@@ -428,6 +428,7 @@ final class AudioPlayer: AudioPlaying {
         timeObserver = player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
             guard let self else { return }
             self.checkScrobbleCriteria()
+            self.updateNowPlayingInfo()
             self.updateLiveActivity()
             NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
         }
