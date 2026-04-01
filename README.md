@@ -13,6 +13,10 @@
 
 ---
 
+<p align="center">
+  <img src="screenshot.png" alt="flaccy screenshots" width="100%">
+</p>
+
 flaccy is a native iOS music player built for audiophiles who collect FLAC files. It uses AI to automatically identify, organize, and clean up music metadata from messy file collections — no manual tagging required.
 
 ## Features
