@@ -1,0 +1,31 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserdata
+*.xcworkspace/xcuserdata/
+xcuserdata/
+
+# Secrets
+flaccy/Secrets.swift
+
+# Dependencies
+.build/
+Packages/
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# CocoaPods (if ever used)
+Pods/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# SPM
+.swiftpm/
+Package.resolved

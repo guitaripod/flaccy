@@ -1,52 +1,106 @@
-//
-//  SceneDelegate.swift
-//  flaccy
-//
-//  Created by Marcus Ziadé on 1.4.2026.
-//
-
 import UIKit
 
-class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+    private let miniPlayer = MiniPlayerView()
+    private var navController: UINavigationController?
 
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        guard let windowScene = scene as? UIWindowScene else { return }
+        let window = UIWindow(windowScene: windowScene)
 
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
-        // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
-        // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
-        guard let _ = (scene as? UIWindowScene) else { return }
+        let nav = UINavigationController(rootViewController: LibraryViewController())
+        nav.navigationBar.prefersLargeTitles = false
+        self.navController = nav
+
+        let container = UIView()
+        container.addSubview(nav.view)
+        nav.view.translatesAutoresizingMaskIntoConstraints = false
+
+        miniPlayer.translatesAutoresizingMaskIntoConstraints = false
+        miniPlayer.isHidden = true
+        miniPlayer.onTap = { [weak self] in self?.presentNowPlaying() }
+        container.addSubview(miniPlayer)
+
+        NSLayoutConstraint.activate([
+            nav.view.topAnchor.constraint(equalTo: container.topAnchor),
+            nav.view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            nav.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            nav.view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+
+            miniPlayer.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            miniPlayer.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            miniPlayer.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -4),
+            miniPlayer.heightAnchor.constraint(equalToConstant: 56),
+        ])
+
+        let rootVC = UIViewController()
+        rootVC.view = container
+        rootVC.addChild(nav)
+        nav.didMove(toParent: rootVC)
+
+        window.rootViewController = rootVC
+        window.makeKeyAndVisible()
+        self.window = window
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(trackDidChange), name: AudioPlayer.trackDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playbackStateDidChange), name: AudioPlayer.playbackStateDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleQueueTapped), name: MiniPlayerView.queueTapped, object: nil
+        )
     }
 
-    func sceneDidDisconnect(_ scene: UIScene) {
-        // Called as the scene is being released by the system.
-        // This occurs shortly after the scene enters the background, or when its session is discarded.
-        // Release any resources associated with this scene that can be re-created the next time the scene connects.
-        // The scene may re-connect later, as its session was not necessarily discarded (see `application:didDiscardSceneSessions` instead).
+    private func presentNowPlaying() {
+        guard let nav = navController else { return }
+        let vc = NowPlayingViewController()
+        vc.modalPresentationStyle = .pageSheet
+        nav.present(vc, animated: true)
     }
 
-    func sceneDidBecomeActive(_ scene: UIScene) {
-        // Called when the scene has moved from an inactive state to an active state.
-        // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
+    @objc private func handleQueueTapped() {
+        guard let nav = navController else { return }
+        let queueVC = QueueViewController()
+        let queueNav = UINavigationController(rootViewController: queueVC)
+        queueNav.modalPresentationStyle = .pageSheet
+        nav.present(queueNav, animated: true)
     }
 
-    func sceneWillResignActive(_ scene: UIScene) {
-        // Called when the scene will move from an active state to an inactive state.
-        // This may occur due to temporary interruptions (ex. an incoming phone call).
+    @objc private func trackDidChange() {
+        updateMiniPlayer()
     }
 
-    func sceneWillEnterForeground(_ scene: UIScene) {
-        // Called as the scene transitions from the background to the foreground.
-        // Use this method to undo the changes made on entering the background.
+    @objc private func playbackStateDidChange() {
+        updateMiniPlayer()
     }
 
-    func sceneDidEnterBackground(_ scene: UIScene) {
-        // Called as the scene transitions from the foreground to the background.
-        // Use this method to save data, release shared resources, and store enough scene-specific state information
-        // to restore the scene back to its current state.
+    private func updateMiniPlayer() {
+        let player = AudioPlayer.shared
+        if let track = player.currentTrack {
+            miniPlayer.configure(with: track, isPlaying: player.isPlaying)
+            if miniPlayer.isHidden {
+                miniPlayer.isHidden = false
+                miniPlayer.alpha = 0
+                UIView.animate(withDuration: 0.3) { self.miniPlayer.alpha = 1 }
+            }
+            navController?.additionalSafeAreaInsets.bottom = 72
+        } else {
+            if !miniPlayer.isHidden {
+                UIView.animate(withDuration: 0.2, animations: {
+                    self.miniPlayer.alpha = 0
+                }) { _ in
+                    self.miniPlayer.isHidden = true
+                }
+            }
+            navController?.additionalSafeAreaInsets.bottom = 0
+        }
     }
-
-
 }
-
