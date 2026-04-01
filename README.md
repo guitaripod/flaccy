@@ -7,7 +7,6 @@
   <img src="https://img.shields.io/badge/platform-iOS%2018.6+-blue?logo=apple" alt="Platform">
   <img src="https://img.shields.io/badge/swift-5.0-orange?logo=swift" alt="Swift">
   <img src="https://img.shields.io/badge/UIKit-programmatic-green" alt="UIKit">
-  <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="License">
   <img src="https://img.shields.io/badge/AI-Groq%20LLM-purple" alt="AI">
   <img src="https://img.shields.io/badge/scrobbling-Last.fm-red?logo=lastdotfm" alt="Last.fm">
 </p>
@@ -89,6 +88,3 @@ No other third-party dependencies.
 - iPhone only
 - Xcode 26+
 
-## License
-
-MIT
