@@ -1,3 +1,4 @@
+import ActivityKit
 import AVFoundation
 import MediaPlayer
 import UIKit
@@ -56,6 +57,7 @@ final class AudioPlayer: AudioPlaying {
     private var sleepTimer: Timer?
     private(set) var sleepTimerRemaining: TimeInterval?
 
+    private var liveActivity: Activity<FlaccyActivityAttributes>?
     private var trackStartTime: Date?
     private var hasScrobbled: Bool = false
     private var originalQueue: [Track] = []
@@ -102,6 +104,7 @@ final class AudioPlayer: AudioPlaying {
                 player?.pause()
                 isPlaying = false
                 updateNowPlayingInfo()
+                updateLiveActivity()
                 NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
             }
         case .ended:
@@ -111,6 +114,7 @@ final class AudioPlayer: AudioPlaying {
                     player?.play()
                     isPlaying = true
                     updateNowPlayingInfo()
+                    updateLiveActivity()
                     NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
                 }
             }
@@ -148,6 +152,7 @@ final class AudioPlayer: AudioPlaying {
         isPlaying.toggle()
         impactLight.impactOccurred()
         updateNowPlayingInfo()
+        updateLiveActivity()
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
     }
 
@@ -267,6 +272,7 @@ final class AudioPlayer: AudioPlaying {
         originalQueue = []
         currentIndex = 0
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        endLiveActivity()
         impactMedium.impactOccurred()
         NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
@@ -392,6 +398,12 @@ final class AudioPlayer: AudioPlaying {
         AppLogger.info("Now playing: \(track.title) - \(track.artist)", category: .content)
         updateNowPlayingInfo()
         sendNowPlayingToLastFM(track: track)
+
+        if liveActivity != nil {
+            endLiveActivity()
+        }
+        startLiveActivity()
+
         NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
     }
@@ -416,6 +428,7 @@ final class AudioPlayer: AudioPlaying {
         timeObserver = player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
             guard let self else { return }
             self.checkScrobbleCriteria()
+            self.updateLiveActivity()
             NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
         }
     }
@@ -453,6 +466,12 @@ final class AudioPlayer: AudioPlaying {
             AppLogger.info("Gapless advance: \(track.title) - \(track.artist)", category: .content)
             updateNowPlayingInfo()
             sendNowPlayingToLastFM(track: track)
+
+            if liveActivity != nil {
+                endLiveActivity()
+            }
+            startLiveActivity()
+
             NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
         } else if repeatMode == .all && !queue.isEmpty {
             currentIndex = 0
@@ -461,6 +480,7 @@ final class AudioPlayer: AudioPlaying {
             player?.pause()
             isPlaying = false
             updateNowPlayingInfo()
+            endLiveActivity()
             NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
         }
     }
@@ -595,5 +615,65 @@ final class AudioPlayer: AudioPlaying {
         }
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    private func startLiveActivity() {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        guard let track = currentTrack else { return }
+
+        let artworkData = track.artwork?.jpegData(compressionQuality: 0.5)
+        let attributes = FlaccyActivityAttributes(artworkData: artworkData)
+        let state = FlaccyActivityAttributes.ContentState(
+            title: track.title,
+            artist: track.artist,
+            albumTitle: track.albumTitle,
+            isPlaying: isPlaying,
+            elapsed: currentTime,
+            duration: duration
+        )
+
+        do {
+            let content = ActivityContent(state: state, staleDate: nil)
+            liveActivity = try Activity.request(attributes: attributes, content: content, pushType: nil)
+        } catch {
+            AppLogger.error("Failed to start live activity: \(error.localizedDescription)", category: .ui)
+        }
+    }
+
+    private func updateLiveActivity() {
+        guard let track = currentTrack else {
+            endLiveActivity()
+            return
+        }
+
+        let state = FlaccyActivityAttributes.ContentState(
+            title: track.title,
+            artist: track.artist,
+            albumTitle: track.albumTitle,
+            isPlaying: isPlaying,
+            elapsed: currentTime,
+            duration: duration
+        )
+
+        Task {
+            let content = ActivityContent(state: state, staleDate: nil)
+            await liveActivity?.update(content)
+        }
+    }
+
+    private func endLiveActivity() {
+        Task {
+            let state = FlaccyActivityAttributes.ContentState(
+                title: currentTrack?.title ?? "",
+                artist: currentTrack?.artist ?? "",
+                albumTitle: currentTrack?.albumTitle ?? "",
+                isPlaying: false,
+                elapsed: 0,
+                duration: 0
+            )
+            let content = ActivityContent(state: state, staleDate: nil)
+            await liveActivity?.end(content, dismissalPolicy: .immediate)
+            liveActivity = nil
+        }
     }
 }

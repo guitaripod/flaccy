@@ -8,10 +8,36 @@
 
 /* Begin PBXBuildFile section */
 		2C2777462F7D0B80007FF196 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 2C2777012F7D0301007FF196 /* GRDB */; };
+		2C27775C2F7D0400007FF196 /* flaccyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C2777502F7D0400007FF196 /* flaccyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2C2777592F7D0400007FF196 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C2776C22F7D0282007FF196 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2C2777552F7D0400007FF196;
+			remoteInfo = flaccyWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2C27775B2F7D0400007FF196 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2C27775C2F7D0400007FF196 /* flaccyWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2C2776CA2F7D0282007FF196 /* flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2C2777502F7D0400007FF196 /* flaccyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = flaccyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -22,6 +48,13 @@
 			);
 			target = 2C2776C92F7D0282007FF196 /* flaccy */;
 		};
+		2C27775D2F7D0400007FF196 /* Exceptions for "flaccyWidgets" folder in "flaccyWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2C2777552F7D0400007FF196 /* flaccyWidgets */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -31,6 +64,14 @@
 				2C2776DC2F7D0283007FF196 /* Exceptions for "flaccy" folder in "flaccy" target */,
 			);
 			path = flaccy;
+			sourceTree = "<group>";
+		};
+		2C2777512F7D0400007FF196 /* flaccyWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2C27775D2F7D0400007FF196 /* Exceptions for "flaccyWidgets" folder in "flaccyWidgets" target */,
+			);
+			path = flaccyWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -44,6 +85,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2C2777532F7D0400007FF196 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -51,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				2C2776CC2F7D0282007FF196 /* flaccy */,
+				2C2777512F7D0400007FF196 /* flaccyWidgets */,
 				2C2776CB2F7D0282007FF196 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -59,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				2C2776CA2F7D0282007FF196 /* flaccy.app */,
+				2C2777502F7D0400007FF196 /* flaccyWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,10 +123,12 @@
 				2C2776C62F7D0282007FF196 /* Sources */,
 				2C2776C72F7D0282007FF196 /* Frameworks */,
 				2C2776C82F7D0282007FF196 /* Resources */,
+				2C27775B2F7D0400007FF196 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				2C27775A2F7D0400007FF196 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				2C2776CC2F7D0282007FF196 /* flaccy */,
@@ -89,6 +141,28 @@
 			productReference = 2C2776CA2F7D0282007FF196 /* flaccy.app */;
 			productType = "com.apple.product-type.application";
 		};
+		2C2777552F7D0400007FF196 /* flaccyWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2C2777582F7D0400007FF196 /* Build configuration list for PBXNativeTarget "flaccyWidgets" */;
+			buildPhases = (
+				2C2777522F7D0400007FF196 /* Sources */,
+				2C2777532F7D0400007FF196 /* Frameworks */,
+				2C2777542F7D0400007FF196 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2C2777512F7D0400007FF196 /* flaccyWidgets */,
+			);
+			name = flaccyWidgets;
+			packageProductDependencies = (
+			);
+			productName = flaccyWidgets;
+			productReference = 2C2777502F7D0400007FF196 /* flaccyWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -100,6 +174,9 @@
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					2C2776C92F7D0282007FF196 = {
+						CreatedOnToolsVersion = 26.4;
+					};
+					2C2777552F7D0400007FF196 = {
 						CreatedOnToolsVersion = 26.4;
 					};
 				};
@@ -122,12 +199,20 @@
 			projectRoot = "";
 			targets = (
 				2C2776C92F7D0282007FF196 /* flaccy */,
+				2C2777552F7D0400007FF196 /* flaccyWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		2C2776C82F7D0282007FF196 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2C2777542F7D0400007FF196 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -144,7 +229,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2C2777522F7D0400007FF196 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2C27775A2F7D0400007FF196 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2C2777552F7D0400007FF196 /* flaccyWidgets */;
+			targetProxy = 2C2777592F7D0400007FF196 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		2C2776DE2F7D0283007FF196 /* Debug */ = {
@@ -342,6 +442,62 @@
 			};
 			name = Release;
 		};
+		2C2777562F7D0400007FF196 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P4DQK6SRKR;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = flaccyWidgets;
+				INFOPLIST_FILE = flaccyWidgets/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccy.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		2C2777572F7D0400007FF196 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P4DQK6SRKR;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = flaccyWidgets;
+				INFOPLIST_FILE = flaccyWidgets/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccy.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -359,6 +515,15 @@
 			buildConfigurations = (
 				2C2776DE2F7D0283007FF196 /* Debug */,
 				2C2776DF2F7D0283007FF196 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2C2777582F7D0400007FF196 /* Build configuration list for PBXNativeTarget "flaccyWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2C2777562F7D0400007FF196 /* Debug */,
+				2C2777572F7D0400007FF196 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
