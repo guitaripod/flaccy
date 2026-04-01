@@ -37,9 +37,20 @@ struct FlaccyLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    ProgressView(value: context.state.duration > 0 ? context.state.elapsed / context.state.duration : 0)
-                        .tint(.white)
-                        .padding(.horizontal, 4)
+                    VStack(spacing: 4) {
+                        ProgressView(value: context.state.duration > 0 ? context.state.elapsed / context.state.duration : 0)
+                            .tint(.white)
+                        HStack {
+                            Text(formatTime(context.state.elapsed))
+                                .font(.system(size: 10, weight: .medium).monospacedDigit())
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("-\(formatTime(max(0, context.state.duration - context.state.elapsed)))")
+                                .font(.system(size: 10, weight: .medium).monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 4)
                 }
             } compactLeading: {
                 if let data = context.attributes.artworkData,
@@ -98,8 +109,19 @@ struct FlaccyLiveActivity: Widget {
                     .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1)
 
-                ProgressView(value: context.state.duration > 0 ? context.state.elapsed / context.state.duration : 0)
-                    .tint(.white)
+                VStack(spacing: 2) {
+                    ProgressView(value: context.state.duration > 0 ? context.state.elapsed / context.state.duration : 0)
+                        .tint(.white)
+                    HStack {
+                        Text(formatTime(context.state.elapsed))
+                            .font(.system(size: 10, weight: .medium).monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.5))
+                        Spacer()
+                        Text("-\(formatTime(max(0, context.state.duration - context.state.elapsed)))")
+                            .font(.system(size: 10, weight: .medium).monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
             }
 
             Spacer()
@@ -114,6 +136,11 @@ struct FlaccyLiveActivity: Widget {
             }
         }
         .padding(16)
+    }
+
+    private func formatTime(_ time: Double) -> String {
+        let total = Int(time)
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 
     @ViewBuilder
