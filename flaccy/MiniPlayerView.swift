@@ -12,6 +12,7 @@ final class MiniPlayerView: UIView {
     private let queueButton = UIButton(type: .system)
     private let progressFill = UIView()
     private var progressWidthConstraint: NSLayoutConstraint?
+    private let timerLabel = UILabel()
 
     var onTap: (() -> Void)?
 
@@ -127,11 +128,32 @@ final class MiniPlayerView: UIView {
             hStack.bottomAnchor.constraint(equalTo: blur.contentView.bottomAnchor),
         ])
 
+        timerLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .medium)
+        timerLabel.textColor = .white
+        timerLabel.textAlignment = .center
+        timerLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        timerLabel.layer.cornerRadius = 8
+        timerLabel.layer.cornerCurve = .continuous
+        timerLabel.clipsToBounds = true
+        timerLabel.isHidden = true
+        timerLabel.translatesAutoresizingMaskIntoConstraints = false
+        blur.contentView.addSubview(timerLabel)
+
+        NSLayoutConstraint.activate([
+            timerLabel.topAnchor.constraint(equalTo: blur.contentView.topAnchor, constant: 4),
+            timerLabel.trailingAnchor.constraint(equalTo: artworkView.leadingAnchor, constant: -6),
+            timerLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 42),
+            timerLabel.heightAnchor.constraint(equalToConstant: 18),
+        ])
+
         let tap = UITapGestureRecognizer(target: self, action: #selector(viewTapped))
         addGestureRecognizer(tap)
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(progressDidChange), name: AudioPlayer.playbackProgressDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(sleepTimerDidUpdate), name: AudioPlayer.sleepTimerDidUpdate, object: nil
         )
     }
 
@@ -157,22 +179,32 @@ final class MiniPlayerView: UIView {
 
     private func updateProgressColor(from image: UIImage) {
         guard let cgImage = image.cgImage else { return }
-        let width = 1
-        let height = 1
-        var pixel = [UInt8](repeating: 0, count: 4)
+        let size = 8
+        var pixels = [UInt8](repeating: 0, count: size * size * 4)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
-            data: &pixel, width: width, height: height,
-            bitsPerComponent: 8, bytesPerRow: 4,
+            data: &pixels, width: size, height: size,
+            bitsPerComponent: 8, bytesPerRow: size * 4,
             space: colorSpace,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return }
-        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: size, height: size))
+
+        var totalR: CGFloat = 0
+        var totalG: CGFloat = 0
+        var totalB: CGFloat = 0
+        let count = size * size
+        for i in 0..<count {
+            totalR += CGFloat(pixels[i * 4])
+            totalG += CGFloat(pixels[i * 4 + 1])
+            totalB += CGFloat(pixels[i * 4 + 2])
+        }
+
         let color = UIColor(
-            red: CGFloat(pixel[0]) / 255,
-            green: CGFloat(pixel[1]) / 255,
-            blue: CGFloat(pixel[2]) / 255,
-            alpha: 0.15
+            red: totalR / CGFloat(count) / 255,
+            green: totalG / CGFloat(count) / 255,
+            blue: totalB / CGFloat(count) / 255,
+            alpha: 0.2
         )
         progressFill.backgroundColor = color
     }
@@ -186,5 +218,16 @@ final class MiniPlayerView: UIView {
         guard player.duration > 0 else { return }
         let fraction = CGFloat(player.currentTime / player.duration)
         progressWidthConstraint?.constant = bounds.width * fraction
+    }
+
+    @objc private func sleepTimerDidUpdate() {
+        guard let remaining = AudioPlayer.shared.sleepTimerRemaining, remaining > 0 else {
+            timerLabel.isHidden = true
+            return
+        }
+        let mins = Int(remaining) / 60
+        let secs = Int(remaining) % 60
+        timerLabel.text = " \(String(format: "%d:%02d", mins, secs)) "
+        timerLabel.isHidden = false
     }
 }
