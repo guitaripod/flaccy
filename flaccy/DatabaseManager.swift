@@ -227,6 +227,29 @@ final class DatabaseManager {
         }
     }
 
+    func fetchAllTrackRelativePaths() throws -> Set<String> {
+        try dbQueue.read { db in
+            let paths = try String.fetchAll(db, sql: "SELECT fileURL FROM tracks")
+            return Set(paths)
+        }
+    }
+
+    func hasUnanalyzedTracks() throws -> Bool {
+        try dbQueue.read { db in
+            let count = try TrackRecord
+                .filter(Column("aiAnalyzed") == false)
+                .fetchCount(db)
+            return count > 0
+        }
+    }
+
+    func fetchTrackSortKeys() throws -> [(fileURL: String, lastPlayed: Date?)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: "SELECT fileURL, lastPlayed FROM tracks")
+            return rows.map { (fileURL: $0["fileURL"], lastPlayed: $0["lastPlayed"]) }
+        }
+    }
+
     func fetchTrack(byRelativePath path: String) throws -> TrackRecord? {
         try dbQueue.read { db in
             try TrackRecord.filter(Column("fileURL") == path).fetchOne(db)

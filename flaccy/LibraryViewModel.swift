@@ -68,42 +68,37 @@ final class LibraryViewModel {
         case .albums: return library.albums.isEmpty
         case .songs: return library.allTracks.isEmpty
         case .artists: return artists.isEmpty
-        case .playlists: return playlists.isEmpty
+        case .playlists: return playlists.isEmpty && !LastFMService.shared.isAuthenticated
         }
     }
 
     var albums: [Album] { library.albums }
 
     var sortedSongs: [Track] {
+        let tracks = library.allTracks
+        guard !tracks.isEmpty else { return tracks }
+
+        let sortKeys: [(fileURL: String, lastPlayed: Date?)]
         do {
-            let records = try DatabaseManager.shared.fetchAllTracks()
-            let played = records.filter { $0.lastPlayed != nil }.sorted { ($0.lastPlayed ?? .distantPast) > ($1.lastPlayed ?? .distantPast) }
-            let unplayed = records.filter { $0.lastPlayed == nil }.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-            return (played + unplayed).map { record in
-                let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
-                let artwork: UIImage?
-                if let data = record.artworkData {
-                    artwork = UIImage(data: data)
-                } else if let albumInfo = try? DatabaseManager.shared.fetchAlbumInfo(title: record.albumTitle, artist: record.artist),
-                          let artData = albumInfo.coverArtData {
-                    artwork = UIImage(data: artData)
-                } else {
-                    artwork = nil
-                }
-                return Track(
-                    fileURL: docsDir.appendingPathComponent(record.fileURL),
-                    title: record.title,
-                    artist: record.artist,
-                    albumTitle: record.albumTitle,
-                    trackNumber: record.trackNumber,
-                    duration: record.duration,
-                    artwork: artwork,
-                    dbID: record.id
-                )
-            }
+            sortKeys = try DatabaseManager.shared.fetchTrackSortKeys()
         } catch {
-            return library.allTracks
+            return tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         }
+
+        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        var lastPlayedByURL = [URL: Date]()
+        for key in sortKeys {
+            if let date = key.lastPlayed {
+                lastPlayedByURL[docsDir.appendingPathComponent(key.fileURL)] = date
+            }
+        }
+
+        let played = tracks.filter { lastPlayedByURL[$0.fileURL] != nil }
+            .sorted { (lastPlayedByURL[$0.fileURL] ?? .distantPast) > (lastPlayedByURL[$1.fileURL] ?? .distantPast) }
+        let unplayed = tracks.filter { lastPlayedByURL[$0.fileURL] == nil }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+
+        return played + unplayed
     }
 
     var recentlyPlayedAlbums: [Album] {

@@ -29,9 +29,11 @@ final class Library: LibraryProviding {
     }
 
     func reload() async {
-        isLoading = true
+        let needsFullLoad = albums.isEmpty
+        if needsFullLoad { isLoading = true }
         await syncFilesWithDatabase()
         if hasUnanalyzedTracks() {
+            isLoading = true
             await analyzeLibrary(dirtyOnly: true)
         }
         await loadFromDatabase()
@@ -81,34 +83,46 @@ final class Library: LibraryProviding {
             at: documentsDirectory, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]
         ) else { return }
 
-        var currentPaths = Set<String>()
-        var newFiles: [URL] = []
+        let supportedExtensions: Set<String> = ["flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf"]
+        var diskPaths = Set<String>()
+        var diskFilesByPath = [String: URL]()
 
         for case let fileURL as URL in enumerator {
-            let supportedExtensions: Set<String> = ["flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf"]
             guard supportedExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
             let relPath = relativePath(for: fileURL)
-            currentPaths.insert(relPath)
+            diskPaths.insert(relPath)
+            diskFilesByPath[relPath] = fileURL
+        }
 
+        let knownPaths: Set<String>
+        do {
+            knownPaths = try db.fetchAllTrackRelativePaths()
+        } catch {
+            AppLogger.error("DB fetch paths error: \(error.localizedDescription)", category: .database)
+            return
+        }
+
+        let newPaths = diskPaths.subtracting(knownPaths)
+        let removedPaths = knownPaths.subtracting(diskPaths)
+
+        if newPaths.isEmpty && removedPaths.isEmpty {
+            AppLogger.info("Sync: \(diskPaths.count) files, no changes", category: .content)
+            return
+        }
+
+        if !removedPaths.isEmpty {
             do {
-                if try db.fetchTrack(byRelativePath: relPath) == nil {
-                    newFiles.append(fileURL)
-                }
+                try db.deleteTracksNotIn(relativePaths: diskPaths)
             } catch {
-                AppLogger.error("DB fetch error: \(error.localizedDescription)", category: .database)
+                AppLogger.error("DB cleanup error: \(error.localizedDescription)", category: .database)
             }
         }
 
-        do {
-            try db.deleteTracksNotIn(relativePaths: currentPaths)
-        } catch {
-            AppLogger.error("DB cleanup error: \(error.localizedDescription)", category: .database)
-        }
-
-        for fileURL in newFiles {
+        for relPath in newPaths {
+            guard let fileURL = diskFilesByPath[relPath] else { continue }
             let metadata = await MetadataService.extractMetadata(from: fileURL)
             let record = TrackRecord(
-                fileURL: relativePath(for: fileURL),
+                fileURL: relPath,
                 title: metadata.title,
                 artist: metadata.artist,
                 albumTitle: metadata.albumTitle,
@@ -126,7 +140,7 @@ final class Library: LibraryProviding {
             }
         }
 
-        AppLogger.info("Sync: \(currentPaths.count) files on disk, \(newFiles.count) new", category: .content)
+        AppLogger.info("Sync: \(diskPaths.count) files on disk, \(newPaths.count) new, \(removedPaths.count) removed", category: .content)
     }
 
     private func analyzeLibrary(dirtyOnly: Bool) async {
@@ -344,8 +358,7 @@ final class Library: LibraryProviding {
 
     private func hasUnanalyzedTracks() -> Bool {
         do {
-            let tracks = try db.fetchAllTracks()
-            return tracks.contains { !$0.aiAnalyzed }
+            return try db.hasUnanalyzedTracks()
         } catch { return false }
     }
 
