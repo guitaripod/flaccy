@@ -34,9 +34,13 @@ final class SettingsViewController: UITableViewController {
         Section.allCases.count
     }
 
+    private var pendingScrobbleCount: Int {
+        (try? DatabaseManager.shared.fetchPendingScrobbles().count) ?? 0
+    }
+
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch Section(rawValue: section)! {
-        case .lastFM: return 1
+        case .lastFM: return pendingScrobbleCount > 0 ? 2 : 1
         case .playback: return 2
         case .library: return 3
         case .about: return 1
@@ -55,7 +59,10 @@ final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         switch Section(rawValue: indexPath.section)! {
         case .lastFM:
-            return lastFMCell()
+            if indexPath.row == 0 {
+                return lastFMCell()
+            }
+            return pendingScrobblesCell()
         case .playback:
             return indexPath.row == 0 ? gaplessPlaybackCell() : audioQualityCell()
         case .library:
@@ -74,7 +81,11 @@ final class SettingsViewController: UITableViewController {
 
         switch Section(rawValue: indexPath.section)! {
         case .lastFM:
-            handleLastFMTap()
+            if indexPath.row == 0 {
+                handleLastFMTap()
+            } else {
+                handleRetryScrobbles()
+            }
         case .playback:
             break
         case .library:
@@ -92,6 +103,46 @@ final class SettingsViewController: UITableViewController {
         case .playback: return false
         case .library: return indexPath.row == 0
         case .about: return false
+        }
+    }
+
+    private func pendingScrobblesCell() -> UITableViewCell {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+        let count = pendingScrobbleCount
+
+        let countLabel = UILabel()
+        countLabel.text = "\(count) pending scrobble\(count == 1 ? "" : "s")"
+        countLabel.font = .preferredFont(forTextStyle: .body)
+        countLabel.textColor = .secondaryLabel
+
+        let retryLabel = UILabel()
+        retryLabel.text = "Retry"
+        retryLabel.font = .preferredFont(forTextStyle: .body)
+        retryLabel.textColor = .tintColor
+
+        let stack = UIStackView(arrangedSubviews: [countLabel, retryLabel])
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        cell.contentView.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
+        ])
+
+        return cell
+    }
+
+    private func handleRetryScrobbles() {
+        impactLight.impactOccurred()
+        Task {
+            await AudioPlayer.shared.retryPendingScrobbles()
+            notificationFeedback.notificationOccurred(.success)
+            tableView.reloadSections(IndexSet(integer: Section.lastFM.rawValue), with: .automatic)
         }
     }
 

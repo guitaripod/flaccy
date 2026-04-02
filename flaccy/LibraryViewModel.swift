@@ -174,6 +174,10 @@ final class LibraryViewModel {
         await library.reload()
     }
 
+    func restorePlaybackState() {
+        audioPlayer.restoreQueueState()
+    }
+
     func importFiles(from urls: [URL]) async {
         await library.importFiles(from: urls)
     }

@@ -59,7 +59,10 @@ final class LibraryViewController: UIViewController {
         setupLoadingOverlay()
         bindViewModel()
 
-        Task { await viewModel.loadLibrary() }
+        Task {
+            await viewModel.loadLibrary()
+            viewModel.restorePlaybackState()
+        }
     }
 
     private func setupSearchController() {
@@ -391,7 +394,7 @@ extension LibraryViewController: UICollectionViewDelegate {
             AudioPlayer.shared.play(viewModel.sortedSongs, startingAt: viewModel.sortedSongs.firstIndex(of: track) ?? 0)
         case .artist(let artist):
             let albums = viewModel.albumsForArtist(artist.name)
-            let vc = ArtistAlbumsViewController(artistName: artist.name, albums: albums)
+            let vc = ArtistDetailViewController(artistName: artist.name, albums: albums)
             navigationController?.pushViewController(vc, animated: true)
         case .playlist(let playlist):
             let vc = PlaylistDetailViewController(playlistId: playlist.id, playlistName: playlist.name)
