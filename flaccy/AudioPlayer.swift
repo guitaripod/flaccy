@@ -35,6 +35,9 @@ protocol AudioPlaying: AnyObject {
     var sleepTimerRemaining: TimeInterval? { get }
     func setSleepTimer(minutes: Int)
     func cancelSleepTimer()
+    func saveQueueState()
+    func restoreQueueState()
+    func retryPendingScrobbles() async
 }
 
 final class AudioPlayer: AudioPlaying {
@@ -46,6 +49,7 @@ final class AudioPlayer: AudioPlaying {
     static let playbackProgressDidChange = Notification.Name("PlaybackProgressDidChange")
     static let shuffleRepeatDidChange = Notification.Name("ShuffleRepeatDidChange")
     static let queueDidChange = Notification.Name("QueueDidChange")
+    static let sleepTimerDidUpdate = Notification.Name("SleepTimerDidUpdate")
 
     private var player: AVQueuePlayer?
     private var timeObserver: Any?
@@ -88,8 +92,15 @@ final class AudioPlayer: AudioPlaying {
     private init() {
         configureRemoteCommands()
         NotificationCenter.default.addObserver(
+            self, selector: #selector(handleWillResignActive), name: UIApplication.willResignActiveNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
             self, selector: #selector(handleInterruption), name: AVAudioSession.interruptionNotification, object: nil
         )
+    }
+
+    @objc private func handleWillResignActive() {
+        saveQueueState()
     }
 
     @objc private func handleInterruption(_ notification: Notification) {
@@ -339,6 +350,7 @@ final class AudioPlayer: AudioPlaying {
             guard let self else { return }
             if let remaining = self.sleepTimerRemaining {
                 self.sleepTimerRemaining = remaining - 1
+                NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
                 if remaining <= 1 {
                     self.cancelSleepTimer()
                     self.player?.pause()
@@ -348,6 +360,7 @@ final class AudioPlayer: AudioPlaying {
                 }
             }
         }
+        NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
         impactLight.impactOccurred()
     }
 
@@ -355,6 +368,7 @@ final class AudioPlayer: AudioPlaying {
         sleepTimer?.invalidate()
         sleepTimer = nil
         sleepTimerRemaining = nil
+        NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
     }
 
     private func loadTrack(at index: Int) {
@@ -675,6 +689,100 @@ final class AudioPlayer: AudioPlaying {
             let content = ActivityContent(state: state, staleDate: nil)
             await liveActivity?.end(content, dismissalPolicy: .immediate)
             liveActivity = nil
+        }
+    }
+
+    func saveQueueState() {
+        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let paths = queue.map { track -> String in
+            let trackPath = track.fileURL.standardizedFileURL.path
+            let docsPath = docsDir.path
+            if trackPath.hasPrefix(docsPath) {
+                let rel = String(trackPath.dropFirst(docsPath.count))
+                return rel.hasPrefix("/") ? String(rel.dropFirst()) : rel
+            }
+            return track.fileURL.lastPathComponent
+        }
+        UserDefaults.standard.set(paths, forKey: "flaccy.queue.paths")
+        UserDefaults.standard.set(currentIndex, forKey: "flaccy.queue.index")
+        UserDefaults.standard.set(currentTime, forKey: "flaccy.queue.elapsed")
+        UserDefaults.standard.set(shuffleEnabled, forKey: "flaccy.queue.shuffle")
+        UserDefaults.standard.set(repeatMode == .all ? 1 : repeatMode == .one ? 2 : 0, forKey: "flaccy.queue.repeat")
+    }
+
+    func restoreQueueState() {
+        guard let paths = UserDefaults.standard.stringArray(forKey: "flaccy.queue.paths"),
+              !paths.isEmpty else { return }
+
+        let savedIndex = UserDefaults.standard.integer(forKey: "flaccy.queue.index")
+        let savedElapsed = UserDefaults.standard.double(forKey: "flaccy.queue.elapsed")
+        let savedShuffle = UserDefaults.standard.bool(forKey: "flaccy.queue.shuffle")
+        let savedRepeat = UserDefaults.standard.integer(forKey: "flaccy.queue.repeat")
+
+        var restoredTracks: [Track] = []
+        for path in paths {
+            guard let record = try? DatabaseManager.shared.fetchTrack(byRelativePath: path) else { continue }
+            let artwork: UIImage?
+            if let albumInfo = try? DatabaseManager.shared.fetchAlbumInfo(title: record.albumTitle, artist: record.artist),
+               let data = albumInfo.coverArtData {
+                artwork = UIImage(data: data)
+            } else {
+                artwork = ImageCache.shared.imageFromData(record.artworkData)
+            }
+            restoredTracks.append(Track.from(record: record, artwork: artwork))
+        }
+
+        guard !restoredTracks.isEmpty else { return }
+
+        queue = restoredTracks
+        originalQueue = restoredTracks
+        currentIndex = min(savedIndex, restoredTracks.count - 1)
+        shuffleEnabled = savedShuffle
+        repeatMode = savedRepeat == 1 ? .all : savedRepeat == 2 ? .one : .off
+
+        let track = queue[currentIndex]
+        let item = AVPlayerItem(url: track.fileURL)
+        if player == nil {
+            player = AVQueuePlayer(items: [item])
+        } else {
+            player?.removeAllItems()
+            player?.insert(item, after: nil)
+        }
+        player?.pause()
+        isPlaying = false
+
+        if savedElapsed > 0 {
+            let cmTime = CMTime(seconds: savedElapsed, preferredTimescale: 600)
+            player?.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero)
+        }
+
+        startTimeObserver()
+        updateNowPlayingInfo()
+
+        NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
+        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        NotificationCenter.default.post(name: AudioPlayer.shuffleRepeatDidChange, object: nil)
+
+        AppLogger.info("Restored queue: \(restoredTracks.count) tracks, index \(currentIndex), elapsed \(savedElapsed)s", category: .content)
+    }
+
+    func retryPendingScrobbles() async {
+        guard LastFMService.shared.isAuthenticated else { return }
+        do {
+            let pending = try DatabaseManager.shared.fetchPendingScrobbles()
+            guard !pending.isEmpty else { return }
+
+            AppLogger.info("Retrying \(pending.count) pending scrobbles", category: .sync)
+
+            let tuples = pending.map { (track: $0.trackTitle, artist: $0.artist, album: $0.albumTitle, timestamp: $0.timestamp, duration: $0.duration) }
+            await LastFMService.shared.submitPendingScrobbles(scrobbles: tuples)
+
+            let ids = pending.compactMap(\.id)
+            try DatabaseManager.shared.markScrobblesSubmitted(ids: ids)
+            AppLogger.info("Scrobble retry complete", category: .sync)
+        } catch {
+            AppLogger.error("Scrobble retry failed: \(error.localizedDescription)", category: .sync)
         }
     }
 }
