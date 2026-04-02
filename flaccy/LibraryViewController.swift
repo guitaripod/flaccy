@@ -362,8 +362,7 @@ final class LibraryViewController: UIViewController {
 
     private func importTapped() {
         impactLight.impactOccurred()
-        let flacType = UTType(filenameExtension: "flac") ?? UTType.audio
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [flacType])
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio])
         picker.allowsMultipleSelection = true
         picker.delegate = self
         present(picker, animated: true)

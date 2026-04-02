@@ -85,7 +85,8 @@ final class Library: LibraryProviding {
         var newFiles: [URL] = []
 
         for case let fileURL as URL in enumerator {
-            guard fileURL.pathExtension.lowercased() == "flac" else { continue }
+            let supportedExtensions: Set<String> = ["flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf"]
+            guard supportedExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
             let relPath = relativePath(for: fileURL)
             currentPaths.insert(relPath)
 
