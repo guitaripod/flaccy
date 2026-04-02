@@ -81,6 +81,18 @@ nonisolated struct PlaylistTrackRecord: Codable, FetchableRecord, PersistableRec
     var position: Int
 }
 
+nonisolated struct LyricsRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
+
+    static let databaseTableName = "lyrics"
+
+    var id: Int64?
+    var trackTitle: String
+    var artist: String
+    var syncedLyrics: String?
+    var plainLyrics: String?
+    var instrumental: Bool
+}
+
 final class DatabaseManager {
 
     static let shared = DatabaseManager()
@@ -179,6 +191,18 @@ final class DatabaseManager {
                 t.column("position", .integer).notNull()
             }
             try db.create(index: "playlistTracks_on_playlistId", on: "playlistTracks", columns: ["playlistId"])
+        }
+
+        migrator.registerMigration("v4") { db in
+            try db.create(table: "lyrics") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("trackTitle", .text).notNull()
+                t.column("artist", .text).notNull()
+                t.column("syncedLyrics", .text)
+                t.column("plainLyrics", .text)
+                t.column("instrumental", .boolean).notNull().defaults(to: false)
+                t.uniqueKey(["trackTitle", "artist"])
+            }
         }
 
         try migrator.migrate(dbQueue)
@@ -424,6 +448,20 @@ final class DatabaseManager {
                 LIMIT ?
             """, arguments: [limit])
             return rows.map { (albumTitle: $0["albumTitle"], artist: $0["artist"]) }
+        }
+    }
+
+    func fetchLyrics(trackTitle: String, artist: String) throws -> LyricsRecord? {
+        try dbQueue.read { db in
+            try LyricsRecord
+                .filter(Column("trackTitle") == trackTitle && Column("artist") == artist)
+                .fetchOne(db)
+        }
+    }
+
+    func saveLyrics(_ record: LyricsRecord) throws {
+        try dbQueue.write { db in
+            try record.save(db)
         }
     }
 }
