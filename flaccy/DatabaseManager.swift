@@ -439,6 +439,14 @@ final class DatabaseManager {
         }
     }
 
+    func findTrack(title: String, artist: String) throws -> TrackRecord? {
+        try dbQueue.read { db in
+            try TrackRecord
+                .filter(Column("title").collating(.nocase) == title && Column("artist").collating(.nocase) == artist)
+                .fetchOne(db)
+        }
+    }
+
     func fetchRecentlyPlayedAlbums(limit: Int) throws -> [(albumTitle: String, artist: String)] {
         try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: """

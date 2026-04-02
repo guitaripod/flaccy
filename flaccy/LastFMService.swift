@@ -2,6 +2,44 @@ import AuthenticationServices
 import CryptoKit
 import Foundation
 
+nonisolated enum ChartPeriod: String, CaseIterable, Sendable {
+    case week = "7day"
+    case month = "1month"
+    case threeMonths = "3month"
+    case sixMonths = "6month"
+    case year = "12month"
+    case allTime = "overall"
+
+    var displayName: String {
+        switch self {
+        case .week: "7 Days"
+        case .month: "1 Month"
+        case .threeMonths: "3 Months"
+        case .sixMonths: "6 Months"
+        case .year: "1 Year"
+        case .allTime: "All Time"
+        }
+    }
+
+    var shortName: String {
+        switch self {
+        case .week: "7D"
+        case .month: "1M"
+        case .threeMonths: "3M"
+        case .sixMonths: "6M"
+        case .year: "1Y"
+        case .allTime: "All"
+        }
+    }
+}
+
+nonisolated struct ChartTrack: Sendable {
+    let rank: Int
+    let name: String
+    let artistName: String
+    let playCount: Int
+}
+
 nonisolated struct AlbumInfo: Sendable {
     let title: String
     let artist: String
@@ -25,6 +63,7 @@ final class LastFMService {
     nonisolated private static let apiSecret = Secrets.lastFMApiSecret
     nonisolated private static let baseURL = "https://ws.audioscrobbler.com/2.0/"
     private static let sessionKeyKey = "lastfm_session_key"
+    private static let usernameKey = "lastfm_username"
 
     private let urlSession: URLSession
     private var authSession: ASWebAuthenticationSession?
@@ -36,6 +75,11 @@ final class LastFMService {
 
     var isAuthenticated: Bool {
         isConfigured && sessionKey != nil
+    }
+
+    private(set) var username: String? {
+        get { UserDefaults.standard.string(forKey: Self.usernameKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.usernameKey) }
     }
 
     private var sessionKey: String? {
@@ -87,11 +131,13 @@ final class LastFMService {
         else { throw LastFMError.authenticationFailed }
 
         sessionKey = key
+        username = session["name"] as? String
         AppLogger.info("Last.fm authentication successful", category: .auth)
     }
 
     func logout() {
         sessionKey = nil
+        username = nil
         AppLogger.info("Last.fm session cleared", category: .auth)
     }
 
@@ -259,6 +305,45 @@ final class LastFMService {
         } catch {
             await AppLogger.error("Fetch artist info failed: \(error.localizedDescription)", category: .content)
             return nil
+        }
+    }
+
+    nonisolated func fetchTopTracks(period: ChartPeriod, limit: Int = 50) async -> [ChartTrack] {
+        guard let user = await username else {
+            await AppLogger.debug("Skipping chart fetch — no username", category: .sync)
+            return []
+        }
+
+        let params: [String: String] = [
+            "method": "user.getTopTracks",
+            "api_key": Self.apiKey,
+            "user": user,
+            "period": period.rawValue,
+            "limit": String(limit),
+        ]
+
+        do {
+            let data = try await performUnsignedGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let topTracks = json["toptracks"] as? [String: Any],
+                  let trackArray = topTracks["track"] as? [[String: Any]]
+            else { return [] }
+
+            return trackArray.compactMap { entry in
+                guard let name = entry["name"] as? String,
+                      let artist = entry["artist"] as? [String: Any],
+                      let artistName = artist["name"] as? String
+                else { return nil }
+
+                let playCount = Int(entry["playcount"] as? String ?? "0") ?? 0
+                let attr = entry["@attr"] as? [String: Any]
+                let rank = Int(attr?["rank"] as? String ?? "0") ?? 0
+
+                return ChartTrack(rank: rank, name: name, artistName: artistName, playCount: playCount)
+            }
+        } catch {
+            await AppLogger.error("Chart fetch failed: \(error.localizedDescription)", category: .sync)
+            return []
         }
     }
 
