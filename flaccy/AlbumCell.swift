@@ -7,6 +7,7 @@ final class AlbumCell: UICollectionViewCell {
     private let artworkView = UIImageView()
     private let titleLabel = UILabel()
     private let artistLabel = UILabel()
+    private let metaLabel = UILabel()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -27,10 +28,17 @@ final class AlbumCell: UICollectionViewCell {
         artistLabel.numberOfLines = 1
         artistLabel.lineBreakMode = .byTruncatingTail
 
-        let stack = UIStackView(arrangedSubviews: [artworkView, titleLabel, artistLabel])
+        metaLabel.font = .systemFont(ofSize: 10, weight: .regular)
+        metaLabel.textColor = .tertiaryLabel
+        metaLabel.numberOfLines = 1
+        metaLabel.lineBreakMode = .byTruncatingTail
+        metaLabel.isHidden = true
+
+        let stack = UIStackView(arrangedSubviews: [artworkView, titleLabel, artistLabel, metaLabel])
         stack.axis = .vertical
         stack.spacing = 6
         stack.setCustomSpacing(4, after: titleLabel)
+        stack.setCustomSpacing(2, after: artistLabel)
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
 
@@ -59,6 +67,11 @@ final class AlbumCell: UICollectionViewCell {
             artworkView.contentMode = .center
             artworkView.image = UIImage(systemName: "music.note")
         }
+        var metaParts: [String] = []
+        if let year = album.year, !year.isEmpty { metaParts.append(year) }
+        if let genre = album.genre, !genre.isEmpty { metaParts.append(genre) }
+        metaLabel.text = metaParts.joined(separator: " \u{00B7} ")
+        metaLabel.isHidden = metaParts.isEmpty
     }
 
     override func prepareForReuse() {
@@ -66,5 +79,7 @@ final class AlbumCell: UICollectionViewCell {
         artworkView.image = nil
         titleLabel.text = nil
         artistLabel.text = nil
+        metaLabel.text = nil
+        metaLabel.isHidden = true
     }
 }

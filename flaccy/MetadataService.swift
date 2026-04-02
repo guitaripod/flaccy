@@ -18,11 +18,17 @@ enum MetadataService {
             metadata = []
         }
 
-        let embeddedTitle = await stringValue(for: .commonIdentifierTitle, in: metadata)
-        let embeddedArtist = await stringValue(for: .commonIdentifierArtist, in: metadata)
-        let embeddedAlbum = await stringValue(for: .commonIdentifierAlbumName, in: metadata)
-        let trackNumber = await trackNumberValue(from: metadata)
-        let artwork = await artworkImage(from: metadata)
+        async let titleTask = stringValue(for: .commonIdentifierTitle, in: metadata)
+        async let artistTask = stringValue(for: .commonIdentifierArtist, in: metadata)
+        async let albumTask = stringValue(for: .commonIdentifierAlbumName, in: metadata)
+        async let trackNumberTask = trackNumberValue(from: metadata)
+        async let artworkTask = artworkImage(from: metadata)
+
+        let embeddedTitle = await titleTask
+        let embeddedArtist = await artistTask
+        let embeddedAlbum = await albumTask
+        let trackNumber = await trackNumberTask
+        let artwork = await artworkTask
 
         let pathInfo = parsePathInfo(from: url)
         let fileInfo = parseFilename(url.deletingPathExtension().lastPathComponent)
