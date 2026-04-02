@@ -140,14 +140,16 @@ extension QueueViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        switch Section(rawValue: section)! {
+        guard let section = Section(rawValue: section) else { return nil }
+        switch section {
         case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? "Now Playing" : nil
         case .upNext: return upNextTracks.isEmpty ? nil : "Up Next"
         }
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        switch Section(rawValue: section)! {
+        guard let section = Section(rawValue: section) else { return 0 }
+        switch section {
         case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? 1 : 0
         case .upNext: return upNextTracks.count
         }
@@ -157,7 +159,8 @@ extension QueueViewController: UITableViewDataSource {
         let cell = tableView.dequeueReusableCell(withIdentifier: QueueTrackCell.reuseID, for: indexPath) as! QueueTrackCell
         let player = AudioPlayer.shared
 
-        switch Section(rawValue: indexPath.section)! {
+        guard let section = Section(rawValue: indexPath.section) else { return cell }
+        switch section {
         case .nowPlaying:
             if let track = player.currentTrack {
                 cell.configure(with: track, isCurrentTrack: true, isPlaying: player.isPlaying)
@@ -173,11 +176,13 @@ extension QueueViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        Section(rawValue: indexPath.section) == .upNext
+        guard let section = Section(rawValue: indexPath.section) else { return false }
+        return section == .upNext
     }
 
     func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        Section(rawValue: indexPath.section) == .upNext
+        guard let section = Section(rawValue: indexPath.section) else { return false }
+        return section == .upNext
     }
 
     func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
@@ -205,12 +210,40 @@ extension QueueViewController: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         impactLight.impactOccurred()
 
-        switch Section(rawValue: indexPath.section)! {
+        guard let section = Section(rawValue: indexPath.section) else { return }
+        switch section {
         case .nowPlaying:
             break
         case .upNext:
             let queueIndex = AudioPlayer.shared.currentIndex + 1 + indexPath.row
             AudioPlayer.shared.jumpToIndex(queueIndex)
+        }
+    }
+
+    func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        guard let section = Section(rawValue: indexPath.section), section == .upNext else { return nil }
+        let upNext = Array(upNextTracks)
+        guard indexPath.row < upNext.count else { return nil }
+        let track = upNext[indexPath.row]
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            let viewArtist = UIAction(title: "Go to Artist", image: UIImage(systemName: "person")) { _ in
+                guard let self else { return }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                let artistAlbums = Library.shared.albums.filter { $0.artist == track.artist }
+                let vc = ArtistDetailViewController(artistName: track.artist, albums: artistAlbums)
+                self.dismiss(animated: true) {
+                    guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                          let rootVC = scene.windows.first?.rootViewController,
+                          let nav = rootVC.children.compactMap({ $0 as? UINavigationController }).first else { return }
+                    nav.pushViewController(vc, animated: true)
+                }
+            }
+            let removeAction = UIAction(title: "Remove", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
+                let queueIndex = AudioPlayer.shared.currentIndex + 1 + indexPath.row
+                AudioPlayer.shared.removeFromQueue(at: queueIndex)
+            }
+            return UIMenu(children: [viewArtist, removeAction])
         }
     }
 
