@@ -4,6 +4,7 @@ DerivedData/
 *.xcuserdata
 *.xcworkspace/xcuserdata/
 xcuserdata/
+*.xcodeproj/xcshareddata/
 
 # Secrets
 flaccy/Secrets.swift
