@@ -203,6 +203,19 @@ final class LibraryViewController: UIViewController {
             cell.accessories = [.disclosureIndicator()]
         }
 
+        let chartsRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Int> { cell, _, _ in
+            var content = UIListContentConfiguration.subtitleCell()
+            content.text = "Last.fm Charts"
+            content.secondaryText = "Your top tracks"
+            content.secondaryTextProperties.color = .secondaryLabel
+            content.image = UIImage(systemName: "chart.bar.fill")
+            content.imageProperties.tintColor = UIColor(red: 0.84, green: 0.09, blue: 0.09, alpha: 1.0)
+            content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
+            content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
+            cell.contentConfiguration = content
+            cell.accessories = [.disclosureIndicator()]
+        }
+
         let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewCell>(
             elementKind: UICollectionView.elementKindSectionHeader
         ) { supplementaryView, _, _ in
@@ -248,6 +261,10 @@ final class LibraryViewController: UIViewController {
             case .playlist(let playlist):
                 return collectionView.dequeueConfiguredReusableCell(
                     using: playlistRegistration, for: indexPath, item: playlist
+                )
+            case .charts:
+                return collectionView.dequeueConfiguredReusableCell(
+                    using: chartsRegistration, for: indexPath, item: 0
                 )
             }
         }
@@ -342,7 +359,8 @@ final class LibraryViewController: UIViewController {
             config.trailingSwipeActionsConfigurationProvider = { [weak self] indexPath in
                 guard let self,
                       let item = self.dataSource.itemIdentifier(for: indexPath),
-                      case .playlist(let playlist) = item else { return nil }
+                      case .playlist(let playlist) = item
+                else { return nil }
                 let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { _, _, completion in
                     do {
                         try DatabaseManager.shared.deletePlaylist(id: playlist.id)
@@ -397,6 +415,9 @@ extension LibraryViewController: UICollectionViewDelegate {
             navigationController?.pushViewController(vc, animated: true)
         case .playlist(let playlist):
             let vc = PlaylistDetailViewController(playlistId: playlist.id, playlistName: playlist.name)
+            navigationController?.pushViewController(vc, animated: true)
+        case .charts:
+            let vc = ChartsViewController()
             navigationController?.pushViewController(vc, animated: true)
         }
     }

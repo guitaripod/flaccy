@@ -6,6 +6,7 @@ nonisolated enum LibraryItem: Hashable, Sendable {
     case song(Track)
     case artist(ArtistItem)
     case playlist(PlaylistItem)
+    case charts
 }
 
 nonisolated struct ArtistItem: Hashable, Sendable {
@@ -241,10 +242,15 @@ final class LibraryViewModel {
             snapshot.appendItems(filtered.map { .artist($0) })
         case .playlists:
             snapshot.appendSections([0])
+            var playlistItems: [LibraryItem] = []
+            if LastFMService.shared.isAuthenticated && query.isEmpty {
+                playlistItems.append(.charts)
+            }
             let filtered = query.isEmpty
                 ? playlists
                 : playlists.filter { $0.name.localizedCaseInsensitiveContains(query) }
-            snapshot.appendItems(filtered.map { .playlist($0) })
+            playlistItems.append(contentsOf: filtered.map { .playlist($0) })
+            snapshot.appendItems(playlistItems)
         }
         return snapshot
     }
