@@ -276,6 +276,10 @@ final class Library: LibraryProviding {
             for (albumInfo, tracks) in albumsWithTracks {
                 guard let first = tracks.first else { continue }
                 if albumInfo?.coverArtData != nil { continue }
+                if let lastFetched = albumInfo?.lastFetched,
+                   Date().timeIntervalSince(lastFetched) < 24 * 3600 {
+                    continue
+                }
 
                 AppLogger.info("Enriching: \(first.artist) — \(first.albumTitle)", category: .content)
 
