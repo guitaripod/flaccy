@@ -115,8 +115,11 @@ final class AlbumDetailViewController: UIViewController {
         let artistLabel = UILabel()
         artistLabel.text = album.artist
         artistLabel.font = .systemFont(ofSize: 16, weight: .regular)
-        artistLabel.textColor = .secondaryLabel
+        artistLabel.textColor = .tintColor
         artistLabel.textAlignment = .center
+        artistLabel.isUserInteractionEnabled = true
+        let artistTap = UITapGestureRecognizer(target: self, action: #selector(artistTapped))
+        artistLabel.addGestureRecognizer(artistTap)
 
         let metaLabel = UILabel()
         metaLabel.font = .systemFont(ofSize: 14, weight: .regular)
@@ -207,6 +210,13 @@ final class AlbumDetailViewController: UIViewController {
         var shuffled = album.tracks
         shuffled.shuffle()
         audioPlayer.play(shuffled, startingAt: 0)
+    }
+
+    @objc private func artistTapped() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let artistAlbums = Library.shared.albums.filter { $0.artist == album.artist }
+        let vc = ArtistDetailViewController(artistName: album.artist, albums: artistAlbums)
+        navigationController?.pushViewController(vc, animated: true)
     }
 }
 

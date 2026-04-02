@@ -11,7 +11,9 @@ final class NowPlayingViewController: UIViewController {
     private let artworkView = UIImageView()
     private let artworkContainer = UIView()
     private let titleLabel = UILabel()
-    private let artistAlbumLabel = UILabel()
+    private let artistButton = UIButton(type: .system)
+    private let dashLabel = UILabel()
+    private let albumLabel = UILabel()
     private let progressSlider = UISlider()
     private let currentTimeLabel = UILabel()
     private let remainingTimeLabel = UILabel()
@@ -72,7 +74,17 @@ final class NowPlayingViewController: UIViewController {
             self?.presentQueue()
         }, for: .touchUpInside)
 
-        let topRow = UIStackView(arrangedSubviews: [dragHandle, topSpacer, airplayButton, sleepTimerButton, queueButton])
+        let lyricsButton = UIButton(type: .system)
+        lyricsButton.setImage(
+            UIImage(systemName: "text.quote", withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)),
+            for: .normal
+        )
+        lyricsButton.tintColor = .secondaryLabel
+        lyricsButton.addAction(UIAction { [weak self] _ in
+            self?.presentLyrics()
+        }, for: .touchUpInside)
+
+        let topRow = UIStackView(arrangedSubviews: [dragHandle, topSpacer, airplayButton, sleepTimerButton, lyricsButton, queueButton])
         topRow.alignment = .center
         topRow.spacing = 16
 
@@ -112,14 +124,32 @@ final class NowPlayingViewController: UIViewController {
         titleLabel.numberOfLines = 2
         titleLabel.lineBreakMode = .byTruncatingTail
 
-        artistAlbumLabel.font = .systemFont(ofSize: 16, weight: .regular)
-        artistAlbumLabel.textColor = .secondaryLabel
+        artistButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        artistButton.setTitleColor(.tintColor, for: .normal)
+        artistButton.contentHorizontalAlignment = .leading
+        artistButton.setContentHuggingPriority(.required, for: .horizontal)
+        artistButton.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        artistButton.addAction(UIAction { [weak self] _ in self?.navigateToArtist() }, for: .touchUpInside)
+
+        dashLabel.text = " — "
+        dashLabel.font = .systemFont(ofSize: 16, weight: .regular)
+        dashLabel.textColor = .secondaryLabel
+        dashLabel.setContentHuggingPriority(.required, for: .horizontal)
+        dashLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        albumLabel.font = .systemFont(ofSize: 16, weight: .regular)
+        albumLabel.textColor = .secondaryLabel
+        albumLabel.lineBreakMode = .byTruncatingTail
+
+        let artistAlbumStack = UIStackView(arrangedSubviews: [artistButton, dashLabel, albumLabel])
+        artistAlbumStack.spacing = 0
+        artistAlbumStack.alignment = .firstBaseline
 
         playingFromLabel.font = .systemFont(ofSize: 12, weight: .regular)
         playingFromLabel.textColor = .tertiaryLabel
         playingFromLabel.isHidden = true
 
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistAlbumLabel, playingFromLabel])
+        let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistAlbumStack, playingFromLabel])
         infoStack.axis = .vertical
         infoStack.spacing = 4
 
@@ -213,7 +243,12 @@ final class NowPlayingViewController: UIViewController {
 
     private func applyState(_ state: NowPlayingViewModel.State) {
         titleLabel.text = state.title
-        artistAlbumLabel.text = state.artistAlbum
+        artistButton.setTitle(state.artist, for: .normal)
+        albumLabel.text = state.albumTitle
+
+        let hasArtist = !state.artist.isEmpty
+        let hasAlbum = !state.albumTitle.isEmpty
+        dashLabel.isHidden = !(hasArtist && hasAlbum)
 
         if state.albumTitle.isEmpty {
             playingFromLabel.text = ""
@@ -273,6 +308,28 @@ final class NowPlayingViewController: UIViewController {
         let nav = UINavigationController(rootViewController: queueVC)
         nav.modalPresentationStyle = .pageSheet
         present(nav, animated: true)
+    }
+
+    private func presentLyrics() {
+        guard let track = AudioPlayer.shared.currentTrack else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let vc = LyricsViewController(track: track.title, artist: track.artist, album: track.albumTitle)
+        vc.modalPresentationStyle = .fullScreen
+        present(vc, animated: true)
+    }
+
+    private func navigateToArtist() {
+        guard let track = AudioPlayer.shared.currentTrack else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let artistAlbums = Library.shared.albums.filter { $0.artist == track.artist }
+        let vc = ArtistDetailViewController(artistName: track.artist, albums: artistAlbums)
+
+        dismiss(animated: true) {
+            guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let rootVC = scene.windows.first?.rootViewController,
+                  let nav = rootVC.children.compactMap({ $0 as? UINavigationController }).first else { return }
+            nav.pushViewController(vc, animated: true)
+        }
     }
 
     @objc private func sliderTouchDown() {

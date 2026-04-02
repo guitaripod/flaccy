@@ -5,8 +5,9 @@ final class NowPlayingViewModel {
 
     struct State {
         let title: String
-        let artistAlbum: String
+        let artist: String
         let albumTitle: String
+        let artistAlbum: String
         let artwork: Any?
         let isPlaying: Bool
         let currentTime: TimeInterval
@@ -63,10 +64,11 @@ final class NowPlayingViewModel {
 
         return State(
             title: track?.title ?? "",
+            artist: track?.artist ?? "",
+            albumTitle: track?.albumTitle ?? "",
             artistAlbum: [track?.artist, track?.albumTitle]
                 .compactMap { $0 }
                 .joined(separator: " — "),
-            albumTitle: track?.albumTitle ?? "",
             artwork: track?.artwork,
             isPlaying: audioPlayer.isPlaying,
             currentTime: current,
