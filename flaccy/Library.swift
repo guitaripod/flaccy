@@ -29,17 +29,25 @@ final class Library: LibraryProviding {
     }
 
     func reload() async {
-        let needsFullLoad = albums.isEmpty
-        if needsFullLoad { isLoading = true }
-        await syncFilesWithDatabase()
-        if hasUnanalyzedTracks() {
+        let firstLoad = albums.isEmpty
+        if firstLoad { isLoading = true }
+
+        let syncChanged = await syncFilesWithDatabase()
+        let needsAnalysis = hasUnanalyzedTracks()
+
+        if needsAnalysis {
             isLoading = true
             await analyzeLibrary(dirtyOnly: true)
         }
-        await loadFromDatabase()
-        logLibraryState()
+
+        if firstLoad || syncChanged || needsAnalysis {
+            await loadFromDatabase()
+            AppLogger.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
+        }
+
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         isLoading = false
+
         await enrichMissingMetadata()
     }
 
@@ -77,11 +85,12 @@ final class Library: LibraryProviding {
         await reload()
     }
 
-    private func syncFilesWithDatabase() async {
+    @discardableResult
+    private func syncFilesWithDatabase() async -> Bool {
         let fm = FileManager.default
         guard let enumerator = fm.enumerator(
             at: documentsDirectory, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]
-        ) else { return }
+        ) else { return false }
 
         let supportedExtensions: Set<String> = ["flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf"]
         var diskPaths = Set<String>()
@@ -99,7 +108,7 @@ final class Library: LibraryProviding {
             knownPaths = try db.fetchAllTrackRelativePaths()
         } catch {
             AppLogger.error("DB fetch paths error: \(error.localizedDescription)", category: .database)
-            return
+            return false
         }
 
         let newPaths = diskPaths.subtracting(knownPaths)
@@ -107,7 +116,7 @@ final class Library: LibraryProviding {
 
         if newPaths.isEmpty && removedPaths.isEmpty {
             AppLogger.info("Sync: \(diskPaths.count) files, no changes", category: .content)
-            return
+            return false
         }
 
         if !removedPaths.isEmpty {
@@ -118,29 +127,38 @@ final class Library: LibraryProviding {
             }
         }
 
-        for relPath in newPaths {
-            guard let fileURL = diskFilesByPath[relPath] else { continue }
-            let metadata = await MetadataService.extractMetadata(from: fileURL)
-            let record = TrackRecord(
-                fileURL: relPath,
-                title: metadata.title,
-                artist: metadata.artist,
-                albumTitle: metadata.albumTitle,
-                trackNumber: metadata.trackNumber,
-                duration: metadata.duration,
-                artworkData: metadata.artwork?.jpegData(compressionQuality: 0.8),
-                dateAdded: Date(),
-                playCount: 0,
-                aiAnalyzed: false
-            )
-            do {
-                try db.insertTrack(record)
-            } catch {
-                AppLogger.error("Insert track error: \(error.localizedDescription)", category: .database)
+        await withTaskGroup(of: TrackRecord?.self) { group in
+            for relPath in newPaths {
+                guard let fileURL = diskFilesByPath[relPath] else { continue }
+                group.addTask {
+                    let metadata = await MetadataService.extractMetadata(from: fileURL)
+                    return TrackRecord(
+                        fileURL: relPath,
+                        title: metadata.title,
+                        artist: metadata.artist,
+                        albumTitle: metadata.albumTitle,
+                        trackNumber: metadata.trackNumber,
+                        duration: metadata.duration,
+                        artworkData: metadata.artwork?.jpegData(compressionQuality: 0.8),
+                        dateAdded: Date(),
+                        playCount: 0,
+                        aiAnalyzed: false
+                    )
+                }
+            }
+
+            for await record in group {
+                guard let record else { continue }
+                do {
+                    try db.insertTrack(record)
+                } catch {
+                    AppLogger.error("Insert track error: \(error.localizedDescription)", category: .database)
+                }
             }
         }
 
         AppLogger.info("Sync: \(diskPaths.count) files on disk, \(newPaths.count) new, \(removedPaths.count) removed", category: .content)
+        return true
     }
 
     private func analyzeLibrary(dirtyOnly: Bool) async {
@@ -232,35 +250,37 @@ final class Library: LibraryProviding {
     private func loadFromDatabase() async {
         do {
             let albumsWithTracks = try db.fetchAlbumsWithTracks()
-            var loadedAlbums: [Album] = []
 
-            for (albumInfo, trackRecords) in albumsWithTracks {
-                let tracks = trackRecords.map { record in
-                    let artwork: UIImage?
-                    if let albumArtData = albumInfo?.coverArtData {
-                        artwork = ImageCache.shared.imageFromData(albumArtData)
-                    } else {
-                        artwork = ImageCache.shared.imageFromData(record.artworkData)
+            let loadedAlbums: [Album] = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    var result: [Album] = []
+                    result.reserveCapacity(albumsWithTracks.count)
+
+                    for (albumInfo, trackRecords) in albumsWithTracks {
+                        let albumArt: UIImage? = {
+                            if let data = albumInfo?.coverArtData { return UIImage(data: data) }
+                            for record in trackRecords {
+                                if let data = record.artworkData { return UIImage(data: data) }
+                            }
+                            return nil
+                        }()
+
+                        let tracks = trackRecords.map { record in
+                            Track.from(record: record, artwork: albumArt)
+                        }
+
+                        guard let first = tracks.first else { continue }
+                        result.append(Album(
+                            title: first.albumTitle,
+                            artist: first.artist,
+                            artwork: albumArt,
+                            tracks: tracks,
+                            year: albumInfo?.year,
+                            genre: albumInfo?.genre
+                        ))
                     }
-                    return Track.from(record: record, artwork: artwork)
+                    continuation.resume(returning: result)
                 }
-
-                guard let first = tracks.first else { continue }
-                let albumArtwork: UIImage?
-                if let data = albumInfo?.coverArtData {
-                    albumArtwork = ImageCache.shared.imageFromData(data)
-                } else {
-                    albumArtwork = tracks.first(where: { $0.artwork != nil })?.artwork
-                }
-
-                loadedAlbums.append(Album(
-                    title: first.albumTitle,
-                    artist: first.artist,
-                    artwork: albumArtwork,
-                    tracks: tracks,
-                    year: albumInfo?.year,
-                    genre: albumInfo?.genre
-                ))
             }
 
             albums = loadedAlbums
@@ -271,75 +291,56 @@ final class Library: LibraryProviding {
     }
 
     private func logLibraryState() {
-        AppLogger.info("=== LIBRARY: \(albums.count) albums, \(allTracks.count) tracks ===", category: .content)
-        for album in albums {
-            AppLogger.info("  [\(album.artist)] \(album.title) — \(album.tracks.count) tracks", category: .content)
-            for track in album.tracks.prefix(3) {
-                AppLogger.debug("    #\(track.trackNumber) \(track.title)", category: .content)
-            }
-            if album.tracks.count > 3 {
-                AppLogger.debug("    ... +\(album.tracks.count - 3) more", category: .content)
-            }
-        }
+        AppLogger.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
     }
 
     private func enrichMissingMetadata() async {
-        do {
-            let albumsWithTracks = try db.fetchAlbumsWithTracks()
-            var enrichedAny = false
+        var enrichedAny = false
 
-            for (albumInfo, tracks) in albumsWithTracks {
-                guard let first = tracks.first else { continue }
-                if albumInfo?.coverArtData != nil { continue }
-                if let lastFetched = albumInfo?.lastFetched,
-                   Date().timeIntervalSince(lastFetched) < 24 * 3600 {
-                    continue
-                }
-
-                AppLogger.info("Enriching: \(first.artist) — \(first.albumTitle)", category: .content)
-
-                let result = await MetadataEnrichmentService.shared.enrichAlbum(
-                    title: first.albumTitle, artist: first.artist
-                )
-
-                if result.coverArtData != nil || result.year != nil || result.genre != nil {
-                    enrichedAny = true
-                }
-
-                do {
-                    var info = try db.fetchOrCreateAlbumInfo(title: first.albumTitle, artist: first.artist)
-                    info.coverArtURL = result.coverArtURL ?? info.coverArtURL
-                    info.coverArtData = result.coverArtData ?? info.coverArtData
-                    info.musicBrainzID = result.musicBrainzID ?? info.musicBrainzID
-                    info.year = result.year ?? info.year
-                    info.genre = result.genre ?? info.genre
-                    info.lastFetched = Date()
-                    try db.updateAlbumInfo(info)
-
-                    if result.coverArtData != nil {
-                        AppLogger.info("  Got cover art for \(first.albumTitle)", category: .content)
-                    }
-
-                    if let artistBio = result.artistBio {
-                        var artist = try db.fetchOrCreateArtist(name: first.artist)
-                        artist.bio = artistBio
-                        artist.imageURL = result.artistImageURL ?? artist.imageURL
-                        artist.musicBrainzID = result.artistMusicBrainzID ?? artist.musicBrainzID
-                        artist.lastFetched = Date()
-                        try db.updateArtist(artist)
-                    }
-                } catch {
-                    AppLogger.error("Enrichment save failed: \(error.localizedDescription)", category: .database)
-                }
+        for album in albums {
+            let albumInfo = try? db.fetchAlbumInfo(title: album.title, artist: album.artist)
+            if albumInfo?.coverArtData != nil { continue }
+            if let lastFetched = albumInfo?.lastFetched,
+               Date().timeIntervalSince(lastFetched) < 24 * 3600 {
+                continue
             }
 
-            if enrichedAny {
-                await loadFromDatabase()
-                NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
-                AppLogger.info("UI refreshed with enriched metadata", category: .content)
+            AppLogger.info("Enriching: \(album.artist) — \(album.title)", category: .content)
+
+            let result = await MetadataEnrichmentService.shared.enrichAlbum(
+                title: album.title, artist: album.artist
+            )
+
+            if result.coverArtData != nil || result.year != nil || result.genre != nil {
+                enrichedAny = true
             }
-        } catch {
-            AppLogger.error("Enrichment failed: \(error.localizedDescription)", category: .database)
+
+            do {
+                var info = try db.fetchOrCreateAlbumInfo(title: album.title, artist: album.artist)
+                info.coverArtURL = result.coverArtURL ?? info.coverArtURL
+                info.coverArtData = result.coverArtData ?? info.coverArtData
+                info.musicBrainzID = result.musicBrainzID ?? info.musicBrainzID
+                info.year = result.year ?? info.year
+                info.genre = result.genre ?? info.genre
+                info.lastFetched = Date()
+                try db.updateAlbumInfo(info)
+
+                if let artistBio = result.artistBio {
+                    var artist = try db.fetchOrCreateArtist(name: album.artist)
+                    artist.bio = artistBio
+                    artist.imageURL = result.artistImageURL ?? artist.imageURL
+                    artist.musicBrainzID = result.artistMusicBrainzID ?? artist.musicBrainzID
+                    artist.lastFetched = Date()
+                    try db.updateArtist(artist)
+                }
+            } catch {
+                AppLogger.error("Enrichment save failed: \(error.localizedDescription)", category: .database)
+            }
+        }
+
+        if enrichedAny {
+            await loadFromDatabase()
+            NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         }
     }
 

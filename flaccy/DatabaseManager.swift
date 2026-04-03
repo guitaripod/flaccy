@@ -369,6 +369,12 @@ final class DatabaseManager {
                        Column("title").collating(.localizedCaseInsensitiveCompare).asc)
                 .fetchAll(db)
 
+            let allAlbumInfos = try AlbumInfoRecord.fetchAll(db)
+            var albumInfoByKey = [String: AlbumInfoRecord]()
+            for info in allAlbumInfos {
+                albumInfoByKey["\(info.title)\0\(info.artist)"] = info
+            }
+
             let grouped: [(key: String, tracks: [TrackRecord])] = {
                 var order: [String] = []
                 var map: [String: [TrackRecord]] = [:]
@@ -382,15 +388,10 @@ final class DatabaseManager {
                 return order.map { (key: $0, tracks: map[$0]!) }
             }()
 
-            var results: [(album: AlbumInfoRecord?, tracks: [TrackRecord])] = []
-            for group in grouped {
-                guard let first = group.tracks.first else { continue }
-                let albumInfo = try AlbumInfoRecord
-                    .filter(Column("title") == first.albumTitle && Column("artist") == first.artist)
-                    .fetchOne(db)
-                results.append((album: albumInfo, tracks: group.tracks))
+            return grouped.compactMap { group in
+                guard group.tracks.first != nil else { return nil }
+                return (album: albumInfoByKey[group.key], tracks: group.tracks)
             }
-            return results
         }
     }
 
