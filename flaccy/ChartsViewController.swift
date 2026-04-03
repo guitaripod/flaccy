@@ -1,7 +1,7 @@
 import Combine
 import UIKit
 
-final class ChartsViewController: UIViewController {
+final class ChartsViewController: UIViewController, SonglinkShareable {
 
     private let viewModel = ChartsViewModel()
     private let audioPlayer: AudioPlaying
@@ -310,7 +310,17 @@ final class ChartsViewController: UIViewController {
             ToastView.show("Added to queue", in: self.view, style: .info)
         }
 
-        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu])
+        let share = UIAction(
+            title: "Share",
+            image: UIImage(systemName: "square.and.arrow.up")
+        ) { [weak self] _ in
+            guard let self else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
+        }
+        let shareMenu = UIMenu(options: .displayInline, children: [share])
+
+        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu, shareMenu])
     }
 }
 

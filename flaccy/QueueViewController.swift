@@ -1,6 +1,6 @@
 import UIKit
 
-final class QueueViewController: UIViewController {
+final class QueueViewController: UIViewController, SonglinkShareable {
 
     private enum Section: Int, CaseIterable {
         case nowPlaying
@@ -243,7 +243,13 @@ extension QueueViewController: UITableViewDelegate {
                 let queueIndex = AudioPlayer.shared.currentIndex + 1 + indexPath.row
                 AudioPlayer.shared.removeFromQueue(at: queueIndex)
             }
-            return UIMenu(children: [viewArtist, removeAction])
+            let share = UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
+                guard let self else { return }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
+            }
+            let shareMenu = UIMenu(options: .displayInline, children: [share])
+            return UIMenu(children: [viewArtist, removeAction, shareMenu])
         }
     }
 

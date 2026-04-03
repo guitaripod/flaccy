@@ -1,6 +1,6 @@
 import UIKit
 
-final class PlaylistDetailViewController: UIViewController {
+final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
 
     private let playlistId: Int64
     private let playlistName: String
@@ -278,5 +278,32 @@ extension PlaylistDetailViewController: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         impactLight.impactOccurred()
         audioPlayer.play(tracks, startingAt: indexPath.row)
+    }
+
+    func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        let track = tracks[indexPath.row]
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            guard let self else { return nil }
+
+            let playNext = UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
+                AudioPlayer.shared.insertNext(track)
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                ToastView.show("Playing next", in: self.view, style: .info)
+            }
+
+            let addToQueue = UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { _ in
+                AudioPlayer.shared.addToQueue(track)
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                ToastView.show("Added to queue", in: self.view, style: .info)
+            }
+
+            let share = UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { _ in
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
+            }
+            let shareMenu = UIMenu(options: .displayInline, children: [share])
+
+            return UIMenu(children: [playNext, addToQueue, shareMenu])
+        }
     }
 }

@@ -1,6 +1,6 @@
 import UIKit
 
-final class AlbumDetailViewController: UIViewController {
+final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
     private let album: Album
     private let audioPlayer: AudioPlaying
@@ -166,12 +166,21 @@ final class AlbumDetailViewController: UIViewController {
         shuffleButton.configuration?.cornerStyle = .capsule
         shuffleButton.addAction(UIAction { [weak self] _ in self?.shuffleTapped() }, for: .touchUpInside)
 
+        let shareAlbumButton = UIButton(configuration: .plain())
+        shareAlbumButton.configuration?.image = UIImage(systemName: "square.and.arrow.up")
+        shareAlbumButton.configuration?.baseForegroundColor = .secondaryLabel
+        shareAlbumButton.addAction(UIAction { [weak self] _ in
+            guard let self else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self.shareAlbumViaSonglink(title: self.album.title, artist: self.album.artist, from: self.view)
+        }, for: .touchUpInside)
+
         let buttonStack = UIStackView(arrangedSubviews: [playButton, shuffleButton])
         buttonStack.axis = .horizontal
         buttonStack.spacing = 12
         buttonStack.distribution = .fillEqually
 
-        let mainStack = UIStackView(arrangedSubviews: [artworkShadow, infoStack, buttonStack])
+        let mainStack = UIStackView(arrangedSubviews: [artworkShadow, infoStack, buttonStack, shareAlbumButton])
         mainStack.axis = .vertical
         mainStack.spacing = 16
         mainStack.setCustomSpacing(24, after: infoStack)
@@ -323,7 +332,17 @@ extension AlbumDetailViewController: UITableViewDelegate {
             ToastView.show("Added to queue", in: self.view, style: .info)
         }
 
-        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu])
+        let share = UIAction(
+            title: "Share",
+            image: UIImage(systemName: "square.and.arrow.up")
+        ) { [weak self] _ in
+            guard let self else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
+        }
+        let shareMenu = UIMenu(options: .displayInline, children: [share])
+
+        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu, shareMenu])
     }
 
     private func promptNewPlaylistAndAdd(trackFileURL: String) {

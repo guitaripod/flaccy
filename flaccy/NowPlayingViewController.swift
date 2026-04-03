@@ -3,7 +3,7 @@ import AVKit
 import Combine
 import UIKit
 
-final class NowPlayingViewController: UIViewController {
+final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     private let viewModel = NowPlayingViewModel()
     private var cancellables = Set<AnyCancellable>()
@@ -84,7 +84,19 @@ final class NowPlayingViewController: UIViewController {
             self?.presentLyrics()
         }, for: .touchUpInside)
 
-        let topRow = UIStackView(arrangedSubviews: [dragHandle, topSpacer, airplayButton, sleepTimerButton, lyricsButton, queueButton])
+        let shareButton = UIButton(type: .system)
+        shareButton.setImage(
+            UIImage(systemName: "square.and.arrow.up", withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)),
+            for: .normal
+        )
+        shareButton.tintColor = .secondaryLabel
+        shareButton.addAction(UIAction { [weak self] _ in
+            guard let self, let track = AudioPlayer.shared.currentTrack else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
+        }, for: .touchUpInside)
+
+        let topRow = UIStackView(arrangedSubviews: [dragHandle, topSpacer, airplayButton, sleepTimerButton, shareButton, lyricsButton, queueButton])
         topRow.alignment = .center
         topRow.spacing = 16
 

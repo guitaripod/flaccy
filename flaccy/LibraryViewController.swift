@@ -2,7 +2,7 @@ import Combine
 import UIKit
 import UniformTypeIdentifiers
 
-final class LibraryViewController: UIViewController {
+final class LibraryViewController: UIViewController, SonglinkShareable {
 
     private let viewModel = LibraryViewModel()
     private var collectionView: UICollectionView!
@@ -561,7 +561,17 @@ final class LibraryViewController: UIViewController {
             children: playlistActions
         )
 
-        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu])
+        let share = UIAction(
+            title: "Share",
+            image: UIImage(systemName: "square.and.arrow.up")
+        ) { [weak self] _ in
+            guard let self else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
+        }
+        let shareMenu = UIMenu(options: .displayInline, children: [share])
+
+        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu, shareMenu])
     }
 }
 
@@ -620,7 +630,13 @@ extension LibraryViewController: UICollectionViewDelegate {
                     }
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
-                return UIMenu(children: [playAction, shuffleAction, playNextAction, addToQueueAction])
+                let shareAlbum = UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
+                    guard let self else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    self.shareAlbumViaSonglink(title: album.title, artist: album.artist, from: self.view)
+                }
+                let shareMenu = UIMenu(options: .displayInline, children: [shareAlbum])
+                return UIMenu(children: [playAction, shuffleAction, playNextAction, addToQueueAction, shareMenu])
             }
         case .song(let track):
             return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
