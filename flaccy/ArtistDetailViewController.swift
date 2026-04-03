@@ -29,8 +29,29 @@ nonisolated struct ArtistHeaderInfo: Hashable, Sendable {
 
 final class ArtistDetailViewController: UIViewController {
 
+    enum AlbumSort: String, CaseIterable {
+        case title, year, trackCount
+
+        var displayName: String {
+            switch self {
+            case .title: "Title"
+            case .year: "Year"
+            case .trackCount: "Track Count"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .title: "textformat.abc"
+            case .year: "calendar"
+            case .trackCount: "number"
+            }
+        }
+    }
+
     private let artistName: String
     private var albums: [Album]
+    private var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "artistDetailAlbumSort") ?? "") ?? .title
     private var bio: String?
     private var artistImageURL: String?
     private var collectionView: UICollectionView!
@@ -51,10 +72,53 @@ final class ArtistDetailViewController: UIViewController {
         view.backgroundColor = .systemBackground
         navigationItem.largeTitleDisplayMode = .never
 
+        setupSortMenu()
         fetchArtistInfo()
+        sortAlbums()
         setupCollectionView()
         configureDataSource()
         applySnapshot()
+    }
+
+    private func setupSortMenu() {
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            image: UIImage(systemName: "arrow.up.arrow.down"),
+            menu: buildSortMenu()
+        )
+    }
+
+    private func buildSortMenu() -> UIMenu {
+        let actions = AlbumSort.allCases.map { sort in
+            UIAction(
+                title: sort.displayName,
+                image: UIImage(systemName: sort.icon),
+                state: albumSort == sort ? .on : .off
+            ) { [weak self] _ in
+                guard let self else { return }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                self.albumSort = sort
+                UserDefaults.standard.set(sort.rawValue, forKey: "artistDetailAlbumSort")
+                self.setupSortMenu()
+                self.sortAlbums()
+                self.applySnapshot()
+            }
+        }
+        return UIMenu(title: "Sort By", children: actions)
+    }
+
+    private func sortAlbums() {
+        switch albumSort {
+        case .title:
+            albums.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .year:
+            albums.sort {
+                let y0 = $0.year ?? "9999"
+                let y1 = $1.year ?? "9999"
+                return y0 == y1 ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : y0 < y1
+            }
+        case .trackCount:
+            albums.sort { $0.tracks.count > $1.tracks.count }
+        }
     }
 
     private func fetchArtistInfo() {

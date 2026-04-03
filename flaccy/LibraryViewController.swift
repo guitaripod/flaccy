@@ -10,6 +10,7 @@ final class LibraryViewController: UIViewController {
     private let segmentedControl = UISegmentedControl(items: ["Albums", "Songs", "Artists", "Playlists"])
     private var cancellables = Set<AnyCancellable>()
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
+    private let sectionIndexView = SectionIndexView()
     private let loadingOverlay = UIView()
     private let loadingSpinner = UIActivityIndicatorView(style: .large)
     private let loadingLabel = UILabel()
@@ -22,7 +23,7 @@ final class LibraryViewController: UIViewController {
         imageView.contentMode = .scaleAspectFit
 
         let label = UILabel()
-        label.text = "Tap + to import FLAC files"
+        label.text = "Import files from Settings"
         label.textColor = .secondaryLabel
         label.font = .preferredFont(forTextStyle: .body)
 
@@ -48,16 +49,15 @@ final class LibraryViewController: UIViewController {
             image: UIImage(systemName: "gearshape"),
             primaryAction: UIAction { [weak self] _ in self?.presentSettings() }
         )
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
-            systemItem: .add, primaryAction: UIAction { [weak self] _ in self?.importTapped() }
-        )
 
         setupSearchController()
         setupSegmentedControl()
         setupCollectionView()
+        setupSectionIndex()
         configureDataSource()
         setupLoadingOverlay()
         bindViewModel()
+        updateRightBarButton(for: .albums)
 
         Task {
             await viewModel.loadLibrary()
@@ -85,21 +85,81 @@ final class LibraryViewController: UIViewController {
             self.viewModel.switchSegment(to: segment)
             self.collectionView.setCollectionViewLayout(self.createLayout(for: segment), animated: true)
             self.updateRightBarButton(for: segment)
+            self.updateSectionIndex()
         }, for: .valueChanged)
         navigationItem.titleView = segmentedControl
     }
 
     private func updateRightBarButton(for segment: LibraryViewModel.Segment) {
         switch segment {
+        case .albums:
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                image: UIImage(systemName: "arrow.up.arrow.down"),
+                menu: albumSortMenu()
+            )
+        case .songs:
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                image: UIImage(systemName: "arrow.up.arrow.down"),
+                menu: songSortMenu()
+            )
+        case .artists:
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                image: UIImage(systemName: "arrow.up.arrow.down"),
+                menu: artistSortMenu()
+            )
         case .playlists:
             navigationItem.rightBarButtonItem = UIBarButtonItem(
                 systemItem: .add, primaryAction: UIAction { [weak self] _ in self?.createPlaylistTapped() }
             )
-        default:
-            navigationItem.rightBarButtonItem = UIBarButtonItem(
-                systemItem: .add, primaryAction: UIAction { [weak self] _ in self?.importTapped() }
-            )
         }
+    }
+
+    private func albumSortMenu() -> UIMenu {
+        let actions = LibraryViewModel.AlbumSort.allCases.map { sort in
+            UIAction(
+                title: sort.displayName,
+                image: UIImage(systemName: sort.icon),
+                state: viewModel.albumSort == sort ? .on : .off
+            ) { [weak self] _ in
+                self?.impactLight.impactOccurred()
+                self?.viewModel.setAlbumSort(sort)
+                self?.updateRightBarButton(for: .albums)
+                self?.updateSectionIndex()
+            }
+        }
+        return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
+    }
+
+    private func songSortMenu() -> UIMenu {
+        let actions = LibraryViewModel.SongSort.allCases.map { sort in
+            UIAction(
+                title: sort.displayName,
+                image: UIImage(systemName: sort.icon),
+                state: viewModel.songSort == sort ? .on : .off
+            ) { [weak self] _ in
+                self?.impactLight.impactOccurred()
+                self?.viewModel.setSongSort(sort)
+                self?.updateRightBarButton(for: .songs)
+                self?.updateSectionIndex()
+            }
+        }
+        return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
+    }
+
+    private func artistSortMenu() -> UIMenu {
+        let actions = LibraryViewModel.ArtistSort.allCases.map { sort in
+            UIAction(
+                title: sort.displayName,
+                image: UIImage(systemName: sort.icon),
+                state: viewModel.artistSort == sort ? .on : .off
+            ) { [weak self] _ in
+                self?.impactLight.impactOccurred()
+                self?.viewModel.setArtistSort(sort)
+                self?.updateRightBarButton(for: .artists)
+                self?.updateSectionIndex()
+            }
+        }
+        return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
     }
 
     private func createPlaylistTapped() {
@@ -137,6 +197,33 @@ final class LibraryViewController: UIViewController {
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+    }
+
+    private func setupSectionIndex() {
+        sectionIndexView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(sectionIndexView)
+
+        NSLayoutConstraint.activate([
+            sectionIndexView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
+            sectionIndexView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
+            sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
+        ])
+
+        sectionIndexView.onSelectIndex = { [weak self] letter in
+            guard let self,
+                  let itemIndex = self.viewModel.indexOfFirstItem(forLetter: letter) else { return }
+            let section = self.viewModel.currentSegment == .albums && self.viewModel.recentlyPlayedAlbums.count > 0
+                && self.dataSource.snapshot().numberOfSections > 1 ? 1 : 0
+            let indexPath = IndexPath(item: itemIndex, section: section)
+            self.collectionView.scrollToItem(at: indexPath, at: .top, animated: false)
+        }
+    }
+
+    private func updateSectionIndex() {
+        let titles = viewModel.indexTitles()
+        sectionIndexView.update(titles: titles)
+        sectionIndexView.isHidden = titles.count < 5 || viewModel.currentSegment == .playlists
     }
 
     private func setupLoadingOverlay() {
@@ -286,6 +373,7 @@ final class LibraryViewController: UIViewController {
                         self.createLayout(for: .albums), animated: false
                     )
                 }
+                self.updateSectionIndex()
             }
             .store(in: &cancellables)
 
@@ -378,6 +466,17 @@ final class LibraryViewController: UIViewController {
         }
     }
 
+    private func presentSettings() {
+        impactLight.impactOccurred()
+        let settings = SettingsViewController()
+        settings.onImportFiles = { [weak self] in
+            self?.importTapped()
+        }
+        let nav = UINavigationController(rootViewController: settings)
+        nav.modalPresentationStyle = .pageSheet
+        present(nav, animated: true)
+    }
+
     private func importTapped() {
         impactLight.impactOccurred()
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio])
@@ -386,14 +485,84 @@ final class LibraryViewController: UIViewController {
         present(picker, animated: true)
     }
 
-    private func presentSettings() {
-        impactLight.impactOccurred()
-        let settings = SettingsViewController()
-        let nav = UINavigationController(rootViewController: settings)
-        nav.modalPresentationStyle = .pageSheet
-        present(nav, animated: true)
-    }
+    private func buildSongContextMenu(for track: Track) -> UIMenu {
+        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let trackPath = track.fileURL.standardizedFileURL.path
+        let docsPath = docsDir.path
+        let relativeURL: String
+        if trackPath.hasPrefix(docsPath) {
+            let rel = String(trackPath.dropFirst(docsPath.count))
+            relativeURL = rel.hasPrefix("/") ? String(rel.dropFirst()) : rel
+        } else {
+            relativeURL = track.fileURL.lastPathComponent
+        }
 
+        let playNext = UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { [weak self] _ in
+            guard let self else { return }
+            AudioPlayer.shared.insertNext(track)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            ToastView.show("Playing next", in: self.view, style: .info)
+        }
+
+        let addToQueue = UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { [weak self] _ in
+            guard let self else { return }
+            AudioPlayer.shared.addToQueue(track)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            ToastView.show("Added to queue", in: self.view, style: .info)
+        }
+
+        var playlistActions: [UIMenuElement] = []
+        do {
+            let playlists = try DatabaseManager.shared.fetchAllPlaylists()
+            for playlist in playlists {
+                guard let playlistId = playlist.id else { continue }
+                let action = UIAction(title: playlist.name, image: UIImage(systemName: "music.note.list")) { [weak self] _ in
+                    guard let self else { return }
+                    do {
+                        try DatabaseManager.shared.addTrackToPlaylist(playlistId: playlistId, trackFileURL: relativeURL)
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        ToastView.show("Added to \(playlist.name)", in: self.view, style: .success)
+                    } catch {
+                        AppLogger.error("Failed to add to playlist: \(error.localizedDescription)", category: .database)
+                    }
+                }
+                playlistActions.append(action)
+            }
+        } catch {
+            AppLogger.error("Failed to fetch playlists: \(error.localizedDescription)", category: .database)
+        }
+
+        let newPlaylistAction = UIAction(title: "New Playlist\u{2026}", image: UIImage(systemName: "plus")) { [weak self] _ in
+            guard let self else { return }
+            let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
+            alert.addTextField { $0.placeholder = "Playlist name"; $0.autocapitalizationType = .words }
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Create", style: .default) { _ in
+                guard let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces),
+                      !name.isEmpty else { return }
+                do {
+                    let playlist = try DatabaseManager.shared.createPlaylist(name: name)
+                    if let id = playlist.id {
+                        try DatabaseManager.shared.addTrackToPlaylist(playlistId: id, trackFileURL: relativeURL)
+                    }
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    ToastView.show("Added to \(name)", in: self.view, style: .success)
+                } catch {
+                    AppLogger.error("Failed to create playlist: \(error.localizedDescription)", category: .database)
+                }
+            })
+            self.present(alert, animated: true)
+        }
+        playlistActions.append(newPlaylistAction)
+
+        let addToPlaylistMenu = UIMenu(
+            title: "Add to Playlist",
+            image: UIImage(systemName: "text.badge.plus"),
+            children: playlistActions
+        )
+
+        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu])
+    }
 }
 
 extension LibraryViewController: UICollectionViewDelegate {
@@ -424,33 +593,41 @@ extension LibraryViewController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemsAt indexPaths: [IndexPath], point: CGPoint) -> UIContextMenuConfiguration? {
         guard let indexPath = indexPaths.first,
-              let item = dataSource.itemIdentifier(for: indexPath),
-              case .album(let album) = item else { return nil }
+              let item = dataSource.itemIdentifier(for: indexPath) else { return nil }
 
-        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-            let playAction = UIAction(title: "Play", image: UIImage(systemName: "play.fill")) { _ in
-                AudioPlayer.shared.play(album.tracks, startingAt: 0)
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            }
-            let shuffleAction = UIAction(title: "Shuffle", image: UIImage(systemName: "shuffle")) { _ in
-                var shuffled = album.tracks
-                shuffled.shuffle()
-                AudioPlayer.shared.play(shuffled, startingAt: 0)
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            }
-            let playNextAction = UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
-                for track in album.tracks.reversed() {
-                    AudioPlayer.shared.insertNext(track)
+        switch item {
+        case .album(let album):
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+                let playAction = UIAction(title: "Play", image: UIImage(systemName: "play.fill")) { _ in
+                    AudioPlayer.shared.play(album.tracks, startingAt: 0)
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 }
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-            }
-            let addToQueueAction = UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { _ in
-                for track in album.tracks {
-                    AudioPlayer.shared.addToQueue(track)
+                let shuffleAction = UIAction(title: "Shuffle", image: UIImage(systemName: "shuffle")) { _ in
+                    var shuffled = album.tracks
+                    shuffled.shuffle()
+                    AudioPlayer.shared.play(shuffled, startingAt: 0)
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 }
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                let playNextAction = UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
+                    for track in album.tracks.reversed() {
+                        AudioPlayer.shared.insertNext(track)
+                    }
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+                let addToQueueAction = UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { _ in
+                    for track in album.tracks {
+                        AudioPlayer.shared.addToQueue(track)
+                    }
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+                return UIMenu(children: [playAction, shuffleAction, playNextAction, addToQueueAction])
             }
-            return UIMenu(children: [playAction, shuffleAction, playNextAction, addToQueueAction])
+        case .song(let track):
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+                self?.buildSongContextMenu(for: track)
+            }
+        default:
+            return nil
         }
     }
 }

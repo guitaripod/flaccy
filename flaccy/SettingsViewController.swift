@@ -2,6 +2,8 @@ import UIKit
 
 final class SettingsViewController: UITableViewController {
 
+    var onImportFiles: (() -> Void)?
+
     private enum Section: Int, CaseIterable {
         case lastFM
         case playback
@@ -42,7 +44,7 @@ final class SettingsViewController: UITableViewController {
         switch Section(rawValue: section)! {
         case .lastFM: return pendingScrobbleCount > 0 ? 2 : 1
         case .playback: return 2
-        case .library: return 3
+        case .library: return 4
         case .about: return 1
         }
     }
@@ -67,8 +69,9 @@ final class SettingsViewController: UITableViewController {
             return indexPath.row == 0 ? gaplessPlaybackCell() : audioQualityCell()
         case .library:
             switch indexPath.row {
-            case 0: return rescanCell()
-            case 1: return libraryStatsCell()
+            case 0: return importFilesCell()
+            case 1: return rescanCell()
+            case 2: return libraryStatsCell()
             default: return storageCell()
             }
         case .about:
@@ -90,6 +93,8 @@ final class SettingsViewController: UITableViewController {
             break
         case .library:
             if indexPath.row == 0 {
+                handleImportTap()
+            } else if indexPath.row == 1 {
                 handleRescanTap()
             }
         case .about:
@@ -101,7 +106,7 @@ final class SettingsViewController: UITableViewController {
         switch Section(rawValue: indexPath.section)! {
         case .lastFM: return true
         case .playback: return false
-        case .library: return indexPath.row == 0
+        case .library: return indexPath.row <= 1
         case .about: return false
         }
     }
@@ -198,6 +203,45 @@ final class SettingsViewController: UITableViewController {
         }
 
         return cell
+    }
+
+    private func importFilesCell() -> UITableViewCell {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+
+        let icon = UIImageView(image: UIImage(systemName: "square.and.arrow.down"))
+        icon.tintColor = .tintColor
+        icon.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "Import Files"
+        label.font = .preferredFont(forTextStyle: .body)
+        label.textColor = .tintColor
+
+        let stack = UIStackView(arrangedSubviews: [icon, label])
+        stack.axis = .horizontal
+        stack.spacing = 12
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        cell.contentView.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            icon.widthAnchor.constraint(equalToConstant: 22),
+            icon.heightAnchor.constraint(equalToConstant: 22),
+            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
+        ])
+
+        return cell
+    }
+
+    private func handleImportTap() {
+        impactLight.impactOccurred()
+        dismiss(animated: true) { [weak self] in
+            self?.onImportFiles?()
+        }
     }
 
     private func rescanCell() -> UITableViewCell {

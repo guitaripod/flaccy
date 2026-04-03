@@ -46,6 +46,68 @@ final class LibraryViewModel {
         case playlists
     }
 
+    enum AlbumSort: String, CaseIterable {
+        case title, artist, year, recentlyAdded
+
+        var displayName: String {
+            switch self {
+            case .title: "Title"
+            case .artist: "Artist"
+            case .year: "Year"
+            case .recentlyAdded: "Recently Added"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .title: "textformat.abc"
+            case .artist: "person"
+            case .year: "calendar"
+            case .recentlyAdded: "clock"
+            }
+        }
+    }
+
+    enum SongSort: String, CaseIterable {
+        case title, artist, recentlyPlayed, dateAdded
+
+        var displayName: String {
+            switch self {
+            case .title: "Title"
+            case .artist: "Artist"
+            case .recentlyPlayed: "Recently Played"
+            case .dateAdded: "Date Added"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .title: "textformat.abc"
+            case .artist: "person"
+            case .recentlyPlayed: "clock"
+            case .dateAdded: "calendar"
+            }
+        }
+    }
+
+    enum ArtistSort: String, CaseIterable {
+        case name, albumCount
+
+        var displayName: String {
+            switch self {
+            case .name: "Name"
+            case .albumCount: "Album Count"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .name: "textformat.abc"
+            case .albumCount: "number"
+            }
+        }
+    }
+
     typealias Snapshot = NSDiffableDataSourceSnapshot<Int, LibraryItem>
 
     private let library: LibraryProviding
@@ -62,6 +124,9 @@ final class LibraryViewModel {
 
     private(set) var currentSegment: Segment = .albums
     private var searchQuery: String = ""
+    private(set) var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "albumSort") ?? "") ?? .title
+    private(set) var songSort: SongSort = SongSort(rawValue: UserDefaults.standard.string(forKey: "songSort") ?? "") ?? .title
+    private(set) var artistSort: ArtistSort = ArtistSort(rawValue: UserDefaults.standard.string(forKey: "artistSort") ?? "") ?? .name
 
     var isEmpty: Bool {
         switch currentSegment {
@@ -72,33 +137,87 @@ final class LibraryViewModel {
         }
     }
 
-    var albums: [Album] { library.albums }
+    var sortedAlbums: [Album] {
+        switch albumSort {
+        case .title:
+            return library.albums.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .artist:
+            return library.albums.sorted {
+                let cmp = $0.artist.localizedCaseInsensitiveCompare($1.artist)
+                return cmp == .orderedSame ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : cmp == .orderedAscending
+            }
+        case .year:
+            return library.albums.sorted {
+                let y0 = $0.year ?? "9999"
+                let y1 = $1.year ?? "9999"
+                return y0 == y1 ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : y0 < y1
+            }
+        case .recentlyAdded:
+            let dateAdded: [String: Date]
+            do {
+                let rows = try DatabaseManager.shared.fetchAllTracks()
+                var map = [String: Date]()
+                for r in rows {
+                    let key = "\(r.albumTitle)\0\(r.artist)"
+                    if let existing = map[key] {
+                        if r.dateAdded > existing { map[key] = r.dateAdded }
+                    } else {
+                        map[key] = r.dateAdded
+                    }
+                }
+                dateAdded = map
+            } catch { dateAdded = [:] }
+            return library.albums.sorted {
+                let d0 = dateAdded["\($0.title)\0\($0.artist)"] ?? .distantPast
+                let d1 = dateAdded["\($1.title)\0\($1.artist)"] ?? .distantPast
+                return d0 > d1
+            }
+        }
+    }
 
     var sortedSongs: [Track] {
         let tracks = library.allTracks
         guard !tracks.isEmpty else { return tracks }
 
-        let sortKeys: [(fileURL: String, lastPlayed: Date?)]
-        do {
-            sortKeys = try DatabaseManager.shared.fetchTrackSortKeys()
-        } catch {
+        switch songSort {
+        case .title:
             return tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-        }
-
-        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
-        var lastPlayedByURL = [URL: Date]()
-        for key in sortKeys {
-            if let date = key.lastPlayed {
-                lastPlayedByURL[docsDir.appendingPathComponent(key.fileURL)] = date
+        case .artist:
+            return tracks.sorted {
+                let cmp = $0.artist.localizedCaseInsensitiveCompare($1.artist)
+                return cmp == .orderedSame ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : cmp == .orderedAscending
             }
+        case .recentlyPlayed:
+            let sortKeys: [(fileURL: String, lastPlayed: Date?)]
+            do {
+                sortKeys = try DatabaseManager.shared.fetchTrackSortKeys()
+            } catch {
+                return tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            }
+            let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+            var lastPlayedByURL = [URL: Date]()
+            for key in sortKeys {
+                if let date = key.lastPlayed {
+                    lastPlayedByURL[docsDir.appendingPathComponent(key.fileURL)] = date
+                }
+            }
+            let played = tracks.filter { lastPlayedByURL[$0.fileURL] != nil }
+                .sorted { (lastPlayedByURL[$0.fileURL] ?? .distantPast) > (lastPlayedByURL[$1.fileURL] ?? .distantPast) }
+            let unplayed = tracks.filter { lastPlayedByURL[$0.fileURL] == nil }
+                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            return played + unplayed
+        case .dateAdded:
+            return tracks
         }
+    }
 
-        let played = tracks.filter { lastPlayedByURL[$0.fileURL] != nil }
-            .sorted { (lastPlayedByURL[$0.fileURL] ?? .distantPast) > (lastPlayedByURL[$1.fileURL] ?? .distantPast) }
-        let unplayed = tracks.filter { lastPlayedByURL[$0.fileURL] == nil }
-            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-
-        return played + unplayed
+    var sortedArtists: [ArtistItem] {
+        switch artistSort {
+        case .name:
+            return artists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .albumCount:
+            return artists.sorted { $0.albumCount > $1.albumCount }
+        }
     }
 
     var recentlyPlayedAlbums: [Album] {
@@ -178,6 +297,68 @@ final class LibraryViewModel {
         await library.importFiles(from: urls)
     }
 
+    func setAlbumSort(_ sort: AlbumSort) {
+        albumSort = sort
+        UserDefaults.standard.set(sort.rawValue, forKey: "albumSort")
+        snapshotPublisher.send(buildSnapshot())
+    }
+
+    func setSongSort(_ sort: SongSort) {
+        songSort = sort
+        UserDefaults.standard.set(sort.rawValue, forKey: "songSort")
+        snapshotPublisher.send(buildSnapshot())
+    }
+
+    func setArtistSort(_ sort: ArtistSort) {
+        artistSort = sort
+        UserDefaults.standard.set(sort.rawValue, forKey: "artistSort")
+        snapshotPublisher.send(buildSnapshot())
+    }
+
+    func indexTitles() -> [String] {
+        let items: [String]
+        switch currentSegment {
+        case .albums:
+            items = sortedAlbums.map { albumSort == .artist ? $0.artist : $0.title }
+        case .songs:
+            items = sortedSongs.map { songSort == .artist ? $0.artist : $0.title }
+        case .artists:
+            items = sortedArtists.map(\.name)
+        case .playlists:
+            return []
+        }
+        var seen = Set<String>()
+        var titles = [String]()
+        for item in items {
+            let letter = String(item.prefix(1)).uppercased()
+            let key = letter.first?.isLetter == true ? letter : "#"
+            if seen.insert(key).inserted {
+                titles.append(key)
+            }
+        }
+        return titles
+    }
+
+    func indexOfFirstItem(forLetter letter: String) -> Int? {
+        let items: [(String, Int)]
+        switch currentSegment {
+        case .albums:
+            items = sortedAlbums.enumerated().map { (albumSort == .artist ? $1.artist : $1.title, $0) }
+        case .songs:
+            items = sortedSongs.enumerated().map { (songSort == .artist ? $1.artist : $1.title, $0) }
+        case .artists:
+            items = sortedArtists.enumerated().map { ($1.name, $0) }
+        case .playlists:
+            return nil
+        }
+        for (name, index) in items {
+            let first = String(name.prefix(1)).uppercased()
+            let key = first.first?.isLetter == true ? first : "#"
+            if key == letter { return index }
+        }
+        return nil
+    }
+
     func switchSegment(to segment: Segment) {
         currentSegment = segment
         snapshotPublisher.send(buildSnapshot())
@@ -202,9 +383,10 @@ final class LibraryViewModel {
         let query = searchQuery.lowercased()
         switch currentSegment {
         case .albums:
+            let all = sortedAlbums
             let filtered = query.isEmpty
-                ? library.albums
-                : library.albums.filter {
+                ? all
+                : all.filter {
                     $0.title.localizedCaseInsensitiveContains(query)
                         || $0.artist.localizedCaseInsensitiveContains(query)
                         || $0.tracks.contains { $0.title.localizedCaseInsensitiveContains(query) }
@@ -232,8 +414,8 @@ final class LibraryViewModel {
         case .artists:
             snapshot.appendSections([0])
             let filtered = query.isEmpty
-                ? artists
-                : artists.filter { $0.name.localizedCaseInsensitiveContains(query) }
+                ? sortedArtists
+                : sortedArtists.filter { $0.name.localizedCaseInsensitiveContains(query) }
             snapshot.appendItems(filtered.map { .artist($0) })
         case .playlists:
             snapshot.appendSections([0])
