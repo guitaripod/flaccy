@@ -128,6 +128,11 @@ final class LibraryViewModel {
     private(set) var songSort: SongSort = SongSort(rawValue: UserDefaults.standard.string(forKey: "songSort") ?? "") ?? .title
     private(set) var artistSort: ArtistSort = ArtistSort(rawValue: UserDefaults.standard.string(forKey: "artistSort") ?? "") ?? .name
 
+    private var cachedSortedAlbums: [Album]?
+    private var cachedSortedSongs: [Track]?
+    private var cachedSortedArtists: [ArtistItem]?
+    private var searchDebounceTask: Task<Void, Never>?
+
     var isEmpty: Bool {
         switch currentSegment {
         case .albums: return library.albums.isEmpty
@@ -138,52 +143,39 @@ final class LibraryViewModel {
     }
 
     var sortedAlbums: [Album] {
+        if let cached = cachedSortedAlbums { return cached }
+        let result: [Album]
         switch albumSort {
         case .title:
-            return library.albums.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            result = library.albums.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         case .artist:
-            return library.albums.sorted {
+            result = library.albums.sorted {
                 let cmp = $0.artist.localizedCaseInsensitiveCompare($1.artist)
                 return cmp == .orderedSame ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : cmp == .orderedAscending
             }
         case .year:
-            return library.albums.sorted {
+            result = library.albums.sorted {
                 let y0 = $0.year ?? "9999"
                 let y1 = $1.year ?? "9999"
                 return y0 == y1 ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : y0 < y1
             }
         case .recentlyAdded:
-            let dateAdded: [String: Date]
-            do {
-                let rows = try DatabaseManager.shared.fetchAllTracks()
-                var map = [String: Date]()
-                for r in rows {
-                    let key = "\(r.albumTitle)\0\(r.artist)"
-                    if let existing = map[key] {
-                        if r.dateAdded > existing { map[key] = r.dateAdded }
-                    } else {
-                        map[key] = r.dateAdded
-                    }
-                }
-                dateAdded = map
-            } catch { dateAdded = [:] }
-            return library.albums.sorted {
-                let d0 = dateAdded["\($0.title)\0\($0.artist)"] ?? .distantPast
-                let d1 = dateAdded["\($1.title)\0\($1.artist)"] ?? .distantPast
-                return d0 > d1
-            }
+            result = library.albums.reversed()
         }
+        cachedSortedAlbums = result
+        return result
     }
 
     var sortedSongs: [Track] {
+        if let cached = cachedSortedSongs { return cached }
         let tracks = library.allTracks
         guard !tracks.isEmpty else { return tracks }
-
+        let result: [Track]
         switch songSort {
         case .title:
-            return tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            result = tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         case .artist:
-            return tracks.sorted {
+            result = tracks.sorted {
                 let cmp = $0.artist.localizedCaseInsensitiveCompare($1.artist)
                 return cmp == .orderedSame ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : cmp == .orderedAscending
             }
@@ -192,7 +184,9 @@ final class LibraryViewModel {
             do {
                 sortKeys = try DatabaseManager.shared.fetchTrackSortKeys()
             } catch {
-                return tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                result = tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                cachedSortedSongs = result
+                return result
             }
             let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
             var lastPlayedByURL = [URL: Date]()
@@ -205,19 +199,25 @@ final class LibraryViewModel {
                 .sorted { (lastPlayedByURL[$0.fileURL] ?? .distantPast) > (lastPlayedByURL[$1.fileURL] ?? .distantPast) }
             let unplayed = tracks.filter { lastPlayedByURL[$0.fileURL] == nil }
                 .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-            return played + unplayed
+            result = played + unplayed
         case .dateAdded:
-            return tracks
+            result = tracks
         }
+        cachedSortedSongs = result
+        return result
     }
 
     var sortedArtists: [ArtistItem] {
+        if let cached = cachedSortedArtists { return cached }
+        let result: [ArtistItem]
         switch artistSort {
         case .name:
-            return artists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            result = artists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         case .albumCount:
-            return artists.sorted { $0.albumCount > $1.albumCount }
+            result = artists.sorted { $0.albumCount > $1.albumCount }
         }
+        cachedSortedArtists = result
+        return result
     }
 
     var recentlyPlayedAlbums: [Album] {
@@ -299,18 +299,21 @@ final class LibraryViewModel {
 
     func setAlbumSort(_ sort: AlbumSort) {
         albumSort = sort
+        cachedSortedAlbums = nil
         UserDefaults.standard.set(sort.rawValue, forKey: "albumSort")
         snapshotPublisher.send(buildSnapshot())
     }
 
     func setSongSort(_ sort: SongSort) {
         songSort = sort
+        cachedSortedSongs = nil
         UserDefaults.standard.set(sort.rawValue, forKey: "songSort")
         snapshotPublisher.send(buildSnapshot())
     }
 
     func setArtistSort(_ sort: ArtistSort) {
         artistSort = sort
+        cachedSortedArtists = nil
         UserDefaults.standard.set(sort.rawValue, forKey: "artistSort")
         snapshotPublisher.send(buildSnapshot())
     }
@@ -375,7 +378,12 @@ final class LibraryViewModel {
 
     func search(query: String) {
         searchQuery = query
-        snapshotPublisher.send(buildSnapshot())
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task {
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled else { return }
+            snapshotPublisher.send(buildSnapshot())
+        }
     }
 
     private func buildSnapshot() -> Snapshot {
@@ -389,7 +397,6 @@ final class LibraryViewModel {
                 : all.filter {
                     $0.title.localizedCaseInsensitiveContains(query)
                         || $0.artist.localizedCaseInsensitiveContains(query)
-                        || $0.tracks.contains { $0.title.localizedCaseInsensitiveContains(query) }
                 }
             let recent = query.isEmpty ? recentlyPlayedAlbums : []
             if !recent.isEmpty {
@@ -441,7 +448,14 @@ final class LibraryViewModel {
     }
 
     @objc private func libraryDidUpdate() {
+        invalidateSortCaches()
         snapshotPublisher.send(buildSnapshot())
+    }
+
+    private func invalidateSortCaches() {
+        cachedSortedAlbums = nil
+        cachedSortedSongs = nil
+        cachedSortedArtists = nil
     }
 
     @objc private func playbackDidChange() {
