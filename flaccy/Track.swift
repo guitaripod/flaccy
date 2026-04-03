@@ -35,4 +35,19 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
             dbID: record.id
         )
     }
+
+    static func from(light record: LightTrackRecord, artwork: UIImage?) -> Track {
+        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let absoluteURL = docsDir.appendingPathComponent(record.fileURL)
+        return Track(
+            fileURL: absoluteURL,
+            title: record.title,
+            artist: record.artist,
+            albumTitle: record.albumTitle,
+            trackNumber: record.trackNumber,
+            duration: record.duration,
+            artwork: artwork,
+            dbID: record.id
+        )
+    }
 }

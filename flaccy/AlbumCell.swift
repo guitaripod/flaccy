@@ -60,13 +60,25 @@ final class AlbumCell: UICollectionViewCell {
     func configure(with album: Album) {
         titleLabel.text = album.title
         artistLabel.text = album.artist
+
         if let artwork = album.artwork {
             artworkView.contentMode = .scaleAspectFill
             artworkView.image = artwork
+        } else if let cached = AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist) {
+            artworkView.contentMode = .scaleAspectFill
+            artworkView.image = cached
         } else {
             artworkView.contentMode = .center
             artworkView.image = UIImage(systemName: "music.note")
+            AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { [weak self] image in
+                guard let self, self.titleLabel.text == album.title else { return }
+                if let image {
+                    self.artworkView.contentMode = .scaleAspectFill
+                    self.artworkView.image = image
+                }
+            }
         }
+
         var metaParts: [String] = []
         if let year = album.year, !year.isEmpty { metaParts.append(year) }
         if let genre = album.genre, !genre.isEmpty { metaParts.append(genre) }

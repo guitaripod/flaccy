@@ -22,6 +22,20 @@ nonisolated struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Ide
     var aiAnalyzed: Bool
 }
 
+nonisolated struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable {
+
+    var id: Int64?
+    var fileURL: String
+    var title: String
+    var artist: String
+    var albumTitle: String
+    var trackNumber: Int
+    var duration: Double
+    var dateAdded: Date
+    var lastPlayed: Date?
+    var playCount: Int
+}
+
 nonisolated struct ArtistRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
 
     static let databaseTableName = "artists"
@@ -357,6 +371,77 @@ final class DatabaseManager {
                 track.lastPlayed = Date()
                 try track.update(db)
             }
+        }
+    }
+
+    func fetchAlbumsWithTracksLightweight() throws -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
+        try dbQueue.read { db in
+            let columns: [Column] = [
+                Column("id"), Column("fileURL"), Column("title"), Column("artist"),
+                Column("albumTitle"), Column("trackNumber"), Column("duration"),
+                Column("dateAdded"), Column("lastPlayed"), Column("playCount"),
+            ]
+
+            let allTracks = try LightTrackRecord.fetchAll(db,
+                TrackRecord.select(columns)
+                    .order(Column("albumTitle").collating(.localizedCaseInsensitiveCompare).asc,
+                           Column("artist").collating(.localizedCaseInsensitiveCompare).asc,
+                           Column("trackNumber").asc,
+                           Column("title").collating(.localizedCaseInsensitiveCompare).asc)
+            )
+
+            let allAlbumInfos = try Row.fetchAll(db, sql: """
+                SELECT id, title, artist, coverArtURL, musicBrainzID, year, genre, lastFetched,
+                       CASE WHEN coverArtData IS NOT NULL THEN 1 ELSE 0 END AS hasCoverArt
+                FROM albumInfo
+            """)
+            var albumInfoByKey = [String: AlbumInfoRecord]()
+            var albumsWithArt = Set<String>()
+            for row in allAlbumInfos {
+                let info = AlbumInfoRecord(
+                    id: row["id"],
+                    title: row["title"],
+                    artist: row["artist"],
+                    coverArtURL: row["coverArtURL"],
+                    coverArtData: nil,
+                    musicBrainzID: row["musicBrainzID"],
+                    year: row["year"],
+                    genre: row["genre"],
+                    lastFetched: row["lastFetched"]
+                )
+                let key = "\(info.title)\0\(info.artist)"
+                albumInfoByKey[key] = info
+                if (row["hasCoverArt"] as? Int) == 1 {
+                    albumsWithArt.insert(key)
+                }
+            }
+
+            var order: [String] = []
+            var map: [String: [LightTrackRecord]] = [:]
+            for track in allTracks {
+                let key = "\(track.albumTitle)\0\(track.artist)"
+                if map[key] == nil { order.append(key) }
+                map[key, default: []].append(track)
+            }
+
+            return order.compactMap { key in
+                guard let tracks = map[key], !tracks.isEmpty else { return nil }
+                return (album: albumInfoByKey[key], tracks: tracks)
+            }
+        }
+    }
+
+    func fetchAlbumArtwork(title: String, artist: String) throws -> Data? {
+        try dbQueue.read { db in
+            if let row = try Row.fetchOne(db, sql: "SELECT coverArtData FROM albumInfo WHERE title = ? AND artist = ? AND coverArtData IS NOT NULL", arguments: [title, artist]),
+               let data: Data = row["coverArtData"] {
+                return data
+            }
+            if let row = try Row.fetchOne(db, sql: "SELECT artworkData FROM tracks WHERE albumTitle = ? AND artist = ? AND artworkData IS NOT NULL LIMIT 1", arguments: [title, artist]),
+               let data: Data = row["artworkData"] {
+                return data
+            }
+            return nil
         }
     }
 

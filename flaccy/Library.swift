@@ -249,38 +249,30 @@ final class Library: LibraryProviding {
 
     private func loadFromDatabase() async {
         do {
-            let albumsWithTracks = try db.fetchAlbumsWithTracks()
+            let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight()
 
-            let loadedAlbums: [Album] = await withCheckedContinuation { continuation in
-                DispatchQueue.global(qos: .userInitiated).async {
-                    var result: [Album] = []
-                    result.reserveCapacity(albumsWithTracks.count)
+            var loadedAlbums: [Album] = []
+            loadedAlbums.reserveCapacity(albumsWithTracks.count)
 
-                    for (albumInfo, trackRecords) in albumsWithTracks {
-                        let albumArt: UIImage? = {
-                            if let data = albumInfo?.coverArtData { return UIImage(data: data) }
-                            for record in trackRecords {
-                                if let data = record.artworkData { return UIImage(data: data) }
-                            }
-                            return nil
-                        }()
+            for (albumInfo, trackRecords) in albumsWithTracks {
+                let cachedArt = AlbumArtworkCache.shared.artwork(
+                    forAlbum: trackRecords.first?.albumTitle ?? "",
+                    artist: trackRecords.first?.artist ?? ""
+                )
 
-                        let tracks = trackRecords.map { record in
-                            Track.from(record: record, artwork: albumArt)
-                        }
-
-                        guard let first = tracks.first else { continue }
-                        result.append(Album(
-                            title: first.albumTitle,
-                            artist: first.artist,
-                            artwork: albumArt,
-                            tracks: tracks,
-                            year: albumInfo?.year,
-                            genre: albumInfo?.genre
-                        ))
-                    }
-                    continuation.resume(returning: result)
+                let tracks = trackRecords.map { record in
+                    Track.from(light: record, artwork: cachedArt)
                 }
+
+                guard let first = tracks.first else { continue }
+                loadedAlbums.append(Album(
+                    title: first.albumTitle,
+                    artist: first.artist,
+                    artwork: cachedArt,
+                    tracks: tracks,
+                    year: albumInfo?.year,
+                    genre: albumInfo?.genre
+                ))
             }
 
             albums = loadedAlbums
