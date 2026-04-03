@@ -12,7 +12,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let sectionIndexView = SectionIndexView()
     private let loadingOverlay = UIView()
-    private let loadingSpinner = UIActivityIndicatorView(style: .large)
+    private let loadingIconView = UIImageView()
     private let loadingLabel = UILabel()
     private lazy var emptyStateView: UIView = {
         let container = UIView()
@@ -45,19 +45,25 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            image: UIImage(systemName: "gearshape"),
-            primaryAction: UIAction { [weak self] _ in self?.presentSettings() }
-        )
+
+        setupLoadingOverlay()
+        loadingOverlay.isHidden = false
+        loadingOverlay.alpha = 1
+        startLoadingPulse()
+        navigationController?.setNavigationBarHidden(true, animated: false)
 
         setupSearchController()
         setupSegmentedControl()
         setupCollectionView()
         setupSectionIndex()
         configureDataSource()
-        setupLoadingOverlay()
         bindViewModel()
         updateRightBarButton(for: .albums)
+
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            image: UIImage(systemName: "gearshape"),
+            primaryAction: UIAction { [weak self] _ in self?.presentSettings() }
+        )
 
         Task {
             await viewModel.loadLibrary()
@@ -83,7 +89,6 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self.impactLight.impactOccurred()
             let segment = LibraryViewModel.Segment(rawValue: self.segmentedControl.selectedSegmentIndex) ?? .albums
             self.viewModel.switchSegment(to: segment)
-            self.collectionView.setCollectionViewLayout(self.createLayout(for: segment), animated: true)
             self.updateRightBarButton(for: segment)
             self.updateSectionIndex()
         }, for: .valueChanged)
@@ -204,7 +209,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         view.addSubview(sectionIndexView)
 
         NSLayoutConstraint.activate([
-            sectionIndexView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
+            sectionIndexView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
             sectionIndexView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
@@ -227,19 +232,24 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     private func setupLoadingOverlay() {
-        loadingOverlay.backgroundColor = .systemBackground.withAlphaComponent(0.85)
+        loadingOverlay.backgroundColor = .systemBackground
         loadingOverlay.isHidden = true
         loadingOverlay.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(loadingOverlay)
 
-        loadingSpinner.color = .label
-        loadingLabel.text = "Scanning library..."
-        loadingLabel.font = .preferredFont(forTextStyle: .subheadline)
-        loadingLabel.textColor = .secondaryLabel
+        loadingIconView.image = UIImage(systemName: "waveform.circle.fill")
+        loadingIconView.tintColor = .tintColor
+        loadingIconView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 64, weight: .thin)
+        loadingIconView.contentMode = .scaleAspectFit
 
-        let stack = UIStackView(arrangedSubviews: [loadingSpinner, loadingLabel])
+        let titleLabel = UILabel()
+        titleLabel.text = "flaccy"
+        titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        titleLabel.textAlignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [loadingIconView, titleLabel])
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = 8
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
         loadingOverlay.addSubview(stack)
@@ -250,8 +260,24 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             loadingOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             loadingOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             stack.centerXAnchor.constraint(equalTo: loadingOverlay.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: loadingOverlay.centerYAnchor, constant: -40),
+            stack.centerYAnchor.constraint(equalTo: loadingOverlay.centerYAnchor, constant: -60),
         ])
+    }
+
+    private func startLoadingPulse() {
+        loadingIconView.layer.removeAnimation(forKey: "pulse")
+        let pulse = CABasicAnimation(keyPath: "opacity")
+        pulse.fromValue = 1.0
+        pulse.toValue = 0.3
+        pulse.duration = 1.2
+        pulse.autoreverses = true
+        pulse.repeatCount = .infinity
+        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        loadingIconView.layer.add(pulse, forKey: "pulse")
+    }
+
+    private func stopLoadingPulse() {
+        loadingIconView.layer.removeAnimation(forKey: "pulse")
     }
 
     private func configureDataSource() {
@@ -267,11 +293,30 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             content.imageProperties.cornerRadius = 22
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
             content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
-            if let artwork = artist.artwork {
-                content.image = artwork
+
+            let firstAlbum = Library.shared.albums.first { $0.artist == artist.name }
+            let cachedArt: UIImage? = firstAlbum.flatMap { AlbumArtworkCache.shared.artwork(forAlbum: $0.title, artist: $0.artist) }
+
+            if let cachedArt {
+                content.image = cachedArt
             } else {
                 content.image = UIImage(systemName: "person.crop.circle.fill")
                 content.imageProperties.tintColor = .tertiaryLabel
+                if let firstAlbum {
+                    AlbumArtworkCache.shared.loadArtwork(forAlbum: firstAlbum.title, artist: firstAlbum.artist) { [weak cell] image in
+                        guard let cell, let image else { return }
+                        var updated = UIListContentConfiguration.subtitleCell()
+                        updated.text = artist.name
+                        updated.secondaryText = "\(artist.albumCount) album\(artist.albumCount == 1 ? "" : "s")"
+                        updated.secondaryTextProperties.color = .secondaryLabel
+                        updated.imageProperties.cornerRadius = 22
+                        updated.imageProperties.maximumSize = CGSize(width: 44, height: 44)
+                        updated.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
+                        updated.image = image
+                        cell.contentConfiguration = updated
+                        cell.accessories = [.disclosureIndicator()]
+                    }
+                }
             }
             cell.contentConfiguration = content
             cell.accessories = [.disclosureIndicator()]
@@ -321,11 +366,23 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             content.imageProperties.cornerRadius = 4
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
             content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
-            if let artwork = track.artwork {
-                content.image = artwork
+            if let cached = AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist) {
+                content.image = cached
             } else {
                 content.image = UIImage(systemName: "music.note")
                 content.imageProperties.tintColor = .tertiaryLabel
+                AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak cell] image in
+                    guard let cell, let image else { return }
+                    var updated = UIListContentConfiguration.subtitleCell()
+                    updated.text = track.title
+                    updated.secondaryText = "\(track.artist) · \(track.albumTitle)"
+                    updated.secondaryTextProperties.color = .secondaryLabel
+                    updated.imageProperties.cornerRadius = 4
+                    updated.imageProperties.maximumSize = CGSize(width: 44, height: 44)
+                    updated.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
+                    updated.image = image
+                    cell.contentConfiguration = updated
+                }
             }
             cell.contentConfiguration = content
         }
@@ -366,13 +423,11 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] snapshot in
                 guard let self else { return }
-                self.dataSource.applySnapshotUsingReloadData(snapshot)
+                self.collectionView.setCollectionViewLayout(
+                    self.createLayout(for: self.viewModel.currentSegment), animated: false
+                )
+                self.dataSource.apply(snapshot, animatingDifferences: false)
                 self.collectionView.backgroundView = self.viewModel.isEmpty ? self.emptyStateView : nil
-                if self.viewModel.currentSegment == .albums {
-                    self.collectionView.setCollectionViewLayout(
-                        self.createLayout(for: .albums), animated: false
-                    )
-                }
                 self.updateSectionIndex()
             }
             .store(in: &cancellables)
@@ -382,11 +437,17 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             .sink { [weak self] isLoading in
                 guard let self else { return }
                 if isLoading {
-                    self.loadingSpinner.startAnimating()
                     self.loadingOverlay.isHidden = false
+                    self.loadingOverlay.alpha = 1
+                    self.startLoadingPulse()
                 } else {
-                    self.loadingSpinner.stopAnimating()
-                    self.loadingOverlay.isHidden = true
+                    self.stopLoadingPulse()
+                    self.navigationController?.setNavigationBarHidden(false, animated: false)
+                    UIView.animate(withDuration: 0.5, delay: 0.05, options: .curveEaseOut) {
+                        self.loadingOverlay.alpha = 0
+                    } completion: { _ in
+                        self.loadingOverlay.isHidden = true
+                    }
                 }
             }
             .store(in: &cancellables)
