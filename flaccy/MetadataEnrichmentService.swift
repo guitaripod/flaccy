@@ -50,10 +50,8 @@ final class MetadataEnrichmentService {
         }
 
         if coverArtData == nil {
-            let itunesResult = await fetchiTunesArtwork(artist: artist, album: title)
-            if let result = itunesResult {
-                coverArtData = result.data
-                coverArtURL = result.url
+            if let data = await MusicKitService.shared.fetchAlbumArtwork(title: title, artist: artist) {
+                coverArtData = data
             }
         }
 
@@ -119,48 +117,6 @@ final class MetadataEnrichmentService {
             return MusicBrainzRelease(id: id, year: year, genre: genre)
         } catch {
             AppLogger.error("MusicBrainz lookup failed: \(error.localizedDescription)", category: .content)
-            return nil
-        }
-    }
-
-    private struct ITunesArtworkResult {
-        let data: Data
-        let url: String
-    }
-
-    private func fetchiTunesArtwork(artist: String, album: String) async -> ITunesArtworkResult? {
-        await generalThrottle.throttle()
-
-        guard let encodedTerm = "\(artist) \(album)"
-            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
-        else {
-            return nil
-        }
-
-        let urlString = "https://itunes.apple.com/search?term=\(encodedTerm)&entity=album&limit=1"
-        guard let url = URL(string: urlString) else { return nil }
-
-        do {
-            let (data, response) = try await session.data(from: url)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                return nil
-            }
-
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            let results = json?["results"] as? [[String: Any]]
-
-            guard let artworkUrl100 = results?.first?["artworkUrl100"] as? String else {
-                return nil
-            }
-
-            let highResURL = artworkUrl100.replacingOccurrences(of: "100x100", with: "600x600")
-            guard let imageData = await downloadImageData(from: highResURL) else {
-                return nil
-            }
-
-            return ITunesArtworkResult(data: imageData, url: highResURL)
-        } catch {
-            AppLogger.error("iTunes lookup failed: \(error.localizedDescription)", category: .content)
             return nil
         }
     }
