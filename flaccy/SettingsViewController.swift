@@ -43,7 +43,7 @@ final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch Section(rawValue: section)! {
         case .lastFM: return pendingScrobbleCount > 0 ? 2 : 1
-        case .playback: return 2
+        case .playback: return 1
         case .library: return 4
         case .about: return 1
         }
@@ -66,7 +66,7 @@ final class SettingsViewController: UITableViewController {
             }
             return pendingScrobblesCell()
         case .playback:
-            return indexPath.row == 0 ? gaplessPlaybackCell() : audioQualityCell()
+            return gaplessPlaybackCell()
         case .library:
             switch indexPath.row {
             case 0: return importFilesCell()
@@ -368,36 +368,6 @@ final class SettingsViewController: UITableViewController {
         }, for: .valueChanged)
 
         let stack = UIStackView(arrangedSubviews: [label, toggle])
-        stack.axis = .horizontal
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        return cell
-    }
-
-    private func audioQualityCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.selectionStyle = .none
-
-        let titleLabel = UILabel()
-        titleLabel.text = "Audio Quality"
-        titleLabel.font = .preferredFont(forTextStyle: .body)
-
-        let valueLabel = UILabel()
-        valueLabel.text = "FLAC (Lossless)"
-        valueLabel.font = .preferredFont(forTextStyle: .body)
-        valueLabel.textColor = .secondaryLabel
-
-        let stack = UIStackView(arrangedSubviews: [titleLabel, valueLabel])
         stack.axis = .horizontal
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
