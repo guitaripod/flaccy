@@ -89,11 +89,19 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         artworkView.tintColor = .tertiaryLabel
         artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 60, weight: .ultraLight)
 
-        if let artwork = album.artwork {
+        let cached = album.artwork
+            ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist)
+
+        if let artwork = cached {
             artworkView.image = artwork
         } else {
             artworkView.contentMode = .center
             artworkView.image = UIImage(systemName: "music.note")
+            AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { image in
+                guard let image else { return }
+                artworkView.contentMode = .scaleAspectFill
+                artworkView.image = image
+            }
         }
 
         artworkView.translatesAutoresizingMaskIntoConstraints = false

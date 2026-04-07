@@ -17,6 +17,7 @@ nonisolated struct ArtistHeaderInfo: Hashable, Sendable {
     let albumCount: Int
     let trackCount: Int
     let artwork: UIImage?
+    let firstAlbumTitle: String?
 
     nonisolated static func == (lhs: ArtistHeaderInfo, rhs: ArtistHeaderInfo) -> Bool {
         lhs.name == rhs.name
@@ -241,7 +242,10 @@ final class ArtistDetailViewController: UIViewController {
 
         let totalTracks = albums.reduce(0) { $0 + $1.tracks.count }
         let genre = albums.compactMap(\.genre).first
-        let artwork = albums.first?.artwork
+        let firstAlbum = albums.first
+        let artwork = firstAlbum.flatMap { album in
+            album.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist)
+        }
 
         let headerInfo = ArtistHeaderInfo(
             name: artistName,
@@ -249,7 +253,8 @@ final class ArtistDetailViewController: UIViewController {
             genre: genre,
             albumCount: albums.count,
             trackCount: totalTracks,
-            artwork: artwork
+            artwork: artwork,
+            firstAlbumTitle: firstAlbum?.title
         )
         snapshot.appendItems([.header(headerInfo)], toSection: .header)
         snapshot.appendItems(albums.map { .album($0) }, toSection: .albums)
@@ -368,6 +373,13 @@ final class ArtistHeaderCell: UICollectionViewCell {
         } else {
             artistImageView.contentMode = .center
             artistImageView.image = UIImage(systemName: "person.crop.circle.fill")
+            if let albumTitle = info.firstAlbumTitle {
+                AlbumArtworkCache.shared.loadArtwork(forAlbum: albumTitle, artist: info.name) { [weak self] image in
+                    guard let self, let image else { return }
+                    self.artistImageView.contentMode = .scaleAspectFill
+                    self.artistImageView.image = image
+                }
+            }
         }
 
         if let genre = info.genre, !genre.isEmpty {

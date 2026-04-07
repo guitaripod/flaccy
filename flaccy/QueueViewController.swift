@@ -339,12 +339,20 @@ final class QueueTrackCell: UITableViewCell {
         trackTitleLabel.text = track.title
         trackArtistLabel.text = track.artist
 
-        if let artwork = track.artwork {
+        let cached = track.artwork
+            ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+
+        if let artwork = cached {
             artworkView.contentMode = .scaleAspectFill
             artworkView.image = artwork
         } else {
             artworkView.contentMode = .center
             artworkView.image = UIImage(systemName: "music.note")
+            AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
+                guard let self, let image else { return }
+                self.artworkView.contentMode = .scaleAspectFill
+                self.artworkView.image = image
+            }
         }
 
         let total = Int(track.duration)
