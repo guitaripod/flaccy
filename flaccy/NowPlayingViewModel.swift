@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import UIKit
 
 final class NowPlayingViewModel {
 
@@ -8,7 +9,7 @@ final class NowPlayingViewModel {
         let artist: String
         let albumTitle: String
         let artistAlbum: String
-        let artwork: Any?
+        let artwork: UIImage?
         let isPlaying: Bool
         let currentTime: TimeInterval
         let duration: TimeInterval
@@ -17,6 +18,7 @@ final class NowPlayingViewModel {
     }
 
     private let audioPlayer: AudioPlaying
+    private var loadingArtworkKey: String?
 
     let statePublisher = PassthroughSubject<State, Never>()
 
@@ -62,6 +64,23 @@ final class NowPlayingViewModel {
         let total = audioPlayer.duration
         let remaining = max(0, total - current)
 
+        var artwork: UIImage?
+        if let track {
+            artwork = track.artwork
+                ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+
+            if artwork == nil {
+                let key = "\(track.albumTitle)\0\(track.artist)"
+                if loadingArtworkKey != key {
+                    loadingArtworkKey = key
+                    AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] _ in
+                        self?.loadingArtworkKey = nil
+                        self?.stateChanged()
+                    }
+                }
+            }
+        }
+
         return State(
             title: track?.title ?? "",
             artist: track?.artist ?? "",
@@ -69,7 +88,7 @@ final class NowPlayingViewModel {
             artistAlbum: [track?.artist, track?.albumTitle]
                 .compactMap { $0 }
                 .joined(separator: " — "),
-            artwork: track?.artwork,
+            artwork: artwork,
             isPlaying: audioPlayer.isPlaying,
             currentTime: current,
             duration: total,

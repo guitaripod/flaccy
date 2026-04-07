@@ -163,18 +163,32 @@ final class MiniPlayerView: UIView {
     func configure(with track: Track, isPlaying: Bool) {
         titleLabel.text = track.title
         artistLabel.text = track.artist
-        if let artwork = track.artwork {
-            artworkView.contentMode = .scaleAspectFill
-            artworkView.image = artwork
-            updateProgressColor(from: artwork)
+
+        let cached = track.artwork
+            ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+
+        if let artwork = cached {
+            applyArtwork(artwork)
         } else {
             artworkView.contentMode = .center
             artworkView.image = UIImage(systemName: "music.note")
             progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.12)
+
+            AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
+                guard let self, let image else { return }
+                self.applyArtwork(image)
+            }
         }
+
         let icon = isPlaying ? "pause.fill" : "play.fill"
         let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
         playPauseButton.setImage(UIImage(systemName: icon, withConfiguration: config), for: .normal)
+    }
+
+    private func applyArtwork(_ artwork: UIImage) {
+        artworkView.contentMode = .scaleAspectFill
+        artworkView.image = artwork
+        updateProgressColor(from: artwork)
     }
 
     private func updateProgressColor(from image: UIImage) {

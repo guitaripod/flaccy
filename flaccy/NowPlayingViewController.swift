@@ -270,7 +270,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             playingFromLabel.isHidden = false
         }
 
-        if let image = state.artwork as? UIImage {
+        if let image = state.artwork {
             artworkView.contentMode = .scaleAspectFill
             artworkView.image = image
         } else {

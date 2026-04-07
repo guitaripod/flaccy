@@ -411,6 +411,7 @@ final class AudioPlayer: AudioPlaying {
 
         AppLogger.info("Now playing: \(track.title) - \(track.artist)", category: .content)
         updateNowPlayingInfo()
+        ensureArtworkLoaded(for: track)
         sendNowPlayingToLastFM(track: track)
 
         if liveActivity != nil {
@@ -434,6 +435,8 @@ final class AudioPlayer: AudioPlaying {
         let nextItem = AVPlayerItem(url: queue[nextIndex].fileURL)
         if player?.canInsert(nextItem, after: player?.items().last) == true {
             player?.insert(nextItem, after: player?.items().last)
+        } else {
+            AppLogger.warning("canInsert returned false for track \(nextIndex): \(queue[nextIndex].title)", category: .content)
         }
     }
 
@@ -465,21 +468,27 @@ final class AudioPlayer: AudioPlaying {
 
         if currentIndex + 1 < queue.count {
             currentIndex += 1
+
+            guard let currentItem = player?.currentItem else {
+                AppLogger.info("Preloaded item unavailable, falling back to loadTrack", category: .content)
+                loadTrack(at: currentIndex)
+                return
+            }
+
             trackStartTime = Date()
             hasScrobbled = false
 
             let track = queue[currentIndex]
-            if let currentItem = player?.currentItem {
-                endObserver = NotificationCenter.default.addObserver(
-                    forName: .AVPlayerItemDidPlayToEndTime, object: currentItem, queue: .main
-                ) { [weak self] _ in
-                    self?.handleTrackFinished()
-                }
+            endObserver = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemDidPlayToEndTime, object: currentItem, queue: .main
+            ) { [weak self] _ in
+                self?.handleTrackFinished()
             }
 
             preloadNextItem(after: currentIndex)
             AppLogger.info("Gapless advance: \(track.title) - \(track.artist)", category: .content)
             updateNowPlayingInfo()
+            ensureArtworkLoaded(for: track)
             sendNowPlayingToLastFM(track: track)
 
             if liveActivity != nil {
@@ -608,6 +617,18 @@ final class AudioPlayer: AudioPlaying {
         }
     }
 
+    private func resolveArtwork(for track: Track) -> UIImage? {
+        track.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+    }
+
+    private func ensureArtworkLoaded(for track: Track) {
+        guard resolveArtwork(for: track) == nil else { return }
+        AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] _ in
+            self?.updateNowPlayingInfo()
+            self?.updateLiveActivity()
+        }
+    }
+
     private func updateNowPlayingInfo() {
         guard let track = currentTrack else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
@@ -623,7 +644,7 @@ final class AudioPlayer: AudioPlaying {
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
         ]
 
-        if let artwork = track.artwork {
+        if let artwork = resolveArtwork(for: track) {
             info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(
                 boundsSize: artwork.size
             ) { _ in artwork }
@@ -636,7 +657,7 @@ final class AudioPlayer: AudioPlaying {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         guard let track = currentTrack else { return }
 
-        let artworkData = track.artwork?.jpegData(compressionQuality: 0.5)
+        let artworkData = resolveArtwork(for: track)?.jpegData(compressionQuality: 0.5)
         let attributes = FlaccyActivityAttributes(artworkData: artworkData)
         let state = FlaccyActivityAttributes.ContentState(
             title: track.title,
