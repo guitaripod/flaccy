@@ -1,58 +1,24 @@
 import Foundation
 
-nonisolated enum SonglinkPlatform: String, CaseIterable, Sendable {
-    case spotify
-    case appleMusic
-    case youtubeMusic
-    case youtube
-    case tidal
-    case amazonMusic
-    case deezer
-    case soundcloud
+nonisolated struct PlatformLink: Sendable, Hashable {
+    let key: String
+    let displayName: String
+    let url: URL
+    let iconName: String
+    let tintColorHex: UInt
 
-    var displayName: String {
-        switch self {
-        case .spotify: "Spotify"
-        case .appleMusic: "Apple Music"
-        case .youtubeMusic: "YouTube Music"
-        case .youtube: "YouTube"
-        case .tidal: "Tidal"
-        case .amazonMusic: "Amazon Music"
-        case .deezer: "Deezer"
-        case .soundcloud: "SoundCloud"
-        }
+    static func == (lhs: PlatformLink, rhs: PlatformLink) -> Bool {
+        lhs.key == rhs.key
     }
 
-    var iconName: String {
-        switch self {
-        case .spotify: "waveform"
-        case .appleMusic: "music.note"
-        case .youtubeMusic: "play.rectangle.fill"
-        case .youtube: "play.rectangle"
-        case .tidal: "waveform.circle"
-        case .amazonMusic: "headphones"
-        case .deezer: "beats.headphones"
-        case .soundcloud: "cloud"
-        }
-    }
-
-    var tintColorHex: UInt {
-        switch self {
-        case .spotify: 0x1DB954
-        case .appleMusic: 0xFC3C44
-        case .youtubeMusic: 0xFF0000
-        case .youtube: 0xFF0000
-        case .tidal: 0x000000
-        case .amazonMusic: 0x25D1DA
-        case .deezer: 0xA238FF
-        case .soundcloud: 0xFF5500
-        }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(key)
     }
 }
 
 nonisolated struct SonglinkResult: Sendable {
     let pageURL: URL
-    let platformLinks: [SonglinkPlatform: URL]
+    let platformLinks: [PlatformLink]
     let title: String
     let artist: String
 }
@@ -64,6 +30,27 @@ final class SonglinkService {
     private let session: URLSession
     private let throttle = SonglinkThrottle()
     private let cache = NSCache<NSString, CachedResult>()
+
+    private static let knownPlatforms: [String: (displayName: String, iconName: String, tintColorHex: UInt, order: Int)] = [
+        "spotify": ("Spotify", "waveform", 0x1DB954, 0),
+        "appleMusic": ("Apple Music", "music.note", 0xFC3C44, 1),
+        "youtubeMusic": ("YouTube Music", "play.rectangle.fill", 0xFF0000, 2),
+        "youtube": ("YouTube", "play.rectangle", 0xFF0000, 3),
+        "tidal": ("Tidal", "waveform.circle", 0x000000, 4),
+        "amazonMusic": ("Amazon Music", "headphones", 0x25D1DA, 5),
+        "deezer": ("Deezer", "beats.headphones", 0xA238FF, 6),
+        "soundcloud": ("SoundCloud", "cloud", 0xFF5500, 7),
+        "pandora": ("Pandora", "radio", 0x224099, 8),
+        "napster": ("Napster", "opticaldisc", 0x0168DA, 9),
+        "audiomack": ("Audiomack", "waveform.badge.plus", 0xFFA500, 10),
+        "anghami": ("Anghami", "music.mic", 0x6200EA, 11),
+        "boomplay": ("Boomplay", "music.note.tv", 0xE44C4B, 12),
+        "itunes": ("iTunes", "music.note.house", 0xFC3C44, 13),
+        "yandex": ("Yandex Music", "globe", 0xFFCC00, 14),
+        "spinrilla": ("Spinrilla", "dot.radiowaves.right", 0x1A1A2E, 15),
+        "audius": ("Audius", "waveform.path", 0xCC0FE0, 16),
+        "line": ("LINE Music", "ellipsis.bubble", 0x06C755, 17),
+    ]
 
     private init() {
         let config = URLSessionConfiguration.default
@@ -139,13 +126,38 @@ final class SonglinkService {
                   let linksByPlatform = json["linksByPlatform"] as? [String: [String: Any]]
             else { return nil }
 
-            var platformLinks = [SonglinkPlatform: URL]()
-            for platform in SonglinkPlatform.allCases {
-                if let platformData = linksByPlatform[platform.rawValue],
-                   let urlString = platformData["url"] as? String,
-                   let url = URL(string: urlString) {
-                    platformLinks[platform] = url
+            var platformLinks = [PlatformLink]()
+            for (key, platformData) in linksByPlatform {
+                guard let urlString = platformData["url"] as? String,
+                      let url = URL(string: urlString)
+                else { continue }
+
+                if let known = Self.knownPlatforms[key] {
+                    platformLinks.append(PlatformLink(
+                        key: key,
+                        displayName: known.displayName,
+                        url: url,
+                        iconName: known.iconName,
+                        tintColorHex: known.tintColorHex
+                    ))
+                } else {
+                    let displayName = key
+                        .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
+                        .localizedCapitalized
+                    platformLinks.append(PlatformLink(
+                        key: key,
+                        displayName: displayName,
+                        url: url,
+                        iconName: "link",
+                        tintColorHex: 0x8E8E93
+                    ))
                 }
+            }
+
+            platformLinks.sort { a, b in
+                let orderA = Self.knownPlatforms[a.key]?.order ?? 100
+                let orderB = Self.knownPlatforms[b.key]?.order ?? 100
+                return orderA < orderB
             }
 
             return SonglinkResult(

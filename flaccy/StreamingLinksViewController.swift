@@ -9,7 +9,6 @@ final class StreamingLinksViewController: UIViewController {
 
     private let result: SonglinkResult
     private let tableView = UITableView(frame: .zero, style: .insetGrouped)
-    private var platforms: [(SonglinkPlatform, URL)] = []
 
     init(result: SonglinkResult) {
         self.result = result
@@ -31,11 +30,6 @@ final class StreamingLinksViewController: UIViewController {
                 self?.dismiss(animated: true)
             }
         )
-
-        platforms = SonglinkPlatform.allCases.compactMap { platform in
-            guard let url = result.platformLinks[platform] else { return nil }
-            return (platform, url)
-        }
 
         setupTableView()
     }
@@ -82,7 +76,7 @@ final class StreamingLinksViewController: UIViewController {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         let text = "\(result.title) by \(result.artist)"
         let activity = UIActivityViewController(activityItems: [text, url], applicationActivities: nil)
-        activity.completionWithItemsHandler = { [weak self] type, completed, _, _ in
+        activity.completionWithItemsHandler = { [weak self] _, completed, _, _ in
             if completed {
                 self?.dismiss(animated: true)
             }
@@ -115,14 +109,14 @@ extension StreamingLinksViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch Section(rawValue: section)! {
         case .universal: return 2
-        case .platforms: return platforms.count
+        case .platforms: return result.platformLinks.count
         }
     }
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         switch Section(rawValue: section)! {
         case .universal: return "Universal Link"
-        case .platforms: return "Share Platform Link"
+        case .platforms: return result.platformLinks.isEmpty ? nil : "Available On"
         }
     }
 
@@ -168,14 +162,14 @@ extension StreamingLinksViewController: UITableViewDataSource {
 
     private func platformCell(for indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: "PlatformCell")
-        let (platform, _) = platforms[indexPath.row]
+        let link = result.platformLinks[indexPath.row]
 
-        let icon = UIImageView(image: UIImage(systemName: platform.iconName))
-        icon.tintColor = colorFromHex(platform.tintColorHex)
+        let icon = UIImageView(image: UIImage(systemName: link.iconName))
+        icon.tintColor = colorFromHex(link.tintColorHex)
         icon.contentMode = .scaleAspectFit
 
         let label = UILabel()
-        label.text = platform.displayName
+        label.text = link.displayName
         label.font = .preferredFont(forTextStyle: .body)
 
         let shareIcon = UIImageView(image: UIImage(systemName: "square.and.arrow.up"))
@@ -215,8 +209,8 @@ extension StreamingLinksViewController: UITableViewDelegate {
                 copyURL(result.pageURL, label: "Universal")
             }
         case .platforms:
-            let (platform, url) = platforms[indexPath.row]
-            shareURL(url, label: platform.displayName)
+            let link = result.platformLinks[indexPath.row]
+            shareURL(link.url, label: link.displayName)
         }
     }
 
@@ -229,9 +223,9 @@ extension StreamingLinksViewController: UITableViewDelegate {
             url = result.pageURL
             label = "Universal"
         case .platforms:
-            let (platform, platformURL) = platforms[indexPath.row]
-            url = platformURL
-            label = platform.displayName
+            let link = result.platformLinks[indexPath.row]
+            url = link.url
+            label = link.displayName
         }
 
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
