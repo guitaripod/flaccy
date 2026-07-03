@@ -6,9 +6,18 @@ import UIKit
 /// any system slider and the sheet's dismiss pan defers to it. The redundant
 /// route button is hidden (AirPlay lives in the action row) and the slider
 /// gets a visible thumb and track tints matching the scrubber.
+private final class FullHeightVolumeView: MPVolumeView {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        for subview in subviews where subview is UISlider {
+            subview.frame = bounds
+        }
+    }
+}
+
 final class SystemVolumeSlider: UIView {
 
-    private let volumeView = MPVolumeView()
+    private let volumeView = FullHeightVolumeView()
     private var hasStyledSlider = false
 
     private lazy var thumbImage: UIImage = {
@@ -38,7 +47,6 @@ final class SystemVolumeSlider: UIView {
         volumeView.frame = bounds
         hideRouteButton()
         styleSliderIfNeeded()
-        internalSlider()?.frame = volumeView.bounds
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
