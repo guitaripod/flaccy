@@ -3,41 +3,105 @@ import UIKit
 final class QueueViewController: UIViewController, SonglinkShareable {
 
     private enum Section: Int, CaseIterable {
+        case history
         case nowPlaying
         case upNext
     }
 
+    private let backdropView = PaletteGradientView()
     private let tableView = UITableView(frame: .zero, style: .grouped)
+    private let headerTitleLabel = UILabel()
+    private let headerSubtitleLabel = UILabel()
     private let shuffleButton = UIButton(type: .system)
     private let repeatButton = UIButton(type: .system)
+    private let clearButton = UIButton(type: .system)
+    private var shuffleCapsule: GlassCapsule?
+    private var repeatCapsule: GlassCapsule?
+    private var clearCapsule: GlassCapsule?
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
+    private let reorderFeedback = UISelectionFeedbackGenerator()
+    private var lastPaletteKey: String?
+    private var hasAnimatedAppearance = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-        title = "Queue"
+        overrideUserInterfaceStyle = .dark
+        navigationController?.overrideUserInterfaceStyle = .dark
+        view.backgroundColor = .black
 
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            systemItem: .done,
-            primaryAction: UIAction { [weak self] _ in self?.dismiss(animated: true) }
-        )
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
-            title: "Clear", style: .plain, target: self, action: #selector(clearTapped)
-        )
-        navigationItem.rightBarButtonItem?.tintColor = .systemRed
-
+        setupNavigationBar()
+        setupBackdrop()
         setupTableView()
         setupControlsBar()
-        updateClearButton()
-        updateEmptyState()
+        setupHeaderTitle()
+        reload()
+        updatePalette()
 
         NotificationCenter.default.addObserver(self, selector: #selector(reload), name: AudioPlayer.queueDidChange, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(reload), name: AudioPlayer.trackDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(trackDidChange), name: AudioPlayer.trackDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(playbackStateDidChange), name: AudioPlayer.playbackStateDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(updateShuffleRepeat), name: AudioPlayer.shuffleRepeatDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(updateHeaderSubtitle), name: AudioPlayer.playbackProgressDidChange, object: nil)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        prepareAppearanceAnimationIfNeeded()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        runAppearanceAnimationIfNeeded()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        backdropView.frame = view.bounds
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    private func setupNavigationBar() {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        navigationItem.standardAppearance = appearance
+        navigationItem.scrollEdgeAppearance = appearance
+        navigationController?.navigationBar.tintColor = .white
+
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            systemItem: .done,
+            primaryAction: UIAction { [weak self] _ in
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                self?.dismiss(animated: true)
+            }
+        )
+    }
+
+    private func setupBackdrop() {
+        backdropView.frame = view.bounds
+        view.addSubview(backdropView)
+    }
+
+    private func setupHeaderTitle() {
+        headerTitleLabel.text = "Queue"
+        headerTitleLabel.font = .scaled(.headline, size: 17, weight: .semibold)
+        headerTitleLabel.adjustsFontForContentSizeCategory = true
+        headerTitleLabel.textColor = .white
+        headerTitleLabel.textAlignment = .center
+
+        headerSubtitleLabel.font = .scaled(.caption1, size: 12, weight: .medium)
+        headerSubtitleLabel.adjustsFontForContentSizeCategory = true
+        headerSubtitleLabel.textColor = .white.withAlphaComponent(0.55)
+        headerSubtitleLabel.textAlignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [headerTitleLabel, headerSubtitleLabel])
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 1
+        navigationItem.titleView = stack
+        updateHeaderSubtitle()
     }
 
     private func setupTableView() {
@@ -46,6 +110,9 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         tableView.register(QueueTrackCell.self, forCellReuseIdentifier: QueueTrackCell.reuseID)
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 64
+        tableView.backgroundColor = .clear
+        tableView.separatorStyle = .none
+        tableView.showsVerticalScrollIndicator = false
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.allowsSelectionDuringEditing = true
         tableView.setEditing(true, animated: false)
@@ -53,42 +120,65 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     }
 
     private func setupControlsBar() {
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
 
         shuffleButton.setImage(UIImage(systemName: "shuffle", withConfiguration: config), for: .normal)
-        shuffleButton.addAction(UIAction { _ in AudioPlayer.shared.toggleShuffle() }, for: .touchUpInside)
+        shuffleButton.accessibilityLabel = "Shuffle"
+        shuffleButton.addAction(UIAction { _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            AudioPlayer.shared.toggleShuffle()
+        }, for: .touchUpInside)
 
         repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-        repeatButton.addAction(UIAction { _ in AudioPlayer.shared.cycleRepeatMode() }, for: .touchUpInside)
+        repeatButton.accessibilityLabel = "Repeat"
+        repeatButton.addAction(UIAction { _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            AudioPlayer.shared.cycleRepeatMode()
+        }, for: .touchUpInside)
+
+        var clearConfig = UIButton.Configuration.plain()
+        clearConfig.image = UIImage(systemName: "xmark.circle", withConfiguration: config)
+        clearConfig.imagePadding = 6
+        clearConfig.attributedTitle = AttributedString(
+            "Clear",
+            attributes: AttributeContainer([.font: UIFont.scaled(.subheadline, size: 14, weight: .semibold)])
+        )
+        clearButton.configuration = clearConfig
+        clearButton.tintColor = .white.withAlphaComponent(0.85)
+        clearButton.accessibilityLabel = "Clear queue"
+        clearButton.addAction(UIAction { [weak self] _ in self?.clearTapped() }, for: .touchUpInside)
+
+        let shuffle = GlassCapsule(hosting: shuffleButton)
+        let repeats = GlassCapsule(hosting: repeatButton)
+        let clear = GlassCapsule(hosting: clearButton)
+        shuffleCapsule = shuffle
+        repeatCapsule = repeats
+        clearCapsule = clear
 
         updateShuffleRepeat()
 
-        let spacer = UIView()
-        let stack = UIStackView(arrangedSubviews: [shuffleButton, spacer, repeatButton])
-        stack.alignment = .center
+        let stack = UIStackView(arrangedSubviews: [shuffle, repeats, clear])
+        stack.distribution = .fillEqually
+        stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
-
-        let bar = UIView()
-        bar.backgroundColor = .secondarySystemBackground
-        bar.translatesAutoresizingMaskIntoConstraints = false
-        bar.addSubview(stack)
-        view.addSubview(bar)
+        view.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 32),
-            stack.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -32),
-            stack.topAnchor.constraint(equalTo: bar.topAnchor, constant: 12),
-            stack.bottomAnchor.constraint(equalTo: bar.bottomAnchor, constant: -12),
-
-            bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            bar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            stack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
 
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: bar.topAnchor),
+            tableView.bottomAnchor.constraint(equalTo: stack.topAnchor, constant: -8),
         ])
+    }
+
+    private var historyTracks: ArraySlice<Track> {
+        let player = AudioPlayer.shared
+        guard player.currentTrack != nil, player.currentIndex > 0 else { return [] }
+        return player.queue[..<player.currentIndex]
     }
 
     private var upNextTracks: ArraySlice<Track> {
@@ -97,14 +187,12 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         return player.queue[(player.currentIndex + 1)...]
     }
 
-    private func updateClearButton() {
-        navigationItem.rightBarButtonItem?.isEnabled = !AudioPlayer.shared.queue.isEmpty
-    }
-
-    @objc private func clearTapped() {
+    private func clearTapped() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         let alert = UIAlertController(title: "Clear Queue", message: "Stop playback and remove all tracks?", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { _ in
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
             AudioPlayer.shared.clearQueue()
         })
         present(alert, animated: true)
@@ -112,8 +200,70 @@ final class QueueViewController: UIViewController, SonglinkShareable {
 
     @objc private func reload() {
         tableView.reloadData()
-        updateClearButton()
+        clearCapsule?.isUserInteractionEnabled = !AudioPlayer.shared.queue.isEmpty
+        clearButton.tintColor = AudioPlayer.shared.queue.isEmpty
+            ? .white.withAlphaComponent(0.35)
+            : .white.withAlphaComponent(0.85)
+        updateHeaderSubtitle()
         updateEmptyState()
+    }
+
+    @objc private func trackDidChange() {
+        reload()
+        updatePalette()
+    }
+
+    @objc private func playbackStateDidChange() {
+        guard let cell = nowPlayingCell() else { return }
+        cell.setPlaying(AudioPlayer.shared.isPlaying)
+    }
+
+    private func nowPlayingCell() -> QueueTrackCell? {
+        let indexPath = IndexPath(row: 0, section: Section.nowPlaying.rawValue)
+        guard AudioPlayer.shared.currentTrack != nil else { return nil }
+        return tableView.cellForRow(at: indexPath) as? QueueTrackCell
+    }
+
+    private func updatePalette() {
+        guard let track = AudioPlayer.shared.currentTrack else {
+            backdropView.apply(ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy"), animated: hasAnimatedAppearance)
+            return
+        }
+        let key = "\(track.albumTitle)\0\(track.artist)"
+        guard key != lastPaletteKey else { return }
+        lastPaletteKey = key
+        let artwork = track.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+        let animated = hasAnimatedAppearance
+        ArtworkPaletteExtractor.palette(
+            for: artwork,
+            cacheKey: key,
+            fallbackSeed: "\(track.title)\(track.artist)"
+        ) { [weak self] palette in
+            self?.backdropView.apply(palette, animated: animated)
+        }
+    }
+
+    @objc private func updateHeaderSubtitle() {
+        let player = AudioPlayer.shared
+        guard !player.queue.isEmpty else {
+            headerSubtitleLabel.text = nil
+            headerSubtitleLabel.isHidden = true
+            return
+        }
+        let count = player.queue.count
+        let currentRemaining = max(0, player.duration - player.currentTime)
+        let remaining = currentRemaining + upNextTracks.reduce(0) { $0 + $1.duration }
+        let tracksPart = count == 1 ? "1 track" : "\(count) tracks"
+        headerSubtitleLabel.text = "\(tracksPart) · \(Self.formatRemaining(remaining)) left"
+        headerSubtitleLabel.isHidden = false
+    }
+
+    private static func formatRemaining(_ interval: TimeInterval) -> String {
+        let totalMinutes = Int(interval / 60)
+        if totalMinutes >= 60 {
+            return "\(totalMinutes / 60) hr \(totalMinutes % 60) min"
+        }
+        return totalMinutes >= 1 ? "\(totalMinutes) min" : "\(Int(interval)) sec"
     }
 
     private func updateEmptyState() {
@@ -125,7 +275,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         let container = UIView()
 
         let iconView = UIImageView(image: UIImage(systemName: "list.bullet"))
-        iconView.tintColor = .tertiaryLabel
+        iconView.tintColor = .white.withAlphaComponent(0.3)
         iconView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 44, weight: .thin)
         iconView.contentMode = .scaleAspectFit
 
@@ -133,7 +283,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         label.text = "Queue is empty"
         label.font = .preferredFont(forTextStyle: .body)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = .white.withAlphaComponent(0.55)
         label.textAlignment = .center
 
         let stack = UIStackView(arrangedSubviews: [iconView, label])
@@ -152,21 +302,49 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     }
 
     @objc private func updateShuffleRepeat() {
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        shuffleButton.tintColor = AudioPlayer.shared.shuffleEnabled ? .systemBlue : .secondaryLabel
+        let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
+        let shuffleActive = AudioPlayer.shared.shuffleEnabled
+        shuffleButton.tintColor = shuffleActive ? .white : .white.withAlphaComponent(0.55)
+        shuffleButton.accessibilityValue = shuffleActive ? "On" : "Off"
+        shuffleCapsule?.setActive(shuffleActive, animated: hasAnimatedAppearance)
 
-        let mode = AudioPlayer.shared.repeatMode
-        switch mode {
+        switch AudioPlayer.shared.repeatMode {
         case .off:
             repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .secondaryLabel
+            repeatButton.tintColor = .white.withAlphaComponent(0.55)
+            repeatButton.accessibilityValue = "Off"
+            repeatCapsule?.setActive(false, animated: hasAnimatedAppearance)
+            repeatCapsule?.setBadge(nil)
         case .all:
             repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .systemBlue
+            repeatButton.tintColor = .white
+            repeatButton.accessibilityValue = "All"
+            repeatCapsule?.setActive(true, animated: hasAnimatedAppearance)
+            repeatCapsule?.setBadge("ALL")
         case .one:
             repeatButton.setImage(UIImage(systemName: "repeat.1", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .systemBlue
+            repeatButton.tintColor = .white
+            repeatButton.accessibilityValue = "One"
+            repeatCapsule?.setActive(true, animated: hasAnimatedAppearance)
+            repeatCapsule?.setBadge("1")
         }
+    }
+
+    private func prepareAppearanceAnimationIfNeeded() {
+        guard !hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
+        tableView.alpha = 0
+        tableView.transform = CGAffineTransform(translationX: 0, y: 16)
+    }
+
+    private func runAppearanceAnimationIfNeeded() {
+        guard !hasAnimatedAppearance else { return }
+        hasAnimatedAppearance = true
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) { [self] in
+            tableView.alpha = 1
+            tableView.transform = .identity
+        }
+        animator.startAnimation()
     }
 }
 
@@ -176,19 +354,47 @@ extension QueueViewController: UITableViewDataSource {
         Section.allCases.count
     }
 
-    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        guard let section = Section(rawValue: section) else { return nil }
-        switch section {
-        case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? "Now Playing" : nil
-        case .upNext: return upNextTracks.isEmpty ? nil : "Up Next"
-        }
-    }
-
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         guard let section = Section(rawValue: section) else { return 0 }
         switch section {
+        case .history: return historyTracks.count
         case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? 1 : 0
         case .upNext: return upNextTracks.count
+        }
+    }
+
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        guard let section = Section(rawValue: section), let title = headerTitle(for: section) else { return nil }
+        let label = UILabel()
+        label.text = title.uppercased()
+        label.font = .scaled(.caption1, size: 12, weight: .semibold)
+        label.adjustsFontForContentSizeCategory = true
+        label.textColor = .white.withAlphaComponent(0.5)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        let container = UIView()
+        container.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -6),
+        ])
+        return container
+    }
+
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        guard let section = Section(rawValue: section), headerTitle(for: section) != nil else { return .leastNonzeroMagnitude }
+        return 34
+    }
+
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        .leastNonzeroMagnitude
+    }
+
+    private func headerTitle(for section: Section) -> String? {
+        switch section {
+        case .history: return historyTracks.isEmpty ? nil : "History"
+        case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? "Now Playing" : nil
+        case .upNext: return upNextTracks.isEmpty ? nil : "Up Next"
         }
     }
 
@@ -198,14 +404,19 @@ extension QueueViewController: UITableViewDataSource {
 
         guard let section = Section(rawValue: indexPath.section) else { return cell }
         switch section {
+        case .history:
+            let history = Array(historyTracks)
+            if indexPath.row < history.count {
+                cell.configure(with: history[indexPath.row], style: .history)
+            }
         case .nowPlaying:
             if let track = player.currentTrack {
-                cell.configure(with: track, isCurrentTrack: true, isPlaying: player.isPlaying)
+                cell.configure(with: track, style: .nowPlaying(isPlaying: player.isPlaying))
             }
         case .upNext:
             let upNext = Array(upNextTracks)
             if indexPath.row < upNext.count {
-                cell.configure(with: upNext[indexPath.row], isCurrentTrack: false, isPlaying: false)
+                cell.configure(with: upNext[indexPath.row], style: .upcoming)
             }
         }
 
@@ -213,19 +424,18 @@ extension QueueViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        guard let section = Section(rawValue: indexPath.section) else { return false }
-        return section == .upNext
+        Section(rawValue: indexPath.section) == .upNext
     }
 
     func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        guard let section = Section(rawValue: indexPath.section) else { return false }
-        return section == .upNext
+        Section(rawValue: indexPath.section) == .upNext
     }
 
     func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
         guard sourceIndexPath.section == Section.upNext.rawValue,
               destinationIndexPath.section == Section.upNext.rawValue else { return }
 
+        reorderFeedback.selectionChanged()
         let player = AudioPlayer.shared
         let sourceQueueIndex = player.currentIndex + 1 + sourceIndexPath.row
         let destQueueIndex = player.currentIndex + 1 + destinationIndexPath.row
@@ -234,7 +444,7 @@ extension QueueViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, targetIndexPathForMoveFromRowAt sourceIndexPath: IndexPath, toProposedIndexPath proposedDestinationIndexPath: IndexPath) -> IndexPath {
-        if proposedDestinationIndexPath.section == Section.nowPlaying.rawValue {
+        if proposedDestinationIndexPath.section != Section.upNext.rawValue {
             return IndexPath(row: 0, section: Section.upNext.rawValue)
         }
         return proposedDestinationIndexPath
@@ -245,13 +455,16 @@ extension QueueViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        impactLight.impactOccurred()
 
         guard let section = Section(rawValue: indexPath.section) else { return }
         switch section {
+        case .history:
+            impactLight.impactOccurred()
+            AudioPlayer.shared.jumpToIndex(indexPath.row)
         case .nowPlaying:
             break
         case .upNext:
+            impactLight.impactOccurred()
             let queueIndex = AudioPlayer.shared.currentIndex + 1 + indexPath.row
             AudioPlayer.shared.jumpToIndex(queueIndex)
         }
@@ -277,6 +490,7 @@ extension QueueViewController: UITableViewDelegate {
                 }
             }
             let removeAction = UIAction(title: "Remove", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
+                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                 let queueIndex = AudioPlayer.shared.currentIndex + 1 + indexPath.row
                 AudioPlayer.shared.removeFromQueue(at: queueIndex)
             }
@@ -294,10 +508,12 @@ extension QueueViewController: UITableViewDelegate {
         guard Section(rawValue: indexPath.section) == .upNext else { return nil }
 
         let remove = UIContextualAction(style: .destructive, title: "Remove") { _, _, completion in
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             let queueIndex = AudioPlayer.shared.currentIndex + 1 + indexPath.row
             AudioPlayer.shared.removeFromQueue(at: queueIndex)
             completion(true)
         }
+        remove.image = UIImage(systemName: "trash.fill")
 
         return UISwipeActionsConfiguration(actions: [remove])
     }
@@ -311,47 +527,166 @@ extension QueueViewController: UITableViewDelegate {
     }
 }
 
+/// Three vertical bars that bounce while playback is active — the queue's
+/// now-playing indicator. Freezes at a low, static level while paused and
+/// under Reduce Motion.
+final class PlayingBarsView: UIView {
+
+    private let barLayers: [CALayer] = (0..<3).map { _ in CALayer() }
+    private var isAnimating = false
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        for bar in barLayers {
+            bar.backgroundColor = UIColor.white.cgColor
+            bar.cornerRadius = 1.25
+            layer.addSublayer(bar)
+        }
+        isAccessibilityElement = false
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(applicationDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification, object: nil
+        )
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: 16, height: 14)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let barWidth: CGFloat = 2.5
+        let gap = (bounds.width - barWidth * 3) / 2
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (index, bar) in barLayers.enumerated() {
+            bar.bounds = CGRect(x: 0, y: 0, width: barWidth, height: bounds.height)
+            bar.position = CGPoint(x: barWidth / 2 + CGFloat(index) * (barWidth + gap), y: bounds.height / 2)
+            bar.anchorPoint = CGPoint(x: 0.5, y: 1)
+            bar.position.y = bounds.height
+        }
+        CATransaction.commit()
+        if isAnimating {
+            restartAnimation()
+        } else {
+            applyIdleScale()
+        }
+    }
+
+    func setPlaying(_ playing: Bool) {
+        let shouldAnimate = playing && !UIAccessibility.isReduceMotionEnabled
+        guard shouldAnimate != isAnimating else { return }
+        isAnimating = shouldAnimate
+        if shouldAnimate {
+            restartAnimation()
+        } else {
+            stopAnimation()
+        }
+    }
+
+    @objc private func applicationDidBecomeActive() {
+        if isAnimating { restartAnimation() }
+    }
+
+    private func restartAnimation() {
+        let durations: [CFTimeInterval] = [0.55, 0.42, 0.62]
+        let peaks: [CGFloat] = [0.95, 0.7, 0.85]
+        for (index, bar) in barLayers.enumerated() {
+            bar.removeAnimation(forKey: "bounce")
+            let bounce = CABasicAnimation(keyPath: "transform.scale.y")
+            bounce.fromValue = 0.25
+            bounce.toValue = peaks[index]
+            bounce.duration = durations[index]
+            bounce.autoreverses = true
+            bounce.repeatCount = .infinity
+            bounce.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            bar.add(bounce, forKey: "bounce")
+        }
+    }
+
+    private func stopAnimation() {
+        for bar in barLayers {
+            bar.removeAnimation(forKey: "bounce")
+        }
+        applyIdleScale()
+    }
+
+    private func applyIdleScale() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for bar in barLayers {
+            bar.transform = CATransform3DMakeScale(1, 0.3, 1)
+        }
+        CATransaction.commit()
+    }
+}
+
 final class QueueTrackCell: UITableViewCell {
+
+    enum Style {
+        case history
+        case nowPlaying(isPlaying: Bool)
+        case upcoming
+    }
 
     static let reuseID = "QueueTrackCell"
 
+    private let highlightView = UIView()
     private let artworkView = UIImageView()
     private let trackTitleLabel = UILabel()
     private let trackArtistLabel = UILabel()
     private let durationLabel = UILabel()
-    private let nowPlayingIcon = UIImageView()
+    private let playingBars = PlayingBarsView()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
+        backgroundColor = .clear
+        contentView.backgroundColor = .clear
+        selectionStyle = .none
+
+        highlightView.backgroundColor = UIColor.white.withAlphaComponent(0.12)
+        highlightView.layer.cornerRadius = 14
+        highlightView.layer.cornerCurve = .continuous
+        highlightView.isHidden = true
+        highlightView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(highlightView)
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 4
-        artworkView.backgroundColor = .tertiarySystemFill
-        artworkView.tintColor = .tertiaryLabel
+        artworkView.layer.cornerRadius = 8
+        artworkView.layer.cornerCurve = .continuous
+        artworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        artworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
 
-        let indicatorConfig = UIImage.SymbolConfiguration(pointSize: 10, weight: .bold)
-        nowPlayingIcon.image = UIImage(systemName: "speaker.wave.2.fill", withConfiguration: indicatorConfig)
-        nowPlayingIcon.tintColor = .systemBlue
-        nowPlayingIcon.contentMode = .center
-        nowPlayingIcon.isHidden = true
+        playingBars.isHidden = true
+        playingBars.setContentHuggingPriority(.required, for: .horizontal)
 
         trackTitleLabel.font = .preferredFont(forTextStyle: .body)
+        trackTitleLabel.adjustsFontForContentSizeCategory = true
+        trackTitleLabel.textColor = .white
         trackTitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         trackArtistLabel.font = .preferredFont(forTextStyle: .caption1)
-        trackArtistLabel.textColor = .secondaryLabel
+        trackArtistLabel.adjustsFontForContentSizeCategory = true
+        trackArtistLabel.textColor = .white.withAlphaComponent(0.55)
         trackArtistLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         durationLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
-        durationLabel.textColor = .tertiaryLabel
+        durationLabel.textColor = .white.withAlphaComponent(0.4)
         durationLabel.setContentHuggingPriority(.required, for: .horizontal)
 
         let textStack = UIStackView(arrangedSubviews: [trackTitleLabel, trackArtistLabel])
         textStack.axis = .vertical
         textStack.spacing = 2
 
-        let mainStack = UIStackView(arrangedSubviews: [artworkView, nowPlayingIcon, textStack, durationLabel])
+        let mainStack = UIStackView(arrangedSubviews: [artworkView, playingBars, textStack, durationLabel])
         mainStack.spacing = 10
         mainStack.alignment = .center
         mainStack.translatesAutoresizingMaskIntoConstraints = false
@@ -360,12 +695,18 @@ final class QueueTrackCell: UITableViewCell {
         NSLayoutConstraint.activate([
             artworkView.widthAnchor.constraint(equalToConstant: 44),
             artworkView.heightAnchor.constraint(equalToConstant: 44),
-            nowPlayingIcon.widthAnchor.constraint(equalToConstant: 20),
+            playingBars.widthAnchor.constraint(equalToConstant: 16),
+            playingBars.heightAnchor.constraint(equalToConstant: 14),
 
-            mainStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            mainStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            mainStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            mainStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            highlightView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 10),
+            highlightView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
+            highlightView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 2),
+            highlightView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -2),
+
+            mainStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            mainStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            mainStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            mainStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
         ])
     }
 
@@ -374,10 +715,49 @@ final class QueueTrackCell: UITableViewCell {
 
     private var currentArtworkKey: String?
 
-    func configure(with track: Track, isCurrentTrack: Bool, isPlaying: Bool) {
+    func configure(with track: Track, style: Style) {
         trackTitleLabel.text = track.title
         trackArtistLabel.text = track.artist
+        loadArtwork(for: track)
 
+        let total = Int(track.duration)
+        durationLabel.text = String(format: "%d:%02d", total / 60, total % 60)
+
+        switch style {
+        case .history:
+            highlightView.isHidden = true
+            playingBars.isHidden = true
+            playingBars.setPlaying(false)
+            contentView.alpha = 0.45
+            accessibilityLabel = "\(track.title), \(track.artist)"
+            accessibilityValue = "Played earlier"
+            accessibilityHint = "Plays this track again"
+        case .nowPlaying(let isPlaying):
+            highlightView.isHidden = false
+            playingBars.isHidden = false
+            playingBars.setPlaying(isPlaying)
+            contentView.alpha = 1
+            accessibilityLabel = "\(track.title), \(track.artist)"
+            accessibilityValue = isPlaying ? "Now playing" : "Paused"
+            accessibilityHint = nil
+        case .upcoming:
+            highlightView.isHidden = true
+            playingBars.isHidden = true
+            playingBars.setPlaying(false)
+            contentView.alpha = 1
+            accessibilityLabel = "\(track.title), \(track.artist)"
+            accessibilityValue = nil
+            accessibilityHint = "Plays this track"
+        }
+        isAccessibilityElement = true
+    }
+
+    func setPlaying(_ playing: Bool) {
+        playingBars.setPlaying(playing)
+        accessibilityValue = playing ? "Now playing" : "Paused"
+    }
+
+    private func loadArtwork(for track: Track) {
         let requestedKey = track.albumTitle + "\u{0}" + track.artist
         currentArtworkKey = requestedKey
 
@@ -396,31 +776,15 @@ final class QueueTrackCell: UITableViewCell {
                 self.artworkView.image = image
             }
         }
-
-        let total = Int(track.duration)
-        durationLabel.text = String(format: "%d:%02d", total / 60, total % 60)
-
-        nowPlayingIcon.isHidden = !isCurrentTrack
-
-        if isCurrentTrack {
-            trackTitleLabel.textColor = .systemBlue
-            trackArtistLabel.textColor = .systemBlue
-            nowPlayingIcon.image = UIImage(
-                systemName: isPlaying ? "speaker.wave.2.fill" : "speaker.fill",
-                withConfiguration: UIImage.SymbolConfiguration(pointSize: 10, weight: .bold)
-            )
-        } else {
-            trackTitleLabel.textColor = .label
-            trackArtistLabel.textColor = .secondaryLabel
-        }
     }
 
     override func prepareForReuse() {
         super.prepareForReuse()
         currentArtworkKey = nil
         artworkView.image = nil
-        nowPlayingIcon.isHidden = true
-        trackTitleLabel.textColor = .label
-        trackArtistLabel.textColor = .secondaryLabel
+        highlightView.isHidden = true
+        playingBars.isHidden = true
+        playingBars.setPlaying(false)
+        contentView.alpha = 1
     }
 }

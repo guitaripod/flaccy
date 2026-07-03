@@ -2,6 +2,7 @@ import UIKit
 
 final class LyricsViewController: UIViewController {
 
+    private let backdropView = PaletteGradientView()
     private var tableView: UITableView!
     private var plainTextView: UITextView!
     private var statusLabel: UILabel!
@@ -19,6 +20,8 @@ final class LyricsViewController: UIViewController {
     private var loadGeneration = 0
     private var isUserScrolling = false
     private var scrollResumeWorkItem: DispatchWorkItem?
+    private let lineSelectionFeedback = UIImpactFeedbackGenerator(style: .light)
+    private var hasAnimatedAppearance = false
 
     init(track: String, artist: String, album: String) {
         self.trackTitle = track
@@ -34,10 +37,18 @@ final class LyricsViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        overrideUserInterfaceStyle = .dark
         view.backgroundColor = .black
+        setupBackdrop()
         setupUI()
         startTrackObservation()
+        updatePalette()
         loadLyrics()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        backdropView.frame = view.bounds
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -49,6 +60,25 @@ final class LyricsViewController: UIViewController {
         if let observer = trackObserver {
             NotificationCenter.default.removeObserver(observer)
             trackObserver = nil
+        }
+    }
+
+    private func setupBackdrop() {
+        backdropView.frame = view.bounds
+        view.addSubview(backdropView)
+    }
+
+    private func updatePalette() {
+        guard let track = AudioPlayer.shared.currentTrack else { return }
+        let key = "\(track.albumTitle)\0\(track.artist)"
+        let artwork = track.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+        let animated = hasAnimatedAppearance
+        ArtworkPaletteExtractor.palette(
+            for: artwork,
+            cacheKey: key,
+            fallbackSeed: "\(track.title)\(track.artist)"
+        ) { [weak self] palette in
+            self?.backdropView.apply(palette, animated: animated)
         }
     }
 
@@ -74,6 +104,7 @@ final class LyricsViewController: UIViewController {
         trackLabel.text = trackTitle
         artistLabel.text = artistName
         resetContent()
+        updatePalette()
         loadLyrics()
     }
 
@@ -89,22 +120,28 @@ final class LyricsViewController: UIViewController {
 
     private func setupUI() {
         let doneButton = UIButton(type: .system)
-        doneButton.setTitle("Done", for: .normal)
-        doneButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        doneButton.setImage(
+            UIImage(systemName: "xmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)),
+            for: .normal
+        )
         doneButton.tintColor = .white
+        doneButton.accessibilityLabel = "Close lyrics"
         doneButton.addAction(UIAction { [weak self] _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             self?.dismiss(animated: true)
         }, for: .touchUpInside)
+        let doneCapsule = GlassCapsule(hosting: doneButton, height: 40)
 
         trackLabel.text = trackTitle
-        trackLabel.font = .systemFont(ofSize: 15, weight: .semibold)
-        trackLabel.textColor = .white.withAlphaComponent(0.8)
+        trackLabel.font = .scaled(.subheadline, size: 15, weight: .semibold)
+        trackLabel.adjustsFontForContentSizeCategory = true
+        trackLabel.textColor = .white.withAlphaComponent(0.85)
         trackLabel.textAlignment = .center
         trackLabel.lineBreakMode = .byTruncatingTail
 
         artistLabel.text = artistName
-        artistLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        artistLabel.font = .scaled(.caption1, size: 13, weight: .regular)
+        artistLabel.adjustsFontForContentSizeCategory = true
         artistLabel.textColor = .white.withAlphaComponent(0.5)
         artistLabel.textAlignment = .center
         artistLabel.lineBreakMode = .byTruncatingTail
@@ -114,20 +151,17 @@ final class LyricsViewController: UIViewController {
         titleStack.spacing = 2
         titleStack.alignment = .center
 
-        let spacer = UIView()
-        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-
         let headerSpacer = UIView()
-        headerSpacer.widthAnchor.constraint(equalToConstant: 60).isActive = true
 
-        let topRow = UIStackView(arrangedSubviews: [headerSpacer, titleStack, doneButton])
+        let topRow = UIStackView(arrangedSubviews: [headerSpacer, titleStack, doneCapsule])
         topRow.alignment = .center
         topRow.distribution = .fill
         topRow.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(topRow)
 
         NSLayoutConstraint.activate([
-            doneButton.widthAnchor.constraint(equalToConstant: 60),
+            doneCapsule.widthAnchor.constraint(equalToConstant: 40),
+            headerSpacer.widthAnchor.constraint(equalTo: doneCapsule.widthAnchor),
             topRow.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             topRow.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             topRow.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
@@ -144,7 +178,8 @@ final class LyricsViewController: UIViewController {
         ])
 
         statusLabel = UILabel()
-        statusLabel.font = .systemFont(ofSize: 20, weight: .medium)
+        statusLabel.font = .scaled(.title3, size: 20, weight: .medium)
+        statusLabel.adjustsFontForContentSizeCategory = true
         statusLabel.textColor = .white.withAlphaComponent(0.5)
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
@@ -180,9 +215,7 @@ final class LyricsViewController: UIViewController {
         plainTextView = UITextView()
         plainTextView.backgroundColor = .clear
         plainTextView.isEditable = false
-        plainTextView.font = .systemFont(ofSize: 20, weight: .medium)
-        plainTextView.textColor = .white.withAlphaComponent(0.8)
-        plainTextView.textContainerInset = UIEdgeInsets(top: 20, left: 24, bottom: 20, right: 24)
+        plainTextView.textContainerInset = UIEdgeInsets(top: 28, left: 28, bottom: 48, right: 28)
         plainTextView.isHidden = true
         plainTextView.showsVerticalScrollIndicator = false
         plainTextView.translatesAutoresizingMaskIntoConstraints = false
@@ -246,7 +279,7 @@ final class LyricsViewController: UIViewController {
         attributed.append(NSAttributedString(
             string: "\nInstrumental",
             attributes: [
-                .font: UIFont.systemFont(ofSize: 20, weight: .medium),
+                .font: UIFont.scaled(.title3, size: 20, weight: .medium),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.5),
             ]
         ))
@@ -265,18 +298,47 @@ final class LyricsViewController: UIViewController {
         tableView.isHidden = false
         tableView.reloadData()
 
-        let topInset = view.bounds.height / 3
-        let bottomInset = view.bounds.height / 3
-        tableView.contentInset = UIEdgeInsets(top: topInset, left: 0, bottom: bottomInset, right: 0)
+        tableView.contentInset = UIEdgeInsets(
+            top: view.bounds.height * 0.3,
+            left: 0,
+            bottom: view.bounds.height * 0.55,
+            right: 0
+        )
 
         startProgressObservation()
         updateCurrentLine()
+        animateContentAppearance(tableView)
     }
 
     private func showPlainLyrics(_ text: String) {
         plainText = text
-        plainTextView.text = text
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = 9
+        paragraph.paragraphSpacing = 14
+        plainTextView.attributedText = NSAttributedString(
+            string: text,
+            attributes: [
+                .font: UIFont.scaled(.title3, size: 21, weight: .medium),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.85),
+                .paragraphStyle: paragraph,
+            ]
+        )
         plainTextView.isHidden = false
+        animateContentAppearance(plainTextView)
+    }
+
+    /// Springs freshly-loaded lyric content in with a short fade-and-rise,
+    /// skipped under Reduce Motion.
+    private func animateContentAppearance(_ content: UIView) {
+        defer { hasAnimatedAppearance = true }
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        content.alpha = 0
+        content.transform = CGAffineTransform(translationX: 0, y: 14)
+        let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) {
+            content.alpha = 1
+            content.transform = .identity
+        }
+        animator.startAnimation()
     }
 
     private func startProgressObservation() {
@@ -304,30 +366,27 @@ final class LyricsViewController: UIViewController {
             }
         }
 
+        setCurrentLine(newIndex, scrolls: !isUserScrolling)
+    }
+
+    private func setCurrentLine(_ newIndex: Int, scrolls: Bool) {
         guard newIndex != currentLineIndex else { return }
-
-        let previousIndex = currentLineIndex
         currentLineIndex = newIndex
+        applyEmphasisToVisibleCells(animated: true)
 
-        var indexPathsToReload: [IndexPath] = []
-        if previousIndex >= 0 && previousIndex < lyrics.count {
-            indexPathsToReload.append(IndexPath(row: previousIndex, section: 0))
-        }
-        if newIndex >= 0 && newIndex < lyrics.count {
-            indexPathsToReload.append(IndexPath(row: newIndex, section: 0))
-        }
-
-        if !indexPathsToReload.isEmpty {
-            tableView.reloadRows(at: indexPathsToReload, with: .fade)
-        }
-
-        guard newIndex >= 0, !isUserScrolling else { return }
-
+        guard newIndex >= 0, scrolls else { return }
         tableView.scrollToRow(
             at: IndexPath(row: newIndex, section: 0),
-            at: .middle,
+            at: .top,
             animated: true
         )
+    }
+
+    private func applyEmphasisToVisibleCells(animated: Bool) {
+        for indexPath in tableView.indexPathsForVisibleRows ?? [] {
+            guard let cell = tableView.cellForRow(at: indexPath) as? LyricCell else { continue }
+            cell.setCurrent(indexPath.row == currentLineIndex, animated: animated)
+        }
     }
 }
 
@@ -339,8 +398,7 @@ extension LyricsViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: LyricCell.reuseID, for: indexPath) as! LyricCell
-        let isCurrent = indexPath.row == currentLineIndex
-        cell.configure(text: lyrics[indexPath.row].text, isCurrent: isCurrent)
+        cell.configure(text: lyrics[indexPath.row].text, isCurrent: indexPath.row == currentLineIndex)
         return cell
     }
 }
@@ -350,8 +408,11 @@ extension LyricsViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let line = lyrics[indexPath.row]
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        lineSelectionFeedback.impactOccurred()
         AudioPlayer.shared.seek(to: line.time)
+        scrollResumeWorkItem?.cancel()
+        isUserScrolling = false
+        setCurrentLine(indexPath.row, scrolls: true)
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -384,20 +445,26 @@ private final class LyricCell: UITableViewCell {
     static let reuseID = "LyricCell"
 
     private let lyricLabel = UILabel()
+    private var isCurrentLine = false
+    private static let dimmedScale: CGFloat = 0.86
+    private static let dimmedAlpha: CGFloat = 0.35
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         backgroundColor = .clear
+        contentView.backgroundColor = .clear
         selectionStyle = .none
 
         lyricLabel.numberOfLines = 0
+        lyricLabel.font = .scaled(.title2, size: 24, weight: .bold)
         lyricLabel.adjustsFontForContentSizeCategory = true
+        lyricLabel.textColor = .white
         lyricLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(lyricLabel)
 
         NSLayoutConstraint.activate([
-            lyricLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            lyricLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            lyricLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            lyricLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
             lyricLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 28),
             lyricLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -28),
         ])
@@ -410,14 +477,41 @@ private final class LyricCell: UITableViewCell {
 
     func configure(text: String, isCurrent: Bool) {
         lyricLabel.text = text
-        if isCurrent {
-            lyricLabel.font = .scaled(.title1, size: 28, weight: .bold)
-            lyricLabel.textColor = .white
-            lyricLabel.transform = .identity
-        } else {
-            lyricLabel.font = .scaled(.title3, size: 20, weight: .medium)
-            lyricLabel.textColor = .white.withAlphaComponent(0.3)
-            lyricLabel.transform = .identity
+        isAccessibilityElement = true
+        accessibilityLabel = text
+        accessibilityValue = isCurrent ? "Current line" : nil
+        accessibilityHint = "Plays from this line"
+        accessibilityTraits = .button
+        setCurrent(isCurrent, animated: false)
+    }
+
+    func setCurrent(_ isCurrent: Bool, animated: Bool) {
+        guard isCurrent != isCurrentLine || !animated else { return }
+        isCurrentLine = isCurrent
+        accessibilityValue = isCurrent ? "Current line" : nil
+        let apply = { [self] in
+            lyricLabel.alpha = isCurrent ? 1 : Self.dimmedAlpha
+            lyricLabel.transform = isCurrent ? .identity : Self.dimmedTransform(width: lyricLabel.bounds.width)
         }
+        if animated, !UIAccessibility.isReduceMotionEnabled {
+            let animator = UIViewPropertyAnimator(duration: 0.28, dampingRatio: 0.86, animations: apply)
+            animator.startAnimation()
+        } else {
+            apply()
+        }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if !isCurrentLine, lyricLabel.transform != .identity {
+            lyricLabel.transform = Self.dimmedTransform(width: lyricLabel.bounds.width)
+        }
+    }
+
+    /// Scales the label down around its leading edge so dimmed lines shrink
+    /// toward the margin the way Apple Music's lyrics do.
+    private static func dimmedTransform(width: CGFloat) -> CGAffineTransform {
+        CGAffineTransform(translationX: -width * (1 - dimmedScale) / 2, y: 0)
+            .scaledBy(x: dimmedScale, y: dimmedScale)
     }
 }
