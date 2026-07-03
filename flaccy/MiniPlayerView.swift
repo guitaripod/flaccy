@@ -34,7 +34,7 @@ final class MiniPlayerView: UIView {
         blur.translatesAutoresizingMaskIntoConstraints = false
         addSubview(blur)
 
-        progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.12)
+        progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.85)
         progressFill.translatesAutoresizingMaskIntoConstraints = false
         blur.contentView.addSubview(progressFill)
 
@@ -43,7 +43,7 @@ final class MiniPlayerView: UIView {
         titleLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        artistLabel.font = .scaled(.caption2, size: 10, weight: .regular, maxSize: 17)
+        artistLabel.font = .scaled(.caption2, size: 11, weight: .medium, maxSize: 17)
         artistLabel.adjustsFontForContentSizeCategory = true
         artistLabel.textColor = .secondaryLabel
         artistLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
@@ -54,7 +54,7 @@ final class MiniPlayerView: UIView {
 
         let textStack = UIStackView(arrangedSubviews: [titleLabel, artistLabel])
         textStack.axis = .vertical
-        textStack.spacing = 1
+        textStack.spacing = 0
         textStack.alignment = .trailing
 
         let buttonConfig = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
@@ -111,7 +111,7 @@ final class MiniPlayerView: UIView {
 
             progressFill.topAnchor.constraint(equalTo: blur.contentView.topAnchor),
             progressFill.leadingAnchor.constraint(equalTo: blur.contentView.leadingAnchor),
-            progressFill.bottomAnchor.constraint(equalTo: blur.contentView.bottomAnchor),
+            progressFill.heightAnchor.constraint(equalToConstant: 2.5),
             progressWidthConstraint!,
 
             artworkView.topAnchor.constraint(equalTo: blur.contentView.topAnchor),
@@ -200,7 +200,7 @@ final class MiniPlayerView: UIView {
         } else {
             artworkView.contentMode = .center
             artworkView.image = UIImage(systemName: "music.note")
-            progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.12)
+            progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.85)
 
             AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
                 guard let self, let image, self.currentArtworkKey == requestedKey else { return }
@@ -256,12 +256,42 @@ final class MiniPlayerView: UIView {
             red: totalR / CGFloat(count) / 255,
             green: totalG / CGFloat(count) / 255,
             blue: totalB / CGFloat(count) / 255,
-            alpha: 0.2
+            alpha: 0.9
         )
         progressFill.backgroundColor = color
     }
 
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        setPressed(true)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        setPressed(false)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
+        setPressed(false)
+    }
+
+    /// Springs the whole surface to 0.98 while pressed, mirroring the Now
+    /// Playing card press language; instant under Reduce Motion.
+    private func setPressed(_ pressed: Bool) {
+        let transform = pressed ? CGAffineTransform(scaleX: 0.98, y: 0.98) : .identity
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            self.transform = transform
+            return
+        }
+        let animator = UIViewPropertyAnimator(duration: pressed ? 0.16 : 0.32, dampingRatio: pressed ? 1 : 0.72) {
+            self.transform = transform
+        }
+        animator.startAnimation()
+    }
+
     @objc private func viewTapped() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         onTap?()
     }
 

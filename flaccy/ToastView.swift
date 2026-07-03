@@ -17,28 +17,33 @@ final class ToastView {
 
     static func show(_ message: String, in view: UIView, style: Style = .info) {
         let toast = UIView()
-        toast.backgroundColor = style.backgroundColor
-        toast.layer.cornerRadius = 12
+        toast.layer.cornerRadius = 14
         toast.layer.cornerCurve = .continuous
+        toast.layer.shadowColor = UIColor.black.cgColor
+        toast.layer.shadowOpacity = 0.16
+        toast.layer.shadowOffset = CGSize(width: 0, height: 6)
+        toast.layer.shadowRadius = 16
         toast.alpha = 0
         toast.translatesAutoresizingMaskIntoConstraints = false
 
+        let contentHost = makeBackground(for: toast, style: style)
+
         let icon = UIImageView(image: UIImage(systemName: style.icon))
-        icon.tintColor = .white
+        icon.tintColor = style.accentColor
         icon.translatesAutoresizingMaskIntoConstraints = false
 
         let label = UILabel()
         label.text = message
         label.font = .scaled(.footnote, size: 14, weight: .medium)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .white
+        label.textColor = .label
         label.numberOfLines = 2
 
         let stack = UIStackView(arrangedSubviews: [icon, label])
         stack.spacing = 8
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
-        toast.addSubview(stack)
+        contentHost.addSubview(stack)
         view.addSubview(toast)
 
         NSLayoutConstraint.activate([
@@ -53,12 +58,54 @@ final class ToastView {
             toast.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
         ])
 
-        UIView.animate(withDuration: 0.3) { toast.alpha = 1 }
+        animateIn(toast)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            UIView.animate(withDuration: 0.3, animations: { toast.alpha = 0 }) { _ in
-                toast.removeFromSuperview()
+            animateOut(toast)
+        }
+    }
+
+    /// Installs a Liquid Glass backing inside the toast (solid fill under
+    /// Reduce Transparency) and returns the view that should host content.
+    private static func makeBackground(for toast: UIView, style: Style) -> UIView {
+        guard !UIAccessibility.isReduceTransparencyEnabled else {
+            toast.backgroundColor = .secondarySystemBackground
+            return toast
+        }
+        let glass = LiquidGlass.view(cornerRadius: 14, tint: style.accentColor.withAlphaComponent(0.25))
+        glass.translatesAutoresizingMaskIntoConstraints = false
+        toast.addSubview(glass)
+        NSLayoutConstraint.activate([
+            glass.topAnchor.constraint(equalTo: toast.topAnchor),
+            glass.leadingAnchor.constraint(equalTo: toast.leadingAnchor),
+            glass.trailingAnchor.constraint(equalTo: toast.trailingAnchor),
+            glass.bottomAnchor.constraint(equalTo: toast.bottomAnchor),
+        ])
+        return glass.contentView
+    }
+
+    private static func animateIn(_ toast: UIView) {
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            UIView.animate(withDuration: 0.2) { toast.alpha = 1 }
+            return
+        }
+        toast.transform = CGAffineTransform(translationX: 0, y: -16).scaledBy(x: 0.92, y: 0.92)
+        let animator = UIViewPropertyAnimator(duration: 0.42, dampingRatio: 0.72) {
+            toast.alpha = 1
+            toast.transform = .identity
+        }
+        animator.startAnimation()
+    }
+
+    private static func animateOut(_ toast: UIView) {
+        let animations = {
+            toast.alpha = 0
+            if !UIAccessibility.isReduceMotionEnabled {
+                toast.transform = CGAffineTransform(translationX: 0, y: -12).scaledBy(x: 0.94, y: 0.94)
             }
         }
+        let animator = UIViewPropertyAnimator(duration: 0.24, dampingRatio: 1, animations: animations)
+        animator.addCompletion { _ in toast.removeFromSuperview() }
+        animator.startAnimation()
     }
 
     enum Style {
@@ -66,7 +113,7 @@ final class ToastView {
         case error
         case info
 
-        var backgroundColor: UIColor {
+        var accentColor: UIColor {
             switch self {
             case .success: .systemGreen
             case .error: .systemRed

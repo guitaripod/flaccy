@@ -16,6 +16,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private let loadingLabel = UILabel()
     private let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
     private let emptyStateLabel = UILabel()
+    private let refreshControl = UIRefreshControl()
+    private var lastRenderedSegment: LibraryViewModel.Segment?
     private lazy var emptyStateView: UIView = {
         let container = UIView()
 
@@ -202,6 +204,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.delegate = self
         collectionView.backgroundColor = .clear
+        setupRefreshControl()
 
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
@@ -210,6 +213,28 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+    }
+
+    private func setupRefreshControl() {
+        refreshControl.tintColor = .secondaryLabel
+        refreshControl.attributedTitle = NSAttributedString(
+            string: "Rescanning library",
+            attributes: [
+                .font: UIFont.scaled(.caption1, size: 12, weight: .medium),
+                .foregroundColor: UIColor.secondaryLabel,
+            ]
+        )
+        refreshControl.addAction(UIAction { [weak self] _ in self?.refreshLibrary() }, for: .valueChanged)
+        collectionView.refreshControl = refreshControl
+    }
+
+    private func refreshLibrary() {
+        impactLight.impactOccurred()
+        Task { [weak self] in
+            guard let self else { return }
+            await self.viewModel.loadLibrary()
+            self.refreshControl.endRefreshing()
+        }
     }
 
     private func setupSectionIndex() {
@@ -446,12 +471,26 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] snapshot in
                 guard let self else { return }
-                self.collectionView.setCollectionViewLayout(
-                    self.createLayout(for: self.viewModel.currentSegment), animated: false
-                )
-                self.dataSource.apply(snapshot, animatingDifferences: false)
-                self.updateEmptyState()
-                self.updateSectionIndex()
+                let segment = self.viewModel.currentSegment
+                let segmentChanged = self.lastRenderedSegment != nil && self.lastRenderedSegment != segment
+                self.lastRenderedSegment = segment
+                let apply = {
+                    self.collectionView.setCollectionViewLayout(
+                        self.createLayout(for: segment), animated: false
+                    )
+                    self.dataSource.apply(snapshot, animatingDifferences: false)
+                    self.updateEmptyState()
+                    self.updateSectionIndex()
+                }
+                if segmentChanged, !UIAccessibility.isReduceMotionEnabled {
+                    UIView.transition(
+                        with: self.collectionView, duration: 0.24,
+                        options: [.transitionCrossDissolve, .allowUserInteraction],
+                        animations: apply
+                    )
+                } else {
+                    apply()
+                }
             }
             .store(in: &cancellables)
 
@@ -460,6 +499,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             .sink { [weak self] isLoading in
                 guard let self else { return }
                 if isLoading {
+                    guard !self.refreshControl.isRefreshing else { return }
                     self.loadingOverlay.isHidden = false
                     self.loadingOverlay.alpha = 1
                     self.startLoadingPulse()
@@ -510,7 +550,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
                 let section = NSCollectionLayoutSection(group: group)
                 section.interGroupSpacing = 12
-                section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 20)
+                section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 12, bottom: 24, trailing: 20)
                 return section
             }
         case .songs, .artists:
