@@ -21,6 +21,12 @@ nonisolated struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Ide
     var playCount: Int
     var aiAnalyzed: Bool
     var analysisAttemptedAt: Date?
+    var codec: String?
+    var bitDepth: Int?
+    var sampleRate: Int?
+    var channels: Int?
+    var loved: Bool = false
+    var lovedPendingOp: String?
 }
 
 nonisolated struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable {
@@ -35,6 +41,32 @@ nonisolated struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sen
     var dateAdded: Date
     var lastPlayed: Date?
     var playCount: Int
+    var loved: Bool = false
+}
+
+nonisolated struct WeeklyChartCacheRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
+
+    static let databaseTableName = "weeklyChartCache"
+
+    var id: Int64?
+    var chartType: String
+    var fromUts: Int
+    var toUts: Int
+    var name: String
+    var artist: String?
+    var playCount: Int
+    var rank: Int
+}
+
+nonisolated struct SimilarArtistCacheRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
+
+    static let databaseTableName = "similarArtistCache"
+
+    var id: Int64?
+    var artist: String
+    var similarName: String
+    var match: Double
+    var fetchedAt: Date
 }
 
 nonisolated struct ArtistRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
@@ -266,6 +298,39 @@ nonisolated final class DatabaseManager: Sendable {
             try db.execute(sql: "DELETE FROM playlistTracks WHERE trackFileURL NOT IN (SELECT fileURL FROM tracks)")
         }
 
+        migrator.registerMigration("v6") { db in
+            try db.alter(table: "tracks") { t in
+                t.add(column: "codec", .text)
+                t.add(column: "bitDepth", .integer)
+                t.add(column: "sampleRate", .integer)
+                t.add(column: "channels", .integer)
+                t.add(column: "loved", .boolean).notNull().defaults(to: false)
+                t.add(column: "lovedPendingOp", .text)
+            }
+            try db.create(index: "tracks_on_loved", on: "tracks", columns: ["loved"])
+
+            try db.create(table: "weeklyChartCache") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("chartType", .text).notNull()
+                t.column("fromUts", .integer).notNull()
+                t.column("toUts", .integer).notNull()
+                t.column("name", .text).notNull()
+                t.column("artist", .text)
+                t.column("playCount", .integer).notNull().defaults(to: 0)
+                t.column("rank", .integer).notNull().defaults(to: 0)
+            }
+            try db.create(index: "weeklyChartCache_on_type_range", on: "weeklyChartCache", columns: ["chartType", "fromUts", "toUts"])
+
+            try db.create(table: "similarArtistCache") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("artist", .text).notNull()
+                t.column("similarName", .text).notNull()
+                t.column("match", .double).notNull().defaults(to: 0)
+                t.column("fetchedAt", .datetime).notNull()
+                t.uniqueKey(["artist", "similarName"])
+            }
+        }
+
         return migrator
     }
 
@@ -331,6 +396,8 @@ nonisolated final class DatabaseManager: Sendable {
         Column("lastFMArtworkURL"), Column("musicBrainzID"), Column("albumMusicBrainzID"),
         Column("dateAdded"), Column("lastPlayed"), Column("playCount"),
         Column("aiAnalyzed"), Column("analysisAttemptedAt"),
+        Column("codec"), Column("bitDepth"), Column("sampleRate"), Column("channels"),
+        Column("loved"), Column("lovedPendingOp"),
     ]
 
     func fetchAllTrackRelativePaths() throws -> Set<String> {
@@ -492,6 +559,7 @@ nonisolated final class DatabaseManager: Sendable {
                 Column("id"), Column("fileURL"), Column("title"), Column("artist"),
                 Column("albumTitle"), Column("trackNumber"), Column("duration"),
                 Column("dateAdded"), Column("lastPlayed"), Column("playCount"),
+                Column("loved"),
             ]
 
             let allTracks = try LightTrackRecord.fetchAll(db,
@@ -699,6 +767,134 @@ nonisolated final class DatabaseManager: Sendable {
     func saveLyrics(_ record: LyricsRecord) throws {
         try dbQueue.write { db in
             try record.save(db)
+        }
+    }
+
+    func setLoved(fileURL: String, loved: Bool, pendingOp: String?) throws {
+        try dbQueue.write { db in
+            try db.execute(
+                sql: "UPDATE tracks SET loved = ?, lovedPendingOp = ? WHERE fileURL = ?",
+                arguments: [loved, pendingOp, fileURL]
+            )
+        }
+    }
+
+    func fetchLovedFileURLs() throws -> Set<String> {
+        try dbQueue.read { db in
+            Set(try String.fetchAll(db, sql: "SELECT fileURL FROM tracks WHERE loved = 1"))
+        }
+    }
+
+    func fetchPendingLoveOps() throws -> [(fileURL: String, title: String, artist: String, op: String)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT fileURL, title, artist, lovedPendingOp FROM tracks
+                WHERE lovedPendingOp IS NOT NULL
+            """)
+            return rows.map { (fileURL: $0["fileURL"], title: $0["title"], artist: $0["artist"], op: $0["lovedPendingOp"]) }
+        }
+    }
+
+    func clearPendingLoveOp(fileURL: String) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "UPDATE tracks SET lovedPendingOp = NULL WHERE fileURL = ?", arguments: [fileURL])
+        }
+    }
+
+    /// Applies a loved state matched by title+artist (used when syncing from
+    /// Last.fm, which keys on names rather than file URLs).
+    func markLoved(paths: [String], loved: Bool) throws {
+        guard !paths.isEmpty else { return }
+        try dbQueue.write { db in
+            _ = try TrackRecord
+                .filter(paths.contains(Column("fileURL")))
+                .updateAll(db, Column("loved").set(to: loved))
+        }
+    }
+
+    func fetchScrobbleTimestamps(since: Date) throws -> [Date] {
+        try dbQueue.read { db in
+            try Date.fetchAll(db, sql: "SELECT timestamp FROM scrobbles WHERE timestamp >= ? ORDER BY timestamp ASC", arguments: [since])
+        }
+    }
+
+    func fetchAllScrobbleRows() throws -> [ScrobbleRecord] {
+        try dbQueue.read { db in
+            try ScrobbleRecord.order(Column("timestamp").asc).fetchAll(db)
+        }
+    }
+
+    func playCountByTrack() throws -> [(trackTitle: String, artist: String, count: Int)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT trackTitle, artist, COUNT(*) AS c FROM scrobbles
+                GROUP BY trackTitle, artist
+                ORDER BY c DESC
+            """)
+            return rows.map { (trackTitle: $0["trackTitle"], artist: $0["artist"], count: $0["c"]) }
+        }
+    }
+
+    func lastPlayedByAlbum() throws -> [(albumTitle: String, artist: String, lastPlayed: Date, playCount: Int)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT albumTitle, artist, MAX(timestamp) AS last, COUNT(*) AS c FROM scrobbles
+                GROUP BY albumTitle, artist
+            """)
+            return rows.map { (albumTitle: $0["albumTitle"], artist: $0["artist"], lastPlayed: $0["last"], playCount: $0["c"]) }
+        }
+    }
+
+    func scrobbleCountInRange(from: Date, to: Date) throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM scrobbles WHERE timestamp >= ? AND timestamp < ?", arguments: [from, to]) ?? 0
+        }
+    }
+
+    func fetchLibraryArtists() throws -> Set<String> {
+        try dbQueue.read { db in
+            Set(try String.fetchAll(db, sql: "SELECT DISTINCT artist FROM tracks"))
+        }
+    }
+
+    func fetchCachedSimilarArtists(artist: String, fresherThan: Date) throws -> [(similarName: String, match: Double)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT similarName, match FROM similarArtistCache
+                WHERE artist = ? AND fetchedAt >= ?
+                ORDER BY match DESC
+            """, arguments: [artist, fresherThan])
+            return rows.map { (similarName: $0["similarName"], match: $0["match"]) }
+        }
+    }
+
+    func saveSimilarArtists(artist: String, entries: [(name: String, match: Double)]) throws {
+        try dbQueue.write { db in
+            let now = Date()
+            for entry in entries {
+                try db.execute(sql: """
+                    INSERT INTO similarArtistCache (artist, similarName, match, fetchedAt) VALUES (?, ?, ?, ?)
+                    ON CONFLICT(artist, similarName) DO UPDATE SET match = excluded.match, fetchedAt = excluded.fetchedAt
+                """, arguments: [artist, entry.name, entry.match, now])
+            }
+        }
+    }
+
+    func fetchWeeklyChart(chartType: String, fromUts: Int, toUts: Int) throws -> [WeeklyChartCacheRecord] {
+        try dbQueue.read { db in
+            try WeeklyChartCacheRecord
+                .filter(Column("chartType") == chartType && Column("fromUts") == fromUts && Column("toUts") == toUts)
+                .order(Column("rank").asc)
+                .fetchAll(db)
+        }
+    }
+
+    func saveWeeklyChart(_ records: [WeeklyChartCacheRecord]) throws {
+        guard !records.isEmpty else { return }
+        try dbQueue.write { db in
+            for record in records {
+                try record.insert(db)
+            }
         }
     }
 }

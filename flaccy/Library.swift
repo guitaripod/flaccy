@@ -163,7 +163,11 @@ final class Library: LibraryProviding {
                         lastPlayed: nil,
                         playCount: 0,
                         aiAnalyzed: false,
-                        analysisAttemptedAt: nil
+                        analysisAttemptedAt: nil,
+                        codec: metadata.codec,
+                        bitDepth: metadata.bitDepth,
+                        sampleRate: metadata.sampleRate,
+                        channels: metadata.channels
                     )
                 }
             }

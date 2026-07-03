@@ -47,6 +47,75 @@ nonisolated struct AlbumInfo: Sendable {
     let imageURL: String?
     let summary: String?
     let musicBrainzID: String?
+    var userPlayCount: Int?
+}
+
+nonisolated struct LovedTrack: Sendable {
+    let name: String
+    let artist: String
+    let uts: Int
+}
+
+nonisolated struct LastFMUserInfo: Sendable {
+    let name: String
+    let realName: String?
+    let playcount: Int
+    let artistCount: Int
+    let trackCount: Int
+    let albumCount: Int
+    let registeredUts: Int
+    let imageURL: String?
+    let country: String?
+}
+
+nonisolated struct RecentTrack: Sendable {
+    let name: String
+    let artist: String
+    let album: String
+    let uts: Int?
+    let nowPlaying: Bool
+}
+
+nonisolated struct ChartArtist: Sendable {
+    let rank: Int
+    let name: String
+    let playCount: Int
+}
+
+nonisolated struct ChartAlbum: Sendable {
+    let rank: Int
+    let name: String
+    let artistName: String
+    let playCount: Int
+    let imageURL: String?
+}
+
+nonisolated struct LastFMTrackInfo: Sendable {
+    let name: String
+    let artist: String
+    let album: String?
+    let duration: Int?
+    let playCount: Int?
+    let userPlayCount: Int?
+    let userLoved: Bool
+    let tags: [String]
+}
+
+actor RequestThrottle {
+    private let minInterval: TimeInterval
+    private var nextAvailable: Date = .distantPast
+
+    init(minInterval: TimeInterval) { self.minInterval = minInterval }
+
+    func acquire() async {
+        let now = Date()
+        let slot = max(now, nextAvailable)
+        nextAvailable = slot.addingTimeInterval(minInterval)
+        let delay = slot.timeIntervalSince(now)
+        if delay > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        }
+    }
 }
 
 nonisolated struct ArtistInfo: Sendable {
@@ -184,14 +253,16 @@ final class LastFMService {
         artist: String,
         album: String,
         timestamp: Date,
-        duration: Int
+        duration: Int,
+        albumArtist: String? = nil,
+        trackNumber: Int? = nil
     ) async -> Bool {
         guard let sk = await sessionKey else {
             await AppLogger.debug("Skipping scrobble — not authenticated", category: .sync)
             return false
         }
 
-        let params: [String: String] = [
+        var params: [String: String] = [
             "method": "track.scrobble",
             "api_key": Self.apiKey,
             "sk": sk,
@@ -200,10 +271,15 @@ final class LastFMService {
             "album": album,
             "timestamp": String(Int(timestamp.timeIntervalSince1970)),
             "duration": String(duration),
+            "chosenByUser": "1",
         ]
+        if let albumArtist, !albumArtist.isEmpty { params["albumArtist"] = albumArtist }
+        if let trackNumber, trackNumber > 0 { params["trackNumber"] = String(trackNumber) }
 
         do {
-            let data = try await performSignedRequest(params: params, httpMethod: "POST")
+            let data = try await Self.performWithBackoff {
+                try await self.performSignedRequest(params: params, httpMethod: "POST")
+            }
             switch Self.parseScrobbleResponse(data: data, expectedCount: 1) {
             case .retryableError(let code, let message):
                 await AppLogger.warning("Scrobble deferred (error \(code): \(message)): \(track) - \(artist)", category: .sync)
@@ -219,6 +295,8 @@ final class LastFMService {
                 guard let status = statuses.first else { return false }
                 if status.accepted {
                     await AppLogger.info("Scrobbled: \(track) - \(artist)", category: .sync)
+                } else if status.ignoredCode == 3 {
+                    await AppLogger.warning("Scrobble rejected as too old (>14 days): \(track) - \(artist)", category: .sync)
                 } else {
                     await AppLogger.warning("Scrobble permanently ignored (code \(status.ignoredCode)): \(track) - \(artist)", category: .sync)
                 }
@@ -259,10 +337,13 @@ final class LastFMService {
                 params["album[\(i)]"] = entry.album
                 params["timestamp[\(i)]"] = String(Int(entry.timestamp.timeIntervalSince1970))
                 params["duration[\(i)]"] = String(entry.duration)
+                params["chosenByUser[\(i)]"] = "1"
             }
 
             do {
-                let data = try await performSignedRequest(params: params, httpMethod: "POST")
+                let data = try await Self.performWithBackoff {
+                    try await self.performSignedRequest(params: params, httpMethod: "POST")
+                }
                 switch Self.parseScrobbleResponse(data: data, expectedCount: batch.count) {
                 case .retryableError(let code, let message):
                     await AppLogger.warning("Batch scrobble deferred (error \(code): \(message)), \(batch.count) kept pending", category: .sync)
@@ -293,15 +374,17 @@ final class LastFMService {
     }
 
     nonisolated func fetchAlbumInfo(artist: String, album: String) async -> AlbumInfo? {
-        let params: [String: String] = [
+        var params: [String: String] = [
             "method": "album.getInfo",
             "api_key": Self.apiKey,
             "artist": artist,
             "album": album,
+            "autocorrect": "1",
         ]
+        if let user = await username { params["username"] = user }
 
         do {
-            let data = try await performUnsignedGET(params: params)
+            let data = try await throttledGET(params: params)
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let albumDict = json["album"] as? [String: Any]
             else { return nil }
@@ -312,13 +395,15 @@ final class LastFMService {
             let wiki = albumDict["wiki"] as? [String: Any]
             let summary = wiki?["summary"] as? String
             let mbid = albumDict["mbid"] as? String
+            let userPlayCount = Self.intValue(albumDict["userplaycount"])
 
             return AlbumInfo(
                 title: title,
                 artist: artistName,
                 imageURL: imageURL,
                 summary: summary,
-                musicBrainzID: mbid
+                musicBrainzID: mbid,
+                userPlayCount: userPlayCount
             )
         } catch {
             await AppLogger.error("Fetch album info failed: \(error.localizedDescription)", category: .content)
@@ -393,6 +478,482 @@ final class LastFMService {
             await AppLogger.error("Chart fetch failed: \(error.localizedDescription)", category: .sync)
             return []
         }
+    }
+
+    nonisolated func loveTrack(artist: String, track: String) async -> Bool {
+        await setLove(method: "track.love", artist: artist, track: track)
+    }
+
+    nonisolated func unloveTrack(artist: String, track: String) async -> Bool {
+        await setLove(method: "track.unlove", artist: artist, track: track)
+    }
+
+    nonisolated private func setLove(method: String, artist: String, track: String) async -> Bool {
+        guard let sk = await sessionKey else {
+            await AppLogger.debug("Skipping \(method) — not authenticated", category: .sync)
+            return false
+        }
+        let params: [String: String] = [
+            "method": method,
+            "api_key": Self.apiKey,
+            "sk": sk,
+            "artist": artist,
+            "track": track,
+        ]
+        do {
+            _ = try await performSignedRequest(params: params, httpMethod: "POST")
+            return true
+        } catch {
+            await AppLogger.error("\(method) failed: \(error.localizedDescription)", category: .sync)
+            return false
+        }
+    }
+
+    nonisolated func fetchLovedTracks(page: Int = 1, limit: Int = 200) async -> (tracks: [LovedTrack], totalPages: Int) {
+        guard let user = await username else { return ([], 0) }
+        let params: [String: String] = [
+            "method": "user.getLovedTracks",
+            "api_key": Self.apiKey,
+            "user": user,
+            "limit": String(min(limit, 1000)),
+            "page": String(page),
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let loved = json["lovedtracks"] as? [String: Any]
+            else { return ([], 0) }
+
+            let attr = loved["@attr"] as? [String: Any]
+            let totalPages = Self.intValue(attr?["totalPages"]) ?? 1
+            let tracks = Self.asArray(loved["track"]).compactMap { entry -> LovedTrack? in
+                guard let name = entry["name"] as? String,
+                      let artistName = (entry["artist"] as? [String: Any])?["name"] as? String
+                else { return nil }
+                let uts = Self.intValue((entry["date"] as? [String: Any])?["uts"]) ?? 0
+                return LovedTrack(name: name, artist: artistName, uts: uts)
+            }
+            return (tracks, totalPages)
+        } catch {
+            await AppLogger.error("Fetch loved tracks failed: \(error.localizedDescription)", category: .sync)
+            return ([], 0)
+        }
+    }
+
+    nonisolated func fetchUserInfo() async -> LastFMUserInfo? {
+        guard let user = await username else { return nil }
+        let params: [String: String] = [
+            "method": "user.getInfo",
+            "api_key": Self.apiKey,
+            "user": user,
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let dict = json["user"] as? [String: Any]
+            else { return nil }
+            return LastFMUserInfo(
+                name: dict["name"] as? String ?? user,
+                realName: (dict["realname"] as? String).flatMap { $0.isEmpty ? nil : $0 },
+                playcount: Self.intValue(dict["playcount"]) ?? 0,
+                artistCount: Self.intValue(dict["artist_count"]) ?? 0,
+                trackCount: Self.intValue(dict["track_count"]) ?? 0,
+                albumCount: Self.intValue(dict["album_count"]) ?? 0,
+                registeredUts: Self.intValue((dict["registered"] as? [String: Any])?["unixtime"]) ?? 0,
+                imageURL: Self.extractLargestImage(from: dict["image"]),
+                country: (dict["country"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            )
+        } catch {
+            await AppLogger.error("Fetch user info failed: \(error.localizedDescription)", category: .sync)
+            return nil
+        }
+    }
+
+    nonisolated func fetchRecentTracks(page: Int = 1, limit: Int = 200, from: Int? = nil, to: Int? = nil) async -> (tracks: [RecentTrack], total: Int, totalPages: Int) {
+        guard let user = await username else { return ([], 0, 0) }
+        var params: [String: String] = [
+            "method": "user.getRecentTracks",
+            "api_key": Self.apiKey,
+            "user": user,
+            "limit": String(min(limit, 200)),
+            "page": String(page),
+            "extended": "1",
+        ]
+        if let from { params["from"] = String(from) }
+        if let to { params["to"] = String(to) }
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let recent = json["recenttracks"] as? [String: Any]
+            else { return ([], 0, 0) }
+
+            let attr = recent["@attr"] as? [String: Any]
+            let total = Self.intValue(attr?["total"]) ?? 0
+            let totalPages = Self.intValue(attr?["totalPages"]) ?? 1
+            let tracks = Self.asArray(recent["track"]).compactMap { entry -> RecentTrack? in
+                guard let name = entry["name"] as? String else { return nil }
+                let artistName: String
+                if let obj = entry["artist"] as? [String: Any] {
+                    artistName = obj["name"] as? String ?? obj["#text"] as? String ?? ""
+                } else {
+                    artistName = entry["artist"] as? String ?? ""
+                }
+                let album = (entry["album"] as? [String: Any])?["#text"] as? String ?? ""
+                let entryAttr = entry["@attr"] as? [String: Any]
+                let nowPlaying = (entryAttr?["nowplaying"] as? String) == "true"
+                let uts = Self.intValue((entry["date"] as? [String: Any])?["uts"])
+                return RecentTrack(name: name, artist: artistName, album: album, uts: uts, nowPlaying: nowPlaying)
+            }
+            return (tracks.filter { !$0.nowPlaying }, total, totalPages)
+        } catch {
+            await AppLogger.error("Fetch recent tracks failed: \(error.localizedDescription)", category: .sync)
+            return ([], 0, 0)
+        }
+    }
+
+    nonisolated func scrobbleCount(from: Int, to: Int) async -> Int {
+        guard let user = await username else { return 0 }
+        let params: [String: String] = [
+            "method": "user.getRecentTracks",
+            "api_key": Self.apiKey,
+            "user": user,
+            "limit": "1",
+            "from": String(from),
+            "to": String(to),
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let recent = json["recenttracks"] as? [String: Any]
+            else { return 0 }
+            return Self.intValue((recent["@attr"] as? [String: Any])?["total"]) ?? 0
+        } catch {
+            await AppLogger.error("Scrobble count failed: \(error.localizedDescription)", category: .sync)
+            return 0
+        }
+    }
+
+    nonisolated func fetchTopArtists(period: ChartPeriod, limit: Int = 50) async -> [ChartArtist] {
+        guard let user = await username else { return [] }
+        let params: [String: String] = [
+            "method": "user.getTopArtists",
+            "api_key": Self.apiKey,
+            "user": user,
+            "period": period.rawValue,
+            "limit": String(limit),
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let top = json["topartists"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(top["artist"]).compactMap { entry in
+                guard let name = entry["name"] as? String else { return nil }
+                let rank = Self.intValue((entry["@attr"] as? [String: Any])?["rank"]) ?? 0
+                return ChartArtist(rank: rank, name: name, playCount: Self.intValue(entry["playcount"]) ?? 0)
+            }
+        } catch {
+            await AppLogger.error("Fetch top artists failed: \(error.localizedDescription)", category: .sync)
+            return []
+        }
+    }
+
+    nonisolated func fetchTopAlbums(period: ChartPeriod, limit: Int = 50) async -> [ChartAlbum] {
+        guard let user = await username else { return [] }
+        let params: [String: String] = [
+            "method": "user.getTopAlbums",
+            "api_key": Self.apiKey,
+            "user": user,
+            "period": period.rawValue,
+            "limit": String(limit),
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let top = json["topalbums"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(top["album"]).compactMap { entry -> ChartAlbum? in
+                guard let name = entry["name"] as? String else { return nil }
+                let artistName = (entry["artist"] as? [String: Any])?["name"] as? String ?? ""
+                let rank = Self.intValue((entry["@attr"] as? [String: Any])?["rank"]) ?? 0
+                return ChartAlbum(
+                    rank: rank,
+                    name: name,
+                    artistName: artistName,
+                    playCount: Self.intValue(entry["playcount"]) ?? 0,
+                    imageURL: Self.extractLargestImage(from: entry["image"])
+                )
+            }
+        } catch {
+            await AppLogger.error("Fetch top albums failed: \(error.localizedDescription)", category: .sync)
+            return []
+        }
+    }
+
+    nonisolated func fetchWeeklyChartList() async -> [(fromUts: Int, toUts: Int)] {
+        guard let user = await username else { return [] }
+        let params: [String: String] = [
+            "method": "user.getWeeklyChartList",
+            "api_key": Self.apiKey,
+            "user": user,
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let list = json["weeklychartlist"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(list["chart"]).compactMap { entry in
+                guard let from = Self.intValue(entry["from"]), let to = Self.intValue(entry["to"]) else { return nil }
+                return (fromUts: from, toUts: to)
+            }
+        } catch {
+            await AppLogger.error("Fetch weekly chart list failed: \(error.localizedDescription)", category: .sync)
+            return []
+        }
+    }
+
+    nonisolated func fetchWeeklyArtistChart(from: Int, to: Int) async -> [ChartArtist] {
+        guard let user = await username else { return [] }
+        let params: [String: String] = [
+            "method": "user.getWeeklyArtistChart",
+            "api_key": Self.apiKey,
+            "user": user,
+            "from": String(from),
+            "to": String(to),
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let chart = json["weeklyartistchart"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(chart["artist"]).compactMap { entry in
+                guard let name = entry["name"] as? String else { return nil }
+                let rank = Self.intValue((entry["@attr"] as? [String: Any])?["rank"]) ?? 0
+                return ChartArtist(rank: rank, name: name, playCount: Self.intValue(entry["playcount"]) ?? 0)
+            }
+        } catch {
+            await AppLogger.error("Fetch weekly artist chart failed: \(error.localizedDescription)", category: .sync)
+            return []
+        }
+    }
+
+    nonisolated func fetchWeeklyTrackChart(from: Int, to: Int) async -> [ChartTrack] {
+        guard let user = await username else { return [] }
+        let params: [String: String] = [
+            "method": "user.getWeeklyTrackChart",
+            "api_key": Self.apiKey,
+            "user": user,
+            "from": String(from),
+            "to": String(to),
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let chart = json["weeklytrackchart"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(chart["track"]).compactMap { entry in
+                guard let name = entry["name"] as? String else { return nil }
+                let artistName = (entry["artist"] as? [String: Any])?["#text"] as? String
+                    ?? (entry["artist"] as? [String: Any])?["name"] as? String ?? ""
+                let rank = Self.intValue((entry["@attr"] as? [String: Any])?["rank"]) ?? 0
+                return ChartTrack(rank: rank, name: name, artistName: artistName, playCount: Self.intValue(entry["playcount"]) ?? 0)
+            }
+        } catch {
+            await AppLogger.error("Fetch weekly track chart failed: \(error.localizedDescription)", category: .sync)
+            return []
+        }
+    }
+
+    nonisolated func fetchWeeklyAlbumChart(from: Int, to: Int) async -> [ChartAlbum] {
+        guard let user = await username else { return [] }
+        let params: [String: String] = [
+            "method": "user.getWeeklyAlbumChart",
+            "api_key": Self.apiKey,
+            "user": user,
+            "from": String(from),
+            "to": String(to),
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let chart = json["weeklyalbumchart"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(chart["album"]).compactMap { entry -> ChartAlbum? in
+                guard let name = entry["name"] as? String else { return nil }
+                let artistName = (entry["artist"] as? [String: Any])?["#text"] as? String
+                    ?? (entry["artist"] as? [String: Any])?["name"] as? String ?? ""
+                let rank = Self.intValue((entry["@attr"] as? [String: Any])?["rank"]) ?? 0
+                return ChartAlbum(rank: rank, name: name, artistName: artistName, playCount: Self.intValue(entry["playcount"]) ?? 0, imageURL: nil)
+            }
+        } catch {
+            await AppLogger.error("Fetch weekly album chart failed: \(error.localizedDescription)", category: .sync)
+            return []
+        }
+    }
+
+    nonisolated func fetchSimilarArtists(artist: String, limit: Int = 30) async -> [(name: String, match: Double)] {
+        let params: [String: String] = [
+            "method": "artist.getSimilar",
+            "api_key": Self.apiKey,
+            "artist": artist,
+            "limit": String(limit),
+            "autocorrect": "1",
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let similar = json["similarartists"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(similar["artist"]).compactMap { entry in
+                guard let name = entry["name"] as? String else { return nil }
+                let match = Double(entry["match"] as? String ?? "0") ?? 0
+                return (name: name, match: match)
+            }
+        } catch {
+            await AppLogger.error("Fetch similar artists failed: \(error.localizedDescription)", category: .content)
+            return []
+        }
+    }
+
+    nonisolated func fetchTrackInfo(artist: String, track: String) async -> LastFMTrackInfo? {
+        var params: [String: String] = [
+            "method": "track.getInfo",
+            "api_key": Self.apiKey,
+            "artist": artist,
+            "track": track,
+            "autocorrect": "1",
+        ]
+        if let user = await username { params["username"] = user }
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let dict = json["track"] as? [String: Any]
+            else { return nil }
+            let artistName = (dict["artist"] as? [String: Any])?["name"] as? String ?? artist
+            let album = (dict["album"] as? [String: Any])?["title"] as? String
+            let tags = Self.asArray((dict["toptags"] as? [String: Any])?["tag"]).compactMap { $0["name"] as? String }
+            let userLovedRaw = dict["userloved"]
+            let userLoved = (Self.intValue(userLovedRaw) ?? 0) == 1
+            return LastFMTrackInfo(
+                name: dict["name"] as? String ?? track,
+                artist: artistName,
+                album: album,
+                duration: Self.intValue(dict["duration"]),
+                playCount: Self.intValue(dict["playcount"]),
+                userPlayCount: Self.intValue(dict["userplaycount"]),
+                userLoved: userLoved,
+                tags: tags
+            )
+        } catch {
+            await AppLogger.error("Fetch track info failed: \(error.localizedDescription)", category: .content)
+            return nil
+        }
+    }
+
+    nonisolated func fetchArtistTopTracks(artist: String, limit: Int = 50) async -> [(name: String, playCount: Int, rank: Int)] {
+        let params: [String: String] = [
+            "method": "artist.getTopTracks",
+            "api_key": Self.apiKey,
+            "artist": artist,
+            "limit": String(limit),
+            "autocorrect": "1",
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let top = json["toptracks"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(top["track"]).compactMap { entry in
+                guard let name = entry["name"] as? String else { return nil }
+                let rank = Self.intValue((entry["@attr"] as? [String: Any])?["rank"]) ?? 0
+                return (name: name, playCount: Self.intValue(entry["playcount"]) ?? 0, rank: rank)
+            }
+        } catch {
+            await AppLogger.error("Fetch artist top tracks failed: \(error.localizedDescription)", category: .content)
+            return []
+        }
+    }
+
+    nonisolated func fetchArtistTopAlbums(artist: String, limit: Int = 50) async -> [ChartAlbum] {
+        let params: [String: String] = [
+            "method": "artist.getTopAlbums",
+            "api_key": Self.apiKey,
+            "artist": artist,
+            "limit": String(limit),
+            "autocorrect": "1",
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let top = json["topalbums"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(top["album"]).compactMap { entry -> ChartAlbum? in
+                guard let name = entry["name"] as? String, name != "(null)" else { return nil }
+                let artistName = (entry["artist"] as? [String: Any])?["name"] as? String ?? artist
+                return ChartAlbum(
+                    rank: 0,
+                    name: name,
+                    artistName: artistName,
+                    playCount: Self.intValue(entry["playcount"]) ?? 0,
+                    imageURL: Self.extractLargestImage(from: entry["image"])
+                )
+            }
+        } catch {
+            await AppLogger.error("Fetch artist top albums failed: \(error.localizedDescription)", category: .content)
+            return []
+        }
+    }
+
+    nonisolated func fetchArtistTopTags(artist: String) async -> [String] {
+        let params: [String: String] = [
+            "method": "artist.getTopTags",
+            "api_key": Self.apiKey,
+            "artist": artist,
+            "autocorrect": "1",
+        ]
+        do {
+            let data = try await throttledGET(params: params)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let top = json["toptags"] as? [String: Any]
+            else { return [] }
+            return Self.asArray(top["tag"]).compactMap { $0["name"] as? String }
+        } catch {
+            await AppLogger.error("Fetch artist top tags failed: \(error.localizedDescription)", category: .content)
+            return []
+        }
+    }
+
+    nonisolated private static let readThrottle = RequestThrottle(minInterval: 0.25)
+
+    nonisolated private func throttledGET(params: [String: String]) async throws -> Data {
+        await Self.readThrottle.acquire()
+        return try await performUnsignedGET(params: params)
+    }
+
+    /// Retries an operation whose response body carries Last.fm error 29 (rate
+    /// limit) with exponential backoff, up to `maxRetries` extra attempts.
+    nonisolated private static func performWithBackoff(
+        maxRetries: Int = 3,
+        _ operation: () async throws -> Data
+    ) async throws -> Data {
+        var attempt = 0
+        while true {
+            let data = try await operation()
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               intValue(json["error"]) == 29, attempt < maxRetries {
+                let delay = pow(2.0, Double(attempt))
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                attempt += 1
+                continue
+            }
+            return data
+        }
+    }
+
+    nonisolated private static func asArray(_ value: Any?) -> [[String: Any]] {
+        if let array = value as? [[String: Any]] { return array }
+        if let single = value as? [String: Any] { return [single] }
+        return []
     }
 
     nonisolated private struct ScrobbleEntryStatus {
