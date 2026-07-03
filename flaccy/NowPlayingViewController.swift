@@ -56,9 +56,32 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private var lastIsPlaying: Bool?
     private var hasAppliedInitialState = false
     private var hasAnimatedAppearance = false
-    private var isSwipeAnimating = false
     private var breatheAnimator: UIViewPropertyAnimator?
     private var artworkRestScale: CGFloat = 1
+
+    private let peekArtworkView = UIImageView()
+    private var trackPanAnimator: UIViewPropertyAnimator?
+    private var trackPanDirection: CGFloat = 0
+    private var trackPanBlocked = false
+    private var trackPanBaseFraction: CGFloat = 0
+    private var trackPanCommitted = false
+    private var trackPanPastThreshold = false
+    private var isInteractiveTrackTransitionActive = false
+    private var deferredArtwork: UIImage??
+    private lazy var thresholdTickGenerator = UIImpactFeedbackGenerator(style: .light)
+
+    private enum TrackPan {
+        static let exitMultiplier: CGFloat = 1.15
+        static let commitDistanceRatio: CGFloat = 0.35
+        static let commitVelocity: CGFloat = 600
+        static let linearLimitRatio: CGFloat = 0.6
+        static let rubberRangeRatio: CGFloat = 0.25
+        static let blockedRangeRatio: CGFloat = 0.16
+        static let exitRotation: CGFloat = 0.06
+        static let exitScale: CGFloat = 0.92
+        static let peekScale: CGFloat = 0.9
+        static let peekStartMultiplier: CGFloat = 1.08
+    }
 
     private lazy var smallThumb = makeThumbImage(size: 6)
     private lazy var largeThumb = makeThumbImage(size: 20)
@@ -234,19 +257,38 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             artworkSquare,
         ])
 
+        setupPeekArtwork()
+
         artworkContainer.isUserInteractionEnabled = true
-        let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeLeft))
-        swipeLeft.direction = .left
-        artworkContainer.addGestureRecognizer(swipeLeft)
-        let swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeRight))
-        swipeRight.direction = .right
-        artworkContainer.addGestureRecognizer(swipeRight)
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(handleTrackPan(_:)))
+        pan.delegate = self
+        artworkContainer.addGestureRecognizer(pan)
 
         let tilt = UILongPressGestureRecognizer(target: self, action: #selector(handleTilt(_:)))
         tilt.minimumPressDuration = 0.18
         artworkContainer.addGestureRecognizer(tilt)
 
         artworkContainer.addInteraction(UIContextMenuInteraction(delegate: self))
+    }
+
+    private func setupPeekArtwork() {
+        peekArtworkView.contentMode = .scaleAspectFill
+        peekArtworkView.clipsToBounds = true
+        peekArtworkView.layer.cornerRadius = 20
+        peekArtworkView.layer.cornerCurve = .continuous
+        peekArtworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        peekArtworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
+        peekArtworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 48, weight: .ultraLight)
+        peekArtworkView.isHidden = true
+        peekArtworkView.isUserInteractionEnabled = false
+        peekArtworkView.translatesAutoresizingMaskIntoConstraints = false
+        artworkContainer.addSubview(peekArtworkView)
+        NSLayoutConstraint.activate([
+            peekArtworkView.topAnchor.constraint(equalTo: artworkView.topAnchor),
+            peekArtworkView.leadingAnchor.constraint(equalTo: artworkView.leadingAnchor),
+            peekArtworkView.trailingAnchor.constraint(equalTo: artworkView.trailingAnchor),
+            peekArtworkView.bottomAnchor.constraint(equalTo: artworkView.bottomAnchor),
+        ])
     }
 
     private func setupInfoBlock() {
@@ -655,19 +697,27 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func setArtwork(_ image: UIImage?) {
-        let update = { [self] in
-            if let image {
-                artworkView.contentMode = .scaleAspectFill
-                artworkView.image = image
-            } else {
-                artworkView.contentMode = .center
-                artworkView.image = UIImage(systemName: "music.note")
-            }
+        if isInteractiveTrackTransitionActive {
+            deferredArtwork = .some(image)
+            return
         }
-        if hasAppliedInitialState, !isSwipeAnimating, !UIAccessibility.isReduceMotionEnabled {
-            UIView.transition(with: artworkView, duration: 0.22, options: [.transitionCrossDissolve, .allowUserInteraction], animations: update)
+        if hasAppliedInitialState, !UIAccessibility.isReduceMotionEnabled {
+            UIView.transition(
+                with: artworkView, duration: 0.22,
+                options: [.transitionCrossDissolve, .allowUserInteraction]
+            ) { self.applyArtworkDirect(image) }
         } else {
-            update()
+            applyArtworkDirect(image)
+        }
+    }
+
+    private func applyArtworkDirect(_ image: UIImage?) {
+        if let image {
+            artworkView.contentMode = .scaleAspectFill
+            artworkView.image = image
+        } else {
+            artworkView.contentMode = .center
+            artworkView.image = UIImage(systemName: "music.note")
         }
     }
 
@@ -928,42 +978,271 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         sleepTimerCapsule?.setActive(isActive, animated: hasAppliedInitialState)
     }
 
-    @objc private func handleSwipeLeft() {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        animateTrackChange(direction: -1) { [weak self] in self?.viewModel.nextTrack() }
-    }
-
-    @objc private func handleSwipeRight() {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        animateTrackChange(direction: 1) { [weak self] in self?.viewModel.previousTrack() }
-    }
-
-    /// Slides the artwork out in the swipe direction, advances the track, then
-    /// springs the new artwork in from the opposite edge with an interruptible animator.
-    private func animateTrackChange(direction: CGFloat, change: @escaping () -> Void) {
+    /// Interactive, interruptible track-change gesture. The card tracks the
+    /// finger 1:1 via a paused linear animator scrubbed by translation, with
+    /// rubber-band resistance past 60% of the width (or from zero when the
+    /// direction is blocked), the neighbor's artwork peeking from the opposite
+    /// edge, and a velocity-seeded spring settle in either direction.
+    @objc private func handleTrackPan(_ gesture: UIPanGestureRecognizer) {
         guard !UIAccessibility.isReduceMotionEnabled else {
-            change()
+            handleReducedMotionTrackPan(gesture)
             return
         }
-        isSwipeAnimating = true
-        let outbound = UIViewPropertyAnimator(duration: 0.12, curve: .easeIn) { [self] in
-            artworkView.transform = CGAffineTransform(translationX: 36 * direction, y: 0).scaledBy(x: 0.94, y: 0.94)
-            artworkView.alpha = 0.35
+        let width = max(artworkContainer.bounds.width, 1)
+        let translation = gesture.translation(in: view).x
+        let velocity = gesture.velocity(in: view).x
+        switch gesture.state {
+        case .began:
+            beginTrackPan()
+        case .changed:
+            scrubTrackPan(translation: translation, width: width)
+        case .ended:
+            settleTrackPan(velocity: velocity, width: width, cancelled: false)
+        case .cancelled, .failed:
+            settleTrackPan(velocity: velocity, width: width, cancelled: true)
+        default:
+            break
         }
-        outbound.addCompletion { [weak self] _ in
-            guard let self else { return }
-            change()
-            self.artworkView.transform = CGAffineTransform(translationX: -36 * direction, y: 0).scaledBy(x: 0.94, y: 0.94)
-            let spring = UISpringTimingParameters(dampingRatio: 0.84, initialVelocity: CGVector(dx: 2.2, dy: 0))
-            let inbound = UIViewPropertyAnimator(duration: 0.32, timingParameters: spring)
-            inbound.addAnimations {
-                self.artworkView.transform = .identity
-                self.artworkView.alpha = 1
+    }
+
+    /// Grabs a settling card mid-flight: the running animator is paused at its
+    /// current fraction and further scrubbing continues from there.
+    private func beginTrackPan() {
+        thresholdTickGenerator.prepare()
+        if let animator = trackPanAnimator, animator.state == .active {
+            animator.pauseAnimation()
+            animator.isReversed = false
+            trackPanBaseFraction = animator.fractionComplete
+        } else {
+            trackPanAnimator = nil
+            trackPanDirection = 0
+            trackPanBaseFraction = 0
+            trackPanCommitted = false
+            trackPanPastThreshold = false
+        }
+    }
+
+    private func startTrackPan(direction: CGFloat, width: CGFloat) {
+        trackPanDirection = direction
+        trackPanBlocked = isTrackChangeBlocked(direction: direction)
+        trackPanBaseFraction = 0
+        trackPanCommitted = false
+        trackPanPastThreshold = false
+        deferredArtwork = nil
+        isInteractiveTrackTransitionActive = true
+        if !trackPanBlocked {
+            configurePeekArtwork(with: neighborTrack(direction: direction))
+            peekArtworkView.transform = CGAffineTransform(
+                translationX: -direction * width * TrackPan.peekStartMultiplier, y: 0
+            ).scaledBy(x: TrackPan.peekScale, y: TrackPan.peekScale)
+            peekArtworkView.isHidden = false
+        }
+        let blocked = trackPanBlocked
+        let fullDistance = trackPanFullDistance(width: width)
+        let animator = UIViewPropertyAnimator(duration: 0.4, curve: .linear)
+        animator.addAnimations { [self] in
+            if blocked {
+                artworkView.transform = CGAffineTransform(translationX: direction * fullDistance, y: 0)
+                    .rotated(by: direction * TrackPan.exitRotation * 0.5)
+                    .scaledBy(x: 0.97, y: 0.97)
+            } else {
+                artworkView.transform = CGAffineTransform(translationX: direction * fullDistance, y: 0)
+                    .rotated(by: direction * TrackPan.exitRotation)
+                    .scaledBy(x: TrackPan.exitScale, y: TrackPan.exitScale)
+                peekArtworkView.transform = .identity
             }
-            inbound.addCompletion { [weak self] _ in self?.isSwipeAnimating = false }
-            inbound.startAnimation()
         }
-        outbound.startAnimation()
+        animator.addCompletion { [weak self] position in
+            self?.trackPanDidSettle(at: position)
+        }
+        animator.pauseAnimation()
+        trackPanAnimator = animator
+    }
+
+    private func scrubTrackPan(translation: CGFloat, width: CGFloat) {
+        if trackPanAnimator == nil {
+            guard abs(translation) > 0.5 else { return }
+            startTrackPan(direction: translation < 0 ? -1 : 1, width: width)
+        }
+        guard let animator = trackPanAnimator else { return }
+        let fullDistance = trackPanFullDistance(width: width)
+        let raw = trackPanBaseFraction * fullDistance + trackPanDirection * translation
+        if raw < -6, trackPanBaseFraction == 0, !trackPanCommitted {
+            flipTrackPanDirection(translation: translation, width: width)
+            return
+        }
+        let mapped = rubberBandedDistance(max(0, raw), width: width)
+        animator.fractionComplete = min(mapped / fullDistance, 1)
+        updateThresholdTick(distance: mapped, width: width)
+    }
+
+    private func flipTrackPanDirection(translation: CGFloat, width: CGFloat) {
+        let newDirection = -trackPanDirection
+        trackPanAnimator?.stopAnimation(true)
+        trackPanAnimator = nil
+        resetCardPresentation()
+        startTrackPan(direction: newDirection, width: width)
+        scrubTrackPan(translation: translation, width: width)
+    }
+
+    /// Commits when the card is past 35% of the width or flicked faster than
+    /// 600 pt/s along the gesture direction (a strong opposite flick cancels);
+    /// an already-committed transition always finishes forward.
+    private func settleTrackPan(velocity: CGFloat, width: CGFloat, cancelled: Bool) {
+        guard let animator = trackPanAnimator else { return }
+        let fullDistance = trackPanFullDistance(width: width)
+        let distance = animator.fractionComplete * fullDistance
+        let directionalVelocity = trackPanDirection * velocity
+        let shouldCommit = trackPanCommitted
+            || (!trackPanBlocked && !cancelled
+                && directionalVelocity > -TrackPan.commitVelocity
+                && (distance >= width * TrackPan.commitDistanceRatio
+                    || directionalVelocity > TrackPan.commitVelocity))
+        if shouldCommit {
+            commitTrackPan(animator: animator, distance: distance, velocity: directionalVelocity, fullDistance: fullDistance)
+        } else {
+            cancelTrackPan(animator: animator, distance: distance, velocity: directionalVelocity, fullDistance: fullDistance)
+        }
+    }
+
+    private func commitTrackPan(
+        animator: UIViewPropertyAnimator, distance: CGFloat, velocity: CGFloat, fullDistance: CGFloat
+    ) {
+        if !trackPanCommitted {
+            trackPanCommitted = true
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            fireTrackChange(direction: trackPanDirection)
+        }
+        let remaining = max(fullDistance - distance, 1)
+        let spring = UISpringTimingParameters(
+            dampingRatio: 0.86, initialVelocity: CGVector(dx: max(0, velocity) / remaining, dy: 0)
+        )
+        animator.isReversed = false
+        animator.continueAnimation(withTimingParameters: spring, durationFactor: 0.8)
+    }
+
+    private func cancelTrackPan(
+        animator: UIViewPropertyAnimator, distance: CGFloat, velocity: CGFloat, fullDistance: CGFloat
+    ) {
+        let remaining = max(distance, 1)
+        let spring = UISpringTimingParameters(
+            dampingRatio: 0.78, initialVelocity: CGVector(dx: max(0, -velocity) / remaining, dy: 0)
+        )
+        animator.isReversed = true
+        animator.continueAnimation(withTimingParameters: spring, durationFactor: 0.7)
+    }
+
+    /// Finalizes a settled transition: on commit the peek image is promoted to
+    /// the main card before the peek hides, so the swap is pixel-identical, and
+    /// any artwork update deferred during the transition is applied directly.
+    private func trackPanDidSettle(at position: UIViewAnimatingPosition) {
+        trackPanAnimator = nil
+        isInteractiveTrackTransitionActive = false
+        if case .some(let pending) = deferredArtwork {
+            applyArtworkDirect(pending)
+        } else if position == .end, trackPanCommitted {
+            artworkView.contentMode = peekArtworkView.contentMode
+            artworkView.image = peekArtworkView.image
+        }
+        deferredArtwork = nil
+        resetCardPresentation()
+        trackPanDirection = 0
+        trackPanCommitted = false
+        trackPanPastThreshold = false
+    }
+
+    private func resetCardPresentation() {
+        artworkView.transform = .identity
+        peekArtworkView.isHidden = true
+        peekArtworkView.transform = .identity
+    }
+
+    /// Maps raw finger distance to card distance: 1:1 up to 60% of the width
+    /// then asymptotically resisted, or fully rubber-banded from zero when the
+    /// direction has no track to go to.
+    private func rubberBandedDistance(_ distance: CGFloat, width: CGFloat) -> CGFloat {
+        if trackPanBlocked {
+            let range = width * TrackPan.blockedRangeRatio
+            return range * (1 - 1 / (1 + distance / range))
+        }
+        let limit = width * TrackPan.linearLimitRatio
+        guard distance > limit else { return distance }
+        let range = width * TrackPan.rubberRangeRatio
+        return limit + range * (1 - 1 / (1 + (distance - limit) / range))
+    }
+
+    private func trackPanFullDistance(width: CGFloat) -> CGFloat {
+        trackPanBlocked ? width * 0.5 : width * TrackPan.exitMultiplier
+    }
+
+    private func updateThresholdTick(distance: CGFloat, width: CGFloat) {
+        guard !trackPanBlocked else { return }
+        let past = distance >= width * TrackPan.commitDistanceRatio
+        guard past != trackPanPastThreshold else { return }
+        trackPanPastThreshold = past
+        thresholdTickGenerator.impactOccurred(intensity: past ? 1.0 : 0.6)
+        thresholdTickGenerator.prepare()
+    }
+
+    private func configurePeekArtwork(with track: Track?) {
+        if let artwork = track?.artwork {
+            peekArtworkView.contentMode = .scaleAspectFill
+            peekArtworkView.image = artwork
+        } else {
+            peekArtworkView.contentMode = .center
+            peekArtworkView.image = UIImage(systemName: "music.note")
+        }
+    }
+
+    /// Resolves the track whose artwork should peek in for the given direction,
+    /// mirroring AudioPlayer semantics: forward wraps only on repeat-all, and a
+    /// backward swipe more than 3s into a track restarts the current one.
+    private func neighborTrack(direction: CGFloat) -> Track? {
+        let player = AudioPlayer.shared
+        if direction < 0 {
+            if player.currentIndex + 1 < player.queue.count {
+                return player.queue[player.currentIndex + 1]
+            }
+            return player.repeatMode == .all ? player.queue.first : nil
+        }
+        if player.currentTime > 3 { return player.currentTrack }
+        guard player.currentIndex > 0, player.currentIndex - 1 < player.queue.count else { return nil }
+        return player.queue[player.currentIndex - 1]
+    }
+
+    private func isTrackChangeBlocked(direction: CGFloat) -> Bool {
+        let player = AudioPlayer.shared
+        guard !player.queue.isEmpty else { return true }
+        if direction < 0 {
+            return player.currentIndex + 1 >= player.queue.count && player.repeatMode != .all
+        }
+        return player.currentIndex <= 0 && player.currentTime <= 3
+    }
+
+    private func fireTrackChange(direction: CGFloat) {
+        AppLogger.info(
+            "Interactive track change committed (\(direction < 0 ? "next" : "previous"))", category: .ui
+        )
+        if direction < 0 {
+            viewModel.nextTrack()
+        } else {
+            viewModel.previousTrack()
+        }
+    }
+
+    private func handleReducedMotionTrackPan(_ gesture: UIPanGestureRecognizer) {
+        guard gesture.state == .ended else { return }
+        let width = max(artworkContainer.bounds.width, 1)
+        let translation = gesture.translation(in: view).x
+        let velocity = gesture.velocity(in: view).x
+        let dominant = abs(translation) > 1 ? translation : velocity
+        guard dominant != 0 else { return }
+        let direction: CGFloat = dominant < 0 ? -1 : 1
+        guard !isTrackChangeBlocked(direction: direction) else { return }
+        guard direction * translation >= width * TrackPan.commitDistanceRatio
+            || direction * velocity > TrackPan.commitVelocity else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        fireTrackChange(direction: direction)
     }
 
     /// Tilts the artwork card in 3D toward the touch point while pressed and
@@ -1034,6 +1313,17 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             [progressSlider, currentTimeLabel, remainingTimeLabel, skipBackButton, previousButton,
              playPauseButton, nextButton, skipForwardButton],
         ]
+    }
+}
+
+extension NowPlayingViewController: UIGestureRecognizerDelegate {
+
+    /// Restricts the track pan to horizontally dominant drags so vertical
+    /// drags still reach the sheet's interactive dismissal.
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+        let velocity = pan.velocity(in: view)
+        return abs(velocity.x) >= abs(velocity.y)
     }
 }
 
