@@ -51,8 +51,11 @@ final class AudioPlayer: AudioPlaying {
 
     private var player: AVQueuePlayer?
     private var timeObserver: Any?
-    private var endObserver: NSObjectProtocol?
     private var timeControlObservation: NSKeyValueObservation?
+    private var currentItemObservation: NSKeyValueObservation?
+    private var playingItem: AVPlayerItem?
+    private var preloadedItem: AVPlayerItem?
+    private var preloadedIndex: Int?
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
     private let selectionFeedback = UISelectionFeedbackGenerator()
@@ -109,6 +112,9 @@ final class AudioPlayer: AudioPlaying {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleMediaServicesReset), name: AVAudioSession.mediaServicesWereResetNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleItemFailedToPlayToEnd(_:)), name: .AVPlayerItemFailedToPlayToEndTime, object: nil
         )
         startNetworkMonitoring()
     }
@@ -185,12 +191,27 @@ final class AudioPlayer: AudioPlaying {
             AppLogger.warning("Media services were reset, rebuilding player", category: .content)
             let resumePosition = self.lastKnownPlaybackPosition
             self.timeControlObservation = nil
+            self.currentItemObservation = nil
+            self.playingItem = nil
+            self.preloadedItem = nil
+            self.preloadedIndex = nil
             self.removePlayerObservers()
             self.player = nil
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             guard self.currentTrack != nil else { return }
             self.rebuildPlayerPaused(at: resumePosition)
             NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+        }
+    }
+
+    /// Skips past an item that cannot finish decoding so one corrupt file never stalls the whole queue.
+    @objc private func handleItemFailedToPlayToEnd(_ notification: Notification) {
+        let failedItem = notification.object as? AVPlayerItem
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let failedItem, failedItem === self.playingItem else { return }
+            let errorDescription = (notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)?.localizedDescription ?? "unknown"
+            AppLogger.error("Item failed to play to end at index \(self.currentIndex): \(errorDescription)", category: .playback)
+            self.nextTrack()
         }
     }
 
@@ -246,9 +267,7 @@ final class AudioPlayer: AudioPlaying {
                 loadTrack(at: currentIndex)
             } else {
                 player?.pause()
-                isPlaying = false
-                updateNowPlayingInfo()
-                NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+                applyPlaybackState(false)
             }
             return
         }
@@ -259,10 +278,12 @@ final class AudioPlayer: AudioPlaying {
 
     func previousTrack() {
         if currentTime > 3 {
-            player?.seek(to: .zero)
             selectionFeedback.selectionChanged()
-            updateNowPlayingInfo()
-            updateLiveActivity()
+            player?.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+                self?.updateNowPlayingInfo()
+                self?.updateLiveActivity()
+                NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
+            }
             return
         }
         checkScrobbleOnSkip()
@@ -340,8 +361,11 @@ final class AudioPlayer: AudioPlaying {
 
     func clearQueue() {
         removePlayerObservers()
+        playingItem = nil
+        preloadedItem = nil
+        preloadedIndex = nil
         player?.pause()
-        player?.replaceCurrentItem(with: nil)
+        player?.removeAllItems()
         isPlaying = false
         queue = []
         originalQueue = []
@@ -455,7 +479,111 @@ final class AudioPlayer: AudioPlaying {
         player.automaticallyWaitsToMinimizeStalling = false
         player.actionAtItemEnd = .advance
         installTimeControlObservation(on: player)
+        installCurrentItemObservation(on: player)
         return player
+    }
+
+    /// Single authoritative advance path: every change of the queue player's currentItem
+    /// (auto-advance at item end, queue exhaustion, repeat-one restart) flows through here,
+    /// with all comparisons done against live player state on the main queue so delayed
+    /// delivery can never bind bookkeeping to an already-finished item.
+    private func installCurrentItemObservation(on player: AVQueuePlayer) {
+        currentItemObservation = player.observe(\.currentItem, options: [.new]) { [weak self] _, _ in
+            DispatchQueue.main.async { self?.handleCurrentItemChanged() }
+        }
+    }
+
+    private func handleCurrentItemChanged() {
+        guard let player else { return }
+        let item = player.currentItem
+        if item === playingItem { return }
+        guard let item else {
+            handleQueueExhausted()
+            return
+        }
+        if item === preloadedItem, let nextIndex = preloadedIndex {
+            completeAutoAdvance(to: nextIndex, item: item)
+            return
+        }
+        if let resolvedIndex = resolveQueueIndex(for: item) {
+            AppLogger.warning("Advance resolved by URL match to index \(resolvedIndex) (preload bookkeeping was stale)", category: .playback)
+            completeAutoAdvance(to: resolvedIndex, item: item)
+            return
+        }
+        AppLogger.warning("Unrecognized current item after advance, reloading index \(currentIndex)", category: .playback)
+        loadTrack(at: currentIndex)
+    }
+
+    /// Recovers the queue index for an item the preload bookkeeping no longer knows,
+    /// e.g. after two back-to-back advances raced a single main-queue hop.
+    private func resolveQueueIndex(for item: AVPlayerItem) -> Int? {
+        guard let url = (item.asset as? AVURLAsset)?.url, !queue.isEmpty else { return nil }
+        let ordered = Array(queue.indices.dropFirst(currentIndex + 1)) + Array(queue.indices.prefix(currentIndex + 1))
+        return ordered.first { queue[$0].fileURL == url }
+    }
+
+    private func completeAutoAdvance(to nextIndex: Int, item: AVPlayerItem) {
+        guard queue.indices.contains(nextIndex) else {
+            AppLogger.warning("Auto-advance target index \(nextIndex) out of bounds (queue count \(queue.count))", category: .playback)
+            handleQueueExhausted()
+            return
+        }
+        if !hasScrobbled {
+            performScrobble()
+        }
+
+        let previousIndex = currentIndex
+        currentIndex = nextIndex
+        playingItem = item
+        preloadedItem = nil
+        preloadedIndex = nil
+        trackStartTime = Date()
+        hasScrobbled = false
+        lastKnownPlaybackPosition = 0
+
+        let track = queue[currentIndex]
+        AppLogger.info("Auto-advance \(previousIndex) -> \(currentIndex): \(track.title) - \(track.artist)", category: .playback)
+
+        resyncPreloadedItems()
+
+        if sleepAtEndOfTrack {
+            cancelSleepTimer()
+            player?.pause()
+            applyPlaybackState(false)
+        } else {
+            activateSession()
+            player?.play()
+            isPlaying = true
+        }
+
+        updateNowPlayingInfo()
+        ensureArtworkLoaded(for: track)
+        sendNowPlayingToLastFM(track: track)
+
+        endLiveActivity()
+        startLiveActivity()
+
+        NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
+        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+    }
+
+    private func handleQueueExhausted() {
+        guard playingItem != nil else { return }
+        AppLogger.info("Queue exhausted at index \(currentIndex), stopping", category: .playback)
+        if !hasScrobbled {
+            performScrobble()
+        }
+        playingItem = nil
+        preloadedItem = nil
+        preloadedIndex = nil
+        if sleepAtEndOfTrack {
+            cancelSleepTimer()
+        }
+        player?.pause()
+        isPlaying = false
+        updateNowPlayingInfo()
+        endLiveActivity()
+        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
     }
 
     /// Derives isPlaying from the player's timeControlStatus so system-initiated pauses (route loss, resource contention) keep app and lock-screen state in sync.
@@ -478,18 +606,6 @@ final class AudioPlayer: AudioPlaying {
             player?.removeTimeObserver(observer)
             timeObserver = nil
         }
-        if let observer = endObserver {
-            NotificationCenter.default.removeObserver(observer)
-            endObserver = nil
-        }
-    }
-
-    private func installEndObserver(for item: AVPlayerItem) {
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
-        ) { [weak self] _ in
-            self?.handleTrackFinished()
-        }
     }
 
     private func loadTrack(at index: Int) {
@@ -499,6 +615,10 @@ final class AudioPlayer: AudioPlaying {
 
         let track = queue[index]
         let item = AVPlayerItem(url: track.fileURL)
+
+        playingItem = item
+        preloadedItem = nil
+        preloadedIndex = nil
 
         if let player {
             player.removeAllItems()
@@ -515,11 +635,11 @@ final class AudioPlayer: AudioPlaying {
 
         trackStartTime = Date()
         hasScrobbled = false
+        lastKnownPlaybackPosition = 0
 
         startTimeObserver()
-        installEndObserver(for: item)
 
-        AppLogger.info("Now playing: \(track.title) - \(track.artist)", category: .content)
+        AppLogger.info("Load track \(index): \(track.title) - \(track.artist)", category: .playback)
         updateNowPlayingInfo()
         ensureArtworkLoaded(for: track)
         sendNowPlayingToLastFM(track: track)
@@ -546,8 +666,11 @@ final class AudioPlayer: AudioPlaying {
         let nextItem = AVPlayerItem(url: queue[nextIndex].fileURL)
         if player?.canInsert(nextItem, after: player?.items().last) == true {
             player?.insert(nextItem, after: player?.items().last)
+            preloadedItem = nextItem
+            preloadedIndex = nextIndex
+            AppLogger.info("Preloaded index \(nextIndex) after \(index)", category: .playback)
         } else {
-            AppLogger.warning("canInsert returned false for track \(nextIndex): \(queue[nextIndex].title)", category: .content)
+            AppLogger.warning("canInsert returned false for track \(nextIndex): \(queue[nextIndex].title)", category: .playback)
         }
     }
 
@@ -557,6 +680,8 @@ final class AudioPlayer: AudioPlaying {
         for item in player.items().dropFirst() {
             player.remove(item)
         }
+        preloadedItem = nil
+        preloadedIndex = nil
         preloadNextItem(after: currentIndex)
     }
 
@@ -568,67 +693,6 @@ final class AudioPlayer: AudioPlaying {
             self.checkScrobbleCriteria()
             NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
         }
-    }
-
-    private func handleTrackFinished() {
-        if !hasScrobbled {
-            performScrobble()
-        }
-
-        if sleepAtEndOfTrack {
-            cancelSleepTimer()
-            player?.pause()
-            applyPlaybackState(false)
-            return
-        }
-
-        if let observer = endObserver {
-            NotificationCenter.default.removeObserver(observer)
-            endObserver = nil
-        }
-
-        let nextIndex: Int
-        if repeatMode == .one {
-            nextIndex = currentIndex
-        } else if currentIndex + 1 < queue.count {
-            nextIndex = currentIndex + 1
-        } else if repeatMode == .all && !queue.isEmpty {
-            nextIndex = 0
-        } else {
-            player?.pause()
-            isPlaying = false
-            updateNowPlayingInfo()
-            endLiveActivity()
-            NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
-            return
-        }
-
-        currentIndex = nextIndex
-
-        guard let currentItem = player?.currentItem else {
-            AppLogger.info("Preloaded item unavailable, falling back to loadTrack", category: .content)
-            loadTrack(at: currentIndex)
-            return
-        }
-
-        trackStartTime = Date()
-        hasScrobbled = false
-
-        let track = queue[currentIndex]
-        installEndObserver(for: currentItem)
-
-        preloadNextItem(after: currentIndex)
-        activateSession()
-        player?.play()
-        AppLogger.info("Gapless advance: \(track.title) - \(track.artist)", category: .content)
-        updateNowPlayingInfo()
-        ensureArtworkLoaded(for: track)
-        sendNowPlayingToLastFM(track: track)
-
-        endLiveActivity()
-        startLiveActivity()
-
-        NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
     }
 
     private func checkScrobbleOnSkip() {
@@ -782,11 +846,12 @@ final class AudioPlayer: AudioPlaying {
             return
         }
 
+        let reportedDuration = duration > 0 ? duration : track.duration
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: track.title,
             MPMediaItemPropertyArtist: track.artist,
             MPMediaItemPropertyAlbumTitle: track.albumTitle,
-            MPMediaItemPropertyPlaybackDuration: duration,
+            MPMediaItemPropertyPlaybackDuration: reportedDuration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
         ]
@@ -963,6 +1028,9 @@ final class AudioPlayer: AudioPlaying {
         removePlayerObservers()
 
         let item = AVPlayerItem(url: track.fileURL)
+        playingItem = item
+        preloadedItem = nil
+        preloadedIndex = nil
         if let player {
             player.removeAllItems()
             player.insert(item, after: nil)
@@ -979,7 +1047,6 @@ final class AudioPlayer: AudioPlaying {
         }
 
         startTimeObserver()
-        installEndObserver(for: item)
         updateNowPlayingInfo()
     }
 
