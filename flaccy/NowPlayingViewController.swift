@@ -168,6 +168,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         mainStack.spacing = 22
         mainStack.setCustomSpacing(26, after: artworkContainer)
         mainStack.setCustomSpacing(28, after: transportStack)
+        if let volumeRow = mainStack.arrangedSubviews.dropLast().last {
+            mainStack.setCustomSpacing(34, after: volumeRow)
+        }
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(mainStack)
 
@@ -182,7 +185,24 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         ])
     }
 
+
+    /// Device-motion parallax: the artwork card drifts opposite the device tilt
+    /// so it reads as floating above the backdrop. Skipped under Reduce Motion.
+    private func addMotionParallax() {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
+        horizontal.minimumRelativeValue = -18
+        horizontal.maximumRelativeValue = 18
+        let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
+        vertical.minimumRelativeValue = -12
+        vertical.maximumRelativeValue = 12
+        let group = UIMotionEffectGroup()
+        group.motionEffects = [horizontal, vertical]
+        artworkContainer.addMotionEffect(group)
+    }
+
     private func setupArtwork() {
+        addMotionParallax()
         artworkContainer.layer.shadowColor = UIColor.black.cgColor
         artworkContainer.layer.shadowOpacity = 0.45
         artworkContainer.layer.shadowOffset = CGSize(width: 0, height: 14)
