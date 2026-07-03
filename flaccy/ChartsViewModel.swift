@@ -24,7 +24,7 @@ final class ChartsViewModel {
         if !lastFM.isAuthenticated {
             importStatePublisher.send(.unavailable)
         } else if UserDefaults.standard.bool(forKey: importStateKey) {
-            importStatePublisher.send(.done)
+            importStatePublisher.send(.done(imported: 0))
         }
     }
 
@@ -110,15 +110,38 @@ final class ChartsViewModel {
         return snapshot
     }
 
+    /// Runs the one-time history backfill while surfacing live progress. Since
+    /// `importHistory()` reports nothing itself, progress is derived by polling the
+    /// local scrobble count against a pre-import baseline — the rows land in the
+    /// database as pages are imported, so the delta is a real, rising count.
     func importHistory() {
-        guard lastFM.isAuthenticated, importStatePublisher.value != .importing else { return }
-        importStatePublisher.send(.importing)
+        guard lastFM.isAuthenticated, !importStatePublisher.value.isImporting else { return }
+        let baseline = stats.totalPlays(period: .allTime)
+        importStatePublisher.send(.importing(imported: 0))
+        AppLogger.info("Recap history import started (baseline \(baseline) scrobbles)", category: .sync)
+
+        let progressTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                guard !Task.isCancelled, let self else { return }
+                let delta = max(0, self.stats.totalPlays(period: .allTime) - baseline)
+                await MainActor.run {
+                    if self.importStatePublisher.value.isImporting {
+                        self.importStatePublisher.send(.importing(imported: delta))
+                    }
+                }
+            }
+        }
+
         Task { [weak self] in
             guard let self else { return }
             await self.stats.importHistory()
+            progressTask.cancel()
+            let imported = max(0, self.stats.totalPlays(period: .allTime) - baseline)
             UserDefaults.standard.set(true, forKey: self.importStateKey)
+            AppLogger.info("Recap history import finished (\(imported) new scrobbles)", category: .sync)
             await MainActor.run {
-                self.importStatePublisher.send(.done)
+                self.importStatePublisher.send(.done(imported: imported))
                 self.load(period: self.selectedPeriod)
             }
         }

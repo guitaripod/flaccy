@@ -75,6 +75,7 @@ final class AsyncImageView: UIImageView {
         AlbumArtworkCache.shared.loadArtwork(forAlbum: title, artist: artist) { [weak self] image in
             guard let self, self.token == current else { return }
             guard let image else {
+                AppLogger.debug("Recap art miss \(title) / \(artist), remote=\(remoteURL != nil)", category: .content)
                 self.setRemote(remoteURL, placeholder: placeholder)
                 return
             }
@@ -369,16 +370,20 @@ final class ImportBannerCell: UICollectionViewCell {
             chevron.isHidden = false
             card.isUserInteractionEnabled = true
             accessibilityHint = "Double tap to import"
-        case .importing:
+        case .importing(let imported):
             titleLabel.text = "Importing history\u{2026}"
-            subtitleLabel.text = "This can take a moment. You can keep browsing."
+            subtitleLabel.text = imported > 0
+                ? "\(RecapFormat.count(imported)) scrobbles imported so far\u{2026}"
+                : "This can take a moment. You can keep browsing."
             spinner.startAnimating()
             chevron.isHidden = true
             card.isUserInteractionEnabled = false
             accessibilityHint = nil
-        case .done:
+        case .done(let imported):
             titleLabel.text = "History imported"
-            subtitleLabel.text = "Your stats now include your full listening history."
+            subtitleLabel.text = imported > 0
+                ? "Imported \(RecapFormat.count(imported)) scrobbles."
+                : "Your stats now include your full listening history."
             spinner.stopAnimating()
             chevron.isHidden = true
             card.isUserInteractionEnabled = false
@@ -392,7 +397,7 @@ final class ImportBannerCell: UICollectionViewCell {
             accessibilityHint = nil
         }
         isAccessibilityElement = true
-        accessibilityLabel = titleLabel.text
+        accessibilityLabel = [titleLabel.text, subtitleLabel.text].compactMap { $0 }.joined(separator: ". ")
     }
 
     override func prepareForReuse() {
@@ -409,13 +414,21 @@ final class ArtistCardCell: UICollectionViewCell {
     private let nameLabel = UILabel()
     private let playsLabel = UILabel()
     private let disc = UIView()
+    private let cover = AsyncImageView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
 
         disc.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         disc.layer.cornerRadius = 40
+        disc.layer.masksToBounds = true
         disc.translatesAutoresizingMaskIntoConstraints = false
+
+        cover.layer.cornerRadius = 40
+        cover.layer.masksToBounds = true
+        cover.isHidden = true
+        cover.translatesAutoresizingMaskIntoConstraints = false
+        disc.addSubview(cover)
 
         initialLabel.font = .scaled(.largeTitle, size: 30, weight: .bold)
         initialLabel.textColor = .white
@@ -453,6 +466,10 @@ final class ArtistCardCell: UICollectionViewCell {
         NSLayoutConstraint.activate([
             disc.widthAnchor.constraint(equalToConstant: 80),
             disc.heightAnchor.constraint(equalToConstant: 80),
+            cover.topAnchor.constraint(equalTo: disc.topAnchor),
+            cover.bottomAnchor.constraint(equalTo: disc.bottomAnchor),
+            cover.leadingAnchor.constraint(equalTo: disc.leadingAnchor),
+            cover.trailingAnchor.constraint(equalTo: disc.trailingAnchor),
             initialLabel.centerXAnchor.constraint(equalTo: disc.centerXAnchor),
             initialLabel.centerYAnchor.constraint(equalTo: disc.centerYAnchor),
             rankLabel.widthAnchor.constraint(equalToConstant: 22),
@@ -474,8 +491,25 @@ final class ArtistCardCell: UICollectionViewCell {
         playsLabel.text = "\(RecapFormat.compact(item.playCount)) plays"
         rankLabel.text = "\(item.rank)"
         disc.backgroundColor = tint.withAlphaComponent(0.28)
+
+        if let title = item.artworkTitle, let artist = item.artworkArtist {
+            cover.isHidden = false
+            initialLabel.isHidden = true
+            cover.setAlbum(title: title, artist: artist, remoteURL: nil, placeholder: nil)
+        } else {
+            cover.isHidden = true
+            initialLabel.isHidden = false
+        }
+
         isAccessibilityElement = true
-        accessibilityLabel = "Number \(item.rank), \(item.name), \(item.playCount) plays"
+        let ownership = item.isLocal ? ", in your library, double tap to start a station" : ""
+        accessibilityLabel = "Number \(item.rank), \(item.name), \(item.playCount) plays\(ownership)"
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        cover.isHidden = true
+        initialLabel.isHidden = false
     }
 }
 
@@ -485,6 +519,7 @@ final class AlbumCoverCell: UICollectionViewCell {
     private let cover = AsyncImageView()
     private let nameLabel = UILabel()
     private let rankLabel = UILabel()
+    private let playBadge = UIImageView(image: UIImage(systemName: "play.circle.fill"))
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -492,6 +527,16 @@ final class AlbumCoverCell: UICollectionViewCell {
         cover.layer.cornerRadius = 10
         cover.layer.cornerCurve = .continuous
         cover.translatesAutoresizingMaskIntoConstraints = false
+
+        playBadge.tintColor = .white
+        playBadge.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 22, weight: .bold)
+        playBadge.contentMode = .scaleAspectFit
+        playBadge.layer.shadowColor = UIColor.black.cgColor
+        playBadge.layer.shadowOpacity = 0.45
+        playBadge.layer.shadowRadius = 3
+        playBadge.layer.shadowOffset = .zero
+        playBadge.isHidden = true
+        playBadge.translatesAutoresizingMaskIntoConstraints = false
 
         rankLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .bold)
         rankLabel.textColor = .white
@@ -512,6 +557,7 @@ final class AlbumCoverCell: UICollectionViewCell {
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
         contentView.addSubview(rankLabel)
+        contentView.addSubview(playBadge)
 
         NSLayoutConstraint.activate([
             cover.widthAnchor.constraint(equalTo: cover.heightAnchor),
@@ -523,6 +569,8 @@ final class AlbumCoverCell: UICollectionViewCell {
             rankLabel.heightAnchor.constraint(equalToConstant: 18),
             rankLabel.leadingAnchor.constraint(equalTo: cover.leadingAnchor, constant: 5),
             rankLabel.topAnchor.constraint(equalTo: cover.topAnchor, constant: 5),
+            playBadge.trailingAnchor.constraint(equalTo: cover.trailingAnchor, constant: -6),
+            playBadge.bottomAnchor.constraint(equalTo: cover.bottomAnchor, constant: -6),
         ])
     }
 
@@ -531,9 +579,13 @@ final class AlbumCoverCell: UICollectionViewCell {
     func configure(_ item: AlbumItem) {
         nameLabel.text = item.name
         rankLabel.text = "\(item.rank)"
-        cover.setAlbum(title: item.name, artist: item.artist, remoteURL: item.imageURL, placeholder: UIImage(systemName: "square.stack"))
+        playBadge.isHidden = !item.isLocal
+        let artTitle = item.artworkTitle ?? item.name
+        let artArtist = item.artworkArtist ?? item.artist
+        cover.setAlbum(title: artTitle, artist: artArtist, remoteURL: item.imageURL, placeholder: UIImage(systemName: "square.stack"))
         isAccessibilityElement = true
-        accessibilityLabel = "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays"
+        let ownership = item.isLocal ? ", in your library, double tap to play" : ""
+        accessibilityLabel = "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays\(ownership)"
     }
 }
 
@@ -541,6 +593,8 @@ final class TrackRowCell: UICollectionViewCell {
     static let reuseID = "TrackRowCell"
 
     private let rankLabel = UILabel()
+    private let artwork = AsyncImageView()
+    private let playBadge = UIImageView(image: UIImage(systemName: "play.circle.fill"))
     private let titleLabel = UILabel()
     private let artistLabel = UILabel()
     private let playsLabel = UILabel()
@@ -551,6 +605,20 @@ final class TrackRowCell: UICollectionViewCell {
         rankLabel.font = .monospacedDigitSystemFont(ofSize: 17, weight: .bold)
         rankLabel.textAlignment = .center
         rankLabel.setContentHuggingPriority(.required, for: .horizontal)
+
+        artwork.layer.cornerRadius = 6
+        artwork.layer.cornerCurve = .continuous
+        artwork.translatesAutoresizingMaskIntoConstraints = false
+
+        playBadge.tintColor = .white
+        playBadge.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 16, weight: .bold)
+        playBadge.contentMode = .scaleAspectFit
+        playBadge.layer.shadowColor = UIColor.black.cgColor
+        playBadge.layer.shadowOpacity = 0.45
+        playBadge.layer.shadowRadius = 2
+        playBadge.layer.shadowOffset = .zero
+        playBadge.isHidden = true
+        playBadge.translatesAutoresizingMaskIntoConstraints = false
 
         titleLabel.font = .scaled(.body, size: 16, weight: .semibold)
         titleLabel.adjustsFontForContentSizeCategory = true
@@ -571,17 +639,22 @@ final class TrackRowCell: UICollectionViewCell {
         info.axis = .vertical
         info.spacing = 1
 
-        let row = UIStackView(arrangedSubviews: [rankLabel, info, playsLabel])
+        let row = UIStackView(arrangedSubviews: [rankLabel, artwork, info, playsLabel])
         row.axis = .horizontal
-        row.spacing = 14
+        row.spacing = 12
         row.alignment = .center
         row.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(row)
+        contentView.addSubview(playBadge)
 
         NSLayoutConstraint.activate([
-            rankLabel.widthAnchor.constraint(equalToConstant: 28),
-            row.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 9),
-            row.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -9),
+            rankLabel.widthAnchor.constraint(equalToConstant: 22),
+            artwork.widthAnchor.constraint(equalToConstant: 40),
+            artwork.heightAnchor.constraint(equalToConstant: 40),
+            playBadge.centerXAnchor.constraint(equalTo: artwork.centerXAnchor),
+            playBadge.centerYAnchor.constraint(equalTo: artwork.centerYAnchor),
+            row.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            row.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
             row.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             row.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
         ])
@@ -604,8 +677,16 @@ final class TrackRowCell: UICollectionViewCell {
         titleLabel.text = item.name
         artistLabel.text = item.artist
         playsLabel.text = RecapFormat.compact(item.playCount)
+
+        playBadge.isHidden = !item.isLocal
+        contentView.alpha = item.isLocal ? 1.0 : 0.55
+        let artTitle = item.artworkTitle ?? item.name
+        let artArtist = item.artworkArtist ?? item.artist
+        artwork.setAlbum(title: artTitle, artist: artArtist, remoteURL: nil, placeholder: UIImage(systemName: "music.note"))
+
         isAccessibilityElement = true
-        accessibilityLabel = "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays"
+        let ownership = item.isLocal ? ", in your library, double tap to play" : ", not in your library"
+        accessibilityLabel = "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays\(ownership)"
     }
 }
 

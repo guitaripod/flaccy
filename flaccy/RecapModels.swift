@@ -23,12 +23,25 @@ nonisolated struct RecapData: Sendable {
     var hasContent: Bool { hasScrobbles || !topArtists.isEmpty || !topTracks.isEmpty || !topAlbums.isEmpty }
 }
 
-/// One-time backfill state for the "Import Last.fm history" affordance.
+/// One-time backfill state for the "Import Last.fm history" affordance. The
+/// associated counts carry live import progress (`importing`) and the final
+/// summary (`done`) so the banner can communicate how many scrobbles landed.
 enum RecapImportState: Hashable {
     case available
-    case importing
-    case done
+    case importing(imported: Int)
+    case done(imported: Int)
     case unavailable
+
+    var isImporting: Bool { if case .importing = self { true } else { false } }
+    var isDone: Bool { if case .done = self { true } else { false } }
+
+    /// Whether the import banner should remain on screen. A freshly-completed
+    /// import keeps its "Imported N scrobbles" summary; a persisted-done state
+    /// restored on a later launch (`imported == 0`) hides the banner entirely.
+    var showsBanner: Bool {
+        if case .done(let imported) = self { return imported > 0 }
+        return true
+    }
 }
 
 /// Diffable sections, one per dashboard row-group.
@@ -70,6 +83,9 @@ nonisolated struct RecapArtistItem: Hashable, Sendable {
     let rank: Int
     let name: String
     let playCount: Int
+    var artworkTitle: String?
+    var artworkArtist: String?
+    var isLocal: Bool = false
 }
 
 nonisolated struct AlbumItem: Hashable, Sendable {
@@ -78,6 +94,10 @@ nonisolated struct AlbumItem: Hashable, Sendable {
     let artist: String
     let playCount: Int
     let imageURL: String?
+    var artworkTitle: String?
+    var artworkArtist: String?
+    var isLocal: Bool = false
+    var localAlbumID: String?
 }
 
 nonisolated struct TrackItem: Hashable, Sendable {
@@ -85,6 +105,10 @@ nonisolated struct TrackItem: Hashable, Sendable {
     let name: String
     let artist: String
     let playCount: Int
+    var artworkTitle: String?
+    var artworkArtist: String?
+    var isLocal: Bool = false
+    var localTrackID: URL?
 }
 
 nonisolated struct ClockItem: Hashable, Sendable {
@@ -143,5 +167,47 @@ enum RecapPersona {
         case "Devotee": "flame.fill"
         default: "sparkles"
         }
+    }
+}
+
+/// A case- and punctuation-insensitive index over the local library, used to
+/// resolve Last.fm chart entries (whose casing/formatting often differs from the
+/// AI-cleaned local metadata) back to the real owned album/track. This is what
+/// lets the Recap show local cover art and enable tap-to-play for owned music.
+nonisolated struct RecapLibraryIndex {
+    private let albumsByKey: [String: Album]
+    private let tracksByKey: [String: Track]
+    private let albumByArtist: [String: Album]
+
+    init(albums: [Album] = [], tracks: [Track] = []) {
+        var albumMap: [String: Album] = [:]
+        var artistMap: [String: Album] = [:]
+        for album in albums {
+            albumMap[Self.key(album.title, album.artist)] = album
+            let artistKey = Self.normalize(album.artist)
+            if !artistKey.isEmpty, artistMap[artistKey] == nil { artistMap[artistKey] = album }
+        }
+        var trackMap: [String: Track] = [:]
+        for track in tracks { trackMap[Self.key(track.title, track.artist)] = track }
+        albumsByKey = albumMap
+        tracksByKey = trackMap
+        albumByArtist = artistMap
+    }
+
+    func album(name: String, artist: String) -> Album? { albumsByKey[Self.key(name, artist)] }
+    func track(title: String, artist: String) -> Track? { tracksByKey[Self.key(title, artist)] }
+    func representativeAlbum(forArtist artist: String) -> Album? { albumByArtist[Self.normalize(artist)] }
+
+    private static func key(_ a: String, _ b: String) -> String {
+        normalize(a) + "\u{0}" + normalize(b)
+    }
+
+    private static func normalize(_ value: String) -> String {
+        let folded = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        var result = String.UnicodeScalarView()
+        for scalar in folded.unicodeScalars where CharacterSet.alphanumerics.contains(scalar) {
+            result.append(scalar)
+        }
+        return String(result)
     }
 }

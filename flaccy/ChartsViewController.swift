@@ -18,6 +18,7 @@ final class ChartsViewController: UIViewController {
     private var currentPalette = ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy")
     private var currentTint = UIColor.systemIndigo
     private var importState: RecapImportState = .available
+    private var libraryIndex = RecapLibraryIndex()
     private var cancellables = Set<AnyCancellable>()
 
     init(audioPlayer: AudioPlaying = AudioPlayer.shared) {
@@ -307,7 +308,7 @@ final class ChartsViewController: UIViewController {
         snapshot.appendSections([.profile])
         snapshot.appendItems([.profile(profile)], toSection: .profile)
 
-        if importState != .done {
+        if importState.showsBanner {
             snapshot.appendSections([.importBanner])
             snapshot.appendItems([.importBanner(importState)], toSection: .importBanner)
         }
@@ -315,17 +316,22 @@ final class ChartsViewController: UIViewController {
         snapshot.appendSections([.period])
         snapshot.appendItems([.period(data.period)], toSection: .period)
 
+        libraryIndex = RecapLibraryIndex(albums: Library.shared.albums, tracks: Library.shared.allTracks)
+
         if !data.topArtists.isEmpty {
             snapshot.appendSections([.artists])
-            snapshot.appendItems(data.topArtists.map { .artist(RecapArtistItem(rank: $0.rank, name: $0.name, playCount: $0.playCount)) }, toSection: .artists)
+            snapshot.appendItems(data.topArtists.map { .artist(resolveArtist($0)) }, toSection: .artists)
         }
         if !data.topAlbums.isEmpty {
             snapshot.appendSections([.albums])
-            snapshot.appendItems(data.topAlbums.map { .album(AlbumItem(rank: $0.rank, name: $0.name, artist: $0.artistName, playCount: $0.playCount, imageURL: $0.imageURL)) }, toSection: .albums)
+            snapshot.appendItems(data.topAlbums.map { .album(resolveAlbum($0)) }, toSection: .albums)
         }
         if !data.topTracks.isEmpty {
             snapshot.appendSections([.tracks])
-            snapshot.appendItems(data.topTracks.map { .track(TrackItem(rank: $0.rank, name: $0.name, artist: $0.artistName, playCount: $0.playCount)) }, toSection: .tracks)
+            let items = data.topTracks.map { resolveTrack($0) }
+            let localCount = items.filter(\.isLocal).count
+            AppLogger.debug("Recap resolved \(localCount)/\(items.count) top tracks to local library", category: .content)
+            snapshot.appendItems(items.map { .track($0) }, toSection: .tracks)
         }
         if data.hasScrobbles {
             snapshot.appendSections([.clock])
@@ -349,9 +355,41 @@ final class ChartsViewController: UIViewController {
         }
     }
 
+    private func resolveArtist(_ artist: ChartArtist) -> RecapArtistItem {
+        var item = RecapArtistItem(rank: artist.rank, name: artist.name, playCount: artist.playCount)
+        if let album = libraryIndex.representativeAlbum(forArtist: artist.name) {
+            item.artworkTitle = album.title
+            item.artworkArtist = album.artist
+            item.isLocal = true
+        }
+        return item
+    }
+
+    private func resolveAlbum(_ album: ChartAlbum) -> AlbumItem {
+        var item = AlbumItem(rank: album.rank, name: album.name, artist: album.artistName, playCount: album.playCount, imageURL: album.imageURL)
+        if let local = libraryIndex.album(name: album.name, artist: album.artistName) {
+            item.artworkTitle = local.title
+            item.artworkArtist = local.artist
+            item.isLocal = true
+            item.localAlbumID = local.id
+        }
+        return item
+    }
+
+    private func resolveTrack(_ track: ChartTrack) -> TrackItem {
+        var item = TrackItem(rank: track.rank, name: track.name, artist: track.artistName, playCount: track.playCount)
+        if let local = libraryIndex.track(title: track.name, artist: track.artistName) {
+            item.artworkTitle = local.albumTitle
+            item.artworkArtist = local.artist
+            item.isLocal = true
+            item.localTrackID = local.fileURL
+        }
+        return item
+    }
+
     private func reapplyImportBanner() {
         var snapshot = dataSource.snapshot()
-        if importState == .done {
+        guard importState.showsBanner else {
             if snapshot.sectionIdentifiers.contains(.importBanner) {
                 snapshot.deleteSections([.importBanner])
                 dataSource.apply(snapshot, animatingDifferences: !UIAccessibility.isReduceMotionEnabled)
@@ -425,5 +463,43 @@ extension ChartsViewController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         collectionView.deselectItem(at: indexPath, animated: true)
+        guard let item = dataSource.itemIdentifier(for: indexPath) else { return }
+        switch item {
+        case .track(let track): playTrack(track)
+        case .album(let album): playAlbum(album)
+        case .artist(let artist): playArtist(artist)
+        default: break
+        }
+    }
+
+    private func playTrack(_ tapped: TrackItem) {
+        guard tapped.isLocal, let tappedURL = tapped.localTrackID else { return }
+        let snapshot = dataSource.snapshot()
+        guard snapshot.sectionIdentifiers.contains(.tracks) else { return }
+
+        let queue: [Track] = snapshot.itemIdentifiers(inSection: .tracks).compactMap { item in
+            guard case .track(let t) = item, t.isLocal, let url = t.localTrackID else { return nil }
+            return Library.shared.allTracks.first { $0.fileURL == url }
+        }
+        guard let startIndex = queue.firstIndex(where: { $0.fileURL == tappedURL }) else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        AppLogger.info("Recap play track: \(tapped.name)", category: .playback)
+        audioPlayer.play(queue, startingAt: startIndex)
+    }
+
+    private func playAlbum(_ tapped: AlbumItem) {
+        guard tapped.isLocal, let id = tapped.localAlbumID,
+              let album = Library.shared.albums.first(where: { $0.id == id }),
+              !album.tracks.isEmpty else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        AppLogger.info("Recap play album: \(album.title)", category: .playback)
+        audioPlayer.play(album.tracks, startingAt: 0)
+    }
+
+    private func playArtist(_ tapped: RecapArtistItem) {
+        guard tapped.isLocal else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        AppLogger.info("Recap start station: \(tapped.name)", category: .playback)
+        audioPlayer.startStation(seedArtist: tapped.name)
     }
 }
