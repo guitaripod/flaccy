@@ -1,17 +1,15 @@
 import MediaPlayer
 import UIKit
 
-/// Hosts MPVolumeView with a usable touch surface. The row is a full 44pt
-/// tall so the system slider is no longer a sliver, the redundant route
-/// button is hidden (AirPlay lives in the action row), the slider gets a
-/// visible thumb and track tints matching the scrubber, and touches that land
-/// on the row but miss the tiny thumb drive the slider's value directly so
-/// the whole row is draggable.
+/// Hosts MPVolumeView with its internal UISlider expanded to the full 44pt
+/// row and receiving touches natively, so volume drags are as forgiving as
+/// any system slider and the sheet's dismiss pan defers to it. The redundant
+/// route button is hidden (AirPlay lives in the action row) and the slider
+/// gets a visible thumb and track tints matching the scrubber.
 final class SystemVolumeSlider: UIView {
 
     private let volumeView = MPVolumeView()
     private var hasStyledSlider = false
-    private let grabGenerator = UIImpactFeedbackGenerator(style: .light)
 
     private lazy var thumbImage: UIImage = {
         let size: CGFloat = 18
@@ -25,11 +23,7 @@ final class SystemVolumeSlider: UIView {
     init() {
         super.init(frame: .zero)
         volumeView.tintColor = .white
-        volumeView.isUserInteractionEnabled = false
         addSubview(volumeView)
-        isAccessibilityElement = true
-        accessibilityLabel = "Volume"
-        accessibilityTraits = .adjustable
     }
 
     @available(*, unavailable)
@@ -44,26 +38,20 @@ final class SystemVolumeSlider: UIView {
         volumeView.frame = bounds
         hideRouteButton()
         styleSliderIfNeeded()
+        internalSlider()?.frame = volumeView.bounds
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         bounds.insetBy(dx: 0, dy: -6).contains(point)
     }
 
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        grabGenerator.impactOccurred()
-        applyVolume(from: touches)
-    }
-
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        applyVolume(from: touches)
-    }
-
-    private func applyVolume(from touches: Set<UITouch>) {
-        guard let touch = touches.first, let slider = internalSlider(), bounds.width > 0 else { return }
-        let fraction = Float(min(max(touch.location(in: self).x / bounds.width, 0), 1))
-        slider.setValue(fraction, animated: false)
-        slider.sendActions(for: .valueChanged)
+    /// Routes every touch on the row to the native slider so its full-width
+    /// surface is draggable without hunting for the thumb.
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard self.point(inside: point, with: event), let slider = internalSlider() else {
+            return super.hitTest(point, with: event)
+        }
+        return slider
     }
 
     private func internalSlider() -> UISlider? {
@@ -81,28 +69,7 @@ final class SystemVolumeSlider: UIView {
         hasStyledSlider = true
         slider.minimumTrackTintColor = .white
         slider.maximumTrackTintColor = .white.withAlphaComponent(0.25)
+        slider.accessibilityLabel = "Volume"
         volumeView.setVolumeThumbImage(thumbImage, for: .normal)
-    }
-
-    override func accessibilityIncrement() {
-        adjustVolume(by: 0.0625)
-    }
-
-    override func accessibilityDecrement() {
-        adjustVolume(by: -0.0625)
-    }
-
-    override var accessibilityValue: String? {
-        get {
-            guard let slider = internalSlider() else { return nil }
-            return "\(Int(round(slider.value * 100))) percent"
-        }
-        set {}
-    }
-
-    private func adjustVolume(by delta: Float) {
-        guard let slider = internalSlider() else { return }
-        slider.setValue(min(max(slider.value + delta, 0), 1), animated: false)
-        slider.sendActions(for: .valueChanged)
     }
 }

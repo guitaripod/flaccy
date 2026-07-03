@@ -1,10 +1,11 @@
 import UIKit
 
-/// Full-width capsule scrubber with a 44pt touch plane. Touching anywhere on
-/// the track grabs the nearest position immediately, the capsule grows while
-/// tracking, and selection haptics tick at the 25/50/75% detents. Playback
-/// progress updates reuse the existing fill view with no per-frame allocations.
-final class ScrubberView: UIControl {
+/// Capsule scrubber built on a real UISlider so touch tracking is fully
+/// native — vertical finger drift never cancels a scrub and the sheet's
+/// dismiss pan defers to it. Touching anywhere on the track grabs that
+/// position, the capsule grows while tracking, and selection haptics tick
+/// at the quarter detents.
+final class ScrubberView: UISlider {
 
     var onScrubBegan: (() -> Void)?
     var onScrubChanged: ((TimeInterval) -> Void)?
@@ -13,11 +14,6 @@ final class ScrubberView: UIControl {
 
     private(set) var isScrubbing = false
     private(set) var duration: TimeInterval = 0
-    private var fraction: CGFloat = 0
-
-    private let trackView = UIView()
-    private let fillView = UIView()
-    private var trackHeightConstraint: NSLayoutConstraint!
     private var lastDetentZone = 0
     private let detentGenerator = UISelectionFeedbackGenerator()
     private let grabGenerator = UIImpactFeedbackGenerator(style: .light)
@@ -27,28 +23,14 @@ final class ScrubberView: UIControl {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        trackView.backgroundColor = .white.withAlphaComponent(0.25)
-        trackView.layer.cornerCurve = .continuous
-        trackView.clipsToBounds = true
-        trackView.isUserInteractionEnabled = false
-        trackView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(trackView)
-
-        fillView.backgroundColor = .white
-        fillView.isUserInteractionEnabled = false
-        trackView.addSubview(fillView)
-
-        trackHeightConstraint = trackView.heightAnchor.constraint(equalToConstant: Self.restingHeight)
-        NSLayoutConstraint.activate([
-            trackView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            trackView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            trackView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            trackHeightConstraint,
-        ])
-
-        isAccessibilityElement = true
+        minimumValue = 0
+        maximumValue = 1
+        minimumTrackTintColor = .white
+        maximumTrackTintColor = .white.withAlphaComponent(0.25)
+        setThumbImage(UIImage(), for: .normal)
+        setThumbImage(UIImage(), for: .highlighted)
+        addTarget(self, action: #selector(valueDidChange), for: .valueChanged)
         accessibilityLabel = "Playback position"
-        accessibilityTraits = .adjustable
     }
 
     @available(*, unavailable)
@@ -58,10 +40,9 @@ final class ScrubberView: UIControl {
         CGSize(width: UIView.noIntrinsicMetric, height: 44)
     }
 
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        trackView.layer.cornerRadius = trackView.bounds.height / 2
-        updateFillFrame()
+    override func trackRect(forBounds bounds: CGRect) -> CGRect {
+        let height = isScrubbing ? Self.trackingHeight : Self.restingHeight
+        return CGRect(x: 0, y: (bounds.height - height) / 2, width: bounds.width, height: height)
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
@@ -69,20 +50,17 @@ final class ScrubberView: UIControl {
     }
 
     var currentTime: TimeInterval {
-        TimeInterval(fraction) * duration
+        TimeInterval(value) * duration
     }
 
-    /// The x position of the playhead in this view's coordinates, for
-    /// anchoring the time bubble.
     var playheadX: CGFloat {
-        bounds.width * fraction
+        bounds.width * CGFloat(value)
     }
 
     func setProgress(currentTime: TimeInterval, duration: TimeInterval) {
         self.duration = max(duration, 0)
         guard !isScrubbing else { return }
-        fraction = self.duration > 0 ? CGFloat(min(max(currentTime / self.duration, 0), 1)) : 0
-        updateFillFrame()
+        value = self.duration > 0 ? Float(min(max(currentTime / self.duration, 0), 1)) : 0
     }
 
     override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
@@ -90,16 +68,16 @@ final class ScrubberView: UIControl {
         isScrubbing = true
         grabGenerator.impactOccurred()
         detentGenerator.prepare()
-        applyFraction(fromTouch: touch)
-        lastDetentZone = detentZone(for: fraction)
-        setTracking(true)
+        value = grabbedValue(for: touch)
+        lastDetentZone = detentZone(for: value)
+        animateTrackHeight()
         onScrubBegan?()
         onScrubChanged?(currentTime)
         return true
     }
 
     override func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-        applyFraction(fromTouch: touch)
+        value = grabbedValue(for: touch)
         tickDetentIfCrossed()
         onScrubChanged?(currentTime)
         return true
@@ -121,45 +99,41 @@ final class ScrubberView: UIControl {
         onAccessibilityAdjust?(max(currentTime - 15, 0))
     }
 
+    @objc private func valueDidChange() {
+        guard isScrubbing else { return }
+        onScrubChanged?(currentTime)
+    }
+
+    private func grabbedValue(for touch: UITouch) -> Float {
+        let width = max(bounds.width, 1)
+        return Float(min(max(touch.location(in: self).x / width, 0), 1))
+    }
+
     private func finishScrub() {
         guard isScrubbing else { return }
         isScrubbing = false
-        setTracking(false)
+        animateTrackHeight()
         onScrubEnded?(currentTime)
     }
 
-    private func applyFraction(fromTouch touch: UITouch) {
-        let width = max(bounds.width, 1)
-        fraction = min(max(touch.location(in: self).x / width, 0), 1)
-        updateFillFrame()
+    private func animateTrackHeight() {
+        let update = { self.setNeedsLayout(); self.layoutIfNeeded() }
+        if UIAccessibility.isReduceMotionEnabled {
+            update()
+        } else {
+            UIViewPropertyAnimator(duration: 0.24, dampingRatio: 0.8, animations: update).startAnimation()
+        }
     }
 
-    private func updateFillFrame() {
-        fillView.frame = CGRect(
-            x: 0, y: 0, width: trackView.bounds.width * fraction, height: trackView.bounds.height
-        )
-    }
-
-    private func detentZone(for fraction: CGFloat) -> Int {
-        min(Int(fraction * 4), 3)
+    private func detentZone(for value: Float) -> Int {
+        min(Int(value * 4), 3)
     }
 
     private func tickDetentIfCrossed() {
-        let zone = detentZone(for: fraction)
+        let zone = detentZone(for: value)
         guard zone != lastDetentZone else { return }
         lastDetentZone = zone
         detentGenerator.selectionChanged()
         detentGenerator.prepare()
-    }
-
-    private func setTracking(_ tracking: Bool) {
-        trackHeightConstraint.constant = tracking ? Self.trackingHeight : Self.restingHeight
-        let update = { self.layoutIfNeeded() }
-        if UIAccessibility.isReduceMotionEnabled {
-            update()
-        } else {
-            let animator = UIViewPropertyAnimator(duration: 0.24, dampingRatio: 0.8, animations: update)
-            animator.startAnimation()
-        }
     }
 }
