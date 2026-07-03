@@ -74,6 +74,23 @@ final class AsyncImageView: UIImageView {
         return cache
     }()
 
+    /// Records entries that provably have no artwork (no local art, no remote URL,
+    /// or a failed download) so a reconfigured cell shows its placeholder instantly
+    /// instead of kicking off the same doomed lookup on every scroll pass.
+    private static let negativeCache: NSCache<NSString, NSNumber> = {
+        let cache = NSCache<NSString, NSNumber>()
+        cache.countLimit = 512
+        return cache
+    }()
+
+    private static func markMiss(_ key: NSString) {
+        negativeCache.setObject(NSNumber(value: true), forKey: key)
+    }
+
+    private static func albumKey(title: String, artist: String) -> NSString {
+        "album:\(title)\u{0}\(artist)" as NSString
+    }
+
     private static let decodeQueue = DispatchQueue(
         label: "com.midgarcorp.flaccy.recap.decode",
         qos: .userInitiated,
@@ -101,29 +118,48 @@ final class AsyncImageView: UIImageView {
         shimmerLayer.frame = bounds
     }
 
-    func setRemote(_ urlString: String?, placeholder: UIImage?) {
+    /// Loads a remote image. Reads the shared thumbnail cache synchronously first —
+    /// so a prewarmed or previously-loaded URL sets immediately with no placeholder
+    /// flash, no re-download, and no token churn on reconfigure — and only falls to
+    /// the async download for a genuine cache miss. `alsoCache` mirrors the result
+    /// into a second key (an album key) so an album that resolved via a remote URL
+    /// is later found by its synchronous album-key read.
+    func setRemote(_ urlString: String?, placeholder: UIImage?, alsoCache extraKey: NSString? = nil) {
+        guard let urlString, let url = URL(string: urlString) else {
+            token = UUID(); setPlaceholder(placeholder); endShimmer(); return
+        }
+        let thumbKey = "remote:\(urlString)" as NSString
+        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) {
+            token = UUID()
+            if let extraKey { Self.thumbnailCache.setObject(thumb, forKey: extraKey) }
+            setImageIfChanged(thumb)
+            endShimmer()
+            return
+        }
+        if Self.negativeCache.object(forKey: thumbKey) != nil {
+            token = UUID(); setPlaceholder(placeholder); endShimmer(); return
+        }
+
         let current = UUID()
         token = current
-        image = placeholder
-        guard let urlString, let url = URL(string: urlString) else { endShimmer(); return }
-        let thumbKey = "remote:\(urlString)" as NSString
-        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) { image = thumb; endShimmer(); return }
-
+        setPlaceholder(placeholder)
         beginShimmer()
+        let keys = extraKey.map { [thumbKey, $0] } ?? [thumbKey]
         Self.decodeQueue.async { [weak self] in
             guard let self else { return }
             if let cached = ImageCache.shared.image(forKey: urlString), let thumb = Self.prepared(cached) {
-                self.deliver(thumb, key: thumbKey, token: current)
+                self.deliver(thumb, keys: keys, token: current)
                 return
             }
             URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
                 guard let self else { return }
                 guard let data, let thumb = Self.downsampled(from: data) else {
+                    Self.markMiss(thumbKey)
                     self.finishShimmer(token: current)
                     return
                 }
                 ImageCache.shared.store(data: data, forKey: urlString)
-                self.deliver(thumb, key: thumbKey, token: current)
+                self.deliver(thumb, keys: keys, token: current)
             }.resume()
         }
     }
@@ -131,18 +167,34 @@ final class AsyncImageView: UIImageView {
     /// Loads cover art, preferring the local library, then any supplied remote URL,
     /// then a lazy Last.fm lookup (`remoteFallback`) for non-local entries, before
     /// finally settling on the SF Symbol placeholder.
+    /// Loads cover art, preferring the local library, then any supplied remote URL,
+    /// then a lazy Last.fm lookup (`remoteFallback`) for non-local entries, before
+    /// finally settling on the SF Symbol placeholder.
+    ///
+    /// Reads the shared thumbnail cache synchronously first: once the artwork has
+    /// been prewarmed (or previously loaded) this sets the image immediately with no
+    /// placeholder flash and no async work, and a known-miss shows the placeholder
+    /// at once. The async resolve path runs only for a genuine cache miss.
     func setAlbum(title: String, artist: String, remoteURL: String?, placeholder: UIImage?, remoteFallback: RecapArtworkQuery? = nil) {
+        let thumbKey = Self.albumKey(title: title, artist: artist)
+        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) {
+            token = UUID()
+            setImageIfChanged(thumb)
+            endShimmer()
+            return
+        }
+        if Self.negativeCache.object(forKey: thumbKey) != nil {
+            token = UUID(); setPlaceholder(placeholder); endShimmer(); return
+        }
+
         let current = UUID()
         token = current
-        image = placeholder
-        let thumbKey = "album:\(title)\u{0}\(artist)" as NSString
-        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) { image = thumb; endShimmer(); return }
-
+        setPlaceholder(placeholder)
         beginShimmer()
         if let cached = AlbumArtworkCache.shared.artwork(forAlbum: title, artist: artist) {
             Self.decodeQueue.async { [weak self] in
                 guard let self, let thumb = Self.prepared(cached) else { return }
-                self.deliver(thumb, key: thumbKey, token: current)
+                self.deliver(thumb, keys: [thumbKey], token: current)
             }
             return
         }
@@ -152,33 +204,43 @@ final class AsyncImageView: UIImageView {
             guard let image else {
                 AppLogger.debug("Recap art miss \(title) / \(artist), remote=\(remoteURL != nil), fallback=\(remoteFallback != nil)", category: .content)
                 if let remoteURL {
-                    self.setRemote(remoteURL, placeholder: placeholder)
+                    self.setRemote(remoteURL, placeholder: placeholder, alsoCache: thumbKey)
                 } else if let remoteFallback {
-                    self.resolveRemote(remoteFallback, placeholder: placeholder, token: current)
+                    self.resolveRemote(remoteFallback, placeholder: placeholder, albumKey: thumbKey, token: current)
                 } else {
+                    Self.markMiss(thumbKey)
                     self.endShimmer()
                 }
                 return
             }
             Self.decodeQueue.async { [weak self] in
                 guard let self, let thumb = Self.prepared(image) else { return }
-                self.deliver(thumb, key: thumbKey, token: current)
+                self.deliver(thumb, keys: [thumbKey], token: current)
             }
         }
     }
 
-    private func resolveRemote(_ query: RecapArtworkQuery, placeholder: UIImage?, token current: UUID) {
+    private func resolveRemote(_ query: RecapArtworkQuery, placeholder: UIImage?, albumKey: NSString, token current: UUID) {
         Task { [weak self] in
             let url = await RecapRemoteArtworkResolver.shared.resolvedURL(for: query)
             await MainActor.run {
                 guard let self, self.token == current else { return }
-                self.setRemote(url, placeholder: placeholder)
+                guard let url else { Self.markMiss(albumKey); self.endShimmer(); return }
+                self.setRemote(url, placeholder: placeholder, alsoCache: albumKey)
             }
         }
     }
 
-    private func deliver(_ image: UIImage, key: NSString, token current: UUID) {
-        Self.thumbnailCache.setObject(image, forKey: key)
+    private func setPlaceholder(_ placeholder: UIImage?) {
+        if image !== placeholder { image = placeholder }
+    }
+
+    private func setImageIfChanged(_ newImage: UIImage) {
+        if image !== newImage { image = newImage }
+    }
+
+    private func deliver(_ image: UIImage, keys: [NSString], token current: UUID) {
+        for key in keys { Self.thumbnailCache.setObject(image, forKey: key) }
         DispatchQueue.main.async { [weak self] in
             guard let self, self.token == current else { return }
             self.endShimmer()
@@ -252,6 +314,75 @@ final class AsyncImageView: UIImageView {
     private func set(_ image: UIImage, animated: Bool) {
         guard animated, !UIAccessibility.isReduceMotionEnabled else { self.image = image; return }
         UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) { self.image = image }
+    }
+
+    /// Resolves and decodes one chart entry's artwork off the main thread into the
+    /// same static thumbnail cache the cells read, so a later `setAlbum` becomes a
+    /// synchronous cache hit. Returns `true` when an image was cached. A genuine
+    /// absence (no local art, no resolvable URL, or a failed download) is recorded
+    /// in the negative cache so the cell shows its placeholder without retrying; a
+    /// cancellation (prewarm timed out) is left un-cached so the cell can retry.
+    nonisolated static func prewarmAlbum(
+        title: String,
+        artist: String,
+        remoteURL: String?,
+        remoteFallback: RecapArtworkQuery?
+    ) async -> Bool {
+        let thumbKey = albumKey(title: title, artist: artist)
+        if thumbnailCache.object(forKey: thumbKey) != nil { return true }
+        if negativeCache.object(forKey: thumbKey) != nil { return false }
+        if Task.isCancelled { return false }
+
+        if let local = await loadLocalArtwork(title: title, artist: artist),
+           let thumb = await decodeOffMain({ prepared(local) }) {
+            thumbnailCache.setObject(thumb, forKey: thumbKey)
+            return true
+        }
+        if Task.isCancelled { return false }
+
+        var urlString = remoteURL
+        if urlString == nil, let remoteFallback {
+            urlString = await RecapRemoteArtworkResolver.shared.resolvedURL(for: remoteFallback)
+        }
+        guard let urlString, let url = URL(string: urlString) else {
+            markMiss(thumbKey)
+            return false
+        }
+        if Task.isCancelled { return false }
+
+        if let cached = ImageCache.shared.image(forKey: urlString),
+           let thumb = await decodeOffMain({ prepared(cached) }) {
+            thumbnailCache.setObject(thumb, forKey: thumbKey)
+            thumbnailCache.setObject(thumb, forKey: "remote:\(urlString)" as NSString)
+            return true
+        }
+        guard let data = try? await URLSession.shared.data(from: url).0 else {
+            if !Task.isCancelled { markMiss(thumbKey) }
+            return false
+        }
+        ImageCache.shared.store(data: data, forKey: urlString)
+        guard let thumb = await decodeOffMain({ downsampled(from: data) }) else {
+            markMiss(thumbKey)
+            return false
+        }
+        thumbnailCache.setObject(thumb, forKey: thumbKey)
+        thumbnailCache.setObject(thumb, forKey: "remote:\(urlString)" as NSString)
+        return true
+    }
+
+    nonisolated private static func loadLocalArtwork(title: String, artist: String) async -> UIImage? {
+        if let cached = AlbumArtworkCache.shared.artwork(forAlbum: title, artist: artist) { return cached }
+        return await withCheckedContinuation { continuation in
+            AlbumArtworkCache.shared.loadArtwork(forAlbum: title, artist: artist) { image in
+                continuation.resume(returning: image)
+            }
+        }
+    }
+
+    nonisolated private static func decodeOffMain(_ work: @escaping @Sendable () -> UIImage?) async -> UIImage? {
+        await withCheckedContinuation { continuation in
+            decodeQueue.async { continuation.resume(returning: work()) }
+        }
     }
 }
 
