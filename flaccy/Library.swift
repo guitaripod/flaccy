@@ -28,7 +28,23 @@ final class Library: LibraryProviding {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
     }
 
+    private var isReloading = false
+    private var reloadPending = false
+
     func reload() async {
+        if isReloading {
+            reloadPending = true
+            return
+        }
+        isReloading = true
+        defer { isReloading = false }
+        repeat {
+            reloadPending = false
+            await doReload()
+        } while reloadPending
+    }
+
+    private func doReload() async {
         let firstLoad = albums.isEmpty
         if firstLoad { isLoading = true }
 
@@ -140,9 +156,14 @@ final class Library: LibraryProviding {
                         trackNumber: metadata.trackNumber,
                         duration: metadata.duration,
                         artworkData: metadata.artwork?.jpegData(compressionQuality: 0.8),
+                        lastFMArtworkURL: nil,
+                        musicBrainzID: nil,
+                        albumMusicBrainzID: nil,
                         dateAdded: Date(),
+                        lastPlayed: nil,
                         playCount: 0,
-                        aiAnalyzed: false
+                        aiAnalyzed: false,
+                        analysisAttemptedAt: nil
                     )
                 }
             }
@@ -197,6 +218,7 @@ final class Library: LibraryProviding {
                 }
 
                 AppLogger.info("Batch: \(dir) (\(tracks.count) tracks)", category: .content)
+                try? db.markAnalysisAttempted(fileURLs: tracks.map(\.fileURL))
 
                 guard let identified = await GroqService.shared.analyzeLibrary(tracks: contexts) else {
                     AppLogger.warning("Groq returned no results for batch: \(dir)", category: .content)
@@ -349,9 +371,11 @@ final class Library: LibraryProviding {
         return url.lastPathComponent
     }
 
+    private static let analysisRetryInterval: TimeInterval = 24 * 60 * 60
+
     private func hasUnanalyzedTracks() -> Bool {
         do {
-            return try db.hasUnanalyzedTracks()
+            return try db.hasUnanalyzedTracks(attemptedBefore: Date().addingTimeInterval(-Self.analysisRetryInterval))
         } catch { return false }
     }
 

@@ -12,6 +12,7 @@ final class AlbumArtworkCache {
 
     private init() {
         memoryCache.countLimit = 300
+        memoryCache.totalCostLimit = 100 * 1024 * 1024
     }
 
     func artwork(forAlbum title: String, artist: String) -> UIImage? {
@@ -44,7 +45,7 @@ final class AlbumArtworkCache {
             let image: UIImage?
             if let data = try? DatabaseManager.shared.fetchAlbumArtwork(title: title, artist: artist) {
                 image = UIImage(data: data)
-                if let image { self.memoryCache.setObject(image, forKey: key as NSString) }
+                if let image { self.memoryCache.setObject(image, forKey: key as NSString, cost: image.memoryCost) }
             } else {
                 image = nil
             }
@@ -82,11 +83,18 @@ final class AlbumArtworkCache {
             guard let data = try? DatabaseManager.shared.fetchAlbumArtwork(title: title, artist: artist),
                   let image = UIImage(data: data) else { return }
 
-            self.memoryCache.setObject(image, forKey: key as NSString)
+            self.memoryCache.setObject(image, forKey: key as NSString, cost: image.memoryCost)
         }
     }
 
     private func cacheKey(title: String, artist: String) -> String {
         "\(title)\0\(artist)"
+    }
+}
+
+private extension UIImage {
+    var memoryCost: Int {
+        guard let cgImage else { return 0 }
+        return cgImage.bytesPerRow * cgImage.height
     }
 }

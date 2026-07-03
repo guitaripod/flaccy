@@ -20,6 +20,7 @@ nonisolated struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Ide
     var lastPlayed: Date?
     var playCount: Int
     var aiAnalyzed: Bool
+    var analysisAttemptedAt: Date?
 }
 
 nonisolated struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable {
@@ -107,27 +108,55 @@ nonisolated struct LyricsRecord: Codable, FetchableRecord, PersistableRecord, Id
     var instrumental: Bool
 }
 
-final class DatabaseManager {
+nonisolated final class DatabaseManager: Sendable {
 
     static let shared = DatabaseManager()
 
     private let dbQueue: DatabaseQueue
 
-    init() {
+    private init() {
         do {
             let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             let dbDirectory = appSupport.appendingPathComponent("flaccy", isDirectory: true)
             try FileManager.default.createDirectory(at: dbDirectory, withIntermediateDirectories: true)
             let dbPath = dbDirectory.appendingPathComponent("library.sqlite").path
-            dbQueue = try DatabaseQueue(path: dbPath)
-            try runMigrations()
+            do {
+                dbQueue = try Self.openDatabase(at: dbPath)
+            } catch {
+                AppLogger.error("Database open/migrate failed, recreating: \(error.localizedDescription)", category: .database)
+                Self.moveCorruptDatabaseAside(at: dbPath)
+                dbQueue = try Self.openDatabase(at: dbPath)
+            }
             AppLogger.info("Database initialized at \(dbPath)", category: .database)
         } catch {
-            fatalError("Failed to initialize database: \(error)")
+            fatalError("Failed to initialize database after recovery attempt: \(error)")
         }
     }
 
-    private func runMigrations() throws {
+    /// Opens the SQLite database and runs all migrations, throwing instead of crashing
+    /// so a corrupt file can be moved aside and the library rebuilt from Documents.
+    private static func openDatabase(at path: String) throws -> DatabaseQueue {
+        let queue = try DatabaseQueue(path: path)
+        try migrator().migrate(queue)
+        return queue
+    }
+
+    private static func moveCorruptDatabaseAside(at path: String) {
+        let fm = FileManager.default
+        let timestamp = Int(Date().timeIntervalSince1970)
+        for suffix in ["", "-wal", "-shm"] {
+            let source = path + suffix
+            guard fm.fileExists(atPath: source) else { continue }
+            let destination = path + ".corrupt-\(timestamp)" + suffix
+            do {
+                try fm.moveItem(atPath: source, toPath: destination)
+            } catch {
+                try? fm.removeItem(atPath: source)
+            }
+        }
+    }
+
+    private static func migrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
 
         migrator.registerMigration("v1") { db in
@@ -219,7 +248,25 @@ final class DatabaseManager {
             }
         }
 
-        try migrator.migrate(dbQueue)
+        migrator.registerMigration("v5") { db in
+            try db.alter(table: "tracks") { t in
+                t.add(column: "analysisAttemptedAt", .datetime)
+            }
+
+            try db.execute(sql: """
+                INSERT INTO albumInfo (title, artist, coverArtData)
+                SELECT albumTitle, artist, artworkData FROM tracks
+                WHERE artworkData IS NOT NULL AND albumTitle <> ''
+                GROUP BY albumTitle, artist
+                ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
+                WHERE albumInfo.coverArtData IS NULL
+            """)
+            try db.execute(sql: "UPDATE tracks SET artworkData = NULL WHERE artworkData IS NOT NULL AND albumTitle <> ''")
+
+            try db.execute(sql: "DELETE FROM playlistTracks WHERE trackFileURL NOT IN (SELECT fileURL FROM tracks)")
+        }
+
+        return migrator
     }
 
     @discardableResult
@@ -235,11 +282,56 @@ final class DatabaseManager {
         }
     }
 
-    func fetchAllTracks() throws -> [TrackRecord] {
-        try dbQueue.read { db in
-            try TrackRecord.fetchAll(db)
+    /// Updates a track fetched without its artwork BLOB, leaving the stored
+    /// `artworkData` column untouched.
+    func updateTrackPreservingArtwork(_ track: TrackRecord) throws {
+        try dbQueue.write { db in
+            try track.update(db, columns: Self.trackColumnsWithoutArtwork)
         }
     }
+
+    func markAnalysisAttempted(fileURLs: [String], date: Date = Date()) throws {
+        guard !fileURLs.isEmpty else { return }
+        try dbQueue.write { db in
+            _ = try TrackRecord
+                .filter(fileURLs.contains(Column("fileURL")))
+                .updateAll(db, Column("analysisAttemptedAt").set(to: date))
+        }
+    }
+
+    func markAnalyzed(fileURLs: [String], date: Date = Date()) throws {
+        guard !fileURLs.isEmpty else { return }
+        try dbQueue.write { db in
+            _ = try TrackRecord
+                .filter(fileURLs.contains(Column("fileURL")))
+                .updateAll(db, Column("aiAnalyzed").set(to: true), Column("analysisAttemptedAt").set(to: date))
+        }
+    }
+
+    func insertTracks(_ tracks: [TrackRecord]) throws {
+        guard !tracks.isEmpty else { return }
+        try dbQueue.write { db in
+            for track in tracks {
+                try track.insert(db)
+            }
+        }
+    }
+
+    /// Fetches every track without the artwork BLOB column so full-library reads stay lean;
+    /// `artworkData` decodes as nil. Use `fetchAlbumArtwork(title:artist:)` for images.
+    func fetchAllTracks() throws -> [TrackRecord] {
+        try dbQueue.read { db in
+            try TrackRecord.fetchAll(db, TrackRecord.select(Self.trackColumnsWithoutArtwork))
+        }
+    }
+
+    private static let trackColumnsWithoutArtwork: [Column] = [
+        Column("id"), Column("fileURL"), Column("title"), Column("artist"),
+        Column("albumTitle"), Column("trackNumber"), Column("duration"),
+        Column("lastFMArtworkURL"), Column("musicBrainzID"), Column("albumMusicBrainzID"),
+        Column("dateAdded"), Column("lastPlayed"), Column("playCount"),
+        Column("aiAnalyzed"), Column("analysisAttemptedAt"),
+    ]
 
     func fetchAllTrackRelativePaths() throws -> Set<String> {
         try dbQueue.read { db in
@@ -248,10 +340,13 @@ final class DatabaseManager {
         }
     }
 
-    func hasUnanalyzedTracks() throws -> Bool {
+    /// Reports whether any track is both unanalyzed and eligible for a retry,
+    /// i.e. never attempted or last attempted before `attemptedBefore`.
+    func hasUnanalyzedTracks(attemptedBefore cutoff: Date) throws -> Bool {
         try dbQueue.read { db in
             let count = try TrackRecord
                 .filter(Column("aiAnalyzed") == false)
+                .filter(Column("analysisAttemptedAt") == nil || Column("analysisAttemptedAt") < cutoff)
                 .fetchCount(db)
             return count > 0
         }
@@ -272,6 +367,9 @@ final class DatabaseManager {
 
     func deleteTrack(id: Int64) throws {
         try dbQueue.write { db in
+            if let fileURL = try String.fetchOne(db, sql: "SELECT fileURL FROM tracks WHERE id = ?", arguments: [id]) {
+                _ = try PlaylistTrackRecord.filter(Column("trackFileURL") == fileURL).deleteAll(db)
+            }
             _ = try TrackRecord.deleteOne(db, id: id)
         }
     }
@@ -279,8 +377,10 @@ final class DatabaseManager {
     func deleteTracksNotIn(relativePaths: Set<String>) throws {
         try dbQueue.write { db in
             if relativePaths.isEmpty {
+                _ = try PlaylistTrackRecord.deleteAll(db)
                 _ = try TrackRecord.deleteAll(db)
             } else {
+                _ = try PlaylistTrackRecord.filter(!relativePaths.contains(Column("trackFileURL"))).deleteAll(db)
                 _ = try TrackRecord.filter(!relativePaths.contains(Column("fileURL"))).deleteAll(db)
             }
         }
@@ -316,6 +416,18 @@ final class DatabaseManager {
             }
             return try AlbumInfoRecord(title: title, artist: artist)
                 .insertAndFetch(db, as: AlbumInfoRecord.self)
+        }
+    }
+
+    /// Stores album artwork once per album (first-writer-wins) instead of
+    /// duplicating the BLOB on every track row.
+    func saveAlbumCoverArtIfMissing(title: String, artist: String, data: Data) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: """
+                INSERT INTO albumInfo (title, artist, coverArtData) VALUES (?, ?, ?)
+                ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
+                WHERE albumInfo.coverArtData IS NULL
+            """, arguments: [title, artist, data])
         }
     }
 
@@ -536,6 +648,13 @@ final class DatabaseManager {
             try PlaylistTrackRecord
                 .filter(Column("playlistId") == playlistId)
                 .fetchCount(db)
+        }
+    }
+
+    func fetchPlaylistTrackCounts() throws -> [Int64: Int] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: "SELECT playlistId, COUNT(*) AS trackCount FROM playlistTracks GROUP BY playlistId")
+            return Dictionary(uniqueKeysWithValues: rows.map { ($0["playlistId"] as Int64, $0["trackCount"] as Int) })
         }
     }
 
