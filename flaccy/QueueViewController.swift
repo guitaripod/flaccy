@@ -22,15 +22,26 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     private let reorderFeedback = UISelectionFeedbackGenerator()
     private var lastPaletteKey: String?
     private var hasAnimatedAppearance = false
+    private let embeddedInNowPlaying: Bool
+
+    init(embeddedInNowPlaying: Bool = false) {
+        self.embeddedInNowPlaying = embeddedInNowPlaying
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         overrideUserInterfaceStyle = .dark
         navigationController?.overrideUserInterfaceStyle = .dark
-        view.backgroundColor = .black
+        view.backgroundColor = embeddedInNowPlaying ? .clear : .black
 
-        setupNavigationBar()
-        setupBackdrop()
+        if !embeddedInNowPlaying {
+            setupNavigationBar()
+            setupBackdrop()
+        }
         setupTableView()
         setupControlsBar()
         setupHeaderTitle()
@@ -157,7 +168,8 @@ final class QueueViewController: UIViewController, SonglinkShareable {
 
         updateShuffleRepeat()
 
-        let stack = UIStackView(arrangedSubviews: [shuffle, repeats, clear])
+        let capsules = embeddedInNowPlaying ? [clear] : [shuffle, repeats, clear]
+        let stack = UIStackView(arrangedSubviews: capsules)
         stack.distribution = .fillEqually
         stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -225,6 +237,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     }
 
     private func updatePalette() {
+        guard !embeddedInNowPlaying else { return }
         guard let track = AudioPlayer.shared.currentTrack else {
             backdropView.apply(ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy"), animated: hasAnimatedAppearance)
             return

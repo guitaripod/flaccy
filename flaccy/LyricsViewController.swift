@@ -22,11 +22,13 @@ final class LyricsViewController: UIViewController {
     private var scrollResumeWorkItem: DispatchWorkItem?
     private let lineSelectionFeedback = UIImpactFeedbackGenerator(style: .light)
     private var hasAnimatedAppearance = false
+    private let embeddedInNowPlaying: Bool
 
-    init(track: String, artist: String, album: String) {
+    init(track: String, artist: String, album: String, embeddedInNowPlaying: Bool = false) {
         self.trackTitle = track
         self.artistName = artist
         self.albumName = album
+        self.embeddedInNowPlaying = embeddedInNowPlaying
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -38,8 +40,10 @@ final class LyricsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         overrideUserInterfaceStyle = .dark
-        view.backgroundColor = .black
-        setupBackdrop()
+        view.backgroundColor = embeddedInNowPlaying ? .clear : .black
+        if !embeddedInNowPlaying {
+            setupBackdrop()
+        }
         setupUI()
         startTrackObservation()
         updatePalette()
@@ -69,7 +73,7 @@ final class LyricsViewController: UIViewController {
     }
 
     private func updatePalette() {
-        guard let track = AudioPlayer.shared.currentTrack else { return }
+        guard !embeddedInNowPlaying, let track = AudioPlayer.shared.currentTrack else { return }
         let key = "\(track.albumTitle)\0\(track.artist)"
         let artwork = track.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
         let animated = hasAnimatedAppearance
@@ -94,7 +98,9 @@ final class LyricsViewController: UIViewController {
 
     private func handleTrackChange() {
         guard let track = AudioPlayer.shared.currentTrack else {
-            dismiss(animated: true)
+            if !embeddedInNowPlaying {
+                dismiss(animated: true)
+            }
             return
         }
         guard track.title != trackTitle || track.artist != artistName || track.albumTitle != albumName else { return }
@@ -119,6 +125,11 @@ final class LyricsViewController: UIViewController {
     }
 
     private func setupUI() {
+        let contentTopAnchor = embeddedInNowPlaying ? view.topAnchor : makeHeaderRow().bottomAnchor
+        setupContent(belowAnchor: contentTopAnchor, spacing: embeddedInNowPlaying ? 0 : 16)
+    }
+
+    private func makeHeaderRow() -> UIView {
         let doneButton = UIButton(type: .system)
         doneButton.setImage(
             UIImage(systemName: "xmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)),
@@ -166,7 +177,10 @@ final class LyricsViewController: UIViewController {
             topRow.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             topRow.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
         ])
+        return topRow
+    }
 
+    private func setupContent(belowAnchor contentTopAnchor: NSLayoutYAxisAnchor, spacing: CGFloat) {
         spinner = UIActivityIndicatorView(style: .large)
         spinner.color = .white
         spinner.translatesAutoresizingMaskIntoConstraints = false
@@ -206,7 +220,7 @@ final class LyricsViewController: UIViewController {
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: topRow.bottomAnchor, constant: 16),
+            tableView.topAnchor.constraint(equalTo: contentTopAnchor, constant: spacing),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
@@ -222,7 +236,7 @@ final class LyricsViewController: UIViewController {
         view.addSubview(plainTextView)
 
         NSLayoutConstraint.activate([
-            plainTextView.topAnchor.constraint(equalTo: topRow.bottomAnchor, constant: 16),
+            plainTextView.topAnchor.constraint(equalTo: contentTopAnchor, constant: spacing),
             plainTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             plainTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             plainTextView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),

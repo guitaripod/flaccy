@@ -1,7 +1,6 @@
 import AVFoundation
 import AVKit
 import Combine
-import MediaPlayer
 import UIKit
 
 final class NowPlayingViewController: UIViewController, SonglinkShareable {
@@ -19,7 +18,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private let dashLabel = UILabel()
     private let albumLabel = UILabel()
     private let playingFromLabel = UILabel()
-    private let progressSlider = UISlider()
+    private let scrubber = ScrubberView()
     private let currentTimeLabel = UILabel()
     private let remainingTimeLabel = UILabel()
     private let scrubBubble = UIView()
@@ -30,7 +29,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private let playPauseIconView = UIImageView()
     private let nextButton = UIButton(type: .system)
     private let skipForwardButton = UIButton(type: .system)
-    private let volumeView = MPVolumeView()
+    private let volumeSlider = SystemVolumeSlider()
     private let shuffleButton = UIButton(type: .system)
     private let repeatButton = UIButton(type: .system)
     private let airplayButton = AVRoutePickerView(frame: .zero)
@@ -42,14 +41,30 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private var shuffleCapsule: GlassCapsule?
     private var repeatCapsule: GlassCapsule?
     private var sleepTimerCapsule: GlassCapsule?
+    private var lyricsCapsule: GlassCapsule?
     private var queueCapsule: GlassCapsule?
     private var actionCapsules: [UIView] = []
     private let actionRowContainer = UIStackView()
 
+    private enum CenterState {
+        case artwork
+        case lyrics
+        case queue
+    }
+
+    private var centerState: CenterState = .artwork
+    private var stateChildController: UIViewController?
+    private let centerContainer = UIView()
+    private let artworkGroup = UIStackView()
+    private let compactHeader = UIControl()
+    private let compactArtworkView = UIImageView()
+    private let compactTitleLabel = UILabel()
+    private let compactArtistLabel = UILabel()
+    private let stateContentContainer = UIView()
+
     private var artistImageTask: Task<Void, Never>?
     private var currentArtistKey: String?
 
-    private var isSliderDragging = false
     private var isSeeking = false
     private var chaseTime: TimeInterval = 0
     private var lastTrackKey: String?
@@ -82,9 +97,6 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         static let peekScale: CGFloat = 0.9
         static let peekStartMultiplier: CGFloat = 1.08
     }
-
-    private lazy var smallThumb = makeThumbImage(size: 6)
-    private lazy var largeThumb = makeThumbImage(size: 20)
 
     private static let pausedArtworkScale: CGFloat = 0.86
     private static let playIconConfig = UIImage.SymbolConfiguration(pointSize: 44, weight: .bold)
@@ -174,9 +186,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         infoStack.axis = .vertical
         infoStack.spacing = 4
 
-        let sliderStack = UIStackView(arrangedSubviews: [progressSlider, makeTimeRow()])
+        let sliderStack = UIStackView(arrangedSubviews: [scrubber, makeTimeRow()])
         sliderStack.axis = .vertical
-        sliderStack.spacing = 4
+        sliderStack.spacing = 0
 
         let transportStack = UIStackView(arrangedSubviews: [
             skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton,
@@ -184,27 +196,125 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         transportStack.distribution = .equalSpacing
         transportStack.alignment = .center
 
-        let mainStack = UIStackView(arrangedSubviews: [
-            artworkContainer, infoStack, sliderStack, transportStack, makeVolumeRow(), makeActionRow(),
+        let volumeRow = makeVolumeRow()
+        let bottomStack = UIStackView(arrangedSubviews: [
+            sliderStack, transportStack, volumeRow, makeActionRow(),
         ])
-        mainStack.axis = .vertical
-        mainStack.spacing = 22
-        mainStack.setCustomSpacing(26, after: artworkContainer)
-        mainStack.setCustomSpacing(28, after: transportStack)
-        if let volumeRow = mainStack.arrangedSubviews.dropLast().last {
-            mainStack.setCustomSpacing(34, after: volumeRow)
-        }
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(mainStack)
+        bottomStack.axis = .vertical
+        bottomStack.spacing = 22
+        bottomStack.setCustomSpacing(28, after: transportStack)
+        bottomStack.setCustomSpacing(34, after: volumeRow)
+        bottomStack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(bottomStack)
 
+        setupCenterContainer(infoStack: infoStack)
         setupScrubBubble()
 
         NSLayoutConstraint.activate([
-            mainStack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
-            mainStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
-            mainStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
-            mainStack.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            centerContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
+            centerContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
+            centerContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
+            centerContainer.bottomAnchor.constraint(equalTo: bottomStack.topAnchor, constant: -14),
+            bottomStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
+            bottomStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
+            bottomStack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
             artworkView.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42),
+        ])
+    }
+
+    /// Hosts the three exclusive center states: the artwork column (default),
+    /// and the lyrics/queue child content shown below a compact now-playing
+    /// header that morphs in when the artwork collapses.
+    private func setupCenterContainer(infoStack: UIStackView) {
+        centerContainer.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(centerContainer)
+
+        artworkGroup.axis = .vertical
+        artworkGroup.spacing = 26
+        artworkGroup.addArrangedSubview(artworkContainer)
+        artworkGroup.addArrangedSubview(infoStack)
+        artworkGroup.translatesAutoresizingMaskIntoConstraints = false
+        centerContainer.addSubview(artworkGroup)
+
+        setupCompactHeader()
+        centerContainer.addSubview(compactHeader)
+
+        stateContentContainer.alpha = 0
+        stateContentContainer.isUserInteractionEnabled = false
+        stateContentContainer.translatesAutoresizingMaskIntoConstraints = false
+        centerContainer.addSubview(stateContentContainer)
+
+        NSLayoutConstraint.activate([
+            artworkGroup.topAnchor.constraint(equalTo: centerContainer.topAnchor),
+            artworkGroup.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
+            artworkGroup.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
+            artworkGroup.bottomAnchor.constraint(lessThanOrEqualTo: centerContainer.bottomAnchor),
+            compactHeader.topAnchor.constraint(equalTo: centerContainer.topAnchor),
+            compactHeader.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
+            compactHeader.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
+            stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),
+            stateContentContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            stateContentContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            stateContentContainer.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor),
+        ])
+    }
+
+    private func setupCompactHeader() {
+        compactHeader.alpha = 0
+        compactHeader.isUserInteractionEnabled = false
+        compactHeader.translatesAutoresizingMaskIntoConstraints = false
+        compactHeader.accessibilityHint = "Returns to the artwork"
+        compactHeader.accessibilityTraits = .button
+        compactHeader.addAction(UIAction { [weak self] _ in
+            self?.setCenterState(.artwork)
+        }, for: .touchUpInside)
+
+        compactArtworkView.contentMode = .scaleAspectFill
+        compactArtworkView.clipsToBounds = true
+        compactArtworkView.layer.cornerRadius = 10
+        compactArtworkView.layer.cornerCurve = .continuous
+        compactArtworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        compactArtworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
+        compactArtworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 18, weight: .light)
+        compactArtworkView.isUserInteractionEnabled = false
+
+        compactTitleLabel.font = .scaled(.subheadline, size: 15, weight: .semibold)
+        compactTitleLabel.adjustsFontForContentSizeCategory = true
+        compactTitleLabel.textColor = .white
+        compactTitleLabel.lineBreakMode = .byTruncatingTail
+
+        compactArtistLabel.font = .scaled(.caption1, size: 13, weight: .regular)
+        compactArtistLabel.adjustsFontForContentSizeCategory = true
+        compactArtistLabel.textColor = .white.withAlphaComponent(0.6)
+        compactArtistLabel.lineBreakMode = .byTruncatingTail
+
+        let textStack = UIStackView(arrangedSubviews: [compactTitleLabel, compactArtistLabel])
+        textStack.axis = .vertical
+        textStack.spacing = 1
+        textStack.isUserInteractionEnabled = false
+
+        let chevron = UIImageView(image: UIImage(
+            systemName: "chevron.down",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        ))
+        chevron.tintColor = .white.withAlphaComponent(0.45)
+        chevron.setContentHuggingPriority(.required, for: .horizontal)
+
+        let row = UIStackView(arrangedSubviews: [compactArtworkView, textStack, chevron])
+        row.spacing = 12
+        row.alignment = .center
+        row.isUserInteractionEnabled = false
+        row.translatesAutoresizingMaskIntoConstraints = false
+        compactHeader.addSubview(row)
+
+        NSLayoutConstraint.activate([
+            compactArtworkView.widthAnchor.constraint(equalToConstant: 44),
+            compactArtworkView.heightAnchor.constraint(equalToConstant: 44),
+            compactHeader.heightAnchor.constraint(greaterThanOrEqualToConstant: 52),
+            row.topAnchor.constraint(equalTo: compactHeader.topAnchor, constant: 4),
+            row.leadingAnchor.constraint(equalTo: compactHeader.leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: compactHeader.trailingAnchor),
+            row.bottomAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: -4),
         ])
     }
 
@@ -296,6 +406,12 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         titleMarquee.textColor = .white
         titleMarquee.setContentHuggingPriority(.defaultLow, for: .horizontal)
         titleMarquee.addInteraction(UIContextMenuInteraction(delegate: self))
+        titleMarquee.isUserInteractionEnabled = true
+        titleMarquee.accessibilityTraits = .button
+        titleMarquee.accessibilityHint = "Shows the album"
+        titleMarquee.addGestureRecognizer(
+            UITapGestureRecognizer(target: self, action: #selector(albumNavigationTapped))
+        )
 
         artistAvatarButton.contentMode = .scaleAspectFill
         artistAvatarButton.imageView?.contentMode = .scaleAspectFill
@@ -332,11 +448,27 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         albumLabel.lineBreakMode = .byTruncatingTail
         albumLabel.addInteraction(UIContextMenuInteraction(delegate: self))
         albumLabel.isUserInteractionEnabled = true
+        albumLabel.isAccessibilityElement = true
+        albumLabel.accessibilityTraits = .button
+        albumLabel.accessibilityHint = "Shows the album"
+        albumLabel.addGestureRecognizer(
+            UITapGestureRecognizer(target: self, action: #selector(albumNavigationTapped))
+        )
 
         playingFromLabel.font = .scaled(.caption1, size: 12, weight: .regular)
         playingFromLabel.adjustsFontForContentSizeCategory = true
         playingFromLabel.textColor = .white.withAlphaComponent(0.4)
         playingFromLabel.isHidden = true
+        playingFromLabel.isUserInteractionEnabled = true
+        playingFromLabel.accessibilityTraits = .button
+        playingFromLabel.accessibilityHint = "Shows the album"
+        playingFromLabel.addGestureRecognizer(
+            UITapGestureRecognizer(target: self, action: #selector(albumNavigationTapped))
+        )
+    }
+
+    @objc private func albumNavigationTapped() {
+        navigateToAlbum()
     }
 
     private func makeArtistAlbumRow() -> UIStackView {
@@ -348,14 +480,13 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func setupScrubber() {
-        progressSlider.minimumTrackTintColor = .white
-        progressSlider.maximumTrackTintColor = .white.withAlphaComponent(0.25)
-        progressSlider.setThumbImage(smallThumb, for: .normal)
-        progressSlider.setThumbImage(largeThumb, for: .highlighted)
-        progressSlider.accessibilityLabel = "Playback position"
-        progressSlider.addTarget(self, action: #selector(sliderTouchDown), for: .touchDown)
-        progressSlider.addTarget(self, action: #selector(sliderTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
-        progressSlider.addTarget(self, action: #selector(sliderChanged), for: .valueChanged)
+        scrubber.onScrubBegan = { [weak self] in self?.scrubBegan() }
+        scrubber.onScrubChanged = { [weak self] time in self?.scrubChanged(to: time) }
+        scrubber.onScrubEnded = { [weak self] time in self?.scrubEnded(at: time) }
+        scrubber.onAccessibilityAdjust = { [weak self] time in
+            self?.chaseTime = time
+            self?.seekToChaseTime()
+        }
 
         let timeFont = UIFontMetrics(forTextStyle: .caption2)
             .scaledFont(for: .monospacedDigitSystemFont(ofSize: 11, weight: .medium), maximumPointSize: 18)
@@ -442,12 +573,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             glyph.tintColor = .white.withAlphaComponent(0.5)
             glyph.setContentHuggingPriority(.required, for: .horizontal)
         }
-        volumeView.tintColor = .white
-        volumeView.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let row = UIStackView(arrangedSubviews: [minGlyph, volumeView, maxGlyph])
+        volumeSlider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let row = UIStackView(arrangedSubviews: [minGlyph, volumeSlider, maxGlyph])
         row.spacing = 12
         row.alignment = .center
-        row.accessibilityLabel = "Volume"
         return row
     }
 
@@ -457,15 +586,17 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         let shuffle = GlassCapsule(hosting: shuffleButton)
         let repeats = GlassCapsule(hosting: repeatButton)
         let sleep = GlassCapsule(hosting: sleepTimerButton)
+        let lyrics = GlassCapsule(hosting: lyricsButton)
         let queue = GlassCapsule(hosting: queueButton)
         shuffleCapsule = shuffle
         repeatCapsule = repeats
         sleepTimerCapsule = sleep
+        lyricsCapsule = lyrics
         queueCapsule = queue
 
         actionCapsules = [
             shuffle, repeats, GlassCapsule(hosting: airplayButton), sleep,
-            GlassCapsule(hosting: shareButton), GlassCapsule(hosting: lyricsButton), queue,
+            GlassCapsule(hosting: shareButton), lyrics, queue,
         ]
         actionRowContainer.axis = .vertical
         actionRowContainer.spacing = 8
@@ -538,13 +669,18 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
         lyricsButton.setImage(UIImage(systemName: "text.quote", withConfiguration: iconConfig), for: .normal)
         lyricsButton.accessibilityLabel = "Lyrics"
-        lyricsButton.addAction(UIAction { [weak self] _ in self?.presentLyrics() }, for: .touchUpInside)
+        lyricsButton.accessibilityHint = "Shows lyrics in place of the artwork"
+        lyricsButton.addAction(UIAction { [weak self] _ in
+            guard let self else { return }
+            self.setCenterState(self.centerState == .lyrics ? .artwork : .lyrics)
+        }, for: .touchUpInside)
 
         queueButton.setImage(UIImage(systemName: "list.bullet", withConfiguration: iconConfig), for: .normal)
         queueButton.accessibilityLabel = "Queue"
+        queueButton.accessibilityHint = "Shows the queue in place of the artwork"
         queueButton.addAction(UIAction { [weak self] _ in
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            self?.presentQueue()
+            guard let self else { return }
+            self.setCenterState(self.centerState == .queue ? .artwork : .queue)
         }, for: .touchUpInside)
 
         for button in [shuffleButton, repeatButton, sleepTimerButton, shareButton, lyricsButton, queueButton] {
@@ -614,11 +750,19 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func setupAccessibilityOrder() {
-        view.accessibilityElements = [
-            artworkContainer, titleMarquee, artistAvatarButton, artistButton, albumLabel, playingFromLabel,
-            progressSlider, currentTimeLabel, remainingTimeLabel,
+        let centerElements: [Any]
+        switch centerState {
+        case .artwork:
+            centerElements = [
+                artworkContainer, titleMarquee, artistAvatarButton, artistButton, albumLabel, playingFromLabel,
+            ]
+        case .lyrics, .queue:
+            centerElements = [compactHeader, stateChildController?.view].compactMap { $0 }
+        }
+        view.accessibilityElements = centerElements + [
+            scrubber, currentTimeLabel, remainingTimeLabel,
             skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton,
-            volumeView,
+            volumeSlider,
             shuffleButton, repeatButton, airplayButton, sleepTimerButton, shareButton, lyricsButton, queueButton,
         ]
     }
@@ -640,9 +784,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             lastIsPlaying = state.isPlaying
             applyPlaybackState(isPlaying: state.isPlaying)
         }
-        if !isSliderDragging {
-            progressSlider.maximumValue = Float(state.duration)
-            progressSlider.value = Float(state.currentTime)
+        if !scrubber.isScrubbing {
+            scrubber.setProgress(currentTime: state.currentTime, duration: state.duration)
+            scrubber.accessibilityValue = state.currentTimeFormatted
             currentTimeLabel.text = state.currentTimeFormatted
             remainingTimeLabel.text = state.remainingTimeFormatted
         }
@@ -652,6 +796,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         titleMarquee.text = state.title
         artistButton.setTitle(state.artist, for: .normal)
         albumLabel.text = state.albumTitle
+        compactTitleLabel.text = state.title
+        compactArtistLabel.text = state.artist
+        compactHeader.accessibilityLabel = "Now playing: \(state.title), \(state.artist)"
 
         let hasArtist = !state.artist.isEmpty
         let hasAlbum = !state.albumTitle.isEmpty
@@ -697,6 +844,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func setArtwork(_ image: UIImage?) {
+        applyCompactArtwork(image)
         if isInteractiveTrackTransitionActive {
             deferredArtwork = .some(image)
             return
@@ -708,6 +856,16 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             ) { self.applyArtworkDirect(image) }
         } else {
             applyArtworkDirect(image)
+        }
+    }
+
+    private func applyCompactArtwork(_ image: UIImage?) {
+        if let image {
+            compactArtworkView.contentMode = .scaleAspectFill
+            compactArtworkView.image = image
+        } else {
+            compactArtworkView.contentMode = .center
+            compactArtworkView.image = UIImage(systemName: "music.note")
         }
     }
 
@@ -767,14 +925,6 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         viewModel.seek(to: target)
     }
 
-    private func makeThumbImage(size: CGFloat) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
-        return renderer.image { ctx in
-            UIColor.white.setFill()
-            ctx.cgContext.fillEllipse(in: CGRect(x: 0, y: 0, width: size, height: size))
-        }
-    }
-
     private func updateShuffleRepeatState() {
         let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
         let animated = hasAppliedInitialState
@@ -808,26 +958,114 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private func updateQueueBadge() {
         let count = AudioPlayer.shared.queue.count
         queueCapsule?.setBadge(count > 1 ? (count > 99 ? "99+" : "\(count)") : nil)
-        queueButton.accessibilityValue = count > 0 ? "\(count) tracks" : nil
+        let countPart = count > 0 ? "\(count) tracks" : nil
+        let shownPart = centerState == .queue ? "Shown" : nil
+        let parts = [countPart, shownPart].compactMap { $0 }
+        queueButton.accessibilityValue = parts.isEmpty ? nil : parts.joined(separator: ", ")
     }
 
     @objc private func queueDidChange() {
         updateQueueBadge()
     }
 
-    private func presentQueue() {
-        let queueVC = QueueViewController()
-        let nav = UINavigationController(rootViewController: queueVC)
-        nav.modalPresentationStyle = .pageSheet
-        present(nav, animated: true)
+    /// Switches the center region between the artwork column and in-place
+    /// lyrics/queue content. States are exclusive; the lyrics and queue
+    /// controllers are embedded as children so their standalone modal
+    /// presentations elsewhere keep working.
+    private func setCenterState(_ target: CenterState) {
+        guard target != centerState else { return }
+        if target == .lyrics, AudioPlayer.shared.currentTrack == nil { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let previous = centerState
+        centerState = target
+        removeStateChild()
+        if let child = makeStateChild(for: target) {
+            embedStateChild(child)
+        }
+        updateStateCapsules()
+        animateCenterTransition(from: previous, to: target)
+        setupAccessibilityOrder()
+        UIAccessibility.post(notification: .layoutChanged, argument: target == .artwork ? artworkContainer : compactHeader)
+        AppLogger.info("Now Playing center state -> \(target)", category: .ui)
     }
 
-    private func presentLyrics() {
-        guard let track = AudioPlayer.shared.currentTrack else { return }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        let vc = LyricsViewController(track: track.title, artist: track.artist, album: track.albumTitle)
-        vc.modalPresentationStyle = .fullScreen
-        present(vc, animated: true)
+    private func makeStateChild(for state: CenterState) -> UIViewController? {
+        switch state {
+        case .artwork:
+            return nil
+        case .lyrics:
+            guard let track = AudioPlayer.shared.currentTrack else { return nil }
+            return LyricsViewController(
+                track: track.title, artist: track.artist, album: track.albumTitle, embeddedInNowPlaying: true
+            )
+        case .queue:
+            return QueueViewController(embeddedInNowPlaying: true)
+        }
+    }
+
+    private func embedStateChild(_ child: UIViewController) {
+        addChild(child)
+        child.view.translatesAutoresizingMaskIntoConstraints = false
+        stateContentContainer.addSubview(child.view)
+        NSLayoutConstraint.activate([
+            child.view.topAnchor.constraint(equalTo: stateContentContainer.topAnchor),
+            child.view.leadingAnchor.constraint(equalTo: stateContentContainer.leadingAnchor),
+            child.view.trailingAnchor.constraint(equalTo: stateContentContainer.trailingAnchor),
+            child.view.bottomAnchor.constraint(equalTo: stateContentContainer.bottomAnchor),
+        ])
+        child.didMove(toParent: self)
+        stateChildController = child
+    }
+
+    private func removeStateChild() {
+        guard let child = stateChildController else { return }
+        child.willMove(toParent: nil)
+        child.view.removeFromSuperview()
+        child.removeFromParent()
+        stateChildController = nil
+    }
+
+    private func updateStateCapsules() {
+        lyricsCapsule?.setActive(centerState == .lyrics, animated: hasAppliedInitialState)
+        queueCapsule?.setActive(centerState == .queue, animated: hasAppliedInitialState)
+        lyricsButton.tintColor = centerState == .lyrics ? .white : .white.withAlphaComponent(0.7)
+        queueButton.tintColor = centerState == .queue ? .white : .white.withAlphaComponent(0.7)
+        lyricsButton.accessibilityValue = centerState == .lyrics ? "Shown" : nil
+        updateQueueBadge()
+    }
+
+    /// Crossfade-and-scale morph between the artwork column and the compact
+    /// header + child content; alpha-only under Reduce Motion.
+    private func animateCenterTransition(from previous: CenterState, to target: CenterState) {
+        let showsArtwork = target == .artwork
+        artworkGroup.isUserInteractionEnabled = showsArtwork
+        compactHeader.isUserInteractionEnabled = !showsArtwork
+        stateContentContainer.isUserInteractionEnabled = !showsArtwork
+
+        let reduceMotion = UIAccessibility.isReduceMotionEnabled
+        let apply = { [self] in
+            artworkGroup.alpha = showsArtwork ? 1 : 0
+            compactHeader.alpha = showsArtwork ? 0 : 1
+            stateContentContainer.alpha = showsArtwork ? 0 : 1
+            if !reduceMotion {
+                artworkGroup.transform = showsArtwork ? .identity : CGAffineTransform(scaleX: 0.94, y: 0.94)
+                stateContentContainer.transform = showsArtwork
+                    ? CGAffineTransform(translationX: 0, y: 12)
+                    : .identity
+            }
+        }
+        guard hasAppliedInitialState, !reduceMotion else {
+            artworkGroup.transform = .identity
+            stateContentContainer.transform = .identity
+            apply()
+            return
+        }
+        if !showsArtwork {
+            stateContentContainer.alpha = 0
+            stateContentContainer.transform = CGAffineTransform(translationX: 0, y: 12)
+        }
+        let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84, animations: apply)
+        animator.startAnimation()
     }
 
     private func navigateToArtist() {
@@ -856,39 +1094,28 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    @objc private func sliderTouchDown() {
-        isSliderDragging = true
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    private func scrubBegan() {
         backdropView.setPaused(true)
-        UIView.animate(withDuration: 0.15) {
-            self.progressSlider.transform = CGAffineTransform(scaleX: 1.0, y: 1.4)
-        }
-        updateScrubBubble(time: TimeInterval(progressSlider.value))
+        updateScrubBubble(time: scrubber.currentTime)
         UIView.animate(withDuration: 0.12) { self.scrubBubble.alpha = 1 }
     }
 
-    @objc private func sliderTouchUp() {
-        isSliderDragging = false
-        if presentedViewController == nil, view.window != nil {
-            backdropView.setPaused(false)
-        }
-        UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.75, initialSpringVelocity: 0.8) {
-            self.progressSlider.transform = .identity
-        }
-        UIView.animate(withDuration: 0.12) { self.scrubBubble.alpha = 0 }
-        let targetTime = TimeInterval(progressSlider.value)
-        chaseTime = targetTime
-        seekToChaseTime()
-    }
-
-    @objc private func sliderChanged() {
-        let time = TimeInterval(progressSlider.value)
+    private func scrubChanged(to time: TimeInterval) {
         chaseTime = time
-        updateTimeLabelsFromSlider(time)
+        updateTimeLabelsFromScrubber(time)
         updateScrubBubble(time: time)
         if !isSeeking {
             seekToChaseTime()
         }
+    }
+
+    private func scrubEnded(at time: TimeInterval) {
+        if presentedViewController == nil, view.window != nil {
+            backdropView.setPaused(false)
+        }
+        UIView.animate(withDuration: 0.12) { self.scrubBubble.alpha = 0 }
+        chaseTime = time
+        seekToChaseTime()
     }
 
     private func updateScrubBubble(time: TimeInterval) {
@@ -898,17 +1125,17 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         let bubbleSize = CGSize(width: scrubBubbleLabel.bounds.width + 20, height: 24)
         scrubBubble.bounds = CGRect(origin: .zero, size: bubbleSize)
         scrubBubbleLabel.frame = scrubBubble.bounds
-        let trackRect = progressSlider.trackRect(forBounds: progressSlider.bounds)
-        let thumbRect = progressSlider.thumbRect(forBounds: progressSlider.bounds, trackRect: trackRect, value: progressSlider.value)
-        let thumbCenter = progressSlider.convert(CGPoint(x: thumbRect.midX, y: thumbRect.minY), to: view)
-        scrubBubble.center = CGPoint(x: thumbCenter.x, y: thumbCenter.y - 26)
+        let anchor = scrubber.convert(CGPoint(x: scrubber.playheadX, y: 0), to: view)
+        let halfWidth = bubbleSize.width / 2
+        let clampedX = min(max(anchor.x, halfWidth + 8), view.bounds.width - halfWidth - 8)
+        scrubBubble.center = CGPoint(x: clampedX, y: anchor.y - 18)
     }
 
     private func seekToChaseTime() {
         isSeeking = true
         let target = chaseTime
         let cmTime = CMTime(seconds: target, preferredTimescale: 600)
-        let tolerance = isSliderDragging
+        let tolerance = scrubber.isScrubbing
             ? CMTime(seconds: 0.5, preferredTimescale: 600)
             : CMTime.zero
 
@@ -921,10 +1148,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func updateTimeLabelsFromSlider(_ time: TimeInterval) {
+    private func updateTimeLabelsFromScrubber(_ time: TimeInterval) {
         let total = Int(time)
         currentTimeLabel.text = String(format: "%d:%02d", total / 60, total % 60)
-        let rem = max(0, TimeInterval(progressSlider.maximumValue) - time)
+        let rem = max(0, scrubber.duration - time)
         let remTotal = Int(rem)
         remainingTimeLabel.text = String(format: "-%d:%02d", remTotal / 60, remTotal % 60)
     }
@@ -941,7 +1168,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         guard view.window != nil || !hasAnimatedAppearance || isBeingPresented else {
             return
         }
-        guard !isSliderDragging else { return }
+        guard !scrubber.isScrubbing else { return }
         backdropView.setPaused(false)
     }
 
@@ -1310,7 +1537,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         [
             [artworkContainer],
             [titleMarquee, artistButton, dashLabel, albumLabel, playingFromLabel],
-            [progressSlider, currentTimeLabel, remainingTimeLabel, skipBackButton, previousButton,
+            [scrubber, currentTimeLabel, remainingTimeLabel, skipBackButton, previousButton,
              playPauseButton, nextButton, skipForwardButton],
         ]
     }
