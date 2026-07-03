@@ -12,6 +12,7 @@ final class AlbumCell: UICollectionViewCell {
     private let metaLabel = UILabel()
     private let qualityBadge = QualityBadgeView(size: .compact)
     private let lovedBadge = UIImageView()
+    private var currentArtworkKey: String?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -109,13 +110,17 @@ final class AlbumCell: UICollectionViewCell {
         artistLabel.text = album.artist
 
         if let artwork = album.artwork {
+            currentArtworkKey = nil
             applyArtwork(artwork)
         } else if let cached = AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist) {
+            currentArtworkKey = nil
             applyArtwork(cached)
         } else {
+            let key = "\(album.title)|\(album.artist)"
+            currentArtworkKey = key
             beginSkeleton()
             AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { [weak self] image in
-                guard let self, self.titleLabel.text == album.title else { return }
+                guard let self, self.currentArtworkKey == key else { return }
                 if let image {
                     self.applyArtwork(image)
                 } else {
@@ -133,6 +138,7 @@ final class AlbumCell: UICollectionViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
+        currentArtworkKey = nil
         endSkeleton()
         artworkView.image = nil
         titleLabel.text = nil

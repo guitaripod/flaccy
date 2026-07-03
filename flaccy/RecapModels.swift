@@ -17,6 +17,10 @@ nonisolated struct RecapData: Sendable {
     var persona: String
 
     var hasScrobbles: Bool { totalPlays > 0 }
+
+    /// Whether there is anything worth showing — local plays, or top lists
+    /// backfilled from Last.fm's network charts when local scrobbles are sparse.
+    var hasContent: Bool { hasScrobbles || !topArtists.isEmpty || !topTracks.isEmpty || !topAlbums.isEmpty }
 }
 
 /// One-time backfill state for the "Import Last.fm history" affordance.

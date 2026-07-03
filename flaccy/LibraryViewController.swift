@@ -72,6 +72,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         setupCollectionView()
         setupSectionIndex()
         configureDataSource()
+        view.bringSubviewToFront(loadingOverlay)
         bindViewModel()
         updateRightBarButton(for: .albums)
         updateChips(for: .albums)
@@ -99,8 +100,18 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         definesPresentationContext = true
     }
 
+    /// Hosts the segment picker as a full-width control pinned below the nav bar
+    /// rather than as a width-constrained `titleView`, so all four titles render
+    /// without truncation across device widths and Dynamic Type sizes.
     private func setupSegmentedControl() {
         segmentedControl.selectedSegmentIndex = 0
+        segmentedControl.apportionsSegmentWidthsByContent = false
+        segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        for state: UIControl.State in [.normal, .selected] {
+            segmentedControl.setTitleTextAttributes(
+                [.font: UIFont.scaled(.subheadline, size: 13, weight: .semibold)], for: state
+            )
+        }
         segmentedControl.addAction(UIAction { [weak self] _ in
             guard let self else { return }
             self.impactLight.impactOccurred()
@@ -110,7 +121,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self.updateChips(for: segment)
             self.updateSectionIndex()
         }, for: .valueChanged)
-        navigationItem.titleView = segmentedControl
+        view.addSubview(segmentedControl)
+        NSLayoutConstraint.activate([
+            segmentedControl.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            segmentedControl.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            segmentedControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+        ])
     }
 
     private func updateRightBarButton(for segment: LibraryViewModel.Segment) {
@@ -160,7 +176,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let snapshot = viewModel.currentSnapshot()
         let apply = {
             self.collectionView.setCollectionViewLayout(self.createLayout(for: segment), animated: false)
-            self.dataSource.apply(snapshot, animatingDifferences: false)
+            self.dataSource.applySnapshotUsingReloadData(snapshot)
             self.updateEmptyState()
             self.updateSectionIndex()
         }
@@ -253,7 +269,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         view.addSubview(filterChipsView)
         chipsHeightConstraint = filterChipsView.heightAnchor.constraint(equalToConstant: 46)
         NSLayoutConstraint.activate([
-            filterChipsView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            filterChipsView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 8),
             filterChipsView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             filterChipsView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             chipsHeightConstraint,

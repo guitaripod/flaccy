@@ -10,6 +10,8 @@ final class HeatmapView: UIView {
     private var tint: UIColor = .systemGreen
     private let calendar = Calendar.current
     private let cellSpacing: CGFloat = 3
+    private var dataVersion = 0
+    private var renderedKey = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -25,18 +27,45 @@ final class HeatmapView: UIView {
     func configure(counts: [Date: Int], tint: UIColor) {
         self.counts = counts
         self.tint = tint
+        dataVersion += 1
         let active = counts.values.filter { $0 > 0 }.count
         accessibilityLabel = "Listening heatmap, \(active) active days in the last months"
-        setNeedsDisplay()
+        setNeedsLayout()
     }
 
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {
         super.traitCollectionDidChange(previous)
-        setNeedsDisplay()
+        setNeedsLayout()
     }
 
-    override func draw(_ rect: CGRect) {
-        guard let ctx = UIGraphicsGetCurrentContext() else { return }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        renderIfNeeded()
+    }
+
+    /// Renders the grid into a cached bitmap exactly once per data/size change so
+    /// the surrounding collection view never re-runs the per-cell drawing.
+    private func renderIfNeeded() {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        var hasher = Hasher()
+        hasher.combine(dataVersion)
+        hasher.combine(Int(bounds.width.rounded()))
+        hasher.combine(Int(bounds.height.rounded()))
+        hasher.combine(traitCollection.userInterfaceStyle.rawValue)
+        let key = hasher.finalize()
+        guard key != renderedKey else { return }
+        renderedKey = key
+
+        let bounds = self.bounds
+        let format = UIGraphicsImageRendererFormat.preferred()
+        let image = UIGraphicsImageRenderer(bounds: bounds, format: format).image { context in
+            self.drawContent(in: context.cgContext, rect: bounds)
+        }
+        layer.contents = image.cgImage
+        layer.contentsScale = image.scale
+    }
+
+    private func drawContent(in ctx: CGContext, rect: CGRect) {
         let cell = (rect.height - 6 * cellSpacing) / 7
         guard cell > 0 else { return }
         let columns = max(1, Int((rect.width + cellSpacing) / (cell + cellSpacing)))

@@ -7,6 +7,8 @@ final class ListeningClockView: UIView {
 
     private var buckets = [Int](repeating: 0, count: 24)
     private var tint: UIColor = .systemIndigo
+    private var dataVersion = 0
+    private var renderedKey = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -22,13 +24,41 @@ final class ListeningClockView: UIView {
     func configure(buckets: [Int], tint: UIColor) {
         self.buckets = buckets.count == 24 ? buckets : [Int](repeating: 0, count: 24)
         self.tint = tint
+        dataVersion += 1
         accessibilityLabel = accessibilitySummary()
-        setNeedsDisplay()
+        setNeedsLayout()
     }
 
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {
         super.traitCollectionDidChange(previous)
-        setNeedsDisplay()
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        renderIfNeeded()
+    }
+
+    /// Renders the clock into a cached bitmap exactly once per data/size change
+    /// so scrolling never re-runs the vector drawing.
+    private func renderIfNeeded() {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        var hasher = Hasher()
+        hasher.combine(dataVersion)
+        hasher.combine(Int(bounds.width.rounded()))
+        hasher.combine(Int(bounds.height.rounded()))
+        hasher.combine(traitCollection.userInterfaceStyle.rawValue)
+        let key = hasher.finalize()
+        guard key != renderedKey else { return }
+        renderedKey = key
+
+        let bounds = self.bounds
+        let format = UIGraphicsImageRendererFormat.preferred()
+        let image = UIGraphicsImageRenderer(bounds: bounds, format: format).image { context in
+            self.drawContent(in: context.cgContext, rect: bounds)
+        }
+        layer.contents = image.cgImage
+        layer.contentsScale = image.scale
     }
 
     private func accessibilitySummary() -> String {
@@ -39,8 +69,7 @@ final class ListeningClockView: UIView {
         return "Listening clock. Peak hour \(peak) hundred hours, with \(buckets[peak]) plays."
     }
 
-    override func draw(_ rect: CGRect) {
-        guard let ctx = UIGraphicsGetCurrentContext() else { return }
+    private func drawContent(in ctx: CGContext, rect: CGRect) {
         let center = CGPoint(x: rect.midX, y: rect.midY)
         let outer = min(rect.width, rect.height) / 2 - 6
         let inner = outer * 0.42

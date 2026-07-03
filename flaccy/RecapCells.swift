@@ -1,8 +1,26 @@
+import ImageIO
 import UIKit
 
 /// A UIImageView that loads local album art (via AlbumArtworkCache) or a remote
 /// URL (via ImageCache), guarding against cell reuse with a per-request token.
+///
+/// All decoding and downsampling happens off the main thread; the decoded
+/// thumbnails are cached so scrolling never pays a synchronous decode cost.
 final class AsyncImageView: UIImageView {
+
+    private static let maxPixelSize: CGFloat = 600
+
+    private static let thumbnailCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 256
+        return cache
+    }()
+
+    private static let decodeQueue = DispatchQueue(
+        label: "com.midgarcorp.flaccy.recap.decode",
+        qos: .userInitiated,
+        attributes: .concurrent
+    )
 
     private var token = UUID()
 
@@ -18,34 +36,85 @@ final class AsyncImageView: UIImageView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func setRemote(_ urlString: String?, placeholder: UIImage?) {
-        token = UUID()
-        let current = token
+        let current = UUID()
+        token = current
         image = placeholder
         guard let urlString, let url = URL(string: urlString) else { return }
-        if let cached = ImageCache.shared.image(forKey: urlString) { image = cached; return }
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            guard let data, let image = UIImage(data: data) else { return }
-            ImageCache.shared.store(image, forKey: urlString)
-            DispatchQueue.main.async {
-                guard let self, self.token == current else { return }
-                self.set(image, animated: true)
+        let thumbKey = "remote:\(urlString)" as NSString
+        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) { image = thumb; return }
+
+        Self.decodeQueue.async { [weak self] in
+            guard let self else { return }
+            if let cached = ImageCache.shared.image(forKey: urlString), let thumb = Self.prepared(cached) {
+                self.deliver(thumb, key: thumbKey, token: current)
+                return
             }
-        }.resume()
+            URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+                guard let self, let data, let thumb = Self.downsampled(from: data) else { return }
+                ImageCache.shared.store(data: data, forKey: urlString)
+                self.deliver(thumb, key: thumbKey, token: current)
+            }.resume()
+        }
     }
 
     func setAlbum(title: String, artist: String, remoteURL: String?, placeholder: UIImage?) {
-        token = UUID()
-        let current = token
+        let current = UUID()
+        token = current
         image = placeholder
-        if let cached = AlbumArtworkCache.shared.artwork(forAlbum: title, artist: artist) { image = cached; return }
+        let thumbKey = "album:\(title)\u{0}\(artist)" as NSString
+        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) { image = thumb; return }
+
+        if let cached = AlbumArtworkCache.shared.artwork(forAlbum: title, artist: artist) {
+            Self.decodeQueue.async { [weak self] in
+                guard let self, let thumb = Self.prepared(cached) else { return }
+                self.deliver(thumb, key: thumbKey, token: current)
+            }
+            return
+        }
+
         AlbumArtworkCache.shared.loadArtwork(forAlbum: title, artist: artist) { [weak self] image in
             guard let self, self.token == current else { return }
-            if let image {
-                self.set(image, animated: true)
-            } else {
+            guard let image else {
                 self.setRemote(remoteURL, placeholder: placeholder)
+                return
+            }
+            Self.decodeQueue.async { [weak self] in
+                guard let self, let thumb = Self.prepared(image) else { return }
+                self.deliver(thumb, key: thumbKey, token: current)
             }
         }
+    }
+
+    private func deliver(_ image: UIImage, key: NSString, token current: UUID) {
+        Self.thumbnailCache.setObject(image, forKey: key)
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.token == current else { return }
+            self.set(image, animated: true)
+        }
+    }
+
+    private static func downsampled(from data: Data) -> UIImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        ]
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        else { return UIImage(data: data)?.preparingForDisplay() }
+        return UIImage(cgImage: cgImage)
+    }
+
+    private static func prepared(_ image: UIImage) -> UIImage? {
+        let longestPixels = max(image.size.width, image.size.height) * image.scale
+        guard longestPixels > maxPixelSize else { return image.preparingForDisplay() ?? image }
+        let ratio = maxPixelSize / longestPixels
+        let targetPixels = CGSize(
+            width: image.size.width * image.scale * ratio,
+            height: image.size.height * image.scale * ratio
+        )
+        return image.preparingThumbnail(of: targetPixels) ?? image.preparingForDisplay() ?? image
     }
 
     private func set(_ image: UIImage, animated: Bool) {
@@ -56,10 +125,14 @@ final class AsyncImageView: UIImageView {
 
 /// Shared number formatting: grouped counts and a compact minutes-to-hours label.
 enum RecapFormat {
-    static func count(_ value: Int) -> String {
+    private static let decimalFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+        return formatter
+    }()
+
+    static func count(_ value: Int) -> String {
+        decimalFormatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
     static func compact(_ value: Int) -> String {

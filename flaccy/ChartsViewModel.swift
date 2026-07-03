@@ -50,6 +50,11 @@ final class ChartsViewModel {
     }
 
     private func buildSnapshot(period: ChartPeriod, userInfo: LastFMUserInfo?) async -> RecapData {
+        var snapshot = await computeLocalSnapshot(period: period, userInfo: userInfo)
+        return await backfillFromNetwork(&snapshot, period: period)
+    }
+
+    private func computeLocalSnapshot(period: ChartPeriod, userInfo: LastFMUserInfo?) async -> RecapData {
         let stats = self.stats
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -70,6 +75,39 @@ final class ChartsViewModel {
                 continuation.resume(returning: snapshot)
             }
         }
+    }
+
+    /// When local scrobbles are too sparse to fill the top lists, backfill them
+    /// from Last.fm's network charts (which also carry remote album artwork) so
+    /// the Recap always shows something for an authenticated user.
+    private func backfillFromNetwork(_ snapshot: inout RecapData, period: ChartPeriod) async -> RecapData {
+        guard lastFM.isAuthenticated else { return snapshot }
+        let needArtists = snapshot.topArtists.count < 3
+        let needAlbums = snapshot.topAlbums.isEmpty
+        let needTracks = snapshot.topTracks.count < 3
+        guard needArtists || needAlbums || needTracks else { return snapshot }
+
+        async let netArtists = needArtists ? lastFM.fetchTopArtists(period: period, limit: 10) : []
+        async let netAlbums = needAlbums ? lastFM.fetchTopAlbums(period: period, limit: 9) : []
+        async let netTracks = needTracks ? lastFM.fetchTopTracks(period: period, limit: 10) : []
+        let (artists, albums, tracks) = await (netArtists, netAlbums, netTracks)
+
+        if needArtists, !artists.isEmpty {
+            snapshot.topArtists = artists.enumerated().map {
+                ChartArtist(rank: $0.offset + 1, name: $0.element.name, playCount: $0.element.playCount)
+            }
+        }
+        if needAlbums, !albums.isEmpty {
+            snapshot.topAlbums = albums.enumerated().map {
+                ChartAlbum(rank: $0.offset + 1, name: $0.element.name, artistName: $0.element.artistName, playCount: $0.element.playCount, imageURL: $0.element.imageURL)
+            }
+        }
+        if needTracks, !tracks.isEmpty {
+            snapshot.topTracks = tracks.enumerated().map {
+                ChartTrack(rank: $0.offset + 1, name: $0.element.name, artistName: $0.element.artistName, playCount: $0.element.playCount)
+            }
+        }
+        return snapshot
     }
 
     func importHistory() {

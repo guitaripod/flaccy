@@ -16,6 +16,7 @@ final class ChartsViewController: UIViewController {
     private let spinner = UIActivityIndicatorView(style: .large)
 
     private var currentPalette = ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy")
+    private var currentTint = UIColor.systemIndigo
     private var importState: RecapImportState = .available
     private var cancellables = Set<AnyCancellable>()
 
@@ -221,7 +222,7 @@ final class ChartsViewController: UIViewController {
     }
 
     private func cell(for item: RecapItem, at indexPath: IndexPath, in collectionView: UICollectionView) -> UICollectionViewCell {
-        let tint = accentTint()
+        let tint = currentTint
         switch item {
         case .profile(let profile):
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ProfileCell.reuseID, for: indexPath) as! ProfileCell
@@ -291,15 +292,16 @@ final class ChartsViewController: UIViewController {
 
     private func render(_ data: RecapData) {
         updatePalette(for: data)
-        navigationItem.rightBarButtonItem?.isEnabled = data.hasScrobbles
+        navigationItem.rightBarButtonItem?.isEnabled = data.hasContent
 
         var snapshot = NSDiffableDataSourceSnapshot<RecapSection, RecapItem>()
 
+        let displayPlays = data.totalPlays > 0 ? data.totalPlays : (data.userInfo?.playcount ?? 0)
         let profile = ProfileItem(
             username: data.userInfo?.name ?? "You",
             sinceText: sinceText(for: data.userInfo),
             avatarURL: data.userInfo?.imageURL,
-            totalPlays: data.totalPlays,
+            totalPlays: displayPlays,
             totalMinutes: data.totalMinutes
         )
         snapshot.appendSections([.profile])
@@ -337,9 +339,14 @@ final class ChartsViewController: UIViewController {
             snapshot.appendItems([.persona(PersonaItem(persona: data.persona, seed: paletteSeed(for: data)))], toSection: .persona)
         }
 
-        let animate = !UIAccessibility.isReduceMotionEnabled && !dataSource.snapshot().itemIdentifiers.isEmpty
-        dataSource.apply(snapshot, animatingDifferences: animate)
-        emptyLabel.isHidden = data.hasScrobbles || data.period != .allTime
+        dataSource.apply(snapshot, animatingDifferences: false)
+
+        emptyLabel.isHidden = data.hasContent
+        if !data.hasContent {
+            emptyLabel.text = importState == .unavailable
+                ? "Connect Last.fm in Settings, or play\nsomething to build your Recap."
+                : "No listening history yet.\nPlay something, or import your\nLast.fm history above."
+        }
     }
 
     private func reapplyImportBanner() {
@@ -370,7 +377,7 @@ final class ChartsViewController: UIViewController {
     }
 
     private func shareRecap() {
-        guard let data = viewModel.data, data.hasScrobbles else { return }
+        guard let data = viewModel.data, data.hasContent else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         let image = RecapShareCardView.makeImage(data: data, palette: currentPalette)
         let activity = UIActivityViewController(activityItems: [image], applicationActivities: nil)
@@ -399,6 +406,7 @@ final class ChartsViewController: UIViewController {
     private func updatePalette(for data: RecapData) {
         let palette = ArtworkPaletteExtractor.fallbackPalette(seed: paletteSeed(for: data))
         currentPalette = palette
+        currentTint = accentTint()
         backdrop.apply(palette, animated: !UIAccessibility.isReduceMotionEnabled)
     }
 
