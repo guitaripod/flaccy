@@ -1,109 +1,87 @@
 import Combine
 import UIKit
 
-nonisolated struct ChartDisplayItem: Hashable, Sendable {
-
-    let rank: Int
-    let trackName: String
-    let artistName: String
-    let playCount: Int
-    let matchedTrack: Track?
-
-    static func == (lhs: ChartDisplayItem, rhs: ChartDisplayItem) -> Bool {
-        lhs.rank == rhs.rank && lhs.trackName == rhs.trackName && lhs.artistName == rhs.artistName
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(rank)
-        hasher.combine(trackName)
-        hasher.combine(artistName)
-    }
-}
-
+/// Drives the Recap dashboard: computes a `RecapData` snapshot for the selected
+/// period from local scrobbles (offline-first) enriched with the Last.fm profile,
+/// and runs the one-time history import.
 final class ChartsViewModel {
 
-    let itemsPublisher = PassthroughSubject<[ChartDisplayItem], Never>()
+    let dataPublisher = CurrentValueSubject<RecapData?, Never>(nil)
     let loadingPublisher = PassthroughSubject<Bool, Never>()
+    let importStatePublisher = CurrentValueSubject<RecapImportState, Never>(.available)
 
-    private(set) var selectedPeriod: ChartPeriod = .week
-    private(set) var items: [ChartDisplayItem] = []
+    private(set) var selectedPeriod: ChartPeriod = .allTime
+    private(set) var data: RecapData?
 
+    private let stats = LastFMStatsService.shared
+    private let lastFM = LastFMService.shared
+    private var cachedUserInfo: LastFMUserInfo?
     private var loadGeneration = 0
 
-    var matchedCount: Int { items.filter { $0.matchedTrack != nil }.count }
-    var totalCount: Int { items.count }
+    private let importStateKey = "recap.historyImported"
 
-    var matchedTracks: [Track] {
-        items.compactMap { $0.matchedTrack }
+    init() {
+        if !lastFM.isAuthenticated {
+            importStatePublisher.send(.unavailable)
+        } else if UserDefaults.standard.bool(forKey: importStateKey) {
+            importStatePublisher.send(.done)
+        }
     }
 
-    /// Loads the chart for the given period and matches it against the current
-    /// library state. The library lookup is rebuilt on every call so imports,
-    /// metadata cleanups, and pull-to-refresh always match fresh data. A
-    /// generation counter ensures that when loads overlap (rapid period
-    /// switches), only the most recently requested load publishes results.
-    func loadChart(period: ChartPeriod) async {
+    func load(period: ChartPeriod) {
         selectedPeriod = period
         loadGeneration += 1
         let generation = loadGeneration
         loadingPublisher.send(true)
 
-        let chartTracks = await LastFMService.shared.fetchTopTracks(period: period)
-        let displayItems = await Self.matchToLibrary(chartTracks: chartTracks)
-
-        guard !Task.isCancelled, generation == loadGeneration else { return }
-
-        items = displayItems
-        itemsPublisher.send(displayItems)
-        loadingPublisher.send(false)
+        Task { [weak self] in
+            guard let self else { return }
+            if self.cachedUserInfo == nil, self.lastFM.isAuthenticated {
+                self.cachedUserInfo = await self.lastFM.fetchUserInfo()
+            }
+            let snapshot = await self.buildSnapshot(period: period, userInfo: self.cachedUserInfo)
+            await MainActor.run {
+                guard generation == self.loadGeneration else { return }
+                self.data = snapshot
+                self.dataPublisher.send(snapshot)
+                self.loadingPublisher.send(false)
+            }
+        }
     }
 
-    /// Matches chart entries against the library on a background queue,
-    /// decoding artwork only for albums that actually matched a chart row
-    /// instead of retaining a decoded image for every album in the library.
-    nonisolated private static func matchToLibrary(chartTracks: [ChartTrack]) async -> [ChartDisplayItem] {
-        await withCheckedContinuation { continuation in
+    private func buildSnapshot(period: ChartPeriod, userInfo: LastFMUserInfo?) async -> RecapData {
+        let stats = self.stats
+        return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                var trackLookup = [String: TrackRecord]()
-                var coverData = [String: Data]()
+                let heatmapPeriod: ChartPeriod = period == .week || period == .month ? period : .year
+                let snapshot = RecapData(
+                    userInfo: userInfo,
+                    period: period,
+                    totalPlays: stats.totalPlays(period: period),
+                    totalMinutes: stats.totalMinutes(period: period),
+                    topArtists: stats.topArtists(period: period, limit: 10),
+                    topAlbums: stats.topAlbums(period: period, limit: 9),
+                    topTracks: stats.topTracks(period: period, limit: 10),
+                    listeningClock: stats.listeningClock(period: period),
+                    streak: stats.currentStreakDays(),
+                    heatmap: stats.dayHeatmap(period: heatmapPeriod),
+                    persona: stats.persona(period: period)
+                )
+                continuation.resume(returning: snapshot)
+            }
+        }
+    }
 
-                if let albumsWithTracks = try? DatabaseManager.shared.fetchAlbumsWithTracks() {
-                    for (albumInfo, records) in albumsWithTracks {
-                        if let first = records.first {
-                            let artKey = "\(first.albumTitle)\0\(first.artist)"
-                            if let data = albumInfo?.coverArtData ?? first.artworkData {
-                                coverData[artKey] = data
-                            }
-                        }
-                        for record in records {
-                            let key = "\(record.title.lowercased())\0\(record.artist.lowercased())"
-                            if trackLookup[key] == nil { trackLookup[key] = record }
-                        }
-                    }
-                }
-
-                var decodedArtwork = [String: UIImage]()
-                let displayItems: [ChartDisplayItem] = chartTracks.map { entry in
-                    let lookupKey = "\(entry.name.lowercased())\0\(entry.artistName.lowercased())"
-                    let track: Track? = trackLookup[lookupKey].map { record in
-                        let artKey = "\(record.albumTitle)\0\(record.artist)"
-                        var artwork = decodedArtwork[artKey]
-                        if artwork == nil, let data = coverData[artKey], let image = UIImage(data: data) {
-                            decodedArtwork[artKey] = image
-                            artwork = image
-                        }
-                        return Track.from(record: record, artwork: artwork)
-                    }
-
-                    return ChartDisplayItem(
-                        rank: entry.rank,
-                        trackName: entry.name,
-                        artistName: entry.artistName,
-                        playCount: entry.playCount,
-                        matchedTrack: track
-                    )
-                }
-                continuation.resume(returning: displayItems)
+    func importHistory() {
+        guard lastFM.isAuthenticated, importStatePublisher.value != .importing else { return }
+        importStatePublisher.send(.importing)
+        Task { [weak self] in
+            guard let self else { return }
+            await self.stats.importHistory()
+            UserDefaults.standard.set(true, forKey: self.importStateKey)
+            await MainActor.run {
+                self.importStatePublisher.send(.done)
+                self.load(period: self.selectedPeriod)
             }
         }
     }

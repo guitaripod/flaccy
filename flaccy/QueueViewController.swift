@@ -53,6 +53,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(self, selector: #selector(playbackStateDidChange), name: AudioPlayer.playbackStateDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(updateShuffleRepeat), name: AudioPlayer.shuffleRepeatDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(updateHeaderSubtitle), name: AudioPlayer.playbackProgressDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(reload), name: LovedTracksService.didChange, object: nil)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -437,7 +438,21 @@ extension QueueViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        Section(rawValue: indexPath.section) == .upNext
+        track(at: indexPath) != nil
+    }
+
+    func track(at indexPath: IndexPath) -> Track? {
+        guard let section = Section(rawValue: indexPath.section) else { return nil }
+        switch section {
+        case .history:
+            let history = Array(historyTracks)
+            return indexPath.row < history.count ? history[indexPath.row] : nil
+        case .nowPlaying:
+            return AudioPlayer.shared.currentTrack
+        case .upNext:
+            let upNext = Array(upNextTracks)
+            return indexPath.row < upNext.count ? upNext[indexPath.row] : nil
+        }
     }
 
     func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
@@ -515,6 +530,23 @@ extension QueueViewController: UITableViewDelegate {
             let shareMenu = UIMenu(options: .displayInline, children: [share])
             return UIMenu(children: [viewArtist, removeAction, shareMenu])
         }
+    }
+
+    func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        guard let track = track(at: indexPath) else { return nil }
+        let loved = LovedTracksService.shared.isLoved(track: track)
+
+        let love = UIContextualAction(style: .normal, title: loved ? "Unlove" : "Love") { _, _, completion in
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+            Task { await LovedTracksService.shared.toggleLove(track: track) }
+            completion(true)
+        }
+        love.image = UIImage(systemName: loved ? "heart.slash.fill" : "heart.fill")
+        love.backgroundColor = LoveButton.lovedTint
+
+        let config = UISwipeActionsConfiguration(actions: [love])
+        config.performsFirstActionWithFullSwipe = true
+        return config
     }
 
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
@@ -657,6 +689,8 @@ final class QueueTrackCell: UITableViewCell {
     private let trackArtistLabel = UILabel()
     private let durationLabel = UILabel()
     private let playingBars = PlayingBarsView()
+    private let qualityBadge = QualityBadgeView(size: .compact)
+    private let lovedIndicator = UIImageView()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -695,11 +729,23 @@ final class QueueTrackCell: UITableViewCell {
         durationLabel.textColor = .white.withAlphaComponent(0.4)
         durationLabel.setContentHuggingPriority(.required, for: .horizontal)
 
+        lovedIndicator.image = UIImage(
+            systemName: "heart.fill",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        )
+        lovedIndicator.tintColor = LoveButton.lovedTint
+        lovedIndicator.contentMode = .center
+        lovedIndicator.isHidden = true
+        lovedIndicator.isAccessibilityElement = false
+        lovedIndicator.setContentHuggingPriority(.required, for: .horizontal)
+
         let textStack = UIStackView(arrangedSubviews: [trackTitleLabel, trackArtistLabel])
         textStack.axis = .vertical
         textStack.spacing = 2
 
-        let mainStack = UIStackView(arrangedSubviews: [artworkView, playingBars, textStack, durationLabel])
+        let mainStack = UIStackView(arrangedSubviews: [
+            artworkView, playingBars, textStack, qualityBadge, lovedIndicator, durationLabel,
+        ])
         mainStack.spacing = 10
         mainStack.alignment = .center
         mainStack.translatesAutoresizingMaskIntoConstraints = false
@@ -733,35 +779,41 @@ final class QueueTrackCell: UITableViewCell {
         trackArtistLabel.text = track.artist
         loadArtwork(for: track)
 
+        qualityBadge.configure(with: track)
+        let loved = LovedTracksService.shared.isLoved(track: track)
+        lovedIndicator.isHidden = !loved
+
         let total = Int(track.duration)
         durationLabel.text = String(format: "%d:%02d", total / 60, total % 60)
 
+        var stateValue: String?
         switch style {
         case .history:
             highlightView.isHidden = true
             playingBars.isHidden = true
             playingBars.setPlaying(false)
             contentView.alpha = 0.45
-            accessibilityLabel = "\(track.title), \(track.artist)"
-            accessibilityValue = "Played earlier"
+            stateValue = "Played earlier"
             accessibilityHint = "Plays this track again"
         case .nowPlaying(let isPlaying):
             highlightView.isHidden = false
             playingBars.isHidden = false
             playingBars.setPlaying(isPlaying)
             contentView.alpha = 1
-            accessibilityLabel = "\(track.title), \(track.artist)"
-            accessibilityValue = isPlaying ? "Now playing" : "Paused"
+            stateValue = isPlaying ? "Now playing" : "Paused"
             accessibilityHint = nil
         case .upcoming:
             highlightView.isHidden = true
             playingBars.isHidden = true
             playingBars.setPlaying(false)
             contentView.alpha = 1
-            accessibilityLabel = "\(track.title), \(track.artist)"
-            accessibilityValue = nil
+            stateValue = nil
             accessibilityHint = "Plays this track"
         }
+        accessibilityLabel = "\(track.title), \(track.artist)"
+        accessibilityValue = [stateValue, loved ? "Loved" : nil]
+            .compactMap { $0 }
+            .joined(separator: ", ")
         isAccessibilityElement = true
     }
 
@@ -795,6 +847,8 @@ final class QueueTrackCell: UITableViewCell {
         super.prepareForReuse()
         currentArtworkKey = nil
         artworkView.image = nil
+        lovedIndicator.isHidden = true
+        qualityBadge.configure(with: nil)
         highlightView.isHidden = true
         playingBars.isHidden = true
         playingBars.setPlaying(false)

@@ -11,6 +11,11 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private var cancellables = Set<AnyCancellable>()
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let sectionIndexView = SectionIndexView()
+    private let filterChipsView = FilterChipsView()
+    private var chipsHeightConstraint: NSLayoutConstraint!
+    private var lastRenderedFilter: LibraryFilter?
+    private var lastRenderedLayout: LibraryLayoutMode?
+    private let selectionFeedback = UISelectionFeedbackGenerator()
     private let loadingOverlay = UIView()
     private let loadingIconView = UIImageView()
     private let loadingLabel = UILabel()
@@ -63,11 +68,13 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         setupSearchController()
         setupSegmentedControl()
+        setupFilterChips()
         setupCollectionView()
         setupSectionIndex()
         configureDataSource()
         bindViewModel()
         updateRightBarButton(for: .albums)
+        updateChips(for: .albums)
 
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             image: UIImage(systemName: "gearshape"),
@@ -100,6 +107,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             let segment = LibraryViewModel.Segment(rawValue: self.segmentedControl.selectedSegmentIndex) ?? .albums
             self.viewModel.switchSegment(to: segment)
             self.updateRightBarButton(for: segment)
+            self.updateChips(for: segment)
             self.updateSectionIndex()
         }, for: .valueChanged)
         navigationItem.titleView = segmentedControl
@@ -108,15 +116,15 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private func updateRightBarButton(for segment: LibraryViewModel.Segment) {
         switch segment {
         case .albums:
-            navigationItem.rightBarButtonItem = UIBarButtonItem(
-                image: UIImage(systemName: "arrow.up.arrow.down"),
-                menu: albumSortMenu()
-            )
+            navigationItem.rightBarButtonItems = [
+                UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), menu: albumSortMenu()),
+                layoutToggleButton(),
+            ]
         case .songs:
-            navigationItem.rightBarButtonItem = UIBarButtonItem(
-                image: UIImage(systemName: "arrow.up.arrow.down"),
-                menu: songSortMenu()
-            )
+            navigationItem.rightBarButtonItems = [
+                UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), menu: songSortMenu()),
+                layoutToggleButton(),
+            ]
         case .artists:
             navigationItem.rightBarButtonItem = UIBarButtonItem(
                 image: UIImage(systemName: "arrow.up.arrow.down"),
@@ -126,6 +134,44 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             navigationItem.rightBarButtonItem = UIBarButtonItem(
                 systemItem: .add, primaryAction: UIAction { [weak self] _ in self?.createPlaylistTapped() }
             )
+        }
+    }
+
+    private func layoutToggleButton() -> UIBarButtonItem {
+        let item = UIBarButtonItem(
+            image: UIImage(systemName: viewModel.layoutMode.icon),
+            primaryAction: UIAction { [weak self] _ in self?.toggleLayoutMode() }
+        )
+        item.accessibilityLabel = viewModel.layoutMode.accessibilityLabel
+        return item
+    }
+
+    private func toggleLayoutMode() {
+        selectionFeedback.selectionChanged()
+        viewModel.cycleLayoutMode()
+        updateRightBarButton(for: viewModel.currentSegment)
+        applyLayoutAndSnapshot(crossfade: true)
+    }
+
+    /// Rebuilds the compositional layout for the current mode and reapplies the
+    /// snapshot, optionally under a sub-350ms crossfade unless Reduce Motion is on.
+    private func applyLayoutAndSnapshot(crossfade: Bool) {
+        let segment = viewModel.currentSegment
+        let snapshot = viewModel.currentSnapshot()
+        let apply = {
+            self.collectionView.setCollectionViewLayout(self.createLayout(for: segment), animated: false)
+            self.dataSource.apply(snapshot, animatingDifferences: false)
+            self.updateEmptyState()
+            self.updateSectionIndex()
+        }
+        if crossfade, !UIAccessibility.isReduceMotionEnabled {
+            UIView.transition(
+                with: collectionView, duration: 0.28,
+                options: [.transitionCrossDissolve, .allowUserInteraction],
+                animations: apply
+            )
+        } else {
+            apply()
         }
     }
 
@@ -199,6 +245,29 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         present(alert, animated: true)
     }
 
+    private func setupFilterChips() {
+        filterChipsView.translatesAutoresizingMaskIntoConstraints = false
+        filterChipsView.onSelect = { [weak self] filter in
+            self?.viewModel.setFilter(filter)
+        }
+        view.addSubview(filterChipsView)
+        chipsHeightConstraint = filterChipsView.heightAnchor.constraint(equalToConstant: 46)
+        NSLayoutConstraint.activate([
+            filterChipsView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            filterChipsView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            filterChipsView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            chipsHeightConstraint,
+        ])
+    }
+
+    private func updateChips(for segment: LibraryViewModel.Segment) {
+        let showsChips = segment == .albums || segment == .songs
+        filterChipsView.isHidden = !showsChips
+        chipsHeightConstraint.constant = showsChips ? 46 : 0
+        guard showsChips else { return }
+        filterChipsView.configure(filters: viewModel.availableFilters(), selected: viewModel.filter)
+    }
+
     private func setupCollectionView() {
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: createLayout(for: .albums))
         collectionView.translatesAutoresizingMaskIntoConstraints = false
@@ -208,7 +277,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            collectionView.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -243,7 +312,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         NSLayoutConstraint.activate([
             sectionIndexView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
-            sectionIndexView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            sectionIndexView.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor, constant: 8),
             sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
         ])
@@ -278,7 +347,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private func updateSectionIndex() {
         let titles = viewModel.indexTitles()
         sectionIndexView.update(titles: titles)
-        sectionIndexView.isHidden = titles.count < 5 || viewModel.currentSegment == .playlists
+        sectionIndexView.isHidden = titles.count < 5
+            || viewModel.currentSegment == .playlists
+            || viewModel.filter != .all
     }
 
     private func setupLoadingOverlay() {
@@ -331,9 +402,110 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         loadingIconView.layer.removeAnimation(forKey: "pulse")
     }
 
+    private func badgeAccessories(qualityTrack: Track?, loved: Bool) -> [UICellAccessory] {
+        let container = UIStackView()
+        container.axis = .horizontal
+        container.spacing = 6
+        container.alignment = .center
+
+        if loved {
+            let heart = UIImageView(image: UIImage(
+                systemName: "heart.fill",
+                withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+            ))
+            heart.tintColor = .systemPink
+            heart.accessibilityLabel = "Loved"
+            heart.isAccessibilityElement = true
+            container.addArrangedSubview(heart)
+        }
+        if qualityTrack?.qualityBadge != nil {
+            let badge = QualityBadgeView(size: .compact)
+            badge.configure(with: qualityTrack)
+            container.addArrangedSubview(badge)
+        }
+        guard !container.arrangedSubviews.isEmpty else { return [] }
+        return [.customView(configuration: .init(customView: container, placement: .trailing()))]
+    }
+
+    private func configureArtworkRow(
+        cell: ListArtworkCell, title: String, subtitle: String,
+        albumTitle: String, artist: String, cornerRadius: CGFloat
+    ) {
+        var content = UIListContentConfiguration.subtitleCell()
+        content.text = title
+        content.secondaryText = subtitle
+        content.secondaryTextProperties.color = .secondaryLabel
+        content.imageProperties.cornerRadius = cornerRadius
+        content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
+        content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
+        if let cached = AlbumArtworkCache.shared.artwork(forAlbum: albumTitle, artist: artist) {
+            content.image = cached
+            cell.currentArtworkKey = nil
+        } else {
+            content.image = UIImage(systemName: "music.note")
+            content.imageProperties.tintColor = .tertiaryLabel
+            let artKey = "\(albumTitle)|\(artist)"
+            cell.currentArtworkKey = artKey
+            AlbumArtworkCache.shared.loadArtwork(forAlbum: albumTitle, artist: artist) { [weak cell] image in
+                guard let cell, cell.currentArtworkKey == artKey, let image,
+                      var updated = cell.contentConfiguration as? UIListContentConfiguration else { return }
+                updated.image = image
+                updated.imageProperties.tintColor = nil
+                cell.contentConfiguration = updated
+            }
+        }
+        cell.contentConfiguration = content
+    }
+
     private func configureDataSource() {
-        let albumRegistration = UICollectionView.CellRegistration<AlbumCell, Album> { cell, _, album in
-            cell.configure(with: album)
+        let albumGridRegistration = UICollectionView.CellRegistration<AlbumCell, Album> { [weak self] cell, _, album in
+            cell.configure(
+                with: album,
+                qualityTrack: self?.viewModel.representativeTrack(for: album),
+                loved: self?.viewModel.isLovedAlbum(album) ?? false
+            )
+        }
+
+        let albumListRegistration = UICollectionView.CellRegistration<ListArtworkCell, Album> { [weak self] cell, _, album in
+            self?.configureArtworkRow(
+                cell: cell, title: album.title, subtitle: album.artist,
+                albumTitle: album.title, artist: album.artist, cornerRadius: 6
+            )
+            cell.accessories = self?.badgeAccessories(
+                qualityTrack: self?.viewModel.representativeTrack(for: album),
+                loved: self?.viewModel.isLovedAlbum(album) ?? false
+            ) ?? []
+        }
+
+        let albumCompactRegistration = UICollectionView.CellRegistration<ListArtworkCell, Album> { [weak self] cell, _, album in
+            var content = UIListContentConfiguration.valueCell()
+            content.text = album.title
+            content.secondaryText = album.artist
+            content.secondaryTextProperties.color = .secondaryLabel
+            content.textProperties.font = .scaled(.subheadline, size: 15, weight: .regular)
+            cell.contentConfiguration = content
+            cell.currentArtworkKey = nil
+            cell.accessories = self?.badgeAccessories(
+                qualityTrack: self?.viewModel.representativeTrack(for: album),
+                loved: self?.viewModel.isLovedAlbum(album) ?? false
+            ) ?? []
+        }
+
+        let songGridRegistration = UICollectionView.CellRegistration<TrackGridCell, Track> { cell, _, track in
+            cell.configure(with: track, loved: LovedTracksService.shared.isLoved(track: track))
+        }
+
+        let songCompactRegistration = UICollectionView.CellRegistration<ListArtworkCell, Track> { [weak self] cell, _, track in
+            var content = UIListContentConfiguration.valueCell()
+            content.text = track.title
+            content.secondaryText = track.artist
+            content.secondaryTextProperties.color = .secondaryLabel
+            content.textProperties.font = .scaled(.subheadline, size: 15, weight: .regular)
+            cell.contentConfiguration = content
+            cell.currentArtworkKey = nil
+            cell.accessories = self?.badgeAccessories(
+                qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track)
+            ) ?? []
         }
 
         let artistRegistration = UICollectionView.CellRegistration<ListArtworkCell, ArtistItem> { cell, _, artist in
@@ -408,44 +580,42 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             supplementaryView.contentConfiguration = config
         }
 
-        let songRegistration = UICollectionView.CellRegistration<ListArtworkCell, Track> { cell, _, track in
-            var content = UIListContentConfiguration.subtitleCell()
-            content.text = track.title
-            content.secondaryText = "\(track.artist) · \(track.albumTitle)"
-            content.secondaryTextProperties.color = .secondaryLabel
-            content.imageProperties.cornerRadius = 4
-            content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
-            content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
-            if let cached = AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist) {
-                content.image = cached
-                cell.currentArtworkKey = nil
-            } else {
-                content.image = UIImage(systemName: "music.note")
-                content.imageProperties.tintColor = .tertiaryLabel
-                let artKey = "\(track.albumTitle)|\(track.artist)"
-                cell.currentArtworkKey = artKey
-                AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak cell] image in
-                    guard let cell, cell.currentArtworkKey == artKey, let image,
-                          var updated = cell.contentConfiguration as? UIListContentConfiguration else { return }
-                    updated.image = image
-                    updated.imageProperties.tintColor = nil
-                    cell.contentConfiguration = updated
-                }
-            }
-            cell.contentConfiguration = content
+        let songRegistration = UICollectionView.CellRegistration<ListArtworkCell, Track> { [weak self] cell, _, track in
+            self?.configureArtworkRow(
+                cell: cell, title: track.title, subtitle: "\(track.artist) · \(track.albumTitle)",
+                albumTitle: track.albumTitle, artist: track.artist, cornerRadius: 4
+            )
+            cell.accessories = self?.badgeAccessories(
+                qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track)
+            ) ?? []
         }
 
         dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView) {
-            collectionView, indexPath, item in
+            [weak self] collectionView, indexPath, item in
+            let mode = self?.viewModel.layoutMode ?? .grid
             switch item {
-            case .album(let album), .recentAlbum(let album):
+            case .recentAlbum(let album):
                 return collectionView.dequeueConfiguredReusableCell(
-                    using: albumRegistration, for: indexPath, item: album
+                    using: albumGridRegistration, for: indexPath, item: album
                 )
+            case .album(let album):
+                switch mode {
+                case .grid:
+                    return collectionView.dequeueConfiguredReusableCell(using: albumGridRegistration, for: indexPath, item: album)
+                case .list:
+                    return collectionView.dequeueConfiguredReusableCell(using: albumListRegistration, for: indexPath, item: album)
+                case .compact:
+                    return collectionView.dequeueConfiguredReusableCell(using: albumCompactRegistration, for: indexPath, item: album)
+                }
             case .song(let track):
-                return collectionView.dequeueConfiguredReusableCell(
-                    using: songRegistration, for: indexPath, item: track
-                )
+                switch mode {
+                case .grid:
+                    return collectionView.dequeueConfiguredReusableCell(using: songGridRegistration, for: indexPath, item: track)
+                case .list:
+                    return collectionView.dequeueConfiguredReusableCell(using: songRegistration, for: indexPath, item: track)
+                case .compact:
+                    return collectionView.dequeueConfiguredReusableCell(using: songCompactRegistration, for: indexPath, item: track)
+                }
             case .artist(let artist):
                 return collectionView.dequeueConfiguredReusableCell(
                     using: artistRegistration, for: indexPath, item: artist
@@ -472,8 +642,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             .sink { [weak self] snapshot in
                 guard let self else { return }
                 let segment = self.viewModel.currentSegment
+                let filter = self.viewModel.filter
                 let segmentChanged = self.lastRenderedSegment != nil && self.lastRenderedSegment != segment
+                let filterChanged = self.lastRenderedFilter != nil && self.lastRenderedFilter != filter
                 self.lastRenderedSegment = segment
+                self.lastRenderedFilter = filter
+                self.lastRenderedLayout = self.viewModel.layoutMode
                 let apply = {
                     self.collectionView.setCollectionViewLayout(
                         self.createLayout(for: segment), animated: false
@@ -481,8 +655,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                     self.dataSource.apply(snapshot, animatingDifferences: false)
                     self.updateEmptyState()
                     self.updateSectionIndex()
+                    self.filterChipsView.setSelected(filter, animated: true)
                 }
-                if segmentChanged, !UIAccessibility.isReduceMotionEnabled {
+                if (segmentChanged || filterChanged), !UIAccessibility.isReduceMotionEnabled {
                     UIView.transition(
                         with: self.collectionView, duration: 0.24,
                         options: [.transitionCrossDissolve, .allowUserInteraction],
@@ -492,6 +667,11 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                     apply()
                 }
             }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: LovedTracksService.didChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.handleLovedChange() }
             .store(in: &cancellables)
 
         viewModel.loadingPublisher
@@ -516,52 +696,115 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             .store(in: &cancellables)
     }
 
+    /// Refreshes loved heart indicators when love state changes elsewhere. When
+    /// the Favorites pivot is active, membership changes so the list is rebuilt;
+    /// otherwise the visible rows are reconfigured in place.
+    private func handleLovedChange() {
+        if viewModel.filter == .favorites {
+            viewModel.refilter()
+            return
+        }
+        var snapshot = dataSource.snapshot()
+        let affected = snapshot.itemIdentifiers.filter {
+            switch $0 {
+            case .song, .album, .recentAlbum: return true
+            default: return false
+            }
+        }
+        guard !affected.isEmpty else { return }
+        snapshot.reconfigureItems(affected)
+        dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    /// Builds a leading swipe action that toggles the loved state of the song at
+    /// the given index, with a heart-fill title, accent color, and haptic.
+    private func loveSwipeConfiguration(at indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        guard let item = dataSource.itemIdentifier(for: indexPath),
+              case .song(let track) = item else { return nil }
+        let loved = LovedTracksService.shared.isLoved(track: track)
+        let action = UIContextualAction(
+            style: .normal,
+            title: loved ? "Unlove" : "Love"
+        ) { _, _, completion in
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            Task {
+                await LovedTracksService.shared.toggleLove(track: track)
+                await MainActor.run { completion(true) }
+            }
+        }
+        action.image = UIImage(systemName: loved ? "heart.slash.fill" : "heart.fill")
+        action.backgroundColor = .systemPink
+        return UISwipeActionsConfiguration(actions: [action])
+    }
+
+    /// A cover-wall section of square art tiles at the given column count.
+    private func gridSection(columns: Int, topInset: CGFloat) -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0 / CGFloat(columns)),
+            heightDimension: .estimated(180)
+        )
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .estimated(180))
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, repeatingSubitem: item, count: columns)
+        group.interItemSpacing = .fixed(10)
+        let section = NSCollectionLayoutSection(group: group)
+        section.interGroupSpacing = 12
+        section.contentInsets = NSDirectionalEdgeInsets(top: topInset, leading: 20, bottom: 24, trailing: 12)
+        return section
+    }
+
+    private func listLayout(leadingInset: CGFloat, leadingSwipeLove: Bool) -> UICollectionViewCompositionalLayout {
+        var config = UICollectionLayoutListConfiguration(appearance: .plain)
+        config.showsSeparators = true
+        config.backgroundColor = .clear
+        if leadingSwipeLove {
+            config.leadingSwipeActionsConfigurationProvider = { [weak self] indexPath in
+                self?.loveSwipeConfiguration(at: indexPath)
+            }
+        }
+        return UICollectionViewCompositionalLayout { _, environment in
+            let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: environment)
+            section.contentInsets.leading = leadingInset
+            return section
+        }
+    }
+
     private func createLayout(for segment: LibraryViewModel.Segment) -> UICollectionViewCompositionalLayout {
         switch segment {
         case .albums:
-            return UICollectionViewCompositionalLayout { [weak self] sectionIndex, _ in
-                guard let self else { return nil }
-                let hasRecent = self.dataSource.snapshot().numberOfSections > 1
-
-                if sectionIndex == 0 && hasRecent {
-                    let itemSize = NSCollectionLayoutSize(widthDimension: .absolute(110), heightDimension: .estimated(160))
-                    let item = NSCollectionLayoutItem(layoutSize: itemSize)
-                    let groupSize = NSCollectionLayoutSize(widthDimension: .absolute(110), heightDimension: .estimated(160))
-                    let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-                    let section = NSCollectionLayoutSection(group: group)
-                    section.orthogonalScrollingBehavior = .continuous
-                    section.interGroupSpacing = 10
-                    section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
-                    return section
+            switch viewModel.layoutMode {
+            case .grid:
+                return UICollectionViewCompositionalLayout { [weak self] sectionIndex, _ in
+                    guard let self else { return nil }
+                    let hasRecent = self.dataSource.snapshot().numberOfSections > 1
+                    if sectionIndex == 0 && hasRecent {
+                        let itemSize = NSCollectionLayoutSize(widthDimension: .absolute(110), heightDimension: .estimated(160))
+                        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+                        let group = NSCollectionLayoutGroup.horizontal(layoutSize: itemSize, subitems: [item])
+                        let section = NSCollectionLayoutSection(group: group)
+                        section.orthogonalScrollingBehavior = .continuous
+                        section.interGroupSpacing = 10
+                        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
+                        return section
+                    }
+                    return self.gridSection(columns: 3, topInset: 12)
                 }
-
-                let itemSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0 / 3.0),
-                    heightDimension: .estimated(180)
-                )
-                let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-                let groupSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .estimated(180)
-                )
-                let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, repeatingSubitem: item, count: 3)
-                group.interItemSpacing = .fixed(10)
-
-                let section = NSCollectionLayoutSection(group: group)
-                section.interGroupSpacing = 12
-                section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 24, trailing: 12)
-                return section
+            case .list:
+                return listLayout(leadingInset: 20, leadingSwipeLove: false)
+            case .compact:
+                return listLayout(leadingInset: 20, leadingSwipeLove: false)
             }
-        case .songs, .artists:
-            var config = UICollectionLayoutListConfiguration(appearance: .plain)
-            config.showsSeparators = true
-            config.backgroundColor = .clear
-            return UICollectionViewCompositionalLayout { _, environment in
-                let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: environment)
-                section.contentInsets.leading = 20
-                return section
+        case .songs:
+            switch viewModel.layoutMode {
+            case .grid:
+                return UICollectionViewCompositionalLayout { [weak self] _, _ in
+                    self?.gridSection(columns: 3, topInset: 12)
+                }
+            case .list, .compact:
+                return listLayout(leadingInset: 20, leadingSwipeLove: true)
             }
+        case .artists:
+            return listLayout(leadingInset: 20, leadingSwipeLove: false)
         case .playlists:
             var config = UICollectionLayoutListConfiguration(appearance: .plain)
             config.showsSeparators = true
@@ -693,7 +936,17 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         }
         let shareMenu = UIMenu(options: .displayInline, children: [share])
 
-        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu, shareMenu])
+        let loved = LovedTracksService.shared.isLoved(track: track)
+        let loveAction = UIAction(
+            title: loved ? "Unlove" : "Love",
+            image: UIImage(systemName: loved ? "heart.slash" : "heart")
+        ) { _ in
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            Task { await LovedTracksService.shared.toggleLove(track: track) }
+        }
+        let loveMenu = UIMenu(options: .displayInline, children: [loveAction])
+
+        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu, loveMenu, shareMenu])
     }
 }
 
@@ -709,7 +962,8 @@ extension LibraryViewController: UICollectionViewDelegate {
             let detail = AlbumDetailViewController(album: album)
             navigationController?.pushViewController(detail, animated: true)
         case .song(let track):
-            AudioPlayer.shared.play(viewModel.sortedSongs, startingAt: viewModel.sortedSongs.firstIndex(of: track) ?? 0)
+            let queue = viewModel.visibleSongs
+            AudioPlayer.shared.play(queue, startingAt: queue.firstIndex(of: track) ?? 0)
         case .artist(let artist):
             let albums = viewModel.albumsForArtist(artist.name)
             let vc = ArtistDetailViewController(artistName: artist.name, albums: albums)

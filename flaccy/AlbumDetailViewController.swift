@@ -13,6 +13,9 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     private var accentColor: UIColor = .white
     private var appearanceElements: [UIView] = []
     private var hasAnimatedAppearance = false
+    private let genreChipsHolder = UIView()
+    private let playCountLabel = UILabel()
+    private var enrichmentTask: Task<Void, Never>?
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
@@ -37,6 +40,8 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(lovedChanged), name: LovedTracksService.didChange, object: nil)
+        loadEnrichment()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -50,14 +55,67 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     }
 
     deinit {
+        enrichmentTask?.cancel()
         NotificationCenter.default.removeObserver(self)
     }
 
     @objc private func playbackChanged() {
+        reconfigureAllRows()
+    }
+
+    @objc private func lovedChanged() {
+        reconfigureAllRows()
+    }
+
+    private func reconfigureAllRows() {
         guard let dataSource else { return }
         var snapshot = dataSource.snapshot()
         snapshot.reconfigureItems(snapshot.itemIdentifiers)
         dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    /// Fetches Last.fm genre tags and the personal album play count off-main,
+    /// caching results, then folds them into the header without blocking UI.
+    private func loadEnrichment() {
+        let artist = album.artist
+        let title = album.title
+        let authenticated = LastFMService.shared.isAuthenticated
+        enrichmentTask = Task { [weak self] in
+            let tags = await DetailEnrichmentCache.shared.topTags(artist: artist)
+            if !Task.isCancelled { self?.applyGenreChips(tags) }
+
+            guard authenticated else { return }
+            let plays = await DetailEnrichmentCache.shared.albumPlayCount(artist: artist, album: title)
+            if !Task.isCancelled, plays > 0 { self?.applyPlayCount(plays) }
+        }
+    }
+
+    private func applyGenreChips(_ tags: [String]) {
+        genreChipsHolder.subviews.forEach { $0.removeFromSuperview() }
+        guard !tags.isEmpty else {
+            genreChipsHolder.isHidden = true
+            sizeHeaderToFit()
+            return
+        }
+        let row = DetailChip.chipsRow(tags)
+        row.translatesAutoresizingMaskIntoConstraints = false
+        genreChipsHolder.addSubview(row)
+        NSLayoutConstraint.activate([
+            row.topAnchor.constraint(equalTo: genreChipsHolder.topAnchor),
+            row.bottomAnchor.constraint(equalTo: genreChipsHolder.bottomAnchor),
+            row.leadingAnchor.constraint(equalTo: genreChipsHolder.leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: genreChipsHolder.trailingAnchor),
+        ])
+        genreChipsHolder.isHidden = false
+        sizeHeaderToFit()
+    }
+
+    private func applyPlayCount(_ count: Int) {
+        let word = count == 1 ? "time" : "times"
+        playCountLabel.text = "You've played this album \(count) \(word)"
+        playCountLabel.textColor = accentColor
+        playCountLabel.isHidden = false
+        sizeHeaderToFit()
     }
 
     private func setupBackdrop() {
@@ -122,8 +180,10 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
                 index: indexPath.row,
                 isCurrent: isCurrent,
                 isPlaying: isCurrent && self.audioPlayer.isPlaying,
+                loved: LovedTracksService.shared.isLoved(track: track),
                 accent: self.accentColor
             )
+            cell.onToggleLove = { [weak self] in self?.toggleLove(track) }
             return cell
         }
         dataSource.defaultRowAnimation = .fade
@@ -192,10 +252,27 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         metaLabel.text = metaParts.joined(separator: " \u{00B7} ")
         metaLabel.isHidden = metaParts.isEmpty
 
-        let infoStack = UIStackView(arrangedSubviews: [titleMarquee, artistButton, metaLabel])
+        playCountLabel.font = .scaled(.footnote, size: 13, weight: .semibold)
+        playCountLabel.adjustsFontForContentSizeCategory = true
+        playCountLabel.textColor = accentColor
+        playCountLabel.numberOfLines = 0
+        playCountLabel.isHidden = true
+
+        genreChipsHolder.isHidden = true
+
+        let qualityBadgeRow = buildQualityBadgeRow()
+
+        let infoStack = UIStackView(arrangedSubviews: [titleMarquee, artistButton, metaLabel, playCountLabel])
         infoStack.axis = .vertical
         infoStack.spacing = 2
         infoStack.alignment = .leading
+        if let qualityBadgeRow {
+            infoStack.addArrangedSubview(qualityBadgeRow)
+            infoStack.setCustomSpacing(10, after: metaLabel)
+        }
+        infoStack.addArrangedSubview(genreChipsHolder)
+        infoStack.setCustomSpacing(10, after: qualityBadgeRow ?? metaLabel)
+        genreChipsHolder.widthAnchor.constraint(equalTo: infoStack.widthAnchor).isActive = true
         titleMarquee.widthAnchor.constraint(equalTo: infoStack.widthAnchor).isActive = true
 
         let actionRow = buildActionRow()
@@ -279,6 +356,17 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         let group = UIMotionEffectGroup()
         group.motionEffects = [horizontal, vertical]
         card.addMotionEffect(group)
+    }
+
+    /// A left-aligned glass pill summarizing the album's peak audio quality,
+    /// or nil when no track carries codec/quality metadata.
+    private func buildQualityBadgeRow() -> UIView? {
+        guard let summary = DetailChip.albumQualitySummary(tracks: album.tracks) else { return nil }
+        let pill = DetailChip.pill(text: summary, systemImage: "waveform", accessibilityPrefix: "Audio quality")
+        let row = UIStackView(arrangedSubviews: [pill, UIView()])
+        row.axis = .horizontal
+        row.alignment = .center
+        return row
     }
 
     private func buildActionRow() -> UIView {
@@ -374,6 +462,11 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         ToastView.show("Added \(album.tracks.count) tracks to queue", in: view, style: .info)
     }
 
+    private func toggleLove(_ track: Track) {
+        impactLight.impactOccurred()
+        Task { _ = await LovedTracksService.shared.toggleLove(track: track) }
+    }
+
     private func artistTapped() {
         impactLight.impactOccurred()
         let artistAlbums = Library.shared.albums.filter { $0.artist == album.artist }
@@ -408,6 +501,14 @@ extension AlbumDetailViewController: UITableViewDelegate {
         leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
     ) -> UISwipeActionsConfiguration? {
         guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
+        let isLoved = LovedTracksService.shared.isLoved(track: track)
+        let love = UIContextualAction(style: .normal, title: isLoved ? "Unlove" : "Love") { [weak self] _, _, completion in
+            guard let self else { return completion(false) }
+            self.toggleLove(track)
+            completion(true)
+        }
+        love.image = UIImage(systemName: isLoved ? "heart.slash.fill" : "heart.fill")
+        love.backgroundColor = .systemPink
         let playNext = UIContextualAction(style: .normal, title: "Play Next") { [weak self] _, _, completion in
             guard let self else { return completion(false) }
             AudioPlayer.shared.insertNext(track)
@@ -417,7 +518,7 @@ extension AlbumDetailViewController: UITableViewDelegate {
         }
         playNext.image = UIImage(systemName: "text.line.first.and.arrowtriangle.forward")
         playNext.backgroundColor = .systemIndigo
-        return UISwipeActionsConfiguration(actions: [playNext])
+        return UISwipeActionsConfiguration(actions: [love, playNext])
     }
 
     func tableView(
@@ -558,9 +659,13 @@ private final class AlbumTrackCell: UITableViewCell {
 
     static let reuseID = "AlbumTrackCell"
 
+    var onToggleLove: (() -> Void)?
+
     private let numberLabel = UILabel()
     private let barsView = NowPlayingBarsView()
     private let trackTitleLabel = UILabel()
+    private let qualityLabel = UILabel()
+    private let lovedButton = UIButton(type: .system)
     private let durationLabel = UILabel()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -582,6 +687,19 @@ private final class AlbumTrackCell: UITableViewCell {
         trackTitleLabel.adjustsFontForContentSizeCategory = true
         trackTitleLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         trackTitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        qualityLabel.font = UIFontMetrics(forTextStyle: .caption2)
+            .scaledFont(for: .monospacedSystemFont(ofSize: 10, weight: .semibold), maximumPointSize: 16)
+        qualityLabel.adjustsFontForContentSizeCategory = true
+        qualityLabel.textColor = .white.withAlphaComponent(0.6)
+        qualityLabel.setContentHuggingPriority(.required, for: .horizontal)
+        qualityLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        lovedButton.setContentHuggingPriority(.required, for: .horizontal)
+        lovedButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+        lovedButton.tintColor = .systemPink
+        lovedButton.addAction(UIAction { [weak self] _ in self?.onToggleLove?() }, for: .touchUpInside)
+        lovedButton.widthAnchor.constraint(equalToConstant: 30).isActive = true
 
         durationLabel.font = UIFontMetrics(forTextStyle: .footnote)
             .scaledFont(for: .monospacedDigitSystemFont(ofSize: 13, weight: .regular), maximumPointSize: 22)
@@ -607,9 +725,10 @@ private final class AlbumTrackCell: UITableViewCell {
             barsView.heightAnchor.constraint(equalToConstant: 14),
         ])
 
-        let stack = UIStackView(arrangedSubviews: [numberContainer, trackTitleLabel, durationLabel])
-        stack.spacing = 12
+        let stack = UIStackView(arrangedSubviews: [numberContainer, trackTitleLabel, qualityLabel, lovedButton, durationLabel])
+        stack.spacing = 10
         stack.alignment = .center
+        stack.setCustomSpacing(4, after: lovedButton)
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
 
@@ -626,12 +745,29 @@ private final class AlbumTrackCell: UITableViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(with track: Track, index: Int, isCurrent: Bool, isPlaying: Bool, accent: UIColor) {
+    func configure(with track: Track, index: Int, isCurrent: Bool, isPlaying: Bool, loved: Bool, accent: UIColor) {
         numberLabel.text = track.trackNumber > 0 ? "\(track.trackNumber)" : "\(index + 1)"
         trackTitleLabel.text = track.title
         let minutes = Int(track.duration) / 60
         let seconds = Int(track.duration) % 60
         durationLabel.text = String(format: "%d:%02d", minutes, seconds)
+
+        if let badge = track.qualityBadge {
+            qualityLabel.text = badge
+            qualityLabel.isHidden = false
+        } else {
+            qualityLabel.text = nil
+            qualityLabel.isHidden = true
+        }
+
+        let heart = UIImage(
+            systemName: loved ? "heart.fill" : "heart",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
+        )
+        lovedButton.setImage(heart, for: .normal)
+        lovedButton.tintColor = loved ? .systemPink : .white.withAlphaComponent(0.5)
+        lovedButton.accessibilityLabel = loved ? "Loved" : "Not loved"
+        lovedButton.accessibilityHint = "Double tap to \(loved ? "unlove" : "love") this track"
 
         numberLabel.isHidden = isCurrent
         barsView.isHidden = !isCurrent
@@ -640,6 +776,11 @@ private final class AlbumTrackCell: UITableViewCell {
         trackTitleLabel.textColor = isCurrent ? accent : .white
         trackTitleLabel.font = .scaled(.body, size: 16, weight: isCurrent ? .semibold : .regular)
         accessibilityValue = isCurrent ? (isPlaying ? "Now playing" : "Paused") : nil
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        onToggleLove = nil
     }
 }
 

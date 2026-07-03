@@ -10,6 +10,8 @@ final class AlbumCell: UICollectionViewCell {
     private let titleLabel = UILabel()
     private let artistLabel = UILabel()
     private let metaLabel = UILabel()
+    private let qualityBadge = QualityBadgeView(size: .compact)
+    private let lovedBadge = UIImageView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -30,6 +32,7 @@ final class AlbumCell: UICollectionViewCell {
         artworkContainer.addSubview(artworkView)
 
         setupShimmerLayer()
+        setupOverlayBadges()
 
         titleLabel.font = .scaled(.footnote, size: 14, weight: .semibold)
         titleLabel.adjustsFontForContentSizeCategory = true
@@ -95,6 +98,12 @@ final class AlbumCell: UICollectionViewCell {
         shimmerLayer.frame = artworkView.bounds
     }
 
+    func configure(with album: Album, qualityTrack: Track?, loved: Bool) {
+        configure(with: album)
+        qualityBadge.configure(with: qualityTrack)
+        lovedBadge.isHidden = !loved
+    }
+
     func configure(with album: Album) {
         titleLabel.text = album.title
         artistLabel.text = album.artist
@@ -130,6 +139,8 @@ final class AlbumCell: UICollectionViewCell {
         artistLabel.text = nil
         metaLabel.text = nil
         metaLabel.isHidden = true
+        qualityBadge.isHidden = true
+        lovedBadge.isHidden = true
         contentView.transform = .identity
     }
 
@@ -145,6 +156,35 @@ final class AlbumCell: UICollectionViewCell {
             self.contentView.transform = transform
         }
         animator.startAnimation()
+    }
+
+    /// Adds the corner overlays: a quality pill on the lower-leading edge of the
+    /// artwork and a loved heart on the lower-trailing edge.
+    private func setupOverlayBadges() {
+        qualityBadge.translatesAutoresizingMaskIntoConstraints = false
+        qualityBadge.isHidden = true
+        artworkContainer.addSubview(qualityBadge)
+
+        lovedBadge.image = UIImage(
+            systemName: "heart.fill",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        )
+        lovedBadge.tintColor = .systemPink
+        lovedBadge.translatesAutoresizingMaskIntoConstraints = false
+        lovedBadge.isHidden = true
+        lovedBadge.layer.shadowColor = UIColor.black.cgColor
+        lovedBadge.layer.shadowOpacity = 0.35
+        lovedBadge.layer.shadowRadius = 3
+        lovedBadge.layer.shadowOffset = .zero
+        artworkContainer.addSubview(lovedBadge)
+
+        NSLayoutConstraint.activate([
+            qualityBadge.leadingAnchor.constraint(equalTo: artworkView.leadingAnchor, constant: 5),
+            qualityBadge.bottomAnchor.constraint(equalTo: artworkView.bottomAnchor, constant: -5),
+            qualityBadge.trailingAnchor.constraint(lessThanOrEqualTo: lovedBadge.leadingAnchor, constant: -4),
+            lovedBadge.trailingAnchor.constraint(equalTo: artworkView.trailingAnchor, constant: -6),
+            lovedBadge.bottomAnchor.constraint(equalTo: artworkView.bottomAnchor, constant: -6),
+        ])
     }
 
     private func applyArtwork(_ image: UIImage) {

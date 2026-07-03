@@ -48,7 +48,7 @@ final class LibraryViewModel {
     }
 
     enum AlbumSort: String, CaseIterable {
-        case title, artist, year, recentlyAdded
+        case title, artist, year, recentlyAdded, recentlyPlayed
 
         var displayName: String {
             switch self {
@@ -56,6 +56,7 @@ final class LibraryViewModel {
             case .artist: "Artist"
             case .year: "Year"
             case .recentlyAdded: "Recently Added"
+            case .recentlyPlayed: "Recently Played"
             }
         }
 
@@ -64,7 +65,8 @@ final class LibraryViewModel {
             case .title: "textformat.abc"
             case .artist: "person"
             case .year: "calendar"
-            case .recentlyAdded: "clock"
+            case .recentlyAdded: "clock.badge.plus"
+            case .recentlyPlayed: "clock.arrow.circlepath"
             }
         }
     }
@@ -128,6 +130,122 @@ final class LibraryViewModel {
     private(set) var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "albumSort") ?? "") ?? .title
     private(set) var songSort: SongSort = SongSort(rawValue: UserDefaults.standard.string(forKey: "songSort") ?? "") ?? .title
     private(set) var artistSort: ArtistSort = ArtistSort(rawValue: UserDefaults.standard.string(forKey: "artistSort") ?? "") ?? .name
+    private(set) var layoutMode: LibraryLayoutMode = .persisted
+    private(set) var filter: LibraryFilter = .persisted
+
+    private struct TrackMeta {
+        let track: Track
+        let dateAdded: Date
+        let lastPlayed: Date?
+    }
+
+    private var cachedMeta: [String: TrackMeta]?
+    private var cachedRediscover: (keys: Set<String>, albums: [Album])?
+    private let recentlyWindow: TimeInterval = 60 * 60 * 24 * 30
+    private let rediscoverMinDays = 14
+    private let rediscoverMinPlays = 2
+
+    private var trackMeta: [String: TrackMeta] {
+        if let cached = cachedMeta { return cached }
+        var map = [String: TrackMeta]()
+        if let records = try? DatabaseManager.shared.fetchAllTracks() {
+            map.reserveCapacity(records.count)
+            for record in records {
+                map[record.fileURL] = TrackMeta(
+                    track: Track.from(record: record, artwork: nil),
+                    dateAdded: record.dateAdded,
+                    lastPlayed: record.lastPlayed
+                )
+            }
+        }
+        cachedMeta = map
+        return map
+    }
+
+    private func relativePath(for url: URL) -> String {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let path = url.standardizedFileURL.path
+        guard path.hasPrefix(docs.path) else { return url.lastPathComponent }
+        let relative = String(path.dropFirst(docs.path.count))
+        return relative.hasPrefix("/") ? String(relative.dropFirst()) : relative
+    }
+
+    /// Returns the codec-populated variant of a lightweight library track so its
+    /// `qualityBadge`/`isLossless` resolve; falls back to the original if unknown.
+    private func hydrate(_ track: Track) -> Track {
+        trackMeta[relativePath(for: track.fileURL)]?.track ?? track
+    }
+
+    private func meta(for track: Track) -> TrackMeta? {
+        trackMeta[relativePath(for: track.fileURL)]
+    }
+
+    /// The album's best representative track for a quality badge: lossless first,
+    /// then highest bit-depth and sample-rate.
+    func representativeTrack(for album: Album) -> Track? {
+        let hydrated = album.tracks.map { hydrate($0) }
+        return hydrated.max { a, b in
+            let ai = qualityRank(a), bi = qualityRank(b)
+            return ai < bi
+        }
+    }
+
+    private var cachedAlbumAdded: [String: Date]?
+    private var cachedAlbumPlayed: [String: Date]?
+
+    private func albumDateAddedMap() -> [String: Date] {
+        if let cached = cachedAlbumAdded { return cached }
+        var map = [String: Date]()
+        for album in library.albums {
+            var newest = Date.distantPast
+            for track in album.tracks {
+                if let added = meta(for: track)?.dateAdded, added > newest { newest = added }
+            }
+            map["\(album.title)|\(album.artist)"] = newest
+        }
+        cachedAlbumAdded = map
+        return map
+    }
+
+    private func albumLastPlayedMap() -> [String: Date] {
+        if let cached = cachedAlbumPlayed { return cached }
+        var map = [String: Date]()
+        if let rows = try? DatabaseManager.shared.lastPlayedByAlbum() {
+            for row in rows { map["\(row.albumTitle)|\(row.artist)"] = row.lastPlayed }
+        }
+        cachedAlbumPlayed = map
+        return map
+    }
+
+    private func qualityRank(_ track: Track) -> Int {
+        (track.isLossless ? 1 << 24 : 0) + (track.bitDepth ?? 0) * 100000 + (track.sampleRate ?? 0)
+    }
+
+    func isLovedAlbum(_ album: Album) -> Bool {
+        album.tracks.contains { LovedTracksService.shared.isLoved(track: $0) }
+    }
+
+    /// Albums highly played but not spun recently, ranked by a Longplay-style
+    /// negligence score of playCount over days since last play.
+    private var rediscover: (keys: Set<String>, albums: [Album]) {
+        if let cached = cachedRediscover { return cached }
+        var scored: [(key: String, score: Double)] = []
+        if let rows = try? DatabaseManager.shared.lastPlayedByAlbum() {
+            let now = Date()
+            for row in rows {
+                let days = Int(now.timeIntervalSince(row.lastPlayed) / 86400)
+                guard days >= rediscoverMinDays, row.playCount >= rediscoverMinPlays else { continue }
+                let score = Double(row.playCount) / Double(days + 1)
+                scored.append((key: "\(row.albumTitle)|\(row.artist)", score: score))
+            }
+        }
+        scored.sort { $0.score > $1.score }
+        let byKey = Dictionary(library.albums.map { ("\($0.title)|\($0.artist)", $0) }, uniquingKeysWith: { a, _ in a })
+        let albums = scored.compactMap { byKey[$0.key] }
+        let result = (keys: Set(scored.map(\.key)), albums: albums)
+        cachedRediscover = result
+        return result
+    }
 
     private var cachedSortedAlbums: [Album]?
     private var cachedSortedSongs: [Track]?
@@ -143,6 +261,7 @@ final class LibraryViewModel {
     }
 
     private(set) var emptyState: EmptyState = .none
+    private(set) var visibleSongs: [Track] = []
 
     var sortedAlbums: [Album] {
         if let cached = cachedSortedAlbums { return cached }
@@ -162,7 +281,17 @@ final class LibraryViewModel {
                 return y0 == y1 ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : y0 < y1
             }
         case .recentlyAdded:
-            result = library.albums.reversed()
+            let added = albumDateAddedMap()
+            result = library.albums.sorted {
+                (added["\($0.title)|\($0.artist)"] ?? .distantPast) > (added["\($1.title)|\($1.artist)"] ?? .distantPast)
+            }
+        case .recentlyPlayed:
+            let played = albumLastPlayedMap()
+            let hasPlay = library.albums.filter { played["\($0.title)|\($0.artist)"] != nil }
+                .sorted { (played["\($0.title)|\($0.artist)"] ?? .distantPast) > (played["\($1.title)|\($1.artist)"] ?? .distantPast) }
+            let noPlay = library.albums.filter { played["\($0.title)|\($0.artist)"] == nil }
+                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            result = hasPlay + noPlay
         }
         cachedSortedAlbums = result
         return result
@@ -203,10 +332,12 @@ final class LibraryViewModel {
                 .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
             result = played + unplayed
         case .dateAdded:
-            result = tracks
+            result = tracks.sorted {
+                (meta(for: $0)?.dateAdded ?? .distantPast) > (meta(for: $1)?.dateAdded ?? .distantPast)
+            }
         }
-        cachedSortedSongs = result
-        return result
+        cachedSortedSongs = result.map { hydrate($0) }
+        return cachedSortedSongs ?? result
     }
 
     var sortedArtists: [ArtistItem] {
@@ -328,6 +459,87 @@ final class LibraryViewModel {
         snapshotPublisher.send(buildSnapshot())
     }
 
+    func cycleLayoutMode() {
+        layoutMode = layoutMode.next
+        layoutMode.persist()
+    }
+
+    func setFilter(_ filter: LibraryFilter) {
+        guard self.filter != filter else { return }
+        self.filter = filter
+        filter.persist()
+        snapshotPublisher.send(buildSnapshot())
+    }
+
+    /// Rebuilds and republishes the current snapshot without changing state,
+    /// e.g. after loved state changes while the Favorites pivot is active.
+    func refilter() {
+        snapshotPublisher.send(buildSnapshot())
+    }
+
+    func currentSnapshot() -> Snapshot {
+        buildSnapshot()
+    }
+
+    func availableFilters() -> [LibraryFilter] {
+        LibraryFilter.allCases.filter { $0.isAvailable(in: currentSegment) }
+    }
+
+    var rediscoverAlbums: [Album] {
+        rediscover.albums
+    }
+
+    private func filteredAlbums(_ albums: [Album]) -> [Album] {
+        switch filter {
+        case .all:
+            return albums
+        case .lossless:
+            return albums.filter { representativeTrack(for: $0)?.isLossless == true }
+        case .favorites:
+            return albums.filter { isLovedAlbum($0) }
+        case .recentlyAdded:
+            let added = albumDateAddedMap()
+            let cutoff = Date().addingTimeInterval(-recentlyWindow)
+            let sorted = albums.sorted { (added["\($0.title)|\($0.artist)"] ?? .distantPast) > (added["\($1.title)|\($1.artist)"] ?? .distantPast) }
+            let recent = sorted.filter { (added["\($0.title)|\($0.artist)"] ?? .distantPast) >= cutoff }
+            return recent.count >= 6 ? recent : Array(sorted.prefix(24))
+        case .recentlyPlayed:
+            let played = albumLastPlayedMap()
+            let cutoff = Date().addingTimeInterval(-recentlyWindow)
+            let sorted = albums.filter { played["\($0.title)|\($0.artist)"] != nil }
+                .sorted { (played["\($0.title)|\($0.artist)"] ?? .distantPast) > (played["\($1.title)|\($1.artist)"] ?? .distantPast) }
+            let recent = sorted.filter { (played["\($0.title)|\($0.artist)"] ?? .distantPast) >= cutoff }
+            return recent.count >= 6 ? recent : sorted
+        case .rediscover:
+            return rediscover.albums
+        }
+    }
+
+    private func filteredSongs(_ songs: [Track]) -> [Track] {
+        switch filter {
+        case .all:
+            return songs
+        case .lossless:
+            return songs.filter { $0.isLossless }
+        case .favorites:
+            return songs.filter { LovedTracksService.shared.isLoved(track: $0) }
+        case .recentlyAdded:
+            let cutoff = Date().addingTimeInterval(-recentlyWindow)
+            let sorted = songs.sorted { (meta(for: $0)?.dateAdded ?? .distantPast) > (meta(for: $1)?.dateAdded ?? .distantPast) }
+            let recent = sorted.filter { (meta(for: $0)?.dateAdded ?? .distantPast) >= cutoff }
+            return recent.count >= 10 ? recent : Array(sorted.prefix(40))
+        case .recentlyPlayed:
+            let cutoff = Date().addingTimeInterval(-recentlyWindow)
+            let sorted = songs.filter { meta(for: $0)?.lastPlayed != nil }
+                .sorted { (meta(for: $0)?.lastPlayed ?? .distantPast) > (meta(for: $1)?.lastPlayed ?? .distantPast) }
+            let recent = sorted.filter { (meta(for: $0)?.lastPlayed ?? .distantPast) >= cutoff }
+            return recent.count >= 10 ? recent : sorted
+        case .rediscover:
+            let keys = rediscover.keys
+            return songs.filter { keys.contains("\($0.albumTitle)|\($0.artist)") }
+        }
+    }
+
     func indexTitles() -> [String] {
         let items: [String]
         switch currentSegment {
@@ -374,6 +586,10 @@ final class LibraryViewModel {
 
     func switchSegment(to segment: Segment) {
         currentSegment = segment
+        if !filter.isAvailable(in: segment) {
+            filter = .all
+            filter.persist()
+        }
         snapshotPublisher.send(buildSnapshot())
     }
 
@@ -402,14 +618,15 @@ final class LibraryViewModel {
         let query = searchQuery.lowercased()
         switch currentSegment {
         case .albums:
-            let all = sortedAlbums
+            let all = filteredAlbums(sortedAlbums)
             let filtered = query.isEmpty
                 ? all
                 : all.filter {
                     $0.title.localizedCaseInsensitiveContains(query)
                         || $0.artist.localizedCaseInsensitiveContains(query)
                 }
-            let recent = query.isEmpty ? recentlyPlayedAlbums : []
+            let showsRecentShelf = query.isEmpty && filter == .all && layoutMode == .grid
+            let recent = showsRecentShelf ? recentlyPlayedAlbums : []
             if !recent.isEmpty {
                 snapshot.appendSections([0, 1])
                 snapshot.appendItems(recent.map { .recentAlbum($0) }, toSection: 0)
@@ -420,7 +637,7 @@ final class LibraryViewModel {
             }
         case .songs:
             snapshot.appendSections([0])
-            var songs = sortedSongs
+            var songs = filteredSongs(sortedSongs)
             if !query.isEmpty {
                 songs = songs.filter {
                     $0.title.localizedCaseInsensitiveContains(query)
@@ -428,6 +645,7 @@ final class LibraryViewModel {
                         || $0.albumTitle.localizedCaseInsensitiveContains(query)
                 }
             }
+            visibleSongs = songs
             snapshot.appendItems(songs.map { .song($0) })
         case .artists:
             snapshot.appendSections([0])
@@ -475,10 +693,19 @@ final class LibraryViewModel {
         cachedSortedArtists = nil
         cachedRecentAlbums = nil
         cachedPlaylists = nil
+        cachedMeta = nil
+        cachedRediscover = nil
+        cachedAlbumAdded = nil
+        cachedAlbumPlayed = nil
     }
 
     @objc private func playbackDidChange() {
         cachedRecentAlbums = nil
+        cachedRediscover = nil
+        cachedAlbumPlayed = nil
+        cachedMeta = nil
+        if albumSort == .recentlyPlayed { cachedSortedAlbums = nil }
+        if songSort == .recentlyPlayed { cachedSortedSongs = nil }
         publishMiniPlayerState()
     }
 

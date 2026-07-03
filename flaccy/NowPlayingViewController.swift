@@ -13,6 +13,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private let artworkView = UIImageView()
     private let artworkContainer = UIView()
     private let titleMarquee = MarqueeLabel()
+    private let loveButton = LoveButton(pointSize: 22)
+    private let qualityBadge = QualityBadgeView(size: .regular)
     private let artistAvatarButton = UIButton(type: .custom)
     private let artistButton = UIButton(type: .system)
     private let dashLabel = UILabel()
@@ -132,6 +134,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(
             self, selector: #selector(resumeBackdrop), name: UIApplication.willEnterForegroundNotification, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(lovedTracksDidChange), name: LovedTracksService.didChange, object: nil
+        )
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -182,7 +187,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         setupScrubber()
         setupTransport()
 
-        let infoStack = UIStackView(arrangedSubviews: [titleMarquee, makeArtistAlbumRow(), playingFromLabel])
+        let infoStack = UIStackView(arrangedSubviews: [makeTitleRow(), makeArtistAlbumRow(), playingFromLabel])
         infoStack.axis = .vertical
         infoStack.spacing = 4
 
@@ -471,6 +476,38 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         navigateToAlbum()
     }
 
+    /// The song title paired with its quality signature and the love toggle:
+    /// title claims the width, the badge and heart hug the trailing edge.
+    private func makeTitleRow() -> UIStackView {
+        loveButton.onToggle = { [weak self] in self?.toggleLove() }
+
+        let row = UIStackView(arrangedSubviews: [titleMarquee, qualityBadge, loveButton])
+        row.spacing = 8
+        row.alignment = .center
+        return row
+    }
+
+    private func toggleLove() {
+        guard let track = AudioPlayer.shared.currentTrack else { return }
+        let newValue = !LovedTracksService.shared.isLoved(track: track)
+        loveButton.setLoved(newValue, animated: true)
+        Task { await LovedTracksService.shared.toggleLove(track: track) }
+    }
+
+    private func refreshTrackSignals() {
+        let track = AudioPlayer.shared.currentTrack
+        qualityBadge.configure(with: track)
+        loveButton.isEnabled = track != nil
+        let loved = track.map { LovedTracksService.shared.isLoved(track: $0) } ?? false
+        loveButton.setLoved(loved, animated: false)
+    }
+
+    @objc private func lovedTracksDidChange() {
+        let track = AudioPlayer.shared.currentTrack
+        let loved = track.map { LovedTracksService.shared.isLoved(track: $0) } ?? false
+        loveButton.setLoved(loved, animated: false)
+    }
+
     private func makeArtistAlbumRow() -> UIStackView {
         let row = UIStackView(arrangedSubviews: [artistAvatarButton, artistButton, dashLabel, albumLabel])
         row.spacing = 0
@@ -754,7 +791,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         switch centerState {
         case .artwork:
             centerElements = [
-                artworkContainer, titleMarquee, artistAvatarButton, artistButton, albumLabel, playingFromLabel,
+                artworkContainer, titleMarquee, qualityBadge, loveButton,
+                artistAvatarButton, artistButton, albumLabel, playingFromLabel,
             ]
         case .lyrics, .queue:
             centerElements = [compactHeader, stateChildController?.view].compactMap { $0 }
@@ -806,6 +844,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         playingFromLabel.text = hasAlbum ? "Playing from \(state.albumTitle)" : ""
         playingFromLabel.isHidden = !hasAlbum
 
+        refreshTrackSignals()
         setArtwork(state.artwork)
         updateBackdropPalette(artwork: state.artwork, state: state)
         updateArtistImage(artist: state.artist)
@@ -1536,7 +1575,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private func appearanceGroups() -> [[UIView]] {
         [
             [artworkContainer],
-            [titleMarquee, artistButton, dashLabel, albumLabel, playingFromLabel],
+            [titleMarquee, qualityBadge, loveButton, artistButton, dashLabel, albumLabel, playingFromLabel],
             [scrubber, currentTimeLabel, remainingTimeLabel, skipBackButton, previousButton,
              playPauseButton, nextButton, skipForwardButton],
         ]
@@ -1590,7 +1629,14 @@ extension NowPlayingViewController: UIContextMenuInteractionDelegate {
 
     private func artworkContextMenuConfiguration(track: Track) -> UIContextMenuConfiguration {
         UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            let loved = LovedTracksService.shared.isLoved(track: track)
             var actions: [UIMenuElement] = [
+                UIAction(
+                    title: loved ? "Unlove" : "Love",
+                    image: UIImage(systemName: loved ? "heart.slash" : "heart")
+                ) { _ in
+                    self?.toggleLove()
+                },
                 UIAction(title: "Go to Album", image: UIImage(systemName: "square.stack")) { _ in
                     self?.navigateToAlbum()
                 },

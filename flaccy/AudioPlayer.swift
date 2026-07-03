@@ -13,6 +13,10 @@ protocol AudioPlaying: AnyObject {
     var duration: TimeInterval { get }
     var shuffleEnabled: Bool { get }
     var repeatMode: RepeatMode { get }
+    var autoplaySimilarWhenQueueEnds: Bool { get set }
+    func startStation(seedArtist: String)
+    func startStation(seedTrack: Track)
+    func playLibraryRadio()
     func play(_ tracks: [Track], startingAt index: Int)
     func togglePlayPause()
     func nextTrack()
@@ -76,6 +80,21 @@ final class AudioPlayer: AudioPlaying {
     private(set) var isPlaying: Bool = false
     private(set) var shuffleEnabled: Bool = false
     private(set) var repeatMode: RepeatMode = .off
+
+    private let autoplayDefaultsKey = "flaccy.autoplaySimilarWhenQueueEnds"
+    private var stationSeedArtist: String?
+    private var isBuildingStation = false
+    private var autoplayContinuationInFlight = false
+
+    /// When enabled, an exhausted queue is extended with a similar-artist / most-played
+    /// continuation instead of stopping, so music never just ends. Persisted; default on.
+    var autoplaySimilarWhenQueueEnds: Bool {
+        get { UserDefaults.standard.object(forKey: autoplayDefaultsKey) as? Bool ?? true }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoplayDefaultsKey)
+            AppLogger.info("Autoplay similar when queue ends set to \(newValue)", category: .playback)
+        }
+    }
 
     var currentTrack: Track? {
         guard !queue.isEmpty, currentIndex >= 0, currentIndex < queue.count else { return nil }
@@ -227,7 +246,7 @@ final class AudioPlayer: AudioPlaying {
             let currentTrack = tracks[index]
             var remaining = tracks
             remaining.remove(at: index)
-            remaining.shuffle()
+            remaining = historyAwareShuffle(remaining)
             queue = [currentTrack] + remaining
             currentIndex = 0
         } else {
@@ -319,7 +338,7 @@ final class AudioPlayer: AudioPlaying {
                 originalQueue = queue
                 var remaining = queue
                 remaining.remove(at: currentIndex)
-                remaining.shuffle()
+                remaining = historyAwareShuffle(remaining)
                 if let current {
                     queue = [current] + remaining
                 } else {
@@ -538,6 +557,7 @@ final class AudioPlayer: AudioPlaying {
         AppLogger.info("Auto-advance \(previousIndex) -> \(currentIndex): \(track.title) - \(track.artist)", category: .playback)
 
         resyncPreloadedItems()
+        scheduleAutoplayContinuationIfNeeded()
 
         if sleepAtEndOfTrack {
             cancelSleepTimer()
@@ -560,13 +580,30 @@ final class AudioPlayer: AudioPlaying {
 
     private func handleQueueExhausted() {
         guard playingItem != nil else { return }
-        AppLogger.info("Queue exhausted at index \(currentIndex), stopping", category: .playback)
         if !hasScrobbled {
             performScrobble()
         }
         playingItem = nil
         preloadedItem = nil
         preloadedIndex = nil
+
+        if autoplaySimilarWhenQueueEnds, repeatMode == .off, !sleepAtEndOfTrack {
+            AppLogger.info("Queue exhausted at index \(currentIndex), attempting autoplay continuation", category: .playback)
+            buildAutoplayContinuation { [weak self] appended in
+                guard let self else { return }
+                if appended, self.queue.indices.contains(self.currentIndex + 1) {
+                    self.loadTrack(at: self.currentIndex + 1)
+                } else {
+                    self.finishQueueExhausted()
+                }
+            }
+            return
+        }
+        finishQueueExhausted()
+    }
+
+    private func finishQueueExhausted() {
+        AppLogger.info("Queue exhausted at index \(currentIndex), stopping", category: .playback)
         if sleepAtEndOfTrack {
             cancelSleepTimer()
         }
@@ -618,6 +655,7 @@ final class AudioPlayer: AudioPlaying {
         }
 
         preloadNextItem(after: index)
+        scheduleAutoplayContinuationIfNeeded()
 
         activateSession()
         player?.play()
@@ -967,6 +1005,138 @@ final class AudioPlayer: AudioPlaying {
 
         startTimeObserver()
         updateNowPlayingInfo()
+    }
+
+    /// Builds a station of the seed artist's tracks plus similar-in-library artists
+    /// (weighted by match) off the main thread, then plays from the top.
+    func startStation(seedArtist: String) {
+        guard !isBuildingStation else { return }
+        isBuildingStation = true
+        let pool = Library.shared.allTracks
+        AppLogger.info("Building artist station for \(seedArtist) from \(pool.count) library tracks", category: .playback)
+        Task { [weak self] in
+            let tracks = await StationBuilder.artistStation(
+                seedArtist: seedArtist, pool: pool, excluding: [], limit: StationBuilder.stationSize
+            )
+            DispatchQueue.main.async { self?.startBuiltStation(tracks, seedArtist: seedArtist) }
+        }
+    }
+
+    /// Builds a station seeded by the track's artist, biased to place the seed track
+    /// first; falls back to a plain artist station when similar data is unavailable.
+    func startStation(seedTrack: Track) {
+        guard !isBuildingStation else { return }
+        isBuildingStation = true
+        let pool = Library.shared.allTracks
+        AppLogger.info("Building track station for \(seedTrack.title) - \(seedTrack.artist)", category: .playback)
+        Task { [weak self] in
+            let tracks = await StationBuilder.trackStation(
+                seedTrack: seedTrack, pool: pool, excluding: [], limit: StationBuilder.stationSize
+            )
+            DispatchQueue.main.async { self?.startBuiltStation(tracks, seedArtist: seedTrack.artist) }
+        }
+    }
+
+    /// Builds a station from the user's most-played tracks (weighted by scrobble
+    /// count) shuffled with variety.
+    func playLibraryRadio() {
+        guard !isBuildingStation else { return }
+        isBuildingStation = true
+        let pool = Library.shared.allTracks
+        AppLogger.info("Building library radio from \(pool.count) library tracks", category: .playback)
+        Task { [weak self] in
+            let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
+            let tracks = StationBuilder.libraryRadio(
+                pool: pool, playCounts: counts, excluding: [], limit: StationBuilder.stationSize
+            )
+            DispatchQueue.main.async { self?.startBuiltStation(tracks, seedArtist: nil) }
+        }
+    }
+
+    private func startBuiltStation(_ tracks: [Track], seedArtist: String?) {
+        isBuildingStation = false
+        stationSeedArtist = seedArtist
+        guard !tracks.isEmpty else {
+            AppLogger.warning("Station build produced no tracks (seed \(seedArtist ?? "library"))", category: .playback)
+            return
+        }
+        AppLogger.info("Starting station with \(tracks.count) tracks (seed \(seedArtist ?? "library"))", category: .playback)
+        play(tracks, startingAt: 0)
+    }
+
+    /// Extends the queue ahead of exhaustion so the KVO advance path always has a
+    /// next item to preload, keeping continuation gapless.
+    private func scheduleAutoplayContinuationIfNeeded() {
+        guard autoplaySimilarWhenQueueEnds, !autoplayContinuationInFlight, repeatMode == .off else { return }
+        guard !queue.isEmpty, currentIndex >= queue.count - 2 else { return }
+        buildAutoplayContinuation(then: nil)
+    }
+
+    private func buildAutoplayContinuation(then completion: ((Bool) -> Void)?) {
+        guard !autoplayContinuationInFlight else { completion?(false); return }
+        autoplayContinuationInFlight = true
+        let pool = Library.shared.allTracks
+        let existing = Set(queue.map(\.fileURL))
+        let seedArtist = stationSeedArtist ?? currentTrack?.artist
+        let seedTrack = currentTrack
+        Task { [weak self] in
+            let batch: [Track]
+            if let seedArtist {
+                batch = await StationBuilder.artistStation(
+                    seedArtist: seedArtist, pool: pool, excluding: existing, limit: StationBuilder.continuationBatchSize
+                )
+            } else if let seedTrack {
+                batch = await StationBuilder.trackStation(
+                    seedTrack: seedTrack, pool: pool, excluding: existing, limit: StationBuilder.continuationBatchSize
+                )
+            } else {
+                let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
+                batch = StationBuilder.libraryRadio(
+                    pool: pool, playCounts: counts, excluding: existing, limit: StationBuilder.continuationBatchSize
+                )
+            }
+            DispatchQueue.main.async { self?.appendContinuation(batch, then: completion) }
+        }
+    }
+
+    private func appendContinuation(_ batch: [Track], then completion: ((Bool) -> Void)?) {
+        autoplayContinuationInFlight = false
+        let existing = Set(queue.map(\.fileURL))
+        let fresh = batch.filter { !existing.contains($0.fileURL) }
+        guard !fresh.isEmpty else {
+            AppLogger.info("Autoplay continuation produced no new tracks", category: .playback)
+            completion?(false)
+            return
+        }
+        queue.append(contentsOf: fresh)
+        originalQueue.append(contentsOf: fresh)
+        AppLogger.info("Autoplay appended \(fresh.count) continuation tracks (queue now \(queue.count))", category: .playback)
+        resyncPreloadedItems()
+        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        completion?(true)
+    }
+
+    /// Shuffle that de-weights recently-played tracks using each track's `lastPlayed`
+    /// timestamp, so a shuffle surfaces neglected music before recent repeats while
+    /// still touching everything.
+    private func historyAwareShuffle(_ tracks: [Track]) -> [Track] {
+        let weights = recencyWeights()
+        return StationBuilder.weightedShuffle(tracks) { weights[$0.fileURL.standardizedFileURL] ?? 1.0 }
+    }
+
+    private func recencyWeights() -> [URL: Double] {
+        guard let keys = try? DatabaseManager.shared.fetchTrackSortKeys() else { return [:] }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let now = Date()
+        let halfLife: Double = 3 * 24 * 3600
+        var map: [URL: Double] = [:]
+        for entry in keys {
+            let url = docs.appendingPathComponent(entry.fileURL).standardizedFileURL
+            guard let lastPlayed = entry.lastPlayed else { map[url] = 1.0; continue }
+            let age = max(0, now.timeIntervalSince(lastPlayed))
+            map[url] = max(0.05, age / (age + halfLife))
+        }
+        return map
     }
 
     func retryPendingScrobbles() async {

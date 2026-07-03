@@ -22,7 +22,7 @@ final class SettingsViewController: UITableViewController {
         var footer: String? {
             switch self {
             case .lastFM: return "Scrobble your listens to Last.fm."
-            case .playback: return "Plays consecutive album tracks without silence between them."
+            case .playback: return "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends."
             case .watch: return nil
             case .library: return nil
             }
@@ -32,7 +32,10 @@ final class SettingsViewController: UITableViewController {
     nonisolated private enum Row: Hashable {
         case lastFMAccount(authenticated: Bool)
         case pendingScrobbles(count: Int)
+        case importLastFM
         case gaplessPlayback
+        case autoplaySimilar
+        case libraryRadio
         case watchSync(syncedCount: Int)
         case importFiles
         case rescanLibrary
@@ -120,8 +123,11 @@ final class SettingsViewController: UITableViewController {
         if pending > 0 {
             lastFMRows.append(.pendingScrobbles(count: pending))
         }
+        if LastFMService.shared.isAuthenticated {
+            lastFMRows.append(.importLastFM)
+        }
         snapshot.appendItems(lastFMRows, toSection: .lastFM)
-        snapshot.appendItems([.gaplessPlayback], toSection: .playback)
+        snapshot.appendItems([.gaplessPlayback, .autoplaySimilar, .libraryRadio], toSection: .playback)
         snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedPaths.count)], toSection: .watch)
         snapshot.appendItems(
             [
@@ -177,12 +183,33 @@ final class SettingsViewController: UITableViewController {
             cell.accessibilityLabel = "Retry pending scrobbles"
             cell.accessibilityValue = "\(count) pending scrobble\(count == 1 ? "" : "s")"
 
+        case .importLastFM:
+            content.image = RowIcon.image(systemName: "square.and.arrow.down.on.square", tint: .systemPink)
+            content.text = "Import Last.fm History"
+            content.textProperties.color = .tintColor
+            cell.accessibilityLabel = "Import Last.fm History"
+            cell.accessibilityHint = "Backfills your listening stats from Last.fm"
+
         case .gaplessPlayback:
             content.image = RowIcon.image(systemName: "infinity", tint: .systemPurple)
             content.text = "Gapless Playback"
             cell.selectionStyle = .none
             cell.accessoryView = makeGaplessSwitch()
             cell.accessibilityTraits = []
+
+        case .autoplaySimilar:
+            content.image = RowIcon.image(systemName: "infinity.circle", tint: .systemPink)
+            content.text = "Autoplay Similar"
+            cell.selectionStyle = .none
+            cell.accessoryView = makeAutoplaySwitch()
+            cell.accessibilityTraits = []
+
+        case .libraryRadio:
+            content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemOrange)
+            content.text = "Library Radio"
+            content.textProperties.color = .tintColor
+            cell.accessibilityLabel = "Library Radio"
+            cell.accessibilityHint = "Plays a station from your most-played tracks"
 
         case .watchSync(let syncedCount):
             content.image = RowIcon.image(systemName: "applewatch", tint: .systemBlue)
@@ -243,6 +270,19 @@ final class SettingsViewController: UITableViewController {
         return toggle
     }
 
+    private func makeAutoplaySwitch() -> UISwitch {
+        let toggle = UISwitch()
+        toggle.isOn = AudioPlayer.shared.autoplaySimilarWhenQueueEnds
+        toggle.accessibilityLabel = "Autoplay Similar"
+        toggle.accessibilityHint = "Keeps a similar-music station going when the queue ends"
+        toggle.addAction(UIAction { [weak self] action in
+            guard let toggle = action.sender as? UISwitch else { return }
+            self?.selectionFeedback.selectionChanged()
+            AudioPlayer.shared.autoplaySimilarWhenQueueEnds = toggle.isOn
+        }, for: .valueChanged)
+        return toggle
+    }
+
     private func makeVersionFooter() -> UIView {
         let info = Bundle.main.infoDictionary
         let name = info?["CFBundleDisplayName"] as? String
@@ -296,7 +336,7 @@ final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
         switch row {
-        case .gaplessPlayback, .libraryStats, .storage: return false
+        case .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: return false
         default: return true
         }
     }
@@ -307,10 +347,12 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .lastFMAccount: handleLastFMTap()
         case .pendingScrobbles: handleRetryScrobbles()
+        case .importLastFM: handleImportLastFM()
+        case .libraryRadio: handleLibraryRadio()
         case .watchSync: handleWatchTap()
         case .importFiles: handleImportTap()
         case .rescanLibrary: handleRescanTap()
-        case .gaplessPlayback, .libraryStats, .storage: break
+        case .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: break
         }
     }
 
@@ -348,6 +390,21 @@ final class SettingsViewController: UITableViewController {
         impactLight.impactOccurred()
         Task {
             await AudioPlayer.shared.retryPendingScrobbles()
+            notificationFeedback.notificationOccurred(.success)
+            applySnapshot(animated: true)
+        }
+    }
+
+    private func handleLibraryRadio() {
+        impactMedium.impactOccurred()
+        AudioPlayer.shared.playLibraryRadio()
+        dismiss(animated: true)
+    }
+
+    private func handleImportLastFM() {
+        impactLight.impactOccurred()
+        Task {
+            await LastFMStatsService.shared.importHistory()
             notificationFeedback.notificationOccurred(.success)
             applySnapshot(animated: true)
         }

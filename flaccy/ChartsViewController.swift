@@ -1,30 +1,27 @@
 import Combine
 import UIKit
 
-final class ChartsViewController: UIViewController, SonglinkShareable {
+/// The Recap dashboard: a scrolling, shareable surface of the listener's local
+/// stats — profile, period selector, top artists/albums/tracks, a listening
+/// clock, a streak heatmap, and a persona card — in flaccy's dark glass language.
+final class ChartsViewController: UIViewController {
 
-    private let viewModel = ChartsViewModel()
+    private let viewModel: ChartsViewModel
     private let audioPlayer: AudioPlaying
-    private let impactLight = UIImpactFeedbackGenerator(style: .light)
-    private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
-    private let selectionFeedback = UISelectionFeedbackGenerator()
 
-    private var tableView: UITableView!
-    private var dataSource: UITableViewDiffableDataSource<ChartSection, ChartDisplayItem>!
-    private var periodCapsules: [GlassCapsule] = []
-    private var subtitleLabel: UILabel!
-    private var playButton: UIButton!
-    private var shuffleButton: UIButton!
-    private var spinner: UIActivityIndicatorView!
-    private var maxPlayCount = 0
+    private var collectionView: UICollectionView!
+    private var dataSource: UICollectionViewDiffableDataSource<RecapSection, RecapItem>!
+    private let backdrop = AmbientPaletteBackdropView()
+    private let emptyLabel = UILabel()
+    private let spinner = UIActivityIndicatorView(style: .large)
+
+    private var currentPalette = ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy")
+    private var importState: RecapImportState = .available
     private var cancellables = Set<AnyCancellable>()
-
-    nonisolated private enum ChartSection: Hashable {
-        case main
-    }
 
     init(audioPlayer: AudioPlaying = AudioPlayer.shared) {
         self.audioPlayer = audioPlayer
+        self.viewModel = ChartsViewModel()
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -33,497 +30,392 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-        title = "Last.fm Charts"
+        title = "Recap"
+        view.backgroundColor = .black
         navigationItem.largeTitleDisplayMode = .never
 
-        setupTableView()
+        setupBackdrop()
+        setupCollectionView()
         setupDataSource()
+        setupOverlays()
+        setupShareButton()
         bindViewModel()
 
-        Task {
-            await viewModel.loadChart(period: .week)
+        viewModel.load(period: viewModel.selectedPeriod)
+    }
+
+    private func setupBackdrop() {
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
+        backdrop.apply(currentPalette, animated: false)
+        view.addSubview(backdrop)
+        NSLayoutConstraint.activate([
+            backdrop.topAnchor.constraint(equalTo: view.topAnchor),
+            backdrop.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backdrop.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backdrop.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+    }
+
+    private func setupCollectionView() {
+        collectionView = UICollectionView(frame: .zero, collectionViewLayout: makeLayout())
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        collectionView.backgroundColor = .clear
+        collectionView.delegate = self
+        collectionView.alwaysBounceVertical = true
+        collectionView.contentInset.bottom = 24
+
+        let refresh = UIRefreshControl()
+        refresh.tintColor = .white
+        refresh.addAction(UIAction { [weak self] _ in
+            guard let self else { return }
+            self.viewModel.load(period: self.viewModel.selectedPeriod)
+            self.collectionView.refreshControl?.endRefreshing()
+        }, for: .valueChanged)
+        collectionView.refreshControl = refresh
+
+        collectionView.register(ProfileCell.self, forCellWithReuseIdentifier: ProfileCell.reuseID)
+        collectionView.register(ImportBannerCell.self, forCellWithReuseIdentifier: ImportBannerCell.reuseID)
+        collectionView.register(PeriodSelectorCell.self, forCellWithReuseIdentifier: PeriodSelectorCell.reuseID)
+        collectionView.register(ArtistCardCell.self, forCellWithReuseIdentifier: ArtistCardCell.reuseID)
+        collectionView.register(AlbumCoverCell.self, forCellWithReuseIdentifier: AlbumCoverCell.reuseID)
+        collectionView.register(TrackRowCell.self, forCellWithReuseIdentifier: TrackRowCell.reuseID)
+        collectionView.register(ClockCell.self, forCellWithReuseIdentifier: ClockCell.reuseID)
+        collectionView.register(StreakCell.self, forCellWithReuseIdentifier: StreakCell.reuseID)
+        collectionView.register(PersonaCell.self, forCellWithReuseIdentifier: PersonaCell.reuseID)
+        collectionView.register(
+            RecapHeaderView.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+            withReuseIdentifier: RecapHeaderView.reuseID
+        )
+
+        view.addSubview(collectionView)
+        NSLayoutConstraint.activate([
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+    }
+
+    private func setupOverlays() {
+        emptyLabel.text = "No listening history yet.\nPlay something, or import your\nLast.fm history above."
+        emptyLabel.font = .scaled(.body, size: 16, weight: .medium)
+        emptyLabel.adjustsFontForContentSizeCategory = true
+        emptyLabel.textColor = UIColor.white.withAlphaComponent(0.6)
+        emptyLabel.numberOfLines = 0
+        emptyLabel.textAlignment = .center
+        emptyLabel.isHidden = true
+        emptyLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(emptyLabel)
+
+        spinner.color = .white
+        spinner.hidesWhenStopped = true
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(spinner)
+
+        NSLayoutConstraint.activate([
+            emptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 32),
+            emptyLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+            spinner.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+        ])
+    }
+
+    private func setupShareButton() {
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            image: UIImage(systemName: "square.and.arrow.up"),
+            primaryAction: UIAction { [weak self] _ in self?.shareRecap() }
+        )
+        navigationItem.rightBarButtonItem?.isEnabled = false
+        navigationItem.rightBarButtonItem?.accessibilityLabel = "Share Recap"
+    }
+
+    private func makeLayout() -> UICollectionViewCompositionalLayout {
+        UICollectionViewCompositionalLayout { [weak self] index, environment in
+            guard let self, let section = self.dataSource.sectionIdentifier(for: index) else { return nil }
+            return self.layoutSection(for: section, environment: environment)
         }
     }
 
-    private func setupTableView() {
-        tableView = UITableView(frame: .zero, style: .plain)
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.delegate = self
-        tableView.separatorStyle = .none
-        tableView.backgroundColor = .clear
-        tableView.register(ChartRowCell.self, forCellReuseIdentifier: ChartRowCell.reuseID)
-        tableView.tableHeaderView = buildHeaderView()
+    private func layoutSection(for section: RecapSection, environment: NSCollectionLayoutEnvironment) -> NSCollectionLayoutSection {
+        let full = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(120))
+        let sideInset: CGFloat = 16
 
-        let refreshControl = UIRefreshControl()
-        refreshControl.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            Task {
-                await self.viewModel.loadChart(period: self.viewModel.selectedPeriod)
-                self.tableView.refreshControl?.endRefreshing()
-            }
-        }, for: .valueChanged)
-        tableView.refreshControl = refreshControl
+        let result: NSCollectionLayoutSection
+        switch section {
+        case .profile, .importBanner, .persona:
+            let item = NSCollectionLayoutItem(layoutSize: full)
+            let group = NSCollectionLayoutGroup.vertical(layoutSize: full, subitems: [item])
+            result = NSCollectionLayoutSection(group: group)
+        case .period:
+            let size = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .absolute(44))
+            let item = NSCollectionLayoutItem(layoutSize: size)
+            let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [item])
+            result = NSCollectionLayoutSection(group: group)
+        case .artists:
+            let itemSize = NSCollectionLayoutSize(widthDimension: .absolute(96), heightDimension: .estimated(150))
+            let item = NSCollectionLayoutItem(layoutSize: itemSize)
+            let group = NSCollectionLayoutGroup.horizontal(layoutSize: itemSize, subitems: [item])
+            let s = NSCollectionLayoutSection(group: group)
+            s.interGroupSpacing = 14
+            s.orthogonalScrollingBehavior = .continuous
+            result = s
+        case .albums:
+            let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0 / 3.0), heightDimension: .estimated(150))
+            let item = NSCollectionLayoutItem(layoutSize: itemSize)
+            item.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 5, bottom: 12, trailing: 5)
+            let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(150))
+            let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item, item, item])
+            result = NSCollectionLayoutSection(group: group)
+        case .tracks:
+            let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(52))
+            let item = NSCollectionLayoutItem(layoutSize: itemSize)
+            let group = NSCollectionLayoutGroup.vertical(layoutSize: itemSize, subitems: [item])
+            result = NSCollectionLayoutSection(group: group)
+        case .clock:
+            let size = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .absolute(260))
+            let item = NSCollectionLayoutItem(layoutSize: size)
+            let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [item])
+            result = NSCollectionLayoutSection(group: group)
+        case .streak:
+            let item = NSCollectionLayoutItem(layoutSize: full)
+            let group = NSCollectionLayoutGroup.vertical(layoutSize: full, subitems: [item])
+            result = NSCollectionLayoutSection(group: group)
+        }
 
-        view.addSubview(tableView)
-        NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.topAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        ])
+        result.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: sideInset, bottom: 12, trailing: sideInset)
+
+        if section.headerTitle != nil {
+            let headerSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(34))
+            let header = NSCollectionLayoutBoundarySupplementaryItem(
+                layoutSize: headerSize,
+                elementKind: UICollectionView.elementKindSectionHeader,
+                alignment: .top
+            )
+            result.boundarySupplementaryItems = [header]
+        }
+        return result
     }
 
     private func setupDataSource() {
-        dataSource = UITableViewDiffableDataSource<ChartSection, ChartDisplayItem>(tableView: tableView) { [weak self] tableView, indexPath, item in
-            let cell = tableView.dequeueReusableCell(withIdentifier: ChartRowCell.reuseID, for: indexPath) as! ChartRowCell
-            cell.configure(with: item, maxPlayCount: self?.maxPlayCount ?? 0)
+        dataSource = UICollectionViewDiffableDataSource<RecapSection, RecapItem>(
+            collectionView: collectionView
+        ) { [weak self] collectionView, indexPath, item in
+            self?.cell(for: item, at: indexPath, in: collectionView)
+        }
+
+        dataSource.supplementaryViewProvider = { [weak self] collectionView, kind, indexPath in
+            guard kind == UICollectionView.elementKindSectionHeader,
+                  let section = self?.dataSource.sectionIdentifier(for: indexPath.section),
+                  let title = section.headerTitle else { return nil }
+            let header = collectionView.dequeueReusableSupplementaryView(
+                ofKind: kind,
+                withReuseIdentifier: RecapHeaderView.reuseID,
+                for: indexPath
+            ) as! RecapHeaderView
+            header.configure(title: title)
+            return header
+        }
+    }
+
+    private func cell(for item: RecapItem, at indexPath: IndexPath, in collectionView: UICollectionView) -> UICollectionViewCell {
+        let tint = accentTint()
+        switch item {
+        case .profile(let profile):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ProfileCell.reuseID, for: indexPath) as! ProfileCell
+            cell.configure(profile)
+            return cell
+        case .importBanner(let state):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ImportBannerCell.reuseID, for: indexPath) as! ImportBannerCell
+            cell.configure(state: state)
+            cell.onTap = { [weak self] in self?.importTapped() }
+            return cell
+        case .period(let period):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: PeriodSelectorCell.reuseID, for: indexPath) as! PeriodSelectorCell
+            cell.configure(selected: period)
+            cell.onSelect = { [weak self] selected in self?.periodSelected(selected) }
+            return cell
+        case .artist(let artist):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ArtistCardCell.reuseID, for: indexPath) as! ArtistCardCell
+            cell.configure(artist, tint: tint)
+            return cell
+        case .album(let album):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: AlbumCoverCell.reuseID, for: indexPath) as! AlbumCoverCell
+            cell.configure(album)
+            return cell
+        case .track(let track):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TrackRowCell.reuseID, for: indexPath) as! TrackRowCell
+            cell.configure(track)
+            return cell
+        case .clock(let clock):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ClockCell.reuseID, for: indexPath) as! ClockCell
+            cell.configure(clock, tint: tint)
+            return cell
+        case .streak(let streak):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: StreakCell.reuseID, for: indexPath) as! StreakCell
+            cell.configure(streak, tint: tint)
+            return cell
+        case .persona(let persona):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: PersonaCell.reuseID, for: indexPath) as! PersonaCell
+            cell.configure(persona, palette: currentPalette)
             return cell
         }
-        dataSource.defaultRowAnimation = .fade
-    }
-
-    private func applySnapshot(items: [ChartDisplayItem]) {
-        maxPlayCount = items.map(\.playCount).max() ?? 0
-        let existing = Set(dataSource.snapshot().itemIdentifiers)
-        var snapshot = NSDiffableDataSourceSnapshot<ChartSection, ChartDisplayItem>()
-        snapshot.appendSections([.main])
-        snapshot.appendItems(items, toSection: .main)
-        snapshot.reconfigureItems(items.filter { existing.contains($0) })
-        let animated = !UIAccessibility.isReduceMotionEnabled && !existing.isEmpty
-        dataSource.apply(snapshot, animatingDifferences: animated)
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        guard let header = tableView.tableHeaderView else { return }
-        let targetSize = CGSize(
-            width: tableView.bounds.width,
-            height: UIView.layoutFittingCompressedSize.height
-        )
-        let size = header.systemLayoutSizeFitting(
-            targetSize,
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        )
-        if header.frame.size.height != size.height {
-            header.frame.size.height = size.height
-            tableView.tableHeaderView = header
-        }
-    }
-
-    private func buildHeaderView() -> UIView {
-        let container = UIView()
-
-        let iconView = UIImageView(image: UIImage(systemName: "chart.bar.fill"))
-        iconView.tintColor = UIColor(red: 0.84, green: 0.09, blue: 0.09, alpha: 1.0)
-        iconView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 48, weight: .thin)
-        iconView.contentMode = .scaleAspectFit
-
-        subtitleLabel = UILabel()
-        subtitleLabel.font = .preferredFont(forTextStyle: .subheadline)
-        subtitleLabel.textColor = .secondaryLabel
-        subtitleLabel.textAlignment = .center
-
-        let periodStack = buildPeriodPicker()
-
-        playButton = UIButton(configuration: .filled())
-        playButton.configuration?.title = "Play"
-        playButton.configuration?.image = UIImage(systemName: "play.fill")
-        playButton.configuration?.imagePadding = 6
-        playButton.configuration?.cornerStyle = .capsule
-        playButton.addAction(UIAction { [weak self] _ in self?.playTapped() }, for: .touchUpInside)
-
-        shuffleButton = UIButton(configuration: .tinted())
-        shuffleButton.configuration?.title = "Shuffle"
-        shuffleButton.configuration?.image = UIImage(systemName: "shuffle")
-        shuffleButton.configuration?.imagePadding = 6
-        shuffleButton.configuration?.cornerStyle = .capsule
-        shuffleButton.addAction(UIAction { [weak self] _ in self?.shuffleTapped() }, for: .touchUpInside)
-
-        let buttonStack = UIStackView(arrangedSubviews: [playButton, shuffleButton])
-        buttonStack.axis = .horizontal
-        buttonStack.spacing = 12
-        buttonStack.distribution = .fillEqually
-
-        spinner = UIActivityIndicatorView(style: .medium)
-        spinner.hidesWhenStopped = true
-
-        let mainStack = UIStackView(arrangedSubviews: [iconView, subtitleLabel, periodStack, buttonStack, spinner])
-        mainStack.axis = .vertical
-        mainStack.spacing = 16
-        mainStack.alignment = .center
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(mainStack)
-
-        let leading = mainStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 32)
-        let trailing = mainStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -32)
-        let bottom = mainStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -24)
-        leading.priority = .defaultHigh
-        trailing.priority = .defaultHigh
-        bottom.priority = .defaultHigh
-
-        let buttonWidth = buttonStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        buttonWidth.priority = .defaultHigh
-        let segmentWidth = periodStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        segmentWidth.priority = .defaultHigh
-
-        NSLayoutConstraint.activate([
-            mainStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 24),
-            leading, trailing, bottom,
-            buttonWidth, segmentWidth,
-        ])
-
-        return container
-    }
-
-    private func buildPeriodPicker() -> UIStackView {
-        periodCapsules = ChartPeriod.allCases.enumerated().map { index, period in
-            let button = UIButton(type: .system)
-            button.setTitle(period.shortName, for: .normal)
-            button.titleLabel?.font = UIFontMetrics(forTextStyle: .footnote)
-                .scaledFont(for: .systemFont(ofSize: 13, weight: .semibold))
-            button.titleLabel?.adjustsFontForContentSizeCategory = true
-            button.setTitleColor(.label, for: .normal)
-            button.addAction(UIAction { [weak self] _ in
-                self?.selectPeriod(at: index)
-            }, for: .touchUpInside)
-
-            let capsule = GlassCapsule(hosting: button, height: 36)
-            capsule.isAccessibilityElement = false
-            button.accessibilityLabel = period.displayName
-            button.accessibilityTraits = index == 0 ? [.button, .selected] : .button
-            return capsule
-        }
-        periodCapsules.first?.setActive(true, animated: false)
-
-        let stack = UIStackView(arrangedSubviews: periodCapsules)
-        stack.axis = .horizontal
-        stack.spacing = 8
-        stack.distribution = .fillEqually
-        return stack
-    }
-
-    private func selectPeriod(at index: Int) {
-        let period = ChartPeriod.allCases[index]
-        guard period != viewModel.selectedPeriod else { return }
-        selectionFeedback.selectionChanged()
-        for (i, capsule) in periodCapsules.enumerated() {
-            capsule.setActive(i == index, animated: !UIAccessibility.isReduceMotionEnabled)
-            if let button = capsule.subviews.compactMap({ $0 as? UIButton }).first {
-                button.accessibilityTraits = i == index ? [.button, .selected] : .button
-            }
-        }
-        Task { await viewModel.loadChart(period: period) }
     }
 
     private func bindViewModel() {
-        viewModel.itemsPublisher
+        viewModel.dataPublisher
+            .compactMap { $0 }
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] items in
-                guard let self else { return }
-                self.updateSubtitle()
-                self.updateButtons()
-                self.applySnapshot(items: items)
-            }
+            .sink { [weak self] data in self?.render(data) }
             .store(in: &cancellables)
 
         viewModel.loadingPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] isLoading in
+            .sink { [weak self] loading in
                 guard let self else { return }
-                if isLoading {
-                    self.spinner.startAnimating()
-                } else {
-                    self.spinner.stopAnimating()
-                }
+                if loading, self.viewModel.data == nil { self.spinner.startAnimating() } else { self.spinner.stopAnimating() }
+            }
+            .store(in: &cancellables)
+
+        viewModel.importStatePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self else { return }
+                self.importState = state
+                self.reapplyImportBanner()
             }
             .store(in: &cancellables)
     }
 
-    private func updateSubtitle() {
-        let matched = viewModel.matchedCount
-        let total = viewModel.totalCount
-        if total == 0 {
-            subtitleLabel.text = "No chart data"
-        } else {
-            subtitleLabel.text = "\(matched) of \(total) tracks in your library"
-        }
-    }
+    private func render(_ data: RecapData) {
+        updatePalette(for: data)
+        navigationItem.rightBarButtonItem?.isEnabled = data.hasScrobbles
 
-    private func updateButtons() {
-        let hasMatches = viewModel.matchedCount > 0
-        playButton.isEnabled = hasMatches
-        shuffleButton.isEnabled = hasMatches
-    }
+        var snapshot = NSDiffableDataSourceSnapshot<RecapSection, RecapItem>()
 
-    private func playTapped() {
-        guard !viewModel.matchedTracks.isEmpty else { return }
-        impactMedium.impactOccurred()
-        audioPlayer.play(viewModel.matchedTracks, startingAt: 0)
-    }
-
-    private func shuffleTapped() {
-        guard !viewModel.matchedTracks.isEmpty else { return }
-        impactMedium.impactOccurred()
-        var shuffled = viewModel.matchedTracks
-        shuffled.shuffle()
-        audioPlayer.play(shuffled, startingAt: 0)
-    }
-
-    private func matchedTrackIndex(for indexPath: IndexPath) -> Int? {
-        let item = viewModel.items[indexPath.row]
-        guard item.matchedTrack != nil else { return nil }
-        var matchIndex = 0
-        for i in 0..<indexPath.row {
-            if viewModel.items[i].matchedTrack != nil {
-                matchIndex += 1
-            }
-        }
-        return matchIndex
-    }
-
-    private func relativeURL(for track: Track) -> String {
-        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
-        let trackPath = track.fileURL.standardizedFileURL.path
-        let docsPath = docsDir.path
-        if trackPath.hasPrefix(docsPath) {
-            let rel = String(trackPath.dropFirst(docsPath.count))
-            return rel.hasPrefix("/") ? String(rel.dropFirst()) : rel
-        }
-        return track.fileURL.lastPathComponent
-    }
-
-    private func buildTrackContextMenu(for track: Track) -> UIMenu {
-        let relURL = relativeURL(for: track)
-
-        var playlistActions: [UIMenuElement] = []
-        do {
-            let playlists = try DatabaseManager.shared.fetchAllPlaylists()
-            for playlist in playlists {
-                guard let playlistId = playlist.id else { continue }
-                let action = UIAction(title: playlist.name, image: UIImage(systemName: "music.note.list")) { [weak self] _ in
-                    guard let self else { return }
-                    do {
-                        try DatabaseManager.shared.addTrackToPlaylist(playlistId: playlistId, trackFileURL: relURL)
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
-                        ToastView.show("Added to \(playlist.name)", in: self.view, style: .success)
-                    } catch {
-                        AppLogger.error("Failed to add track to playlist: \(error.localizedDescription)", category: .database)
-                        ToastView.show("Failed to add to playlist", in: self.view, style: .error)
-                    }
-                }
-                playlistActions.append(action)
-            }
-        } catch {
-            AppLogger.error("Failed to fetch playlists: \(error.localizedDescription)", category: .database)
-        }
-
-        let newPlaylistAction = UIAction(
-            title: "New Playlist\u{2026}",
-            image: UIImage(systemName: "plus")
-        ) { [weak self] _ in
-            guard let self else { return }
-            let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
-            alert.addTextField { $0.placeholder = "Playlist name"; $0.autocapitalizationType = .words }
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-            alert.addAction(UIAlertAction(title: "Create", style: .default) { _ in
-                guard let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces),
-                      !name.isEmpty else { return }
-                do {
-                    let playlist = try DatabaseManager.shared.createPlaylist(name: name)
-                    if let id = playlist.id {
-                        try DatabaseManager.shared.addTrackToPlaylist(playlistId: id, trackFileURL: relURL)
-                    }
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    ToastView.show("Added to \(name)", in: self.view, style: .success)
-                } catch {
-                    AppLogger.error("Failed to create playlist: \(error.localizedDescription)", category: .database)
-                }
-            })
-            self.present(alert, animated: true)
-        }
-        playlistActions.append(newPlaylistAction)
-
-        let addToPlaylistMenu = UIMenu(
-            title: "Add to Playlist",
-            image: UIImage(systemName: "text.badge.plus"),
-            children: playlistActions
+        let profile = ProfileItem(
+            username: data.userInfo?.name ?? "You",
+            sinceText: sinceText(for: data.userInfo),
+            avatarURL: data.userInfo?.imageURL,
+            totalPlays: data.totalPlays,
+            totalMinutes: data.totalMinutes
         )
+        snapshot.appendSections([.profile])
+        snapshot.appendItems([.profile(profile)], toSection: .profile)
 
-        let playNext = UIAction(
-            title: "Play Next",
-            image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")
-        ) { [weak self] _ in
-            guard let self else { return }
-            AudioPlayer.shared.insertNext(track)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show("Playing next", in: self.view, style: .info)
+        if importState != .done {
+            snapshot.appendSections([.importBanner])
+            snapshot.appendItems([.importBanner(importState)], toSection: .importBanner)
         }
 
-        let addToQueue = UIAction(
-            title: "Add to Queue",
-            image: UIImage(systemName: "text.append")
-        ) { [weak self] _ in
-            guard let self else { return }
-            AudioPlayer.shared.addToQueue(track)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show("Added to queue", in: self.view, style: .info)
+        snapshot.appendSections([.period])
+        snapshot.appendItems([.period(data.period)], toSection: .period)
+
+        if !data.topArtists.isEmpty {
+            snapshot.appendSections([.artists])
+            snapshot.appendItems(data.topArtists.map { .artist(RecapArtistItem(rank: $0.rank, name: $0.name, playCount: $0.playCount)) }, toSection: .artists)
+        }
+        if !data.topAlbums.isEmpty {
+            snapshot.appendSections([.albums])
+            snapshot.appendItems(data.topAlbums.map { .album(AlbumItem(rank: $0.rank, name: $0.name, artist: $0.artistName, playCount: $0.playCount, imageURL: $0.imageURL)) }, toSection: .albums)
+        }
+        if !data.topTracks.isEmpty {
+            snapshot.appendSections([.tracks])
+            snapshot.appendItems(data.topTracks.map { .track(TrackItem(rank: $0.rank, name: $0.name, artist: $0.artistName, playCount: $0.playCount)) }, toSection: .tracks)
+        }
+        if data.hasScrobbles {
+            snapshot.appendSections([.clock])
+            snapshot.appendItems([.clock(ClockItem(buckets: data.listeningClock, seed: paletteSeed(for: data)))], toSection: .clock)
+
+            snapshot.appendSections([.streak])
+            let days = data.heatmap.map { HeatmapDay(date: $0.key, count: $0.value) }.sorted { $0.date < $1.date }
+            snapshot.appendItems([.streak(StreakItem(streakDays: data.streak, days: days, seed: paletteSeed(for: data)))], toSection: .streak)
+
+            snapshot.appendSections([.persona])
+            snapshot.appendItems([.persona(PersonaItem(persona: data.persona, seed: paletteSeed(for: data)))], toSection: .persona)
         }
 
-        let share = UIAction(
-            title: "Share",
-            image: UIImage(systemName: "square.and.arrow.up")
-        ) { [weak self] _ in
-            guard let self else { return }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
-        }
-        let shareMenu = UIMenu(options: .displayInline, children: [share])
+        let animate = !UIAccessibility.isReduceMotionEnabled && !dataSource.snapshot().itemIdentifiers.isEmpty
+        dataSource.apply(snapshot, animatingDifferences: animate)
+        emptyLabel.isHidden = data.hasScrobbles || data.period != .allTime
+    }
 
-        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu, shareMenu])
+    private func reapplyImportBanner() {
+        var snapshot = dataSource.snapshot()
+        if importState == .done {
+            if snapshot.sectionIdentifiers.contains(.importBanner) {
+                snapshot.deleteSections([.importBanner])
+                dataSource.apply(snapshot, animatingDifferences: !UIAccessibility.isReduceMotionEnabled)
+            }
+            return
+        }
+        guard snapshot.sectionIdentifiers.contains(.importBanner) else { return }
+        let items = snapshot.itemIdentifiers(inSection: .importBanner)
+        snapshot.deleteItems(items)
+        snapshot.appendItems([.importBanner(importState)], toSection: .importBanner)
+        dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    private func periodSelected(_ period: ChartPeriod) {
+        guard period != viewModel.selectedPeriod else { return }
+        viewModel.load(period: period)
+    }
+
+    private func importTapped() {
+        guard importState == .available else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        viewModel.importHistory()
+    }
+
+    private func shareRecap() {
+        guard let data = viewModel.data, data.hasScrobbles else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let image = RecapShareCardView.makeImage(data: data, palette: currentPalette)
+        let activity = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        activity.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItem
+        present(activity, animated: true)
+    }
+
+    private func accentTint() -> UIColor {
+        let colors = currentPalette.colors
+        let candidate = colors.max(by: { saturation(of: $0) < saturation(of: $1) }) ?? currentPalette.dominant
+        return brighten(candidate)
+    }
+
+    private func saturation(of color: UIColor) -> CGFloat {
+        var s: CGFloat = 0
+        color.getHue(nil, saturation: &s, brightness: nil, alpha: nil)
+        return s
+    }
+
+    private func brighten(_ color: UIColor) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        return UIColor(hue: h, saturation: min(1, s + 0.1), brightness: max(b, 0.72), alpha: 1)
+    }
+
+    private func updatePalette(for data: RecapData) {
+        let palette = ArtworkPaletteExtractor.fallbackPalette(seed: paletteSeed(for: data))
+        currentPalette = palette
+        backdrop.apply(palette, animated: !UIAccessibility.isReduceMotionEnabled)
+    }
+
+    private func paletteSeed(for data: RecapData) -> String {
+        (data.userInfo?.name ?? "flaccy") + "|" + data.persona + "|" + (data.topArtists.first?.name ?? "")
+    }
+
+    private func sinceText(for info: LastFMUserInfo?) -> String? {
+        guard let info, info.registeredUts > 0 else { return nil }
+        let year = Calendar.current.component(.year, from: Date(timeIntervalSince1970: TimeInterval(info.registeredUts)))
+        return "scrobbling since \(year)"
     }
 }
 
-private final class ChartRowCell: UITableViewCell {
+extension ChartsViewController: UICollectionViewDelegate {
 
-    static let reuseID = "ChartRowCell"
-
-    private let rankLabel = UILabel()
-    private let titleLabel = UILabel()
-    private let artistLabel = UILabel()
-    private let playsLabel = UILabel()
-    private let playCountBar = UIView()
-    private var playCountFraction: CGFloat = 0
-
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        backgroundColor = .clear
-
-        playCountBar.backgroundColor = tintColor.withAlphaComponent(0.08)
-        playCountBar.layer.cornerRadius = 6
-        playCountBar.layer.cornerCurve = .continuous
-        playCountBar.isUserInteractionEnabled = false
-        contentView.addSubview(playCountBar)
-
-        rankLabel.font = UIFontMetrics(forTextStyle: .subheadline)
-            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 15, weight: .semibold))
-        rankLabel.adjustsFontForContentSizeCategory = true
-        rankLabel.textAlignment = .center
-
-        titleLabel.font = .preferredFont(forTextStyle: .body)
-        titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        artistLabel.font = .preferredFont(forTextStyle: .caption1)
-        artistLabel.adjustsFontForContentSizeCategory = true
-
-        playsLabel.font = UIFontMetrics(forTextStyle: .caption1)
-            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 12, weight: .regular))
-        playsLabel.adjustsFontForContentSizeCategory = true
-        playsLabel.textAlignment = .right
-
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistLabel])
-        infoStack.axis = .vertical
-        infoStack.spacing = 2
-
-        let stack = UIStackView(arrangedSubviews: [rankLabel, infoStack, playsLabel])
-        stack.spacing = 12
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            rankLabel.widthAnchor.constraint(equalToConstant: 32),
-            playsLabel.widthAnchor.constraint(equalToConstant: 44),
-            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-        ])
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let inset: CGFloat = 8
-        let maxWidth = contentView.bounds.width - inset * 2
-        playCountBar.frame = CGRect(
-            x: inset,
-            y: 4,
-            width: max(0, maxWidth * playCountFraction),
-            height: contentView.bounds.height - 8
-        )
-    }
-
-    override func prepareForReuse() {
-        super.prepareForReuse()
-        playCountFraction = 0
-        playCountBar.frame.size.width = 0
-        playCountBar.backgroundColor = tintColor.withAlphaComponent(0.08)
-    }
-
-    /// Gold, silver, and bronze semantic tints for the top three chart ranks.
-    private static func medalColor(for rank: Int) -> UIColor? {
-        switch rank {
-        case 1: .systemYellow
-        case 2: .systemGray
-        case 3: .systemBrown
-        default: nil
-        }
-    }
-
-    func configure(with item: ChartDisplayItem, maxPlayCount: Int) {
-        let isMatched = item.matchedTrack != nil
-
-        rankLabel.text = "\(item.rank)"
-        if let medal = Self.medalColor(for: item.rank) {
-            rankLabel.textColor = isMatched ? medal : medal.withAlphaComponent(0.4)
-        } else {
-            rankLabel.textColor = isMatched ? .tintColor : .quaternaryLabel
-        }
-
-        titleLabel.text = item.trackName
-        titleLabel.textColor = isMatched ? .label : .tertiaryLabel
-
-        artistLabel.text = item.artistName
-        artistLabel.textColor = isMatched ? .secondaryLabel : .quaternaryLabel
-
-        playsLabel.textColor = isMatched ? .secondaryLabel : .quaternaryLabel
-        if item.playCount >= 1000 {
-            playsLabel.text = String(format: "%.1fK", Double(item.playCount) / 1000.0)
-        } else {
-            playsLabel.text = "\(item.playCount)"
-        }
-
-        playCountFraction = maxPlayCount > 0 ? CGFloat(item.playCount) / CGFloat(maxPlayCount) : 0
-        playCountBar.backgroundColor = tintColor.withAlphaComponent(isMatched ? 0.08 : 0.04)
-        setNeedsLayout()
-
-        selectionStyle = isMatched ? .default : .none
-
-        isAccessibilityElement = true
-        accessibilityLabel = "Rank \(item.rank), \(item.trackName) by \(item.artistName)"
-        accessibilityValue = "\(item.playCount) plays\(isMatched ? ", in your library" : ", not in your library")"
-        accessibilityTraits = isMatched ? .button : .staticText
-    }
-}
-
-extension ChartsViewController: UITableViewDelegate {
-
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-        guard let startIndex = matchedTrackIndex(for: indexPath) else { return }
-        impactLight.impactOccurred()
-        audioPlayer.play(viewModel.matchedTracks, startingAt: startIndex)
-    }
-
-    func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-        guard let track = viewModel.items[indexPath.row].matchedTrack else { return nil }
-        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            self?.buildTrackContextMenu(for: track)
-        }
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        collectionView.deselectItem(at: indexPath, animated: true)
     }
 }
