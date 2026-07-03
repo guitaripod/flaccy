@@ -13,7 +13,8 @@ final class ChartsViewController: UIViewController {
     private var dataSource: UICollectionViewDiffableDataSource<RecapSection, RecapItem>!
     private let backdrop = AmbientPaletteBackdropView()
     private let emptyLabel = UILabel()
-    private let spinner = UIActivityIndicatorView(style: .large)
+    private let skeleton = RecapSkeletonView()
+    private var wantsSkeletonOnLoad = true
 
     private var currentPalette = ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy")
     private var currentTint = UIColor.systemIndigo
@@ -110,18 +111,19 @@ final class ChartsViewController: UIViewController {
         emptyLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(emptyLabel)
 
-        spinner.color = .white
-        spinner.hidesWhenStopped = true
-        spinner.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(spinner)
+        skeleton.translatesAutoresizingMaskIntoConstraints = false
+        skeleton.isHidden = true
+        view.addSubview(skeleton)
 
         NSLayoutConstraint.activate([
             emptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             emptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             emptyLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 32),
             emptyLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
-            spinner.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            spinner.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            skeleton.topAnchor.constraint(equalTo: view.topAnchor),
+            skeleton.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            skeleton.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            skeleton.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
 
@@ -277,7 +279,7 @@ final class ChartsViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] loading in
                 guard let self else { return }
-                if loading, self.viewModel.data == nil { self.spinner.startAnimating() } else { self.spinner.stopAnimating() }
+                if loading, self.viewModel.data == nil || self.wantsSkeletonOnLoad { self.showSkeleton() }
             }
             .store(in: &cancellables)
 
@@ -289,6 +291,32 @@ final class ChartsViewController: UIViewController {
                 self.reapplyImportBanner()
             }
             .store(in: &cancellables)
+    }
+
+    private func showSkeleton() {
+        skeleton.isHidden = false
+        skeleton.alpha = 1
+        skeleton.startAnimating()
+        collectionView.alpha = 0
+        emptyLabel.isHidden = true
+    }
+
+    private func hideSkeleton() {
+        guard !skeleton.isHidden else { collectionView.alpha = 1; return }
+        let finish = { [weak self] in
+            self?.skeleton.isHidden = true
+            self?.skeleton.stopAnimating()
+        }
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            skeleton.alpha = 0
+            collectionView.alpha = 1
+            finish()
+            return
+        }
+        UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
+            self.skeleton.alpha = 0
+            self.collectionView.alpha = 1
+        } completion: { _ in finish() }
     }
 
     private func render(_ data: RecapData) {
@@ -346,6 +374,9 @@ final class ChartsViewController: UIViewController {
         }
 
         dataSource.apply(snapshot, animatingDifferences: false)
+
+        wantsSkeletonOnLoad = false
+        hideSkeleton()
 
         emptyLabel.isHidden = data.hasContent
         if !data.hasContent {
@@ -405,6 +436,7 @@ final class ChartsViewController: UIViewController {
 
     private func periodSelected(_ period: ChartPeriod) {
         guard period != viewModel.selectedPeriod else { return }
+        wantsSkeletonOnLoad = true
         viewModel.load(period: period)
     }
 

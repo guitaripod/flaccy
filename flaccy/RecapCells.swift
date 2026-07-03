@@ -1,8 +1,66 @@
 import ImageIO
 import UIKit
 
+/// A remote-artwork lookup for a Recap chart entry that has no local match and no
+/// artwork URL of its own. Resolved once against Last.fm, then cached.
+nonisolated enum RecapArtworkQuery: Sendable, Hashable {
+    case album(artist: String, album: String)
+    case track(artist: String, track: String)
+
+    fileprivate var cacheKey: String {
+        switch self {
+        case let .album(artist, album): "album\u{0}\(artist)\u{0}\(album)"
+        case let .track(artist, track): "track\u{0}\(artist)\u{0}\(track)"
+        }
+    }
+}
+
+/// Resolves cover-art URLs for scrobble-derived chart entries that are absent from
+/// the local library, via Last.fm's `album.getInfo` / `track.getInfo`. Results
+/// (including misses) are memoised in-memory and keyed by album/track+artist so a
+/// given entry hits the network at most once, and concurrent cells for the same
+/// entry share a single in-flight request.
+actor RecapRemoteArtworkResolver {
+    static let shared = RecapRemoteArtworkResolver()
+
+    private var cache: [String: String?] = [:]
+    private var inFlight: [String: Task<String?, Never>] = [:]
+
+    func resolvedURL(for query: RecapArtworkQuery) async -> String? {
+        let key = query.cacheKey
+        if let cached = cache[key] {
+            AppLogger.debug("Recap remote art cache hit \(key) -> \(cached ?? "nil")", category: .content)
+            return cached
+        }
+        if let existing = inFlight[key] { return await existing.value }
+
+        let task = Task<String?, Never> { await Self.fetch(query) }
+        inFlight[key] = task
+        let url = await task.value
+        inFlight[key] = nil
+        cache[key] = url
+        AppLogger.debug("Recap remote art resolved \(key) -> \(url ?? "miss")", category: .content)
+        return url
+    }
+
+    private static func fetch(_ query: RecapArtworkQuery) async -> String? {
+        switch query {
+        case let .album(artist, album):
+            return await LastFMService.shared.fetchAlbumInfo(artist: artist, album: album)?.imageURL
+        case let .track(artist, track):
+            guard let info = await LastFMService.shared.fetchTrackInfo(artist: artist, track: track),
+                  let album = info.album, !album.isEmpty else { return nil }
+            return await LastFMService.shared.fetchAlbumInfo(artist: info.artist, album: album)?.imageURL
+        }
+    }
+}
+
 /// A UIImageView that loads local album art (via AlbumArtworkCache) or a remote
 /// URL (via ImageCache), guarding against cell reuse with a per-request token.
+///
+/// While a real image is still being fetched it shows an animated shimmer so the
+/// placeholder reads as a skeleton rather than a flat box; the shimmer clears the
+/// moment the artwork lands (or, on a miss, reveals the SF Symbol placeholder).
 ///
 /// All decoding and downsampling happens off the main thread; the decoded
 /// thumbnails are cached so scrolling never pays a synchronous decode cost.
@@ -23,6 +81,8 @@ final class AsyncImageView: UIImageView {
     )
 
     private var token = UUID()
+    private let shimmerLayer = CAGradientLayer()
+    private var isShimmering = false
 
     convenience init() { self.init(frame: .zero) }
 
@@ -31,18 +91,25 @@ final class AsyncImageView: UIImageView {
         contentMode = .scaleAspectFill
         clipsToBounds = true
         backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        configureShimmerLayer()
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        shimmerLayer.frame = bounds
+    }
 
     func setRemote(_ urlString: String?, placeholder: UIImage?) {
         let current = UUID()
         token = current
         image = placeholder
-        guard let urlString, let url = URL(string: urlString) else { return }
+        guard let urlString, let url = URL(string: urlString) else { endShimmer(); return }
         let thumbKey = "remote:\(urlString)" as NSString
-        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) { image = thumb; return }
+        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) { image = thumb; endShimmer(); return }
 
+        beginShimmer()
         Self.decodeQueue.async { [weak self] in
             guard let self else { return }
             if let cached = ImageCache.shared.image(forKey: urlString), let thumb = Self.prepared(cached) {
@@ -50,20 +117,28 @@ final class AsyncImageView: UIImageView {
                 return
             }
             URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-                guard let self, let data, let thumb = Self.downsampled(from: data) else { return }
+                guard let self else { return }
+                guard let data, let thumb = Self.downsampled(from: data) else {
+                    self.finishShimmer(token: current)
+                    return
+                }
                 ImageCache.shared.store(data: data, forKey: urlString)
                 self.deliver(thumb, key: thumbKey, token: current)
             }.resume()
         }
     }
 
-    func setAlbum(title: String, artist: String, remoteURL: String?, placeholder: UIImage?) {
+    /// Loads cover art, preferring the local library, then any supplied remote URL,
+    /// then a lazy Last.fm lookup (`remoteFallback`) for non-local entries, before
+    /// finally settling on the SF Symbol placeholder.
+    func setAlbum(title: String, artist: String, remoteURL: String?, placeholder: UIImage?, remoteFallback: RecapArtworkQuery? = nil) {
         let current = UUID()
         token = current
         image = placeholder
         let thumbKey = "album:\(title)\u{0}\(artist)" as NSString
-        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) { image = thumb; return }
+        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) { image = thumb; endShimmer(); return }
 
+        beginShimmer()
         if let cached = AlbumArtworkCache.shared.artwork(forAlbum: title, artist: artist) {
             Self.decodeQueue.async { [weak self] in
                 guard let self, let thumb = Self.prepared(cached) else { return }
@@ -75,8 +150,14 @@ final class AsyncImageView: UIImageView {
         AlbumArtworkCache.shared.loadArtwork(forAlbum: title, artist: artist) { [weak self] image in
             guard let self, self.token == current else { return }
             guard let image else {
-                AppLogger.debug("Recap art miss \(title) / \(artist), remote=\(remoteURL != nil)", category: .content)
-                self.setRemote(remoteURL, placeholder: placeholder)
+                AppLogger.debug("Recap art miss \(title) / \(artist), remote=\(remoteURL != nil), fallback=\(remoteFallback != nil)", category: .content)
+                if let remoteURL {
+                    self.setRemote(remoteURL, placeholder: placeholder)
+                } else if let remoteFallback {
+                    self.resolveRemote(remoteFallback, placeholder: placeholder, token: current)
+                } else {
+                    self.endShimmer()
+                }
                 return
             }
             Self.decodeQueue.async { [weak self] in
@@ -86,12 +167,62 @@ final class AsyncImageView: UIImageView {
         }
     }
 
+    private func resolveRemote(_ query: RecapArtworkQuery, placeholder: UIImage?, token current: UUID) {
+        Task { [weak self] in
+            let url = await RecapRemoteArtworkResolver.shared.resolvedURL(for: query)
+            await MainActor.run {
+                guard let self, self.token == current else { return }
+                self.setRemote(url, placeholder: placeholder)
+            }
+        }
+    }
+
     private func deliver(_ image: UIImage, key: NSString, token current: UUID) {
         Self.thumbnailCache.setObject(image, forKey: key)
         DispatchQueue.main.async { [weak self] in
             guard let self, self.token == current else { return }
+            self.endShimmer()
             self.set(image, animated: true)
         }
+    }
+
+    private func finishShimmer(token current: UUID) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.token == current else { return }
+            self.endShimmer()
+        }
+    }
+
+    private func configureShimmerLayer() {
+        let base = UIColor.white.withAlphaComponent(0.06).cgColor
+        let highlight = UIColor.white.withAlphaComponent(0.18).cgColor
+        shimmerLayer.colors = [base, highlight, base]
+        shimmerLayer.locations = [0, 0.5, 1]
+        shimmerLayer.startPoint = CGPoint(x: 0, y: 0.5)
+        shimmerLayer.endPoint = CGPoint(x: 1, y: 0.5)
+        shimmerLayer.isHidden = true
+    }
+
+    private func beginShimmer() {
+        shimmerLayer.frame = bounds
+        if shimmerLayer.superlayer == nil { layer.addSublayer(shimmerLayer) }
+        shimmerLayer.isHidden = false
+        guard !isShimmering else { return }
+        isShimmering = true
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        let sweep = CABasicAnimation(keyPath: "locations")
+        sweep.fromValue = [-1.0, -0.5, 0.0]
+        sweep.toValue = [1.0, 1.5, 2.0]
+        sweep.duration = 1.35
+        sweep.repeatCount = .infinity
+        shimmerLayer.add(sweep, forKey: "shimmer")
+    }
+
+    private func endShimmer() {
+        guard isShimmering || !shimmerLayer.isHidden else { return }
+        isShimmering = false
+        shimmerLayer.removeAnimation(forKey: "shimmer")
+        shimmerLayer.isHidden = true
     }
 
     private static func downsampled(from data: Data) -> UIImage? {
@@ -582,7 +713,8 @@ final class AlbumCoverCell: UICollectionViewCell {
         playBadge.isHidden = !item.isLocal
         let artTitle = item.artworkTitle ?? item.name
         let artArtist = item.artworkArtist ?? item.artist
-        cover.setAlbum(title: artTitle, artist: artArtist, remoteURL: item.imageURL, placeholder: UIImage(systemName: "square.stack"))
+        let fallback: RecapArtworkQuery? = item.isLocal ? nil : .album(artist: item.artist, album: item.name)
+        cover.setAlbum(title: artTitle, artist: artArtist, remoteURL: item.imageURL, placeholder: UIImage(systemName: "square.stack"), remoteFallback: fallback)
         isAccessibilityElement = true
         let ownership = item.isLocal ? ", in your library, double tap to play" : ""
         accessibilityLabel = "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays\(ownership)"
@@ -682,7 +814,8 @@ final class TrackRowCell: UICollectionViewCell {
         contentView.alpha = item.isLocal ? 1.0 : 0.55
         let artTitle = item.artworkTitle ?? item.name
         let artArtist = item.artworkArtist ?? item.artist
-        artwork.setAlbum(title: artTitle, artist: artArtist, remoteURL: nil, placeholder: UIImage(systemName: "music.note"))
+        let fallback: RecapArtworkQuery? = item.isLocal ? nil : .track(artist: item.artist, track: item.name)
+        artwork.setAlbum(title: artTitle, artist: artArtist, remoteURL: nil, placeholder: UIImage(systemName: "music.note"), remoteFallback: fallback)
 
         isAccessibilityElement = true
         let ownership = item.isLocal ? ", in your library, double tap to play" : ", not in your library"
@@ -916,4 +1049,193 @@ final class PeriodSelectorCell: UICollectionViewCell {
 /// The 7D / 1M / 3M / 1Y / All subset of ChartPeriod the Recap surfaces.
 enum RecapPeriods {
     static let all: [ChartPeriod] = [.week, .month, .threeMonths, .year, .allTime]
+}
+
+/// A single muted, rounded placeholder block with an animated diagonal sheen. On
+/// Reduce Motion the sheen holds still, reading as a soft static card.
+final class ShimmerBlock: UIView {
+    private let sheen = CAGradientLayer()
+
+    init(cornerRadius: CGFloat = 12) {
+        super.init(frame: .zero)
+        backgroundColor = UIColor.white.withAlphaComponent(0.06)
+        layer.cornerRadius = cornerRadius
+        layer.cornerCurve = .continuous
+        layer.masksToBounds = true
+        sheen.colors = [
+            UIColor.white.withAlphaComponent(0).cgColor,
+            UIColor.white.withAlphaComponent(0.12).cgColor,
+            UIColor.white.withAlphaComponent(0).cgColor,
+        ]
+        sheen.locations = [0, 0.5, 1]
+        sheen.startPoint = CGPoint(x: 0, y: 0.5)
+        sheen.endPoint = CGPoint(x: 1, y: 0.5)
+        layer.addSublayer(sheen)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        sheen.frame = bounds
+    }
+
+    func startAnimating() {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        let sweep = CABasicAnimation(keyPath: "locations")
+        sweep.fromValue = [-1.0, -0.5, 0.0]
+        sweep.toValue = [1.0, 1.5, 2.0]
+        sweep.duration = 1.35
+        sweep.repeatCount = .infinity
+        sheen.add(sweep, forKey: "shimmer")
+    }
+
+    func stopAnimating() { sheen.removeAnimation(forKey: "shimmer") }
+}
+
+/// A full-screen skeleton mirroring the Recap layout — profile, top-artist row,
+/// album grid, track rows, clock, and heatmap — shown while a period's data is
+/// still loading so the screen is never bare or a lone spinner. All blocks share
+/// one shimmer that starts/stops with `startAnimating()`/`stopAnimating()`.
+final class RecapSkeletonView: UIView {
+    private var blocks: [ShimmerBlock] = []
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        accessibilityElementsHidden = true
+        buildLayout()
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func startAnimating() { blocks.forEach { $0.startAnimating() } }
+    func stopAnimating() { blocks.forEach { $0.stopAnimating() } }
+
+    private func block(_ cornerRadius: CGFloat = 12) -> ShimmerBlock {
+        let block = ShimmerBlock(cornerRadius: cornerRadius)
+        block.translatesAutoresizingMaskIntoConstraints = false
+        blocks.append(block)
+        return block
+    }
+
+    private func buildLayout() {
+        let content = UIStackView()
+        content.axis = .vertical
+        content.spacing = 22
+        content.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(content)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
+            content.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            content.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+        ])
+
+        content.addArrangedSubview(profileSkeleton())
+        content.addArrangedSubview(pill(width: 220, height: 20))
+        content.addArrangedSubview(artistRowSkeleton())
+        content.addArrangedSubview(header())
+        content.addArrangedSubview(albumGridSkeleton())
+        content.addArrangedSubview(header())
+        content.addArrangedSubview(trackListSkeleton())
+        content.addArrangedSubview(fixedBlock(height: 200, cornerRadius: 22))
+    }
+
+    private func header() -> UIView {
+        pill(width: 150, height: 22)
+    }
+
+    private func pill(width: CGFloat, height: CGFloat) -> UIView {
+        let container = UIView()
+        let bar = block(height / 2)
+        container.addSubview(bar)
+        NSLayoutConstraint.activate([
+            bar.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            bar.topAnchor.constraint(equalTo: container.topAnchor),
+            bar.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            bar.widthAnchor.constraint(equalToConstant: width),
+            bar.heightAnchor.constraint(equalToConstant: height),
+        ])
+        return container
+    }
+
+    private func fixedBlock(height: CGFloat, cornerRadius: CGFloat) -> ShimmerBlock {
+        let block = block(cornerRadius)
+        block.heightAnchor.constraint(equalToConstant: height).isActive = true
+        return block
+    }
+
+    private func profileSkeleton() -> UIView {
+        let avatar = block(34)
+        NSLayoutConstraint.activate([
+            avatar.widthAnchor.constraint(equalToConstant: 68),
+            avatar.heightAnchor.constraint(equalToConstant: 68),
+        ])
+        let lines = UIStackView(arrangedSubviews: [pill(width: 160, height: 26), pill(width: 110, height: 14)])
+        lines.axis = .vertical
+        lines.spacing = 8
+        lines.alignment = .leading
+
+        let topRow = UIStackView(arrangedSubviews: [avatar, lines])
+        topRow.axis = .horizontal
+        topRow.spacing = 14
+        topRow.alignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [topRow, fixedBlock(height: 84, cornerRadius: 22)])
+        stack.axis = .vertical
+        stack.spacing = 16
+        return stack
+    }
+
+    private func artistRowSkeleton() -> UIView {
+        let row = UIStackView()
+        row.axis = .horizontal
+        row.spacing = 14
+        row.alignment = .top
+        for _ in 0..<5 {
+            let disc = block(40)
+            NSLayoutConstraint.activate([
+                disc.widthAnchor.constraint(equalToConstant: 80),
+                disc.heightAnchor.constraint(equalToConstant: 80),
+            ])
+            row.addArrangedSubview(disc)
+        }
+        return row
+    }
+
+    private func albumGridSkeleton() -> UIView {
+        let row = UIStackView()
+        row.axis = .horizontal
+        row.spacing = 10
+        row.distribution = .fillEqually
+        for _ in 0..<3 {
+            let cover = block(10)
+            cover.heightAnchor.constraint(equalTo: cover.widthAnchor).isActive = true
+            row.addArrangedSubview(cover)
+        }
+        return row
+    }
+
+    private func trackListSkeleton() -> UIView {
+        let column = UIStackView()
+        column.axis = .vertical
+        column.spacing = 14
+        for _ in 0..<4 {
+            let art = block(6)
+            NSLayoutConstraint.activate([
+                art.widthAnchor.constraint(equalToConstant: 40),
+                art.heightAnchor.constraint(equalToConstant: 40),
+            ])
+            let lines = UIStackView(arrangedSubviews: [pill(width: 180, height: 15), pill(width: 120, height: 11)])
+            lines.axis = .vertical
+            lines.spacing = 6
+            lines.alignment = .leading
+            let rowStack = UIStackView(arrangedSubviews: [art, lines])
+            rowStack.axis = .horizontal
+            rowStack.spacing = 12
+            rowStack.alignment = .center
+            column.addArrangedSubview(rowStack)
+        }
+        return column
+    }
 }
