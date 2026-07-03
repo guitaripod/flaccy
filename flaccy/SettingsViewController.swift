@@ -7,6 +7,7 @@ final class SettingsViewController: UITableViewController {
     private enum Section: Int, CaseIterable {
         case lastFM
         case playback
+        case watch
         case library
         case about
     }
@@ -44,6 +45,7 @@ final class SettingsViewController: UITableViewController {
         switch Section(rawValue: section)! {
         case .lastFM: return pendingScrobbleCount > 0 ? 2 : 1
         case .playback: return 1
+        case .watch: return 1
         case .library: return 4
         case .about: return 1
         }
@@ -53,6 +55,7 @@ final class SettingsViewController: UITableViewController {
         switch Section(rawValue: section)! {
         case .lastFM: return "Last.fm"
         case .playback: return "Playback"
+        case .watch: return "Apple Watch"
         case .library: return "Library"
         case .about: return "About"
         }
@@ -67,6 +70,8 @@ final class SettingsViewController: UITableViewController {
             return pendingScrobblesCell()
         case .playback:
             return gaplessPlaybackCell()
+        case .watch:
+            return watchSyncCell()
         case .library:
             switch indexPath.row {
             case 0: return importFilesCell()
@@ -91,6 +96,8 @@ final class SettingsViewController: UITableViewController {
             }
         case .playback:
             break
+        case .watch:
+            handleWatchTap()
         case .library:
             if indexPath.row == 0 {
                 handleImportTap()
@@ -106,6 +113,7 @@ final class SettingsViewController: UITableViewController {
         switch Section(rawValue: indexPath.section)! {
         case .lastFM: return true
         case .playback: return false
+        case .watch: return true
         case .library: return indexPath.row <= 1
         case .about: return false
         }
@@ -350,6 +358,24 @@ final class SettingsViewController: UITableViewController {
         ])
 
         return cell
+    }
+
+    private func watchSyncCell() -> UITableViewCell {
+        let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
+        var content = UIListContentConfiguration.valueCell()
+        content.text = "Sync Music to Watch"
+        content.image = UIImage(systemName: "applewatch")
+        content.imageProperties.tintColor = .tintColor
+        let synced = WatchSyncService.shared.syncedPaths.count
+        if synced > 0 { content.secondaryText = "\(synced)" }
+        cell.contentConfiguration = content
+        cell.accessoryType = .disclosureIndicator
+        return cell
+    }
+
+    private func handleWatchTap() {
+        impactLight.impactOccurred()
+        navigationController?.pushViewController(WatchSyncViewController(), animated: true)
     }
 
     private func gaplessPlaybackCell() -> UITableViewCell {

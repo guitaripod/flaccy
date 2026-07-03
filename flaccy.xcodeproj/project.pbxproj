@@ -7,8 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0BB345FBD38D4072779FC1A1 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = D2E21F4867B0D1251124B5D3 /* FlaccyCore */; };
+		1CD0A584B2671D1567CEB203 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7084824E5A82BA46E8C7F7 /* LibraryView.swift */; };
+		20364068D2334231B84E65AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F54FEC40BC514CE9408F611 /* Foundation.framework */; };
 		2C2777462F7D0B80007FF196 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 2C2777012F7D0301007FF196 /* GRDB */; };
 		2C27775C2F7D0400007FF196 /* flaccyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C2777502F7D0400007FF196 /* flaccyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2EF7E3522074A6D4757D100A /* WatchAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBEFB8DA11EA80BE3A1C0BE /* WatchAudioPlayer.swift */; };
+		331A551AA661711BBCCE5E4C /* ArtworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AC28FB864167FA1CD5F9AC4 /* ArtworkView.swift */; };
+		4114B9F2DAEFCEF2104A7CF6 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5939164CA91FCC865B69DB94 /* FlaccyCore */; };
+		478CB61873AE062D0199DA6D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 64EF0C9A9CD815CA8E65E069 /* Assets.xcassets */; };
+		77121E0B8B0D3F4357C64CA6 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E46B13F9441353C5009A48 /* NowPlayingView.swift */; };
+		8493917450A16A02594F223F /* flaccyWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		94EEA69301AB52580318B7E7 /* WatchTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9DDE13019C6B5BC73D42B17 /* WatchTheme.swift */; };
+		CA99A2EA58555ABCCFD86321 /* SampleContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B013C8839D5A863DFE6791 /* SampleContent.swift */; };
+		D3446621CB91CB204AD64EAF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC3821FD60497EF57CD4BDC8 /* RootView.swift */; };
+		D3957B9F09EDCDDDB9BFD553 /* flaccyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BE96F0B1F12FFE3EBA355F /* flaccyWatchApp.swift */; };
+		D628E7E5CB4C3AA1CAA431F3 /* AlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61186AD73843676DB85FD70F /* AlbumDetailView.swift */; };
+		D64D782252CE4C71291C68DC /* WatchSyncReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EF654E1DE0CDEDD2F136310 /* WatchSyncReceiver.swift */; };
+		D991B88B26A79409988D10A3 /* WatchLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C52181F33B5B245C922684AA /* WatchLibraryStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -18,6 +34,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 2C2777552F7D0400007FF196;
 			remoteInfo = flaccyWidgets;
+		};
+		313486C10012669327EF7ED8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C2776C22F7D0282007FF196 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE0477C1A3CAE5D10A3D4168;
+			remoteInfo = "flaccyWatch Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -33,11 +56,37 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9C292215C54F089F243EB55C /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				8493917450A16A02594F223F /* flaccyWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2C2776CA2F7D0282007FF196 /* flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C2777502F7D0400007FF196 /* flaccyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = flaccyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F54FEC40BC514CE9408F611 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		3AC28FB864167FA1CD5F9AC4 /* ArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ArtworkView.swift; path = Support/ArtworkView.swift; sourceTree = "<group>"; };
+		61186AD73843676DB85FD70F /* AlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AlbumDetailView.swift; path = Views/AlbumDetailView.swift; sourceTree = "<group>"; };
+		64EF0C9A9CD815CA8E65E069 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flaccyWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		93B013C8839D5A863DFE6791 /* SampleContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SampleContent.swift; sourceTree = "<group>"; };
+		9EF654E1DE0CDEDD2F136310 /* WatchSyncReceiver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSyncReceiver.swift; sourceTree = "<group>"; };
+		A9DDE13019C6B5BC73D42B17 /* WatchTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTheme.swift; path = Support/WatchTheme.swift; sourceTree = "<group>"; };
+		AF7084824E5A82BA46E8C7F7 /* LibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = Views/LibraryView.swift; sourceTree = "<group>"; };
+		B6E46B13F9441353C5009A48 /* NowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NowPlayingView.swift; path = Views/NowPlayingView.swift; sourceTree = "<group>"; };
+		BC3821FD60497EF57CD4BDC8 /* RootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RootView.swift; path = Views/RootView.swift; sourceTree = "<group>"; };
+		BDBEFB8DA11EA80BE3A1C0BE /* WatchAudioPlayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAudioPlayer.swift; sourceTree = "<group>"; };
+		C52181F33B5B245C922684AA /* WatchLibraryStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLibraryStore.swift; sourceTree = "<group>"; };
+		D21E18037CD4569DE9E41F19 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E2BE96F0B1F12FFE3EBA355F /* flaccyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = flaccyWatchApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -82,6 +131,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2C2777462F7D0B80007FF196 /* GRDB in Frameworks */,
+				0BB345FBD38D4072779FC1A1 /* FlaccyCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,15 +142,47 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		82D8D96669C3CDB45993605A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				20364068D2334231B84E65AD /* Foundation.framework in Frameworks */,
+				4114B9F2DAEFCEF2104A7CF6 /* FlaccyCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1330E0EC564CA79898E235B1 /* flaccyWatch Watch App */ = {
+			isa = PBXGroup;
+			children = (
+				93B013C8839D5A863DFE6791 /* SampleContent.swift */,
+				3AC28FB864167FA1CD5F9AC4 /* ArtworkView.swift */,
+				A9DDE13019C6B5BC73D42B17 /* WatchTheme.swift */,
+				61186AD73843676DB85FD70F /* AlbumDetailView.swift */,
+				AF7084824E5A82BA46E8C7F7 /* LibraryView.swift */,
+				B6E46B13F9441353C5009A48 /* NowPlayingView.swift */,
+				BC3821FD60497EF57CD4BDC8 /* RootView.swift */,
+				BDBEFB8DA11EA80BE3A1C0BE /* WatchAudioPlayer.swift */,
+				C52181F33B5B245C922684AA /* WatchLibraryStore.swift */,
+				9EF654E1DE0CDEDD2F136310 /* WatchSyncReceiver.swift */,
+				E2BE96F0B1F12FFE3EBA355F /* flaccyWatchApp.swift */,
+				64EF0C9A9CD815CA8E65E069 /* Assets.xcassets */,
+				D21E18037CD4569DE9E41F19 /* Info.plist */,
+			);
+			name = "flaccyWatch Watch App";
+			path = "flaccyWatch Watch App";
+			sourceTree = "<group>";
+		};
 		2C2776C12F7D0282007FF196 = {
 			isa = PBXGroup;
 			children = (
 				2C2776CC2F7D0282007FF196 /* flaccy */,
 				2C2777512F7D0400007FF196 /* flaccyWidgets */,
 				2C2776CB2F7D0282007FF196 /* Products */,
+				F7E3E335AA05BD4FE7CF88E7 /* Frameworks */,
+				1330E0EC564CA79898E235B1 /* flaccyWatch Watch App */,
 			);
 			sourceTree = "<group>";
 		};
@@ -109,8 +191,25 @@
 			children = (
 				2C2776CA2F7D0282007FF196 /* flaccy.app */,
 				2C2777502F7D0400007FF196 /* flaccyWidgets.appex */,
+				714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		937ACA69B8A57323276B0855 /* watchOS */ = {
+			isa = PBXGroup;
+			children = (
+				2F54FEC40BC514CE9408F611 /* Foundation.framework */,
+			);
+			name = watchOS;
+			sourceTree = "<group>";
+		};
+		F7E3E335AA05BD4FE7CF88E7 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				937ACA69B8A57323276B0855 /* watchOS */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -124,11 +223,13 @@
 				2C2776C72F7D0282007FF196 /* Frameworks */,
 				2C2776C82F7D0282007FF196 /* Resources */,
 				2C27775B2F7D0400007FF196 /* Embed Foundation Extensions */,
+				9C292215C54F089F243EB55C /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				2C27775A2F7D0400007FF196 /* PBXTargetDependency */,
+				B17E6D248FB45949133CC076 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				2C2776CC2F7D0282007FF196 /* flaccy */,
@@ -136,6 +237,7 @@
 			name = flaccy;
 			packageProductDependencies = (
 				2C2777012F7D0301007FF196 /* GRDB */,
+				D2E21F4867B0D1251124B5D3 /* FlaccyCore */,
 			);
 			productName = flaccy;
 			productReference = 2C2776CA2F7D0282007FF196 /* flaccy.app */;
@@ -157,11 +259,29 @@
 				2C2777512F7D0400007FF196 /* flaccyWidgets */,
 			);
 			name = flaccyWidgets;
-			packageProductDependencies = (
-			);
 			productName = flaccyWidgets;
 			productReference = 2C2777502F7D0400007FF196 /* flaccyWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		DE0477C1A3CAE5D10A3D4168 /* flaccyWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5DB352AA23A1B7E07B26DC5F /* Build configuration list for PBXNativeTarget "flaccyWatch Watch App" */;
+			buildPhases = (
+				869246149F391E43A7FE0395 /* Sources */,
+				82D8D96669C3CDB45993605A /* Frameworks */,
+				3949682C6E87778D562C23CC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "flaccyWatch Watch App";
+			packageProductDependencies = (
+				5939164CA91FCC865B69DB94 /* FlaccyCore */,
+			);
+			productName = "flaccyWatch Watch App";
+			productReference = 714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -192,6 +312,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				2C2777002F7D0300007FF196 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				87B8F983431A9C5256D98CCC /* XCLocalSwiftPackageReference "FlaccyCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2C2776CB2F7D0282007FF196 /* Products */;
@@ -200,6 +321,7 @@
 			targets = (
 				2C2776C92F7D0282007FF196 /* flaccy */,
 				2C2777552F7D0400007FF196 /* flaccyWidgets */,
+				DE0477C1A3CAE5D10A3D4168 /* flaccyWatch Watch App */,
 			);
 		};
 /* End PBXProject section */
@@ -216,6 +338,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3949682C6E87778D562C23CC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				478CB61873AE062D0199DA6D /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -236,6 +366,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		869246149F391E43A7FE0395 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA99A2EA58555ABCCFD86321 /* SampleContent.swift in Sources */,
+				331A551AA661711BBCCE5E4C /* ArtworkView.swift in Sources */,
+				94EEA69301AB52580318B7E7 /* WatchTheme.swift in Sources */,
+				D628E7E5CB4C3AA1CAA431F3 /* AlbumDetailView.swift in Sources */,
+				1CD0A584B2671D1567CEB203 /* LibraryView.swift in Sources */,
+				77121E0B8B0D3F4357C64CA6 /* NowPlayingView.swift in Sources */,
+				D3446621CB91CB204AD64EAF /* RootView.swift in Sources */,
+				2EF7E3522074A6D4757D100A /* WatchAudioPlayer.swift in Sources */,
+				D991B88B26A79409988D10A3 /* WatchLibraryStore.swift in Sources */,
+				D64D782252CE4C71291C68DC /* WatchSyncReceiver.swift in Sources */,
+				D3957B9F09EDCDDDB9BFD553 /* flaccyWatchApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -244,9 +392,45 @@
 			target = 2C2777552F7D0400007FF196 /* flaccyWidgets */;
 			targetProxy = 2C2777592F7D0400007FF196 /* PBXContainerItemProxy */;
 		};
+		B17E6D248FB45949133CC076 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "flaccyWatch Watch App";
+			target = DE0477C1A3CAE5D10A3D4168 /* flaccyWatch Watch App */;
+			targetProxy = 313486C10012669327EF7ED8 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		020192F059FCDEFAF278E655 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P4DQK6SRKR;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "flaccyWatch Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Flaccy;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccy.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
 		2C2776DE2F7D0283007FF196 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -502,6 +686,37 @@
 			};
 			name = Release;
 		};
+		AE3AA281783D918A6ED3E7A4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P4DQK6SRKR;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "flaccyWatch Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Flaccy;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccy.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -532,7 +747,23 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		5DB352AA23A1B7E07B26DC5F /* Build configuration list for PBXNativeTarget "flaccyWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AE3AA281783D918A6ED3E7A4 /* Release */,
+				020192F059FCDEFAF278E655 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		87B8F983431A9C5256D98CCC /* XCLocalSwiftPackageReference "FlaccyCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = FlaccyCore;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		2C2777002F7D0300007FF196 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
@@ -550,6 +781,14 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2C2777002F7D0300007FF196 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
+		};
+		5939164CA91FCC865B69DB94 /* FlaccyCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlaccyCore;
+		};
+		D2E21F4867B0D1251124B5D3 /* FlaccyCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FlaccyCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

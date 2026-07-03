@@ -8,9 +8,13 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .default)
-        try? session.setActive(true)
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        } catch {
+            AppLogger.error("Audio session category failed: \(error.localizedDescription)", category: .playback)
+        }
+
+        WatchSyncService.shared.activate()
 
         Task {
             await AudioPlayer.shared.retryPendingScrobbles()
