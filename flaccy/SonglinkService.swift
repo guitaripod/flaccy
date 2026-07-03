@@ -70,7 +70,9 @@ final class SonglinkService {
             return nil
         }
 
+        guard !Task.isCancelled else { return nil }
         await throttle.wait()
+        guard !Task.isCancelled else { return nil }
 
         guard let result = await fetchSonglink(url: songMatch.appleMusicURL, title: title, artist: artist) else {
             return nil
@@ -180,12 +182,16 @@ private final class CachedResult: NSObject {
 
 private actor SonglinkThrottle {
     private var lastRequest: Date = .distantPast
+    private let interval: TimeInterval = 6.0
 
+    /// Reserves the next request slot before suspending so concurrent waiters
+    /// serialize at `interval` spacing despite actor reentrancy.
     func wait() async {
-        let elapsed = Date().timeIntervalSince(lastRequest)
-        if elapsed < 6.0 {
-            try? await Task.sleep(for: .milliseconds(Int((6.0 - elapsed) * 1000)))
+        let target = max(Date(), lastRequest.addingTimeInterval(interval))
+        lastRequest = target
+        let delay = target.timeIntervalSinceNow
+        if delay > 0 {
+            try? await Task.sleep(for: .seconds(delay))
         }
-        lastRequest = Date()
     }
 }

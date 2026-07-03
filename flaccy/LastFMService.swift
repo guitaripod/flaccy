@@ -1,6 +1,7 @@
 import AuthenticationServices
 import CryptoKit
 import Foundation
+import Security
 
 nonisolated enum ChartPeriod: String, CaseIterable, Sendable {
     case week = "7day"
@@ -83,8 +84,21 @@ final class LastFMService {
     }
 
     private var sessionKey: String? {
-        get { UserDefaults.standard.string(forKey: Self.sessionKeyKey) }
-        set { UserDefaults.standard.set(newValue, forKey: Self.sessionKeyKey) }
+        get {
+            if let key = KeychainStore.string(for: Self.sessionKeyKey) { return key }
+            return migrateLegacySessionKey()
+        }
+        set { KeychainStore.set(newValue, for: Self.sessionKeyKey) }
+    }
+
+    /// Moves a session key persisted by older builds out of UserDefaults
+    /// (plaintext plist, included in backups) into the Keychain.
+    private func migrateLegacySessionKey() -> String? {
+        guard let legacy = UserDefaults.standard.string(forKey: Self.sessionKeyKey) else { return nil }
+        KeychainStore.set(legacy, for: Self.sessionKeyKey)
+        UserDefaults.standard.removeObject(forKey: Self.sessionKeyKey)
+        AppLogger.info("Migrated Last.fm session key from UserDefaults to Keychain", category: .auth)
+        return legacy
     }
 
     private init() {
@@ -190,17 +204,25 @@ final class LastFMService {
 
         do {
             let data = try await performSignedRequest(params: params, httpMethod: "POST")
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            let scrobbles = json?["scrobbles"] as? [String: Any]
-            let attr = scrobbles?["@attr"] as? [String: Any]
-            let accepted = (attr?["accepted"] as? Int) ?? 0
-
-            if accepted > 0 {
-                await AppLogger.info("Scrobbled: \(track) - \(artist)", category: .sync)
-                return true
-            } else {
+            switch Self.parseScrobbleResponse(data: data, expectedCount: 1) {
+            case .retryableError(let code, let message):
+                await AppLogger.warning("Scrobble deferred (error \(code): \(message)): \(track) - \(artist)", category: .sync)
+                return false
+            case .acceptedCount(let accepted):
+                if accepted > 0 {
+                    await AppLogger.info("Scrobbled: \(track) - \(artist)", category: .sync)
+                    return true
+                }
                 await AppLogger.warning("Scrobble rejected: \(track) - \(artist)", category: .sync)
                 return false
+            case .entries(let statuses):
+                guard let status = statuses.first else { return false }
+                if status.accepted {
+                    await AppLogger.info("Scrobbled: \(track) - \(artist)", category: .sync)
+                } else {
+                    await AppLogger.warning("Scrobble permanently ignored (code \(status.ignoredCode)): \(track) - \(artist)", category: .sync)
+                }
+                return true
             }
         } catch {
             await AppLogger.error("Scrobble failed: \(error.localizedDescription)", category: .sync)
@@ -208,18 +230,22 @@ final class LastFMService {
         }
     }
 
+    /// Submits pending scrobbles in batches and returns the ids that were
+    /// actually accepted. Failed batches are omitted so they stay pending and
+    /// are retried later (rather than being marked submitted and lost).
     nonisolated func submitPendingScrobbles(
-        scrobbles: [(track: String, artist: String, album: String, timestamp: Date, duration: Int)]
-    ) async {
+        scrobbles: [(id: Int64, track: String, artist: String, album: String, timestamp: Date, duration: Int)]
+    ) async -> [Int64] {
         guard let sk = await sessionKey else {
             await AppLogger.debug("Skipping batch scrobble — not authenticated", category: .sync)
-            return
+            return []
         }
 
         let batches = stride(from: 0, to: scrobbles.count, by: 50).map {
             Array(scrobbles[$0..<min($0 + 50, scrobbles.count)])
         }
 
+        var submittedIds: [Int64] = []
         for batch in batches {
             var params: [String: String] = [
                 "method": "track.scrobble",
@@ -236,12 +262,34 @@ final class LastFMService {
             }
 
             do {
-                _ = try await performSignedRequest(params: params, httpMethod: "POST")
-                await AppLogger.info("Batch scrobbled \(batch.count) tracks", category: .sync)
+                let data = try await performSignedRequest(params: params, httpMethod: "POST")
+                switch Self.parseScrobbleResponse(data: data, expectedCount: batch.count) {
+                case .retryableError(let code, let message):
+                    await AppLogger.warning("Batch scrobble deferred (error \(code): \(message)), \(batch.count) kept pending", category: .sync)
+                case .acceptedCount(let accepted):
+                    if accepted > 0 {
+                        submittedIds.append(contentsOf: batch.map(\.id))
+                        await AppLogger.info("Batch scrobbled \(batch.count) tracks (accepted \(accepted))", category: .sync)
+                    } else {
+                        await AppLogger.warning("Batch scrobble accepted 0 of \(batch.count), kept pending", category: .sync)
+                    }
+                case .entries(let statuses):
+                    var acceptedCount = 0
+                    for (entry, status) in zip(batch, statuses) {
+                        submittedIds.append(entry.id)
+                        if status.accepted {
+                            acceptedCount += 1
+                        } else {
+                            await AppLogger.warning("Scrobble permanently ignored (code \(status.ignoredCode)): \(entry.track) - \(entry.artist)", category: .sync)
+                        }
+                    }
+                    await AppLogger.info("Batch scrobbled \(acceptedCount)/\(batch.count) tracks accepted", category: .sync)
+                }
             } catch {
-                await AppLogger.error("Batch scrobble failed: \(error.localizedDescription)", category: .sync)
+                await AppLogger.error("Batch scrobble failed (kept pending): \(error.localizedDescription)", category: .sync)
             }
         }
+        return submittedIds
     }
 
     nonisolated func fetchAlbumInfo(artist: String, album: String) async -> AlbumInfo? {
@@ -347,6 +395,70 @@ final class LastFMService {
         }
     }
 
+    nonisolated private struct ScrobbleEntryStatus {
+        let accepted: Bool
+        let ignoredCode: Int
+    }
+
+    nonisolated private enum ScrobbleResponse {
+        case entries([ScrobbleEntryStatus])
+        case acceptedCount(Int)
+        case retryableError(code: Int, message: String)
+    }
+
+    /// Parses a track.scrobble response body. Returns per-entry accepted/ignored
+    /// statuses when the response matches the submitted count, a retryable API
+    /// error (codes 11/16/29) when the whole request should be retried later,
+    /// or falls back to the top-level accepted count for malformed responses.
+    nonisolated private static func parseScrobbleResponse(data: Data, expectedCount: Int) -> ScrobbleResponse {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return .acceptedCount(0)
+        }
+
+        if let errorCode = intValue(json["error"]) {
+            let message = json["message"] as? String ?? "unknown"
+            if [11, 16, 29].contains(errorCode) {
+                return .retryableError(code: errorCode, message: message)
+            }
+            return .acceptedCount(0)
+        }
+
+        guard let scrobbles = json["scrobbles"] as? [String: Any] else {
+            return .acceptedCount(0)
+        }
+
+        let attr = scrobbles["@attr"] as? [String: Any]
+        let acceptedCount = intValue(attr?["accepted"]) ?? 0
+
+        let rawEntries: [[String: Any]]
+        if let array = scrobbles["scrobble"] as? [[String: Any]] {
+            rawEntries = array
+        } else if let single = scrobbles["scrobble"] as? [String: Any] {
+            rawEntries = [single]
+        } else {
+            rawEntries = []
+        }
+
+        guard rawEntries.count == expectedCount else {
+            return .acceptedCount(acceptedCount)
+        }
+
+        let statuses = rawEntries.map { entry -> ScrobbleEntryStatus in
+            let ignored = entry["ignoredMessage"] as? [String: Any]
+            let code = intValue((ignored?["@attr"] as? [String: Any])?["code"])
+                ?? intValue(ignored?["code"])
+                ?? 0
+            return ScrobbleEntryStatus(accepted: code == 0, ignoredCode: code)
+        }
+        return .entries(statuses)
+    }
+
+    nonisolated private static func intValue(_ value: Any?) -> Int? {
+        if let int = value as? Int { return int }
+        if let string = value as? String { return Int(string) }
+        return nil
+    }
+
     nonisolated private func performSignedRequest(
         params: [String: String],
         httpMethod: String
@@ -444,6 +556,53 @@ final class LastFMService {
             }
         }
         return nil
+    }
+}
+
+private enum KeychainStore {
+
+    nonisolated private static var service: String {
+        Bundle.main.bundleIdentifier ?? "flaccy"
+    }
+
+    nonisolated static func string(for account: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data
+        else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    nonisolated static func set(_ value: String?, for account: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+
+        guard let value else {
+            SecItemDelete(query as CFDictionary)
+            return
+        }
+
+        let data = Data(value.utf8)
+        let update: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+
+        let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+        if status == errSecItemNotFound {
+            let add = query.merging(update) { _, new in new }
+            SecItemAdd(add as CFDictionary, nil)
+        }
     }
 }
 

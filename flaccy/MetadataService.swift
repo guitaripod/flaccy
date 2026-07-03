@@ -92,28 +92,27 @@ enum MetadataService {
         let patterns: [(regex: String, titleGroup: Int, trackGroup: Int)] = [
             (#"^(\d{1,3})\s*[-._)\]]\s*(.+)$"#, 2, 1),
             (#"^(\d{1,3})\s+(.+)$"#, 2, 1),
-            (#"^(.+?)\s*[-._]\s*(\d{1,3})$"#, 1, 2),
         ]
 
+        let original = name
         for pattern in patterns {
-            if let regex = try? NSRegularExpression(pattern: pattern.regex),
-               let match = regex.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)) {
-                if let titleRange = Range(match.range(at: pattern.titleGroup), in: name) {
-                    let parsedTitle = String(name[titleRange]).trimmingCharacters(in: .whitespaces)
-                    if !parsedTitle.isEmpty {
-                        name = parsedTitle
-                    }
-                }
-                if let trackRange = Range(match.range(at: pattern.trackGroup), in: name) {
-                    trackNumber = Int(name[trackRange]) ?? 0
-                }
-                break
+            guard let regex = try? NSRegularExpression(pattern: pattern.regex),
+                  let match = regex.firstMatch(in: original, range: NSRange(original.startIndex..., in: original))
+            else { continue }
+
+            if let trackRange = Range(match.range(at: pattern.trackGroup), in: original) {
+                trackNumber = Int(original[trackRange]) ?? 0
             }
+            if let titleRange = Range(match.range(at: pattern.titleGroup), in: original) {
+                let parsedTitle = String(original[titleRange]).trimmingCharacters(in: .whitespaces)
+                if !parsedTitle.isEmpty { name = parsedTitle }
+            }
+            break
         }
 
         name = name
             .replacingOccurrences(of: "_", with: " ")
-            .replacingOccurrences(of: "  ", with: " ")
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespaces)
 
         return FileInfo(title: name, trackNumber: trackNumber)

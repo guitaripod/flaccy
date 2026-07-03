@@ -55,6 +55,12 @@ final class MetadataEnrichmentService {
             }
         }
 
+        if let release = await fetchMusicBrainzRelease(artist: artist, album: title) {
+            if musicBrainzID == nil { musicBrainzID = release.id }
+            year = release.year
+            genre = release.genre
+        }
+
         await generalThrottle.throttle()
         let artistInfo = await LastFMService.shared.fetchArtistInfo(artist: artist)
         if let artistInfo {

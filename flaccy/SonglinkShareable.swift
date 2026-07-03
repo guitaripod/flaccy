@@ -36,10 +36,7 @@ extension SonglinkShareable {
         let overlay = UIView()
         overlay.translatesAutoresizingMaskIntoConstraints = false
 
-        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemThickMaterial))
-        blur.layer.cornerRadius = 14
-        blur.layer.cornerCurve = .continuous
-        blur.clipsToBounds = true
+        let blur = LiquidGlass.view(cornerRadius: 14)
         blur.translatesAutoresizingMaskIntoConstraints = false
 
         let spinner = UIActivityIndicatorView(style: .medium)
