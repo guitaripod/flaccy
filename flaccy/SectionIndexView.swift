@@ -172,7 +172,7 @@ final class SectionIndexView: UIView {
             superview.addSubview(bubbleView)
         }
         let clampedY = max(26, min(bounds.height - 26, y))
-        let center = superview.convert(CGPoint(x: -46, y: clampedY), from: self)
+        let center = superview.convert(CGPoint(x: bounds.width + 46, y: clampedY), from: self)
         bubbleView.center = center
     }
 

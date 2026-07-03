@@ -242,7 +242,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         view.addSubview(sectionIndexView)
 
         NSLayoutConstraint.activate([
-            sectionIndexView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
+            sectionIndexView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
             sectionIndexView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
@@ -550,7 +550,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
                 let section = NSCollectionLayoutSection(group: group)
                 section.interGroupSpacing = 12
-                section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 12, bottom: 24, trailing: 20)
+                section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 24, trailing: 12)
                 return section
             }
         case .songs, .artists:
@@ -559,7 +559,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             config.backgroundColor = .clear
             return UICollectionViewCompositionalLayout { _, environment in
                 let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: environment)
-                section.contentInsets.trailing = 20
+                section.contentInsets.leading = 20
                 return section
             }
         case .playlists:
