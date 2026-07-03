@@ -17,12 +17,17 @@ final class NowPlayingBackdropView: UIView {
     private var commandQueue: MTLCommandQueue?
     private var pipelineState: MTLRenderPipelineState?
     private var fallbackGradient: CAGradientLayer?
+    private let ambientImageView = UIImageView()
+    private var hasArtistImage = false
     private let startTime = CACurrentMediaTime()
     private var fadeStartTime: CFTimeInterval?
     private var colorsFrom: [SIMD4<Float>]
     private var colorsTo: [SIMD4<Float>]
 
     private static let crossfadeDuration: CFTimeInterval = 1.0
+    private static let ambientPhotoAlpha: CGFloat = 0.55
+    private static let colorFieldOverPhotoAlpha: CGFloat = 0.72
+    private static let kenBurnsKey = "kenBurns"
 
     override init(frame: CGRect) {
         let initial = ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy").simdColors
@@ -30,6 +35,7 @@ final class NowPlayingBackdropView: UIView {
         colorsTo = initial
         super.init(frame: frame)
         isUserInteractionEnabled = false
+        configureAmbientImageView()
         if UIAccessibility.isReduceMotionEnabled || !configureMetal() {
             configureFallbackGradient()
         }
@@ -57,14 +63,92 @@ final class NowPlayingBackdropView: UIView {
         }
     }
 
+    /// Crossfades a heavily-dimmed artist photo in behind the color field and
+    /// drops the field's opacity so the palette flow plays over the photo;
+    /// passing nil restores the pure-shader look.
+    func setArtistImage(_ image: UIImage?, animated: Bool) {
+        let hadImage = hasArtistImage
+        hasArtistImage = image != nil
+
+        let applyImage = { self.ambientImageView.image = image }
+        if animated, image != nil, hadImage, !UIAccessibility.isReduceMotionEnabled {
+            UIView.transition(with: ambientImageView, duration: 0.6, options: [.transitionCrossDissolve], animations: applyImage)
+        } else {
+            applyImage()
+        }
+
+        let targetPhotoAlpha: CGFloat = image == nil ? 0 : Self.ambientPhotoAlpha
+        let targetFieldAlpha: CGFloat = image == nil ? 1 : Self.colorFieldOverPhotoAlpha
+        let applyAlphas = {
+            self.ambientImageView.alpha = targetPhotoAlpha
+            self.mtkView?.alpha = targetFieldAlpha
+            self.fallbackGradient?.opacity = Float(targetFieldAlpha)
+        }
+        if animated {
+            UIView.animate(withDuration: 0.8, delay: 0, options: [.beginFromCurrentState, .curveEaseInOut], animations: applyAlphas)
+        } else {
+            applyAlphas()
+        }
+        updateKenBurns()
+    }
+
     func setPaused(_ paused: Bool) {
         mtkView?.isPaused = paused
+        if paused {
+            if let presented = ambientImageView.layer.presentation() {
+                ambientImageView.layer.transform = presented.transform
+            }
+            ambientImageView.layer.removeAnimation(forKey: Self.kenBurnsKey)
+        } else {
+            updateKenBurns()
+        }
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
         mtkView?.contentScaleFactor = 1.0
         fallbackGradient?.frame = bounds
+        ambientImageView.frame = bounds
+    }
+
+    private func configureAmbientImageView() {
+        ambientImageView.contentMode = .scaleAspectFill
+        ambientImageView.clipsToBounds = false
+        ambientImageView.alpha = 0
+        ambientImageView.frame = bounds
+        clipsToBounds = true
+        addSubview(ambientImageView)
+    }
+
+    /// Runs a ~40s autoreversing pan/zoom on the photo layer; pure Core
+    /// Animation, restarted after pauses, skipped under Reduce Motion.
+    private func updateKenBurns() {
+        guard hasArtistImage else {
+            ambientImageView.layer.removeAnimation(forKey: Self.kenBurnsKey)
+            ambientImageView.layer.transform = CATransform3DIdentity
+            return
+        }
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            ambientImageView.layer.transform = CATransform3DMakeScale(1.1, 1.1, 1)
+            return
+        }
+        guard ambientImageView.layer.animation(forKey: Self.kenBurnsKey) == nil else { return }
+
+        let current = ambientImageView.layer.transform
+        let from = CATransform3DIsIdentity(current) ? CATransform3DMakeScale(1.12, 1.12, 1) : current
+        var to = CATransform3DMakeScale(1.24, 1.24, 1)
+        to = CATransform3DTranslate(to, bounds.width * 0.025, bounds.height * -0.02, 0)
+
+        let animation = CABasicAnimation(keyPath: "transform")
+        animation.fromValue = from
+        animation.toValue = to
+        animation.duration = 40
+        animation.autoreverses = true
+        animation.repeatCount = .infinity
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.isRemovedOnCompletion = false
+        ambientImageView.layer.transform = from
+        ambientImageView.layer.add(animation, forKey: Self.kenBurnsKey)
     }
 
     /// Sets up the 1×-scale, frame-capped MTKView; returns false when the device

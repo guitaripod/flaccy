@@ -14,6 +14,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private let artworkView = UIImageView()
     private let artworkContainer = UIView()
     private let titleMarquee = MarqueeLabel()
+    private let artistAvatarButton = UIButton(type: .custom)
     private let artistButton = UIButton(type: .system)
     private let dashLabel = UILabel()
     private let albumLabel = UILabel()
@@ -37,6 +38,16 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private let shareButton = UIButton(type: .system)
     private let lyricsButton = UIButton(type: .system)
     private let queueButton = UIButton(type: .system)
+
+    private var shuffleCapsule: GlassCapsule?
+    private var repeatCapsule: GlassCapsule?
+    private var sleepTimerCapsule: GlassCapsule?
+    private var queueCapsule: GlassCapsule?
+    private var actionCapsules: [UIView] = []
+    private let actionRowContainer = UIStackView()
+
+    private var artistImageTask: Task<Void, Never>?
+    private var currentArtistKey: String?
 
     private var isSliderDragging = false
     private var isSeeking = false
@@ -68,9 +79,17 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         hasAppliedInitialState = true
         updateShuffleRepeatState()
         updateSleepTimerButton()
+        updateQueueBadge()
+
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (self: Self, _) in
+            self.relayoutActionRow()
+        }
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(shuffleRepeatDidChange), name: AudioPlayer.shuffleRepeatDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(queueDidChange), name: AudioPlayer.queueDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(pauseBackdrop), name: UIApplication.didEnterBackgroundNotification, object: nil
@@ -206,6 +225,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         let tilt = UILongPressGestureRecognizer(target: self, action: #selector(handleTilt(_:)))
         tilt.minimumPressDuration = 0.18
         artworkContainer.addGestureRecognizer(tilt)
+
+        artworkContainer.addInteraction(UIContextMenuInteraction(delegate: self))
     }
 
     private func setupInfoBlock() {
@@ -213,6 +234,19 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         titleMarquee.textColor = .white
         titleMarquee.setContentHuggingPriority(.defaultLow, for: .horizontal)
         titleMarquee.addInteraction(UIContextMenuInteraction(delegate: self))
+
+        artistAvatarButton.contentMode = .scaleAspectFill
+        artistAvatarButton.imageView?.contentMode = .scaleAspectFill
+        artistAvatarButton.clipsToBounds = true
+        artistAvatarButton.layer.cornerRadius = 11
+        artistAvatarButton.isHidden = true
+        artistAvatarButton.accessibilityLabel = "Artist photo"
+        artistAvatarButton.accessibilityHint = "Shows the artist's albums"
+        artistAvatarButton.addAction(UIAction { [weak self] _ in self?.navigateToArtist() }, for: .touchUpInside)
+        NSLayoutConstraint.activate([
+            artistAvatarButton.widthAnchor.constraint(equalToConstant: 22),
+            artistAvatarButton.heightAnchor.constraint(equalToConstant: 22),
+        ])
 
         artistButton.titleLabel?.font = .scaled(.callout, size: 16, weight: .semibold)
         artistButton.titleLabel?.adjustsFontForContentSizeCategory = true
@@ -244,9 +278,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func makeArtistAlbumRow() -> UIStackView {
-        let row = UIStackView(arrangedSubviews: [artistButton, dashLabel, albumLabel])
+        let row = UIStackView(arrangedSubviews: [artistAvatarButton, artistButton, dashLabel, albumLabel])
         row.spacing = 0
-        row.alignment = .firstBaseline
+        row.setCustomSpacing(7, after: artistAvatarButton)
+        row.alignment = .center
         return row
     }
 
@@ -355,6 +390,46 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func makeActionRow() -> UIStackView {
+        configureActionButtons()
+
+        let shuffle = GlassCapsule(hosting: shuffleButton)
+        let repeats = GlassCapsule(hosting: repeatButton)
+        let sleep = GlassCapsule(hosting: sleepTimerButton)
+        let queue = GlassCapsule(hosting: queueButton)
+        shuffleCapsule = shuffle
+        repeatCapsule = repeats
+        sleepTimerCapsule = sleep
+        queueCapsule = queue
+
+        actionCapsules = [
+            shuffle, repeats, GlassCapsule(hosting: airplayButton), sleep,
+            GlassCapsule(hosting: shareButton), GlassCapsule(hosting: lyricsButton), queue,
+        ]
+        actionRowContainer.axis = .vertical
+        actionRowContainer.spacing = 8
+        relayoutActionRow()
+        return actionRowContainer
+    }
+
+    /// Lays the capsules out as a single equal-width row, splitting into two
+    /// rows at accessibility text sizes so they never overflow the width.
+    private func relayoutActionRow() {
+        for view in actionRowContainer.arrangedSubviews {
+            view.removeFromSuperview()
+        }
+        let wraps = traitCollection.preferredContentSizeCategory.isAccessibilityCategory
+        let groups: [[UIView]] = wraps
+            ? [Array(actionCapsules.prefix(4)), Array(actionCapsules.suffix(3))]
+            : [actionCapsules]
+        for group in groups {
+            let row = UIStackView(arrangedSubviews: group)
+            row.distribution = .fillEqually
+            row.spacing = 8
+            actionRowContainer.addArrangedSubview(row)
+        }
+    }
+
+    private func configureActionButtons() {
         let iconConfig = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
 
         shuffleButton.setImage(UIImage(systemName: "shuffle", withConfiguration: iconConfig), for: .normal)
@@ -380,6 +455,11 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         sleepTimerButton.setImage(UIImage(systemName: "moon.zzz", withConfiguration: iconConfig), for: .normal)
         sleepTimerButton.accessibilityLabel = "Sleep timer"
         sleepTimerButton.addAction(UIAction { [weak self] _ in self?.showSleepTimerSheet() }, for: .touchUpInside)
+        sleepTimerButton.menu = UIMenu(children: [
+            UIDeferredMenuElement.uncached { [weak self] completion in
+                completion(self?.sleepTimerMenuActions() ?? [])
+            }
+        ])
 
         shareButton.setImage(UIImage(systemName: "square.and.arrow.up", withConfiguration: iconConfig), for: .normal)
         shareButton.accessibilityLabel = "Share"
@@ -388,6 +468,11 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
         }, for: .touchUpInside)
+        shareButton.menu = UIMenu(children: [
+            UIDeferredMenuElement.uncached { [weak self] completion in
+                completion(self?.shareMenuActions() ?? [])
+            }
+        ])
 
         lyricsButton.setImage(UIImage(systemName: "text.quote", withConfiguration: iconConfig), for: .normal)
         lyricsButton.accessibilityLabel = "Lyrics"
@@ -400,21 +485,75 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             self?.presentQueue()
         }, for: .touchUpInside)
 
-        let buttons = [shuffleButton, repeatButton, sleepTimerButton, shareButton, lyricsButton, queueButton]
-        for button in buttons {
+        for button in [shuffleButton, repeatButton, sleepTimerButton, shareButton, lyricsButton, queueButton] {
             button.tintColor = .white.withAlphaComponent(0.7)
         }
-        var capsules = buttons.map { LiquidGlass.capsule(hosting: $0, height: 40) }
-        capsules.insert(LiquidGlass.capsule(hosting: airplayButton, height: 40), at: 2)
-        let row = UIStackView(arrangedSubviews: capsules)
-        row.distribution = .fillEqually
-        row.spacing = 8
-        return row
+    }
+
+    private func sleepTimerMenuActions() -> [UIMenuElement] {
+        var actions: [UIMenuElement] = [15, 30, 45, 60].map { minutes in
+            UIAction(title: "\(minutes) minutes", image: UIImage(systemName: "timer")) { [weak self] _ in
+                AudioPlayer.shared.setSleepTimer(minutes: minutes)
+                self?.updateSleepTimerButton()
+            }
+        }
+        actions.append(UIAction(title: "End of Track", image: UIImage(systemName: "forward.end")) { [weak self] _ in
+            AudioPlayer.shared.setSleepTimerEndOfTrack()
+            self?.updateSleepTimerButton()
+        })
+        if AudioPlayer.shared.sleepTimerRemaining != nil || AudioPlayer.shared.sleepAtEndOfTrack {
+            actions.append(UIAction(title: "Cancel Timer", image: UIImage(systemName: "xmark.circle"), attributes: .destructive) { [weak self] _ in
+                AudioPlayer.shared.cancelSleepTimer()
+                self?.updateSleepTimerButton()
+            })
+        }
+        return actions
+    }
+
+    private func shareMenuActions() -> [UIMenuElement] {
+        guard let track = AudioPlayer.shared.currentTrack else { return [] }
+        var actions: [UIMenuElement] = [
+            UIAction(title: "Share Track", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
+                guard let self else { return }
+                self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
+            },
+            UIAction(title: "Copy Songlink", image: UIImage(systemName: "link")) { [weak self] _ in
+                self?.copySonglink(title: track.title, artist: track.artist)
+            },
+        ]
+        if let artwork = artworkView.image, artworkView.contentMode == .scaleAspectFill {
+            actions.append(UIAction(title: "Share Artwork", image: UIImage(systemName: "photo")) { [weak self] _ in
+                self?.shareArtworkImage(artwork)
+            })
+        }
+        return actions
+    }
+
+    private func copySonglink(title: String, artist: String) {
+        Task { [weak self] in
+            guard let result = await SonglinkService.shared.lookup(title: title, artist: artist) else {
+                if let self {
+                    ToastView.show("Couldn't find a Songlink for this track", in: self.view, style: .error)
+                }
+                return
+            }
+            UIPasteboard.general.url = result.pageURL
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            if let self {
+                ToastView.show("Songlink copied", in: self.view, style: .success)
+            }
+        }
+    }
+
+    private func shareArtworkImage(_ image: UIImage) {
+        let activity = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        activity.popoverPresentationController?.sourceView = artworkContainer
+        present(activity, animated: true)
     }
 
     private func setupAccessibilityOrder() {
         view.accessibilityElements = [
-            artworkContainer, titleMarquee, artistButton, albumLabel, playingFromLabel,
+            artworkContainer, titleMarquee, artistAvatarButton, artistButton, albumLabel, playingFromLabel,
             progressSlider, currentTimeLabel, remainingTimeLabel,
             skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton,
             volumeView,
@@ -460,6 +599,39 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
         setArtwork(state.artwork)
         updateBackdropPalette(artwork: state.artwork, state: state)
+        updateArtistImage(artist: state.artist)
+    }
+
+    /// Resolves the artist photo off-main and applies it to the ambient
+    /// backdrop layer and avatar, skipping redundant fetches for the same artist.
+    private func updateArtistImage(artist: String) {
+        let key = artist.lowercased()
+        guard key != currentArtistKey else { return }
+        currentArtistKey = key
+        artistImageTask?.cancel()
+
+        guard !artist.isEmpty else {
+            applyArtistImage(nil)
+            return
+        }
+        artistImageTask = Task { [weak self] in
+            let image = await ArtistImageService.shared.image(for: artist)
+            guard !Task.isCancelled, let self, self.currentArtistKey == key else { return }
+            self.applyArtistImage(image)
+        }
+    }
+
+    private func applyArtistImage(_ image: UIImage?) {
+        backdropView.setArtistImage(image, animated: hasAppliedInitialState)
+        let showAvatar = image != nil
+        artistAvatarButton.setImage(image, for: .normal)
+        guard artistAvatarButton.isHidden == showAvatar else { return }
+        let update = { self.artistAvatarButton.isHidden = !showAvatar }
+        if hasAppliedInitialState, !UIAccessibility.isReduceMotionEnabled {
+            UIView.animate(withDuration: 0.2, animations: update)
+        } else {
+            update()
+        }
     }
 
     private func setArtwork(_ image: UIImage?) {
@@ -473,7 +645,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             }
         }
         if hasAppliedInitialState, !isSwipeAnimating, !UIAccessibility.isReduceMotionEnabled {
-            UIView.transition(with: artworkView, duration: 0.35, options: [.transitionCrossDissolve, .allowUserInteraction], animations: update)
+            UIView.transition(with: artworkView, duration: 0.22, options: [.transitionCrossDissolve, .allowUserInteraction], animations: update)
         } else {
             update()
         }
@@ -511,7 +683,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         breatheAnimator?.stopAnimation(true)
         let scale = isPlaying ? 1.0 : Self.pausedArtworkScale
         artworkRestScale = scale
-        let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 0.72) { [self] in
+        let animator = UIViewPropertyAnimator(duration: 0.42, dampingRatio: 0.76) { [self] in
             artworkContainer.transform = CGAffineTransform(scaleX: scale, y: scale)
             artworkView.alpha = isPlaying ? 1 : 0.75
         }
@@ -535,24 +707,42 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     private func updateShuffleRepeatState() {
         let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
+        let animated = hasAppliedInitialState
         let shuffleActive = AudioPlayer.shared.shuffleEnabled
-        shuffleButton.tintColor = shuffleActive ? .white : .white.withAlphaComponent(0.4)
+        shuffleButton.tintColor = shuffleActive ? .white : .white.withAlphaComponent(0.55)
         shuffleButton.accessibilityValue = shuffleActive ? "On" : "Off"
+        shuffleCapsule?.setActive(shuffleActive, animated: animated)
 
         switch AudioPlayer.shared.repeatMode {
         case .off:
             repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .white.withAlphaComponent(0.4)
+            repeatButton.tintColor = .white.withAlphaComponent(0.55)
             repeatButton.accessibilityValue = "Off"
+            repeatCapsule?.setActive(false, animated: animated)
+            repeatCapsule?.setBadge(nil)
         case .all:
             repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
             repeatButton.tintColor = .white
             repeatButton.accessibilityValue = "All"
+            repeatCapsule?.setActive(true, animated: animated)
+            repeatCapsule?.setBadge("ALL")
         case .one:
             repeatButton.setImage(UIImage(systemName: "repeat.1", withConfiguration: config), for: .normal)
             repeatButton.tintColor = .white
             repeatButton.accessibilityValue = "One"
+            repeatCapsule?.setActive(true, animated: animated)
+            repeatCapsule?.setBadge("1")
         }
+    }
+
+    private func updateQueueBadge() {
+        let count = AudioPlayer.shared.queue.count
+        queueCapsule?.setBadge(count > 1 ? (count > 99 ? "99+" : "\(count)") : nil)
+        queueButton.accessibilityValue = count > 0 ? "\(count) tracks" : nil
+    }
+
+    @objc private func queueDidChange() {
+        updateQueueBadge()
     }
 
     private func presentQueue() {
@@ -574,13 +764,25 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         guard let track = AudioPlayer.shared.currentTrack else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         let artistAlbums = Library.shared.albums.filter { $0.artist == track.artist }
-        let vc = ArtistDetailViewController(artistName: track.artist, albums: artistAlbums)
+        dismissAndPush(ArtistDetailViewController(artistName: track.artist, albums: artistAlbums))
+    }
 
+    private func navigateToAlbum() {
+        guard let track = AudioPlayer.shared.currentTrack,
+              let album = Library.shared.albums.first(where: {
+                  $0.title == track.albumTitle && $0.artist == track.artist
+              })
+        else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        dismissAndPush(AlbumDetailViewController(album: album))
+    }
+
+    private func dismissAndPush(_ viewController: UIViewController) {
         dismiss(animated: true) {
             guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let rootVC = scene.windows.first?.rootViewController,
                   let nav = rootVC.children.compactMap({ $0 as? UINavigationController }).first else { return }
-            nav.pushViewController(vc, animated: true)
+            nav.pushViewController(viewController, animated: true)
         }
     }
 
@@ -588,11 +790,11 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         isSliderDragging = true
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         backdropView.setPaused(true)
-        UIView.animate(withDuration: 0.2) {
+        UIView.animate(withDuration: 0.15) {
             self.progressSlider.transform = CGAffineTransform(scaleX: 1.0, y: 1.4)
         }
         updateScrubBubble(time: TimeInterval(progressSlider.value))
-        UIView.animate(withDuration: 0.15) { self.scrubBubble.alpha = 1 }
+        UIView.animate(withDuration: 0.12) { self.scrubBubble.alpha = 1 }
     }
 
     @objc private func sliderTouchUp() {
@@ -600,10 +802,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         if presentedViewController == nil, view.window != nil {
             backdropView.setPaused(false)
         }
-        UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0) {
+        UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.75, initialSpringVelocity: 0.8) {
             self.progressSlider.transform = .identity
         }
-        UIView.animate(withDuration: 0.15) { self.scrubBubble.alpha = 0 }
+        UIView.animate(withDuration: 0.12) { self.scrubBubble.alpha = 0 }
         let targetTime = TimeInterval(progressSlider.value)
         chaseTime = targetTime
         seekToChaseTime()
@@ -703,6 +905,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         sleepTimerButton.setImage(UIImage(systemName: iconName, withConfiguration: config), for: .normal)
         sleepTimerButton.tintColor = isActive ? .white : .white.withAlphaComponent(0.7)
         sleepTimerButton.accessibilityValue = isActive ? "Active" : "Off"
+        sleepTimerCapsule?.setActive(isActive, animated: hasAppliedInitialState)
     }
 
     @objc private func handleSwipeLeft() {
@@ -723,7 +926,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             return
         }
         isSwipeAnimating = true
-        let outbound = UIViewPropertyAnimator(duration: 0.18, curve: .easeIn) { [self] in
+        let outbound = UIViewPropertyAnimator(duration: 0.12, curve: .easeIn) { [self] in
             artworkView.transform = CGAffineTransform(translationX: 36 * direction, y: 0).scaledBy(x: 0.94, y: 0.94)
             artworkView.alpha = 0.35
         }
@@ -731,7 +934,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             guard let self else { return }
             change()
             self.artworkView.transform = CGAffineTransform(translationX: -36 * direction, y: 0).scaledBy(x: 0.94, y: 0.94)
-            let inbound = UIViewPropertyAnimator(duration: 0.5, dampingRatio: 0.78) {
+            let spring = UISpringTimingParameters(dampingRatio: 0.84, initialVelocity: CGVector(dx: 2.2, dy: 0))
+            let inbound = UIViewPropertyAnimator(duration: 0.32, timingParameters: spring)
+            inbound.addAnimations {
                 self.artworkView.transform = .identity
                 self.artworkView.alpha = 1
             }
@@ -790,7 +995,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         hasAnimatedAppearance = true
         guard !UIAccessibility.isReduceMotionEnabled else { return }
         for (index, group) in appearanceGroups().enumerated() {
-            let animator = UIViewPropertyAnimator(duration: 0.55, dampingRatio: 0.8) { [self] in
+            let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) { [self] in
                 for element in group {
                     element.alpha = 1
                     element.transform = element === artworkContainer
@@ -798,7 +1003,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
                         : .identity
                 }
             }
-            animator.startAnimation(afterDelay: Double(index) * 0.08)
+            animator.startAnimation(afterDelay: Double(index) * 0.05)
         }
     }
 
@@ -819,6 +1024,9 @@ extension NowPlayingViewController: UIContextMenuInteractionDelegate {
         configurationForMenuAtLocation location: CGPoint
     ) -> UIContextMenuConfiguration? {
         guard let track = AudioPlayer.shared.currentTrack else { return nil }
+        if interaction.view === artworkContainer {
+            return artworkContextMenuConfiguration(track: track)
+        }
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
             let copyTitle = UIAction(title: "Copy Title", image: UIImage(systemName: "doc.on.doc")) { _ in
                 UIPasteboard.general.string = track.title
@@ -830,6 +1038,38 @@ extension NowPlayingViewController: UIContextMenuInteractionDelegate {
                 UIPasteboard.general.string = "\(track.artist) — \(track.title)"
             }
             return UIMenu(children: [copyTitle, copyArtist, copyBoth])
+        }
+    }
+
+    func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        willDisplayMenuFor configuration: UIContextMenuConfiguration,
+        animator: UIContextMenuInteractionAnimating?
+    ) {
+        guard interaction.view === artworkContainer else { return }
+        artworkView.layer.removeAnimation(forKey: "tiltRelease")
+        artworkView.layer.transform = CATransform3DIdentity
+    }
+
+    private func artworkContextMenuConfiguration(track: Track) -> UIContextMenuConfiguration {
+        UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            var actions: [UIMenuElement] = [
+                UIAction(title: "Go to Album", image: UIImage(systemName: "square.stack")) { _ in
+                    self?.navigateToAlbum()
+                },
+                UIAction(title: "Go to Artist", image: UIImage(systemName: "music.microphone")) { _ in
+                    self?.navigateToArtist()
+                },
+            ]
+            if let self, let artwork = self.artworkView.image, self.artworkView.contentMode == .scaleAspectFill {
+                actions.append(UIAction(title: "Share Artwork", image: UIImage(systemName: "square.and.arrow.up")) { _ in
+                    self.shareArtworkImage(artwork)
+                })
+            }
+            actions.append(UIAction(title: "Copy Title", image: UIImage(systemName: "doc.on.doc")) { _ in
+                UIPasteboard.general.string = track.title
+            })
+            return UIMenu(children: actions)
         }
     }
 }

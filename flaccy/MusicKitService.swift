@@ -117,6 +117,33 @@ final class MusicKitService {
         }
     }
 
+    /// Searches the Apple Music catalog for the artist and downloads their
+    /// editorial artwork; returns nil when no confident match or artwork exists.
+    nonisolated func fetchArtistImage(artist: String) async -> Data? {
+        guard !artist.isEmpty, await requestAuthorizationIfNeeded() else { return nil }
+
+        do {
+            var request = MusicCatalogSearchRequest(term: artist, types: [MusicKit.Artist.self])
+            request.limit = 5
+            let response = try await request.response()
+
+            let match = response.artists.first { $0.name.localizedCaseInsensitiveCompare(artist) == .orderedSame }
+                ?? response.artists.first { $0.name.localizedCaseInsensitiveContains(artist) }
+
+            guard let artworkURL = match?.artwork?.url(width: 1024, height: 1024) else {
+                await AppLogger.debug("MusicKit: no artist artwork for \(artist)", category: .content)
+                return nil
+            }
+
+            let (data, response2) = try await URLSession.shared.data(from: artworkURL)
+            guard let http = response2 as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            return data
+        } catch {
+            await AppLogger.error("MusicKit artist image fetch failed: \(error.localizedDescription)", category: .content)
+            return nil
+        }
+    }
+
     nonisolated func fetchAlbumArtwork(title: String, artist: String) async -> Data? {
         guard let album = await findAlbum(title: title, artist: artist),
               let artworkURL = album.artworkURL else { return nil }
