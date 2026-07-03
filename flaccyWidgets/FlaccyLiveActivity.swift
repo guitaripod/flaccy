@@ -37,20 +37,8 @@ struct FlaccyLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 4) {
-                        ProgressView(value: context.state.duration > 0 ? context.state.elapsed / context.state.duration : 0)
-                            .tint(.white)
-                        HStack {
-                            Text(formatTime(context.state.elapsed))
-                                .font(.system(size: 10, weight: .medium).monospacedDigit())
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text("-\(formatTime(max(0, context.state.duration - context.state.elapsed)))")
-                                .font(.system(size: 10, weight: .medium).monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 4)
+                    progressSection(context.state, timeStyle: .secondary)
+                        .padding(.horizontal, 4)
                 }
             } compactLeading: {
                 if let data = context.attributes.artworkData,
@@ -109,19 +97,7 @@ struct FlaccyLiveActivity: Widget {
                     .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1)
 
-                VStack(spacing: 2) {
-                    ProgressView(value: context.state.duration > 0 ? context.state.elapsed / context.state.duration : 0)
-                        .tint(.white)
-                    HStack {
-                        Text(formatTime(context.state.elapsed))
-                            .font(.system(size: 10, weight: .medium).monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.5))
-                        Spacer()
-                        Text("-\(formatTime(max(0, context.state.duration - context.state.elapsed)))")
-                            .font(.system(size: 10, weight: .medium).monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.5))
-                    }
-                }
+                progressSection(context.state, timeStyle: .white.opacity(0.5))
             }
 
             Spacer()
@@ -138,8 +114,46 @@ struct FlaccyLiveActivity: Widget {
         .padding(16)
     }
 
+    /// Renders playback progress from the state's start date so the system animates
+    /// it forward on its own — no per-second activity updates required.
+    @ViewBuilder
+    private func progressSection(_ state: FlaccyActivityAttributes.ContentState, timeStyle: some ShapeStyle) -> some View {
+        VStack(spacing: 2) {
+            if state.isPlaying, state.duration > 0 {
+                ProgressView(timerInterval: state.playbackStartDate...state.playbackEndDate, countsDown: false, label: { EmptyView() }, currentValueLabel: { EmptyView() })
+                    .tint(.white)
+                HStack {
+                    Text(timerInterval: state.playbackStartDate...state.playbackEndDate, countsDown: false, showsHours: state.duration >= 3600)
+                        .font(.system(size: 10, weight: .medium).monospacedDigit())
+                        .foregroundStyle(timeStyle)
+                        .frame(maxWidth: 60, alignment: .leading)
+                    Spacer()
+                    Text(timerInterval: state.playbackStartDate...state.playbackEndDate, countsDown: true, showsHours: state.duration >= 3600)
+                        .font(.system(size: 10, weight: .medium).monospacedDigit())
+                        .foregroundStyle(timeStyle)
+                        .frame(maxWidth: 60, alignment: .trailing)
+                }
+            } else {
+                ProgressView(value: state.progressFraction)
+                    .tint(.white)
+                HStack {
+                    Text(formatTime(state.pausedElapsed))
+                        .font(.system(size: 10, weight: .medium).monospacedDigit())
+                        .foregroundStyle(timeStyle)
+                    Spacer()
+                    Text("-\(formatTime(max(0, state.duration - state.pausedElapsed)))")
+                        .font(.system(size: 10, weight: .medium).monospacedDigit())
+                        .foregroundStyle(timeStyle)
+                }
+            }
+        }
+    }
+
     private func formatTime(_ time: Double) -> String {
         let total = Int(time)
+        if total >= 3600 {
+            return String(format: "%d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
+        }
         return String(format: "%d:%02d", total / 60, total % 60)
     }
 
