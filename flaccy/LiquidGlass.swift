@@ -58,6 +58,77 @@ enum LiquidGlass {
     }
 }
 
+extension LiquidGlass {
+
+    /// Wraps a view whose subtree contains multiple glass capsules in a
+    /// UIGlassContainerEffect on iOS 26 so adjacent glass shapes merge and morph
+    /// as one group; on earlier systems the view is returned unchanged.
+    static func grouping(_ content: UIView) -> UIView {
+        guard #available(iOS 26.0, *), !UIAccessibility.isReduceTransparencyEnabled else {
+            return content
+        }
+        let container = UIVisualEffectView(effect: UIGlassContainerEffect())
+        content.translatesAutoresizingMaskIntoConstraints = false
+        container.contentView.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: container.contentView.topAnchor),
+            content.leadingAnchor.constraint(equalTo: container.contentView.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: container.contentView.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: container.contentView.bottomAnchor),
+        ])
+        return container
+    }
+
+    /// A glass capsule wrapping a titled action button, sized for detail-screen
+    /// action rows, with white foreground and light-impact haptics on tap.
+    static func actionCapsule(
+        title: String,
+        systemImage: String,
+        height: CGFloat = 48,
+        action: @escaping () -> Void
+    ) -> UIView {
+        let button = makeActionButton(systemImage: systemImage, action: action)
+        button.configuration?.title = title
+        button.configuration?.imagePadding = 6
+        button.configuration?.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .scaled(.subheadline, size: 15, weight: .semibold)
+            return outgoing
+        }
+        return capsule(hosting: button, height: height)
+    }
+
+    /// A glass capsule wrapping an icon-only action button; `accessibilityLabel`
+    /// names the action for VoiceOver since no title is shown.
+    static func iconCapsule(
+        systemImage: String,
+        accessibilityLabel: String,
+        height: CGFloat = 48,
+        action: @escaping () -> Void
+    ) -> UIView {
+        let button = makeActionButton(systemImage: systemImage, action: action)
+        button.accessibilityLabel = accessibilityLabel
+        let capsule = capsule(hosting: button, height: height)
+        capsule.widthAnchor.constraint(equalToConstant: height + 10).isActive = true
+        return capsule
+    }
+
+    private static func makeActionButton(systemImage: String, action: @escaping () -> Void) -> UIButton {
+        var config = UIButton.Configuration.plain()
+        config.image = UIImage(
+            systemName: systemImage,
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
+        )
+        config.baseForegroundColor = .white
+        let button = UIButton(configuration: config)
+        button.addAction(UIAction { _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        }, for: .touchUpInside)
+        return button
+    }
+}
+
 /// A glass capsule hosting a control, with an animatable active-state fill
 /// and an optional count badge pinned to the top-trailing corner.
 final class GlassCapsule: UIView {

@@ -5,6 +5,14 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     private let album: Album
     private let audioPlayer: AudioPlaying
     private var tableView: UITableView!
+    private var dataSource: UITableViewDiffableDataSource<Int, Track>!
+    private let backdropView = AmbientPaletteBackdropView()
+    private let artworkCard = UIView()
+    private let artworkView = UIImageView()
+    private let titleMarquee = MarqueeLabel()
+    private var accentColor: UIColor = .white
+    private var appearanceElements: [UIView] = []
+    private var hasAnimatedAppearance = false
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
@@ -19,12 +27,26 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        overrideUserInterfaceStyle = .dark
+        view.backgroundColor = .black
         navigationItem.largeTitleDisplayMode = .never
+        setupBackdrop()
         setupTableView()
+        configureDataSource()
+        applySnapshot()
 
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        prepareAppearanceAnimationIfNeeded()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        runAppearanceAnimationIfNeeded()
     }
 
     deinit {
@@ -32,18 +54,53 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     }
 
     @objc private func playbackChanged() {
-        tableView.reloadData()
+        guard let dataSource else { return }
+        var snapshot = dataSource.snapshot()
+        snapshot.reconfigureItems(snapshot.itemIdentifiers)
+        dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    private func setupBackdrop() {
+        backdropView.frame = view.bounds
+        view.addSubview(backdropView)
+        applyPalette(from: resolvedArtwork(), animated: false)
+    }
+
+    private func resolvedArtwork() -> UIImage? {
+        album.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist)
+    }
+
+    private func applyPalette(from artwork: UIImage?, animated: Bool) {
+        let cacheKey = "\(album.title)\0\(album.artist)"
+        ArtworkPaletteExtractor.palette(for: artwork, cacheKey: cacheKey, fallbackSeed: album.id) { [weak self] palette in
+            guard let self else { return }
+            self.backdropView.apply(palette, animated: animated)
+            self.accentColor = Self.readableAccent(from: palette)
+            self.playbackChanged()
+        }
+    }
+
+    /// Lifts the dominant palette color to a bright, low-saturation tint so
+    /// now-playing rows stay legible against the dark backdrop.
+    private static func readableAccent(from palette: ArtworkPalette) -> UIColor {
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        var alpha: CGFloat = 0
+        palette.dominant.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        return UIColor(hue: hue, saturation: min(saturation, 0.5), brightness: max(brightness, 0.9), alpha: 1)
     }
 
     private func setupTableView() {
         tableView = UITableView(frame: .zero, style: .plain)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.delegate = self
-        tableView.dataSource = self
         tableView.separatorStyle = .none
         tableView.backgroundColor = .clear
+        tableView.indicatorStyle = .white
         tableView.register(AlbumTrackCell.self, forCellReuseIdentifier: AlbumTrackCell.reuseID)
         tableView.tableHeaderView = buildHeaderView()
+        tableView.tableFooterView = buildFooterView()
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
@@ -54,167 +111,248 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         ])
     }
 
+    private func configureDataSource() {
+        dataSource = UITableViewDiffableDataSource<Int, Track>(tableView: tableView) {
+            [weak self] tableView, indexPath, track in
+            let cell = tableView.dequeueReusableCell(withIdentifier: AlbumTrackCell.reuseID, for: indexPath) as! AlbumTrackCell
+            guard let self else { return cell }
+            let isCurrent = self.audioPlayer.currentTrack?.fileURL == track.fileURL
+            cell.configure(
+                with: track,
+                index: indexPath.row,
+                isCurrent: isCurrent,
+                isPlaying: isCurrent && self.audioPlayer.isPlaying,
+                accent: self.accentColor
+            )
+            return cell
+        }
+        dataSource.defaultRowAnimation = .fade
+    }
+
+    private func applySnapshot() {
+        var snapshot = NSDiffableDataSourceSnapshot<Int, Track>()
+        snapshot.appendSections([0])
+        snapshot.appendItems(album.tracks)
+        dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        guard let header = tableView.tableHeaderView else { return }
-        let targetSize = CGSize(
-            width: tableView.bounds.width,
-            height: UIView.layoutFittingCompressedSize.height
-        )
-        let size = header.systemLayoutSizeFitting(
-            targetSize,
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        )
-        if header.frame.size.height != size.height {
-            header.frame.size.height = size.height
-            tableView.tableHeaderView = header
+        backdropView.frame = view.bounds
+        artworkCard.layer.shadowPath = UIBezierPath(
+            roundedRect: artworkCard.bounds, cornerRadius: 16
+        ).cgPath
+        sizeHeaderToFit()
+    }
+
+    private func sizeHeaderToFit() {
+        for wrapper in [tableView.tableHeaderView, tableView.tableFooterView] {
+            guard let wrapper else { continue }
+            let size = wrapper.systemLayoutSizeFitting(
+                CGSize(width: tableView.bounds.width, height: UIView.layoutFittingCompressedSize.height),
+                withHorizontalFittingPriority: .required,
+                verticalFittingPriority: .fittingSizeLevel
+            )
+            if wrapper.frame.size.height != size.height {
+                wrapper.frame.size.height = size.height
+                if wrapper === tableView.tableHeaderView {
+                    tableView.tableHeaderView = wrapper
+                } else {
+                    tableView.tableFooterView = wrapper
+                }
+            }
         }
     }
 
     private func buildHeaderView() -> UIView {
         let container = UIView()
 
-        let artworkShadow = UIView()
-        artworkShadow.layer.shadowColor = UIColor.black.cgColor
-        artworkShadow.layer.shadowOpacity = 0.25
-        artworkShadow.layer.shadowOffset = CGSize(width: 0, height: 8)
-        artworkShadow.layer.shadowRadius = 20
+        setupArtworkCard()
 
-        let artworkView = UIImageView()
-        artworkView.contentMode = .scaleAspectFill
-        artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 12
-        artworkView.backgroundColor = .tertiarySystemFill
-        artworkView.tintColor = .tertiaryLabel
-        artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 60, weight: .ultraLight)
+        titleMarquee.text = album.title
+        titleMarquee.font = .scaled(.title2, size: 24, weight: .bold)
+        titleMarquee.textColor = .white
 
-        let cached = album.artwork
-            ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist)
-
-        if let artwork = cached {
-            artworkView.image = artwork
-        } else {
-            artworkView.contentMode = .center
-            artworkView.image = UIImage(systemName: "music.note")
-            AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { image in
-                guard let image else { return }
-                artworkView.contentMode = .scaleAspectFill
-                artworkView.image = image
-            }
-        }
-
-        artworkView.translatesAutoresizingMaskIntoConstraints = false
-        artworkShadow.addSubview(artworkView)
-        NSLayoutConstraint.activate([
-            artworkView.topAnchor.constraint(equalTo: artworkShadow.topAnchor),
-            artworkView.leadingAnchor.constraint(equalTo: artworkShadow.leadingAnchor),
-            artworkView.trailingAnchor.constraint(equalTo: artworkShadow.trailingAnchor),
-            artworkView.bottomAnchor.constraint(equalTo: artworkShadow.bottomAnchor),
-            artworkView.heightAnchor.constraint(equalTo: artworkView.widthAnchor),
-        ])
-
-        let titleLabel = UILabel()
-        titleLabel.text = album.title
-        titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
-        titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 2
-
-        let artistLabel = UILabel()
-        artistLabel.text = album.artist
-        artistLabel.font = .systemFont(ofSize: 16, weight: .regular)
-        artistLabel.textColor = .tintColor
-        artistLabel.textAlignment = .center
-        artistLabel.isUserInteractionEnabled = true
-        let artistTap = UITapGestureRecognizer(target: self, action: #selector(artistTapped))
-        artistLabel.addGestureRecognizer(artistTap)
+        let artistButton = UIButton(type: .system)
+        artistButton.setTitle(album.artist, for: .normal)
+        artistButton.titleLabel?.font = .scaled(.callout, size: 16, weight: .semibold)
+        artistButton.titleLabel?.adjustsFontForContentSizeCategory = true
+        artistButton.setTitleColor(.white.withAlphaComponent(0.85), for: .normal)
+        artistButton.contentHorizontalAlignment = .leading
+        artistButton.accessibilityHint = "Shows the artist's albums"
+        artistButton.addAction(UIAction { [weak self] _ in self?.artistTapped() }, for: .touchUpInside)
 
         let metaLabel = UILabel()
-        metaLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        metaLabel.textColor = .tertiaryLabel
-        metaLabel.textAlignment = .center
+        metaLabel.font = .scaled(.footnote, size: 13, weight: .regular)
+        metaLabel.adjustsFontForContentSizeCategory = true
+        metaLabel.textColor = .white.withAlphaComponent(0.55)
         var metaParts: [String] = []
         if let year = album.year, !year.isEmpty { metaParts.append(year) }
         if let genre = album.genre, !genre.isEmpty { metaParts.append(genre) }
         metaLabel.text = metaParts.joined(separator: " \u{00B7} ")
         metaLabel.isHidden = metaParts.isEmpty
 
-        let totalSeconds = album.tracks.reduce(0) { $0 + Int($1.duration) }
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let durationText: String
-        if hours > 0 {
-            durationText = "\(album.tracks.count) tracks \u{00B7} \(hours) hr \(minutes) min"
-        } else {
-            durationText = "\(album.tracks.count) tracks \u{00B7} \(minutes) min"
-        }
-
-        let durationLabel = UILabel()
-        durationLabel.font = .systemFont(ofSize: 14, weight: .regular)
-        durationLabel.textColor = .tertiaryLabel
-        durationLabel.textAlignment = .center
-        durationLabel.text = durationText
-
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistLabel, metaLabel, durationLabel])
+        let infoStack = UIStackView(arrangedSubviews: [titleMarquee, artistButton, metaLabel])
         infoStack.axis = .vertical
-        infoStack.spacing = 4
-        infoStack.alignment = .center
+        infoStack.spacing = 2
+        infoStack.alignment = .leading
+        titleMarquee.widthAnchor.constraint(equalTo: infoStack.widthAnchor).isActive = true
 
-        let playButton = UIButton(configuration: .filled())
-        playButton.configuration?.title = "Play"
-        playButton.configuration?.image = UIImage(systemName: "play.fill")
-        playButton.configuration?.imagePadding = 6
-        playButton.configuration?.cornerStyle = .capsule
-        playButton.addAction(UIAction { [weak self] _ in self?.playTapped() }, for: .touchUpInside)
+        let actionRow = buildActionRow()
+        appearanceElements = [artworkCard, infoStack, actionRow]
 
-        let shuffleButton = UIButton(configuration: .tinted())
-        shuffleButton.configuration?.title = "Shuffle"
-        shuffleButton.configuration?.image = UIImage(systemName: "shuffle")
-        shuffleButton.configuration?.imagePadding = 6
-        shuffleButton.configuration?.cornerStyle = .capsule
-        shuffleButton.addAction(UIAction { [weak self] _ in self?.shuffleTapped() }, for: .touchUpInside)
-
-        let shareAlbumButton = UIButton(configuration: .plain())
-        shareAlbumButton.configuration?.image = UIImage(systemName: "square.and.arrow.up")
-        shareAlbumButton.configuration?.baseForegroundColor = .secondaryLabel
-        shareAlbumButton.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            self.shareAlbumViaSonglink(title: self.album.title, artist: self.album.artist, from: self.view)
-        }, for: .touchUpInside)
-
-        let buttonStack = UIStackView(arrangedSubviews: [playButton, shuffleButton])
-        buttonStack.axis = .horizontal
-        buttonStack.spacing = 12
-        buttonStack.distribution = .fillEqually
-
-        let mainStack = UIStackView(arrangedSubviews: [artworkShadow, infoStack, buttonStack, shareAlbumButton])
+        let mainStack = UIStackView(arrangedSubviews: [artworkCard, infoStack, actionRow])
         mainStack.axis = .vertical
-        mainStack.spacing = 16
-        mainStack.setCustomSpacing(24, after: infoStack)
-        mainStack.alignment = .center
+        mainStack.spacing = 18
+        mainStack.setCustomSpacing(22, after: artworkCard)
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(mainStack)
 
-        let leading = mainStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 32)
-        let trailing = mainStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -32)
-        let bottom = mainStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -24)
-        leading.priority = .defaultHigh
-        trailing.priority = .defaultHigh
-        bottom.priority = .defaultHigh
-
-        let artworkWidth = artworkShadow.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        artworkWidth.priority = .defaultHigh
-        let buttonWidth = buttonStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        buttonWidth.priority = .defaultHigh
+        let leading = mainStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24)
+        let trailing = mainStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
+        let bottom = mainStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -20)
+        for constraint in [leading, trailing, bottom] {
+            constraint.priority = .defaultHigh
+        }
+        let cardWidth = artworkCard.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.8)
+        cardWidth.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
-            mainStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
-            leading, trailing, bottom,
-            artworkWidth, buttonWidth,
+            mainStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            artworkCard.centerXAnchor.constraint(equalTo: mainStack.centerXAnchor),
+            leading, trailing, bottom, cardWidth,
         ])
-
         return container
+    }
+
+    private func setupArtworkCard() {
+        artworkCard.layer.shadowColor = UIColor.black.cgColor
+        artworkCard.layer.shadowOpacity = 0.45
+        artworkCard.layer.shadowOffset = CGSize(width: 0, height: 12)
+        artworkCard.layer.shadowRadius = 28
+        addMotionParallax(to: artworkCard)
+
+        artworkView.contentMode = .scaleAspectFill
+        artworkView.clipsToBounds = true
+        artworkView.layer.cornerRadius = 16
+        artworkView.layer.cornerCurve = .continuous
+        artworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        artworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
+        artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 56, weight: .ultraLight)
+        artworkView.isAccessibilityElement = true
+        artworkView.accessibilityLabel = "Album artwork for \(album.title)"
+
+        if let artwork = resolvedArtwork() {
+            artworkView.image = artwork
+        } else {
+            artworkView.contentMode = .center
+            artworkView.image = UIImage(systemName: "music.note")
+            AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { [weak self] image in
+                guard let self, let image else { return }
+                self.artworkView.contentMode = .scaleAspectFill
+                self.artworkView.image = image
+                self.applyPalette(from: image, animated: true)
+            }
+        }
+
+        artworkView.translatesAutoresizingMaskIntoConstraints = false
+        artworkCard.addSubview(artworkView)
+        NSLayoutConstraint.activate([
+            artworkView.topAnchor.constraint(equalTo: artworkCard.topAnchor),
+            artworkView.leadingAnchor.constraint(equalTo: artworkCard.leadingAnchor),
+            artworkView.trailingAnchor.constraint(equalTo: artworkCard.trailingAnchor),
+            artworkView.bottomAnchor.constraint(equalTo: artworkCard.bottomAnchor),
+            artworkView.heightAnchor.constraint(equalTo: artworkView.widthAnchor),
+        ])
+    }
+
+    /// Device-tilt parallax matching the Now Playing artwork card; skipped
+    /// under Reduce Motion.
+    private func addMotionParallax(to card: UIView) {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
+        horizontal.minimumRelativeValue = -14
+        horizontal.maximumRelativeValue = 14
+        let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
+        vertical.minimumRelativeValue = -10
+        vertical.maximumRelativeValue = 10
+        let group = UIMotionEffectGroup()
+        group.motionEffects = [horizontal, vertical]
+        card.addMotionEffect(group)
+    }
+
+    private func buildActionRow() -> UIView {
+        let play = LiquidGlass.actionCapsule(title: "Play", systemImage: "play.fill") { [weak self] in
+            self?.playTapped()
+        }
+        let shuffle = LiquidGlass.actionCapsule(title: "Shuffle", systemImage: "shuffle") { [weak self] in
+            self?.shuffleTapped()
+        }
+        let queue = LiquidGlass.iconCapsule(systemImage: "text.append", accessibilityLabel: "Add album to queue") { [weak self] in
+            self?.addAlbumToQueue()
+        }
+        let share = LiquidGlass.iconCapsule(systemImage: "square.and.arrow.up", accessibilityLabel: "Share album") { [weak self] in
+            guard let self else { return }
+            self.shareAlbumViaSonglink(title: self.album.title, artist: self.album.artist, from: self.view)
+        }
+        play.widthAnchor.constraint(equalTo: shuffle.widthAnchor).isActive = true
+
+        let row = UIStackView(arrangedSubviews: [play, shuffle, queue, share])
+        row.spacing = 10
+        return LiquidGlass.grouping(row)
+    }
+
+    private func buildFooterView() -> UIView {
+        let container = UIView()
+        let label = UILabel()
+        label.font = .scaled(.footnote, size: 13, weight: .regular)
+        label.adjustsFontForContentSizeCategory = true
+        label.textColor = .white.withAlphaComponent(0.45)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.text = footerText()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -32),
+        ])
+        let trailing = label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
+        trailing.priority = .defaultHigh
+        trailing.isActive = true
+        return container
+    }
+
+    private func footerText() -> String {
+        let count = album.tracks.count
+        let trackWord = count == 1 ? "track" : "tracks"
+        let totalSeconds = album.tracks.reduce(0) { $0 + Int($1.duration) }
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let duration = hours > 0 ? "\(hours) hr \(minutes) min" : "\(minutes) min"
+        return "\(count) \(trackWord) \u{00B7} \(duration)"
+    }
+
+    private func prepareAppearanceAnimationIfNeeded() {
+        guard !hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
+        for element in appearanceElements {
+            element.alpha = 0
+            element.transform = CGAffineTransform(translationX: 0, y: 14)
+        }
+    }
+
+    private func runAppearanceAnimationIfNeeded() {
+        guard !hasAnimatedAppearance else { return }
+        hasAnimatedAppearance = true
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        for (index, element) in appearanceElements.enumerated() {
+            let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) {
+                element.alpha = 1
+                element.transform = .identity
+            }
+            animator.startAnimation(afterDelay: Double(index) * 0.05)
+        }
     }
 
     private func playTapped() {
@@ -229,26 +367,19 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         audioPlayer.play(shuffled, startingAt: 0)
     }
 
-    @objc private func artistTapped() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    private func addAlbumToQueue() {
+        for track in album.tracks {
+            AudioPlayer.shared.addToQueue(track)
+        }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        ToastView.show("Added \(album.tracks.count) tracks to queue", in: view, style: .info)
+    }
+
+    private func artistTapped() {
+        impactLight.impactOccurred()
         let artistAlbums = Library.shared.albums.filter { $0.artist == album.artist }
         let vc = ArtistDetailViewController(artistName: album.artist, albums: artistAlbums)
         navigationController?.pushViewController(vc, animated: true)
-    }
-}
-
-extension AlbumDetailViewController: UITableViewDataSource {
-
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        album.tracks.count
-    }
-
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: AlbumTrackCell.reuseID, for: indexPath) as! AlbumTrackCell
-        let track = album.tracks[indexPath.row]
-        let isNowPlaying = (audioPlayer.currentTrack?.fileURL == track.fileURL && audioPlayer.isPlaying)
-        cell.configure(with: track, index: indexPath.row, isNowPlaying: isNowPlaying)
-        return cell
     }
 }
 
@@ -260,12 +391,59 @@ extension AlbumDetailViewController: UITableViewDelegate {
         audioPlayer.play(album.tracks, startingAt: indexPath.row)
     }
 
+    /// Stretchy hero: pulling past the top scales the artwork card up around
+    /// its center so the overscroll feels physical.
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
+        let pull = -(scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
+        if pull > 0 {
+            let scale = 1 + min(pull / 500, 0.18)
+            artworkCard.transform = CGAffineTransform(translationX: 0, y: -pull * 0.15).scaledBy(x: scale, y: scale)
+        } else {
+            artworkCard.transform = .identity
+        }
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
+        let playNext = UIContextualAction(style: .normal, title: "Play Next") { [weak self] _, _, completion in
+            guard let self else { return completion(false) }
+            AudioPlayer.shared.insertNext(track)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            ToastView.show("Playing next", in: self.view, style: .info)
+            completion(true)
+        }
+        playNext.image = UIImage(systemName: "text.line.first.and.arrowtriangle.forward")
+        playNext.backgroundColor = .systemIndigo
+        return UISwipeActionsConfiguration(actions: [playNext])
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
+        let addToQueue = UIContextualAction(style: .normal, title: "Queue") { [weak self] _, _, completion in
+            guard let self else { return completion(false) }
+            AudioPlayer.shared.addToQueue(track)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            ToastView.show("Added to queue", in: self.view, style: .info)
+            completion(true)
+        }
+        addToQueue.image = UIImage(systemName: "text.append")
+        addToQueue.backgroundColor = .systemTeal
+        return UISwipeActionsConfiguration(actions: [addToQueue])
+    }
+
     func tableView(
         _ tableView: UITableView,
         contextMenuConfigurationForRowAt indexPath: IndexPath,
         point: CGPoint
     ) -> UIContextMenuConfiguration? {
-        let track = album.tracks[indexPath.row]
+        guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             self?.buildTrackContextMenu(for: track)
         }
@@ -381,49 +559,53 @@ private final class AlbumTrackCell: UITableViewCell {
 
     static let reuseID = "AlbumTrackCell"
 
-    let numberLabel = UILabel()
-    let nowPlayingIcon = UIImageView()
-    let trackTitleLabel = UILabel()
-    let durationLabel = UILabel()
+    private let numberLabel = UILabel()
+    private let barsView = NowPlayingBarsView()
+    private let trackTitleLabel = UILabel()
+    private let durationLabel = UILabel()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         backgroundColor = .clear
+        let selection = UIView()
+        selection.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        selectedBackgroundView = selection
 
-        numberLabel.font = .monospacedDigitSystemFont(ofSize: 15, weight: .regular)
-        numberLabel.textColor = .tertiaryLabel
+        numberLabel.font = UIFontMetrics(forTextStyle: .subheadline)
+            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 15, weight: .regular), maximumPointSize: 24)
+        numberLabel.adjustsFontForContentSizeCategory = true
+        numberLabel.textColor = .white.withAlphaComponent(0.45)
         numberLabel.textAlignment = .center
 
-        nowPlayingIcon.image = UIImage(
-            systemName: "speaker.wave.2.fill",
-            withConfiguration: UIImage.SymbolConfiguration(pointSize: 10, weight: .medium)
-        )
-        nowPlayingIcon.tintColor = .systemBlue
-        nowPlayingIcon.contentMode = .center
-        nowPlayingIcon.isHidden = true
+        barsView.isHidden = true
 
-        trackTitleLabel.font = .preferredFont(forTextStyle: .body)
+        trackTitleLabel.font = .scaled(.body, size: 16, weight: .regular)
+        trackTitleLabel.adjustsFontForContentSizeCategory = true
         trackTitleLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         trackTitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        durationLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
-        durationLabel.textColor = .tertiaryLabel
+        durationLabel.font = UIFontMetrics(forTextStyle: .footnote)
+            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 13, weight: .regular), maximumPointSize: 22)
+        durationLabel.adjustsFontForContentSizeCategory = true
+        durationLabel.textColor = .white.withAlphaComponent(0.45)
         durationLabel.textAlignment = .right
 
         let numberContainer = UIView()
         numberContainer.translatesAutoresizingMaskIntoConstraints = false
         numberLabel.translatesAutoresizingMaskIntoConstraints = false
-        nowPlayingIcon.translatesAutoresizingMaskIntoConstraints = false
+        barsView.translatesAutoresizingMaskIntoConstraints = false
         numberContainer.addSubview(numberLabel)
-        numberContainer.addSubview(nowPlayingIcon)
+        numberContainer.addSubview(barsView)
 
         NSLayoutConstraint.activate([
             numberLabel.topAnchor.constraint(equalTo: numberContainer.topAnchor),
             numberLabel.bottomAnchor.constraint(equalTo: numberContainer.bottomAnchor),
             numberLabel.leadingAnchor.constraint(equalTo: numberContainer.leadingAnchor),
             numberLabel.trailingAnchor.constraint(equalTo: numberContainer.trailingAnchor),
-            nowPlayingIcon.centerXAnchor.constraint(equalTo: numberContainer.centerXAnchor),
-            nowPlayingIcon.centerYAnchor.constraint(equalTo: numberContainer.centerYAnchor),
+            barsView.centerXAnchor.constraint(equalTo: numberContainer.centerXAnchor),
+            barsView.centerYAnchor.constraint(equalTo: numberContainer.centerYAnchor),
+            barsView.widthAnchor.constraint(equalToConstant: 16),
+            barsView.heightAnchor.constraint(equalToConstant: 14),
         ])
 
         let stack = UIStackView(arrangedSubviews: [numberContainer, trackTitleLabel, durationLabel])
@@ -434,26 +616,107 @@ private final class AlbumTrackCell: UITableViewCell {
 
         NSLayoutConstraint.activate([
             numberContainer.widthAnchor.constraint(equalToConstant: 28),
-            durationLabel.widthAnchor.constraint(equalToConstant: 48),
+            durationLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 48),
             stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
         ])
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(with track: Track, index: Int, isNowPlaying: Bool) {
+    func configure(with track: Track, index: Int, isCurrent: Bool, isPlaying: Bool, accent: UIColor) {
         numberLabel.text = track.trackNumber > 0 ? "\(track.trackNumber)" : "\(index + 1)"
         trackTitleLabel.text = track.title
         let minutes = Int(track.duration) / 60
         let seconds = Int(track.duration) % 60
         durationLabel.text = String(format: "%d:%02d", minutes, seconds)
 
-        numberLabel.isHidden = isNowPlaying
-        nowPlayingIcon.isHidden = !isNowPlaying
-        trackTitleLabel.textColor = isNowPlaying ? .systemBlue : .label
+        numberLabel.isHidden = isCurrent
+        barsView.isHidden = !isCurrent
+        barsView.tintColor = accent
+        barsView.setAnimating(isPlaying)
+        trackTitleLabel.textColor = isCurrent ? accent : .white
+        trackTitleLabel.font = .scaled(.body, size: 16, weight: isCurrent ? .semibold : .regular)
+        accessibilityValue = isCurrent ? (isPlaying ? "Now playing" : "Paused") : nil
+    }
+}
+
+/// Three vertical bars that bounce while the track is playing and freeze at
+/// staggered heights when paused; Reduce Motion keeps them static.
+private final class NowPlayingBarsView: UIView {
+
+    private let barLayers: [CALayer] = (0..<3).map { _ in CALayer() }
+    private var isAnimating = false
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        for bar in barLayers {
+            bar.cornerRadius = 1.25
+            layer.addSublayer(bar)
+        }
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(restartIfNeeded),
+            name: UIApplication.willEnterForegroundNotification, object: nil
+        )
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func tintColorDidChange() {
+        super.tintColorDidChange()
+        for bar in barLayers {
+            bar.backgroundColor = tintColor.cgColor
+        }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let barWidth: CGFloat = 2.5
+        let spacing = (bounds.width - barWidth * 3) / 2
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (index, bar) in barLayers.enumerated() {
+            let x = CGFloat(index) * (barWidth + spacing)
+            bar.frame = CGRect(x: x, y: 0, width: barWidth, height: bounds.height)
+            bar.anchorPoint = CGPoint(x: 0.5, y: 1)
+            bar.position = CGPoint(x: x + barWidth / 2, y: bounds.height)
+            bar.backgroundColor = tintColor.cgColor
+        }
+        CATransaction.commit()
+        applyBarState()
+    }
+
+    func setAnimating(_ animating: Bool) {
+        isAnimating = animating
+        applyBarState()
+    }
+
+    @objc private func restartIfNeeded() {
+        applyBarState()
+    }
+
+    private func applyBarState() {
+        let restScales: [CGFloat] = [0.45, 0.8, 0.6]
+        guard isAnimating, !UIAccessibility.isReduceMotionEnabled, window != nil || superview != nil else {
+            for (index, bar) in barLayers.enumerated() {
+                bar.removeAnimation(forKey: "bounce")
+                bar.transform = CATransform3DMakeScale(1, restScales[index], 1)
+            }
+            return
+        }
+        for (index, bar) in barLayers.enumerated() {
+            guard bar.animation(forKey: "bounce") == nil else { continue }
+            let animation = CABasicAnimation(keyPath: "transform.scale.y")
+            animation.fromValue = restScales[index]
+            animation.toValue = 1.0
+            animation.duration = 0.36 + Double(index) * 0.08
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            bar.add(animation, forKey: "bounce")
+        }
     }
 }

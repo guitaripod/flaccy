@@ -54,10 +54,14 @@ final class ArtistDetailViewController: UIViewController {
     private var albums: [Album]
     private var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "artistDetailAlbumSort") ?? "") ?? .title
     private var bio: String?
-    private var artistImageURL: String?
+    private var artistPhoto: UIImage?
+    private var artistPhotoTask: Task<Void, Never>?
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<ArtistDetailSection, ArtistDetailItem>!
+    private let backdropView = AmbientPaletteBackdropView()
+    private var hasAnimatedAppearance = false
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
+    private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
     init(artistName: String, albums: [Album]) {
         self.artistName = artistName
@@ -68,17 +72,92 @@ final class ArtistDetailViewController: UIViewController {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    deinit {
+        artistPhotoTask?.cancel()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        overrideUserInterfaceStyle = .dark
+        view.backgroundColor = .black
         navigationItem.largeTitleDisplayMode = .never
 
+        setupBackdrop()
         setupSortMenu()
         fetchArtistInfo()
         sortAlbums()
         setupCollectionView()
         configureDataSource()
         applySnapshot()
+        fetchArtistPhoto()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if !hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled {
+            collectionView.alpha = 0
+            collectionView.transform = CGAffineTransform(translationX: 0, y: 16)
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard !hasAnimatedAppearance else { return }
+        hasAnimatedAppearance = true
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) { [self] in
+            collectionView.alpha = 1
+            collectionView.transform = .identity
+        }
+        animator.startAnimation()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        backdropView.frame = view.bounds
+    }
+
+    private func setupBackdrop() {
+        backdropView.frame = view.bounds
+        view.addSubview(backdropView)
+        applyPalette(from: initialArtwork(), animated: false)
+    }
+
+    private func initialArtwork() -> UIImage? {
+        guard let album = albums.first else { return nil }
+        return album.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist)
+    }
+
+    private func applyPalette(from image: UIImage?, animated: Bool) {
+        ArtworkPaletteExtractor.palette(
+            for: image,
+            cacheKey: "artist\0\(artistName.lowercased())",
+            fallbackSeed: artistName
+        ) { [weak self] palette in
+            self?.backdropView.apply(palette, animated: animated)
+        }
+    }
+
+    /// Resolves the artist photo through the caching service, then swaps it into
+    /// the hero and re-derives the ambient palette from the photo itself.
+    private func fetchArtistPhoto() {
+        artistPhotoTask = Task { [weak self] in
+            guard let self else { return }
+            let image = await ArtistImageService.shared.image(for: self.artistName)
+            guard !Task.isCancelled, let image else { return }
+            self.artistPhoto = image
+            ArtworkPaletteExtractor.palette(
+                for: image,
+                cacheKey: "artistphoto\0\(self.artistName.lowercased())",
+                fallbackSeed: self.artistName
+            ) { [weak self] palette in
+                self?.backdropView.apply(palette, animated: true)
+            }
+            var snapshot = self.dataSource.snapshot()
+            let headerItems = snapshot.itemIdentifiers(inSection: .header)
+            snapshot.reconfigureItems(headerItems)
+            await self.dataSource.apply(snapshot, animatingDifferences: false)
+        }
     }
 
     private func setupSortMenu() {
@@ -129,7 +208,6 @@ final class ArtistDetailViewController: UIViewController {
                 .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        artistImageURL = artist.imageURL
     }
 
     private func setupCollectionView() {
@@ -137,6 +215,7 @@ final class ArtistDetailViewController: UIViewController {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.delegate = self
         collectionView.backgroundColor = .clear
+        collectionView.indicatorStyle = .white
         view.addSubview(collectionView)
 
         NSLayoutConstraint.activate([
@@ -155,12 +234,12 @@ final class ArtistDetailViewController: UIViewController {
             case .header:
                 let itemSize = NSCollectionLayoutSize(
                     widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .estimated(200)
+                    heightDimension: .estimated(320)
                 )
                 let item = NSCollectionLayoutItem(layoutSize: itemSize)
                 let groupSize = NSCollectionLayoutSize(
                     widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .estimated(200)
+                    heightDimension: .estimated(320)
                 )
                 let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
                 let layoutSection = NSCollectionLayoutSection(group: group)
@@ -200,10 +279,12 @@ final class ArtistDetailViewController: UIViewController {
 
     private func configureDataSource() {
         let headerCellRegistration = UICollectionView.CellRegistration<ArtistHeaderCell, ArtistHeaderInfo> { [weak self] cell, _, info in
-            cell.configure(with: info)
+            cell.configure(with: info, artistPhoto: self?.artistPhoto)
             cell.onBioToggle = {
                 self?.collectionView.collectionViewLayout.invalidateLayout()
             }
+            cell.onPlayAll = { self?.playAll(shuffled: false) }
+            cell.onShuffleAll = { self?.playAll(shuffled: true) }
         }
 
         let albumCellRegistration = UICollectionView.CellRegistration<AlbumCell, Album> { cell, _, album in
@@ -215,9 +296,10 @@ final class ArtistDetailViewController: UIViewController {
         ) { supplementaryView, _, _ in
             var config = UIListContentConfiguration.plainHeader()
             config.text = "Albums"
-            config.textProperties.font = .systemFont(ofSize: 20, weight: .bold)
-            config.textProperties.color = .label
+            config.textProperties.font = .scaled(.title3, size: 20, weight: .bold)
+            config.textProperties.color = .white
             supplementaryView.contentConfiguration = config
+            supplementaryView.backgroundConfiguration = .clear()
         }
 
         dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView) {
@@ -260,6 +342,16 @@ final class ArtistDetailViewController: UIViewController {
         snapshot.appendItems(albums.map { .album($0) }, toSection: .albums)
         dataSource.apply(snapshot, animatingDifferences: false)
     }
+
+    private func playAll(shuffled: Bool) {
+        var tracks = albums.flatMap(\.tracks)
+        guard !tracks.isEmpty else { return }
+        if shuffled {
+            tracks.shuffle()
+        }
+        impactMedium.impactOccurred()
+        AudioPlayer.shared.play(tracks, startingAt: 0)
+    }
 }
 
 extension ArtistDetailViewController: UICollectionViewDelegate {
@@ -280,7 +372,10 @@ extension ArtistDetailViewController: UICollectionViewDelegate {
 final class ArtistHeaderCell: UICollectionViewCell {
 
     var onBioToggle: (() -> Void)?
+    var onPlayAll: (() -> Void)?
+    var onShuffleAll: (() -> Void)?
 
+    private let photoContainer = UIView()
     private let artistImageView = UIImageView()
     private let nameLabel = UILabel()
     private let genreLabel = UILabel()
@@ -288,72 +383,71 @@ final class ArtistHeaderCell: UICollectionViewCell {
     private let bioLabel = UILabel()
     private let readMoreButton = UIButton(type: .system)
     private var bioExpanded = false
+    private var showsFallbackImage = false
+
+    private static let imageSize: CGFloat = 132
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        setupPhotoHero()
 
-        artistImageView.contentMode = .scaleAspectFill
-        artistImageView.clipsToBounds = true
-        artistImageView.backgroundColor = .tertiarySystemFill
-        artistImageView.tintColor = .tertiaryLabel
-        artistImageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 36, weight: .ultraLight)
-
-        nameLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        nameLabel.font = .scaled(.title1, size: 28, weight: .bold)
+        nameLabel.adjustsFontForContentSizeCategory = true
+        nameLabel.textColor = .white
         nameLabel.numberOfLines = 2
         nameLabel.textAlignment = .center
 
-        genreLabel.font = .systemFont(ofSize: 15, weight: .medium)
-        genreLabel.textColor = .secondaryLabel
+        genreLabel.font = .scaled(.subheadline, size: 15, weight: .medium)
+        genreLabel.adjustsFontForContentSizeCategory = true
+        genreLabel.textColor = .white.withAlphaComponent(0.7)
         genreLabel.textAlignment = .center
 
-        statsLabel.font = .systemFont(ofSize: 13, weight: .regular)
-        statsLabel.textColor = .tertiaryLabel
+        statsLabel.font = .scaled(.footnote, size: 13, weight: .regular)
+        statsLabel.adjustsFontForContentSizeCategory = true
+        statsLabel.textColor = .white.withAlphaComponent(0.5)
         statsLabel.textAlignment = .center
 
-        bioLabel.font = .preferredFont(forTextStyle: .subheadline)
-        bioLabel.textColor = .secondaryLabel
+        bioLabel.font = .scaled(.subheadline, size: 15, weight: .regular)
+        bioLabel.adjustsFontForContentSizeCategory = true
+        bioLabel.textColor = .white.withAlphaComponent(0.7)
         bioLabel.numberOfLines = 4
 
         readMoreButton.setTitle("Read more", for: .normal)
-        readMoreButton.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
+        readMoreButton.titleLabel?.font = .scaled(.footnote, size: 13, weight: .semibold)
+        readMoreButton.titleLabel?.adjustsFontForContentSizeCategory = true
+        readMoreButton.setTitleColor(.white, for: .normal)
         readMoreButton.contentHorizontalAlignment = .leading
-        readMoreButton.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            self.bioExpanded.toggle()
-            self.bioLabel.numberOfLines = self.bioExpanded ? 0 : 4
-            self.readMoreButton.setTitle(self.bioExpanded ? "Read less" : "Read more", for: .normal)
-            UIView.animate(withDuration: 0.3) {
-                self.onBioToggle?()
-            }
-        }, for: .touchUpInside)
-
-        let imageSize: CGFloat = 100
-        artistImageView.layer.cornerRadius = imageSize / 2
-        artistImageView.translatesAutoresizingMaskIntoConstraints = false
+        readMoreButton.accessibilityHint = "Expands the artist biography"
+        readMoreButton.addAction(UIAction { [weak self] _ in self?.toggleBio() }, for: .touchUpInside)
 
         let bioStack = UIStackView(arrangedSubviews: [bioLabel, readMoreButton])
         bioStack.axis = .vertical
         bioStack.spacing = 4
 
-        let mainStack = UIStackView(arrangedSubviews: [artistImageView, nameLabel, genreLabel, statsLabel, bioStack])
+        let actionRow = buildActionRow()
+
+        let mainStack = UIStackView(arrangedSubviews: [photoContainer, nameLabel, genreLabel, statsLabel, actionRow, bioStack])
         mainStack.axis = .vertical
         mainStack.spacing = 8
-        mainStack.setCustomSpacing(16, after: artistImageView)
+        mainStack.setCustomSpacing(16, after: photoContainer)
         mainStack.setCustomSpacing(4, after: nameLabel)
         mainStack.setCustomSpacing(4, after: genreLabel)
         mainStack.setCustomSpacing(16, after: statsLabel)
+        mainStack.setCustomSpacing(20, after: actionRow)
         mainStack.alignment = .center
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(mainStack)
 
         let bioStackWidth = bioStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
         bioStackWidth.priority = .defaultHigh
+        let actionRowWidth = actionRow.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
+        actionRowWidth.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
-            artistImageView.widthAnchor.constraint(equalToConstant: imageSize),
-            artistImageView.heightAnchor.constraint(equalToConstant: imageSize),
+            photoContainer.widthAnchor.constraint(equalToConstant: Self.imageSize),
+            photoContainer.heightAnchor.constraint(equalToConstant: Self.imageSize),
             bioStackWidth,
+            actionRowWidth,
             mainStack.topAnchor.constraint(equalTo: contentView.topAnchor),
             mainStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             mainStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
@@ -364,23 +458,62 @@ final class ArtistHeaderCell: UICollectionViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(with info: ArtistHeaderInfo) {
-        nameLabel.text = info.name
+    private func setupPhotoHero() {
+        photoContainer.layer.shadowColor = UIColor.black.cgColor
+        photoContainer.layer.shadowOpacity = 0.45
+        photoContainer.layer.shadowOffset = CGSize(width: 0, height: 10)
+        photoContainer.layer.shadowRadius = 22
 
-        if let artwork = info.artwork {
-            artistImageView.contentMode = .scaleAspectFill
-            artistImageView.image = artwork
-        } else {
-            artistImageView.contentMode = .center
-            artistImageView.image = UIImage(systemName: "person.crop.circle.fill")
-            if let albumTitle = info.firstAlbumTitle {
-                AlbumArtworkCache.shared.loadArtwork(forAlbum: albumTitle, artist: info.name) { [weak self] image in
-                    guard let self, let image else { return }
-                    self.artistImageView.contentMode = .scaleAspectFill
-                    self.artistImageView.image = image
-                }
-            }
+        artistImageView.contentMode = .scaleAspectFill
+        artistImageView.clipsToBounds = true
+        artistImageView.layer.cornerRadius = Self.imageSize / 2
+        artistImageView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        artistImageView.tintColor = UIColor.white.withAlphaComponent(0.35)
+        artistImageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 44, weight: .ultraLight)
+        artistImageView.translatesAutoresizingMaskIntoConstraints = false
+        photoContainer.addSubview(artistImageView)
+        NSLayoutConstraint.activate([
+            artistImageView.topAnchor.constraint(equalTo: photoContainer.topAnchor),
+            artistImageView.leadingAnchor.constraint(equalTo: photoContainer.leadingAnchor),
+            artistImageView.trailingAnchor.constraint(equalTo: photoContainer.trailingAnchor),
+            artistImageView.bottomAnchor.constraint(equalTo: photoContainer.bottomAnchor),
+        ])
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        photoContainer.layer.shadowPath = UIBezierPath(ovalIn: photoContainer.bounds).cgPath
+    }
+
+    private func buildActionRow() -> UIView {
+        let play = LiquidGlass.actionCapsule(title: "Play All", systemImage: "play.fill") { [weak self] in
+            self?.onPlayAll?()
         }
+        let shuffle = LiquidGlass.actionCapsule(title: "Shuffle All", systemImage: "shuffle") { [weak self] in
+            self?.onShuffleAll?()
+        }
+        play.widthAnchor.constraint(equalTo: shuffle.widthAnchor).isActive = true
+        let row = UIStackView(arrangedSubviews: [play, shuffle])
+        row.spacing = 10
+        row.distribution = .fillEqually
+        return LiquidGlass.grouping(row)
+    }
+
+    private func toggleBio() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        bioExpanded.toggle()
+        bioLabel.numberOfLines = bioExpanded ? 0 : 4
+        readMoreButton.setTitle(bioExpanded ? "Read less" : "Read more", for: .normal)
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.86, initialSpringVelocity: 0.6) {
+            self.onBioToggle?()
+        }
+    }
+
+    func configure(with info: ArtistHeaderInfo, artistPhoto: UIImage?) {
+        nameLabel.text = info.name
+        photoContainer.isAccessibilityElement = true
+        photoContainer.accessibilityLabel = "Photo of \(info.name)"
+        setHeroImage(artistPhoto ?? info.artwork, isArtistPhoto: artistPhoto != nil, info: info)
 
         if let genre = info.genre, !genre.isEmpty {
             genreLabel.text = genre
@@ -400,6 +533,34 @@ final class ArtistHeaderCell: UICollectionViewCell {
         } else {
             bioLabel.isHidden = true
             readMoreButton.isHidden = true
+        }
+    }
+
+    /// Applies the hero image, crossfading when a real artist photo replaces
+    /// the album-artwork placeholder; falls back to a symbol and a lazy
+    /// artwork load when nothing is available yet.
+    private func setHeroImage(_ image: UIImage?, isArtistPhoto: Bool, info: ArtistHeaderInfo) {
+        if let image {
+            let apply = {
+                self.artistImageView.contentMode = .scaleAspectFill
+                self.artistImageView.image = image
+            }
+            if isArtistPhoto, artistImageView.image != nil, !showsFallbackImage, !UIAccessibility.isReduceMotionEnabled {
+                UIView.transition(with: artistImageView, duration: 0.3, options: [.transitionCrossDissolve], animations: apply)
+            } else {
+                apply()
+            }
+            showsFallbackImage = false
+            return
+        }
+        showsFallbackImage = true
+        artistImageView.contentMode = .center
+        artistImageView.image = UIImage(systemName: "person.crop.circle.fill")
+        guard let albumTitle = info.firstAlbumTitle else { return }
+        AlbumArtworkCache.shared.loadArtwork(forAlbum: albumTitle, artist: info.name) { [weak self] image in
+            guard let self, let image, self.showsFallbackImage else { return }
+            self.artistImageView.contentMode = .scaleAspectFill
+            self.artistImageView.image = image
         }
     }
 }
