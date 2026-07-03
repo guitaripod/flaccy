@@ -295,10 +295,9 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
             guard let self else { return }
             self.shareAlbumViaSonglink(title: self.album.title, artist: self.album.artist, from: self.view)
         }
-        play.widthAnchor.constraint(equalTo: shuffle.widthAnchor).isActive = true
-
         let row = UIStackView(arrangedSubviews: [play, shuffle, queue, share])
         row.spacing = 10
+        play.widthAnchor.constraint(equalTo: shuffle.widthAnchor).isActive = true
         return LiquidGlass.grouping(row)
     }
 

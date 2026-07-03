@@ -492,7 +492,6 @@ final class ArtistHeaderCell: UICollectionViewCell {
         let shuffle = LiquidGlass.actionCapsule(title: "Shuffle All", systemImage: "shuffle") { [weak self] in
             self?.onShuffleAll?()
         }
-        play.widthAnchor.constraint(equalTo: shuffle.widthAnchor).isActive = true
         let row = UIStackView(arrangedSubviews: [play, shuffle])
         row.spacing = 10
         row.distribution = .fillEqually
