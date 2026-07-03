@@ -553,6 +553,19 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    /// Normalizes album+artist into a grouping key so tracks whose titles differ
+    /// only by case, surrounding whitespace, or punctuation still collapse into
+    /// one album (AI metadata cleanup can rewrite them slightly per track).
+    static func albumGroupingKey(albumTitle: String, artist: String) -> String {
+        func norm(_ s: String) -> String {
+            s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+        }
+        return "\(norm(albumTitle))\u{0}\(norm(artist))"
+    }
+
     func fetchAlbumsWithTracksLightweight() throws -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
         try dbQueue.read { db in
             let columns: [Column] = [
@@ -598,15 +611,20 @@ nonisolated final class DatabaseManager: Sendable {
 
             var order: [String] = []
             var map: [String: [LightTrackRecord]] = [:]
+            var displayKeyByGroup: [String: String] = [:]
             for track in allTracks {
-                let key = "\(track.albumTitle)\0\(track.artist)"
-                if map[key] == nil { order.append(key) }
-                map[key, default: []].append(track)
+                let groupKey = Self.albumGroupingKey(albumTitle: track.albumTitle, artist: track.artist)
+                if map[groupKey] == nil {
+                    order.append(groupKey)
+                    displayKeyByGroup[groupKey] = "\(track.albumTitle)\0\(track.artist)"
+                }
+                map[groupKey, default: []].append(track)
             }
 
-            return order.compactMap { key in
-                guard let tracks = map[key], !tracks.isEmpty else { return nil }
-                return (album: albumInfoByKey[key], tracks: tracks)
+            return order.compactMap { groupKey in
+                guard let tracks = map[groupKey], !tracks.isEmpty else { return nil }
+                let displayKey = displayKeyByGroup[groupKey] ?? groupKey
+                return (album: albumInfoByKey[displayKey], tracks: tracks)
             }
         }
     }

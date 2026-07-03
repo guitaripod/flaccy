@@ -40,12 +40,13 @@ enum DetailChip {
         content.translatesAutoresizingMaskIntoConstraints = false
 
         let host = capsuleHost()
-        host.addSubview(content)
+        let container = (host as? UIVisualEffectView)?.contentView ?? host
+        container.addSubview(content)
         NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: host.leadingAnchor, constant: 12),
-            content.trailingAnchor.constraint(equalTo: host.trailingAnchor, constant: -12),
-            content.topAnchor.constraint(equalTo: host.topAnchor, constant: 6),
-            content.bottomAnchor.constraint(equalTo: host.bottomAnchor, constant: -6),
+            content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            content.topAnchor.constraint(equalTo: container.topAnchor, constant: 6),
+            content.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -6),
             host.heightAnchor.constraint(equalToConstant: 30),
         ])
         host.isAccessibilityElement = true
