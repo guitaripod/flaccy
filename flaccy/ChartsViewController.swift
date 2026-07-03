@@ -7,14 +7,21 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
     private let audioPlayer: AudioPlaying
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
+    private let selectionFeedback = UISelectionFeedbackGenerator()
 
     private var tableView: UITableView!
-    private var segmentedControl: UISegmentedControl!
+    private var dataSource: UITableViewDiffableDataSource<ChartSection, ChartDisplayItem>!
+    private var periodCapsules: [GlassCapsule] = []
     private var subtitleLabel: UILabel!
     private var playButton: UIButton!
     private var shuffleButton: UIButton!
     private var spinner: UIActivityIndicatorView!
+    private var maxPlayCount = 0
     private var cancellables = Set<AnyCancellable>()
+
+    nonisolated private enum ChartSection: Hashable {
+        case main
+    }
 
     init(audioPlayer: AudioPlaying = AudioPlayer.shared) {
         self.audioPlayer = audioPlayer
@@ -31,6 +38,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         navigationItem.largeTitleDisplayMode = .never
 
         setupTableView()
+        setupDataSource()
         bindViewModel()
 
         Task {
@@ -42,7 +50,6 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         tableView = UITableView(frame: .zero, style: .plain)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.delegate = self
-        tableView.dataSource = self
         tableView.separatorStyle = .none
         tableView.backgroundColor = .clear
         tableView.register(ChartRowCell.self, forCellReuseIdentifier: ChartRowCell.reuseID)
@@ -65,6 +72,26 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+    }
+
+    private func setupDataSource() {
+        dataSource = UITableViewDiffableDataSource<ChartSection, ChartDisplayItem>(tableView: tableView) { [weak self] tableView, indexPath, item in
+            let cell = tableView.dequeueReusableCell(withIdentifier: ChartRowCell.reuseID, for: indexPath) as! ChartRowCell
+            cell.configure(with: item, maxPlayCount: self?.maxPlayCount ?? 0)
+            return cell
+        }
+        dataSource.defaultRowAnimation = .fade
+    }
+
+    private func applySnapshot(items: [ChartDisplayItem]) {
+        maxPlayCount = items.map(\.playCount).max() ?? 0
+        let existing = Set(dataSource.snapshot().itemIdentifiers)
+        var snapshot = NSDiffableDataSourceSnapshot<ChartSection, ChartDisplayItem>()
+        snapshot.appendSections([.main])
+        snapshot.appendItems(items, toSection: .main)
+        snapshot.reconfigureItems(items.filter { existing.contains($0) })
+        let animated = !UIAccessibility.isReduceMotionEnabled && !existing.isEmpty
+        dataSource.apply(snapshot, animatingDifferences: animated)
     }
 
     override func viewDidLayoutSubviews() {
@@ -98,14 +125,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.textAlignment = .center
 
-        segmentedControl = UISegmentedControl(items: ChartPeriod.allCases.map { $0.shortName })
-        segmentedControl.selectedSegmentIndex = 0
-        segmentedControl.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            self.impactLight.impactOccurred()
-            let period = ChartPeriod.allCases[self.segmentedControl.selectedSegmentIndex]
-            Task { await self.viewModel.loadChart(period: period) }
-        }, for: .valueChanged)
+        let periodStack = buildPeriodPicker()
 
         playButton = UIButton(configuration: .filled())
         playButton.configuration?.title = "Play"
@@ -129,7 +149,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         spinner = UIActivityIndicatorView(style: .medium)
         spinner.hidesWhenStopped = true
 
-        let mainStack = UIStackView(arrangedSubviews: [iconView, subtitleLabel, segmentedControl, buttonStack, spinner])
+        let mainStack = UIStackView(arrangedSubviews: [iconView, subtitleLabel, periodStack, buttonStack, spinner])
         mainStack.axis = .vertical
         mainStack.spacing = 16
         mainStack.alignment = .center
@@ -145,7 +165,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
 
         let buttonWidth = buttonStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
         buttonWidth.priority = .defaultHigh
-        let segmentWidth = segmentedControl.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
+        let segmentWidth = periodStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
         segmentWidth.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
@@ -157,6 +177,46 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         return container
     }
 
+    private func buildPeriodPicker() -> UIStackView {
+        periodCapsules = ChartPeriod.allCases.enumerated().map { index, period in
+            let button = UIButton(type: .system)
+            button.setTitle(period.shortName, for: .normal)
+            button.titleLabel?.font = UIFontMetrics(forTextStyle: .footnote)
+                .scaledFont(for: .systemFont(ofSize: 13, weight: .semibold))
+            button.titleLabel?.adjustsFontForContentSizeCategory = true
+            button.setTitleColor(.label, for: .normal)
+            button.addAction(UIAction { [weak self] _ in
+                self?.selectPeriod(at: index)
+            }, for: .touchUpInside)
+
+            let capsule = GlassCapsule(hosting: button, height: 36)
+            capsule.isAccessibilityElement = false
+            button.accessibilityLabel = period.displayName
+            button.accessibilityTraits = index == 0 ? [.button, .selected] : .button
+            return capsule
+        }
+        periodCapsules.first?.setActive(true, animated: false)
+
+        let stack = UIStackView(arrangedSubviews: periodCapsules)
+        stack.axis = .horizontal
+        stack.spacing = 8
+        stack.distribution = .fillEqually
+        return stack
+    }
+
+    private func selectPeriod(at index: Int) {
+        let period = ChartPeriod.allCases[index]
+        guard period != viewModel.selectedPeriod else { return }
+        selectionFeedback.selectionChanged()
+        for (i, capsule) in periodCapsules.enumerated() {
+            capsule.setActive(i == index, animated: !UIAccessibility.isReduceMotionEnabled)
+            if let button = capsule.subviews.compactMap({ $0 as? UIButton }).first {
+                button.accessibilityTraits = i == index ? [.button, .selected] : .button
+            }
+        }
+        Task { await viewModel.loadChart(period: period) }
+    }
+
     private func bindViewModel() {
         viewModel.itemsPublisher
             .receive(on: DispatchQueue.main)
@@ -164,7 +224,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
                 guard let self else { return }
                 self.updateSubtitle()
                 self.updateButtons()
-                self.tableView.reloadData()
+                self.applySnapshot(items: items)
             }
             .store(in: &cancellables)
 
@@ -325,19 +385,6 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
     }
 }
 
-extension ChartsViewController: UITableViewDataSource {
-
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        viewModel.items.count
-    }
-
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: ChartRowCell.reuseID, for: indexPath) as! ChartRowCell
-        cell.configure(with: viewModel.items[indexPath.row])
-        return cell
-    }
-}
-
 private final class ChartRowCell: UITableViewCell {
 
     static let reuseID = "ChartRowCell"
@@ -346,10 +393,18 @@ private final class ChartRowCell: UITableViewCell {
     private let titleLabel = UILabel()
     private let artistLabel = UILabel()
     private let playsLabel = UILabel()
+    private let playCountBar = UIView()
+    private var playCountFraction: CGFloat = 0
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         backgroundColor = .clear
+
+        playCountBar.backgroundColor = tintColor.withAlphaComponent(0.08)
+        playCountBar.layer.cornerRadius = 6
+        playCountBar.layer.cornerCurve = .continuous
+        playCountBar.isUserInteractionEnabled = false
+        contentView.addSubview(playCountBar)
 
         rankLabel.font = UIFontMetrics(forTextStyle: .subheadline)
             .scaledFont(for: .monospacedDigitSystemFont(ofSize: 15, weight: .semibold))
@@ -391,11 +446,44 @@ private final class ChartRowCell: UITableViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(with item: ChartDisplayItem) {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let inset: CGFloat = 8
+        let maxWidth = contentView.bounds.width - inset * 2
+        playCountBar.frame = CGRect(
+            x: inset,
+            y: 4,
+            width: max(0, maxWidth * playCountFraction),
+            height: contentView.bounds.height - 8
+        )
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        playCountFraction = 0
+        playCountBar.frame.size.width = 0
+        playCountBar.backgroundColor = tintColor.withAlphaComponent(0.08)
+    }
+
+    /// Gold, silver, and bronze semantic tints for the top three chart ranks.
+    private static func medalColor(for rank: Int) -> UIColor? {
+        switch rank {
+        case 1: .systemYellow
+        case 2: .systemGray
+        case 3: .systemBrown
+        default: nil
+        }
+    }
+
+    func configure(with item: ChartDisplayItem, maxPlayCount: Int) {
         let isMatched = item.matchedTrack != nil
 
         rankLabel.text = "\(item.rank)"
-        rankLabel.textColor = isMatched ? .tintColor : .quaternaryLabel
+        if let medal = Self.medalColor(for: item.rank) {
+            rankLabel.textColor = isMatched ? medal : medal.withAlphaComponent(0.4)
+        } else {
+            rankLabel.textColor = isMatched ? .tintColor : .quaternaryLabel
+        }
 
         titleLabel.text = item.trackName
         titleLabel.textColor = isMatched ? .label : .tertiaryLabel
@@ -410,7 +498,16 @@ private final class ChartRowCell: UITableViewCell {
             playsLabel.text = "\(item.playCount)"
         }
 
+        playCountFraction = maxPlayCount > 0 ? CGFloat(item.playCount) / CGFloat(maxPlayCount) : 0
+        playCountBar.backgroundColor = tintColor.withAlphaComponent(isMatched ? 0.08 : 0.04)
+        setNeedsLayout()
+
         selectionStyle = isMatched ? .default : .none
+
+        isAccessibilityElement = true
+        accessibilityLabel = "Rank \(item.rank), \(item.trackName) by \(item.artistName)"
+        accessibilityValue = "\(item.playCount) plays\(isMatched ? ", in your library" : ", not in your library")"
+        accessibilityTraits = isMatched ? .button : .staticText
     }
 }
 

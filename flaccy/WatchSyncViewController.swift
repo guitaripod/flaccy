@@ -23,14 +23,221 @@ enum SyncFormat {
         if minutes < 60 { return "about \(minutes) min left" }
         return "about \(minutes / 60)h \(minutes % 60)m left"
     }
+
+    static func percent(_ fraction: Double) -> String {
+        "\(Int((min(1, max(0, fraction)) * 100).rounded()))%"
+    }
+}
+
+/// Mirrors WatchSyncService's document-relative path derivation so the UI can
+/// match tracks against the service's published path sets without widening the
+/// service's API.
+private func syncRelativePath(for url: URL) -> String {
+    let documents = FileManager.default
+        .urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .standardizedFileURL.path
+    let path = url.standardizedFileURL.path
+    guard path.hasPrefix(documents) else { return canonicalSyncPath(url.lastPathComponent) }
+    let relative = String(path.dropFirst(documents.count))
+    return canonicalSyncPath(relative.hasPrefix("/") ? String(relative.dropFirst()) : relative)
+}
+
+private enum AlbumSyncStatus {
+    case synced
+    case sending(Double)
+    case waiting
+    case failed
+    case storageFull
+    case partial(synced: Int, total: Int)
+    case notSynced
+
+    var pill: (text: String, color: UIColor)? {
+        switch self {
+        case .synced: return ("Synced", .systemGreen)
+        case .sending: return ("Sending", .systemBlue)
+        case .waiting: return ("Waiting", .systemGray)
+        case .failed: return ("Failed", .systemRed)
+        case .storageFull: return ("Storage Full", .systemOrange)
+        case .partial, .notSynced: return nil
+        }
+    }
+
+    var voiceOverValue: String {
+        switch self {
+        case .synced: return "Synced"
+        case let .sending(fraction): return "Sending, \(SyncFormat.percent(fraction))"
+        case .waiting: return "Waiting"
+        case .failed: return "Failed"
+        case .storageFull: return "Storage full"
+        case let .partial(synced, total): return "\(synced) of \(total) synced"
+        case .notSynced: return "Not synced"
+        }
+    }
+
+    static func status(for album: Album, service: WatchSyncService) -> AlbumSyncStatus {
+        let paths = album.tracks.map { syncRelativePath(for: $0.fileURL) }
+        let total = album.tracks.count
+        let synced = paths.reduce(0) { $0 + (service.syncedPaths.contains($1) ? 1 : 0) }
+        if paths.contains(where: { service.diskFullPaths.contains($0) }) { return .storageFull }
+        if paths.contains(where: { service.failedPaths.contains($0) || service.stuckPaths.contains($0) }) { return .failed }
+        if service.isSyncing(album: album) { return .sending(service.albumSyncFraction(album)) }
+        if synced == total, total > 0 { return .synced }
+        if paths.contains(where: { service.requestedPaths.contains($0) && !service.syncedPaths.contains($0) }) { return .waiting }
+        if synced > 0 { return .partial(synced: synced, total: total) }
+        return .notSynced
+    }
+}
+
+private final class ProgressRingView: UIView {
+
+    private let trackLayer = CAShapeLayer()
+    private let progressLayer = CAShapeLayer()
+    private var fraction: CGFloat = 0
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        for layer in [trackLayer, progressLayer] {
+            layer.fillColor = UIColor.clear.cgColor
+            layer.lineCap = .round
+            layer.lineWidth = 3
+            self.layer.addSublayer(layer)
+        }
+        progressLayer.strokeEnd = 0
+        applyColors()
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: ProgressRingView, _) in
+            self.applyColors()
+        }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func applyColors() {
+        trackLayer.strokeColor = UIColor.tertiarySystemFill.cgColor
+        progressLayer.strokeColor = tintColor.cgColor
+    }
+
+    override func tintColorDidChange() {
+        super.tintColorDidChange()
+        applyColors()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let inset = progressLayer.lineWidth / 2
+        let rect = bounds.insetBy(dx: inset, dy: inset)
+        let path = UIBezierPath(
+            arcCenter: CGPoint(x: bounds.midX, y: bounds.midY),
+            radius: min(rect.width, rect.height) / 2,
+            startAngle: -.pi / 2,
+            endAngle: .pi * 1.5,
+            clockwise: true
+        )
+        trackLayer.path = path.cgPath
+        progressLayer.path = path.cgPath
+        trackLayer.frame = bounds
+        progressLayer.frame = bounds
+    }
+
+    /// Advances the ring smoothly; regressions and Reduce Motion set the value
+    /// directly so the stroke never visibly rewinds or interpolates.
+    func setProgress(_ value: Double, animated: Bool) {
+        let clamped = CGFloat(min(1, max(0, value)))
+        let shouldAnimate = animated
+            && !UIAccessibility.isReduceMotionEnabled
+            && clamped > fraction
+            && window != nil
+        fraction = clamped
+        if shouldAnimate {
+            let from = (progressLayer.presentation() ?? progressLayer).strokeEnd
+            progressLayer.strokeEnd = clamped
+            let animation = CABasicAnimation(keyPath: "strokeEnd")
+            animation.fromValue = from
+            animation.toValue = clamped
+            animation.duration = 0.3
+            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            progressLayer.add(animation, forKey: "strokeEnd")
+        } else {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            progressLayer.removeAnimation(forKey: "strokeEnd")
+            progressLayer.strokeEnd = clamped
+            CATransaction.commit()
+        }
+    }
+}
+
+private final class StatusPillView: UIView {
+
+    private let label = UILabel()
+
+    init() {
+        super.init(frame: .zero)
+        isUserInteractionEnabled = false
+        layer.cornerCurve = .continuous
+        clipsToBounds = true
+        label.font = .preferredFont(forTextStyle: .caption2)
+        label.adjustsFontForContentSizeCategory = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            label.topAnchor.constraint(equalTo: topAnchor, constant: 3),
+            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -3),
+        ])
+        setContentHuggingPriority(.required, for: .horizontal)
+        setContentCompressionResistancePriority(.required, for: .horizontal)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        layer.cornerRadius = bounds.height / 2
+    }
+
+    func apply(text: String, color: UIColor) {
+        label.text = text
+        label.textColor = color
+        backgroundColor = UIAccessibility.isReduceTransparencyEnabled
+            ? color.withAlphaComponent(0.28)
+            : color.withAlphaComponent(0.16)
+    }
 }
 
 final class WatchSyncViewController: UITableViewController {
+
+    nonisolated private enum Section: Int, CaseIterable { case status, albums }
+
+    nonisolated private enum Item: Hashable {
+        case status
+        case activeSync
+        case album(String)
+    }
+
+    private final class DataSource: UITableViewDiffableDataSource<Section, Item> {
+        var headerTitle: ((Section) -> String?)?
+        var footerTitle: ((Section) -> String?)?
+
+        override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+            Section(rawValue: section).flatMap { headerTitle?($0) }
+        }
+
+        override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+            Section(rawValue: section).flatMap { footerTitle?($0) }
+        }
+    }
 
     private var albums: [Album] = []
     private let service = WatchSyncService.shared
     private let impact = UIImpactFeedbackGenerator(style: .light)
     private let notify = UINotificationFeedbackGenerator()
+    private var dataSource: DataSource!
+    private var wasSyncing = false
+    private var pendingProgressUpdate: DispatchWorkItem?
 
     init() { super.init(style: .insetGrouped) }
 
@@ -42,7 +249,11 @@ final class WatchSyncViewController: UITableViewController {
         title = "Apple Watch"
         view.backgroundColor = .systemGroupedBackground
         tableView.register(WatchAlbumSyncCell.self, forCellReuseIdentifier: WatchAlbumSyncCell.reuseID)
+        tableView.register(WatchStatusCell.self, forCellReuseIdentifier: WatchStatusCell.reuseID)
+        tableView.register(ActiveSyncCell.self, forCellReuseIdentifier: ActiveSyncCell.reuseID)
         albums = Library.shared.albums
+        configureDataSource()
+        applySnapshot()
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             image: UIImage(systemName: "trash"),
@@ -62,8 +273,49 @@ final class WatchSyncViewController: UITableViewController {
 
     deinit { NotificationCenter.default.removeObserver(self) }
 
-    private var wasSyncing = false
-    private var pendingProgressUpdate: DispatchWorkItem?
+    private func configureDataSource() {
+        dataSource = DataSource(tableView: tableView) { [weak self] tableView, indexPath, item in
+            guard let self else { return UITableViewCell() }
+            switch item {
+            case .status:
+                let cell = tableView.dequeueReusableCell(withIdentifier: WatchStatusCell.reuseID, for: indexPath) as! WatchStatusCell
+                let state = self.connectionState()
+                cell.configure(state: state, subtitle: self.stateSubtitle(state))
+                return cell
+            case .activeSync:
+                let cell = tableView.dequeueReusableCell(withIdentifier: ActiveSyncCell.reuseID, for: indexPath) as! ActiveSyncCell
+                cell.configure(service: self.service)
+                return cell
+            case let .album(id):
+                let cell = tableView.dequeueReusableCell(withIdentifier: WatchAlbumSyncCell.reuseID, for: indexPath) as! WatchAlbumSyncCell
+                if let album = self.album(withID: id) {
+                    cell.configure(album: album, service: self.service)
+                }
+                return cell
+            }
+        }
+        dataSource.defaultRowAnimation = .fade
+        dataSource.headerTitle = { [weak self] section in
+            guard let self else { return nil }
+            return section == .albums && !self.albums.isEmpty ? "Albums" : nil
+        }
+        dataSource.footerTitle = { [weak self] section in
+            guard let self else { return nil }
+            return section == .status ? self.statusFooter() : self.albumsFooter()
+        }
+    }
+
+    private func applySnapshot() {
+        var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
+        snapshot.appendSections(Section.allCases)
+        snapshot.appendItems(service.isSyncing ? [.status, .activeSync] : [.status], toSection: .status)
+        snapshot.appendItems(albums.map { .album($0.id) }, toSection: .albums)
+        dataSource.applySnapshotUsingReloadData(snapshot)
+    }
+
+    private func album(withID id: String) -> Album? {
+        albums.first { $0.id == id }
+    }
 
     @objc private func stateChanged() {
         DispatchQueue.main.async { [weak self] in
@@ -71,8 +323,12 @@ final class WatchSyncViewController: UITableViewController {
             self.pendingProgressUpdate?.cancel()
             self.pendingProgressUpdate = nil
             self.albums = Library.shared.albums
-            self.wasSyncing = self.service.isSyncing
-            self.tableView.reloadData()
+            let isSyncing = self.service.isSyncing
+            if self.wasSyncing, !isSyncing, self.service.unconfirmedCount == 0, self.service.diskFullCount == 0 {
+                self.notify.notificationOccurred(.success)
+            }
+            self.wasSyncing = isSyncing
+            self.applySnapshot()
         }
     }
 
@@ -100,13 +356,17 @@ final class WatchSyncViewController: UITableViewController {
             return
         }
         for indexPath in tableView.indexPathsForVisibleRows ?? [] {
-            if indexPath.section == 0 {
-                if indexPath.row == 1 {
-                    configureActiveSync(cell: tableView.cellForRow(at: indexPath))
-                }
-            } else if let cell = tableView.cellForRow(at: indexPath) as? WatchAlbumSyncCell,
-                      albums.indices.contains(indexPath.row) {
-                cell.configure(album: albums[indexPath.row], service: service)
+            switch dataSource.itemIdentifier(for: indexPath) {
+            case .activeSync:
+                (tableView.cellForRow(at: indexPath) as? ActiveSyncCell)?.configure(service: service)
+            case let .album(id):
+                guard
+                    let cell = tableView.cellForRow(at: indexPath) as? WatchAlbumSyncCell,
+                    let album = album(withID: id)
+                else { continue }
+                cell.configure(album: album, service: service)
+            default:
+                continue
             }
         }
     }
@@ -115,43 +375,16 @@ final class WatchSyncViewController: UITableViewController {
         service.isSupported && service.isPaired && service.isWatchAppInstalled
     }
 
-    // MARK: - Table
-
-    override func numberOfSections(in tableView: UITableView) -> Int { 2 }
-
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if section == 0 { return service.isSyncing ? 2 : 1 }
-        return albums.count
-    }
-
-    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        section == 1 && !albums.isEmpty ? "Albums" : nil
-    }
-
-    override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        section == 0 ? statusFooter() : albumsFooter()
-    }
-
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        if indexPath.section == 0 {
-            return indexPath.row == 0 ? statusCell() : activeSyncCell()
-        }
-        let cell = tableView.dequeueReusableCell(withIdentifier: WatchAlbumSyncCell.reuseID, for: indexPath) as! WatchAlbumSyncCell
-        cell.configure(album: albums[indexPath.row], service: service)
-        return cell
-    }
-
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard indexPath.section == 1 else { return }
-        toggle(album: albums[indexPath.row])
+        guard case let .album(id) = dataSource.itemIdentifier(for: indexPath), let album = album(withID: id) else { return }
+        toggle(album: album)
     }
 
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
-        indexPath.section == 1 && canSync
+        guard case .album = dataSource.itemIdentifier(for: indexPath) else { return false }
+        return canSync
     }
-
-    // MARK: - Actions
 
     private func toggle(album: Album) {
         guard canSync else {
@@ -216,9 +449,7 @@ final class WatchSyncViewController: UITableViewController {
         present(alert, animated: true)
     }
 
-    // MARK: - Connection state
-
-    private enum ConnectionState {
+    fileprivate enum ConnectionState {
         case notSupported, notPaired, notInstalled, full, syncing, pending, synced, ready
 
         var color: UIColor {
@@ -292,8 +523,6 @@ final class WatchSyncViewController: UITableViewController {
         }
     }
 
-    // MARK: - Footers
-
     private func statusFooter() -> String {
         let state = connectionState()
         switch state {
@@ -310,29 +539,31 @@ final class WatchSyncViewController: UITableViewController {
             + "Hi‑res albums are large and take several minutes; compressed (AAC) files sync in seconds — "
             + "same quality through AirPods."
     }
+}
 
-    // MARK: - Cells
+private final class WatchStatusCell: UITableViewCell {
 
-    private func statusCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-        cell.selectionStyle = .none
+    static let reuseID = "WatchStatusCell"
 
-        let state = connectionState()
-        let dot = UIImageView(image: UIImage(systemName: state.symbol))
-        dot.tintColor = state.color
+    private let dot = UIImageView()
+    private let titleLabel = UILabel()
+    private let subtitleLabel = UILabel()
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        selectionStyle = .none
+
         dot.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 13)
         dot.setContentHuggingPriority(.required, for: .horizontal)
 
-        let title = UILabel()
-        title.font = .preferredFont(forTextStyle: .body)
-        title.text = state.title
-        let subtitle = UILabel()
-        subtitle.font = .preferredFont(forTextStyle: .caption1)
-        subtitle.textColor = .secondaryLabel
-        subtitle.numberOfLines = 0
-        subtitle.text = stateSubtitle(state)
+        titleLabel.font = .preferredFont(forTextStyle: .body)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        subtitleLabel.font = .preferredFont(forTextStyle: .caption1)
+        subtitleLabel.adjustsFontForContentSizeCategory = true
+        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.numberOfLines = 0
 
-        let textStack = UIStackView(arrangedSubviews: [title, subtitle])
+        let textStack = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel])
         textStack.axis = .vertical
         textStack.spacing = 2
 
@@ -341,64 +572,79 @@ final class WatchSyncViewController: UITableViewController {
         stack.spacing = 12
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
-        cell.contentView.addSubview(stack)
-        pinToMargins(stack, in: cell)
-        return cell
+        contentView.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: contentView.layoutMarginsGuide.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: contentView.layoutMarginsGuide.bottomAnchor),
+        ])
     }
 
-    private func activeSyncCell() -> UITableViewCell {
-        let cell = ActiveSyncCell()
-        cell.configure(service: service)
-        return cell
-    }
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
 
-    private func configureActiveSync(cell: UITableViewCell?) {
-        (cell as? ActiveSyncCell)?.configure(service: service)
-    }
-
-    private func pinToMargins(_ view: UIView, in cell: UITableViewCell, vertical: CGFloat? = nil) {
-        let guide = cell.contentView.layoutMarginsGuide
-        var constraints = [
-            view.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
-            view.trailingAnchor.constraint(equalTo: guide.trailingAnchor),
-        ]
-        if let vertical {
-            constraints.append(view.topAnchor.constraint(equalTo: cell.contentView.topAnchor, constant: vertical))
-            constraints.append(view.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor, constant: -vertical))
-        } else {
-            constraints.append(view.topAnchor.constraint(equalTo: guide.topAnchor))
-            constraints.append(view.bottomAnchor.constraint(equalTo: guide.bottomAnchor))
-        }
-        NSLayoutConstraint.activate(constraints)
+    func configure(state: WatchSyncViewController.ConnectionState, subtitle: String) {
+        dot.image = UIImage(systemName: state.symbol)
+        dot.tintColor = state.color
+        titleLabel.text = state.title
+        subtitleLabel.text = subtitle
+        isAccessibilityElement = true
+        accessibilityLabel = state.title
+        accessibilityValue = subtitle
     }
 }
 
 final class ActiveSyncCell: UITableViewCell {
 
+    static let reuseID = "ActiveSyncCell"
+
+    private let ring = ProgressRingView()
+    private let percentLabel = UILabel()
     private let header = UILabel()
     private let progress = UIProgressView(progressViewStyle: .default)
     private let detail = UILabel()
 
-    init() {
-        super.init(style: .default, reuseIdentifier: nil)
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
         selectionStyle = .none
 
         header.font = .preferredFont(forTextStyle: .subheadline).bold()
+        header.adjustsFontForContentSizeCategory = true
 
         progress.progressTintColor = .tintColor
         progress.trackTintColor = .tertiarySystemFill
-        progress.translatesAutoresizingMaskIntoConstraints = false
 
         detail.font = .preferredFont(forTextStyle: .caption1).monospacedDigit()
         detail.textColor = .secondaryLabel
         detail.numberOfLines = 0
 
-        let stack = UIStackView(arrangedSubviews: [header, progress, detail])
-        stack.axis = .vertical
-        stack.spacing = 7
+        percentLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
+        percentLabel.textColor = .secondaryLabel
+        percentLabel.textAlignment = .center
+        percentLabel.adjustsFontSizeToFitWidth = true
+        percentLabel.minimumScaleFactor = 0.6
+        percentLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        ring.translatesAutoresizingMaskIntoConstraints = false
+        ring.addSubview(percentLabel)
+
+        let textStack = UIStackView(arrangedSubviews: [header, progress, detail])
+        textStack.axis = .vertical
+        textStack.spacing = 7
+
+        let stack = UIStackView(arrangedSubviews: [ring, textStack])
+        stack.axis = .horizontal
+        stack.spacing = 14
+        stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
         NSLayoutConstraint.activate([
+            ring.widthAnchor.constraint(equalToConstant: 48),
+            ring.heightAnchor.constraint(equalToConstant: 48),
+            percentLabel.centerXAnchor.constraint(equalTo: ring.centerXAnchor),
+            percentLabel.centerYAnchor.constraint(equalTo: ring.centerYAnchor),
+            percentLabel.widthAnchor.constraint(lessThanOrEqualTo: ring.widthAnchor, constant: -12),
             stack.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
             stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
@@ -409,13 +655,31 @@ final class ActiveSyncCell: UITableViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        ring.setProgress(0, animated: false)
+        progress.setProgress(0, animated: false)
+    }
+
     func configure(service: WatchSyncService) {
         let count = service.activeTransferCount
+        let fraction = service.sessionFraction
         header.text = "Syncing \(count) track\(count == 1 ? "" : "s")…"
-        progress.setProgress(Float(service.sessionFraction), animated: false)
+        ring.setProgress(fraction, animated: true)
+        percentLabel.text = SyncFormat.percent(fraction)
+        if UIAccessibility.isReduceMotionEnabled {
+            progress.setProgress(Float(fraction), animated: false)
+        } else {
+            progress.setProgress(Float(fraction), animated: Float(fraction) > progress.progress)
+        }
         let transferred = SyncFormat.size(service.sessionTransferredBytes)
         let total = SyncFormat.size(service.sessionTotalBytesPending)
-        detail.text = "\(transferred) of \(total)  ·  \(SyncFormat.speed(service.speedBytesPerSec))  ·  \(SyncFormat.eta(service.etaSeconds))"
+        let speed = SyncFormat.speed(service.speedBytesPerSec)
+        let eta = SyncFormat.eta(service.etaSeconds)
+        detail.text = "\(transferred) of \(total)  ·  \(speed)  ·  \(eta)"
+        isAccessibilityElement = true
+        accessibilityLabel = header.text
+        accessibilityValue = "\(SyncFormat.percent(fraction)), \(transferred) of \(total), \(speed), \(eta)"
     }
 }
 
@@ -426,7 +690,8 @@ final class WatchAlbumSyncCell: UITableViewCell {
     private let artworkView = UIImageView()
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
-    private let progressView = UIProgressView(progressViewStyle: .default)
+    private let pill = StatusPillView()
+    private let ring = ProgressRingView()
     private let statusIcon = UIImageView()
     private var currentArtworkKey: String?
 
@@ -439,6 +704,10 @@ final class WatchAlbumSyncCell: UITableViewCell {
         super.prepareForReuse()
         currentArtworkKey = nil
         artworkView.image = nil
+        ring.setProgress(0, animated: false)
+        ring.isHidden = true
+        pill.isHidden = true
+        statusIcon.image = nil
     }
 
     @available(*, unavailable)
@@ -451,26 +720,35 @@ final class WatchAlbumSyncCell: UITableViewCell {
         artworkView.layer.cornerCurve = .continuous
         artworkView.backgroundColor = .tertiarySystemFill
         artworkView.tintColor = .tertiaryLabel
-        artworkView.translatesAutoresizingMaskIntoConstraints = false
 
         titleLabel.font = .preferredFont(forTextStyle: .body)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.numberOfLines = 1
         subtitleLabel.font = .preferredFont(forTextStyle: .caption1)
+        subtitleLabel.adjustsFontForContentSizeCategory = true
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.numberOfLines = 1
 
-        progressView.progressTintColor = .tintColor
-        progressView.trackTintColor = .tertiarySystemFill
-        progressView.isHidden = true
+        pill.isHidden = true
+        let pillRow = UIStackView(arrangedSubviews: [pill, UIView()])
+        pillRow.axis = .horizontal
 
         statusIcon.contentMode = .center
-        statusIcon.setContentHuggingPriority(.required, for: .horizontal)
+        ring.isHidden = true
 
-        let textStack = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel, progressView])
+        let trailing = UIView()
+        trailing.translatesAutoresizingMaskIntoConstraints = false
+        statusIcon.translatesAutoresizingMaskIntoConstraints = false
+        ring.translatesAutoresizingMaskIntoConstraints = false
+        trailing.addSubview(statusIcon)
+        trailing.addSubview(ring)
+
+        let textStack = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel, pillRow])
         textStack.axis = .vertical
         textStack.spacing = 4
+        textStack.setCustomSpacing(6, after: subtitleLabel)
 
-        let stack = UIStackView(arrangedSubviews: [artworkView, textStack, statusIcon])
+        let stack = UIStackView(arrangedSubviews: [artworkView, textStack, trailing])
         stack.axis = .horizontal
         stack.spacing = 12
         stack.alignment = .center
@@ -480,7 +758,14 @@ final class WatchAlbumSyncCell: UITableViewCell {
         NSLayoutConstraint.activate([
             artworkView.widthAnchor.constraint(equalToConstant: 48),
             artworkView.heightAnchor.constraint(equalToConstant: 48),
-            statusIcon.widthAnchor.constraint(equalToConstant: 28),
+            trailing.widthAnchor.constraint(equalToConstant: 28),
+            trailing.heightAnchor.constraint(equalToConstant: 28),
+            statusIcon.centerXAnchor.constraint(equalTo: trailing.centerXAnchor),
+            statusIcon.centerYAnchor.constraint(equalTo: trailing.centerYAnchor),
+            ring.widthAnchor.constraint(equalToConstant: 26),
+            ring.heightAnchor.constraint(equalToConstant: 26),
+            ring.centerXAnchor.constraint(equalTo: trailing.centerXAnchor),
+            ring.centerYAnchor.constraint(equalTo: trailing.centerYAnchor),
             stack.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
             stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
@@ -490,7 +775,60 @@ final class WatchAlbumSyncCell: UITableViewCell {
 
     func configure(album: Album, service: WatchSyncService) {
         titleLabel.text = album.title
+        loadArtwork(for: album)
 
+        let total = album.tracks.count
+        let synced = service.syncedCount(in: album)
+        let size = SyncFormat.size(service.totalBytes(in: album))
+        let status = AlbumSyncStatus.status(for: album, service: service)
+
+        if let pillContent = status.pill {
+            pill.apply(text: pillContent.text, color: pillContent.color)
+            pill.isHidden = false
+        } else {
+            pill.isHidden = true
+        }
+
+        switch status {
+        case let .sending(fraction):
+            statusIcon.image = nil
+            ring.isHidden = false
+            ring.setProgress(fraction, animated: true)
+            subtitleLabel.text = "Syncing \(synced) of \(total)  ·  \(size)"
+        case .synced:
+            showIcon("checkmark.circle.fill", tint: .systemGreen)
+            subtitleLabel.text = "On Apple Watch  ·  \(size)"
+        case .failed:
+            showIcon("exclamationmark.circle.fill", tint: .systemRed)
+            subtitleLabel.text = "Tap to retry  ·  \(size)"
+        case .storageFull:
+            showIcon("externaldrive.fill.trianglebadge.exclamationmark", tint: .systemOrange)
+            subtitleLabel.text = "Not enough space on Watch  ·  \(size)"
+        case .waiting:
+            showIcon("clock", tint: .systemGray)
+            subtitleLabel.text = "Waiting to send  ·  \(size)"
+        case .partial:
+            showIcon("circle.lefthalf.filled", tint: .tintColor)
+            subtitleLabel.text = "\(synced) of \(total) on Watch  ·  \(size)"
+        case .notSynced:
+            showIcon("arrow.down.circle", tint: .tintColor)
+            subtitleLabel.text = "\(total) track\(total == 1 ? "" : "s")  ·  \(size)"
+        }
+
+        isAccessibilityElement = true
+        accessibilityLabel = "\(album.title), \(subtitleLabel.text ?? "")"
+        accessibilityValue = status.voiceOverValue
+        accessibilityTraits = .button
+    }
+
+    private func showIcon(_ symbol: String, tint: UIColor) {
+        ring.isHidden = true
+        ring.setProgress(0, animated: false)
+        statusIcon.image = UIImage(systemName: symbol)
+        statusIcon.tintColor = tint
+    }
+
+    private func loadArtwork(for album: Album) {
         let artworkKey = album.id
         currentArtworkKey = artworkKey
         if let art = album.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist) {
@@ -501,32 +839,6 @@ final class WatchAlbumSyncCell: UITableViewCell {
                 guard let self, let image, self.currentArtworkKey == artworkKey else { return }
                 self.setArtwork(image)
             }
-        }
-
-        let total = album.tracks.count
-        let synced = service.syncedCount(in: album)
-        let size = SyncFormat.size(service.totalBytes(in: album))
-
-        if service.isSyncing(album: album) {
-            statusIcon.image = nil
-            progressView.isHidden = false
-            progressView.setProgress(Float(service.albumSyncFraction(album)), animated: false)
-            subtitleLabel.text = "Syncing \(synced) of \(total)  ·  \(size)"
-        } else if synced == total, total > 0 {
-            progressView.isHidden = true
-            statusIcon.image = UIImage(systemName: "checkmark.circle.fill")
-            statusIcon.tintColor = .systemGreen
-            subtitleLabel.text = "On Apple Watch  ·  \(size)"
-        } else if synced > 0 {
-            progressView.isHidden = true
-            statusIcon.image = UIImage(systemName: "circle.lefthalf.filled")
-            statusIcon.tintColor = .tintColor
-            subtitleLabel.text = "\(synced) of \(total) on Watch  ·  \(size)"
-        } else {
-            progressView.isHidden = true
-            statusIcon.image = UIImage(systemName: "arrow.down.circle")
-            statusIcon.tintColor = .tintColor
-            subtitleLabel.text = "\(total) track\(total == 1 ? "" : "s")  ·  \(size)"
         }
     }
 

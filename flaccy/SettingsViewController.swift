@@ -4,464 +4,314 @@ final class SettingsViewController: UITableViewController {
 
     var onImportFiles: (() -> Void)?
 
-    private enum Section: Int, CaseIterable {
+    nonisolated private enum Section: Int, CaseIterable, Hashable {
         case lastFM
         case playback
         case watch
         case library
-        case about
+
+        var header: String? {
+            switch self {
+            case .lastFM: return "Last.fm"
+            case .playback: return "Playback"
+            case .watch: return "Apple Watch"
+            case .library: return "Library"
+            }
+        }
+
+        var footer: String? {
+            switch self {
+            case .lastFM: return "Scrobble your listens to Last.fm."
+            case .playback: return "Plays consecutive album tracks without silence between them."
+            case .watch: return nil
+            case .library: return nil
+            }
+        }
     }
 
+    nonisolated private enum Row: Hashable {
+        case lastFMAccount(authenticated: Bool)
+        case pendingScrobbles(count: Int)
+        case gaplessPlayback
+        case watchSync(syncedCount: Int)
+        case importFiles
+        case rescanLibrary
+        case libraryStats(albums: Int, tracks: Int)
+        case storage(used: String)
+    }
+
+    /// Renders an Apple-Settings-style icon: a white SF Symbol glyph centered
+    /// on a tinted continuous-corner rounded square.
+    private enum RowIcon {
+        static let side: CGFloat = 29
+
+        static func image(systemName: String, tint: UIColor) -> UIImage {
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
+            return renderer.image { _ in
+                let rect = CGRect(x: 0, y: 0, width: side, height: side)
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: 6.5)
+                tint.setFill()
+                path.fill()
+                let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
+                guard let glyph = UIImage(systemName: systemName, withConfiguration: config)?
+                    .withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
+                let glyphRect = CGRect(
+                    x: (side - glyph.size.width) / 2,
+                    y: (side - glyph.size.height) / 2,
+                    width: glyph.size.width,
+                    height: glyph.size.height
+                )
+                glyph.draw(in: glyphRect)
+            }
+        }
+    }
+
+    private static let cellReuseIdentifier = "SettingsCell"
+
+    private let selectionFeedback = UISelectionFeedbackGenerator()
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
     private let notificationFeedback = UINotificationFeedbackGenerator()
 
+    private var dataSource: UITableViewDiffableDataSource<Section, Row>!
+
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Settings"
-        view.backgroundColor = .systemGroupedBackground
         tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.delegate = self
-        tableView.dataSource = self
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellReuseIdentifier)
+        view.backgroundColor = .systemGroupedBackground
 
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
+        navigationItem.rightBarButtonItem = makeDoneButton()
+        configureDataSource()
+        tableView.tableFooterView = makeVersionFooter()
+        applySnapshot(animated: false)
+    }
+
+    private func makeDoneButton() -> UIBarButtonItem {
+        UIBarButtonItem(
             systemItem: .done,
             primaryAction: UIAction { [weak self] _ in
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                self?.impactLight.impactOccurred()
                 self?.dismiss(animated: true)
             }
         )
     }
 
-    override func numberOfSections(in tableView: UITableView) -> Int {
-        Section.allCases.count
+    private func configureDataSource() {
+        dataSource = UITableViewDiffableDataSource<Section, Row>(tableView: tableView) {
+            [weak self] tableView, indexPath, row in
+            self?.cell(for: row, at: indexPath, in: tableView) ?? UITableViewCell()
+        }
+        dataSource.defaultRowAnimation = .fade
     }
 
     private var pendingScrobbleCount: Int {
         (try? DatabaseManager.shared.fetchPendingScrobbles().count) ?? 0
     }
 
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        switch Section(rawValue: section)! {
-        case .lastFM: return pendingScrobbleCount > 0 ? 2 : 1
-        case .playback: return 1
-        case .watch: return 1
-        case .library: return 4
-        case .about: return 1
+    private func applySnapshot(animated: Bool) {
+        var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
+        snapshot.appendSections(Section.allCases)
+
+        var lastFMRows: [Row] = [.lastFMAccount(authenticated: LastFMService.shared.isAuthenticated)]
+        let pending = pendingScrobbleCount
+        if pending > 0 {
+            lastFMRows.append(.pendingScrobbles(count: pending))
         }
+        snapshot.appendItems(lastFMRows, toSection: .lastFM)
+        snapshot.appendItems([.gaplessPlayback], toSection: .playback)
+        snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedPaths.count)], toSection: .watch)
+        snapshot.appendItems(
+            [
+                .importFiles,
+                .rescanLibrary,
+                .libraryStats(albums: Library.shared.albums.count, tracks: Library.shared.allTracks.count),
+                .storage(used: calculateStorageUsed()),
+            ],
+            toSection: .library
+        )
+        dataSource.apply(snapshot, animatingDifferences: animated)
+    }
+
+    private func cell(for row: Row, at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: Self.cellReuseIdentifier, for: indexPath)
+        cell.accessoryType = .none
+        cell.accessoryView = nil
+        cell.selectionStyle = .default
+        cell.accessibilityTraits = .button
+        cell.accessibilityValue = nil
+        cell.accessibilityHint = nil
+
+        var content = UIListContentConfiguration.valueCell()
+        content.textProperties.font = .preferredFont(forTextStyle: .body)
+        content.textProperties.adjustsFontForContentSizeCategory = true
+        content.secondaryTextProperties.font = .preferredFont(forTextStyle: .body)
+        content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
+        content.secondaryTextProperties.color = .secondaryLabel
+        content.imageProperties.maximumSize = CGSize(width: RowIcon.side, height: RowIcon.side)
+
+        switch row {
+        case .lastFMAccount(let authenticated):
+            content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemRed)
+            if authenticated {
+                content.text = "Disconnect Last.fm"
+                content.secondaryText = "Connected"
+                content.textProperties.color = .systemRed
+                cell.accessibilityHint = "Stops scrobbling your listens"
+            } else {
+                content.text = "Connect to Last.fm"
+                content.secondaryText = "Not connected"
+                cell.accessoryType = .disclosureIndicator
+                cell.accessibilityHint = "Signs in to Last.fm to scrobble your listens"
+            }
+            cell.accessibilityLabel = content.text
+            cell.accessibilityValue = content.secondaryText
+
+        case .pendingScrobbles(let count):
+            content.image = RowIcon.image(systemName: "clock.arrow.circlepath", tint: .systemOrange)
+            content.text = "Retry Pending Scrobbles"
+            content.secondaryText = "\(count)"
+            content.textProperties.color = .tintColor
+            cell.accessibilityLabel = "Retry pending scrobbles"
+            cell.accessibilityValue = "\(count) pending scrobble\(count == 1 ? "" : "s")"
+
+        case .gaplessPlayback:
+            content.image = RowIcon.image(systemName: "infinity", tint: .systemPurple)
+            content.text = "Gapless Playback"
+            cell.selectionStyle = .none
+            cell.accessoryView = makeGaplessSwitch()
+            cell.accessibilityTraits = []
+
+        case .watchSync(let syncedCount):
+            content.image = RowIcon.image(systemName: "applewatch", tint: .systemBlue)
+            content.text = "Sync Music to Watch"
+            if syncedCount > 0 { content.secondaryText = "\(syncedCount)" }
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = "Sync Music to Watch"
+            if syncedCount > 0 {
+                cell.accessibilityValue = "\(syncedCount) track\(syncedCount == 1 ? "" : "s") synced"
+            }
+
+        case .importFiles:
+            content.image = RowIcon.image(systemName: "square.and.arrow.down", tint: .systemGreen)
+            content.text = "Import Files"
+            content.textProperties.color = .tintColor
+            cell.accessibilityLabel = "Import Files"
+            cell.accessibilityHint = "Opens the file browser to add music"
+
+        case .rescanLibrary:
+            content.image = RowIcon.image(systemName: "arrow.clockwise", tint: .systemIndigo)
+            content.text = "Rescan Library"
+            content.textProperties.color = .tintColor
+            cell.accessibilityLabel = "Rescan Library"
+            cell.accessibilityHint = "Re-analyzes all tracks"
+
+        case .libraryStats(let albums, let tracks):
+            content.image = RowIcon.image(systemName: "chart.bar.fill", tint: .systemTeal)
+            content.text = "Library"
+            content.secondaryText = "\(albums) album\(albums == 1 ? "" : "s"), \(tracks) track\(tracks == 1 ? "" : "s")"
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = .staticText
+            cell.accessibilityLabel = "Library"
+            cell.accessibilityValue = content.secondaryText
+
+        case .storage(let used):
+            content.image = RowIcon.image(systemName: "internaldrive.fill", tint: .systemGray)
+            content.text = "Storage Used"
+            content.secondaryText = used
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = .staticText
+            cell.accessibilityLabel = "Storage Used"
+            cell.accessibilityValue = used
+        }
+
+        cell.contentConfiguration = content
+        return cell
+    }
+
+    private func makeGaplessSwitch() -> UISwitch {
+        let toggle = UISwitch()
+        toggle.isOn = UserDefaults.standard.object(forKey: "gaplessPlayback") as? Bool ?? true
+        toggle.accessibilityLabel = "Gapless Playback"
+        toggle.addAction(UIAction { [weak self] action in
+            guard let toggle = action.sender as? UISwitch else { return }
+            self?.selectionFeedback.selectionChanged()
+            UserDefaults.standard.set(toggle.isOn, forKey: "gaplessPlayback")
+        }, for: .valueChanged)
+        return toggle
+    }
+
+    private func makeVersionFooter() -> UIView {
+        let info = Bundle.main.infoDictionary
+        let name = info?["CFBundleDisplayName"] as? String
+            ?? info?["CFBundleName"] as? String
+            ?? "flaccy"
+        let version = info?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = info?["CFBundleVersion"] as? String ?? "1"
+
+        let nameLabel = UILabel()
+        nameLabel.text = name
+        nameLabel.font = UIFontMetrics(forTextStyle: .footnote)
+            .scaledFont(for: .systemFont(ofSize: 13, weight: .semibold))
+        nameLabel.adjustsFontForContentSizeCategory = true
+        nameLabel.textColor = .secondaryLabel
+        nameLabel.textAlignment = .center
+
+        let versionLabel = UILabel()
+        versionLabel.text = "Version \(version) (\(build))"
+        versionLabel.font = .preferredFont(forTextStyle: .footnote)
+        versionLabel.adjustsFontForContentSizeCategory = true
+        versionLabel.textColor = .tertiaryLabel
+        versionLabel.textAlignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [nameLabel, versionLabel])
+        stack.axis = .vertical
+        stack.spacing = 2
+        stack.alignment = .center
+        stack.isLayoutMarginsRelativeArrangement = true
+        stack.layoutMargins = UIEdgeInsets(top: 20, left: 16, bottom: 24, right: 16)
+        stack.isAccessibilityElement = true
+        stack.accessibilityLabel = "\(name), version \(version), build \(build)"
+
+        let width = view.bounds.width
+        let size = stack.systemLayoutSizeFitting(
+            CGSize(width: width, height: UIView.layoutFittingCompressedSize.height),
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        )
+        stack.frame = CGRect(origin: .zero, size: CGSize(width: width, height: size.height))
+        return stack
     }
 
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        switch Section(rawValue: section)! {
-        case .lastFM: return "Last.fm"
-        case .playback: return "Playback"
-        case .watch: return "Apple Watch"
-        case .library: return "Library"
-        case .about: return "About"
-        }
+        dataSource.sectionIdentifier(for: section)?.header
     }
 
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        switch Section(rawValue: indexPath.section)! {
-        case .lastFM:
-            if indexPath.row == 0 {
-                return lastFMCell()
-            }
-            return pendingScrobblesCell()
-        case .playback:
-            return gaplessPlaybackCell()
-        case .watch:
-            return watchSyncCell()
-        case .library:
-            switch indexPath.row {
-            case 0: return importFilesCell()
-            case 1: return rescanCell()
-            case 2: return libraryStatsCell()
-            default: return storageCell()
-            }
-        case .about:
-            return aboutCell()
+    override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+        dataSource.sectionIdentifier(for: section)?.footer
+    }
+
+    override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
+        guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
+        switch row {
+        case .gaplessPlayback, .libraryStats, .storage: return false
+        default: return true
         }
     }
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-
-        switch Section(rawValue: indexPath.section)! {
-        case .lastFM:
-            if indexPath.row == 0 {
-                handleLastFMTap()
-            } else {
-                handleRetryScrobbles()
-            }
-        case .playback:
-            break
-        case .watch:
-            handleWatchTap()
-        case .library:
-            if indexPath.row == 0 {
-                handleImportTap()
-            } else if indexPath.row == 1 {
-                handleRescanTap()
-            }
-        case .about:
-            break
+        guard let row = dataSource.itemIdentifier(for: indexPath) else { return }
+        switch row {
+        case .lastFMAccount: handleLastFMTap()
+        case .pendingScrobbles: handleRetryScrobbles()
+        case .watchSync: handleWatchTap()
+        case .importFiles: handleImportTap()
+        case .rescanLibrary: handleRescanTap()
+        case .gaplessPlayback, .libraryStats, .storage: break
         }
-    }
-
-    override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
-        switch Section(rawValue: indexPath.section)! {
-        case .lastFM: return true
-        case .playback: return false
-        case .watch: return true
-        case .library: return indexPath.row <= 1
-        case .about: return false
-        }
-    }
-
-    private func pendingScrobblesCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        let count = pendingScrobbleCount
-
-        let countLabel = UILabel()
-        countLabel.text = "\(count) pending scrobble\(count == 1 ? "" : "s")"
-        countLabel.font = .preferredFont(forTextStyle: .body)
-        countLabel.textColor = .secondaryLabel
-
-        let retryLabel = UILabel()
-        retryLabel.text = "Retry"
-        retryLabel.font = .preferredFont(forTextStyle: .body)
-        retryLabel.textColor = .tintColor
-
-        let stack = UIStackView(arrangedSubviews: [countLabel, retryLabel])
-        stack.axis = .horizontal
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        return cell
-    }
-
-    private func handleRetryScrobbles() {
-        impactLight.impactOccurred()
-        Task {
-            await AudioPlayer.shared.retryPendingScrobbles()
-            notificationFeedback.notificationOccurred(.success)
-            tableView.reloadSections(IndexSet(integer: Section.lastFM.rawValue), with: .automatic)
-        }
-    }
-
-    private func lastFMCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        let authenticated = LastFMService.shared.isAuthenticated
-
-        let dot = UIView()
-        dot.translatesAutoresizingMaskIntoConstraints = false
-        dot.backgroundColor = authenticated ? .systemGreen : .systemGray
-        dot.layer.cornerRadius = 5
-
-        let titleLabel = UILabel()
-        titleLabel.font = .preferredFont(forTextStyle: .body)
-
-        let statusLabel = UILabel()
-        statusLabel.font = .preferredFont(forTextStyle: .caption1)
-        statusLabel.textColor = .secondaryLabel
-
-        if authenticated {
-            titleLabel.text = "Disconnect Last.fm"
-            statusLabel.text = "Connected"
-            titleLabel.textColor = .systemRed
-        } else {
-            titleLabel.text = "Connect to Last.fm"
-            statusLabel.text = "Not connected"
-            titleLabel.textColor = .label
-        }
-
-        let textStack = UIStackView(arrangedSubviews: [titleLabel, statusLabel])
-        textStack.axis = .vertical
-        textStack.spacing = 2
-
-        let mainStack = UIStackView(arrangedSubviews: [dot, textStack])
-        mainStack.axis = .horizontal
-        mainStack.spacing = 12
-        mainStack.alignment = .center
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(mainStack)
-
-        NSLayoutConstraint.activate([
-            dot.widthAnchor.constraint(equalToConstant: 10),
-            dot.heightAnchor.constraint(equalToConstant: 10),
-            mainStack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            mainStack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            mainStack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            mainStack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        if !authenticated {
-            cell.accessoryType = .disclosureIndicator
-        }
-
-        return cell
-    }
-
-    private func importFilesCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-
-        let icon = UIImageView(image: UIImage(systemName: "square.and.arrow.down"))
-        icon.tintColor = .tintColor
-        icon.translatesAutoresizingMaskIntoConstraints = false
-
-        let label = UILabel()
-        label.text = "Import Files"
-        label.font = .preferredFont(forTextStyle: .body)
-        label.textColor = .tintColor
-
-        let stack = UIStackView(arrangedSubviews: [icon, label])
-        stack.axis = .horizontal
-        stack.spacing = 12
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            icon.widthAnchor.constraint(equalToConstant: 22),
-            icon.heightAnchor.constraint(equalToConstant: 22),
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        return cell
-    }
-
-    private func handleImportTap() {
-        impactLight.impactOccurred()
-        dismiss(animated: true) { [weak self] in
-            self?.onImportFiles?()
-        }
-    }
-
-    private func rescanCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-
-        let icon = UIImageView(image: UIImage(systemName: "arrow.clockwise"))
-        icon.tintColor = .tintColor
-        icon.translatesAutoresizingMaskIntoConstraints = false
-
-        let label = UILabel()
-        label.text = "Rescan Library"
-        label.font = .preferredFont(forTextStyle: .body)
-        label.textColor = .tintColor
-
-        let stack = UIStackView(arrangedSubviews: [icon, label])
-        stack.axis = .horizontal
-        stack.spacing = 12
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            icon.widthAnchor.constraint(equalToConstant: 22),
-            icon.heightAnchor.constraint(equalToConstant: 22),
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        return cell
-    }
-
-    private func libraryStatsCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.selectionStyle = .none
-
-        let library = Library.shared
-        let albumCount = library.albums.count
-        let trackCount = library.allTracks.count
-
-        let albumLabel = UILabel()
-        albumLabel.text = "\(albumCount) album\(albumCount == 1 ? "" : "s")"
-        albumLabel.font = .preferredFont(forTextStyle: .body)
-        albumLabel.textColor = .secondaryLabel
-
-        let trackLabel = UILabel()
-        trackLabel.text = "\(trackCount) track\(trackCount == 1 ? "" : "s")"
-        trackLabel.font = .preferredFont(forTextStyle: .body)
-        trackLabel.textColor = .secondaryLabel
-
-        let separator = UIView()
-        separator.backgroundColor = .separator
-        separator.translatesAutoresizingMaskIntoConstraints = false
-
-        let stack = UIStackView(arrangedSubviews: [albumLabel, separator, trackLabel])
-        stack.axis = .horizontal
-        stack.spacing = 12
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            separator.widthAnchor.constraint(equalToConstant: 1),
-            separator.heightAnchor.constraint(equalToConstant: 16),
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        return cell
-    }
-
-    private func aboutCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.selectionStyle = .none
-
-        let appLabel = UILabel()
-        appLabel.text = "flaccy"
-        appLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-
-        let versionLabel = UILabel()
-        versionLabel.text = "Version \(version) (\(build))"
-        versionLabel.font = .preferredFont(forTextStyle: .caption1)
-        versionLabel.textColor = .secondaryLabel
-
-        let stack = UIStackView(arrangedSubviews: [appLabel, versionLabel])
-        stack.axis = .vertical
-        stack.spacing = 2
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        return cell
-    }
-
-    private func watchSyncCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
-        var content = UIListContentConfiguration.valueCell()
-        content.text = "Sync Music to Watch"
-        content.image = UIImage(systemName: "applewatch")
-        content.imageProperties.tintColor = .tintColor
-        let synced = WatchSyncService.shared.syncedPaths.count
-        if synced > 0 { content.secondaryText = "\(synced)" }
-        cell.contentConfiguration = content
-        cell.accessoryType = .disclosureIndicator
-        return cell
-    }
-
-    private func handleWatchTap() {
-        impactLight.impactOccurred()
-        navigationController?.pushViewController(WatchSyncViewController(), animated: true)
-    }
-
-    private func gaplessPlaybackCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.selectionStyle = .none
-
-        let label = UILabel()
-        label.text = "Gapless Playback"
-        label.font = .preferredFont(forTextStyle: .body)
-
-        let toggle = UISwitch()
-        toggle.isOn = UserDefaults.standard.object(forKey: "gaplessPlayback") as? Bool ?? true
-        toggle.addAction(UIAction { _ in
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            UserDefaults.standard.set(toggle.isOn, forKey: "gaplessPlayback")
-        }, for: .valueChanged)
-
-        let stack = UIStackView(arrangedSubviews: [label, toggle])
-        stack.axis = .horizontal
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        return cell
-    }
-
-    private func storageCell() -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.selectionStyle = .none
-
-        let titleLabel = UILabel()
-        titleLabel.text = "Storage Used"
-        titleLabel.font = .preferredFont(forTextStyle: .body)
-
-        let valueLabel = UILabel()
-        valueLabel.text = calculateStorageUsed()
-        valueLabel.font = .preferredFont(forTextStyle: .body)
-        valueLabel.textColor = .secondaryLabel
-
-        let stack = UIStackView(arrangedSubviews: [titleLabel, valueLabel])
-        stack.axis = .horizontal
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.layoutMarginsGuide.bottomAnchor),
-        ])
-
-        return cell
-    }
-
-    private func calculateStorageUsed() -> String {
-        let fm = FileManager.default
-        let docsURL = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        var totalSize: Int64 = 0
-
-        guard let enumerator = fm.enumerator(
-            at: docsURL, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]
-        ) else { return "0 MB" }
-
-        for case let fileURL as URL in enumerator {
-            if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
-               let fileSize = resourceValues.fileSize {
-                totalSize += Int64(fileSize)
-            }
-        }
-
-        let gigabytes = Double(totalSize) / 1_073_741_824
-        if gigabytes >= 1.0 {
-            return String(format: "%.1f GB", gigabytes)
-        }
-        let megabytes = Double(totalSize) / 1_048_576
-        return String(format: "%.0f MB", megabytes)
     }
 
     private func handleLastFMTap() {
@@ -476,21 +326,42 @@ final class SettingsViewController: UITableViewController {
             alert.addAction(UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
                 LastFMService.shared.logout()
                 self?.notificationFeedback.notificationOccurred(.success)
-                self?.tableView.reloadSections(IndexSet(integer: Section.lastFM.rawValue), with: .automatic)
+                self?.applySnapshot(animated: true)
             })
             present(alert, animated: true)
         } else {
-            impactLight.impactOccurred()
+            selectionFeedback.selectionChanged()
             guard let window = view.window else { return }
             Task {
                 do {
                     try await LastFMService.shared.authenticate(from: window)
                     notificationFeedback.notificationOccurred(.success)
-                    tableView.reloadSections(IndexSet(integer: Section.lastFM.rawValue), with: .automatic)
+                    applySnapshot(animated: true)
                 } catch {
                     AppLogger.error("Last.fm auth failed: \(error.localizedDescription)", category: .auth)
                 }
             }
+        }
+    }
+
+    private func handleRetryScrobbles() {
+        impactLight.impactOccurred()
+        Task {
+            await AudioPlayer.shared.retryPendingScrobbles()
+            notificationFeedback.notificationOccurred(.success)
+            applySnapshot(animated: true)
+        }
+    }
+
+    private func handleWatchTap() {
+        selectionFeedback.selectionChanged()
+        navigationController?.pushViewController(WatchSyncViewController(), animated: true)
+    }
+
+    private func handleImportTap() {
+        impactLight.impactOccurred()
+        dismiss(animated: true) { [weak self] in
+            self?.onImportFiles?()
         }
     }
 
@@ -518,15 +389,33 @@ final class SettingsViewController: UITableViewController {
         Task {
             await Library.shared.resetAndReload()
             view.isUserInteractionEnabled = true
-            navigationItem.rightBarButtonItem = UIBarButtonItem(
-                systemItem: .done,
-                primaryAction: UIAction { [weak self] _ in
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    self?.dismiss(animated: true)
-                }
-            )
+            navigationItem.rightBarButtonItem = makeDoneButton()
             notificationFeedback.notificationOccurred(.success)
-            tableView.reloadData()
+            applySnapshot(animated: true)
         }
+    }
+
+    private func calculateStorageUsed() -> String {
+        let fm = FileManager.default
+        let docsURL = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        var totalSize: Int64 = 0
+
+        guard let enumerator = fm.enumerator(
+            at: docsURL, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]
+        ) else { return "0 MB" }
+
+        for case let fileURL as URL in enumerator {
+            if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+               let fileSize = resourceValues.fileSize {
+                totalSize += Int64(fileSize)
+            }
+        }
+
+        let gigabytes = Double(totalSize) / 1_073_741_824
+        if gigabytes >= 1.0 {
+            return String(format: "%.1f GB", gigabytes)
+        }
+        let megabytes = Double(totalSize) / 1_048_576
+        return String(format: "%.0f MB", megabytes)
     }
 }
