@@ -66,6 +66,7 @@ final class ScrubberView: UISlider {
     override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
         guard duration > 0 else { return false }
         isScrubbing = true
+        AppLogger.debug("scrub beginTracking", category: .ui)
         grabGenerator.impactOccurred()
         detentGenerator.prepare()
         value = grabbedValue(for: touch)
@@ -84,10 +85,12 @@ final class ScrubberView: UISlider {
     }
 
     override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+        AppLogger.debug("scrub endTracking", category: .ui)
         finishScrub()
     }
 
     override func cancelTracking(with event: UIEvent?) {
+        AppLogger.debug("scrub cancelTracking", category: .ui)
         finishScrub()
     }
 
@@ -100,6 +103,7 @@ final class ScrubberView: UISlider {
     }
 
     @objc private func valueDidChange() {
+        AppLogger.debug("scrub valueChanged native value=\(value) isScrubbing=\(isScrubbing)", category: .ui)
         guard isScrubbing else { return }
         onScrubChanged?(currentTime)
     }
