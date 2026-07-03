@@ -19,16 +19,19 @@ final class AlbumCell: UICollectionViewCell {
         artworkView.tintColor = .tertiaryLabel
         artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 32, weight: .ultraLight)
 
-        titleLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        titleLabel.font = .scaled(.footnote, size: 14, weight: .semibold)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.numberOfLines = 1
         titleLabel.lineBreakMode = .byTruncatingTail
 
-        artistLabel.font = .systemFont(ofSize: 12, weight: .regular)
+        artistLabel.font = .scaled(.caption1, size: 12, weight: .regular)
+        artistLabel.adjustsFontForContentSizeCategory = true
         artistLabel.textColor = .secondaryLabel
         artistLabel.numberOfLines = 1
         artistLabel.lineBreakMode = .byTruncatingTail
 
-        metaLabel.font = .systemFont(ofSize: 10, weight: .regular)
+        metaLabel.font = .scaled(.caption2, size: 10, weight: .regular)
+        metaLabel.adjustsFontForContentSizeCategory = true
         metaLabel.textColor = .tertiaryLabel
         metaLabel.numberOfLines = 1
         metaLabel.lineBreakMode = .byTruncatingTail

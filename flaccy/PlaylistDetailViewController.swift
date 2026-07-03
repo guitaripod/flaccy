@@ -50,6 +50,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         tableView.dataSource = self
         tableView.separatorStyle = .none
         tableView.backgroundColor = .clear
+        tableView.register(PlaylistTrackCell.self, forCellReuseIdentifier: PlaylistTrackCell.reuseID)
         tableView.tableHeaderView = buildHeaderView()
         view.addSubview(tableView)
 
@@ -184,48 +185,8 @@ extension PlaylistDetailViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: "PlaylistTrackRow")
-        cell.selectionStyle = .default
-        cell.backgroundColor = .clear
-
-        let track = tracks[indexPath.row]
-
-        let titleLabel = UILabel()
-        titleLabel.font = .preferredFont(forTextStyle: .body)
-        titleLabel.text = track.title
-        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        let artistLabel = UILabel()
-        artistLabel.font = .preferredFont(forTextStyle: .caption1)
-        artistLabel.textColor = .secondaryLabel
-        artistLabel.text = track.artist
-
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistLabel])
-        infoStack.axis = .vertical
-        infoStack.spacing = 2
-
-        let minutes = Int(track.duration) / 60
-        let seconds = Int(track.duration) % 60
-        let durationLabel = UILabel()
-        durationLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
-        durationLabel.textColor = .tertiaryLabel
-        durationLabel.textAlignment = .right
-        durationLabel.text = String(format: "%d:%02d", minutes, seconds)
-
-        let stack = UIStackView(arrangedSubviews: [infoStack, durationLabel])
-        stack.spacing = 12
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        cell.contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            durationLabel.widthAnchor.constraint(equalToConstant: 48),
-            stack.topAnchor.constraint(equalTo: cell.contentView.topAnchor, constant: 10),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor, constant: -10),
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -16),
-        ])
-
+        let cell = tableView.dequeueReusableCell(withIdentifier: PlaylistTrackCell.reuseID, for: indexPath) as! PlaylistTrackCell
+        cell.configure(with: tracks[indexPath.row])
         return cell
     }
 
@@ -269,6 +230,62 @@ extension PlaylistDetailViewController: UITableViewDataSource {
             }
         }
         impactLight.impactOccurred()
+    }
+}
+
+private final class PlaylistTrackCell: UITableViewCell {
+
+    static let reuseID = "PlaylistTrackCell"
+
+    private let titleLabel = UILabel()
+    private let artistLabel = UILabel()
+    private let durationLabel = UILabel()
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        backgroundColor = .clear
+
+        titleLabel.font = .preferredFont(forTextStyle: .body)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        artistLabel.font = .preferredFont(forTextStyle: .caption1)
+        artistLabel.adjustsFontForContentSizeCategory = true
+        artistLabel.textColor = .secondaryLabel
+
+        durationLabel.font = UIFontMetrics(forTextStyle: .footnote)
+            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 13, weight: .regular))
+        durationLabel.adjustsFontForContentSizeCategory = true
+        durationLabel.textColor = .tertiaryLabel
+        durationLabel.textAlignment = .right
+
+        let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistLabel])
+        infoStack.axis = .vertical
+        infoStack.spacing = 2
+
+        let stack = UIStackView(arrangedSubviews: [infoStack, durationLabel])
+        stack.spacing = 12
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            durationLabel.widthAnchor.constraint(equalToConstant: 48),
+            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
+            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    func configure(with track: Track) {
+        titleLabel.text = track.title
+        artistLabel.text = track.artist
+        let total = Int(track.duration)
+        durationLabel.text = String(format: "%d:%02d", total / 60, total % 60)
     }
 }
 

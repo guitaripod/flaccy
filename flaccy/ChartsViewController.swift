@@ -45,6 +45,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         tableView.dataSource = self
         tableView.separatorStyle = .none
         tableView.backgroundColor = .clear
+        tableView.register(ChartRowCell.self, forCellReuseIdentifier: ChartRowCell.reuseID)
         tableView.tableHeaderView = buildHeaderView()
 
         let refreshControl = UIRefreshControl()
@@ -331,64 +332,85 @@ extension ChartsViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: "ChartRow")
-        cell.backgroundColor = .clear
-        cell.contentView.subviews.forEach { $0.removeFromSuperview() }
+        let cell = tableView.dequeueReusableCell(withIdentifier: ChartRowCell.reuseID, for: indexPath) as! ChartRowCell
+        cell.configure(with: viewModel.items[indexPath.row])
+        return cell
+    }
+}
 
-        let item = viewModel.items[indexPath.row]
-        let isMatched = item.matchedTrack != nil
+private final class ChartRowCell: UITableViewCell {
 
-        let rankLabel = UILabel()
-        rankLabel.font = .monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
-        rankLabel.textColor = isMatched ? .tintColor : .quaternaryLabel
-        rankLabel.text = "\(item.rank)"
+    static let reuseID = "ChartRowCell"
+
+    private let rankLabel = UILabel()
+    private let titleLabel = UILabel()
+    private let artistLabel = UILabel()
+    private let playsLabel = UILabel()
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        backgroundColor = .clear
+
+        rankLabel.font = UIFontMetrics(forTextStyle: .subheadline)
+            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 15, weight: .semibold))
+        rankLabel.adjustsFontForContentSizeCategory = true
         rankLabel.textAlignment = .center
-        rankLabel.widthAnchor.constraint(equalToConstant: 32).isActive = true
 
-        let titleLabel = UILabel()
         titleLabel.font = .preferredFont(forTextStyle: .body)
-        titleLabel.textColor = isMatched ? .label : .tertiaryLabel
-        titleLabel.text = item.trackName
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let artistLabel = UILabel()
         artistLabel.font = .preferredFont(forTextStyle: .caption1)
-        artistLabel.textColor = isMatched ? .secondaryLabel : .quaternaryLabel
-        artistLabel.text = item.artistName
+        artistLabel.adjustsFontForContentSizeCategory = true
+
+        playsLabel.font = UIFontMetrics(forTextStyle: .caption1)
+            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 12, weight: .regular))
+        playsLabel.adjustsFontForContentSizeCategory = true
+        playsLabel.textAlignment = .right
 
         let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistLabel])
         infoStack.axis = .vertical
         infoStack.spacing = 2
 
-        let playsLabel = UILabel()
-        playsLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
-        playsLabel.textColor = isMatched ? .secondaryLabel : .quaternaryLabel
-        playsLabel.textAlignment = .right
-
-        if item.playCount >= 1000 {
-            let thousands = Double(item.playCount) / 1000.0
-            playsLabel.text = String(format: "%.1fK", thousands)
-        } else {
-            playsLabel.text = "\(item.playCount)"
-        }
-
         let stack = UIStackView(arrangedSubviews: [rankLabel, infoStack, playsLabel])
         stack.spacing = 12
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
-        cell.contentView.addSubview(stack)
+        contentView.addSubview(stack)
 
         NSLayoutConstraint.activate([
+            rankLabel.widthAnchor.constraint(equalToConstant: 32),
             playsLabel.widthAnchor.constraint(equalToConstant: 44),
-            stack.topAnchor.constraint(equalTo: cell.contentView.topAnchor, constant: 10),
-            stack.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor, constant: -10),
-            stack.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
+            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
         ])
+    }
 
-        cell.selectionStyle = isMatched ? .default : .none
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
 
-        return cell
+    func configure(with item: ChartDisplayItem) {
+        let isMatched = item.matchedTrack != nil
+
+        rankLabel.text = "\(item.rank)"
+        rankLabel.textColor = isMatched ? .tintColor : .quaternaryLabel
+
+        titleLabel.text = item.trackName
+        titleLabel.textColor = isMatched ? .label : .tertiaryLabel
+
+        artistLabel.text = item.artistName
+        artistLabel.textColor = isMatched ? .secondaryLabel : .quaternaryLabel
+
+        playsLabel.textColor = isMatched ? .secondaryLabel : .quaternaryLabel
+        if item.playCount >= 1000 {
+            playsLabel.text = String(format: "%.1fK", Double(item.playCount) / 1000.0)
+        } else {
+            playsLabel.text = "\(item.playCount)"
+        }
+
+        selectionStyle = isMatched ? .default : .none
     }
 }
 

@@ -13,6 +13,8 @@ final class MiniPlayerView: UIView {
     private let progressFill = UIView()
     private var progressWidthConstraint: NSLayoutConstraint?
     private let timerLabel = UILabel()
+    private var currentArtworkKey: String?
+    private let expandElement = ExpandAccessibilityElement(accessibilityContainer: NSObject())
 
     var onTap: (() -> Void)?
 
@@ -28,22 +30,21 @@ final class MiniPlayerView: UIView {
         layer.shadowRadius = 12
         layer.masksToBounds = false
 
-        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemThickMaterial))
+        let blur = LiquidGlass.view(cornerRadius: 16)
         blur.translatesAutoresizingMaskIntoConstraints = false
-        blur.layer.cornerRadius = 16
-        blur.layer.cornerCurve = .continuous
-        blur.clipsToBounds = true
         addSubview(blur)
 
         progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.12)
         progressFill.translatesAutoresizingMaskIntoConstraints = false
         blur.contentView.addSubview(progressFill)
 
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.font = .scaled(.footnote, size: 13, weight: .semibold, maxSize: 21)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        artistLabel.font = .systemFont(ofSize: 10, weight: .regular)
+        artistLabel.font = .scaled(.caption2, size: 10, weight: .regular, maxSize: 17)
+        artistLabel.adjustsFontForContentSizeCategory = true
         artistLabel.textColor = .secondaryLabel
         artistLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         artistLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -60,6 +61,7 @@ final class MiniPlayerView: UIView {
 
         playPauseButton.setImage(UIImage(systemName: "play.fill", withConfiguration: buttonConfig), for: .normal)
         playPauseButton.tintColor = .label
+        playPauseButton.accessibilityLabel = "Play"
         playPauseButton.addAction(UIAction { _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             AudioPlayer.shared.togglePlayPause()
@@ -67,6 +69,7 @@ final class MiniPlayerView: UIView {
 
         nextButton.setImage(UIImage(systemName: "forward.fill", withConfiguration: buttonConfig), for: .normal)
         nextButton.tintColor = .label
+        nextButton.accessibilityLabel = "Next track"
         nextButton.addAction(UIAction { _ in
             UISelectionFeedbackGenerator().selectionChanged()
             AudioPlayer.shared.nextTrack()
@@ -75,6 +78,7 @@ final class MiniPlayerView: UIView {
         let queueConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         queueButton.setImage(UIImage(systemName: "list.bullet", withConfiguration: queueConfig), for: .normal)
         queueButton.tintColor = .secondaryLabel
+        queueButton.accessibilityLabel = "Queue"
         queueButton.addAction(UIAction { _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             NotificationCenter.default.post(name: MiniPlayerView.queueTapped, object: nil)
@@ -128,7 +132,9 @@ final class MiniPlayerView: UIView {
             hStack.bottomAnchor.constraint(equalTo: blur.contentView.bottomAnchor),
         ])
 
-        timerLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .medium)
+        timerLabel.font = UIFontMetrics(forTextStyle: .caption2)
+            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 10, weight: .medium), maximumPointSize: 15)
+        timerLabel.adjustsFontForContentSizeCategory = true
         timerLabel.textColor = .white
         timerLabel.textAlignment = .center
         timerLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
@@ -149,6 +155,8 @@ final class MiniPlayerView: UIView {
         let tap = UITapGestureRecognizer(target: self, action: #selector(viewTapped))
         addGestureRecognizer(tap)
 
+        setupAccessibility()
+
         NotificationCenter.default.addObserver(
             self, selector: #selector(progressDidChange), name: AudioPlayer.playbackProgressDidChange, object: nil
         )
@@ -160,9 +168,29 @@ final class MiniPlayerView: UIView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    private func setupAccessibility() {
+        isAccessibilityElement = false
+        expandElement.accessibilityContainer = self
+        expandElement.accessibilityTraits = .button
+        expandElement.accessibilityHint = "Opens Now Playing"
+        expandElement.onActivate = { [weak self] in self?.onTap?() }
+        accessibilityElements = [expandElement, playPauseButton, nextButton, queueButton]
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        expandElement.accessibilityFrameInContainerSpace = bounds
+    }
+
     func configure(with track: Track, isPlaying: Bool) {
         titleLabel.text = track.title
         artistLabel.text = track.artist
+        expandElement.accessibilityLabel = "\(track.title), \(track.artist)"
+
+        updateProgressBar()
+
+        let requestedKey = track.albumTitle + "\u{0}" + track.artist
+        currentArtworkKey = requestedKey
 
         let cached = track.artwork
             ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
@@ -175,7 +203,7 @@ final class MiniPlayerView: UIView {
             progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.12)
 
             AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
-                guard let self, let image else { return }
+                guard let self, let image, self.currentArtworkKey == requestedKey else { return }
                 self.applyArtwork(image)
             }
         }
@@ -183,6 +211,16 @@ final class MiniPlayerView: UIView {
         let icon = isPlaying ? "pause.fill" : "play.fill"
         let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
         playPauseButton.setImage(UIImage(systemName: icon, withConfiguration: config), for: .normal)
+        playPauseButton.accessibilityLabel = isPlaying ? "Pause" : "Play"
+    }
+
+    private func updateProgressBar() {
+        let player = AudioPlayer.shared
+        if player.duration > 0 {
+            progressWidthConstraint?.constant = bounds.width * CGFloat(player.currentTime / player.duration)
+        } else {
+            progressWidthConstraint?.constant = 0
+        }
     }
 
     private func applyArtwork(_ artwork: UIImage) {
@@ -228,13 +266,16 @@ final class MiniPlayerView: UIView {
     }
 
     @objc private func progressDidChange() {
-        let player = AudioPlayer.shared
-        guard player.duration > 0 else { return }
-        let fraction = CGFloat(player.currentTime / player.duration)
-        progressWidthConstraint?.constant = bounds.width * fraction
+        updateProgressBar()
     }
 
     @objc private func sleepTimerDidUpdate() {
+        if AudioPlayer.shared.sleepAtEndOfTrack {
+            timerLabel.text = " End of track "
+            timerLabel.accessibilityLabel = "Sleep timer, at end of track"
+            timerLabel.isHidden = false
+            return
+        }
         guard let remaining = AudioPlayer.shared.sleepTimerRemaining, remaining > 0 else {
             timerLabel.isHidden = true
             return
@@ -242,6 +283,16 @@ final class MiniPlayerView: UIView {
         let mins = Int(remaining) / 60
         let secs = Int(remaining) % 60
         timerLabel.text = " \(String(format: "%d:%02d", mins, secs)) "
+        timerLabel.accessibilityLabel = "Sleep timer, \(mins) minutes \(secs) seconds remaining"
         timerLabel.isHidden = false
+    }
+}
+
+private final class ExpandAccessibilityElement: UIAccessibilityElement {
+    var onActivate: (() -> Void)?
+
+    override func accessibilityActivate() -> Bool {
+        onActivate?()
+        return true
     }
 }

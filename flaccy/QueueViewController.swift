@@ -29,6 +29,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         setupTableView()
         setupControlsBar()
         updateClearButton()
+        updateEmptyState()
 
         NotificationCenter.default.addObserver(self, selector: #selector(reload), name: AudioPlayer.queueDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(reload), name: AudioPlayer.trackDidChange, object: nil)
@@ -112,6 +113,42 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     @objc private func reload() {
         tableView.reloadData()
         updateClearButton()
+        updateEmptyState()
+    }
+
+    private func updateEmptyState() {
+        let isEmpty = AudioPlayer.shared.queue.isEmpty && AudioPlayer.shared.currentTrack == nil
+        tableView.backgroundView = isEmpty ? makeEmptyBackgroundView() : nil
+    }
+
+    private func makeEmptyBackgroundView() -> UIView {
+        let container = UIView()
+
+        let iconView = UIImageView(image: UIImage(systemName: "list.bullet"))
+        iconView.tintColor = .tertiaryLabel
+        iconView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 44, weight: .thin)
+        iconView.contentMode = .scaleAspectFit
+
+        let label = UILabel()
+        label.text = "Queue is empty"
+        label.font = .preferredFont(forTextStyle: .body)
+        label.adjustsFontForContentSizeCategory = true
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [iconView, label])
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: container.centerYAnchor, constant: -40),
+        ])
+
+        return container
     }
 
     @objc private func updateShuffleRepeat() {
@@ -335,9 +372,14 @@ final class QueueTrackCell: UITableViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    private var currentArtworkKey: String?
+
     func configure(with track: Track, isCurrentTrack: Bool, isPlaying: Bool) {
         trackTitleLabel.text = track.title
         trackArtistLabel.text = track.artist
+
+        let requestedKey = track.albumTitle + "\u{0}" + track.artist
+        currentArtworkKey = requestedKey
 
         let cached = track.artwork
             ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
@@ -349,7 +391,7 @@ final class QueueTrackCell: UITableViewCell {
             artworkView.contentMode = .center
             artworkView.image = UIImage(systemName: "music.note")
             AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
-                guard let self, let image else { return }
+                guard let self, let image, self.currentArtworkKey == requestedKey else { return }
                 self.artworkView.contentMode = .scaleAspectFill
                 self.artworkView.image = image
             }
@@ -375,6 +417,7 @@ final class QueueTrackCell: UITableViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
+        currentArtworkKey = nil
         artworkView.image = nil
         nowPlayingIcon.isHidden = true
         trackTitleLabel.textColor = .label

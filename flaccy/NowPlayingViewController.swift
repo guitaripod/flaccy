@@ -116,12 +116,16 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         artworkView.translatesAutoresizingMaskIntoConstraints = false
         artworkContainer.addSubview(artworkView)
 
+        let artworkSquare = artworkView.heightAnchor.constraint(equalTo: artworkView.widthAnchor)
+        artworkSquare.priority = .defaultHigh
+        artworkContainer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+
         NSLayoutConstraint.activate([
             artworkView.topAnchor.constraint(equalTo: artworkContainer.topAnchor),
             artworkView.leadingAnchor.constraint(equalTo: artworkContainer.leadingAnchor),
             artworkView.trailingAnchor.constraint(equalTo: artworkContainer.trailingAnchor),
             artworkView.bottomAnchor.constraint(equalTo: artworkContainer.bottomAnchor),
-            artworkView.heightAnchor.constraint(equalTo: artworkView.widthAnchor),
+            artworkSquare,
         ])
 
         artworkContainer.isUserInteractionEnabled = true
@@ -132,11 +136,13 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         swipeRight.direction = .right
         artworkContainer.addGestureRecognizer(swipeRight)
 
-        titleLabel.font = .systemFont(ofSize: 20, weight: .bold)
+        titleLabel.font = .scaled(.title3, size: 20, weight: .bold)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.numberOfLines = 2
         titleLabel.lineBreakMode = .byTruncatingTail
 
-        artistButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+        artistButton.titleLabel?.font = .scaled(.callout, size: 16, weight: .regular)
+        artistButton.titleLabel?.adjustsFontForContentSizeCategory = true
         artistButton.setTitleColor(.tintColor, for: .normal)
         artistButton.contentHorizontalAlignment = .leading
         artistButton.setContentHuggingPriority(.required, for: .horizontal)
@@ -144,12 +150,14 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         artistButton.addAction(UIAction { [weak self] _ in self?.navigateToArtist() }, for: .touchUpInside)
 
         dashLabel.text = " — "
-        dashLabel.font = .systemFont(ofSize: 16, weight: .regular)
+        dashLabel.font = .scaled(.callout, size: 16, weight: .regular)
+        dashLabel.adjustsFontForContentSizeCategory = true
         dashLabel.textColor = .secondaryLabel
         dashLabel.setContentHuggingPriority(.required, for: .horizontal)
         dashLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
-        albumLabel.font = .systemFont(ofSize: 16, weight: .regular)
+        albumLabel.font = .scaled(.callout, size: 16, weight: .regular)
+        albumLabel.adjustsFontForContentSizeCategory = true
         albumLabel.textColor = .secondaryLabel
         albumLabel.lineBreakMode = .byTruncatingTail
 
@@ -157,7 +165,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         artistAlbumStack.spacing = 0
         artistAlbumStack.alignment = .firstBaseline
 
-        playingFromLabel.font = .systemFont(ofSize: 12, weight: .regular)
+        playingFromLabel.font = .scaled(.caption1, size: 12, weight: .regular)
+        playingFromLabel.adjustsFontForContentSizeCategory = true
         playingFromLabel.textColor = .tertiaryLabel
         playingFromLabel.isHidden = true
 
@@ -173,11 +182,14 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         progressSlider.addTarget(self, action: #selector(sliderTouchUp), for: [.touchUpInside, .touchUpOutside])
         progressSlider.addTarget(self, action: #selector(sliderChanged), for: .valueChanged)
 
-        let timeFont = UIFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+        let timeFont = UIFontMetrics(forTextStyle: .caption2)
+            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 11, weight: .medium), maximumPointSize: 18)
         currentTimeLabel.font = timeFont
+        currentTimeLabel.adjustsFontForContentSizeCategory = true
         currentTimeLabel.textColor = .tertiaryLabel
         currentTimeLabel.text = "0:00"
         remainingTimeLabel.font = timeFont
+        remainingTimeLabel.adjustsFontForContentSizeCategory = true
         remainingTimeLabel.textColor = .tertiaryLabel
         remainingTimeLabel.text = "-0:00"
         remainingTimeLabel.textAlignment = .right
@@ -243,6 +255,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             mainStack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             mainStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
             mainStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
+            mainStack.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            artworkView.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42),
         ])
     }
 
@@ -285,9 +299,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         if !isSliderDragging {
             progressSlider.maximumValue = Float(state.duration)
             progressSlider.value = Float(state.currentTime)
+            currentTimeLabel.text = state.currentTimeFormatted
+            remainingTimeLabel.text = state.remainingTimeFormatted
         }
-        currentTimeLabel.text = state.currentTimeFormatted
-        remainingTimeLabel.text = state.remainingTimeFormatted
     }
 
     private func makeThumbImage(size: CGFloat) -> UIImage {
@@ -404,12 +418,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             })
         }
         sheet.addAction(UIAlertAction(title: "End of Track", style: .default) { [weak self] _ in
-            let remaining = AudioPlayer.shared.duration - AudioPlayer.shared.currentTime
-            let minutes = max(1, Int(ceil(remaining / 60)))
-            AudioPlayer.shared.setSleepTimer(minutes: minutes)
+            AudioPlayer.shared.setSleepTimerEndOfTrack()
             self?.updateSleepTimerButton()
         })
-        if AudioPlayer.shared.sleepTimerRemaining != nil {
+        if AudioPlayer.shared.sleepTimerRemaining != nil || AudioPlayer.shared.sleepAtEndOfTrack {
             sheet.addAction(UIAlertAction(title: "Cancel Timer", style: .destructive) { [weak self] _ in
                 AudioPlayer.shared.cancelSleepTimer()
                 self?.updateSleepTimerButton()
@@ -420,7 +432,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func updateSleepTimerButton() {
-        let isActive = AudioPlayer.shared.sleepTimerRemaining != nil
+        let isActive = AudioPlayer.shared.sleepTimerRemaining != nil || AudioPlayer.shared.sleepAtEndOfTrack
         let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)
         let iconName = isActive ? "moon.zzz.fill" : "moon.zzz"
         sleepTimerButton.setImage(UIImage(systemName: iconName, withConfiguration: config), for: .normal)

@@ -9,11 +9,16 @@ final class LyricsViewController: UIViewController {
     private var lyrics: [LyricLine] = []
     private var plainText: String?
     private var currentLineIndex: Int = -1
-    private let trackTitle: String
-    private let artistName: String
-    private let albumName: String
+    private var trackTitle: String
+    private var artistName: String
+    private var albumName: String
+    private let trackLabel = UILabel()
+    private let artistLabel = UILabel()
     private var progressObserver: NSObjectProtocol?
+    private var trackObserver: NSObjectProtocol?
+    private var loadGeneration = 0
     private var isUserScrolling = false
+    private var scrollResumeWorkItem: DispatchWorkItem?
 
     init(track: String, artist: String, album: String) {
         self.trackTitle = track
@@ -31,6 +36,7 @@ final class LyricsViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .black
         setupUI()
+        startTrackObservation()
         loadLyrics()
     }
 
@@ -40,6 +46,45 @@ final class LyricsViewController: UIViewController {
             NotificationCenter.default.removeObserver(observer)
             progressObserver = nil
         }
+        if let observer = trackObserver {
+            NotificationCenter.default.removeObserver(observer)
+            trackObserver = nil
+        }
+    }
+
+    private func startTrackObservation() {
+        trackObserver = NotificationCenter.default.addObserver(
+            forName: AudioPlayer.trackDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleTrackChange()
+        }
+    }
+
+    private func handleTrackChange() {
+        guard let track = AudioPlayer.shared.currentTrack else {
+            dismiss(animated: true)
+            return
+        }
+        guard track.title != trackTitle || track.artist != artistName || track.albumTitle != albumName else { return }
+        trackTitle = track.title
+        artistName = track.artist
+        albumName = track.albumTitle
+        trackLabel.text = trackTitle
+        artistLabel.text = artistName
+        resetContent()
+        loadLyrics()
+    }
+
+    private func resetContent() {
+        lyrics = []
+        plainText = nil
+        currentLineIndex = -1
+        tableView.isHidden = true
+        tableView.reloadData()
+        plainTextView.isHidden = true
+        statusLabel.isHidden = true
     }
 
     private func setupUI() {
@@ -52,14 +97,12 @@ final class LyricsViewController: UIViewController {
             self?.dismiss(animated: true)
         }, for: .touchUpInside)
 
-        let trackLabel = UILabel()
         trackLabel.text = trackTitle
         trackLabel.font = .systemFont(ofSize: 15, weight: .semibold)
         trackLabel.textColor = .white.withAlphaComponent(0.8)
         trackLabel.textAlignment = .center
         trackLabel.lineBreakMode = .byTruncatingTail
 
-        let artistLabel = UILabel()
         artistLabel.text = artistName
         artistLabel.font = .systemFont(ofSize: 13, weight: .regular)
         artistLabel.textColor = .white.withAlphaComponent(0.5)
@@ -154,6 +197,8 @@ final class LyricsViewController: UIViewController {
     }
 
     private func loadLyrics() {
+        loadGeneration += 1
+        let generation = loadGeneration
         spinner.startAnimating()
 
         Task {
@@ -162,6 +207,7 @@ final class LyricsViewController: UIViewController {
                 artist: artistName,
                 album: albumName
             )
+            guard generation == loadGeneration else { return }
             spinner.stopAnimating()
 
             guard let result else {
@@ -234,6 +280,7 @@ final class LyricsViewController: UIViewController {
     }
 
     private func startProgressObservation() {
+        guard progressObserver == nil else { return }
         progressObserver = NotificationCenter.default.addObserver(
             forName: AudioPlayer.playbackProgressDidChange,
             object: nil,
@@ -308,6 +355,7 @@ extension LyricsViewController: UITableViewDelegate {
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        scrollResumeWorkItem?.cancel()
         isUserScrolling = true
     }
 
@@ -322,9 +370,12 @@ extension LyricsViewController: UITableViewDelegate {
     }
 
     private func scheduleScrollResume() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+        scrollResumeWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
             self?.isUserScrolling = false
         }
+        scrollResumeWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: workItem)
     }
 }
 
@@ -340,6 +391,7 @@ private final class LyricCell: UITableViewCell {
         selectionStyle = .none
 
         lyricLabel.numberOfLines = 0
+        lyricLabel.adjustsFontForContentSizeCategory = true
         lyricLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(lyricLabel)
 
@@ -359,11 +411,11 @@ private final class LyricCell: UITableViewCell {
     func configure(text: String, isCurrent: Bool) {
         lyricLabel.text = text
         if isCurrent {
-            lyricLabel.font = .systemFont(ofSize: 28, weight: .bold)
+            lyricLabel.font = .scaled(.title1, size: 28, weight: .bold)
             lyricLabel.textColor = .white
             lyricLabel.transform = .identity
         } else {
-            lyricLabel.font = .systemFont(ofSize: 20, weight: .medium)
+            lyricLabel.font = .scaled(.title3, size: 20, weight: .medium)
             lyricLabel.textColor = .white.withAlphaComponent(0.3)
             lyricLabel.transform = .identity
         }

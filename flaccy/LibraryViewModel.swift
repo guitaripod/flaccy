@@ -3,6 +3,7 @@ import UIKit
 
 nonisolated enum LibraryItem: Hashable, Sendable {
     case album(Album)
+    case recentAlbum(Album)
     case song(Track)
     case artist(ArtistItem)
     case playlist(PlaylistItem)
@@ -131,16 +132,17 @@ final class LibraryViewModel {
     private var cachedSortedAlbums: [Album]?
     private var cachedSortedSongs: [Track]?
     private var cachedSortedArtists: [ArtistItem]?
+    private var cachedRecentAlbums: [Album]?
+    private var cachedPlaylists: [PlaylistItem]?
     private var searchDebounceTask: Task<Void, Never>?
 
-    var isEmpty: Bool {
-        switch currentSegment {
-        case .albums: return library.albums.isEmpty
-        case .songs: return library.allTracks.isEmpty
-        case .artists: return artists.isEmpty
-        case .playlists: return playlists.isEmpty && !LastFMService.shared.isAuthenticated
-        }
+    enum EmptyState {
+        case none
+        case noLibrary
+        case noSearchResults(String)
     }
+
+    private(set) var emptyState: EmptyState = .none
 
     var sortedAlbums: [Album] {
         if let cached = cachedSortedAlbums { return cached }
@@ -221,26 +223,34 @@ final class LibraryViewModel {
     }
 
     var recentlyPlayedAlbums: [Album] {
+        if let cached = cachedRecentAlbums { return cached }
+        let result: [Album]
         do {
             let recent = try DatabaseManager.shared.fetchRecentlyPlayedAlbums(limit: 6)
-            return recent.compactMap { pair in
+            result = recent.compactMap { pair in
                 library.albums.first { $0.title == pair.albumTitle && $0.artist == pair.artist }
             }
-        } catch { return [] }
+        } catch { result = [] }
+        cachedRecentAlbums = result
+        return result
     }
 
     var playlists: [PlaylistItem] {
+        if let cached = cachedPlaylists { return cached }
+        let result: [PlaylistItem]
         do {
             let records = try DatabaseManager.shared.fetchAllPlaylists()
-            return records.compactMap { record in
+            let counts = (try? DatabaseManager.shared.fetchPlaylistTrackCounts()) ?? [:]
+            result = records.compactMap { record in
                 guard let id = record.id else { return nil }
-                let count = (try? DatabaseManager.shared.fetchPlaylistTrackCount(playlistId: id)) ?? 0
-                return PlaylistItem(id: id, name: record.name, trackCount: count)
+                return PlaylistItem(id: id, name: record.name, trackCount: counts[id] ?? 0)
             }
         } catch {
             AppLogger.error("Failed to fetch playlists: \(error.localizedDescription)", category: .database)
-            return []
+            result = []
         }
+        cachedPlaylists = result
+        return result
     }
 
     var artists: [ArtistItem] {
@@ -372,6 +382,7 @@ final class LibraryViewModel {
     }
 
     func refreshPlaylists() {
+        cachedPlaylists = nil
         guard currentSegment == .playlists else { return }
         snapshotPublisher.send(buildSnapshot())
     }
@@ -401,7 +412,7 @@ final class LibraryViewModel {
             let recent = query.isEmpty ? recentlyPlayedAlbums : []
             if !recent.isEmpty {
                 snapshot.appendSections([0, 1])
-                snapshot.appendItems(recent.map { .album($0) }, toSection: 0)
+                snapshot.appendItems(recent.map { .recentAlbum($0) }, toSection: 0)
                 snapshot.appendItems(filtered.map { .album($0) }, toSection: 1)
             } else {
                 snapshot.appendSections([0])
@@ -436,7 +447,13 @@ final class LibraryViewModel {
             playlistItems.append(contentsOf: filtered.map { .playlist($0) })
             snapshot.appendItems(playlistItems)
         }
+        emptyState = computeEmptyState(itemCount: snapshot.numberOfItems)
         return snapshot
+    }
+
+    private func computeEmptyState(itemCount: Int) -> EmptyState {
+        guard itemCount == 0 else { return .none }
+        return searchQuery.isEmpty ? .noLibrary : .noSearchResults(searchQuery)
     }
 
     private func publishMiniPlayerState() {
@@ -456,9 +473,12 @@ final class LibraryViewModel {
         cachedSortedAlbums = nil
         cachedSortedSongs = nil
         cachedSortedArtists = nil
+        cachedRecentAlbums = nil
+        cachedPlaylists = nil
     }
 
     @objc private func playbackDidChange() {
+        cachedRecentAlbums = nil
         publishMiniPlayerState()
     }
 

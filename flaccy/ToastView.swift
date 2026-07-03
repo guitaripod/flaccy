@@ -1,5 +1,18 @@
 import UIKit
 
+extension UIFont {
+
+    /// Returns a Dynamic Type–scaled font anchored to the given text style, so fixed design sizes track the user's content size category.
+    static func scaled(_ style: UIFont.TextStyle, size: CGFloat, weight: UIFont.Weight) -> UIFont {
+        UIFontMetrics(forTextStyle: style).scaledFont(for: .systemFont(ofSize: size, weight: weight))
+    }
+
+    /// Same as `scaled(_:size:weight:)` but capped at a maximum point size for space-constrained UI.
+    static func scaled(_ style: UIFont.TextStyle, size: CGFloat, weight: UIFont.Weight, maxSize: CGFloat) -> UIFont {
+        UIFontMetrics(forTextStyle: style).scaledFont(for: .systemFont(ofSize: size, weight: weight), maximumPointSize: maxSize)
+    }
+}
+
 final class ToastView {
 
     static func show(_ message: String, in view: UIView, style: Style = .info) {
@@ -16,7 +29,8 @@ final class ToastView {
 
         let label = UILabel()
         label.text = message
-        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.font = .scaled(.footnote, size: 14, weight: .medium)
+        label.adjustsFontForContentSizeCategory = true
         label.textColor = .white
         label.numberOfLines = 2
 

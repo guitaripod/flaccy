@@ -14,18 +14,23 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private let loadingOverlay = UIView()
     private let loadingIconView = UIImageView()
     private let loadingLabel = UILabel()
+    private let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
+    private let emptyStateLabel = UILabel()
     private lazy var emptyStateView: UIView = {
         let container = UIView()
 
-        let imageView = UIImageView(image: UIImage(systemName: "music.note.list"))
+        let imageView = emptyStateIconView
         imageView.tintColor = .tertiaryLabel
         imageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 56, weight: .thin)
         imageView.contentMode = .scaleAspectFit
 
-        let label = UILabel()
+        let label = emptyStateLabel
         label.text = "Import files from Settings"
         label.textColor = .secondaryLabel
         label.font = .preferredFont(forTextStyle: .body)
+        label.adjustsFontForContentSizeCategory = true
+        label.numberOfLines = 0
+        label.textAlignment = .center
 
         let stack = UIStackView(arrangedSubviews: [imageView, label])
         stack.axis = .vertical
@@ -37,6 +42,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: container.centerYAnchor, constant: -40),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -32),
         ])
 
         return container
@@ -209,7 +216,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         view.addSubview(sectionIndexView)
 
         NSLayoutConstraint.activate([
-            sectionIndexView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+            sectionIndexView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
             sectionIndexView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
@@ -218,10 +225,27 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         sectionIndexView.onSelectIndex = { [weak self] letter in
             guard let self,
                   let itemIndex = self.viewModel.indexOfFirstItem(forLetter: letter) else { return }
-            let section = self.viewModel.currentSegment == .albums && self.viewModel.recentlyPlayedAlbums.count > 0
+            let section = self.viewModel.currentSegment == .albums
                 && self.dataSource.snapshot().numberOfSections > 1 ? 1 : 0
+            guard section < self.collectionView.numberOfSections,
+                  itemIndex < self.collectionView.numberOfItems(inSection: section) else { return }
             let indexPath = IndexPath(item: itemIndex, section: section)
             self.collectionView.scrollToItem(at: indexPath, at: .top, animated: false)
+        }
+    }
+
+    private func updateEmptyState() {
+        switch viewModel.emptyState {
+        case .none:
+            collectionView.backgroundView = nil
+        case .noLibrary:
+            emptyStateIconView.image = UIImage(systemName: "music.note.list")
+            emptyStateLabel.text = "Import files from Settings"
+            collectionView.backgroundView = emptyStateView
+        case .noSearchResults(let query):
+            emptyStateIconView.image = UIImage(systemName: "magnifyingglass")
+            emptyStateLabel.text = "No results for \u{201C}\(query)\u{201D}"
+            collectionView.backgroundView = emptyStateView
         }
     }
 
@@ -244,7 +268,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         let titleLabel = UILabel()
         titleLabel.text = "flaccy"
-        titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        titleLabel.font = .scaled(.title1, size: 28, weight: .bold)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.textAlignment = .center
 
         let stack = UIStackView(arrangedSubviews: [loadingIconView, titleLabel])
@@ -285,7 +310,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             cell.configure(with: album)
         }
 
-        let artistRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, ArtistItem> { cell, _, artist in
+        let artistRegistration = UICollectionView.CellRegistration<ListArtworkCell, ArtistItem> { cell, _, artist in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = artist.name
             content.secondaryText = "\(artist.albumCount) album\(artist.albumCount == 1 ? "" : "s")"
@@ -299,23 +324,22 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
             if let cachedArt {
                 content.image = cachedArt
+                cell.currentArtworkKey = nil
             } else {
                 content.image = UIImage(systemName: "person.crop.circle.fill")
                 content.imageProperties.tintColor = .tertiaryLabel
                 if let firstAlbum {
+                    let artKey = "\(firstAlbum.title)|\(firstAlbum.artist)|\(artist.name)"
+                    cell.currentArtworkKey = artKey
                     AlbumArtworkCache.shared.loadArtwork(forAlbum: firstAlbum.title, artist: firstAlbum.artist) { [weak cell] image in
-                        guard let cell, let image else { return }
-                        var updated = UIListContentConfiguration.subtitleCell()
-                        updated.text = artist.name
-                        updated.secondaryText = "\(artist.albumCount) album\(artist.albumCount == 1 ? "" : "s")"
-                        updated.secondaryTextProperties.color = .secondaryLabel
-                        updated.imageProperties.cornerRadius = 22
-                        updated.imageProperties.maximumSize = CGSize(width: 44, height: 44)
-                        updated.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
+                        guard let cell, cell.currentArtworkKey == artKey, let image,
+                              var updated = cell.contentConfiguration as? UIListContentConfiguration else { return }
                         updated.image = image
+                        updated.imageProperties.tintColor = nil
                         cell.contentConfiguration = updated
-                        cell.accessories = [.disclosureIndicator()]
                     }
+                } else {
+                    cell.currentArtworkKey = nil
                 }
             }
             cell.contentConfiguration = content
@@ -353,12 +377,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         ) { supplementaryView, _, _ in
             var config = UIListContentConfiguration.plainHeader()
             config.text = "Recently Played"
-            config.textProperties.font = .systemFont(ofSize: 13, weight: .semibold)
+            config.textProperties.font = .scaled(.footnote, size: 13, weight: .semibold)
             config.textProperties.color = .secondaryLabel
             supplementaryView.contentConfiguration = config
         }
 
-        let songRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Track> { cell, _, track in
+        let songRegistration = UICollectionView.CellRegistration<ListArtworkCell, Track> { cell, _, track in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = track.title
             content.secondaryText = "\(track.artist) · \(track.albumTitle)"
@@ -368,19 +392,17 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
             if let cached = AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist) {
                 content.image = cached
+                cell.currentArtworkKey = nil
             } else {
                 content.image = UIImage(systemName: "music.note")
                 content.imageProperties.tintColor = .tertiaryLabel
+                let artKey = "\(track.albumTitle)|\(track.artist)"
+                cell.currentArtworkKey = artKey
                 AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak cell] image in
-                    guard let cell, let image else { return }
-                    var updated = UIListContentConfiguration.subtitleCell()
-                    updated.text = track.title
-                    updated.secondaryText = "\(track.artist) · \(track.albumTitle)"
-                    updated.secondaryTextProperties.color = .secondaryLabel
-                    updated.imageProperties.cornerRadius = 4
-                    updated.imageProperties.maximumSize = CGSize(width: 44, height: 44)
-                    updated.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
+                    guard let cell, cell.currentArtworkKey == artKey, let image,
+                          var updated = cell.contentConfiguration as? UIListContentConfiguration else { return }
                     updated.image = image
+                    updated.imageProperties.tintColor = nil
                     cell.contentConfiguration = updated
                 }
             }
@@ -390,7 +412,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView) {
             collectionView, indexPath, item in
             switch item {
-            case .album(let album):
+            case .album(let album), .recentAlbum(let album):
                 return collectionView.dequeueConfiguredReusableCell(
                     using: albumRegistration, for: indexPath, item: album
                 )
@@ -427,7 +449,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                     self.createLayout(for: self.viewModel.currentSegment), animated: false
                 )
                 self.dataSource.apply(snapshot, animatingDifferences: false)
-                self.collectionView.backgroundView = self.viewModel.isEmpty ? self.emptyStateView : nil
+                self.updateEmptyState()
                 self.updateSectionIndex()
             }
             .store(in: &cancellables)
@@ -458,8 +480,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         case .albums:
             return UICollectionViewCompositionalLayout { [weak self] sectionIndex, _ in
                 guard let self else { return nil }
-                let hasRecent = self.viewModel.recentlyPlayedAlbums.count > 0
-                    && self.dataSource.snapshot().numberOfSections > 1
+                let hasRecent = self.dataSource.snapshot().numberOfSections > 1
 
                 if sectionIndex == 0 && hasRecent {
                     let itemSize = NSCollectionLayoutSize(widthDimension: .absolute(110), heightDimension: .estimated(160))
@@ -488,19 +509,18 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
                 let section = NSCollectionLayoutSection(group: group)
                 section.interGroupSpacing = 12
-                section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
+                section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 20)
                 return section
             }
-        case .songs:
+        case .songs, .artists:
             var config = UICollectionLayoutListConfiguration(appearance: .plain)
             config.showsSeparators = true
             config.backgroundColor = .clear
-            return UICollectionViewCompositionalLayout.list(using: config)
-        case .artists:
-            var config = UICollectionLayoutListConfiguration(appearance: .plain)
-            config.showsSeparators = true
-            config.backgroundColor = .clear
-            return UICollectionViewCompositionalLayout.list(using: config)
+            return UICollectionViewCompositionalLayout { _, environment in
+                let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: environment)
+                section.contentInsets.trailing = 20
+                return section
+            }
         case .playlists:
             var config = UICollectionLayoutListConfiguration(appearance: .plain)
             config.showsSeparators = true
@@ -644,7 +664,7 @@ extension LibraryViewController: UICollectionViewDelegate {
         impactLight.impactOccurred()
 
         switch item {
-        case .album(let album):
+        case .album(let album), .recentAlbum(let album):
             let detail = AlbumDetailViewController(album: album)
             navigationController?.pushViewController(detail, animated: true)
         case .song(let track):
@@ -667,7 +687,7 @@ extension LibraryViewController: UICollectionViewDelegate {
               let item = dataSource.itemIdentifier(for: indexPath) else { return nil }
 
         switch item {
-        case .album(let album):
+        case .album(let album), .recentAlbum(let album):
             return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
                 let playAction = UIAction(title: "Play", image: UIImage(systemName: "play.fill")) { _ in
                     AudioPlayer.shared.play(album.tracks, startingAt: 0)
@@ -722,5 +742,15 @@ extension LibraryViewController: UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         Task { await viewModel.importFiles(from: urls) }
+    }
+}
+
+
+final class ListArtworkCell: UICollectionViewListCell {
+    var currentArtworkKey: String?
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        currentArtworkKey = nil
     }
 }
