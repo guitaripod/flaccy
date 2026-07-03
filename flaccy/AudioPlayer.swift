@@ -1,4 +1,3 @@
-import ActivityKit
 import AVFoundation
 import FlaccyCore
 import MediaPlayer
@@ -64,7 +63,6 @@ final class AudioPlayer: AudioPlaying {
     private(set) var sleepTimerRemaining: TimeInterval?
     private(set) var sleepAtEndOfTrack = false
 
-    private var liveActivity: Activity<FlaccyActivityAttributes>?
     private var trackStartTime: Date?
     private var hasScrobbled: Bool = false
     private var originalQueue: [Track] = []
@@ -218,7 +216,6 @@ final class AudioPlayer: AudioPlaying {
     private func applyPlaybackState(_ playing: Bool) {
         isPlaying = playing
         updateNowPlayingInfo()
-        updateLiveActivity()
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
     }
 
@@ -281,7 +278,6 @@ final class AudioPlayer: AudioPlaying {
             selectionFeedback.selectionChanged()
             player?.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
                 self?.updateNowPlayingInfo()
-                self?.updateLiveActivity()
                 NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
             }
             return
@@ -300,7 +296,6 @@ final class AudioPlayer: AudioPlaying {
         let cmTime = CMTime(seconds: time, preferredTimescale: 600)
         player?.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             self?.updateNowPlayingInfo()
-            self?.updateLiveActivity()
             NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
         }
     }
@@ -309,7 +304,6 @@ final class AudioPlayer: AudioPlaying {
         player?.seek(to: time, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] finished in
             if finished {
                 self?.updateNowPlayingInfo()
-                self?.updateLiveActivity()
             }
             completion()
         }
@@ -372,7 +366,6 @@ final class AudioPlayer: AudioPlaying {
         currentIndex = 0
         lastKnownPlaybackPosition = 0
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-        endLiveActivity()
         impactMedium.impactOccurred()
         NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
@@ -560,8 +553,6 @@ final class AudioPlayer: AudioPlaying {
         ensureArtworkLoaded(for: track)
         sendNowPlayingToLastFM(track: track)
 
-        endLiveActivity()
-        startLiveActivity()
 
         NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
@@ -582,7 +573,6 @@ final class AudioPlayer: AudioPlaying {
         player?.pause()
         isPlaying = false
         updateNowPlayingInfo()
-        endLiveActivity()
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
     }
 
@@ -644,8 +634,6 @@ final class AudioPlayer: AudioPlaying {
         ensureArtworkLoaded(for: track)
         sendNowPlayingToLastFM(track: track)
 
-        endLiveActivity()
-        startLiveActivity()
 
         NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
@@ -826,6 +814,11 @@ final class AudioPlayer: AudioPlaying {
             DispatchQueue.main.async { self?.seek(to: positionEvent.positionTime) }
             return .success
         }
+
+        center.skipForwardCommand.isEnabled = false
+        center.skipBackwardCommand.isEnabled = false
+        center.seekForwardCommand.isEnabled = false
+        center.seekBackwardCommand.isEnabled = false
     }
 
     private func resolveArtwork(for track: Track) -> UIImage? {
@@ -836,7 +829,6 @@ final class AudioPlayer: AudioPlaying {
         guard resolveArtwork(for: track) == nil else { return }
         AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] _ in
             self?.updateNowPlayingInfo()
-            self?.updateLiveActivity()
         }
     }
 
@@ -854,6 +846,11 @@ final class AudioPlayer: AudioPlaying {
             MPMediaItemPropertyPlaybackDuration: reportedDuration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0,
+            MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
+            MPNowPlayingInfoPropertyPlaybackQueueIndex: currentIndex,
+            MPNowPlayingInfoPropertyPlaybackQueueCount: queue.count,
+            MPMediaItemPropertyAlbumTrackNumber: track.trackNumber,
         ]
 
         if let artwork = resolveArtwork(for: track) {
@@ -863,84 +860,6 @@ final class AudioPlayer: AudioPlaying {
         }
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-    }
-
-    /// Produces a thumbnail small enough that the encoded ActivityAttributes stay under ActivityKit's 4KB payload limit.
-    private func liveActivityArtworkData(for track: Track) -> Data? {
-        guard let artwork = resolveArtwork(for: track) else { return nil }
-        let side: CGFloat = 96
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let thumbnail = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
-            artwork.draw(in: CGRect(x: 0, y: 0, width: side, height: side))
-        }
-        for quality in [0.7, 0.5, 0.3] {
-            if let data = thumbnail.jpegData(compressionQuality: quality), data.count < 3000 {
-                return data
-            }
-        }
-        return nil
-    }
-
-    private func makeLiveActivityContentState() -> FlaccyActivityAttributes.ContentState? {
-        guard let track = currentTrack else { return nil }
-        let elapsed = currentTime
-        let trackDuration = duration > 0 ? duration : track.duration
-        return FlaccyActivityAttributes.ContentState(
-            title: track.title,
-            artist: track.artist,
-            albumTitle: track.albumTitle,
-            isPlaying: isPlaying,
-            playbackStartDate: Date().addingTimeInterval(-elapsed),
-            pausedElapsed: elapsed,
-            duration: trackDuration
-        )
-    }
-
-    private func makeLiveActivityContent(state: FlaccyActivityAttributes.ContentState) -> ActivityContent<FlaccyActivityAttributes.ContentState> {
-        let staleDate = state.isPlaying && state.duration > 0
-            ? state.playbackStartDate.addingTimeInterval(state.duration)
-            : nil
-        return ActivityContent(state: state, staleDate: staleDate)
-    }
-
-    private func startLiveActivity() {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        guard let track = currentTrack, let state = makeLiveActivityContentState() else { return }
-
-        let attributes = FlaccyActivityAttributes(artworkData: liveActivityArtworkData(for: track))
-
-        do {
-            liveActivity = try Activity.request(attributes: attributes, content: makeLiveActivityContent(state: state), pushType: nil)
-        } catch {
-            AppLogger.error("Failed to start live activity: \(error.localizedDescription)", category: .ui)
-        }
-    }
-
-    private func updateLiveActivity() {
-        guard let state = makeLiveActivityContentState() else {
-            endLiveActivity()
-            return
-        }
-        guard let activity = liveActivity else { return }
-        let content = makeLiveActivityContent(state: state)
-        Task { await activity.update(content) }
-    }
-
-    private func endLiveActivity() {
-        guard let activity = liveActivity else { return }
-        liveActivity = nil
-        let state = FlaccyActivityAttributes.ContentState(
-            title: currentTrack?.title ?? "",
-            artist: currentTrack?.artist ?? "",
-            albumTitle: currentTrack?.albumTitle ?? "",
-            isPlaying: false,
-            playbackStartDate: Date(),
-            pausedElapsed: 0,
-            duration: 0
-        )
-        let content = ActivityContent(state: state, staleDate: nil)
-        Task { await activity.end(content, dismissalPolicy: .immediate) }
     }
 
     func saveQueueState() {
