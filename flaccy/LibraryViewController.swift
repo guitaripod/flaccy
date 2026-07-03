@@ -85,6 +85,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         searchController.searchBar.placeholder = "Albums, Artists, Songs"
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
+        navigationItem.preferredSearchBarPlacement = .stacked
         navigationItem.largeTitleDisplayMode = .never
         definesPresentationContext = true
     }
