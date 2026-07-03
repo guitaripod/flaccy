@@ -1,6 +1,7 @@
 import AVFoundation
 import AVKit
 import Combine
+import MediaPlayer
 import UIKit
 
 final class NowPlayingViewController: UIViewController, SonglinkShareable {
@@ -8,113 +9,179 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private let viewModel = NowPlayingViewModel()
     private var cancellables = Set<AnyCancellable>()
 
+    private let backdropView = NowPlayingBackdropView()
+    private let scrimLayer = CAGradientLayer()
     private let artworkView = UIImageView()
     private let artworkContainer = UIView()
-    private let titleLabel = UILabel()
+    private let titleMarquee = MarqueeLabel()
     private let artistButton = UIButton(type: .system)
     private let dashLabel = UILabel()
     private let albumLabel = UILabel()
+    private let playingFromLabel = UILabel()
     private let progressSlider = UISlider()
     private let currentTimeLabel = UILabel()
     private let remainingTimeLabel = UILabel()
+    private let scrubBubble = UIView()
+    private let scrubBubbleLabel = UILabel()
+    private let skipBackButton = UIButton(type: .system)
     private let previousButton = UIButton(type: .system)
-    private let playPauseButton = UIButton(type: .system)
+    private let playPauseButton = UIButton(type: .custom)
+    private let playPauseIconView = UIImageView()
     private let nextButton = UIButton(type: .system)
+    private let skipForwardButton = UIButton(type: .system)
+    private let volumeView = MPVolumeView()
     private let shuffleButton = UIButton(type: .system)
     private let repeatButton = UIButton(type: .system)
-    private let playingFromLabel = UILabel()
     private let airplayButton = AVRoutePickerView(frame: .zero)
     private let sleepTimerButton = UIButton(type: .system)
+    private let shareButton = UIButton(type: .system)
+    private let lyricsButton = UIButton(type: .system)
     private let queueButton = UIButton(type: .system)
+
     private var isSliderDragging = false
     private var isSeeking = false
     private var chaseTime: TimeInterval = 0
+    private var lastTrackKey: String?
+    private var lastIsPlaying: Bool?
+    private var hasAppliedInitialState = false
+    private var hasAnimatedAppearance = false
+    private var isSwipeAnimating = false
+    private var breatheAnimator: UIViewPropertyAnimator?
+    private var artworkRestScale: CGFloat = 1
 
     private lazy var smallThumb = makeThumbImage(size: 6)
     private lazy var largeThumb = makeThumbImage(size: 20)
 
+    private static let pausedArtworkScale: CGFloat = 0.86
+    private static let playIconConfig = UIImage.SymbolConfiguration(pointSize: 44, weight: .bold)
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        overrideUserInterfaceStyle = .dark
+        view.backgroundColor = .black
+        configureSheet()
+        setupBackdrop()
         setupUI()
+        setupAccessibilityOrder()
         bindViewModel()
         applyState(viewModel.currentState)
+        hasAppliedInitialState = true
         updateShuffleRepeatState()
+        updateSleepTimerButton()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(shuffleRepeatDidChange), name: AudioPlayer.shuffleRepeatDidChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(pauseBackdrop), name: UIApplication.didEnterBackgroundNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(resumeBackdrop), name: UIApplication.willEnterForegroundNotification, object: nil
+        )
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        resumeBackdrop()
+        prepareAppearanceAnimationIfNeeded()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        runAppearanceAnimationIfNeeded()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        backdropView.setPaused(true)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        backdropView.frame = view.bounds
+        scrimLayer.frame = view.bounds
+        artworkContainer.layer.shadowPath = UIBezierPath(
+            roundedRect: artworkContainer.bounds, cornerRadius: 20
+        ).cgPath
+    }
+
+    private func configureSheet() {
+        sheetPresentationController?.prefersGrabberVisible = true
+        sheetPresentationController?.preferredCornerRadius = 32
+    }
+
+    private func setupBackdrop() {
+        backdropView.frame = view.bounds
+        view.addSubview(backdropView)
+        scrimLayer.colors = [
+            UIColor.black.withAlphaComponent(0.35).cgColor,
+            UIColor.black.withAlphaComponent(0.12).cgColor,
+            UIColor.black.withAlphaComponent(0.45).cgColor,
+        ]
+        scrimLayer.locations = [0, 0.45, 1]
+        view.layer.addSublayer(scrimLayer)
     }
 
     private func setupUI() {
-        let dragHandle = UIView()
-        dragHandle.backgroundColor = .quaternaryLabel
-        dragHandle.layer.cornerRadius = 2.5
+        setupArtwork()
+        setupInfoBlock()
+        setupScrubber()
+        setupTransport()
 
-        let topSpacer = UIView()
+        let infoStack = UIStackView(arrangedSubviews: [titleMarquee, makeArtistAlbumRow(), playingFromLabel])
+        infoStack.axis = .vertical
+        infoStack.spacing = 4
 
-        airplayButton.tintColor = .secondaryLabel
-        airplayButton.activeTintColor = .systemBlue
-        airplayButton.translatesAutoresizingMaskIntoConstraints = false
+        let sliderStack = UIStackView(arrangedSubviews: [progressSlider, makeTimeRow()])
+        sliderStack.axis = .vertical
+        sliderStack.spacing = 4
 
-        sleepTimerButton.setImage(
-            UIImage(systemName: "moon.zzz", withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)),
-            for: .normal
-        )
-        sleepTimerButton.tintColor = .secondaryLabel
-        sleepTimerButton.addAction(UIAction { [weak self] _ in self?.showSleepTimerSheet() }, for: .touchUpInside)
+        let transportStack = UIStackView(arrangedSubviews: [
+            skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton,
+        ])
+        transportStack.distribution = .equalSpacing
+        transportStack.alignment = .center
 
-        queueButton.setImage(
-            UIImage(systemName: "list.bullet", withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)),
-            for: .normal
-        )
-        queueButton.tintColor = .secondaryLabel
-        queueButton.addAction(UIAction { [weak self] _ in
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            self?.presentQueue()
-        }, for: .touchUpInside)
+        let mainStack = UIStackView(arrangedSubviews: [
+            artworkContainer, infoStack, sliderStack, transportStack, makeVolumeRow(), makeActionRow(),
+        ])
+        mainStack.axis = .vertical
+        mainStack.spacing = 22
+        mainStack.setCustomSpacing(26, after: artworkContainer)
+        mainStack.setCustomSpacing(28, after: transportStack)
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(mainStack)
 
-        let lyricsButton = UIButton(type: .system)
-        lyricsButton.setImage(
-            UIImage(systemName: "text.quote", withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)),
-            for: .normal
-        )
-        lyricsButton.tintColor = .secondaryLabel
-        lyricsButton.addAction(UIAction { [weak self] _ in
-            self?.presentLyrics()
-        }, for: .touchUpInside)
+        setupScrubBubble()
 
-        let shareButton = UIButton(type: .system)
-        shareButton.setImage(
-            UIImage(systemName: "square.and.arrow.up", withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)),
-            for: .normal
-        )
-        shareButton.tintColor = .secondaryLabel
-        shareButton.addAction(UIAction { [weak self] _ in
-            guard let self, let track = AudioPlayer.shared.currentTrack else { return }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
-        }, for: .touchUpInside)
+        NSLayoutConstraint.activate([
+            mainStack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
+            mainStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
+            mainStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
+            mainStack.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            artworkView.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42),
+        ])
+    }
 
-        let topRow = UIStackView(arrangedSubviews: [dragHandle, topSpacer, airplayButton, sleepTimerButton, shareButton, lyricsButton, queueButton])
-        topRow.alignment = .center
-        topRow.spacing = 16
-
+    private func setupArtwork() {
         artworkContainer.layer.shadowColor = UIColor.black.cgColor
-        artworkContainer.layer.shadowOpacity = 0.25
-        artworkContainer.layer.shadowOffset = CGSize(width: 0, height: 10)
-        artworkContainer.layer.shadowRadius = 30
+        artworkContainer.layer.shadowOpacity = 0.45
+        artworkContainer.layer.shadowOffset = CGSize(width: 0, height: 14)
+        artworkContainer.layer.shadowRadius = 34
 
         artworkView.contentMode = .scaleAspectFill
         artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 14
+        artworkView.layer.cornerRadius = 20
         artworkView.layer.cornerCurve = .continuous
-        artworkView.backgroundColor = .tertiarySystemFill
+        artworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         artworkView.image = UIImage(systemName: "music.note")
-        artworkView.tintColor = .quaternaryLabel
+        artworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
         artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 48, weight: .ultraLight)
         artworkView.translatesAutoresizingMaskIntoConstraints = false
         artworkContainer.addSubview(artworkView)
+        artworkContainer.isAccessibilityElement = true
+        artworkContainer.accessibilityLabel = "Album artwork"
+        artworkContainer.accessibilityHint = "Swipe left or right with two fingers to change track"
 
         let artworkSquare = artworkView.heightAnchor.constraint(equalTo: artworkView.widthAnchor)
         artworkSquare.priority = .defaultHigh
@@ -136,128 +203,223 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         swipeRight.direction = .right
         artworkContainer.addGestureRecognizer(swipeRight)
 
-        titleLabel.font = .scaled(.title3, size: 20, weight: .bold)
-        titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.numberOfLines = 2
-        titleLabel.lineBreakMode = .byTruncatingTail
+        let tilt = UILongPressGestureRecognizer(target: self, action: #selector(handleTilt(_:)))
+        tilt.minimumPressDuration = 0.18
+        artworkContainer.addGestureRecognizer(tilt)
+    }
 
-        artistButton.titleLabel?.font = .scaled(.callout, size: 16, weight: .regular)
+    private func setupInfoBlock() {
+        titleMarquee.font = .scaled(.title3, size: 21, weight: .bold)
+        titleMarquee.textColor = .white
+        titleMarquee.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        titleMarquee.addInteraction(UIContextMenuInteraction(delegate: self))
+
+        artistButton.titleLabel?.font = .scaled(.callout, size: 16, weight: .semibold)
         artistButton.titleLabel?.adjustsFontForContentSizeCategory = true
-        artistButton.setTitleColor(.tintColor, for: .normal)
+        artistButton.setTitleColor(.white.withAlphaComponent(0.85), for: .normal)
         artistButton.contentHorizontalAlignment = .leading
         artistButton.setContentHuggingPriority(.required, for: .horizontal)
         artistButton.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        artistButton.accessibilityHint = "Shows the artist's albums"
         artistButton.addAction(UIAction { [weak self] _ in self?.navigateToArtist() }, for: .touchUpInside)
 
         dashLabel.text = " — "
         dashLabel.font = .scaled(.callout, size: 16, weight: .regular)
         dashLabel.adjustsFontForContentSizeCategory = true
-        dashLabel.textColor = .secondaryLabel
+        dashLabel.textColor = .white.withAlphaComponent(0.55)
         dashLabel.setContentHuggingPriority(.required, for: .horizontal)
         dashLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         albumLabel.font = .scaled(.callout, size: 16, weight: .regular)
         albumLabel.adjustsFontForContentSizeCategory = true
-        albumLabel.textColor = .secondaryLabel
+        albumLabel.textColor = .white.withAlphaComponent(0.55)
         albumLabel.lineBreakMode = .byTruncatingTail
-
-        let artistAlbumStack = UIStackView(arrangedSubviews: [artistButton, dashLabel, albumLabel])
-        artistAlbumStack.spacing = 0
-        artistAlbumStack.alignment = .firstBaseline
+        albumLabel.addInteraction(UIContextMenuInteraction(delegate: self))
+        albumLabel.isUserInteractionEnabled = true
 
         playingFromLabel.font = .scaled(.caption1, size: 12, weight: .regular)
         playingFromLabel.adjustsFontForContentSizeCategory = true
-        playingFromLabel.textColor = .tertiaryLabel
+        playingFromLabel.textColor = .white.withAlphaComponent(0.4)
         playingFromLabel.isHidden = true
+    }
 
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistAlbumStack, playingFromLabel])
-        infoStack.axis = .vertical
-        infoStack.spacing = 4
+    private func makeArtistAlbumRow() -> UIStackView {
+        let row = UIStackView(arrangedSubviews: [artistButton, dashLabel, albumLabel])
+        row.spacing = 0
+        row.alignment = .firstBaseline
+        return row
+    }
 
-        progressSlider.minimumTrackTintColor = .label
-        progressSlider.maximumTrackTintColor = .quaternaryLabel
+    private func setupScrubber() {
+        progressSlider.minimumTrackTintColor = .white
+        progressSlider.maximumTrackTintColor = .white.withAlphaComponent(0.25)
         progressSlider.setThumbImage(smallThumb, for: .normal)
         progressSlider.setThumbImage(largeThumb, for: .highlighted)
+        progressSlider.accessibilityLabel = "Playback position"
         progressSlider.addTarget(self, action: #selector(sliderTouchDown), for: .touchDown)
-        progressSlider.addTarget(self, action: #selector(sliderTouchUp), for: [.touchUpInside, .touchUpOutside])
+        progressSlider.addTarget(self, action: #selector(sliderTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
         progressSlider.addTarget(self, action: #selector(sliderChanged), for: .valueChanged)
 
         let timeFont = UIFontMetrics(forTextStyle: .caption2)
             .scaledFont(for: .monospacedDigitSystemFont(ofSize: 11, weight: .medium), maximumPointSize: 18)
-        currentTimeLabel.font = timeFont
-        currentTimeLabel.adjustsFontForContentSizeCategory = true
-        currentTimeLabel.textColor = .tertiaryLabel
+        for label in [currentTimeLabel, remainingTimeLabel] {
+            label.font = timeFont
+            label.adjustsFontForContentSizeCategory = true
+            label.textColor = .white.withAlphaComponent(0.5)
+        }
         currentTimeLabel.text = "0:00"
-        remainingTimeLabel.font = timeFont
-        remainingTimeLabel.adjustsFontForContentSizeCategory = true
-        remainingTimeLabel.textColor = .tertiaryLabel
         remainingTimeLabel.text = "-0:00"
         remainingTimeLabel.textAlignment = .right
+    }
 
-        let timeSpacer = UIView()
-        let timeStack = UIStackView(arrangedSubviews: [currentTimeLabel, timeSpacer, remainingTimeLabel])
+    private func makeTimeRow() -> UIStackView {
+        UIStackView(arrangedSubviews: [currentTimeLabel, UIView(), remainingTimeLabel])
+    }
 
-        let sliderStack = UIStackView(arrangedSubviews: [progressSlider, timeStack])
-        sliderStack.axis = .vertical
-        sliderStack.spacing = 4
+    private func setupScrubBubble() {
+        scrubBubble.backgroundColor = UIColor.white.withAlphaComponent(0.95)
+        scrubBubble.layer.cornerRadius = 12
+        scrubBubble.layer.cornerCurve = .continuous
+        scrubBubble.alpha = 0
+        scrubBubbleLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+        scrubBubbleLabel.textColor = .black
+        scrubBubbleLabel.textAlignment = .center
+        scrubBubble.addSubview(scrubBubbleLabel)
+        view.addSubview(scrubBubble)
+    }
 
-        let transportConfig = UIImage.SymbolConfiguration(pointSize: 32, weight: .bold)
-        let playConfig = UIImage.SymbolConfiguration(pointSize: 48, weight: .bold)
-        let secondaryConfig = UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)
+    private func setupTransport() {
+        let skipConfig = UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold)
+        let transportConfig = UIImage.SymbolConfiguration(pointSize: 30, weight: .bold)
+
+        skipBackButton.setImage(UIImage(systemName: "gobackward.15", withConfiguration: skipConfig), for: .normal)
+        skipBackButton.tintColor = .white.withAlphaComponent(0.85)
+        skipBackButton.accessibilityLabel = "Skip back 15 seconds"
+        skipBackButton.addAction(UIAction { [weak self] _ in self?.skip(by: -15) }, for: .touchUpInside)
 
         previousButton.setImage(UIImage(systemName: "backward.fill", withConfiguration: transportConfig), for: .normal)
-        previousButton.tintColor = .label
-        previousButton.addAction(UIAction { [weak self] _ in self?.viewModel.previousTrack() }, for: .touchUpInside)
+        previousButton.tintColor = .white
+        previousButton.accessibilityLabel = "Previous track"
+        previousButton.addAction(UIAction { [weak self] _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self?.viewModel.previousTrack()
+        }, for: .touchUpInside)
 
-        playPauseButton.setImage(UIImage(systemName: "play.fill", withConfiguration: playConfig), for: .normal)
-        playPauseButton.tintColor = .label
-        playPauseButton.addAction(UIAction { [weak self] _ in self?.viewModel.togglePlayPause() }, for: .touchUpInside)
+        playPauseIconView.image = UIImage(systemName: "play.fill", withConfiguration: Self.playIconConfig)
+        playPauseIconView.tintColor = .white
+        playPauseIconView.contentMode = .center
+        playPauseIconView.translatesAutoresizingMaskIntoConstraints = false
+        playPauseButton.addSubview(playPauseIconView)
+        playPauseButton.accessibilityLabel = "Play"
+        playPauseButton.addAction(UIAction { [weak self] _ in
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            self?.viewModel.togglePlayPause()
+        }, for: .touchUpInside)
 
         nextButton.setImage(UIImage(systemName: "forward.fill", withConfiguration: transportConfig), for: .normal)
-        nextButton.tintColor = .label
-        nextButton.addAction(UIAction { [weak self] _ in self?.viewModel.nextTrack() }, for: .touchUpInside)
+        nextButton.tintColor = .white
+        nextButton.accessibilityLabel = "Next track"
+        nextButton.addAction(UIAction { [weak self] _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self?.viewModel.nextTrack()
+        }, for: .touchUpInside)
 
-        shuffleButton.setImage(UIImage(systemName: "shuffle", withConfiguration: secondaryConfig), for: .normal)
+        skipForwardButton.setImage(UIImage(systemName: "goforward.15", withConfiguration: skipConfig), for: .normal)
+        skipForwardButton.tintColor = .white.withAlphaComponent(0.85)
+        skipForwardButton.accessibilityLabel = "Skip forward 15 seconds"
+        skipForwardButton.addAction(UIAction { [weak self] _ in self?.skip(by: 15) }, for: .touchUpInside)
+
+        NSLayoutConstraint.activate([
+            playPauseButton.widthAnchor.constraint(equalToConstant: 72),
+            playPauseButton.heightAnchor.constraint(equalToConstant: 72),
+            playPauseIconView.centerXAnchor.constraint(equalTo: playPauseButton.centerXAnchor),
+            playPauseIconView.centerYAnchor.constraint(equalTo: playPauseButton.centerYAnchor),
+        ])
+    }
+
+    private func makeVolumeRow() -> UIStackView {
+        let glyphConfig = UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        let minGlyph = UIImageView(image: UIImage(systemName: "speaker.fill", withConfiguration: glyphConfig))
+        let maxGlyph = UIImageView(image: UIImage(systemName: "speaker.wave.3.fill", withConfiguration: glyphConfig))
+        for glyph in [minGlyph, maxGlyph] {
+            glyph.tintColor = .white.withAlphaComponent(0.5)
+            glyph.setContentHuggingPriority(.required, for: .horizontal)
+        }
+        volumeView.tintColor = .white
+        volumeView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let row = UIStackView(arrangedSubviews: [minGlyph, volumeView, maxGlyph])
+        row.spacing = 12
+        row.alignment = .center
+        row.accessibilityLabel = "Volume"
+        return row
+    }
+
+    private func makeActionRow() -> UIStackView {
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
+
+        shuffleButton.setImage(UIImage(systemName: "shuffle", withConfiguration: iconConfig), for: .normal)
+        shuffleButton.accessibilityLabel = "Shuffle"
         shuffleButton.addAction(UIAction { [weak self] _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             AudioPlayer.shared.toggleShuffle()
             self?.updateShuffleRepeatState()
         }, for: .touchUpInside)
 
-        repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: secondaryConfig), for: .normal)
+        repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: iconConfig), for: .normal)
+        repeatButton.accessibilityLabel = "Repeat"
         repeatButton.addAction(UIAction { [weak self] _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             AudioPlayer.shared.cycleRepeatMode()
             self?.updateShuffleRepeatState()
         }, for: .touchUpInside)
 
-        let controlsStack = UIStackView(arrangedSubviews: [
-            shuffleButton, previousButton, playPauseButton, nextButton, repeatButton,
-        ])
-        controlsStack.distribution = .equalSpacing
-        controlsStack.alignment = .center
+        airplayButton.tintColor = .white.withAlphaComponent(0.7)
+        airplayButton.activeTintColor = .white
+        airplayButton.accessibilityLabel = "AirPlay"
 
-        let mainStack = UIStackView(arrangedSubviews: [
-            topRow, artworkContainer, infoStack, sliderStack, controlsStack,
-        ])
-        mainStack.axis = .vertical
-        mainStack.spacing = 24
-        mainStack.setCustomSpacing(12, after: topRow)
-        mainStack.setCustomSpacing(28, after: artworkContainer)
-        mainStack.setCustomSpacing(32, after: sliderStack)
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(mainStack)
+        sleepTimerButton.setImage(UIImage(systemName: "moon.zzz", withConfiguration: iconConfig), for: .normal)
+        sleepTimerButton.accessibilityLabel = "Sleep timer"
+        sleepTimerButton.addAction(UIAction { [weak self] _ in self?.showSleepTimerSheet() }, for: .touchUpInside)
 
-        NSLayoutConstraint.activate([
-            dragHandle.widthAnchor.constraint(equalToConstant: 36),
-            dragHandle.heightAnchor.constraint(equalToConstant: 5),
-            airplayButton.widthAnchor.constraint(equalToConstant: 36),
-            airplayButton.heightAnchor.constraint(equalToConstant: 36),
+        shareButton.setImage(UIImage(systemName: "square.and.arrow.up", withConfiguration: iconConfig), for: .normal)
+        shareButton.accessibilityLabel = "Share"
+        shareButton.addAction(UIAction { [weak self] _ in
+            guard let self, let track = AudioPlayer.shared.currentTrack else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
+        }, for: .touchUpInside)
 
-            mainStack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            mainStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
-            mainStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
-            mainStack.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-            artworkView.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42),
-        ])
+        lyricsButton.setImage(UIImage(systemName: "text.quote", withConfiguration: iconConfig), for: .normal)
+        lyricsButton.accessibilityLabel = "Lyrics"
+        lyricsButton.addAction(UIAction { [weak self] _ in self?.presentLyrics() }, for: .touchUpInside)
+
+        queueButton.setImage(UIImage(systemName: "list.bullet", withConfiguration: iconConfig), for: .normal)
+        queueButton.accessibilityLabel = "Queue"
+        queueButton.addAction(UIAction { [weak self] _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self?.presentQueue()
+        }, for: .touchUpInside)
+
+        let buttons = [shuffleButton, repeatButton, sleepTimerButton, shareButton, lyricsButton, queueButton]
+        for button in buttons {
+            button.tintColor = .white.withAlphaComponent(0.7)
+        }
+        var capsules = buttons.map { LiquidGlass.capsule(hosting: $0, height: 40) }
+        capsules.insert(LiquidGlass.capsule(hosting: airplayButton, height: 40), at: 2)
+        let row = UIStackView(arrangedSubviews: capsules)
+        row.distribution = .fillEqually
+        row.spacing = 8
+        return row
+    }
+
+    private func setupAccessibilityOrder() {
+        view.accessibilityElements = [
+            artworkContainer, titleMarquee, artistButton, albumLabel, playingFromLabel,
+            progressSlider, currentTimeLabel, remainingTimeLabel,
+            skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton,
+            volumeView,
+            shuffleButton, repeatButton, airplayButton, sleepTimerButton, shareButton, lyricsButton, queueButton,
+        ]
     }
 
     private func bindViewModel() {
@@ -268,34 +430,15 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func applyState(_ state: NowPlayingViewModel.State) {
-        titleLabel.text = state.title
-        artistButton.setTitle(state.artist, for: .normal)
-        albumLabel.text = state.albumTitle
-
-        let hasArtist = !state.artist.isEmpty
-        let hasAlbum = !state.albumTitle.isEmpty
-        dashLabel.isHidden = !(hasArtist && hasAlbum)
-
-        if state.albumTitle.isEmpty {
-            playingFromLabel.text = ""
-            playingFromLabel.isHidden = true
-        } else {
-            playingFromLabel.text = "Playing from \(state.albumTitle)"
-            playingFromLabel.isHidden = false
+        let trackKey = "\(state.title)\0\(state.artist)\0\(state.albumTitle)"
+        if trackKey != lastTrackKey {
+            lastTrackKey = trackKey
+            applyTrackMetadata(state)
         }
-
-        if let image = state.artwork {
-            artworkView.contentMode = .scaleAspectFill
-            artworkView.image = image
-        } else {
-            artworkView.contentMode = .center
-            artworkView.image = UIImage(systemName: "music.note")
+        if state.isPlaying != lastIsPlaying {
+            lastIsPlaying = state.isPlaying
+            applyPlaybackState(isPlaying: state.isPlaying)
         }
-
-        let icon = state.isPlaying ? "pause.fill" : "play.fill"
-        let playConfig = UIImage.SymbolConfiguration(pointSize: 48, weight: .bold)
-        playPauseButton.setImage(UIImage(systemName: icon, withConfiguration: playConfig), for: .normal)
-
         if !isSliderDragging {
             progressSlider.maximumValue = Float(state.duration)
             progressSlider.value = Float(state.currentTime)
@@ -304,28 +447,111 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         }
     }
 
+    private func applyTrackMetadata(_ state: NowPlayingViewModel.State) {
+        titleMarquee.text = state.title
+        artistButton.setTitle(state.artist, for: .normal)
+        albumLabel.text = state.albumTitle
+
+        let hasArtist = !state.artist.isEmpty
+        let hasAlbum = !state.albumTitle.isEmpty
+        dashLabel.isHidden = !(hasArtist && hasAlbum)
+        playingFromLabel.text = hasAlbum ? "Playing from \(state.albumTitle)" : ""
+        playingFromLabel.isHidden = !hasAlbum
+
+        setArtwork(state.artwork)
+        updateBackdropPalette(artwork: state.artwork, state: state)
+    }
+
+    private func setArtwork(_ image: UIImage?) {
+        let update = { [self] in
+            if let image {
+                artworkView.contentMode = .scaleAspectFill
+                artworkView.image = image
+            } else {
+                artworkView.contentMode = .center
+                artworkView.image = UIImage(systemName: "music.note")
+            }
+        }
+        if hasAppliedInitialState, !isSwipeAnimating, !UIAccessibility.isReduceMotionEnabled {
+            UIView.transition(with: artworkView, duration: 0.35, options: [.transitionCrossDissolve, .allowUserInteraction], animations: update)
+        } else {
+            update()
+        }
+    }
+
+    private func updateBackdropPalette(artwork: UIImage?, state: NowPlayingViewModel.State) {
+        let cacheKey = "\(state.albumTitle)\0\(state.artist)"
+        let seed = state.title.isEmpty ? "flaccy" : "\(state.title)\(state.artist)"
+        let animated = hasAppliedInitialState
+        ArtworkPaletteExtractor.palette(for: artwork, cacheKey: cacheKey, fallbackSeed: seed) { [weak self] palette in
+            self?.backdropView.apply(palette, animated: animated)
+        }
+    }
+
+    private func applyPlaybackState(isPlaying: Bool) {
+        let iconName = isPlaying ? "pause.fill" : "play.fill"
+        let image = UIImage(systemName: iconName, withConfiguration: Self.playIconConfig)!
+        if hasAppliedInitialState {
+            playPauseIconView.setSymbolImage(image, contentTransition: .replace)
+        } else {
+            playPauseIconView.image = image
+        }
+        playPauseButton.accessibilityLabel = isPlaying ? "Pause" : "Play"
+        animateBreathe(isPlaying: isPlaying)
+    }
+
+    /// Springs the artwork card between full scale while playing and a dimmed,
+    /// smaller presentation while paused; skipped entirely under Reduce Motion.
+    private func animateBreathe(isPlaying: Bool) {
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            artworkContainer.transform = .identity
+            artworkView.alpha = 1
+            return
+        }
+        breatheAnimator?.stopAnimation(true)
+        let scale = isPlaying ? 1.0 : Self.pausedArtworkScale
+        artworkRestScale = scale
+        let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 0.72) { [self] in
+            artworkContainer.transform = CGAffineTransform(scaleX: scale, y: scale)
+            artworkView.alpha = isPlaying ? 1 : 0.75
+        }
+        animator.startAnimation()
+        breatheAnimator = animator
+    }
+
+    private func skip(by seconds: TimeInterval) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let target = min(max(0, AudioPlayer.shared.currentTime + seconds), AudioPlayer.shared.duration)
+        viewModel.seek(to: target)
+    }
+
     private func makeThumbImage(size: CGFloat) -> UIImage {
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
         return renderer.image { ctx in
-            UIColor.label.setFill()
+            UIColor.white.setFill()
             ctx.cgContext.fillEllipse(in: CGRect(x: 0, y: 0, width: size, height: size))
         }
     }
 
     private func updateShuffleRepeatState() {
-        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)
-        shuffleButton.tintColor = AudioPlayer.shared.shuffleEnabled ? .systemBlue : .tertiaryLabel
+        let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
+        let shuffleActive = AudioPlayer.shared.shuffleEnabled
+        shuffleButton.tintColor = shuffleActive ? .white : .white.withAlphaComponent(0.4)
+        shuffleButton.accessibilityValue = shuffleActive ? "On" : "Off"
 
         switch AudioPlayer.shared.repeatMode {
         case .off:
             repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .tertiaryLabel
+            repeatButton.tintColor = .white.withAlphaComponent(0.4)
+            repeatButton.accessibilityValue = "Off"
         case .all:
             repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .systemBlue
+            repeatButton.tintColor = .white
+            repeatButton.accessibilityValue = "All"
         case .one:
             repeatButton.setImage(UIImage(systemName: "repeat.1", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .systemBlue
+            repeatButton.tintColor = .white
+            repeatButton.accessibilityValue = "One"
         }
     }
 
@@ -361,10 +587,23 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     @objc private func sliderTouchDown() {
         isSliderDragging = true
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        backdropView.setPaused(true)
+        UIView.animate(withDuration: 0.2) {
+            self.progressSlider.transform = CGAffineTransform(scaleX: 1.0, y: 1.4)
+        }
+        updateScrubBubble(time: TimeInterval(progressSlider.value))
+        UIView.animate(withDuration: 0.15) { self.scrubBubble.alpha = 1 }
     }
 
     @objc private func sliderTouchUp() {
         isSliderDragging = false
+        if presentedViewController == nil, view.window != nil {
+            backdropView.setPaused(false)
+        }
+        UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0) {
+            self.progressSlider.transform = .identity
+        }
+        UIView.animate(withDuration: 0.15) { self.scrubBubble.alpha = 0 }
         let targetTime = TimeInterval(progressSlider.value)
         chaseTime = targetTime
         seekToChaseTime()
@@ -374,9 +613,23 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         let time = TimeInterval(progressSlider.value)
         chaseTime = time
         updateTimeLabelsFromSlider(time)
+        updateScrubBubble(time: time)
         if !isSeeking {
             seekToChaseTime()
         }
+    }
+
+    private func updateScrubBubble(time: TimeInterval) {
+        let total = Int(time)
+        scrubBubbleLabel.text = String(format: "%d:%02d", total / 60, total % 60)
+        scrubBubbleLabel.sizeToFit()
+        let bubbleSize = CGSize(width: scrubBubbleLabel.bounds.width + 20, height: 24)
+        scrubBubble.bounds = CGRect(origin: .zero, size: bubbleSize)
+        scrubBubbleLabel.frame = scrubBubble.bounds
+        let trackRect = progressSlider.trackRect(forBounds: progressSlider.bounds)
+        let thumbRect = progressSlider.thumbRect(forBounds: progressSlider.bounds, trackRect: trackRect, value: progressSlider.value)
+        let thumbCenter = progressSlider.convert(CGPoint(x: thumbRect.midX, y: thumbRect.minY), to: view)
+        scrubBubble.center = CGPoint(x: thumbCenter.x, y: thumbCenter.y - 26)
     }
 
     private func seekToChaseTime() {
@@ -408,6 +661,18 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         updateShuffleRepeatState()
     }
 
+    @objc private func pauseBackdrop() {
+        backdropView.setPaused(true)
+    }
+
+    @objc private func resumeBackdrop() {
+        guard view.window != nil || !hasAnimatedAppearance || isBeingPresented else {
+            return
+        }
+        guard !isSliderDragging else { return }
+        backdropView.setPaused(false)
+    }
+
     private func showSleepTimerSheet() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         let sheet = UIAlertController(title: "Sleep Timer", message: nil, preferredStyle: .actionSheet)
@@ -433,39 +698,138 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     private func updateSleepTimerButton() {
         let isActive = AudioPlayer.shared.sleepTimerRemaining != nil || AudioPlayer.shared.sleepAtEndOfTrack
-        let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
         let iconName = isActive ? "moon.zzz.fill" : "moon.zzz"
         sleepTimerButton.setImage(UIImage(systemName: iconName, withConfiguration: config), for: .normal)
-        sleepTimerButton.tintColor = isActive ? .systemBlue : .secondaryLabel
+        sleepTimerButton.tintColor = isActive ? .white : .white.withAlphaComponent(0.7)
+        sleepTimerButton.accessibilityValue = isActive ? "Active" : "Off"
     }
 
     @objc private func handleSwipeLeft() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        UIView.animate(withDuration: 0.15, animations: {
-            self.artworkView.transform = CGAffineTransform(translationX: -30, y: 0).scaledBy(x: 0.95, y: 0.95)
-            self.artworkView.alpha = 0.5
-        }) { _ in
-            self.viewModel.nextTrack()
-            self.artworkView.transform = CGAffineTransform(translationX: 30, y: 0).scaledBy(x: 0.95, y: 0.95)
-            UIView.animate(withDuration: 0.2) {
-                self.artworkView.transform = .identity
-                self.artworkView.alpha = 1
-            }
-        }
+        animateTrackChange(direction: -1) { [weak self] in self?.viewModel.nextTrack() }
     }
 
     @objc private func handleSwipeRight() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        UIView.animate(withDuration: 0.15, animations: {
-            self.artworkView.transform = CGAffineTransform(translationX: 30, y: 0).scaledBy(x: 0.95, y: 0.95)
-            self.artworkView.alpha = 0.5
-        }) { _ in
-            self.viewModel.previousTrack()
-            self.artworkView.transform = CGAffineTransform(translationX: -30, y: 0).scaledBy(x: 0.95, y: 0.95)
-            UIView.animate(withDuration: 0.2) {
+        animateTrackChange(direction: 1) { [weak self] in self?.viewModel.previousTrack() }
+    }
+
+    /// Slides the artwork out in the swipe direction, advances the track, then
+    /// springs the new artwork in from the opposite edge with an interruptible animator.
+    private func animateTrackChange(direction: CGFloat, change: @escaping () -> Void) {
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            change()
+            return
+        }
+        isSwipeAnimating = true
+        let outbound = UIViewPropertyAnimator(duration: 0.18, curve: .easeIn) { [self] in
+            artworkView.transform = CGAffineTransform(translationX: 36 * direction, y: 0).scaledBy(x: 0.94, y: 0.94)
+            artworkView.alpha = 0.35
+        }
+        outbound.addCompletion { [weak self] _ in
+            guard let self else { return }
+            change()
+            self.artworkView.transform = CGAffineTransform(translationX: -36 * direction, y: 0).scaledBy(x: 0.94, y: 0.94)
+            let inbound = UIViewPropertyAnimator(duration: 0.5, dampingRatio: 0.78) {
                 self.artworkView.transform = .identity
                 self.artworkView.alpha = 1
             }
+            inbound.addCompletion { [weak self] _ in self?.isSwipeAnimating = false }
+            inbound.startAnimation()
+        }
+        outbound.startAnimation()
+    }
+
+    /// Tilts the artwork card in 3D toward the touch point while pressed and
+    /// springs it flat on release; disabled under Reduce Motion.
+    @objc private func handleTilt(_ gesture: UILongPressGestureRecognizer) {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        switch gesture.state {
+        case .began, .changed:
+            let location = gesture.location(in: artworkContainer)
+            let bounds = artworkContainer.bounds
+            guard bounds.width > 0, bounds.height > 0 else { return }
+            let normalizedX = (location.x / bounds.width - 0.5) * 2
+            let normalizedY = (location.y / bounds.height - 0.5) * 2
+            let maxAngle: CGFloat = 6 * .pi / 180
+            var transform = CATransform3DIdentity
+            transform.m34 = -1 / 600
+            transform = CATransform3DRotate(transform, -normalizedY * maxAngle, 1, 0, 0)
+            transform = CATransform3DRotate(transform, normalizedX * maxAngle, 0, 1, 0)
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.15)
+            artworkView.layer.transform = transform
+            CATransaction.commit()
+        case .ended, .cancelled, .failed:
+            let spring = CASpringAnimation(keyPath: "transform")
+            spring.fromValue = artworkView.layer.presentation()?.transform ?? artworkView.layer.transform
+            spring.toValue = CATransform3DIdentity
+            spring.damping = 14
+            spring.stiffness = 160
+            spring.duration = spring.settlingDuration
+            artworkView.layer.transform = CATransform3DIdentity
+            artworkView.layer.add(spring, forKey: "tiltRelease")
+        default:
+            break
+        }
+    }
+
+    private func prepareAppearanceAnimationIfNeeded() {
+        guard !hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
+        for group in appearanceGroups() {
+            for element in group {
+                element.alpha = 0
+                element.transform = CGAffineTransform(translationX: 0, y: 14)
+            }
+        }
+    }
+
+    private func runAppearanceAnimationIfNeeded() {
+        guard !hasAnimatedAppearance else { return }
+        hasAnimatedAppearance = true
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        for (index, group) in appearanceGroups().enumerated() {
+            let animator = UIViewPropertyAnimator(duration: 0.55, dampingRatio: 0.8) { [self] in
+                for element in group {
+                    element.alpha = 1
+                    element.transform = element === artworkContainer
+                        ? CGAffineTransform(scaleX: artworkRestScale, y: artworkRestScale)
+                        : .identity
+                }
+            }
+            animator.startAnimation(afterDelay: Double(index) * 0.08)
+        }
+    }
+
+    private func appearanceGroups() -> [[UIView]] {
+        [
+            [artworkContainer],
+            [titleMarquee, artistButton, dashLabel, albumLabel, playingFromLabel],
+            [progressSlider, currentTimeLabel, remainingTimeLabel, skipBackButton, previousButton,
+             playPauseButton, nextButton, skipForwardButton],
+        ]
+    }
+}
+
+extension NowPlayingViewController: UIContextMenuInteractionDelegate {
+
+    func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        configurationForMenuAtLocation location: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard let track = AudioPlayer.shared.currentTrack else { return nil }
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+            let copyTitle = UIAction(title: "Copy Title", image: UIImage(systemName: "doc.on.doc")) { _ in
+                UIPasteboard.general.string = track.title
+            }
+            let copyArtist = UIAction(title: "Copy Artist", image: UIImage(systemName: "person")) { _ in
+                UIPasteboard.general.string = track.artist
+            }
+            let copyBoth = UIAction(title: "Copy Track Info", image: UIImage(systemName: "music.note")) { _ in
+                UIPasteboard.general.string = "\(track.artist) — \(track.title)"
+            }
+            return UIMenu(children: [copyTitle, copyArtist, copyBoth])
         }
     }
 }

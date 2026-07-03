@@ -22,4 +22,38 @@ enum LiquidGlass {
         view.clipsToBounds = true
         return view
     }
+
+    /// A fixed-height glass capsule hosting the given control, with a solid-fill
+    /// fallback when Reduce Transparency is enabled.
+    static func capsule(hosting control: UIView, height: CGFloat = 44) -> UIView {
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        let background: UIView
+        if UIAccessibility.isReduceTransparencyEnabled {
+            let solid = UIView()
+            solid.backgroundColor = UIColor.white.withAlphaComponent(0.16)
+            solid.layer.cornerRadius = height / 2
+            solid.layer.cornerCurve = .continuous
+            solid.clipsToBounds = true
+            background = solid
+        } else {
+            background = view(cornerRadius: height / 2, interactive: true)
+        }
+        background.translatesAutoresizingMaskIntoConstraints = false
+        control.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(background)
+        container.addSubview(control)
+        NSLayoutConstraint.activate([
+            container.heightAnchor.constraint(equalToConstant: height),
+            background.topAnchor.constraint(equalTo: container.topAnchor),
+            background.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            background.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            background.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            control.topAnchor.constraint(equalTo: container.topAnchor),
+            control.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            control.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            control.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+        return container
+    }
 }
