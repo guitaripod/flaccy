@@ -101,7 +101,7 @@ final class MusicKitService {
                 return nil
             }
 
-            let artworkURL = album.artwork?.url(width: 600, height: 600)
+            let artworkURL = album.artwork?.url(width: 1600, height: 1600)
 
             let result = MusicKitAlbumMatch(
                 title: album.title,

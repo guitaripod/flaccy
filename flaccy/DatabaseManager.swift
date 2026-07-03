@@ -543,17 +543,18 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    /// Returns the larger of the enrichment cover and the embedded file artwork,
+    /// since either source can be the low-resolution one for a given album.
     func fetchAlbumArtwork(title: String, artist: String) throws -> Data? {
         try dbQueue.read { db in
-            if let row = try Row.fetchOne(db, sql: "SELECT coverArtData FROM albumInfo WHERE title = ? AND artist = ? AND coverArtData IS NOT NULL", arguments: [title, artist]),
-               let data: Data = row["coverArtData"] {
-                return data
+            let cover: Data? = try Row.fetchOne(db, sql: "SELECT coverArtData FROM albumInfo WHERE title = ? AND artist = ? AND coverArtData IS NOT NULL", arguments: [title, artist])?["coverArtData"]
+            let embedded: Data? = try Row.fetchOne(db, sql: "SELECT artworkData FROM tracks WHERE albumTitle = ? AND artist = ? AND artworkData IS NOT NULL ORDER BY LENGTH(artworkData) DESC LIMIT 1", arguments: [title, artist])?["artworkData"]
+            switch (cover, embedded) {
+            case let (c?, e?): return e.count > c.count ? e : c
+            case let (c?, nil): return c
+            case let (nil, e?): return e
+            default: return nil
             }
-            if let row = try Row.fetchOne(db, sql: "SELECT artworkData FROM tracks WHERE albumTitle = ? AND artist = ? AND artworkData IS NOT NULL LIMIT 1", arguments: [title, artist]),
-               let data: Data = row["artworkData"] {
-                return data
-            }
-            return nil
         }
     }
 
