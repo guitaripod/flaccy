@@ -182,6 +182,25 @@ final class MiniPlayerView: UIView {
         expandElement.accessibilityFrameInContainerSpace = bounds
     }
 
+    /// The on-screen frame of the dock artwork, used as the start rect for the
+    /// morph's flying artwork proxy when the dock grows into the full player.
+    func artworkFrame(in view: UIView) -> CGRect {
+        artworkView.convert(artworkView.bounds, to: view)
+    }
+
+    /// The dock's current album image, or nil while it still shows the
+    /// music-note placeholder, so the morph proxy never flies a glyph.
+    var currentArtwork: UIImage? {
+        artworkView.contentMode == .scaleAspectFill ? artworkView.image : nil
+    }
+
+    /// Toggles only the dock artwork's visibility so the morph proxy can take
+    /// over the artwork during a transition while the rest of the dock chrome
+    /// cross-fades independently.
+    func setMorphArtworkHidden(_ hidden: Bool) {
+        artworkView.alpha = hidden ? 0 : 1
+    }
+
     func configure(with track: Track, isPlaying: Bool) {
         titleLabel.text = track.title
         artistLabel.text = track.artist

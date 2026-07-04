@@ -47,6 +47,11 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private var queueCapsule: GlassCapsule?
     private var actionCapsules: [UIView] = []
     private let actionRowContainer = UIStackView()
+    private let transportStack = UIStackView()
+
+    var isMorphEmbedded = false
+    weak var morphContainer: PlayerMorphContaining?
+    private var morphBackdropActive = false
 
     private enum CenterState {
         case artwork
@@ -165,6 +170,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func configureSheet() {
+        guard !isMorphEmbedded else { return }
         sheetPresentationController?.prefersGrabberVisible = true
         sheetPresentationController?.preferredCornerRadius = 32
     }
@@ -195,9 +201,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         sliderStack.axis = .vertical
         sliderStack.spacing = 0
 
-        let transportStack = UIStackView(arrangedSubviews: [
-            skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton,
-        ])
+        for control in [skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton] {
+            transportStack.addArrangedSubview(control)
+        }
         transportStack.distribution = .equalSpacing
         transportStack.alignment = .center
 
@@ -1125,6 +1131,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func dismissAndPush(_ viewController: UIViewController) {
+        if let morphContainer {
+            morphContainer.collapseAndPush(viewController)
+            return
+        }
         dismiss(animated: true) {
             guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let rootVC = scene.windows.first?.rootViewController,
@@ -1204,11 +1214,64 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     @objc private func resumeBackdrop() {
+        if isMorphEmbedded {
+            guard morphBackdropActive, !scrubber.isScrubbing else { return }
+            backdropView.setPaused(false)
+            return
+        }
         guard view.window != nil || !hasAnimatedAppearance || isBeingPresented else {
             return
         }
         guard !scrubber.isScrubbing else { return }
         backdropView.setPaused(false)
+    }
+
+    /// The on-screen frame of the big artwork card, transform included, so the
+    /// morph proxy lands pixel-exactly on the real artwork at full expansion.
+    func artworkMorphFrame(in target: UIView) -> CGRect {
+        view.layoutIfNeeded()
+        return centerContainer.convert(artworkContainer.frame, to: target)
+    }
+
+    /// Hides only the big artwork card so the morph proxy owns the artwork
+    /// while the surrounding full-player chrome cross-fades independently.
+    func setArtworkHiddenForMorph(_ hidden: Bool) {
+        artworkContainer.alpha = hidden ? 0 : 1
+    }
+
+    /// Drives the ambient backdrop from the morph container: it runs only while
+    /// the player is expanded, and stays paused behind the docked mini player.
+    func setBackdropActive(_ active: Bool) {
+        morphBackdropActive = active
+        if active {
+            guard !scrubber.isScrubbing else { return }
+            backdropView.setPaused(false)
+        } else {
+            backdropView.setPaused(true)
+        }
+    }
+
+    func showQueueCenterState() {
+        setCenterState(.queue)
+    }
+
+    /// Whether a downward drag at the given point should collapse the player
+    /// rather than be consumed by an interactive control or a mid-scroll list.
+    func morphCollapseAllowed(at point: CGPoint) -> Bool {
+        guard let hit = view.hitTest(point, with: nil) else { return true }
+        var node: UIView? = hit
+        while let current = node, current !== view {
+            if current === scrubber || current === volumeSlider
+                || current === actionRowContainer || current === transportStack {
+                return false
+            }
+            if let scroll = current as? UIScrollView,
+               scroll.contentOffset.y > -scroll.adjustedContentInset.top + 0.5 {
+                return false
+            }
+            node = current.superview
+        }
+        return true
     }
 
     private func showSleepTimerSheet() {
@@ -1546,6 +1609,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func prepareAppearanceAnimationIfNeeded() {
+        guard !isMorphEmbedded else { return }
         guard !hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
         for group in appearanceGroups() {
             for element in group {
@@ -1558,6 +1622,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private func runAppearanceAnimationIfNeeded() {
         guard !hasAnimatedAppearance else { return }
         hasAnimatedAppearance = true
+        guard !isMorphEmbedded else { return }
         guard !UIAccessibility.isReduceMotionEnabled else { return }
         for (index, group) in appearanceGroups().enumerated() {
             let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) { [self] in

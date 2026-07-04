@@ -23,6 +23,13 @@ final class LyricsService {
         session = URLSession(configuration: config)
     }
 
+    /// Warms the lyrics cache for a track as soon as it starts, so opening the
+    /// lyrics view is instant. A no-op once the track is already cached.
+    func prefetch(track: String, artist: String, album: String) {
+        guard !track.isEmpty, !artist.isEmpty else { return }
+        Task { _ = await fetchLyrics(track: track, artist: artist, album: album) }
+    }
+
     func fetchLyrics(track: String, artist: String, album: String) async -> LyricsResult? {
         if let cached = try? DatabaseManager.shared.fetchLyrics(trackTitle: track, artist: artist) {
             var syncedLines: [LyricLine]?

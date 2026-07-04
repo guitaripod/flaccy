@@ -3,7 +3,7 @@ import UIKit
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-    private let miniPlayer = MiniPlayerView()
+    private let playerContainer = PlayerContainerViewController()
     private var navController: UINavigationController?
 
     func scene(
@@ -22,10 +22,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         container.addSubview(nav.view)
         nav.view.translatesAutoresizingMaskIntoConstraints = false
 
-        miniPlayer.translatesAutoresizingMaskIntoConstraints = false
-        miniPlayer.isHidden = true
-        miniPlayer.onTap = { [weak self] in self?.presentNowPlaying() }
-        container.addSubview(miniPlayer)
+        playerContainer.view.translatesAutoresizingMaskIntoConstraints = false
+        playerContainer.onRequestPush = { [weak nav] vc in
+            nav?.pushViewController(vc, animated: true)
+        }
+        container.addSubview(playerContainer.view)
 
         NSLayoutConstraint.activate([
             nav.view.topAnchor.constraint(equalTo: container.topAnchor),
@@ -33,16 +34,18 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             nav.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             nav.view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
 
-            miniPlayer.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
-            miniPlayer.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
-            miniPlayer.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -4),
-            miniPlayer.heightAnchor.constraint(equalToConstant: 56),
+            playerContainer.view.topAnchor.constraint(equalTo: container.topAnchor),
+            playerContainer.view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            playerContainer.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            playerContainer.view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
 
         let rootVC = UIViewController()
         rootVC.view = container
         rootVC.addChild(nav)
         nav.didMove(toParent: rootVC)
+        rootVC.addChild(playerContainer)
+        playerContainer.didMove(toParent: rootVC)
 
         window.rootViewController = rootVC
         window.makeKeyAndVisible()
@@ -59,19 +62,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         )
     }
 
-    private func presentNowPlaying() {
-        guard let nav = navController else { return }
-        let vc = NowPlayingViewController()
-        vc.modalPresentationStyle = .pageSheet
-        nav.present(vc, animated: true)
-    }
-
     @objc private func handleQueueTapped() {
-        guard let nav = navController else { return }
-        let queueVC = QueueViewController()
-        let queueNav = UINavigationController(rootViewController: queueVC)
-        queueNav.modalPresentationStyle = .pageSheet
-        nav.present(queueNav, animated: true)
+        playerContainer.expandShowingQueue()
     }
 
     @objc private func trackDidChange() {
@@ -84,23 +76,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     private func updateMiniPlayer() {
         let player = AudioPlayer.shared
-        if let track = player.currentTrack {
-            miniPlayer.configure(with: track, isPlaying: player.isPlaying)
-            if miniPlayer.isHidden {
-                miniPlayer.isHidden = false
-                miniPlayer.alpha = 0
-                UIView.animate(withDuration: 0.3) { self.miniPlayer.alpha = 1 }
-            }
-            navController?.additionalSafeAreaInsets.bottom = 72
-        } else {
-            if !miniPlayer.isHidden {
-                UIView.animate(withDuration: 0.2, animations: {
-                    self.miniPlayer.alpha = 0
-                }) { _ in
-                    self.miniPlayer.isHidden = true
-                }
-            }
-            navController?.additionalSafeAreaInsets.bottom = 0
-        }
+        playerContainer.syncDock(track: player.currentTrack, isPlaying: player.isPlaying)
+        navController?.additionalSafeAreaInsets.bottom = player.currentTrack != nil ? 72 : 0
     }
 }
