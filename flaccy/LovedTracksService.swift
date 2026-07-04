@@ -17,6 +17,22 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
 
     private init() {
         reloadCache()
+        observeLastFMAuth()
+    }
+
+    /// Pushes loves queued while disconnected and pulls the remote loved list as
+    /// soon as a Last.fm account connects. A disconnect needs no action because
+    /// the local `loved` column is already the source of truth.
+    private func observeLastFMAuth() {
+        NotificationCenter.default.addObserver(
+            forName: LastFMService.authDidChange, object: nil, queue: nil
+        ) { [weak self] _ in
+            guard let self, self.lastFM.isAuthenticated else { return }
+            Task {
+                await self.flushPendingLoves()
+                await self.syncLovedFromLastFM()
+            }
+        }
     }
 
     private func reloadCache() {
