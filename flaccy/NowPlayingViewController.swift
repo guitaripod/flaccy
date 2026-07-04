@@ -52,6 +52,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     var isMorphEmbedded = false
     weak var morphContainer: PlayerMorphContaining?
     private var morphBackdropActive = false
+    private let grabberControl = UIControl()
 
     private enum CenterState {
         case artwork
@@ -115,6 +116,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         configureSheet()
         setupBackdrop()
         setupUI()
+        setupGrabberIfEmbedded()
         setupAccessibilityOrder()
         bindViewModel()
         applyState(viewModel.currentState)
@@ -242,7 +244,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
         artworkGroup.axis = .vertical
         artworkGroup.spacing = 26
-        artworkGroup.addArrangedSubview(artworkContainer)
+        artworkGroup.addArrangedSubview(makeArtworkRow())
         artworkGroup.addArrangedSubview(infoStack)
         artworkGroup.translatesAutoresizingMaskIntoConstraints = false
         centerContainer.addSubview(artworkGroup)
@@ -343,6 +345,29 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         let group = UIMotionEffectGroup()
         group.motionEffects = [horizontal, vertical]
         artworkContainer.addMotionEffect(group)
+    }
+
+    /// Wraps the artwork card in a full-width row that keeps it a centered
+    /// square — album art never letterboxes into a warped ratio, and it shrinks
+    /// as one square when vertical space is tight.
+    private func makeArtworkRow() -> UIView {
+        let row = UIView()
+        row.translatesAutoresizingMaskIntoConstraints = false
+        artworkContainer.translatesAutoresizingMaskIntoConstraints = false
+        row.addSubview(artworkContainer)
+
+        let preferredWidth = artworkContainer.widthAnchor.constraint(equalTo: row.widthAnchor)
+        preferredWidth.priority = .defaultHigh
+
+        NSLayoutConstraint.activate([
+            artworkContainer.topAnchor.constraint(equalTo: row.topAnchor),
+            artworkContainer.bottomAnchor.constraint(equalTo: row.bottomAnchor),
+            artworkContainer.centerXAnchor.constraint(equalTo: row.centerXAnchor),
+            artworkContainer.widthAnchor.constraint(equalTo: artworkContainer.heightAnchor),
+            artworkContainer.widthAnchor.constraint(lessThanOrEqualTo: row.widthAnchor),
+            preferredWidth,
+        ])
+        return row
     }
 
     private func setupArtwork() {
@@ -792,6 +817,45 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         present(activity, animated: true)
     }
 
+    /// A sheet-style grabber pill hinting the drag-to-collapse gesture, with a
+    /// generous tap target that collapses the player outright.
+    private func setupGrabberIfEmbedded() {
+        guard isMorphEmbedded else { return }
+        let pill = UIView()
+        pill.backgroundColor = UIColor.white.withAlphaComponent(0.35)
+        pill.layer.cornerRadius = 2.5
+        pill.layer.cornerCurve = .continuous
+        pill.isUserInteractionEnabled = false
+        pill.translatesAutoresizingMaskIntoConstraints = false
+
+        grabberControl.accessibilityLabel = "Collapse player"
+        grabberControl.accessibilityTraits = .button
+        grabberControl.addAction(UIAction { [weak self] _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self?.morphContainer?.requestCollapse()
+        }, for: .touchUpInside)
+        grabberControl.translatesAutoresizingMaskIntoConstraints = false
+        grabberControl.addSubview(pill)
+        view.addSubview(grabberControl)
+
+        NSLayoutConstraint.activate([
+            grabberControl.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            grabberControl.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            grabberControl.widthAnchor.constraint(equalToConstant: 88),
+            grabberControl.heightAnchor.constraint(equalToConstant: 26),
+            pill.topAnchor.constraint(equalTo: grabberControl.topAnchor, constant: 6),
+            pill.centerXAnchor.constraint(equalTo: grabberControl.centerXAnchor),
+            pill.widthAnchor.constraint(equalToConstant: 36),
+            pill.heightAnchor.constraint(equalToConstant: 5),
+        ])
+    }
+
+    override func accessibilityPerformEscape() -> Bool {
+        guard isMorphEmbedded else { return false }
+        morphContainer?.requestCollapse()
+        return true
+    }
+
     private func setupAccessibilityOrder() {
         let centerElements: [Any]
         switch centerState {
@@ -803,12 +867,13 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         case .lyrics, .queue:
             centerElements = [compactHeader, stateChildController?.view].compactMap { $0 }
         }
+        let trailing: [Any] = isMorphEmbedded ? [grabberControl] : []
         view.accessibilityElements = centerElements + [
             scrubber, currentTimeLabel, remainingTimeLabel,
             skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton,
             volumeSlider,
             shuffleButton, repeatButton, airplayButton, sleepTimerButton, shareButton, lyricsButton, queueButton,
-        ]
+        ] + trailing
     }
 
     private func bindViewModel() {
@@ -854,6 +919,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         setArtwork(state.artwork)
         updateBackdropPalette(artwork: state.artwork, state: state)
         updateArtistImage(artist: state.artist)
+        LyricsService.shared.prefetch(track: state.title, artist: state.artist, album: state.albumTitle)
     }
 
     /// Resolves the artist photo off-main and applies it to the ambient
@@ -958,7 +1024,6 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         artworkRestScale = scale
         let animator = UIViewPropertyAnimator(duration: 0.42, dampingRatio: 0.76) { [self] in
             artworkContainer.transform = CGAffineTransform(scaleX: scale, y: scale)
-            artworkView.alpha = isPlaying ? 1 : 0.75
         }
         animator.startAnimation()
         breatheAnimator = animator
@@ -1159,6 +1224,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func scrubEnded(at time: TimeInterval) {
+        AppLogger.debug("scrubEnded time=\(time) isSeeking=\(isSeeking)", category: .ui)
         if presentedViewController == nil, view.window != nil {
             backdropView.setPaused(false)
         }
@@ -1191,6 +1257,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         AudioPlayer.shared.seekSmooth(to: cmTime, tolerance: tolerance) { [weak self] in
             guard let self else { return }
             self.isSeeking = false
+            AppLogger.debug(
+                "seek complete target=\(target) chase=\(self.chaseTime) scrubbing=\(self.scrubber.isScrubbing)",
+                category: .ui
+            )
             if abs(self.chaseTime - target) > 0.5 {
                 self.seekToChaseTime()
             }
@@ -1226,17 +1296,30 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         backdropView.setPaused(false)
     }
 
-    /// The on-screen frame of the big artwork card, transform included, so the
-    /// morph proxy lands pixel-exactly on the real artwork at full expansion.
-    func artworkMorphFrame(in target: UIView) -> CGRect {
+    /// The frame the morph proxy should land on, in this controller's own
+    /// coordinate space (identical to the morph container's, since this view is
+    /// pinned full-screen and never transformed — a transform would corrupt the
+    /// safe-area-derived layout): the big artwork card normally, or the compact
+    /// header's artwork when lyrics/queue are shown.
+    func artworkMorphFrame() -> CGRect {
         view.layoutIfNeeded()
-        return centerContainer.convert(artworkContainer.frame, to: target)
+        if centerState != .artwork {
+            return compactArtworkView.convert(compactArtworkView.bounds, to: view)
+        }
+        guard let parent = artworkContainer.superview else { return artworkContainer.frame }
+        return parent.convert(artworkContainer.frame, to: view)
     }
 
-    /// Hides only the big artwork card so the morph proxy owns the artwork
-    /// while the surrounding full-player chrome cross-fades independently.
+    var artworkMorphCornerRadius: CGFloat {
+        centerState == .artwork ? 20 : 10
+    }
+
+    /// Hides the player's own artwork views so the morph proxy owns the
+    /// artwork while the surrounding chrome cross-fades independently.
     func setArtworkHiddenForMorph(_ hidden: Bool) {
-        artworkContainer.alpha = hidden ? 0 : 1
+        let alpha: CGFloat = hidden ? 0 : 1
+        artworkContainer.alpha = alpha
+        compactArtworkView.alpha = alpha
     }
 
     /// Drives the ambient backdrop from the morph container: it runs only while
@@ -1257,7 +1340,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     /// Whether a downward drag at the given point should collapse the player
     /// rather than be consumed by an interactive control or a mid-scroll list.
+    /// Always refused mid-scrub so a drifting scrub finger can never hand the
+    /// touch to the collapse gesture.
     func morphCollapseAllowed(at point: CGPoint) -> Bool {
+        guard !scrubber.isScrubbing else { return false }
         guard let hit = view.hitTest(point, with: nil) else { return true }
         var node: UIView? = hit
         while let current = node, current !== view {

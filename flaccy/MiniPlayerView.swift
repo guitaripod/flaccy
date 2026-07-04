@@ -182,12 +182,6 @@ final class MiniPlayerView: UIView {
         expandElement.accessibilityFrameInContainerSpace = bounds
     }
 
-    /// The on-screen frame of the dock artwork, used as the start rect for the
-    /// morph's flying artwork proxy when the dock grows into the full player.
-    func artworkFrame(in view: UIView) -> CGRect {
-        artworkView.convert(artworkView.bounds, to: view)
-    }
-
     /// The dock's current album image, or nil while it still shows the
     /// music-note placeholder, so the morph proxy never flies a glyph.
     var currentArtwork: UIImage? {

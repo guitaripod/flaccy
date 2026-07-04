@@ -19,13 +19,30 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.navController = nav
 
         let container = UIView()
+        container.backgroundColor = .black
         container.addSubview(nav.view)
         nav.view.translatesAutoresizingMaskIntoConstraints = false
+        nav.view.layer.cornerCurve = .continuous
+        nav.view.clipsToBounds = true
 
-        playerContainer.view.translatesAutoresizingMaskIntoConstraints = false
+        let dimmingView = UIView()
+        dimmingView.backgroundColor = .black
+        dimmingView.alpha = 0
+        dimmingView.isUserInteractionEnabled = false
+        dimmingView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(dimmingView)
+
         playerContainer.onRequestPush = { [weak nav] vc in
             nav?.pushViewController(vc, animated: true)
         }
+        playerContainer.onMorphProgress = { [weak nav, weak dimmingView] t in
+            dimmingView?.alpha = 0.35 * t
+            guard !UIAccessibility.isReduceMotionEnabled else { return }
+            let scale = 1 - 0.06 * t
+            nav?.view.transform = CGAffineTransform(scaleX: scale, y: scale)
+            nav?.view.layer.cornerRadius = 28 * t
+        }
+        playerContainer.view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(playerContainer.view)
 
         NSLayoutConstraint.activate([
@@ -34,14 +51,20 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             nav.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             nav.view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
 
+            dimmingView.topAnchor.constraint(equalTo: container.topAnchor),
+            dimmingView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            dimmingView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            dimmingView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+
             playerContainer.view.topAnchor.constraint(equalTo: container.topAnchor),
             playerContainer.view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             playerContainer.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             playerContainer.view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
 
-        let rootVC = UIViewController()
+        let rootVC = RootContainerViewController()
         rootVC.view = container
+        rootVC.statusBarSource = playerContainer
         rootVC.addChild(nav)
         nav.didMove(toParent: rootVC)
         rootVC.addChild(playerContainer)
@@ -79,4 +102,12 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         playerContainer.syncDock(track: player.currentTrack, isPlaying: player.isPlaying)
         navController?.additionalSafeAreaInsets.bottom = player.currentTrack != nil ? 72 : 0
     }
+}
+
+/// Root container that lets the player overlay drive the status bar, so it
+/// flips to light content as the dark player expands over the library.
+final class RootContainerViewController: UIViewController {
+    weak var statusBarSource: UIViewController?
+
+    override var childForStatusBarStyle: UIViewController? { statusBarSource }
 }

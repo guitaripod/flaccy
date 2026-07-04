@@ -3,6 +3,7 @@ import UIKit
 
 protocol PlayerMorphContaining: AnyObject {
     func collapseAndPush(_ viewController: UIViewController)
+    func requestCollapse()
 }
 
 private enum MorphState {
@@ -13,10 +14,10 @@ private enum MorphState {
 }
 
 private enum MorphTuning {
-    static let commitProgress: CGFloat = 0.4
+    static let commitProgress: CGFloat = 0.18
     static let commitVelocity: CGFloat = 900
-    static let springStiffness: CGFloat = 200
-    static let springDamping: CGFloat = 26
+    static let springStiffness: CGFloat = 240
+    static let springDamping: CGFloat = 28
     static let reduceMotionDuration: CFTimeInterval = 0.24
     static let dockCorner: CGFloat = 16
     static let fullCorner: CGFloat = 44
@@ -84,12 +85,24 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     private var dockVisible = false
     private var isApplyingLayout = false
     private var onSettleToDock: (() -> Void)?
-    private var onSettleToFull: (() -> Void)?
+    private var fullArtCornerRadius: CGFloat = MorphTuning.proxyFullCorner
 
     var onRequestPush: ((UIViewController) -> Void)?
+    var onMorphProgress: ((CGFloat) -> Void)?
+
+    private var statusBarLight = false {
+        didSet {
+            guard statusBarLight != oldValue else { return }
+            UIView.animate(withDuration: 0.2) { self.setNeedsStatusBarAppearanceUpdate() }
+        }
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        statusBarLight ? .lightContent : .default
+    }
 
     private let thresholdGenerator = UIImpactFeedbackGenerator(style: .soft)
-    private let lockInGenerator = UIImpactFeedbackGenerator(style: .rigid)
+    private let lockInGenerator = UIImpactFeedbackGenerator(style: .soft)
     private var reduceMotion: Bool { UIAccessibility.isReduceMotionEnabled }
 
     override func loadView() {
@@ -142,7 +155,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         proxyView.contentMode = .scaleAspectFill
         proxyView.clipsToBounds = true
         proxyView.layer.cornerCurve = .continuous
-        proxyView.layer.shadowColor = UIColor.black.cgColor
         proxyView.isHidden = true
         proxyView.isUserInteractionEnabled = false
         view.addSubview(proxyView)
@@ -239,13 +251,13 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         startSpring(to: 0, initialPointVelocity: 0)
     }
 
+    func requestCollapse() {
+        collapse()
+    }
+
     func expandShowingQueue() {
-        if state == .dock {
-            onSettleToFull = { [weak self] in self?.npc.showQueueCenterState() }
-            expand()
-        } else {
-            npc.showQueueCenterState()
-        }
+        npc.showQueueCenterState()
+        expand()
     }
 
     func collapseAndPush(_ viewController: UIViewController) {
@@ -267,8 +279,14 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         dockTopConstant = height - safeBottom - MorphTuning.dockBottomGap - MorphTuning.dockHeight
         dockBottomConstant = -(safeBottom + MorphTuning.dockBottomGap)
         travelDistance = max(dockTopConstant, 1)
-        dockArtRect = miniPlayer.artworkFrame(in: view)
-        fullArtRect = npc.artworkMorphFrame(in: view)
+        dockArtRect = CGRect(
+            x: view.bounds.width - MorphTuning.dockInset - MorphTuning.dockHeight,
+            y: dockTopConstant,
+            width: MorphTuning.dockHeight,
+            height: MorphTuning.dockHeight
+        )
+        fullArtRect = npc.artworkMorphFrame()
+        fullArtCornerRadius = npc.artworkMorphCornerRadius
     }
 
     // MARK: Morph driver
@@ -287,32 +305,36 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         view.layoutIfNeeded()
         isApplyingLayout = false
 
-        cardView.layer.cornerRadius = lerp(MorphTuning.dockCorner, MorphTuning.fullCorner, t)
+        let dockFade = smoothstep(t, 0, 0.22)
+        cardBackdrop.alpha = dockFade
+        miniPlayer.alpha = dockVisible ? (1 - dockFade) : 0
+        npc.view.alpha = smoothstep(t, 0.12, 0.72)
 
-        let chromeFade = smoothstep(t, 0, 0.30)
-        cardBackdrop.alpha = chromeFade
-        miniPlayer.alpha = dockVisible ? (1 - chromeFade) : 0
-        npc.view.alpha = smoothstep(t, 0.25, 0.90)
-
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        let cornerRadius = lerp(MorphTuning.dockCorner, MorphTuning.fullCorner, t)
+        cardView.layer.cornerRadius = cornerRadius
         cardShadowView.frame = cardView.frame
         cardShadowView.layer.shadowPath = UIBezierPath(
-            roundedRect: cardShadowView.bounds, cornerRadius: cardView.layer.cornerRadius
+            roundedRect: cardShadowView.bounds, cornerRadius: cornerRadius
         ).cgPath
-        cardShadowView.layer.shadowOpacity = Float(lerp(0.18, 0, chromeFade))
+        cardShadowView.layer.shadowOpacity = Float(lerp(0.18, 0, dockFade))
         cardShadowView.layer.shadowRadius = 12
 
         if reduceMotion {
             miniPlayer.setMorphArtworkHidden(false)
             npc.setArtworkHiddenForMorph(false)
         } else {
-            let eased = easeInOut(t)
-            proxyView.frame = interpolate(dockArtRect, fullArtRect, eased)
-            proxyView.layer.cornerRadius = lerp(MorphTuning.proxyDockCorner, MorphTuning.proxyFullCorner, t)
-            proxyView.layer.shadowOpacity = Float(lerp(0.15, 0.45, t))
-            proxyView.layer.shadowRadius = lerp(12, 34, t)
-            proxyView.layer.shadowOffset = CGSize(width: 0, height: lerp(4, 14, t))
+            proxyView.frame = interpolate(dockArtRect, fullArtRect, t)
+            proxyView.layer.cornerRadius = lerp(MorphTuning.proxyDockCorner, fullArtCornerRadius, t)
+            proxyView.layer.maskedCorners = t < 0.03
+                ? [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+                : [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
         }
+        CATransaction.commit()
 
+        statusBarLight = t > 0.5
+        onMorphProgress?(t)
         updateThresholdTick()
     }
 
@@ -322,7 +344,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         let past = progress >= MorphTuning.commitProgress
         guard past != pastThreshold else { return }
         pastThreshold = past
-        thresholdGenerator.impactOccurred(intensity: past ? 0.9 : 0.5)
+        thresholdGenerator.impactOccurred(intensity: past ? 1 : 0.7)
         thresholdGenerator.prepare()
     }
 
@@ -338,17 +360,42 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         if !reduceMotion {
             applyProxyArtwork()
         }
+        npc.view.isUserInteractionEnabled = false
+        miniPlayer.isUserInteractionEnabled = false
         view.isUserInteractionEnabled = true
         (view as? OverlayView)?.capturesEverything = true
+        setProgress(currentT)
+    }
+
+    /// Re-reads the real artwork's frame so the proxy targets where the artwork
+    /// actually is now, not where it was when the session began — any relayout
+    /// during the flight is absorbed instead of popping at the handoff.
+    private func refreshFullArtTarget(context: String) {
+        let fresh = npc.artworkMorphFrame()
+        let drift = max(
+            abs(fresh.midX - fullArtRect.midX) + abs(fresh.midY - fullArtRect.midY),
+            abs(fresh.width - fullArtRect.width)
+        )
+        if drift > 0.5 {
+            AppLogger.info(
+                "Morph art target drift \(String(format: "%.1f", drift))pt at \(context): \(fullArtRect) -> \(fresh)",
+                category: .ui
+            )
+        }
+        fullArtRect = fresh
+        fullArtCornerRadius = npc.artworkMorphCornerRadius
     }
 
     private func endMorphSession(at terminal: MorphState) {
         let landedFull = terminal == .full
+        if landedFull, !reduceMotion {
+            refreshFullArtTarget(context: "handoff")
+        }
+        state = terminal
+        setProgress(landedFull ? 1 : 0)
         proxyView.isHidden = true
         npc.setArtworkHiddenForMorph(!landedFull)
         miniPlayer.setMorphArtworkHidden(landedFull)
-        state = terminal
-        setProgress(landedFull ? 1 : 0)
         npc.view.isUserInteractionEnabled = landedFull
         npc.view.accessibilityElementsHidden = !landedFull
         miniPlayer.isUserInteractionEnabled = !landedFull
@@ -356,14 +403,10 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         npc.setBackdropActive(landedFull)
         updateOverlayCapture()
         if terminal != sessionStartTerminal {
-            lockInGenerator.impactOccurred()
+            lockInGenerator.impactOccurred(intensity: 1)
         }
         UIAccessibility.post(notification: .screenChanged, argument: landedFull ? npc.view : miniPlayer)
         AppLogger.info("Player morph settled -> \(landedFull ? "full" : "dock")", category: .ui)
-        if landedFull, let settle = onSettleToFull {
-            onSettleToFull = nil
-            settle()
-        }
         if !landedFull, let settle = onSettleToDock {
             onSettleToDock = nil
             settle()
@@ -404,7 +447,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
                 origin = currentT <= 0.5 ? .dock : .full
             }
             onSettleToDock = nil
-            onSettleToFull = nil
             beginMorphSession(from: origin)
             state = .dragging
             panBaseT = currentT
@@ -434,6 +476,9 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     // MARK: Settle animation
 
     private func startSpring(to target: CGFloat, initialPointVelocity: CGFloat) {
+        if target == 1 {
+            refreshFullArtTarget(context: "settle start")
+        }
         state = .settling
         springTarget = target
         springVelocity = travelDistance > 0 ? -initialPointVelocity / travelDistance : 0
@@ -517,10 +562,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     private func smoothstep(_ x: CGFloat, _ edge0: CGFloat, _ edge1: CGFloat) -> CGFloat {
         let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
         return t * t * (3 - 2 * t)
-    }
-
-    private func easeInOut(_ t: CGFloat) -> CGFloat {
-        t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
     }
 
     private func interpolate(_ from: CGRect, _ to: CGRect, _ t: CGFloat) -> CGRect {
