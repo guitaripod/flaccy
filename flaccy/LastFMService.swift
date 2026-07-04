@@ -129,6 +129,8 @@ final class LastFMService {
 
     static let shared = LastFMService()
 
+    static let authDidChange = Notification.Name("LastFMServiceAuthDidChange")
+
     nonisolated private static let apiKey = Secrets.lastFMApiKey
     nonisolated private static let apiSecret = Secrets.lastFMApiSecret
     nonisolated private static let baseURL = "https://ws.audioscrobbler.com/2.0/"
@@ -216,12 +218,14 @@ final class LastFMService {
         sessionKey = key
         username = session["name"] as? String
         AppLogger.info("Last.fm authentication successful", category: .auth)
+        NotificationCenter.default.post(name: Self.authDidChange, object: nil)
     }
 
     func logout() {
         sessionKey = nil
         username = nil
         AppLogger.info("Last.fm session cleared", category: .auth)
+        NotificationCenter.default.post(name: Self.authDidChange, object: nil)
     }
 
     nonisolated func updateNowPlaying(track: String, artist: String, album: String, duration: Int) async {
