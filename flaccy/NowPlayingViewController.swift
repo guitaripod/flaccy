@@ -1080,8 +1080,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     /// Switches the center region between the artwork column and in-place
     /// lyrics/queue content. States are exclusive; the lyrics and queue
-    /// controllers are embedded as children so their standalone modal
-    /// presentations elsewhere keep working.
+    /// controllers are embedded as children.
     private func setCenterState(_ target: CenterState) {
         guard target != centerState else { return }
         if target == .lyrics, AudioPlayer.shared.currentTrack == nil { return }
@@ -1105,9 +1104,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             return nil
         case .lyrics:
             guard let track = AudioPlayer.shared.currentTrack else { return nil }
-            return LyricsViewController(
-                track: track.title, artist: track.artist, album: track.albumTitle, embeddedInNowPlaying: true
-            )
+            return LyricsViewController(track: track.title, artist: track.artist, album: track.albumTitle)
         case .queue:
             let queueController = QueueViewController()
             queueController.onPushRequest = { [weak self] viewController in
