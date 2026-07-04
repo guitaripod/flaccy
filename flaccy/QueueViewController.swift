@@ -8,112 +8,36 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         case upNext
     }
 
-    private let backdropView = PaletteGradientView()
     private let tableView = UITableView(frame: .zero, style: .grouped)
-    private let headerTitleLabel = UILabel()
-    private let headerSubtitleLabel = UILabel()
-    private let shuffleButton = UIButton(type: .system)
-    private let repeatButton = UIButton(type: .system)
-    private let clearButton = UIButton(type: .system)
-    private var shuffleCapsule: GlassCapsule?
-    private var repeatCapsule: GlassCapsule?
-    private var clearCapsule: GlassCapsule?
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let reorderFeedback = UISelectionFeedbackGenerator()
-    private var lastPaletteKey: String?
-    private var hasAnimatedAppearance = false
-    private let embeddedInNowPlaying: Bool
+    private weak var upNextSummaryLabel: UILabel?
+    private var hasPerformedInitialScroll = false
 
-    init(embeddedInNowPlaying: Bool = false) {
-        self.embeddedInNowPlaying = embeddedInNowPlaying
-        super.init(nibName: nil, bundle: nil)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
+    var onPushRequest: ((UIViewController) -> Void)?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         overrideUserInterfaceStyle = .dark
-        navigationController?.overrideUserInterfaceStyle = .dark
-        view.backgroundColor = embeddedInNowPlaying ? .clear : .black
+        view.backgroundColor = .clear
 
-        if !embeddedInNowPlaying {
-            setupNavigationBar()
-            setupBackdrop()
-        }
         setupTableView()
-        setupControlsBar()
-        setupHeaderTitle()
         reload()
-        updatePalette()
 
         NotificationCenter.default.addObserver(self, selector: #selector(reload), name: AudioPlayer.queueDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(trackDidChange), name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(playbackStateDidChange), name: AudioPlayer.playbackStateDidChange, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(updateShuffleRepeat), name: AudioPlayer.shuffleRepeatDidChange, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(updateHeaderSubtitle), name: AudioPlayer.playbackProgressDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(updateUpNextSummary), name: AudioPlayer.playbackProgressDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(reload), name: LovedTracksService.didChange, object: nil)
-    }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        prepareAppearanceAnimationIfNeeded()
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        runAppearanceAnimationIfNeeded()
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        backdropView.frame = view.bounds
+        performInitialScrollIfNeeded()
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-    }
-
-    private func setupNavigationBar() {
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-        navigationItem.standardAppearance = appearance
-        navigationItem.scrollEdgeAppearance = appearance
-        navigationController?.navigationBar.tintColor = .white
-
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            systemItem: .done,
-            primaryAction: UIAction { [weak self] _ in
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                self?.dismiss(animated: true)
-            }
-        )
-    }
-
-    private func setupBackdrop() {
-        backdropView.frame = view.bounds
-        view.addSubview(backdropView)
-    }
-
-    private func setupHeaderTitle() {
-        headerTitleLabel.text = "Queue"
-        headerTitleLabel.font = .scaled(.headline, size: 17, weight: .semibold)
-        headerTitleLabel.adjustsFontForContentSizeCategory = true
-        headerTitleLabel.textColor = .white
-        headerTitleLabel.textAlignment = .center
-
-        headerSubtitleLabel.font = .scaled(.caption1, size: 12, weight: .medium)
-        headerSubtitleLabel.adjustsFontForContentSizeCategory = true
-        headerSubtitleLabel.textColor = .white.withAlphaComponent(0.55)
-        headerSubtitleLabel.textAlignment = .center
-
-        let stack = UIStackView(arrangedSubviews: [headerTitleLabel, headerSubtitleLabel])
-        stack.axis = .vertical
-        stack.alignment = .center
-        stack.spacing = 1
-        navigationItem.titleView = stack
-        updateHeaderSubtitle()
     }
 
     private func setupTableView() {
@@ -125,66 +49,17 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         tableView.backgroundColor = .clear
         tableView.separatorStyle = .none
         tableView.showsVerticalScrollIndicator = false
+        tableView.contentInset.bottom = 12
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.allowsSelectionDuringEditing = true
         tableView.setEditing(true, animated: false)
         view.addSubview(tableView)
-    }
-
-    private func setupControlsBar() {
-        let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
-
-        shuffleButton.setImage(UIImage(systemName: "shuffle", withConfiguration: config), for: .normal)
-        shuffleButton.accessibilityLabel = "Shuffle"
-        shuffleButton.addAction(UIAction { _ in
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            AudioPlayer.shared.toggleShuffle()
-        }, for: .touchUpInside)
-
-        repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-        repeatButton.accessibilityLabel = "Repeat"
-        repeatButton.addAction(UIAction { _ in
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            AudioPlayer.shared.cycleRepeatMode()
-        }, for: .touchUpInside)
-
-        var clearConfig = UIButton.Configuration.plain()
-        clearConfig.image = UIImage(systemName: "xmark.circle", withConfiguration: config)
-        clearConfig.imagePadding = 6
-        clearConfig.attributedTitle = AttributedString(
-            "Clear",
-            attributes: AttributeContainer([.font: UIFont.scaled(.subheadline, size: 14, weight: .semibold)])
-        )
-        clearButton.configuration = clearConfig
-        clearButton.tintColor = .white.withAlphaComponent(0.85)
-        clearButton.accessibilityLabel = "Clear queue"
-        clearButton.addAction(UIAction { [weak self] _ in self?.clearTapped() }, for: .touchUpInside)
-
-        let shuffle = GlassCapsule(hosting: shuffleButton)
-        let repeats = GlassCapsule(hosting: repeatButton)
-        let clear = GlassCapsule(hosting: clearButton)
-        shuffleCapsule = shuffle
-        repeatCapsule = repeats
-        clearCapsule = clear
-
-        updateShuffleRepeat()
-
-        let capsules = embeddedInNowPlaying ? [clear] : [shuffle, repeats, clear]
-        let stack = UIStackView(arrangedSubviews: capsules)
-        stack.distribution = .fillEqually
-        stack.spacing = 10
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            stack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
-
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: stack.topAnchor, constant: -8),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
 
@@ -200,76 +75,53 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         return player.queue[(player.currentIndex + 1)...]
     }
 
-    private func clearTapped() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        let alert = UIAlertController(title: "Clear Queue", message: "Stop playback and remove all tracks?", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { _ in
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            AudioPlayer.shared.clearQueue()
-        })
-        present(alert, animated: true)
+    private var nowPlayingIndexPath: IndexPath {
+        IndexPath(row: 0, section: Section.nowPlaying.rawValue)
+    }
+
+    private func performInitialScrollIfNeeded() {
+        guard !hasPerformedInitialScroll, view.bounds.height > 0 else { return }
+        hasPerformedInitialScroll = true
+        guard AudioPlayer.shared.currentTrack != nil, !historyTracks.isEmpty else { return }
+        tableView.scrollToRow(at: nowPlayingIndexPath, at: .top, animated: false)
+    }
+
+    private func isNowPlayingRowVisible() -> Bool {
+        tableView.indexPathsForVisibleRows?.contains(nowPlayingIndexPath) ?? false
     }
 
     @objc private func reload() {
         tableView.reloadData()
-        clearCapsule?.isUserInteractionEnabled = !AudioPlayer.shared.queue.isEmpty
-        clearButton.tintColor = AudioPlayer.shared.queue.isEmpty
-            ? .white.withAlphaComponent(0.35)
-            : .white.withAlphaComponent(0.85)
-        updateHeaderSubtitle()
+        updateUpNextSummary()
         updateEmptyState()
     }
 
     @objc private func trackDidChange() {
+        let followsCurrentTrack = !tableView.isDragging && !tableView.isDecelerating && isNowPlayingRowVisible()
         reload()
-        updatePalette()
+        guard followsCurrentTrack, AudioPlayer.shared.currentTrack != nil else { return }
+        tableView.scrollToRow(at: nowPlayingIndexPath, at: .top, animated: true)
     }
 
     @objc private func playbackStateDidChange() {
-        guard let cell = nowPlayingCell() else { return }
+        guard AudioPlayer.shared.currentTrack != nil,
+              let cell = tableView.cellForRow(at: nowPlayingIndexPath) as? QueueTrackCell else { return }
         cell.setPlaying(AudioPlayer.shared.isPlaying)
     }
 
-    private func nowPlayingCell() -> QueueTrackCell? {
-        let indexPath = IndexPath(row: 0, section: Section.nowPlaying.rawValue)
-        guard AudioPlayer.shared.currentTrack != nil else { return nil }
-        return tableView.cellForRow(at: indexPath) as? QueueTrackCell
+    @objc private func updateUpNextSummary() {
+        guard let label = upNextSummaryLabel else { return }
+        label.text = upNextSummaryText()
     }
 
-    private func updatePalette() {
-        guard !embeddedInNowPlaying else { return }
-        guard let track = AudioPlayer.shared.currentTrack else {
-            backdropView.apply(ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy"), animated: hasAnimatedAppearance)
-            return
-        }
-        let key = "\(track.albumTitle)\0\(track.artist)"
-        guard key != lastPaletteKey else { return }
-        lastPaletteKey = key
-        let artwork = track.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
-        let animated = hasAnimatedAppearance
-        ArtworkPaletteExtractor.palette(
-            for: artwork,
-            cacheKey: key,
-            fallbackSeed: "\(track.title)\(track.artist)"
-        ) { [weak self] palette in
-            self?.backdropView.apply(palette, animated: animated)
-        }
-    }
-
-    @objc private func updateHeaderSubtitle() {
+    private func upNextSummaryText() -> String? {
+        let upNext = upNextTracks
+        guard !upNext.isEmpty else { return nil }
         let player = AudioPlayer.shared
-        guard !player.queue.isEmpty else {
-            headerSubtitleLabel.text = nil
-            headerSubtitleLabel.isHidden = true
-            return
-        }
-        let count = player.queue.count
         let currentRemaining = max(0, player.duration - player.currentTime)
-        let remaining = currentRemaining + upNextTracks.reduce(0) { $0 + $1.duration }
-        let tracksPart = count == 1 ? "1 track" : "\(count) tracks"
-        headerSubtitleLabel.text = "\(tracksPart) · \(Self.formatRemaining(remaining)) left"
-        headerSubtitleLabel.isHidden = false
+        let remaining = currentRemaining + upNext.reduce(0) { $0 + $1.duration }
+        let tracksPart = upNext.count == 1 ? "1 track" : "\(upNext.count) tracks"
+        return "\(tracksPart) · \(Self.formatRemaining(remaining)) left"
     }
 
     private static func formatRemaining(_ interval: TimeInterval) -> String {
@@ -315,50 +167,77 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         return container
     }
 
-    @objc private func updateShuffleRepeat() {
-        let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
-        let shuffleActive = AudioPlayer.shared.shuffleEnabled
-        shuffleButton.tintColor = shuffleActive ? .white : .white.withAlphaComponent(0.55)
-        shuffleButton.accessibilityValue = shuffleActive ? "On" : "Off"
-        shuffleCapsule?.setActive(shuffleActive, animated: hasAnimatedAppearance)
-
-        switch AudioPlayer.shared.repeatMode {
-        case .off:
-            repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .white.withAlphaComponent(0.55)
-            repeatButton.accessibilityValue = "Off"
-            repeatCapsule?.setActive(false, animated: hasAnimatedAppearance)
-            repeatCapsule?.setBadge(nil)
-        case .all:
-            repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .white
-            repeatButton.accessibilityValue = "All"
-            repeatCapsule?.setActive(true, animated: hasAnimatedAppearance)
-            repeatCapsule?.setBadge("ALL")
-        case .one:
-            repeatButton.setImage(UIImage(systemName: "repeat.1", withConfiguration: config), for: .normal)
-            repeatButton.tintColor = .white
-            repeatButton.accessibilityValue = "One"
-            repeatCapsule?.setActive(true, animated: hasAnimatedAppearance)
-            repeatCapsule?.setBadge("1")
-        }
+    private func makeSectionHeaderLabel(_ title: String) -> UILabel {
+        let label = UILabel()
+        label.text = title.uppercased()
+        label.font = .scaled(.caption1, size: 12, weight: .semibold)
+        label.adjustsFontForContentSizeCategory = true
+        label.textColor = .white.withAlphaComponent(0.5)
+        return label
     }
 
-    private func prepareAppearanceAnimationIfNeeded() {
-        guard !hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
-        tableView.alpha = 0
-        tableView.transform = CGAffineTransform(translationX: 0, y: 16)
+    private func makeUpNextHeader() -> UIView {
+        let titleLabel = makeSectionHeaderLabel("Up Next")
+        titleLabel.setContentHuggingPriority(.required, for: .horizontal)
+        titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        let summaryLabel = UILabel()
+        summaryLabel.font = .scaled(.caption1, size: 12, weight: .medium)
+        summaryLabel.adjustsFontForContentSizeCategory = true
+        summaryLabel.textColor = .white.withAlphaComponent(0.35)
+        summaryLabel.text = upNextSummaryText()
+        upNextSummaryLabel = summaryLabel
+
+        var clearConfig = UIButton.Configuration.plain()
+        clearConfig.attributedTitle = AttributedString(
+            "Clear",
+            attributes: AttributeContainer([.font: UIFont.scaled(.caption1, size: 12, weight: .semibold)])
+        )
+        clearConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 0)
+        let clearButton = UIButton(configuration: clearConfig)
+        clearButton.tintColor = .white.withAlphaComponent(0.55)
+        clearButton.accessibilityLabel = "Clear up next"
+        clearButton.showsMenuAsPrimaryAction = true
+        clearButton.menu = UIMenu(children: [
+            UIDeferredMenuElement.uncached { completion in
+                let count = AudioPlayer.shared.queue.count - AudioPlayer.shared.currentIndex - 1
+                let title = count == 1 ? "Remove 1 Track" : "Remove \(count) Tracks"
+                completion([
+                    UIAction(title: title, image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
+                        AudioPlayer.shared.clearUpNext()
+                    }
+                ])
+            }
+        ])
+        clearButton.setContentHuggingPriority(.required, for: .horizontal)
+        clearButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        let stack = UIStackView(arrangedSubviews: [titleLabel, summaryLabel, clearButton])
+        stack.spacing = 8
+        stack.alignment = .lastBaseline
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let container = UIView()
+        container.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
+            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -2),
+        ])
+        return container
     }
 
-    private func runAppearanceAnimationIfNeeded() {
-        guard !hasAnimatedAppearance else { return }
-        hasAnimatedAppearance = true
-        guard !UIAccessibility.isReduceMotionEnabled else { return }
-        let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) { [self] in
-            tableView.alpha = 1
-            tableView.transform = .identity
-        }
-        animator.startAnimation()
+    private func makePlainHeader(_ title: String) -> UIView {
+        let label = makeSectionHeaderLabel(title)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        let container = UIView()
+        container.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -6),
+        ])
+        return container
     }
 }
 
@@ -379,25 +258,12 @@ extension QueueViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         guard let section = Section(rawValue: section), let title = headerTitle(for: section) else { return nil }
-        let label = UILabel()
-        label.text = title.uppercased()
-        label.font = .scaled(.caption1, size: 12, weight: .semibold)
-        label.adjustsFontForContentSizeCategory = true
-        label.textColor = .white.withAlphaComponent(0.5)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        let container = UIView()
-        container.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24),
-            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -6),
-        ])
-        return container
+        return section == .upNext ? makeUpNextHeader() : makePlainHeader(title)
     }
 
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         guard let section = Section(rawValue: section), headerTitle(for: section) != nil else { return .leastNonzeroMagnitude }
-        return 34
+        return section == .upNext ? 40 : 34
     }
 
     func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
@@ -414,26 +280,15 @@ extension QueueViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: QueueTrackCell.reuseID, for: indexPath) as! QueueTrackCell
-        let player = AudioPlayer.shared
-
-        guard let section = Section(rawValue: indexPath.section) else { return cell }
+        guard let section = Section(rawValue: indexPath.section), let track = track(at: indexPath) else { return cell }
         switch section {
         case .history:
-            let history = Array(historyTracks)
-            if indexPath.row < history.count {
-                cell.configure(with: history[indexPath.row], style: .history)
-            }
+            cell.configure(with: track, style: .history)
         case .nowPlaying:
-            if let track = player.currentTrack {
-                cell.configure(with: track, style: .nowPlaying(isPlaying: player.isPlaying))
-            }
+            cell.configure(with: track, style: .nowPlaying(isPlaying: AudioPlayer.shared.isPlaying))
         case .upNext:
-            let upNext = Array(upNextTracks)
-            if indexPath.row < upNext.count {
-                cell.configure(with: upNext[indexPath.row], style: .upcoming)
-            }
+            cell.configure(with: track, style: .upcoming)
         }
-
         return cell
     }
 
@@ -445,13 +300,15 @@ extension QueueViewController: UITableViewDataSource {
         guard let section = Section(rawValue: indexPath.section) else { return nil }
         switch section {
         case .history:
-            let history = Array(historyTracks)
-            return indexPath.row < history.count ? history[indexPath.row] : nil
+            let history = historyTracks
+            let index = history.startIndex + indexPath.row
+            return index < history.endIndex ? history[index] : nil
         case .nowPlaying:
             return AudioPlayer.shared.currentTrack
         case .upNext:
-            let upNext = Array(upNextTracks)
-            return indexPath.row < upNext.count ? upNext[indexPath.row] : nil
+            let upNext = upNextTracks
+            let index = upNext.startIndex + indexPath.row
+            return index < upNext.endIndex ? upNext[index] : nil
         }
     }
 
@@ -499,23 +356,15 @@ extension QueueViewController: UITableViewDelegate {
     }
 
     func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-        guard let section = Section(rawValue: indexPath.section), section == .upNext else { return nil }
-        let upNext = Array(upNextTracks)
-        guard indexPath.row < upNext.count else { return nil }
-        let track = upNext[indexPath.row]
+        guard let section = Section(rawValue: indexPath.section), section == .upNext,
+              let track = track(at: indexPath) else { return nil }
 
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             let viewArtist = UIAction(title: "Go to Artist", image: UIImage(systemName: "person")) { _ in
                 guard let self else { return }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 let artistAlbums = Library.shared.albums.filter { $0.artist == track.artist }
-                let vc = ArtistDetailViewController(artistName: track.artist, albums: artistAlbums)
-                self.dismiss(animated: true) {
-                    guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                          let rootVC = scene.windows.first?.rootViewController,
-                          let nav = rootVC.children.compactMap({ $0 as? UINavigationController }).first else { return }
-                    nav.pushViewController(vc, animated: true)
-                }
+                self.onPushRequest?(ArtistDetailViewController(artistName: track.artist, albums: artistAlbums))
             }
             let removeAction = UIAction(title: "Remove", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
                 UIImpactFeedbackGenerator(style: .rigid).impactOccurred()

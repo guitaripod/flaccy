@@ -24,7 +24,7 @@ protocol AudioPlaying: AnyObject {
     func seek(to time: TimeInterval)
     func toggleShuffle()
     func cycleRepeatMode()
-    func clearQueue()
+    func clearUpNext()
     func seekSmooth(to time: CMTime, tolerance: CMTime, completion: @escaping () -> Void)
     func jumpToIndex(_ index: Int)
     func removeFromQueue(at index: Int)
@@ -372,22 +372,18 @@ final class AudioPlayer: AudioPlaying {
         NotificationCenter.default.post(name: AudioPlayer.shuffleRepeatDidChange, object: nil)
     }
 
-    func clearQueue() {
-        removePlayerObservers()
-        playingItem = nil
-        preloadedItem = nil
-        preloadedIndex = nil
-        player?.pause()
-        player?.removeAllItems()
-        isPlaying = false
-        queue = []
-        originalQueue = []
-        currentIndex = 0
-        lastKnownPlaybackPosition = 0
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    func clearUpNext() {
+        let firstUpcomingIndex = currentIndex + 1
+        guard firstUpcomingIndex < queue.count else { return }
+        let removed = Array(queue[firstUpcomingIndex...])
+        queue.removeSubrange(firstUpcomingIndex...)
+        for track in removed {
+            if let origIdx = originalQueue.firstIndex(of: track) {
+                originalQueue.remove(at: origIdx)
+            }
+        }
+        resyncPreloadedItems()
         impactMedium.impactOccurred()
-        NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
-        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
     }
 

@@ -1109,7 +1109,11 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
                 track: track.title, artist: track.artist, album: track.albumTitle, embeddedInNowPlaying: true
             )
         case .queue:
-            return QueueViewController(embeddedInNowPlaying: true)
+            let queueController = QueueViewController()
+            queueController.onPushRequest = { [weak self] viewController in
+                self?.dismissAndPush(viewController)
+            }
+            return queueController
         }
     }
 
