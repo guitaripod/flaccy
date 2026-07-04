@@ -19,13 +19,37 @@ final class ChartsViewModel {
     private var loadGeneration = 0
 
     private let importStateKey = "recap.historyImported"
+    private var authObserver: NSObjectProtocol?
 
     init() {
-        if !lastFM.isAuthenticated {
-            importStatePublisher.send(.unavailable)
-        } else if UserDefaults.standard.bool(forKey: importStateKey) {
-            importStatePublisher.send(.done(imported: 0))
+        importStatePublisher.send(currentImportState())
+        authObserver = NotificationCenter.default.addObserver(
+            forName: LastFMService.authDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.handleAuthChange()
         }
+    }
+
+    deinit {
+        if let authObserver {
+            NotificationCenter.default.removeObserver(authObserver)
+        }
+    }
+
+    private func currentImportState() -> RecapImportState {
+        guard lastFM.isAuthenticated else { return .unavailable }
+        return UserDefaults.standard.bool(forKey: importStateKey) ? .done(imported: 0) : .available
+    }
+
+    /// Rebuilds the Recap when a Last.fm account connects or disconnects: the
+    /// profile card, network-backfilled charts, and import affordance all hinge
+    /// on the account, while local stats keep rendering either way.
+    private func handleAuthChange() {
+        cachedUserInfo = nil
+        if !importStatePublisher.value.isImporting {
+            importStatePublisher.send(currentImportState())
+        }
+        load(period: selectedPeriod)
     }
 
     func load(period: ChartPeriod) {

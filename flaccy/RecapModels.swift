@@ -37,10 +37,15 @@ enum RecapImportState: Hashable {
 
     /// Whether the import banner should remain on screen. A freshly-completed
     /// import keeps its "Imported N scrobbles" summary; a persisted-done state
-    /// restored on a later launch (`imported == 0`) hides the banner entirely.
+    /// restored on a later launch (`imported == 0`) hides the banner entirely,
+    /// as does `unavailable` — without a Last.fm account the Recap is purely
+    /// local and shows no Last.fm chrome.
     var showsBanner: Bool {
-        if case .done(let imported) = self { return imported > 0 }
-        return true
+        switch self {
+        case .done(let imported): return imported > 0
+        case .unavailable: return false
+        case .available, .importing: return true
+        }
     }
 }
 
