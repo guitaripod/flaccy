@@ -9,10 +9,13 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     }
 
     private let tableView = UITableView(frame: .zero, style: .grouped)
+    private let edgeFadeMask = CAGradientLayer()
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let reorderFeedback = UISelectionFeedbackGenerator()
+    private let sectionCrossingFeedback = UISelectionFeedbackGenerator()
     private weak var upNextSummaryLabel: UILabel?
     private var hasPerformedInitialScroll = false
+    private var lastTopSection: Section?
 
     var onPushRequest: ((UIViewController) -> Void)?
 
@@ -22,6 +25,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         view.backgroundColor = .clear
 
         setupTableView()
+        setupEdgeFade()
         reload()
 
         NotificationCenter.default.addObserver(self, selector: #selector(reload), name: AudioPlayer.queueDidChange, object: nil)
@@ -33,6 +37,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        layoutEdgeFade()
         performInitialScrollIfNeeded()
     }
 
@@ -61,6 +66,34 @@ final class QueueViewController: UIViewController, SonglinkShareable {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+    }
+
+    /// Masks the view so rows dissolve into short transparent gradients at the
+    /// top and bottom edges instead of clipping hard against them.
+    private func setupEdgeFade() {
+        edgeFadeMask.colors = [
+            UIColor.clear.cgColor,
+            UIColor.black.cgColor,
+            UIColor.black.cgColor,
+            UIColor.clear.cgColor,
+        ]
+        view.layer.mask = edgeFadeMask
+    }
+
+    private func layoutEdgeFade() {
+        let height = view.bounds.height
+        guard height > 0 else { return }
+        let fade: CGFloat = 24
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        edgeFadeMask.frame = view.bounds
+        edgeFadeMask.locations = [
+            0,
+            NSNumber(value: Double(fade / height)),
+            NSNumber(value: Double(1 - fade / height)),
+            1,
+        ]
+        CATransaction.commit()
     }
 
     private var historyTracks: ArraySlice<Track> {
@@ -412,6 +445,29 @@ extension QueueViewController: UITableViewDelegate {
         return UISwipeActionsConfiguration(actions: [remove])
     }
 
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        sectionCrossingFeedback.prepare()
+        lastTopSection = topVisibleSection()
+    }
+
+    /// Ticks a subtle selection haptic whenever user-driven scrolling carries a
+    /// different section (History / Now Playing / Up Next) past the top edge.
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard scrollView.isTracking || scrollView.isDecelerating else { return }
+        guard let section = topVisibleSection() else { return }
+        if let last = lastTopSection, last != section {
+            sectionCrossingFeedback.selectionChanged()
+            sectionCrossingFeedback.prepare()
+        }
+        lastTopSection = section
+    }
+
+    private func topVisibleSection() -> Section? {
+        let probe = CGPoint(x: tableView.bounds.midX, y: tableView.contentOffset.y + tableView.adjustedContentInset.top + 24)
+        guard let indexPath = tableView.indexPathForRow(at: probe) else { return nil }
+        return Section(rawValue: indexPath.section)
+    }
+
     func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
         .none
     }
@@ -538,7 +594,6 @@ final class QueueTrackCell: UITableViewCell {
     private let trackArtistLabel = UILabel()
     private let durationLabel = UILabel()
     private let playingBars = PlayingBarsView()
-    private let qualityBadge = QualityBadgeView(size: .compact)
     private let lovedIndicator = UIImageView()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -593,7 +648,7 @@ final class QueueTrackCell: UITableViewCell {
         textStack.spacing = 2
 
         let mainStack = UIStackView(arrangedSubviews: [
-            artworkView, playingBars, textStack, qualityBadge, lovedIndicator, durationLabel,
+            artworkView, playingBars, textStack, lovedIndicator, durationLabel,
         ])
         mainStack.spacing = 10
         mainStack.alignment = .center
@@ -628,7 +683,6 @@ final class QueueTrackCell: UITableViewCell {
         trackArtistLabel.text = track.artist
         loadArtwork(for: track)
 
-        qualityBadge.configure(with: track)
         let loved = LovedTracksService.shared.isLoved(track: track)
         lovedIndicator.isHidden = !loved
 
@@ -697,7 +751,6 @@ final class QueueTrackCell: UITableViewCell {
         currentArtworkKey = nil
         artworkView.image = nil
         lovedIndicator.isHidden = true
-        qualityBadge.configure(with: nil)
         highlightView.isHidden = true
         playingBars.isHidden = true
         playingBars.setPlaying(false)
