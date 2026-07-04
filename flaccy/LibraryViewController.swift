@@ -137,10 +137,16 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 layoutToggleButton(),
             ]
         case .songs:
-            navigationItem.rightBarButtonItems = [
+            var items = [
                 UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), menu: songSortMenu()),
                 layoutToggleButton(),
             ]
+            if LastFMService.shared.isAuthenticated {
+                let range = UIBarButtonItem(image: UIImage(systemName: "calendar"), menu: scrobbleRangeMenu())
+                range.accessibilityLabel = "Scrobble time range"
+                items.insert(range, at: 1)
+            }
+            navigationItem.rightBarButtonItems = items
         case .artists:
             navigationItem.rightBarButtonItem = UIBarButtonItem(
                 image: UIImage(systemName: "arrow.up.arrow.down"),
@@ -208,19 +214,40 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     private func songSortMenu() -> UIMenu {
-        let actions = LibraryViewModel.SongSort.allCases.map { sort in
+        let authenticated = LastFMService.shared.isAuthenticated
+        let actions = LibraryViewModel.SongSort.allCases
+            .filter { authenticated || !$0.requiresLastFM }
+            .map { sort in
+                UIAction(
+                    title: sort.displayName,
+                    image: UIImage(systemName: sort.icon),
+                    state: viewModel.songSort == sort ? .on : .off
+                ) { [weak self] _ in
+                    self?.impactLight.impactOccurred()
+                    self?.viewModel.setSongSort(sort)
+                    self?.updateRightBarButton(for: .songs)
+                    self?.updateSectionIndex()
+                }
+            }
+        return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
+    }
+
+    private func scrobbleRangeMenu() -> UIMenu {
+        let actions = ChartPeriod.allCases.map { period in
             UIAction(
-                title: sort.displayName,
-                image: UIImage(systemName: sort.icon),
-                state: viewModel.songSort == sort ? .on : .off
+                title: period.displayName,
+                state: viewModel.scrobbleRange == period ? .on : .off
             ) { [weak self] _ in
                 self?.impactLight.impactOccurred()
-                self?.viewModel.setSongSort(sort)
+                self?.viewModel.setScrobbleRange(period)
                 self?.updateRightBarButton(for: .songs)
-                self?.updateSectionIndex()
             }
         }
-        return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
+        return UIMenu(
+            title: "Scrobbles From",
+            image: UIImage(systemName: "calendar"),
+            children: actions
+        )
     }
 
     private func artistSortMenu() -> UIMenu {
@@ -418,12 +445,15 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         loadingIconView.layer.removeAnimation(forKey: "pulse")
     }
 
-    private func badgeAccessories(qualityTrack: Track?, loved: Bool) -> [UICellAccessory] {
+    private func badgeAccessories(qualityTrack: Track?, loved: Bool, scrobbleCount: Int? = nil) -> [UICellAccessory] {
         let container = UIStackView()
         container.axis = .horizontal
         container.spacing = 6
         container.alignment = .center
 
+        if let scrobbleCount {
+            container.addArrangedSubview(scrobbleCountView(scrobbleCount))
+        }
         if loved {
             let heart = UIImageView(image: UIImage(
                 systemName: "heart.fill",
@@ -441,6 +471,32 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         }
         guard !container.arrangedSubviews.isEmpty else { return [] }
         return [.customView(configuration: .init(customView: container, placement: .trailing()))]
+    }
+
+    /// A compact play-count pill (waveform glyph + monospaced count) shown on song
+    /// rows, sized so it never increases the row height set by the title/subtitle.
+    private func scrobbleCountView(_ count: Int) -> UIView {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 3
+        stack.alignment = .center
+
+        let glyph = UIImageView(image: UIImage(
+            systemName: "waveform",
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        ))
+        glyph.tintColor = .tertiaryLabel
+
+        let label = UILabel()
+        label.text = count > 999 ? "\(count / 1000)k" : "\(count)"
+        label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+        label.textColor = .secondaryLabel
+
+        stack.addArrangedSubview(glyph)
+        stack.addArrangedSubview(label)
+        stack.isAccessibilityElement = true
+        stack.accessibilityLabel = "\(count) scrobble\(count == 1 ? "" : "s")"
+        return stack
     }
 
     private func configureArtworkRow(
@@ -520,7 +576,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             cell.contentConfiguration = content
             cell.currentArtworkKey = nil
             cell.accessories = self?.badgeAccessories(
-                qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track)
+                qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track),
+                scrobbleCount: self?.viewModel.scrobbleCount(for: track)
             ) ?? []
         }
 
@@ -573,6 +630,24 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             cell.accessories = [.disclosureIndicator()]
         }
 
+        let suggestedRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, SuggestedPlaylist> { cell, _, suggestion in
+            var content = UIListContentConfiguration.subtitleCell()
+            content.text = suggestion.title
+            content.secondaryText = "\(suggestion.subtitle) · \(suggestion.tracks.count) songs"
+            content.secondaryTextProperties.color = .secondaryLabel
+            content.image = UIImage(systemName: suggestion.systemImage)
+            content.imageProperties.tintColor = .tintColor
+            content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
+            content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
+            cell.contentConfiguration = content
+            let play = UIImageView(image: UIImage(
+                systemName: "play.circle.fill",
+                withConfiguration: UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+            ))
+            play.tintColor = .tintColor
+            cell.accessories = [.customView(configuration: .init(customView: play, placement: .trailing()))]
+        }
+
         let chartsRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Int> { cell, _, _ in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = "Last.fm Charts"
@@ -602,7 +677,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 albumTitle: track.albumTitle, artist: track.artist, cornerRadius: 4
             )
             cell.accessories = self?.badgeAccessories(
-                qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track)
+                qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track),
+                scrobbleCount: self?.viewModel.scrobbleCount(for: track)
             ) ?? []
         }
 
@@ -639,6 +715,10 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             case .playlist(let playlist):
                 return collectionView.dequeueConfiguredReusableCell(
                     using: playlistRegistration, for: indexPath, item: playlist
+                )
+            case .suggestedPlaylist(let suggestion):
+                return collectionView.dequeueConfiguredReusableCell(
+                    using: suggestedRegistration, for: indexPath, item: suggestion
                 )
             case .charts:
                 return collectionView.dequeueConfiguredReusableCell(
@@ -964,6 +1044,55 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu, loveMenu, shareMenu])
     }
+
+    private func relativePath(for track: Track) -> String {
+        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let trackPath = track.fileURL.standardizedFileURL.path
+        guard trackPath.hasPrefix(docsDir.path) else { return track.fileURL.lastPathComponent }
+        let rel = String(trackPath.dropFirst(docsDir.path.count))
+        return rel.hasPrefix("/") ? String(rel.dropFirst()) : rel
+    }
+
+    private func buildSuggestedPlaylistMenu(for suggestion: SuggestedPlaylist) -> UIMenu {
+        let tracks = suggestion.tracks
+        let play = UIAction(title: "Play", image: UIImage(systemName: "play.fill")) { _ in
+            AudioPlayer.shared.play(tracks, startingAt: 0)
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
+        let shuffle = UIAction(title: "Shuffle", image: UIImage(systemName: "shuffle")) { _ in
+            AudioPlayer.shared.play(tracks.shuffled(), startingAt: 0)
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
+        let playNext = UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
+            for track in tracks.reversed() { AudioPlayer.shared.insertNext(track) }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+        let addToQueue = UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { _ in
+            for track in tracks { AudioPlayer.shared.addToQueue(track) }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+        let save = UIAction(title: "Save as Playlist", image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
+            self?.saveSuggestion(suggestion)
+        }
+        let saveMenu = UIMenu(options: .displayInline, children: [save])
+        return UIMenu(children: [play, shuffle, playNext, addToQueue, saveMenu])
+    }
+
+    private func saveSuggestion(_ suggestion: SuggestedPlaylist) {
+        do {
+            let playlist = try DatabaseManager.shared.createPlaylist(name: suggestion.title)
+            if let id = playlist.id {
+                for track in suggestion.tracks {
+                    try DatabaseManager.shared.addTrackToPlaylist(playlistId: id, trackFileURL: relativePath(for: track))
+                }
+            }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            viewModel.refreshPlaylists()
+            ToastView.show("Saved \u{201C}\(suggestion.title)\u{201D}", in: view, style: .success)
+        } catch {
+            AppLogger.error("Failed to save suggested playlist: \(error.localizedDescription)", category: .database)
+        }
+    }
 }
 
 extension LibraryViewController: UICollectionViewDelegate {
@@ -987,6 +1116,11 @@ extension LibraryViewController: UICollectionViewDelegate {
         case .playlist(let playlist):
             let vc = PlaylistDetailViewController(playlistId: playlist.id, playlistName: playlist.name)
             navigationController?.pushViewController(vc, animated: true)
+        case .suggestedPlaylist(let suggestion):
+            guard !suggestion.tracks.isEmpty else { return }
+            AudioPlayer.shared.play(suggestion.tracks, startingAt: 0)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            ToastView.show("Playing \(suggestion.title)", in: view, style: .success)
         case .charts:
             let vc = ChartsViewController()
             navigationController?.pushViewController(vc, animated: true)
@@ -1033,6 +1167,10 @@ extension LibraryViewController: UICollectionViewDelegate {
         case .song(let track):
             return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
                 self?.buildSongContextMenu(for: track)
+            }
+        case .suggestedPlaylist(let suggestion):
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+                self?.buildSuggestedPlaylistMenu(for: suggestion)
             }
         default:
             return nil

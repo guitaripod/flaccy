@@ -7,6 +7,7 @@ nonisolated enum LibraryItem: Hashable, Sendable {
     case song(Track)
     case artist(ArtistItem)
     case playlist(PlaylistItem)
+    case suggestedPlaylist(SuggestedPlaylist)
     case charts
 }
 
@@ -72,12 +73,13 @@ final class LibraryViewModel {
     }
 
     enum SongSort: String, CaseIterable {
-        case title, artist, recentlyPlayed, dateAdded
+        case title, artist, mostScrobbled, recentlyPlayed, dateAdded
 
         var displayName: String {
             switch self {
             case .title: "Title"
             case .artist: "Artist"
+            case .mostScrobbled: "Most Scrobbled"
             case .recentlyPlayed: "Recently Played"
             case .dateAdded: "Date Added"
             }
@@ -87,10 +89,15 @@ final class LibraryViewModel {
             switch self {
             case .title: "textformat.abc"
             case .artist: "person"
+            case .mostScrobbled: "flame"
             case .recentlyPlayed: "clock"
             case .dateAdded: "calendar"
             }
         }
+
+        /// Whether this ordering is derived from Last.fm scrobble history and
+        /// therefore only meaningful while authenticated.
+        var requiresLastFM: Bool { self == .mostScrobbled }
     }
 
     enum ArtistSort: String, CaseIterable {
@@ -129,6 +136,7 @@ final class LibraryViewModel {
     private var searchQuery: String = ""
     private(set) var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "albumSort") ?? "") ?? .title
     private(set) var songSort: SongSort = SongSort(rawValue: UserDefaults.standard.string(forKey: "songSort") ?? "") ?? .title
+    private(set) var scrobbleRange: ChartPeriod = ChartPeriod(rawValue: UserDefaults.standard.string(forKey: "songScrobbleRange") ?? "") ?? .allTime
     private(set) var artistSort: ArtistSort = ArtistSort(rawValue: UserDefaults.standard.string(forKey: "artistSort") ?? "") ?? .name
     private(set) var layoutMode: LibraryLayoutMode = .persisted
     private(set) var filter: LibraryFilter = .persisted
@@ -140,6 +148,8 @@ final class LibraryViewModel {
     }
 
     private var cachedMeta: [String: TrackMeta]?
+    private var cachedScrobbleCounts: (period: ChartPeriod, counts: [String: Int])?
+    private var scrobbleCountsWarming = false
     private var cachedRediscover: (keys: Set<String>, albums: [Album])?
     private let recentlyWindow: TimeInterval = 60 * 60 * 24 * 30
     private let rediscoverMinDays = 14
@@ -178,6 +188,38 @@ final class LibraryViewModel {
 
     private func meta(for track: Track) -> TrackMeta? {
         trackMeta[relativePath(for: track.fileURL)]
+    }
+
+    /// The number of scrobbles for a track over the selected range, or nil when
+    /// unauthenticated, not yet warmed, or never scrobbled. Reads only the warmed
+    /// cache so it is cheap enough to call for every visible cell.
+    func scrobbleCount(for track: Track) -> Int? {
+        guard LastFMService.shared.isAuthenticated,
+              let cached = cachedScrobbleCounts, cached.period == scrobbleRange else { return nil }
+        let count = cached.counts[LastFMStatsService.trackKey(track.title, track.artist)] ?? 0
+        return count > 0 ? count : nil
+    }
+
+    /// Warms the scrobble-count cache off-main the first time the Songs segment
+    /// needs it, then republishes so cells pick up their counts without hitching.
+    func warmScrobbleCountsIfNeeded() {
+        guard currentSegment == .songs, LastFMService.shared.isAuthenticated else { return }
+        if let cached = cachedScrobbleCounts, cached.period == scrobbleRange { return }
+        guard !scrobbleCountsWarming else { return }
+        scrobbleCountsWarming = true
+        let range = scrobbleRange
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let counts = LastFMStatsService.shared.scrobbleCounts(period: range)
+            await MainActor.run {
+                guard let self else { return }
+                self.scrobbleCountsWarming = false
+                self.cachedScrobbleCounts = (range, counts)
+                if self.currentSegment == .songs {
+                    if self.songSort == .mostScrobbled { self.cachedSortedSongs = nil }
+                    self.snapshotPublisher.send(self.buildSnapshot())
+                }
+            }
+        }
     }
 
     /// The album's best representative track for a quality badge: lossless first,
@@ -252,6 +294,8 @@ final class LibraryViewModel {
     private var cachedSortedArtists: [ArtistItem]?
     private var cachedRecentAlbums: [Album]?
     private var cachedPlaylists: [PlaylistItem]?
+    private var cachedSuggestions: [SuggestedPlaylist]?
+    private var suggestionsLoading = false
     private var searchDebounceTask: Task<Void, Never>?
 
     enum EmptyState {
@@ -310,6 +354,20 @@ final class LibraryViewModel {
                 let cmp = $0.artist.localizedCaseInsensitiveCompare($1.artist)
                 return cmp == .orderedSame ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : cmp == .orderedAscending
             }
+        case .mostScrobbled:
+            guard let counts = cachedScrobbleCounts.flatMap({ $0.period == scrobbleRange ? $0.counts : nil }) else {
+                warmScrobbleCountsIfNeeded()
+                return tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            }
+            let scored = tracks.filter { counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0 > 0 }
+                .sorted {
+                    let a = counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0
+                    let b = counts[LastFMStatsService.trackKey($1.title, $1.artist)] ?? 0
+                    return a == b ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : a > b
+                }
+            let unscrobbled = tracks.filter { counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0 == 0 }
+                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            result = scored + unscrobbled
         case .recentlyPlayed:
             let sortKeys: [(fileURL: String, lastPlayed: Date?)]
             do {
@@ -449,6 +507,17 @@ final class LibraryViewModel {
         songSort = sort
         cachedSortedSongs = nil
         UserDefaults.standard.set(sort.rawValue, forKey: "songSort")
+        warmScrobbleCountsIfNeeded()
+        snapshotPublisher.send(buildSnapshot())
+    }
+
+    func setScrobbleRange(_ range: ChartPeriod) {
+        guard scrobbleRange != range else { return }
+        scrobbleRange = range
+        cachedScrobbleCounts = nil
+        if songSort == .mostScrobbled { cachedSortedSongs = nil }
+        UserDefaults.standard.set(range.rawValue, forKey: "songScrobbleRange")
+        warmScrobbleCountsIfNeeded()
         snapshotPublisher.send(buildSnapshot())
     }
 
@@ -591,6 +660,8 @@ final class LibraryViewModel {
             filter.persist()
         }
         snapshotPublisher.send(buildSnapshot())
+        loadSuggestionsIfNeeded()
+        warmScrobbleCountsIfNeeded()
     }
 
     func albumsForArtist(_ name: String) -> [Album] {
@@ -601,6 +672,28 @@ final class LibraryViewModel {
         cachedPlaylists = nil
         guard currentSegment == .playlists else { return }
         snapshotPublisher.send(buildSnapshot())
+    }
+
+    /// Computes Last.fm-derived suggestions off-main the first time the Playlists
+    /// segment is shown, then republishes so they slot in above the user's lists.
+    func loadSuggestionsIfNeeded() {
+        guard currentSegment == .playlists,
+              LastFMService.shared.isAuthenticated,
+              cachedSuggestions == nil,
+              !suggestionsLoading else { return }
+        suggestionsLoading = true
+        let pool = library.allTracks
+        Task.detached(priority: .utility) { [weak self] in
+            let suggestions = SuggestedPlaylistService.build(pool: pool)
+            await MainActor.run {
+                guard let self else { return }
+                self.cachedSuggestions = suggestions
+                self.suggestionsLoading = false
+                if self.currentSegment == .playlists {
+                    self.snapshotPublisher.send(self.buildSnapshot())
+                }
+            }
+        }
     }
 
     func search(query: String) {
@@ -658,6 +751,7 @@ final class LibraryViewModel {
             var playlistItems: [LibraryItem] = []
             if LastFMService.shared.isAuthenticated && query.isEmpty {
                 playlistItems.append(.charts)
+                playlistItems.append(contentsOf: (cachedSuggestions ?? []).map { .suggestedPlaylist($0) })
             }
             let filtered = query.isEmpty
                 ? playlists
@@ -693,10 +787,12 @@ final class LibraryViewModel {
         cachedSortedArtists = nil
         cachedRecentAlbums = nil
         cachedPlaylists = nil
+        cachedSuggestions = nil
         cachedMeta = nil
         cachedRediscover = nil
         cachedAlbumAdded = nil
         cachedAlbumPlayed = nil
+        cachedScrobbleCounts = nil
     }
 
     @objc private func playbackDidChange() {

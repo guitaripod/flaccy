@@ -70,6 +70,20 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
             .map { ChartTrack(rank: $0.offset + 1, name: $0.element.title, artistName: $0.element.artist, playCount: $0.element.count) }
     }
 
+    /// Per-track scrobble counts over the period, keyed by a lowercased
+    /// `title\0artist` composite matching `StationBuilder`/`LovedTracksService`.
+    func scrobbleCounts(period: ChartPeriod) -> [String: Int] {
+        var counts: [String: Int] = [:]
+        for row in rows(in: period) {
+            counts[Self.trackKey(row.trackTitle, row.artist), default: 0] += 1
+        }
+        return counts
+    }
+
+    static func trackKey(_ title: String, _ artist: String) -> String {
+        "\(title.lowercased())\u{0}\(artist.lowercased())"
+    }
+
     func totalPlays(period: ChartPeriod = .allTime) -> Int {
         rows(in: period).count
     }
