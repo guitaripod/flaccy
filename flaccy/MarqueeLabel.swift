@@ -16,6 +16,7 @@ final class MarqueeLabel: UIView {
             primaryLabel.text = text
             trailingLabel.text = text
             accessibilityLabel = text
+            invalidateIntrinsicContentSize()
             restartIfNeeded()
         }
     }
