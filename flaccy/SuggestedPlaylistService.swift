@@ -18,15 +18,15 @@ nonisolated struct SuggestedPlaylist: Hashable, Sendable {
 }
 
 /// Derives a handful of ready-to-play playlists by intersecting the user's
-/// Last.fm scrobble history with the tracks they actually own locally. Pure and
-/// off-main; the caller snapshots `Library.shared.allTracks` and hands it in.
+/// local play history with the tracks they actually own. Pure and off-main;
+/// the caller snapshots `Library.shared.allTracks` and hands it in.
 nonisolated enum SuggestedPlaylistService {
 
     private static let maxTracks = 50
     private static let minTracks = 8
 
     static func build(pool: [Track]) -> [SuggestedPlaylist] {
-        guard LastFMService.shared.isAuthenticated, !pool.isEmpty else { return [] }
+        guard !pool.isEmpty else { return [] }
 
         var poolByKey: [String: Track] = [:]
         poolByKey.reserveCapacity(pool.count)

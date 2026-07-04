@@ -136,16 +136,13 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 layoutToggleButton(),
             ]
         case .songs:
-            var items = [
+            let range = UIBarButtonItem(image: UIImage(systemName: "calendar"), menu: scrobbleRangeMenu())
+            range.accessibilityLabel = "Play history range"
+            navigationItem.rightBarButtonItems = [
                 UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), menu: songSortMenu()),
+                range,
                 layoutToggleButton(),
             ]
-            if LastFMService.shared.isAuthenticated {
-                let range = UIBarButtonItem(image: UIImage(systemName: "calendar"), menu: scrobbleRangeMenu())
-                range.accessibilityLabel = "Scrobble time range"
-                items.insert(range, at: 1)
-            }
-            navigationItem.rightBarButtonItems = items
         case .artists:
             navigationItem.rightBarButtonItem = UIBarButtonItem(
                 image: UIImage(systemName: "arrow.up.arrow.down"),
@@ -213,9 +210,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     private func songSortMenu() -> UIMenu {
-        let authenticated = LastFMService.shared.isAuthenticated
         let actions = LibraryViewModel.SongSort.allCases
-            .filter { authenticated || !$0.requiresLastFM }
             .map { sort in
                 UIAction(
                     title: sort.displayName,
@@ -243,7 +238,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             }
         }
         return UIMenu(
-            title: "Scrobbles From",
+            title: "Plays From",
             image: UIImage(systemName: "calendar"),
             children: actions
         )
@@ -626,11 +621,11 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         let chartsRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Int> { cell, _, _ in
             var content = UIListContentConfiguration.subtitleCell()
-            content.text = "Last.fm Charts"
-            content.secondaryText = "Your top tracks"
+            content.text = "Recap"
+            content.secondaryText = "Your listening stats"
             content.secondaryTextProperties.color = .secondaryLabel
             content.image = UIImage(systemName: "chart.bar.fill")
-            content.imageProperties.tintColor = UIColor(red: 0.84, green: 0.09, blue: 0.09, alpha: 1.0)
+            content.imageProperties.tintColor = .systemPink
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
             content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
             cell.contentConfiguration = content

@@ -79,7 +79,7 @@ final class LibraryViewModel {
             switch self {
             case .title: "Title"
             case .artist: "Artist"
-            case .mostScrobbled: "Most Scrobbled"
+            case .mostScrobbled: "Most Played"
             case .recentlyPlayed: "Recently Played"
             case .dateAdded: "Date Added"
             }
@@ -94,10 +94,6 @@ final class LibraryViewModel {
             case .dateAdded: "calendar"
             }
         }
-
-        /// Whether this ordering is derived from Last.fm scrobble history and
-        /// therefore only meaningful while authenticated.
-        var requiresLastFM: Bool { self == .mostScrobbled }
     }
 
     enum ArtistSort: String, CaseIterable {
@@ -190,20 +186,19 @@ final class LibraryViewModel {
         trackMeta[relativePath(for: track.fileURL)]
     }
 
-    /// The number of scrobbles for a track over the selected range, or nil when
-    /// unauthenticated, not yet warmed, or never scrobbled. Reads only the warmed
-    /// cache so it is cheap enough to call for every visible cell.
+    /// The number of local plays for a track over the selected range, or nil
+    /// when not yet warmed or never played. Reads only the warmed cache so it
+    /// is cheap enough to call for every visible cell.
     func scrobbleCount(for track: Track) -> Int? {
-        guard LastFMService.shared.isAuthenticated,
-              let cached = cachedScrobbleCounts, cached.period == scrobbleRange else { return nil }
+        guard let cached = cachedScrobbleCounts, cached.period == scrobbleRange else { return nil }
         let count = cached.counts[LastFMStatsService.trackKey(track.title, track.artist)] ?? 0
         return count > 0 ? count : nil
     }
 
-    /// Warms the scrobble-count cache off-main the first time the Songs segment
+    /// Warms the play-count cache off-main the first time the Songs segment
     /// needs it, then republishes so cells pick up their counts without hitching.
     func warmScrobbleCountsIfNeeded() {
-        guard currentSegment == .songs, LastFMService.shared.isAuthenticated else { return }
+        guard currentSegment == .songs else { return }
         if let cached = cachedScrobbleCounts, cached.period == scrobbleRange { return }
         guard !scrobbleCountsWarming else { return }
         scrobbleCountsWarming = true
@@ -674,11 +669,11 @@ final class LibraryViewModel {
         snapshotPublisher.send(buildSnapshot())
     }
 
-    /// Computes Last.fm-derived suggestions off-main the first time the Playlists
-    /// segment is shown, then republishes so they slot in above the user's lists.
+    /// Computes play-history-derived suggestions off-main the first time the
+    /// Playlists segment is shown, then republishes so they slot in above the
+    /// user's lists.
     func loadSuggestionsIfNeeded() {
         guard currentSegment == .playlists,
-              LastFMService.shared.isAuthenticated,
               cachedSuggestions == nil,
               !suggestionsLoading else { return }
         suggestionsLoading = true
@@ -749,7 +744,7 @@ final class LibraryViewModel {
         case .playlists:
             snapshot.appendSections([0])
             var playlistItems: [LibraryItem] = []
-            if LastFMService.shared.isAuthenticated && query.isEmpty {
+            if query.isEmpty {
                 playlistItems.append(.charts)
                 playlistItems.append(contentsOf: (cachedSuggestions ?? []).map { .suggestedPlaylist($0) })
             }
