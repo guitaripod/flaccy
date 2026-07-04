@@ -598,108 +598,14 @@ extension AlbumDetailViewController: UITableViewDelegate {
     }
 
     private func buildTrackContextMenu(for track: Track) -> UIMenu {
-        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
-        let trackPath = track.fileURL.standardizedFileURL.path
-        let docsPath = docsDir.path
-        let relativeURL: String
-        if trackPath.hasPrefix(docsPath) {
-            let rel = String(trackPath.dropFirst(docsPath.count))
-            relativeURL = rel.hasPrefix("/") ? String(rel.dropFirst()) : rel
-        } else {
-            relativeURL = track.fileURL.lastPathComponent
-        }
-
-        var playlistActions: [UIMenuElement] = []
-
-        do {
-            let playlists = try DatabaseManager.shared.fetchAllPlaylists()
-            for playlist in playlists {
-                guard let playlistId = playlist.id else { continue }
-                let action = UIAction(title: playlist.name, image: UIImage(systemName: "music.note.list")) { [weak self] _ in
-                    guard let self else { return }
-                    do {
-                        try DatabaseManager.shared.addTrackToPlaylist(playlistId: playlistId, trackFileURL: relativeURL)
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
-                        ToastView.show("Added to \(playlist.name)", in: self.view, style: .success)
-                    } catch {
-                        AppLogger.error("Failed to add track to playlist: \(error.localizedDescription)", category: .database)
-                        ToastView.show("Failed to add to playlist", in: self.view, style: .error)
-                    }
-                }
-                playlistActions.append(action)
-            }
-        } catch {
-            AppLogger.error("Failed to fetch playlists: \(error.localizedDescription)", category: .database)
-        }
-
-        let newPlaylistAction = UIAction(
-            title: "New Playlist\u{2026}",
-            image: UIImage(systemName: "plus")
-        ) { [weak self] _ in
-            self?.promptNewPlaylistAndAdd(trackFileURL: relativeURL)
-        }
-        playlistActions.append(newPlaylistAction)
-
-        let addToPlaylistMenu = UIMenu(
-            title: "Add to Playlist",
-            image: UIImage(systemName: "text.badge.plus"),
-            children: playlistActions
+        TrackContextMenu.build(
+            for: track,
+            in: self,
+            push: { [weak self] viewController in
+                self?.navigationController?.pushViewController(viewController, animated: true)
+            },
+            context: TrackContextMenu.Context(hideGoToAlbum: true)
         )
-
-        let playNext = UIAction(
-            title: "Play Next",
-            image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")
-        ) { [weak self] _ in
-            guard let self else { return }
-            AudioPlayer.shared.insertNext(track)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show("Playing next", in: self.view, style: .info)
-        }
-
-        let addToQueue = UIAction(
-            title: "Add to Queue",
-            image: UIImage(systemName: "text.append")
-        ) { [weak self] _ in
-            guard let self else { return }
-            AudioPlayer.shared.addToQueue(track)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show("Added to queue", in: self.view, style: .info)
-        }
-
-        let share = UIAction(
-            title: "Share",
-            image: UIImage(systemName: "square.and.arrow.up")
-        ) { [weak self] _ in
-            guard let self else { return }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
-        }
-        let shareMenu = UIMenu(options: .displayInline, children: [share])
-
-        return UIMenu(children: [playNext, addToQueue, addToPlaylistMenu, shareMenu])
-    }
-
-    private func promptNewPlaylistAndAdd(trackFileURL: String) {
-        let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
-        alert.addTextField { textField in
-            textField.placeholder = "Playlist name"
-            textField.autocapitalizationType = .words
-        }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Create", style: .default) { _ in
-            guard let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces),
-                  !name.isEmpty else { return }
-            do {
-                let playlist = try DatabaseManager.shared.createPlaylist(name: name)
-                if let playlistId = playlist.id {
-                    try DatabaseManager.shared.addTrackToPlaylist(playlistId: playlistId, trackFileURL: trackFileURL)
-                }
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-            } catch {
-                AppLogger.error("Failed to create playlist and add track: \(error.localizedDescription)", category: .database)
-            }
-        })
-        present(alert, animated: true)
     }
 }
 

@@ -393,24 +393,26 @@ extension QueueViewController: UITableViewDelegate {
               let track = track(at: indexPath) else { return nil }
 
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            let viewArtist = UIAction(title: "Go to Artist", image: UIImage(systemName: "person")) { _ in
-                guard let self else { return }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                let artistAlbums = Library.shared.albums.filter { $0.artist == track.artist }
-                self.onPushRequest?(ArtistDetailViewController(artistName: track.artist, albums: artistAlbums))
-            }
-            let removeAction = UIAction(title: "Remove", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
+            guard let self else { return nil }
+            let remove = UIAction(
+                title: "Remove from Queue",
+                image: UIImage(systemName: "trash"),
+                attributes: .destructive
+            ) { _ in
                 UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                 let queueIndex = AudioPlayer.shared.currentIndex + 1 + indexPath.row
                 AudioPlayer.shared.removeFromQueue(at: queueIndex)
             }
-            let share = UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
-                guard let self else { return }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
-            }
-            let shareMenu = UIMenu(options: .displayInline, children: [share])
-            return UIMenu(children: [viewArtist, removeAction, shareMenu])
+            return TrackContextMenu.build(
+                for: track,
+                in: self,
+                push: { [weak self] viewController in
+                    self?.onPushRequest?(viewController)
+                },
+                context: TrackContextMenu.Context(
+                    extraSections: [UIMenu(options: .displayInline, children: [remove])]
+                )
+            )
         }
     }
 

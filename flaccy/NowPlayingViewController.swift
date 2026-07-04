@@ -1781,30 +1781,27 @@ extension NowPlayingViewController: UIContextMenuInteractionDelegate {
 
     private func artworkContextMenuConfiguration(track: Track) -> UIContextMenuConfiguration {
         UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            let loved = LovedTracksService.shared.isLoved(track: track)
-            var actions: [UIMenuElement] = [
-                UIAction(
-                    title: loved ? "Unlove" : "Love",
-                    image: UIImage(systemName: loved ? "heart.slash" : "heart")
-                ) { _ in
-                    self?.toggleLove()
-                },
-                UIAction(title: "Go to Album", image: UIImage(systemName: "square.stack")) { _ in
-                    self?.navigateToAlbum()
-                },
-                UIAction(title: "Go to Artist", image: UIImage(systemName: "music.microphone")) { _ in
-                    self?.navigateToArtist()
-                },
-            ]
-            if let self, let artwork = self.artworkView.image, self.artworkView.contentMode == .scaleAspectFill {
-                actions.append(UIAction(title: "Share Artwork", image: UIImage(systemName: "square.and.arrow.up")) { _ in
-                    self.shareArtworkImage(artwork)
-                })
+            guard let self else { return nil }
+            var extras: [UIMenuElement] = []
+            if let artwork = self.artworkView.image, self.artworkView.contentMode == .scaleAspectFill {
+                extras.append(UIMenu(options: .displayInline, children: [
+                    UIAction(title: "Share Artwork", image: UIImage(systemName: "photo")) { _ in
+                        self.shareArtworkImage(artwork)
+                    }
+                ]))
             }
-            actions.append(UIAction(title: "Copy Title", image: UIImage(systemName: "doc.on.doc")) { _ in
-                UIPasteboard.general.string = track.title
-            })
-            return UIMenu(children: actions)
+            return TrackContextMenu.build(
+                for: track,
+                in: self,
+                push: { [weak self] viewController in
+                    self?.dismissAndPush(viewController)
+                },
+                context: TrackContextMenu.Context(
+                    includeQueueActions: false,
+                    hideLyrics: true,
+                    extraSections: extras
+                )
+            )
         }
     }
 }

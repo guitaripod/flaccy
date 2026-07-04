@@ -396,26 +396,38 @@ extension PlaylistDetailViewController: UITableViewDelegate {
         let track = tracks[indexPath.row]
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             guard let self else { return nil }
-
-            let playNext = UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
-                AudioPlayer.shared.insertNext(track)
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                ToastView.show("Playing next", in: self.view, style: .info)
+            let remove = UIAction(
+                title: "Remove from Playlist",
+                image: UIImage(systemName: "trash"),
+                attributes: .destructive
+            ) { [weak self] _ in
+                self?.removeTrack(at: indexPath)
             }
+            return TrackContextMenu.build(
+                for: track,
+                in: self,
+                push: { [weak self] viewController in
+                    self?.navigationController?.pushViewController(viewController, animated: true)
+                },
+                context: TrackContextMenu.Context(
+                    extraSections: [UIMenu(options: .displayInline, children: [remove])]
+                )
+            )
+        }
+    }
 
-            let addToQueue = UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { _ in
-                AudioPlayer.shared.addToQueue(track)
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                ToastView.show("Added to queue", in: self.view, style: .info)
-            }
-
-            let share = UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { _ in
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                self.shareTrackViaSonglink(title: track.title, artist: track.artist, from: self.view)
-            }
-            let shareMenu = UIMenu(options: .displayInline, children: [share])
-
-            return UIMenu(children: [playNext, addToQueue, shareMenu])
+    private func removeTrack(at indexPath: IndexPath) {
+        guard playlistTrackRecords.indices.contains(indexPath.row),
+              let recordId = playlistTrackRecords[indexPath.row].id else { return }
+        do {
+            try db.removeTrackFromPlaylist(id: recordId)
+            playlistTrackRecords.remove(at: indexPath.row)
+            tracks.remove(at: indexPath.row)
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+            updateMosaic()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } catch {
+            AppLogger.error("Failed to remove track from playlist: \(error.localizedDescription)", category: .database)
         }
     }
 }
