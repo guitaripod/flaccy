@@ -848,6 +848,21 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    func fetchScrobbleRows(from: Date, to: Date) throws -> [ScrobbleRecord] {
+        try dbQueue.read { db in
+            try ScrobbleRecord
+                .filter(Column("timestamp") >= from && Column("timestamp") < to)
+                .order(Column("timestamp").asc)
+                .fetchAll(db)
+        }
+    }
+
+    func scrobbleYears() throws -> [Int] {
+        try dbQueue.read { db in
+            try Int.fetchAll(db, sql: "SELECT DISTINCT CAST(strftime('%Y', timestamp) AS INTEGER) FROM scrobbles ORDER BY 1 DESC")
+        }
+    }
+
     func fetchAllScrobbleRows() throws -> [ScrobbleRecord] {
         try dbQueue.read { db in
             try ScrobbleRecord.order(Column("timestamp").asc).fetchAll(db)

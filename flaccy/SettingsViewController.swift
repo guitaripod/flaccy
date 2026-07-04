@@ -7,6 +7,7 @@ final class SettingsViewController: UITableViewController {
 
     nonisolated private enum Section: Int, CaseIterable, Hashable {
         case lastFM
+        case recap
         case playback
         case watch
         case library
@@ -14,6 +15,7 @@ final class SettingsViewController: UITableViewController {
         var header: String? {
             switch self {
             case .lastFM: return "Last.fm"
+            case .recap: return "Year in Music"
             case .playback: return "Playback"
             case .watch: return "Apple Watch"
             case .library: return "Library"
@@ -23,6 +25,7 @@ final class SettingsViewController: UITableViewController {
         var footer: String? {
             switch self {
             case .lastFM: return nil
+            case .recap: return "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story."
             case .playback: return "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends."
             case .watch: return nil
             case .library: return nil
@@ -34,6 +37,8 @@ final class SettingsViewController: UITableViewController {
         case lastFMAccount(username: String?)
         case pendingScrobbles(count: Int)
         case importLastFM
+        case yearInMusic
+        case recapNotifications(frequency: String)
         case gaplessPlayback
         case autoplaySimilar
         case libraryRadio
@@ -70,6 +75,19 @@ final class SettingsViewController: UITableViewController {
         }
     }
 
+    private final class DataSource: UITableViewDiffableDataSource<Section, Row> {
+        var footerForSection: ((Section) -> String?)?
+
+        override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+            sectionIdentifier(for: section)?.header
+        }
+
+        override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+            guard let section = sectionIdentifier(for: section) else { return nil }
+            return footerForSection?(section) ?? section.footer
+        }
+    }
+
     private static let cellReuseIdentifier = "SettingsCell"
 
     private let selectionFeedback = UISelectionFeedbackGenerator()
@@ -77,7 +95,7 @@ final class SettingsViewController: UITableViewController {
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
     private let notificationFeedback = UINotificationFeedbackGenerator()
 
-    private var dataSource: UITableViewDiffableDataSource<Section, Row>!
+    private var dataSource: DataSource!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -93,6 +111,11 @@ final class SettingsViewController: UITableViewController {
         applySnapshot(animated: false)
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        applySnapshot(animated: false)
+    }
+
     private func makeDoneButton() -> UIBarButtonItem {
         UIBarButtonItem(
             systemItem: .done,
@@ -104,9 +127,12 @@ final class SettingsViewController: UITableViewController {
     }
 
     private func configureDataSource() {
-        dataSource = UITableViewDiffableDataSource<Section, Row>(tableView: tableView) {
+        dataSource = DataSource(tableView: tableView) {
             [weak self] tableView, indexPath, row in
             self?.cell(for: row, at: indexPath, in: tableView) ?? UITableViewCell()
+        }
+        dataSource.footerForSection = { [weak self] section in
+            section == .lastFM ? self?.lastFMFooter() : nil
         }
         dataSource.defaultRowAnimation = .fade
     }
@@ -129,6 +155,13 @@ final class SettingsViewController: UITableViewController {
             lastFMRows.append(.importLastFM)
         }
         snapshot.appendItems(lastFMRows, toSection: .lastFM)
+        snapshot.appendItems(
+            [
+                .yearInMusic,
+                .recapNotifications(frequency: RecapNotificationScheduler.shared.frequency.displayName),
+            ],
+            toSection: .recap
+        )
         snapshot.appendItems([.gaplessPlayback, .autoplaySimilar, .libraryRadio], toSection: .playback)
         snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedPaths.count)], toSection: .watch)
         snapshot.appendItems(
@@ -191,6 +224,22 @@ final class SettingsViewController: UITableViewController {
             content.textProperties.color = .tintColor
             cell.accessibilityLabel = "Import Last.fm History"
             cell.accessibilityHint = "Backfills your listening stats from Last.fm"
+
+        case .yearInMusic:
+            content.image = RowIcon.image(systemName: "sparkles", tint: .systemIndigo)
+            content.text = "Your Year in Music"
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = "Your Year in Music"
+            cell.accessibilityHint = "Shows your yearly listening recap with shareable story cards"
+
+        case .recapNotifications(let frequency):
+            content.image = RowIcon.image(systemName: "bell.badge.fill", tint: .systemRed)
+            content.text = "Recap Notifications"
+            content.secondaryText = frequency
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = "Recap Notifications"
+            cell.accessibilityValue = frequency
+            cell.accessibilityHint = "Chooses how often flaccy reminds you about your recap"
 
         case .gaplessPlayback:
             content.image = RowIcon.image(systemName: "infinity", tint: .systemPurple)
@@ -327,16 +376,6 @@ final class SettingsViewController: UITableViewController {
         return stack
     }
 
-    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        dataSource.sectionIdentifier(for: section)?.header
-    }
-
-    override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        guard let section = dataSource.sectionIdentifier(for: section) else { return nil }
-        if section == .lastFM { return lastFMFooter() }
-        return section.footer
-    }
-
     private func lastFMFooter() -> String {
         if LastFMService.shared.isAuthenticated {
             return "Your listens are scrobbled to Last.fm and your loved tracks stay in sync."
@@ -359,6 +398,8 @@ final class SettingsViewController: UITableViewController {
         case .lastFMAccount: handleLastFMTap()
         case .pendingScrobbles: handleRetryScrobbles()
         case .importLastFM: handleImportLastFM()
+        case .yearInMusic: handleYearInMusicTap()
+        case .recapNotifications: handleRecapNotificationsTap()
         case .libraryRadio: handleLibraryRadio()
         case .watchSync: handleWatchTap()
         case .importFiles: handleImportTap()
@@ -462,6 +503,16 @@ final class SettingsViewController: UITableViewController {
             notificationFeedback.notificationOccurred(.success)
             applySnapshot(animated: true)
         }
+    }
+
+    private func handleYearInMusicTap() {
+        impactMedium.impactOccurred()
+        present(YearInMusicViewController(), animated: true)
+    }
+
+    private func handleRecapNotificationsTap() {
+        selectionFeedback.selectionChanged()
+        navigationController?.pushViewController(RecapNotificationsViewController(), animated: true)
     }
 
     private func handleWatchTap() {

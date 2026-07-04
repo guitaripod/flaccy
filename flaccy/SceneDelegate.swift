@@ -85,6 +85,12 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         )
     }
 
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        Task {
+            await RecapNotificationScheduler.shared.refreshSchedule()
+        }
+    }
+
     @objc private func handleQueueTapped() {
         playerContainer.expandShowingQueue()
     }

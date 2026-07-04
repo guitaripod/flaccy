@@ -138,12 +138,25 @@ final class ChartsViewController: UIViewController {
     }
 
     private func setupShareButton() {
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
+        let share = UIBarButtonItem(
             image: UIImage(systemName: "square.and.arrow.up"),
             primaryAction: UIAction { [weak self] _ in self?.shareRecap() }
         )
-        navigationItem.rightBarButtonItem?.isEnabled = false
-        navigationItem.rightBarButtonItem?.accessibilityLabel = "Share Recap"
+        share.isEnabled = false
+        share.accessibilityLabel = "Share Recap"
+
+        let yearInMusic = UIBarButtonItem(
+            image: UIImage(systemName: "sparkles"),
+            primaryAction: UIAction { [weak self] _ in self?.presentYearInMusic() }
+        )
+        yearInMusic.accessibilityLabel = "Year in Music"
+
+        navigationItem.rightBarButtonItems = [share, yearInMusic]
+    }
+
+    private func presentYearInMusic() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        present(YearInMusicViewController(), animated: true)
     }
 
     private func makeLayout() -> UICollectionViewCompositionalLayout {
