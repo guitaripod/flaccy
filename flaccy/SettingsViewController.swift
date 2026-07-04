@@ -1,3 +1,4 @@
+import AuthenticationServices
 import UIKit
 
 final class SettingsViewController: UITableViewController {
@@ -21,7 +22,7 @@ final class SettingsViewController: UITableViewController {
 
         var footer: String? {
             switch self {
-            case .lastFM: return "Scrobble your listens to Last.fm."
+            case .lastFM: return nil
             case .playback: return "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends."
             case .watch: return nil
             case .library: return nil
@@ -30,7 +31,7 @@ final class SettingsViewController: UITableViewController {
     }
 
     nonisolated private enum Row: Hashable {
-        case lastFMAccount(authenticated: Bool)
+        case lastFMAccount(username: String?)
         case pendingScrobbles(count: Int)
         case importLastFM
         case gaplessPlayback
@@ -118,12 +119,13 @@ final class SettingsViewController: UITableViewController {
         var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
         snapshot.appendSections(Section.allCases)
 
-        var lastFMRows: [Row] = [.lastFMAccount(authenticated: LastFMService.shared.isAuthenticated)]
-        let pending = pendingScrobbleCount
-        if pending > 0 {
-            lastFMRows.append(.pendingScrobbles(count: pending))
-        }
-        if LastFMService.shared.isAuthenticated {
+        let authenticated = LastFMService.shared.isAuthenticated
+        var lastFMRows: [Row] = [.lastFMAccount(username: authenticated ? LastFMService.shared.username : nil)]
+        if authenticated {
+            let pending = pendingScrobbleCount
+            if pending > 0 {
+                lastFMRows.append(.pendingScrobbles(count: pending))
+            }
             lastFMRows.append(.importLastFM)
         }
         snapshot.appendItems(lastFMRows, toSection: .lastFM)
@@ -138,6 +140,7 @@ final class SettingsViewController: UITableViewController {
             ],
             toSection: .library
         )
+        snapshot.reloadSections([.lastFM])
         dataSource.apply(snapshot, animatingDifferences: animated)
     }
 
@@ -159,16 +162,15 @@ final class SettingsViewController: UITableViewController {
         content.imageProperties.maximumSize = CGSize(width: RowIcon.side, height: RowIcon.side)
 
         switch row {
-        case .lastFMAccount(let authenticated):
+        case .lastFMAccount(let username):
             content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemRed)
-            if authenticated {
-                content.text = "Disconnect Last.fm"
-                content.secondaryText = "Connected"
-                content.textProperties.color = .systemRed
-                cell.accessibilityHint = "Stops scrobbling your listens"
+            if let username {
+                content.text = "Last.fm Account"
+                content.secondaryText = username
+                cell.accessoryType = .disclosureIndicator
+                cell.accessibilityHint = "Shows account options"
             } else {
                 content.text = "Connect to Last.fm"
-                content.secondaryText = "Not connected"
                 cell.accessoryType = .disclosureIndicator
                 cell.accessibilityHint = "Signs in to Last.fm to scrobble your listens"
             }
@@ -330,7 +332,16 @@ final class SettingsViewController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        dataSource.sectionIdentifier(for: section)?.footer
+        guard let section = dataSource.sectionIdentifier(for: section) else { return nil }
+        if section == .lastFM { return lastFMFooter() }
+        return section.footer
+    }
+
+    private func lastFMFooter() -> String {
+        if LastFMService.shared.isAuthenticated {
+            return "Your listens are scrobbled to Last.fm and your loved tracks stay in sync."
+        }
+        return "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and import your listening history. Everything else works without it."
     }
 
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
@@ -358,32 +369,75 @@ final class SettingsViewController: UITableViewController {
 
     private func handleLastFMTap() {
         if LastFMService.shared.isAuthenticated {
-            impactMedium.impactOccurred()
-            let alert = UIAlertController(
-                title: "Disconnect Last.fm",
-                message: "This will stop scrobbling your listens.",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-            alert.addAction(UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
-                LastFMService.shared.logout()
-                self?.notificationFeedback.notificationOccurred(.success)
-                self?.applySnapshot(animated: true)
-            })
-            present(alert, animated: true)
+            presentLastFMAccountSheet()
         } else {
-            selectionFeedback.selectionChanged()
-            guard let window = view.window else { return }
-            Task {
-                do {
-                    try await LastFMService.shared.authenticate(from: window)
-                    notificationFeedback.notificationOccurred(.success)
-                    applySnapshot(animated: true)
-                } catch {
-                    AppLogger.error("Last.fm auth failed: \(error.localizedDescription)", category: .auth)
-                }
+            connectLastFM()
+        }
+    }
+
+    private func presentLastFMAccountSheet() {
+        selectionFeedback.selectionChanged()
+        let username = LastFMService.shared.username
+        let sheet = UIAlertController(
+            title: "Last.fm",
+            message: username.map { "Connected as \($0)" } ?? "Connected",
+            preferredStyle: .actionSheet
+        )
+        if let username, let profileURL = URL(string: "https://www.last.fm/user/\(username)") {
+            sheet.addAction(UIAlertAction(title: "View Profile", style: .default) { _ in
+                UIApplication.shared.open(profileURL)
+            })
+        }
+        sheet.addAction(UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
+            self?.confirmDisconnectLastFM()
+        })
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(sheet, animated: true)
+    }
+
+    private func confirmDisconnectLastFM() {
+        impactMedium.impactOccurred()
+        let alert = UIAlertController(
+            title: "Disconnect Last.fm",
+            message: "Your listens will no longer be scrobbled. Your library, play history, and loved tracks stay on this device.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
+            LastFMService.shared.logout()
+            self?.notificationFeedback.notificationOccurred(.success)
+            self?.applySnapshot(animated: true)
+        })
+        present(alert, animated: true)
+    }
+
+    private func connectLastFM() {
+        selectionFeedback.selectionChanged()
+        guard let window = view.window else { return }
+        Task {
+            do {
+                try await LastFMService.shared.authenticate(from: window)
+                notificationFeedback.notificationOccurred(.success)
+                applySnapshot(animated: true)
+            } catch {
+                AppLogger.error("Last.fm auth failed: \(error.localizedDescription)", category: .auth)
+                guard !isAuthCancellation(error) else { return }
+                notificationFeedback.notificationOccurred(.error)
+                let alert = UIAlertController(
+                    title: "Couldn't Connect",
+                    message: "Last.fm sign-in didn't complete. Check your connection and try again.",
+                    preferredStyle: .alert
+                )
+                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                present(alert, animated: true)
             }
         }
+    }
+
+    private func isAuthCancellation(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == ASWebAuthenticationSessionError.errorDomain
+            && nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
     }
 
     private func handleRetryScrobbles() {
