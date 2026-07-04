@@ -110,12 +110,25 @@ actor DetailEnrichmentCache {
     private var popularTracks: [String: [(name: String, playCount: Int, rank: Int)]] = [:]
     private var similarAlbums: [String: [Album]] = [:]
 
+    /// Nonisolated mirror of the memoized values so callers can synchronously
+    /// tell whether data is already available and skip a gratuitous fade.
+    private let sync = SyncCache()
+
+    nonisolated func cachedTopTags(artist: String) -> [String]? {
+        sync.tags(forArtist: artist.lowercased())
+    }
+
+    nonisolated func cachedAlbumPlayCount(artist: String, album: String) -> Int? {
+        sync.playCount(forKey: "\(artist.lowercased())\u{0}\(album.lowercased())")
+    }
+
     func albumPlayCount(artist: String, album: String) async -> Int {
         let key = "\(artist.lowercased())\u{0}\(album.lowercased())"
         if let cached = albumPlayCounts[key] { return cached }
         let info = await LastFMService.shared.fetchAlbumInfo(artist: artist, album: album)
         let count = info?.userPlayCount ?? 0
         albumPlayCounts[key] = count
+        sync.setPlayCount(count, forKey: key)
         return count
     }
 
@@ -124,6 +137,7 @@ actor DetailEnrichmentCache {
         if let cached = artistTags[key] { return cached }
         let tags = Array(await LastFMService.shared.fetchArtistTopTags(artist: artist).prefix(6))
         artistTags[key] = tags
+        sync.setTags(tags, forArtist: key)
         return tags
     }
 
@@ -141,5 +155,31 @@ actor DetailEnrichmentCache {
         let albums = await SimilarArtistService.shared.similarInLibrary(toArtist: artist)
         similarAlbums[key] = albums
         return albums
+    }
+}
+
+private final class SyncCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var artistTags: [String: [String]] = [:]
+    private var albumPlayCounts: [String: Int] = [:]
+
+    func tags(forArtist key: String) -> [String]? {
+        lock.lock(); defer { lock.unlock() }
+        return artistTags[key]
+    }
+
+    func setTags(_ tags: [String], forArtist key: String) {
+        lock.lock(); defer { lock.unlock() }
+        artistTags[key] = tags
+    }
+
+    func playCount(forKey key: String) -> Int? {
+        lock.lock(); defer { lock.unlock() }
+        return albumPlayCounts[key]
+    }
+
+    func setPlayCount(_ count: Int, forKey key: String) {
+        lock.lock(); defer { lock.unlock() }
+        albumPlayCounts[key] = count
     }
 }

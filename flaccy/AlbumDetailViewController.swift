@@ -80,17 +80,30 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         let artist = album.artist
         let title = album.title
         let authenticated = LastFMService.shared.isAuthenticated
-        enrichmentTask = Task { [weak self] in
-            let tags = await DetailEnrichmentCache.shared.topTags(artist: artist)
-            if !Task.isCancelled { self?.applyGenreChips(tags) }
 
-            guard authenticated else { return }
+        let cachedTags = DetailEnrichmentCache.shared.cachedTopTags(artist: artist)
+        if let cachedTags { applyGenreChips(cachedTags, animated: false) }
+        let cachedPlays = authenticated
+            ? DetailEnrichmentCache.shared.cachedAlbumPlayCount(artist: artist, album: title)
+            : nil
+        if let cachedPlays, cachedPlays > 0 { applyPlayCount(cachedPlays, animated: false) }
+
+        let tagsResolved = cachedTags != nil
+        let playsResolved = !authenticated || cachedPlays != nil
+        guard !tagsResolved || !playsResolved else { return }
+
+        enrichmentTask = Task { [weak self] in
+            if !tagsResolved {
+                let tags = await DetailEnrichmentCache.shared.topTags(artist: artist)
+                if !Task.isCancelled { self?.applyGenreChips(tags, animated: true) }
+            }
+            guard authenticated, !playsResolved else { return }
             let plays = await DetailEnrichmentCache.shared.albumPlayCount(artist: artist, album: title)
-            if !Task.isCancelled, plays > 0 { self?.applyPlayCount(plays) }
+            if !Task.isCancelled, plays > 0 { self?.applyPlayCount(plays, animated: true) }
         }
     }
 
-    private func applyGenreChips(_ tags: [String]) {
+    private func applyGenreChips(_ tags: [String], animated: Bool) {
         genreChipsHolder.subviews.forEach { $0.removeFromSuperview() }
         guard !tags.isEmpty else {
             genreChipsHolder.isHidden = true
@@ -107,15 +120,39 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
             row.trailingAnchor.constraint(equalTo: genreChipsHolder.trailingAnchor),
         ])
         genreChipsHolder.isHidden = false
-        sizeHeaderToFit()
+        reveal(row, animated: animated)
     }
 
-    private func applyPlayCount(_ count: Int) {
+    private func applyPlayCount(_ count: Int, animated: Bool) {
         let word = count == 1 ? "time" : "times"
         playCountLabel.text = "You've played this album \(count) \(word)"
         playCountLabel.textColor = accentColor
         playCountLabel.isHidden = false
+        reveal(playCountLabel, animated: animated)
+    }
+
+    private func reveal(_ view: UIView, animated: Bool) {
+        if animated {
+            animateHeaderReveal(fading: view)
+        } else {
+            view.alpha = 1
+            sizeHeaderToFit()
+        }
+    }
+
+    /// Fades a newly-revealed header element in while smoothly resizing the
+    /// table header so the track rows slide down instead of jumping; applies
+    /// instantly under Reduce Motion.
+    private func animateHeaderReveal(fading view: UIView) {
         sizeHeaderToFit()
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            view.alpha = 1
+            return
+        }
+        view.alpha = 0
+        UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseInOut]) {
+            view.alpha = 1
+        }
     }
 
     private func setupBackdrop() {
@@ -333,6 +370,10 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         }
 
         artworkView.translatesAutoresizingMaskIntoConstraints = false
+        for axis in [NSLayoutConstraint.Axis.horizontal, .vertical] {
+            artworkView.setContentCompressionResistancePriority(.defaultLow, for: axis)
+            artworkView.setContentHuggingPriority(.defaultLow, for: axis)
+        }
         artworkCard.addSubview(artworkView)
         NSLayoutConstraint.activate([
             artworkView.topAnchor.constraint(equalTo: artworkCard.topAnchor),
@@ -423,6 +464,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
     private func prepareAppearanceAnimationIfNeeded() {
         guard !hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
+        tableView.alpha = 0
         for element in appearanceElements {
             element.alpha = 0
             element.transform = CGAffineTransform(translationX: 0, y: 14)
@@ -432,7 +474,13 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     private func runAppearanceAnimationIfNeeded() {
         guard !hasAnimatedAppearance else { return }
         hasAnimatedAppearance = true
-        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            tableView.alpha = 1
+            return
+        }
+        UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) { [self] in
+            tableView.alpha = 1
+        }.startAnimation()
         for (index, element) in appearanceElements.enumerated() {
             let animator = UIViewPropertyAnimator(duration: 0.32, dampingRatio: 0.84) {
                 element.alpha = 1

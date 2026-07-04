@@ -875,7 +875,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         artistAvatarButton.setImage(image, for: .normal)
         guard artistAvatarButton.isHidden == showAvatar else { return }
         let update = { self.artistAvatarButton.isHidden = !showAvatar }
-        if hasAppliedInitialState, !UIAccessibility.isReduceMotionEnabled {
+        if hasAppliedInitialState, hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled {
             UIView.animate(withDuration: 0.2, animations: update)
         } else {
             update()
@@ -1575,7 +1575,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private func appearanceGroups() -> [[UIView]] {
         [
             [artworkContainer],
-            [titleMarquee, qualityBadge, loveButton, artistButton, dashLabel, albumLabel, playingFromLabel],
+            [titleMarquee, qualityBadge, loveButton, artistAvatarButton, artistButton, dashLabel, albumLabel, playingFromLabel],
             [scrubber, currentTimeLabel, remainingTimeLabel, skipBackButton, previousButton,
              playPauseButton, nextButton, skipForwardButton],
         ]

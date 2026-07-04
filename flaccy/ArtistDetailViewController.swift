@@ -175,7 +175,7 @@ final class ArtistDetailViewController: UIViewController {
             let tags = await tagsResult
             if !Task.isCancelled, !tags.isEmpty {
                 self?.genres = tags
-                self?.applySnapshot()
+                self?.applySnapshot(animatingDifferences: !UIAccessibility.isReduceMotionEnabled)
             }
         }
     }
@@ -478,7 +478,7 @@ final class ArtistDetailViewController: UIViewController {
         }
     }
 
-    private func applySnapshot() {
+    private func applySnapshot(animatingDifferences: Bool = false) {
         var snapshot = NSDiffableDataSourceSnapshot<ArtistDetailSection, ArtistDetailItem>()
         snapshot.appendSections(ArtistDetailSection.allCases)
 
@@ -503,7 +503,7 @@ final class ArtistDetailViewController: UIViewController {
         snapshot.appendItems(similarSectionItems(), toSection: .similarArtists)
         snapshot.appendItems(popularSectionItems(), toSection: .popularTracks)
         snapshot.appendItems(albums.map { .album($0) }, toSection: .albums)
-        dataSource.apply(snapshot, animatingDifferences: false)
+        dataSource.apply(snapshot, animatingDifferences: animatingDifferences)
     }
 
     private func similarSectionItems() -> [ArtistDetailItem] {
@@ -577,6 +577,7 @@ final class ArtistHeaderCell: UICollectionViewCell {
     private let readMoreButton = UIButton(type: .system)
     private var bioExpanded = false
     private var showsFallbackImage = false
+    private var genreChipsShown = false
 
     private static let imageSize: CGFloat = 132
 
@@ -718,6 +719,7 @@ final class ArtistHeaderCell: UICollectionViewCell {
         genreChipsHolder.subviews.forEach { $0.removeFromSuperview() }
         guard !genres.isEmpty else {
             genreChipsHolder.isHidden = true
+            genreChipsShown = false
             return
         }
         let row = DetailChip.chipsRow(genres)
@@ -730,6 +732,14 @@ final class ArtistHeaderCell: UICollectionViewCell {
             row.trailingAnchor.constraint(equalTo: genreChipsHolder.trailingAnchor),
         ])
         genreChipsHolder.isHidden = false
+
+        let shouldFade = !genreChipsShown && !UIAccessibility.isReduceMotionEnabled
+        genreChipsShown = true
+        guard shouldFade else { return }
+        row.alpha = 0
+        UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseInOut]) {
+            row.alpha = 1
+        }
     }
 
     private func toggleBio() {
