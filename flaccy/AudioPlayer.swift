@@ -133,6 +133,9 @@ final class AudioPlayer: AudioPlaying {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleItemFailedToPlayToEnd(_:)), name: .AVPlayerItemFailedToPlayToEndTime, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleLastFMAuthChange), name: LastFMService.authDidChange, object: nil
+        )
         startNetworkMonitoring()
     }
 
@@ -154,6 +157,21 @@ final class AudioPlayer: AudioPlaying {
 
     @objc private func handleWillResignActive() {
         saveQueueState()
+    }
+
+    /// Connecting flushes anything queued while offline; disconnecting retires
+    /// the pending queue so plays stay as local history and nothing waits on an
+    /// account the user opted out of.
+    @objc private func handleLastFMAuthChange() {
+        if LastFMService.shared.isAuthenticated {
+            Task { await retryPendingScrobbles() }
+        } else {
+            do {
+                try DatabaseManager.shared.retirePendingScrobbles(olderThan: .distantFuture)
+            } catch {
+                AppLogger.error("Failed to retire pending scrobbles on disconnect: \(error.localizedDescription)", category: .database)
+            }
+        }
     }
 
     @objc private func handleWillEnterForeground() {
@@ -753,19 +771,22 @@ final class AudioPlayer: AudioPlaying {
                 }
             }
 
+            let scrobblesToLastFM = LastFMService.shared.isAuthenticated
             let record = ScrobbleRecord(
                 trackTitle: track.title,
                 artist: track.artist,
                 albumTitle: track.albumTitle,
                 timestamp: startTime,
                 duration: trackDuration,
-                submitted: false
+                submitted: !scrobblesToLastFM
             )
             do {
                 try DatabaseManager.shared.insertScrobble(record)
             } catch {
-                AppLogger.error("Failed to persist pending scrobble: \(error.localizedDescription)", category: .database)
+                AppLogger.error("Failed to persist scrobble: \(error.localizedDescription)", category: .database)
             }
+
+            guard scrobblesToLastFM else { return }
 
             let success = await LastFMService.shared.scrobble(
                 track: track.title,
@@ -1141,6 +1162,9 @@ final class AudioPlayer: AudioPlaying {
         isRetryingScrobbles = true
         defer { isRetryingScrobbles = false }
         do {
+            try DatabaseManager.shared.retirePendingScrobbles(
+                olderThan: Date().addingTimeInterval(-14 * 86_400)
+            )
             let pending = try DatabaseManager.shared.fetchPendingScrobbles()
             guard !pending.isEmpty else { return }
 

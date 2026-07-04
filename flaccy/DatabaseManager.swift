@@ -527,6 +527,18 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    /// Retires pending scrobbles older than the cutoff by marking them submitted,
+    /// keeping them as local listening history without queuing them for Last.fm,
+    /// which rejects scrobbles more than 14 days old. Pass `.distantFuture` to
+    /// retire the entire pending queue.
+    func retirePendingScrobbles(olderThan cutoff: Date) throws {
+        _ = try dbQueue.write { db in
+            try ScrobbleRecord
+                .filter(Column("submitted") == false && Column("timestamp") < cutoff)
+                .updateAll(db, Column("submitted").set(to: true))
+        }
+    }
+
     func markScrobblesSubmitted(ids: [Int64]) throws {
         guard !ids.isEmpty else { return }
         _ = try dbQueue.write { db in
