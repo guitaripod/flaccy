@@ -58,7 +58,6 @@ final class ChartsViewModel {
         let stats = self.stats
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let heatmapPeriod: ChartPeriod = period == .week || period == .month ? period : .year
                 let snapshot = RecapData(
                     userInfo: userInfo,
                     period: period,
@@ -69,7 +68,7 @@ final class ChartsViewModel {
                     topTracks: stats.topTracks(period: period, limit: 10),
                     listeningClock: stats.listeningClock(period: period),
                     streak: stats.currentStreakDays(),
-                    heatmap: stats.dayHeatmap(period: heatmapPeriod),
+                    heatmap: stats.dayHeatmap(period: period),
                     persona: stats.persona(period: period)
                 )
                 continuation.resume(returning: snapshot)
@@ -77,32 +76,30 @@ final class ChartsViewModel {
         }
     }
 
-    /// When local scrobbles are too sparse to fill the top lists, backfill them
-    /// from Last.fm's network charts (which also carry remote album artwork) so
-    /// the Recap always shows something for an authenticated user.
+    /// Replaces the ranked top lists with Last.fm's server-side period charts,
+    /// which aggregate the user's entire history (the local `scrobbles` table is
+    /// import-capped, so its "overall" only spans the most recent pages). Local
+    /// results are retained as an offline fallback when the network returns empty.
+    /// The network albums also carry remote artwork.
     private func backfillFromNetwork(_ snapshot: inout RecapData, period: ChartPeriod) async -> RecapData {
         guard lastFM.isAuthenticated else { return snapshot }
-        let needArtists = snapshot.topArtists.count < 3
-        let needAlbums = snapshot.topAlbums.isEmpty
-        let needTracks = snapshot.topTracks.count < 3
-        guard needArtists || needAlbums || needTracks else { return snapshot }
 
-        async let netArtists = needArtists ? lastFM.fetchTopArtists(period: period, limit: 10) : []
-        async let netAlbums = needAlbums ? lastFM.fetchTopAlbums(period: period, limit: 9) : []
-        async let netTracks = needTracks ? lastFM.fetchTopTracks(period: period, limit: 10) : []
+        async let netArtists = lastFM.fetchTopArtists(period: period, limit: 10)
+        async let netAlbums = lastFM.fetchTopAlbums(period: period, limit: 9)
+        async let netTracks = lastFM.fetchTopTracks(period: period, limit: 10)
         let (artists, albums, tracks) = await (netArtists, netAlbums, netTracks)
 
-        if needArtists, !artists.isEmpty {
+        if !artists.isEmpty {
             snapshot.topArtists = artists.enumerated().map {
                 ChartArtist(rank: $0.offset + 1, name: $0.element.name, playCount: $0.element.playCount)
             }
         }
-        if needAlbums, !albums.isEmpty {
+        if !albums.isEmpty {
             snapshot.topAlbums = albums.enumerated().map {
                 ChartAlbum(rank: $0.offset + 1, name: $0.element.name, artistName: $0.element.artistName, playCount: $0.element.playCount, imageURL: $0.element.imageURL)
             }
         }
-        if needTracks, !tracks.isEmpty {
+        if !tracks.isEmpty {
             snapshot.topTracks = tracks.enumerated().map {
                 ChartTrack(rank: $0.offset + 1, name: $0.element.name, artistName: $0.element.artistName, playCount: $0.element.playCount)
             }

@@ -29,7 +29,7 @@ final class HeatmapView: UIView {
         self.tint = tint
         dataVersion += 1
         let active = counts.values.filter { $0 > 0 }.count
-        accessibilityLabel = "Listening heatmap, \(active) active days in the last months"
+        accessibilityLabel = "Listening heatmap, \(active) active days"
         setNeedsLayout()
     }
 
@@ -66,18 +66,25 @@ final class HeatmapView: UIView {
     }
 
     private func drawContent(in ctx: CGContext, rect: CGRect) {
-        let cell = (rect.height - 6 * cellSpacing) / 7
-        guard cell > 0 else { return }
-        let columns = max(1, Int((rect.width + cellSpacing) / (cell + cellSpacing)))
-        let maxCount = max(counts.values.max() ?? 0, 1)
+        let heightCell = (rect.height - 6 * cellSpacing) / 7
+        guard heightCell > 0 else { return }
 
         let today = calendar.startOfDay(for: Date())
         let weekday = calendar.component(.weekday, from: today) - 1
         guard let lastColumnStart = calendar.date(byAdding: .day, value: -weekday, to: today) else { return }
 
+        let earliest = counts.keys.min().map { calendar.startOfDay(for: $0) } ?? today
+        let earliestWeekday = calendar.component(.weekday, from: earliest) - 1
+        let firstColumnStart = calendar.date(byAdding: .day, value: -earliestWeekday, to: earliest) ?? lastColumnStart
+        let spanDays = calendar.dateComponents([.day], from: firstColumnStart, to: lastColumnStart).day ?? 0
+        let columns = max(1, spanDays / 7 + 1)
+
+        let widthCell = (rect.width - CGFloat(columns - 1) * cellSpacing) / CGFloat(columns)
+        let cell = max(1, min(heightCell, widthCell))
+        let maxCount = max(counts.values.max() ?? 0, 1)
+
         for column in 0..<columns {
-            let weeksBack = columns - 1 - column
-            guard let columnStart = calendar.date(byAdding: .day, value: -7 * weeksBack, to: lastColumnStart) else { continue }
+            guard let columnStart = calendar.date(byAdding: .day, value: 7 * column, to: firstColumnStart) else { continue }
             for row in 0..<7 {
                 guard let day = calendar.date(byAdding: .day, value: row, to: columnStart) else { continue }
                 if day > today { continue }
