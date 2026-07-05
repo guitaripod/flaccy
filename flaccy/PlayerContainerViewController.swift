@@ -334,7 +334,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         }
         CATransaction.commit()
 
-        statusBarLight = t > 0.5
         onMorphProgress?(t)
         updateThresholdTick()
     }
@@ -394,6 +393,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         }
         state = terminal
         setProgress(landedFull ? 1 : 0)
+        statusBarLight = landedFull
         proxyView.isHidden = true
         npc.setArtworkHiddenForMorph(!landedFull)
         miniPlayer.setMorphArtworkHidden(landedFull)
@@ -419,6 +419,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         recomputeGeometry()
         setProgress(terminal == .full ? 1 : 0)
         let landedFull = terminal == .full
+        statusBarLight = landedFull
         npc.view.isUserInteractionEnabled = landedFull
         npc.view.accessibilityElementsHidden = !landedFull
         miniPlayer.isUserInteractionEnabled = !landedFull

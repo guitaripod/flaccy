@@ -22,8 +22,6 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         container.backgroundColor = .black
         container.addSubview(nav.view)
         nav.view.translatesAutoresizingMaskIntoConstraints = false
-        nav.view.layer.cornerCurve = .continuous
-        nav.view.clipsToBounds = true
 
         let dimmingView = UIView()
         dimmingView.backgroundColor = .black
@@ -35,12 +33,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         playerContainer.onRequestPush = { [weak nav] vc in
             nav?.pushViewController(vc, animated: true)
         }
-        playerContainer.onMorphProgress = { [weak nav, weak dimmingView] t in
+        playerContainer.onMorphProgress = { [weak dimmingView] t in
             dimmingView?.alpha = 0.35 * t
-            guard !UIAccessibility.isReduceMotionEnabled else { return }
-            let scale = 1 - 0.06 * t
-            nav?.view.transform = CGAffineTransform(scaleX: scale, y: scale)
-            nav?.view.layer.cornerRadius = 28 * t
         }
         playerContainer.view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(playerContainer.view)
