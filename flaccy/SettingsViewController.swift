@@ -9,6 +9,7 @@ final class SettingsViewController: UITableViewController {
         case lastFM
         case recap
         case playback
+        case guide
         case watch
         case library
 
@@ -17,6 +18,7 @@ final class SettingsViewController: UITableViewController {
             case .lastFM: return "Last.fm"
             case .recap: return "Year in Music"
             case .playback: return "Playback"
+            case .guide: return nil
             case .watch: return "Apple Watch"
             case .library: return "Library"
             }
@@ -27,6 +29,7 @@ final class SettingsViewController: UITableViewController {
             case .lastFM: return nil
             case .recap: return "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story."
             case .playback: return "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends."
+            case .guide: return "How Bluetooth, AAC, and lossless files really affect what you hear."
             case .watch: return nil
             case .library: return nil
             }
@@ -42,6 +45,7 @@ final class SettingsViewController: UITableViewController {
         case gaplessPlayback
         case autoplaySimilar
         case libraryRadio
+        case listeningGuide
         case watchSync(syncedCount: Int)
         case importFiles
         case rescanLibrary
@@ -163,6 +167,7 @@ final class SettingsViewController: UITableViewController {
             toSection: .recap
         )
         snapshot.appendItems([.gaplessPlayback, .autoplaySimilar, .libraryRadio], toSection: .playback)
+        snapshot.appendItems([.listeningGuide], toSection: .guide)
         snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedPaths.count)], toSection: .watch)
         snapshot.appendItems(
             [
@@ -261,6 +266,13 @@ final class SettingsViewController: UITableViewController {
             content.textProperties.color = .tintColor
             cell.accessibilityLabel = "Library Radio"
             cell.accessibilityHint = "Plays a station from your most-played tracks"
+
+        case .listeningGuide:
+            content.image = RowIcon.image(systemName: "waveform", tint: .systemCyan)
+            content.text = "Listening Guide"
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = "Listening Guide"
+            cell.accessibilityHint = "Explains how Bluetooth, AAC, and lossless audio affect what you hear"
 
         case .watchSync(let syncedCount):
             content.image = RowIcon.image(systemName: "applewatch", tint: .systemBlue)
@@ -401,6 +413,7 @@ final class SettingsViewController: UITableViewController {
         case .yearInMusic: handleYearInMusicTap()
         case .recapNotifications: handleRecapNotificationsTap()
         case .libraryRadio: handleLibraryRadio()
+        case .listeningGuide: handleListeningGuideTap()
         case .watchSync: handleWatchTap()
         case .importFiles: handleImportTap()
         case .rescanLibrary: handleRescanTap()
@@ -513,6 +526,11 @@ final class SettingsViewController: UITableViewController {
     private func handleRecapNotificationsTap() {
         selectionFeedback.selectionChanged()
         navigationController?.pushViewController(RecapNotificationsViewController(), animated: true)
+    }
+
+    private func handleListeningGuideTap() {
+        selectionFeedback.selectionChanged()
+        navigationController?.pushViewController(ListeningGuideViewController(), animated: true)
     }
 
     private func handleWatchTap() {
