@@ -17,10 +17,10 @@ final class ScreenshotTests: XCTestCase {
 
         app.buttons["Albums"].firstMatch.tap()
         sleep(2)
-        openAlbum(app, named: "Nevermind")
+        openAlbum(app, named: "Lateralus")
         capture(app, wait: 6, name: "dark-03-album-detail")
 
-        startPlayback(app, trackNamed: "Smells Like Teen Spirit")
+        startPlayback(app, trackNamed: "Schism")
         expandNowPlaying(app)
         capture(app, wait: 6, name: "dark-04-now-playing")
 
@@ -170,7 +170,7 @@ final class ScreenshotTests: XCTestCase {
     }
 
     private func expandNowPlaying(_ app: XCUIApplication) {
-        let mini = app.otherElements["Smells Like Teen Spirit, Nirvana"].firstMatch
+        let mini = app.otherElements["Schism, Tool"].firstMatch
         if mini.waitForExistence(timeout: 5) && mini.isHittable {
             mini.tap()
         } else {
