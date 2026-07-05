@@ -446,6 +446,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         sectionIndexView.isHidden = titles.count < 5
             || viewModel.currentSegment == .playlists
             || viewModel.filter != .all
+            || !viewModel.isCurrentSortAlphabetical
     }
 
     private func setupLoadingOverlay() {
@@ -962,6 +963,16 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                         section.orthogonalScrollingBehavior = .continuous
                         section.interGroupSpacing = 10
                         section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
+                        let headerSize = NSCollectionLayoutSize(
+                            widthDimension: .fractionalWidth(1.0), heightDimension: .estimated(32)
+                        )
+                        section.boundarySupplementaryItems = [
+                            NSCollectionLayoutBoundarySupplementaryItem(
+                                layoutSize: headerSize,
+                                elementKind: UICollectionView.elementKindSectionHeader,
+                                alignment: .top
+                            )
+                        ]
                         return section
                     }
                     return self.gridSection(columns: 3, topInset: 12)

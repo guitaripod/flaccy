@@ -419,7 +419,11 @@ final class LibraryViewModel {
         case .name:
             result = artists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         case .albumCount:
-            result = artists.sorted { $0.albumCount > $1.albumCount }
+            result = artists.sorted {
+                $0.albumCount == $1.albumCount
+                    ? $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                    : $0.albumCount > $1.albumCount
+            }
         }
         cachedSortedArtists = result
         return result
@@ -623,6 +627,18 @@ final class LibraryViewModel {
         }
     }
 
+    /// The alphabet scrubber only makes sense when the visible order is
+    /// alphabetical; for time- or count-based sorts the first letters land in
+    /// arbitrary order and the index is noise.
+    var isCurrentSortAlphabetical: Bool {
+        switch currentSegment {
+        case .albums: albumSort == .title || albumSort == .artist
+        case .songs: songSort == .title || songSort == .artist
+        case .artists: artistSort == .name
+        case .playlists: false
+        }
+    }
+
     func indexTitles() -> [String] {
         let items: [String]
         switch currentSegment {
@@ -753,7 +769,7 @@ final class LibraryViewModel {
                     Self.searchFold($0.title).contains(query)
                         || Self.searchFold($0.artist).contains(query)
                 }
-            let showsRecentShelf = query.isEmpty && filter == .all && layoutMode == .grid
+            let showsRecentShelf = query.isEmpty && filter == .all && layoutMode == .grid && albumSort == .title
             let recent = showsRecentShelf ? recentlyPlayedAlbums : []
             if !recent.isEmpty {
                 snapshot.appendSections([0, 1])
