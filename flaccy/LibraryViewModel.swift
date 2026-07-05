@@ -169,11 +169,14 @@ final class LibraryViewModel {
         return map
     }
 
+    private static let documentsPath = FileManager.default
+        .urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL.path
+
     private func relativePath(for url: URL) -> String {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let docs = Self.documentsPath
         let path = url.standardizedFileURL.path
-        guard path.hasPrefix(docs.path) else { return url.lastPathComponent }
-        let relative = String(path.dropFirst(docs.path.count))
+        guard path.hasPrefix(docs) else { return url.lastPathComponent }
+        let relative = String(path.dropFirst(docs.count))
         return relative.hasPrefix("/") ? String(relative.dropFirst()) : relative
     }
 
@@ -218,14 +221,29 @@ final class LibraryViewModel {
         }
     }
 
+    private var cachedRepresentativeTracks = [String: Track]()
+    private var cachedFirstAlbumByArtist: [String: Album]?
+
     /// The album's best representative track for a quality badge: lossless first,
-    /// then highest bit-depth and sample-rate.
+    /// then highest bit-depth and sample-rate. Cached per album because cells
+    /// request it on every dequeue during a scroll.
     func representativeTrack(for album: Album) -> Track? {
-        let hydrated = album.tracks.map { hydrate($0) }
-        return hydrated.max { a, b in
-            let ai = qualityRank(a), bi = qualityRank(b)
-            return ai < bi
+        let key = "\(album.title)|\(album.artist)"
+        if let cached = cachedRepresentativeTracks[key] { return cached }
+        let best = album.tracks.map { hydrate($0) }.max { qualityRank($0) < qualityRank($1) }
+        if let best { cachedRepresentativeTracks[key] = best }
+        return best
+    }
+
+    /// A representative album for the artist's avatar artwork, resolved through
+    /// a lazily built index instead of a per-cell linear scan over all albums.
+    func firstAlbum(forArtist name: String) -> Album? {
+        if cachedFirstAlbumByArtist == nil {
+            cachedFirstAlbumByArtist = Dictionary(
+                library.albums.map { ($0.artist, $0) }, uniquingKeysWith: { first, _ in first }
+            )
         }
+        return cachedFirstAlbumByArtist?[name]
     }
 
     private var cachedAlbumAdded: [String: Date]?
@@ -702,17 +720,38 @@ final class LibraryViewModel {
         }
     }
 
+    private static func searchFold(_ s: String) -> String {
+        s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+
+    private var cachedSongSearchKeys: [String: String]?
+
+    /// Folded "title artist album" haystacks keyed by file URL, computed once
+    /// per library generation so typing in search does plain substring scans
+    /// instead of locale-aware compares over every track.
+    private func songSearchKeys() -> [String: String] {
+        if let cached = cachedSongSearchKeys { return cached }
+        var map = [String: String]()
+        let tracks = library.allTracks
+        map.reserveCapacity(tracks.count)
+        for track in tracks {
+            map[track.fileURL.path] = Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)")
+        }
+        cachedSongSearchKeys = map
+        return map
+    }
+
     private func buildSnapshot() -> Snapshot {
         var snapshot = Snapshot()
-        let query = searchQuery.lowercased()
+        let query = Self.searchFold(searchQuery)
         switch currentSegment {
         case .albums:
             let all = filteredAlbums(sortedAlbums)
             let filtered = query.isEmpty
                 ? all
                 : all.filter {
-                    $0.title.localizedCaseInsensitiveContains(query)
-                        || $0.artist.localizedCaseInsensitiveContains(query)
+                    Self.searchFold($0.title).contains(query)
+                        || Self.searchFold($0.artist).contains(query)
                 }
             let showsRecentShelf = query.isEmpty && filter == .all && layoutMode == .grid
             let recent = showsRecentShelf ? recentlyPlayedAlbums : []
@@ -728,10 +767,10 @@ final class LibraryViewModel {
             snapshot.appendSections([0])
             var songs = filteredSongs(sortedSongs)
             if !query.isEmpty {
-                songs = songs.filter {
-                    $0.title.localizedCaseInsensitiveContains(query)
-                        || $0.artist.localizedCaseInsensitiveContains(query)
-                        || $0.albumTitle.localizedCaseInsensitiveContains(query)
+                let keys = songSearchKeys()
+                songs = songs.filter { track in
+                    if let key = keys[track.fileURL.path] { return key.contains(query) }
+                    return Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)").contains(query)
                 }
             }
             visibleSongs = songs
@@ -740,7 +779,7 @@ final class LibraryViewModel {
             snapshot.appendSections([0])
             let filtered = query.isEmpty
                 ? sortedArtists
-                : sortedArtists.filter { $0.name.localizedCaseInsensitiveContains(query) }
+                : sortedArtists.filter { Self.searchFold($0.name).contains(query) }
             snapshot.appendItems(filtered.map { .artist($0) })
         case .playlists:
             snapshot.appendSections([0])
@@ -752,7 +791,7 @@ final class LibraryViewModel {
             }
             let filtered = query.isEmpty
                 ? playlists
-                : playlists.filter { $0.name.localizedCaseInsensitiveContains(query) }
+                : playlists.filter { Self.searchFold($0.name).contains(query) }
             playlistItems.append(contentsOf: filtered.map { .playlist($0) })
             snapshot.appendItems(playlistItems)
         }
@@ -790,6 +829,9 @@ final class LibraryViewModel {
         cachedAlbumAdded = nil
         cachedAlbumPlayed = nil
         cachedScrobbleCounts = nil
+        cachedRepresentativeTracks = [:]
+        cachedFirstAlbumByArtist = nil
+        cachedSongSearchKeys = nil
     }
 
     @objc private func playbackDidChange() {
