@@ -6,6 +6,7 @@ final class SettingsViewController: UITableViewController {
     var onImportFiles: (() -> Void)?
 
     nonisolated private enum Section: Int, CaseIterable, Hashable {
+        case unlock
         case lastFM
         case recap
         case playback
@@ -15,6 +16,7 @@ final class SettingsViewController: UITableViewController {
 
         var header: String? {
             switch self {
+            case .unlock: return nil
             case .lastFM: return "Last.fm"
             case .recap: return "Year in Music"
             case .playback: return "Playback"
@@ -26,6 +28,7 @@ final class SettingsViewController: UITableViewController {
 
         var footer: String? {
             switch self {
+            case .unlock: return nil
             case .lastFM: return nil
             case .recap: return "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story."
             case .playback: return "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends."
@@ -37,6 +40,7 @@ final class SettingsViewController: UITableViewController {
     }
 
     nonisolated private enum Row: Hashable {
+        case lifetime(EntitlementState)
         case lastFMAccount(username: String?)
         case pendingScrobbles(count: Int)
         case importLastFM
@@ -148,6 +152,7 @@ final class SettingsViewController: UITableViewController {
     private func applySnapshot(animated: Bool) {
         var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
         snapshot.appendSections(Section.allCases)
+        snapshot.appendItems([.lifetime(PurchaseManager.shared.state)], toSection: .unlock)
 
         let authenticated = LastFMService.shared.isAuthenticated
         var lastFMRows: [Row] = [.lastFMAccount(username: authenticated ? LastFMService.shared.username : nil)]
@@ -200,6 +205,32 @@ final class SettingsViewController: UITableViewController {
         content.imageProperties.maximumSize = CGSize(width: RowIcon.side, height: RowIcon.side)
 
         switch row {
+        case .lifetime(let state):
+            content.image = RowIcon.image(systemName: "crown.fill", tint: .systemYellow)
+            switch state {
+            case .purchased:
+                content.text = "Lifetime"
+                content.secondaryText = "Unlocked ✓"
+                cell.selectionStyle = .none
+                cell.accessibilityTraits = .staticText
+                cell.accessibilityLabel = "Lifetime"
+                cell.accessibilityValue = "Unlocked"
+            case .trial(let daysRemaining):
+                content.text = "Unlock Lifetime"
+                content.secondaryText = "Trial — \(daysRemaining) day\(daysRemaining == 1 ? "" : "s") left"
+                cell.accessoryType = .disclosureIndicator
+                cell.accessibilityLabel = "Unlock Lifetime"
+                cell.accessibilityValue = content.secondaryText
+                cell.accessibilityHint = "Shows the one-time purchase that unlocks flaccy forever"
+            case .expired:
+                content.text = "Unlock Lifetime"
+                content.secondaryText = "Trial ended"
+                cell.accessoryType = .disclosureIndicator
+                cell.accessibilityLabel = "Unlock Lifetime"
+                cell.accessibilityValue = "Trial ended"
+                cell.accessibilityHint = "Shows the one-time purchase that unlocks flaccy forever"
+            }
+
         case .lastFMAccount(let username):
             content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemRed)
             if let username {
@@ -399,6 +430,7 @@ final class SettingsViewController: UITableViewController {
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
         switch row {
         case .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: return false
+        case .lifetime(let state): return state != .purchased
         default: return true
         }
     }
@@ -407,6 +439,7 @@ final class SettingsViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return }
         switch row {
+        case .lifetime(let state): handleLifetimeTap(state)
         case .lastFMAccount: handleLastFMTap()
         case .pendingScrobbles: handleRetryScrobbles()
         case .importLastFM: handleImportLastFM()
@@ -419,6 +452,12 @@ final class SettingsViewController: UITableViewController {
         case .rescanLibrary: handleRescanTap()
         case .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: break
         }
+    }
+
+    private func handleLifetimeTap(_ state: EntitlementState) {
+        guard state != .purchased else { return }
+        impactMedium.impactOccurred()
+        PaywallViewController.presentSheet(from: self)
     }
 
     private func handleLastFMTap() {
