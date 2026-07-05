@@ -410,6 +410,7 @@ extension QueueViewController: UITableViewDelegate {
                     self?.onPushRequest?(viewController)
                 },
                 context: TrackContextMenu.Context(
+                    includeQueueActions: false,
                     extraSections: [UIMenu(options: .displayInline, children: [remove])]
                 )
             )

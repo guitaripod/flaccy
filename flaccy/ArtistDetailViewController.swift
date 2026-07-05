@@ -69,7 +69,7 @@ nonisolated struct ArtistHeaderInfo: Hashable, Sendable {
     }
 }
 
-final class ArtistDetailViewController: UIViewController {
+final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
     enum AlbumSort: String, CaseIterable {
         case title, year, trackCount
@@ -556,6 +556,24 @@ extension ArtistDetailViewController: UICollectionViewDelegate {
             AudioPlayer.shared.play([owned], startingAt: 0)
         case .header, .message:
             break
+        }
+    }
+
+    func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemsAt indexPaths: [IndexPath], point: CGPoint) -> UIContextMenuConfiguration? {
+        guard let indexPath = indexPaths.first,
+              case .popularTrack(let item) = dataSource.itemIdentifier(for: indexPath),
+              let owned = item.ownedTrack else { return nil }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            guard let self else { return nil }
+            return TrackContextMenu.build(
+                for: owned,
+                in: self,
+                push: { [weak self] viewController in
+                    self?.navigationController?.pushViewController(viewController, animated: true)
+                },
+                context: TrackContextMenu.Context(hideGoToArtist: true)
+            )
         }
     }
 }

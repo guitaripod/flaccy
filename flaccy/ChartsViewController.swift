@@ -4,7 +4,7 @@ import UIKit
 /// The Recap dashboard: a scrolling, shareable surface of the listener's local
 /// stats — profile, period selector, top artists/albums/tracks, a listening
 /// clock, a streak heatmap, and a persona card — in flaccy's dark glass language.
-final class ChartsViewController: UIViewController {
+final class ChartsViewController: UIViewController, SonglinkShareable {
 
     private let viewModel: ChartsViewModel
     private let audioPlayer: AudioPlaying
@@ -634,6 +634,24 @@ extension ChartsViewController: UICollectionViewDelegate {
         case .album(let album): playAlbum(album)
         case .artist(let artist): playArtist(artist)
         default: break
+        }
+    }
+
+    func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemsAt indexPaths: [IndexPath], point: CGPoint) -> UIContextMenuConfiguration? {
+        guard let indexPath = indexPaths.first,
+              case .track(let item) = dataSource.itemIdentifier(for: indexPath),
+              item.isLocal, let url = item.localTrackID,
+              let track = Library.shared.allTracks.first(where: { $0.fileURL == url }) else { return nil }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            guard let self else { return nil }
+            return TrackContextMenu.build(
+                for: track,
+                in: self,
+                push: { [weak self] viewController in
+                    self?.navigationController?.pushViewController(viewController, animated: true)
+                }
+            )
         }
     }
 
