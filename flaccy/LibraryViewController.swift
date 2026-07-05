@@ -22,6 +22,18 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
     private let emptyStateLabel = UILabel()
     private var lastRenderedSegment: LibraryViewModel.Segment?
+    private lazy var sampleMusicButton: UIButton = {
+        var config = UIButton.Configuration.borderedProminent()
+        config.title = "Add Sample Music"
+        config.subtitle = "Bach, lossless, free"
+        config.image = UIImage(systemName: "arrow.down.circle")
+        config.imagePadding = 8
+        config.cornerStyle = .large
+        let button = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.downloadSampleMusic()
+        })
+        return button
+    }()
     private lazy var emptyStateView: UIView = {
         let container = UIView()
 
@@ -38,10 +50,11 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         label.numberOfLines = 0
         label.textAlignment = .center
 
-        let stack = UIStackView(arrangedSubviews: [imageView, label])
+        let stack = UIStackView(arrangedSubviews: [imageView, label, sampleMusicButton])
         stack.axis = .vertical
         stack.spacing = 12
         stack.alignment = .center
+        stack.setCustomSpacing(24, after: label)
         stack.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(stack)
 
@@ -376,12 +389,53 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             collectionView.backgroundView = nil
         case .noLibrary:
             emptyStateIconView.image = UIImage(systemName: "music.note.list")
-            emptyStateLabel.text = "Import files from Settings"
+            emptyStateLabel.text = "Import files from Settings,\nor start with a free lossless album"
+            sampleMusicButton.isHidden = false
             collectionView.backgroundView = emptyStateView
         case .noSearchResults(let query):
             emptyStateIconView.image = UIImage(systemName: "magnifyingglass")
             emptyStateLabel.text = "No results for \u{201C}\(query)\u{201D}"
+            sampleMusicButton.isHidden = true
             collectionView.backgroundView = emptyStateView
+        }
+    }
+
+    private func downloadSampleMusic() {
+        guard !SampleMusicService.shared.isDownloading else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        var config = sampleMusicButton.configuration
+        config?.showsActivityIndicator = true
+        config?.title = "Downloading…"
+        config?.subtitle = "About 130 MB of 24-bit FLAC"
+        sampleMusicButton.configuration = config
+        sampleMusicButton.isEnabled = false
+
+        let progressObserver = NotificationCenter.default.addObserver(
+            forName: SampleMusicService.progressDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            let text = SampleMusicService.shared.progressText
+            guard !text.isEmpty else { return }
+            var config = self?.sampleMusicButton.configuration
+            config?.title = text
+            self?.sampleMusicButton.configuration = config
+        }
+
+        Task { [weak self] in
+            let success = await SampleMusicService.shared.downloadSamples()
+            NotificationCenter.default.removeObserver(progressObserver)
+            guard let self else { return }
+            self.sampleMusicButton.isEnabled = true
+            var config = self.sampleMusicButton.configuration
+            config?.showsActivityIndicator = false
+            config?.title = "Add Sample Music"
+            config?.subtitle = "Bach, lossless, free"
+            self.sampleMusicButton.configuration = config
+            if success {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                ToastView.show("Sample album added — Open Goldberg Variations (CC0)", in: self.view, style: .success)
+            } else {
+                ToastView.show("Sample download failed — check your connection", in: self.view, style: .error)
+            }
         }
     }
 
