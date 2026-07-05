@@ -47,7 +47,34 @@ final class SystemVolumeSlider: UIView {
         volumeView.frame = bounds
         hideRouteButton()
         styleSliderIfNeeded()
+        #if targetEnvironment(simulator)
+        addSimulatorSliderIfNeeded()
+        #endif
     }
+
+    #if targetEnvironment(simulator)
+    private var simulatorSlider: UISlider?
+
+    /// MPVolumeView renders no slider on the Simulator (there is no volume
+    /// hardware), which blanks the row in screenshots. A static stand-in
+    /// slider keeps the Now Playing layout truthful to what devices show.
+    private func addSimulatorSliderIfNeeded() {
+        guard internalSlider() == nil else { return }
+        if let simulatorSlider {
+            simulatorSlider.frame = bounds
+            return
+        }
+        let slider = UISlider(frame: bounds)
+        slider.value = 0.7
+        slider.isUserInteractionEnabled = false
+        slider.minimumTrackTintColor = .white
+        slider.maximumTrackTintColor = .white.withAlphaComponent(0.25)
+        slider.setThumbImage(thumbImage, for: .normal)
+        slider.accessibilityLabel = "Volume"
+        addSubview(slider)
+        simulatorSlider = slider
+    }
+    #endif
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         bounds.insetBy(dx: 0, dy: -6).contains(point)
