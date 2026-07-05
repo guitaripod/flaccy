@@ -37,6 +37,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         setupTableView()
         configureDataSource()
         applySnapshot()
+        setupOverflowMenu()
 
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
@@ -57,6 +58,31 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     deinit {
         enrichmentTask?.cancel()
         NotificationCenter.default.removeObserver(self)
+    }
+
+    private func setupOverflowMenu() {
+        let album = self.album
+        let delete = UIAction(title: "Delete from Library", image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
+            guard let self else { return }
+            TrackContextMenu.confirmDelete(
+                title: "Delete \"\(album.title)\"?",
+                message: "All \(album.tracks.count) tracks will be removed from this device.",
+                in: self
+            ) { [weak self] in
+                Task { @MainActor in
+                    let navigationController = self?.navigationController
+                    navigationController?.popViewController(animated: true)
+                    await Library.shared.deleteTracks(album.tracks)
+                    if let navView = navigationController?.view {
+                        ToastView.show("Deleted \(album.title)", in: navView, style: .info)
+                    }
+                }
+            }
+        }
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            image: UIImage(systemName: "ellipsis.circle"),
+            menu: UIMenu(children: [delete])
+        )
     }
 
     @objc private func playbackChanged() {

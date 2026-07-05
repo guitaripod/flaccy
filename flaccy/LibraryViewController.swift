@@ -1100,7 +1100,23 @@ extension LibraryViewController: UICollectionViewDelegate {
                     self.shareAlbumViaSonglink(title: album.title, artist: album.artist, from: self.view)
                 }
                 let shareMenu = UIMenu(options: .displayInline, children: [shareAlbum])
-                return UIMenu(children: [playAction, shuffleAction, playNextAction, addToQueueAction, shareMenu])
+                let deleteAlbum = UIAction(title: "Delete from Library", image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
+                    guard let self else { return }
+                    TrackContextMenu.confirmDelete(
+                        title: "Delete \"\(album.title)\"?",
+                        message: "All \(album.tracks.count) tracks will be removed from this device.",
+                        in: self
+                    ) { [weak self] in
+                        Task { @MainActor in
+                            await Library.shared.deleteTracks(album.tracks)
+                            if let self {
+                                ToastView.show("Deleted \(album.title)", in: self.view, style: .info)
+                            }
+                        }
+                    }
+                }
+                let deleteMenu = UIMenu(options: .displayInline, children: [deleteAlbum])
+                return UIMenu(children: [playAction, shuffleAction, playNextAction, addToQueueAction, shareMenu, deleteMenu])
             }
         case .song(let track):
             return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in

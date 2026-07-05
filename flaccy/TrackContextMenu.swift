@@ -33,8 +33,37 @@ enum TrackContextMenu {
         }
         sections.append(UIMenu(options: .displayInline, children: shareActions(for: track, in: host)))
         sections.append(contentsOf: context.extraSections)
+        sections.append(UIMenu(options: .displayInline, children: [deleteAction(for: track, in: host)]))
 
         return UIMenu(title: track.qualityBadge ?? "", children: sections)
+    }
+
+    private static func deleteAction(for track: Track, in host: UIViewController) -> UIMenuElement {
+        UIAction(title: "Delete from Library", image: UIImage(systemName: "trash"), attributes: .destructive) { [weak host] _ in
+            guard let host else { return }
+            confirmDelete(
+                title: "Delete \"\(track.title)\"?",
+                message: "The audio file will be removed from this device.",
+                in: host
+            ) { [weak host] in
+                Task { @MainActor in
+                    await Library.shared.deleteTracks([track])
+                    if let host {
+                        ToastView.show("Deleted \(track.title)", in: host.view, style: .info)
+                    }
+                }
+            }
+        }
+    }
+
+    static func confirmDelete(title: String, message: String, in host: UIViewController, onConfirm: @escaping () -> Void) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            onConfirm()
+        })
+        host.present(alert, animated: true)
     }
 
     private static func queueActions(for track: Track, in host: UIViewController) -> [UIMenuElement] {

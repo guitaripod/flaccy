@@ -28,6 +28,7 @@ protocol AudioPlaying: AnyObject {
     func seekSmooth(to time: CMTime, tolerance: CMTime, completion: @escaping () -> Void)
     func jumpToIndex(_ index: Int)
     func removeFromQueue(at index: Int)
+    func handleDeletedTracks(_ urls: Set<URL>)
     func moveInQueue(from sourceIndex: Int, to destinationIndex: Int)
     func insertNext(_ track: Track)
     func addToQueue(_ track: Track)
@@ -380,6 +381,51 @@ final class AudioPlayer: AudioPlaying {
         let total = duration
         guard total > 0 else { return max(0, time) }
         return min(max(0, time), max(0, total - 0.25))
+    }
+
+    /// Purges deleted files from the queue: keeps position when the playing
+    /// track survives, advances to the nearest remaining track when it was
+    /// deleted mid-play, and stops cleanly when nothing is left.
+    func handleDeletedTracks(_ urls: Set<URL>) {
+        guard !queue.isEmpty, queue.contains(where: { urls.contains($0.fileURL) }) else { return }
+        let playingURL = currentTrack?.fileURL
+        let wasPlaying = isPlaying
+        originalQueue.removeAll { urls.contains($0.fileURL) }
+        var remaining = queue
+        remaining.removeAll { urls.contains($0.fileURL) }
+
+        if remaining.isEmpty {
+            queue = []
+            currentIndex = 0
+            player?.pause()
+            player?.removeAllItems()
+            playingItem = nil
+            preloadedItem = nil
+            preloadedIndex = nil
+            isPlaying = false
+            updateNowPlayingInfo()
+            NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
+            NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+            NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+            return
+        }
+
+        if let playingURL, !urls.contains(playingURL) {
+            queue = remaining
+            currentIndex = remaining.firstIndex { $0.fileURL == playingURL } ?? 0
+            resyncPreloadedItems()
+        } else {
+            queue = remaining
+            currentIndex = min(currentIndex, remaining.count - 1)
+            loadTrack(at: currentIndex)
+            if !wasPlaying {
+                player?.pause()
+                isPlaying = false
+                updateNowPlayingInfo()
+                NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+            }
+        }
+        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
     }
 
     func toggleShuffle() {

@@ -8,6 +8,7 @@ protocol LibraryProviding: AnyObject {
     func reload() async
     func resetAndReload() async
     func importFiles(from urls: [URL]) async
+    func deleteTracks(_ tracks: [Track]) async
 }
 
 final class Library: LibraryProviding {
@@ -98,6 +99,22 @@ final class Library: LibraryProviding {
                 AppLogger.error("Import failed: \(error.localizedDescription)", category: .content)
             }
         }
+        await reload()
+    }
+
+    /// Deleting the files is the single source of truth — the reload's file
+    /// sync then drops the database rows, playlist entries, and UI state.
+    func deleteTracks(_ tracks: [Track]) async {
+        guard !tracks.isEmpty else { return }
+        for track in tracks {
+            do {
+                try FileManager.default.removeItem(at: track.fileURL)
+                AppLogger.info("Deleted: \(track.fileURL.lastPathComponent)", category: .content)
+            } catch {
+                AppLogger.error("Delete failed for \(track.fileURL.lastPathComponent): \(error.localizedDescription)", category: .content)
+            }
+        }
+        AudioPlayer.shared.handleDeletedTracks(Set(tracks.map(\.fileURL)))
         await reload()
     }
 
