@@ -34,6 +34,13 @@
 			remoteGlobalIDString = DE0477C1A3CAE5D10A3D4168;
 			remoteInfo = "flaccyWatch Watch App";
 		};
+		AA00UITESTPROXY00000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C2776C22F7D0282007FF196 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2C2776C92F7D0282007FF196;
+			remoteInfo = flaccy;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -62,6 +69,7 @@
 
 /* Begin PBXFileReference section */
 		2C2776CA2F7D0282007FF196 /* flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA00UITESTPRODUCT0000001 /* flaccyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F54FEC40BC514CE9408F611 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3AC28FB864167FA1CD5F9AC4 /* ArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ArtworkView.swift; path = Support/ArtworkView.swift; sourceTree = "<group>"; };
 		61186AD73843676DB85FD70F /* AlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AlbumDetailView.swift; path = Views/AlbumDetailView.swift; sourceTree = "<group>"; };
@@ -90,6 +98,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		AA00UITESTGROUP000000001 /* flaccyUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = flaccyUITests;
+			sourceTree = "<group>";
+		};
 		2C2776CC2F7D0282007FF196 /* flaccy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -116,6 +129,13 @@
 			files = (
 				20364068D2334231B84E65AD /* Foundation.framework in Frameworks */,
 				4114B9F2DAEFCEF2104A7CF6 /* FlaccyCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA00UITESTFRAMEWORKS0001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -147,6 +167,7 @@
 			isa = PBXGroup;
 			children = (
 				2C2776CC2F7D0282007FF196 /* flaccy */,
+				AA00UITESTGROUP000000001 /* flaccyUITests */,
 				2C2776CB2F7D0282007FF196 /* Products */,
 				F7E3E335AA05BD4FE7CF88E7 /* Frameworks */,
 				1330E0EC564CA79898E235B1 /* flaccyWatch Watch App */,
@@ -157,6 +178,7 @@
 			isa = PBXGroup;
 			children = (
 				2C2776CA2F7D0282007FF196 /* flaccy.app */,
+				AA00UITESTPRODUCT0000001 /* flaccyUITests.xctest */,
 				714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */,
 			);
 			name = Products;
@@ -228,6 +250,26 @@
 			productReference = 714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AA00UITESTTARGET00000001 /* flaccyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00UITESTCONFLIST000001 /* Build configuration list for PBXNativeTarget "flaccyUITests" */;
+			buildPhases = (
+				AA00UITESTSOURCES0000001 /* Sources */,
+				AA00UITESTFRAMEWORKS0001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA00UITESTDEPENDENCY0001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA00UITESTGROUP000000001 /* flaccyUITests */,
+			);
+			name = flaccyUITests;
+			productName = flaccyUITests;
+			productReference = AA00UITESTPRODUCT0000001 /* flaccyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -262,6 +304,7 @@
 			projectRoot = "";
 			targets = (
 				2C2776C92F7D0282007FF196 /* flaccy */,
+				AA00UITESTTARGET00000001 /* flaccyUITests */,
 				DE0477C1A3CAE5D10A3D4168 /* flaccyWatch Watch App */,
 			);
 		};
@@ -318,6 +361,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA00UITESTSOURCES0000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -326,6 +376,12 @@
 			name = "flaccyWatch Watch App";
 			target = DE0477C1A3CAE5D10A3D4168 /* flaccyWatch Watch App */;
 			targetProxy = 313486C10012669327EF7ED8 /* PBXContainerItemProxy */;
+		};
+		AA00UITESTDEPENDENCY0001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = flaccy;
+			target = 2C2776C92F7D0282007FF196 /* flaccy */;
+			targetProxy = AA00UITESTPROXY00000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -590,6 +646,44 @@
 			};
 			name = Release;
 		};
+		AA00UITESTDEBUGCONF00001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P4DQK6SRKR;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccyUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = flaccy;
+			};
+			name = Debug;
+		};
+		AA00UITESTRELEASECONF001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P4DQK6SRKR;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccyUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = flaccy;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -616,6 +710,15 @@
 			buildConfigurations = (
 				AE3AA281783D918A6ED3E7A4 /* Release */,
 				020192F059FCDEFAF278E655 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA00UITESTCONFLIST000001 /* Build configuration list for PBXNativeTarget "flaccyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00UITESTDEBUGCONF00001 /* Debug */,
+				AA00UITESTRELEASECONF001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
