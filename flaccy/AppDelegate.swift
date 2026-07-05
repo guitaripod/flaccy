@@ -17,6 +17,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 
         UNUserNotificationCenter.current().delegate = self
         WatchSyncService.shared.activate()
+        PurchaseManager.shared.start()
 
         Task {
             await AudioPlayer.shared.retryPendingScrobbles()
