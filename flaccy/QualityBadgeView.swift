@@ -11,9 +11,20 @@ final class QualityBadgeView: UIView {
     }
 
     static let losslessTint = UIColor(red: 0.45, green: 0.86, blue: 0.92, alpha: 1)
-    private static let lossyTint = UIColor.white.withAlphaComponent(0.6)
+
+    private static let losslessDynamicTint = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? losslessTint
+            : UIColor(red: 0.0, green: 0.42, blue: 0.5, alpha: 1)
+    }
+    private static let lossyDynamicTint = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.6)
+            : UIColor.black.withAlphaComponent(0.55)
+    }
 
     private let label = UILabel()
+    private var showsLossless = false
 
     init(size: Size = .regular) {
         super.init(frame: .zero)
@@ -43,6 +54,10 @@ final class QualityBadgeView: UIView {
 
         isAccessibilityElement = true
         accessibilityTraits = .staticText
+
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: QualityBadgeView, _) in
+            self.applyTint()
+        }
     }
 
     @available(*, unavailable)
@@ -57,14 +72,18 @@ final class QualityBadgeView: UIView {
         }
         isHidden = false
         label.text = badge.uppercased()
-
-        let lossless = track.isLossless
-        let tint = lossless ? Self.losslessTint : Self.lossyTint
-        label.textColor = tint
-        layer.borderColor = tint.withAlphaComponent(lossless ? 0.5 : 0.25).cgColor
-        backgroundColor = tint.withAlphaComponent(lossless ? 0.14 : 0.06)
+        showsLossless = track.isLossless
+        applyTint()
 
         let spoken = badge.replacingOccurrences(of: "·", with: "")
-        accessibilityLabel = (lossless ? "Lossless, " : "Quality, ") + spoken
+        accessibilityLabel = (showsLossless ? "Lossless, " : "Quality, ") + spoken
+    }
+
+    private func applyTint() {
+        let tint = showsLossless ? Self.losslessDynamicTint : Self.lossyDynamicTint
+        let resolved = tint.resolvedColor(with: traitCollection)
+        label.textColor = resolved
+        layer.borderColor = resolved.withAlphaComponent(showsLossless ? 0.5 : 0.25).cgColor
+        backgroundColor = resolved.withAlphaComponent(showsLossless ? 0.14 : 0.06)
     }
 }

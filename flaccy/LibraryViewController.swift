@@ -441,7 +441,14 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             container.addArrangedSubview(badge)
         }
         guard !container.arrangedSubviews.isEmpty else { return [] }
-        return [.customView(configuration: .init(customView: container, placement: .trailing()))]
+        let size = container.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        container.frame = CGRect(origin: .zero, size: size)
+        return [.customView(configuration: .init(
+            customView: container,
+            placement: .trailing(),
+            reservedLayoutWidth: .actual,
+            maintainsFixedSize: true
+        ))]
     }
 
     /// A compact play-count pill (waveform glyph + monospaced count) shown on song
