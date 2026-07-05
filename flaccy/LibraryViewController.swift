@@ -349,6 +349,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: createLayout(for: .albums))
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.delegate = self
+        collectionView.prefetchDataSource = self
         collectionView.backgroundColor = .clear
 
         view.addSubview(collectionView)
@@ -569,7 +570,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         content.imageProperties.cornerRadius = cornerRadius
         content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
         content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
-        if let cached = AlbumArtworkCache.shared.artwork(forAlbum: albumTitle, artist: artist) {
+        if let cached = AlbumArtworkCache.shared.thumbnail(forAlbum: albumTitle, artist: artist) {
             content.image = cached
             cell.currentArtworkKey = nil
         } else {
@@ -577,7 +578,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             content.imageProperties.tintColor = .tertiaryLabel
             let artKey = "\(albumTitle)|\(artist)"
             cell.currentArtworkKey = artKey
-            AlbumArtworkCache.shared.loadArtwork(forAlbum: albumTitle, artist: artist) { [weak cell] image in
+            AlbumArtworkCache.shared.loadThumbnail(forAlbum: albumTitle, artist: artist) { [weak cell] image in
                 guard let cell, cell.currentArtworkKey == artKey, let image,
                       var updated = cell.contentConfiguration as? UIListContentConfiguration else { return }
                 updated.image = image
@@ -640,7 +641,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             ) ?? []
         }
 
-        let artistRegistration = UICollectionView.CellRegistration<ListArtworkCell, ArtistItem> { cell, _, artist in
+        let artistRegistration = UICollectionView.CellRegistration<ListArtworkCell, ArtistItem> { [weak self] cell, _, artist in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = artist.name
             content.secondaryText = "\(artist.albumCount) album\(artist.albumCount == 1 ? "" : "s")"
@@ -649,8 +650,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
             content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
 
-            let firstAlbum = Library.shared.albums.first { $0.artist == artist.name }
-            let cachedArt: UIImage? = firstAlbum.flatMap { AlbumArtworkCache.shared.artwork(forAlbum: $0.title, artist: $0.artist) }
+            let firstAlbum = self?.viewModel.firstAlbum(forArtist: artist.name)
+            let cachedArt: UIImage? = firstAlbum.flatMap { AlbumArtworkCache.shared.thumbnail(forAlbum: $0.title, artist: $0.artist) }
 
             if let cachedArt {
                 content.image = cachedArt
@@ -661,7 +662,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 if let firstAlbum {
                     let artKey = "\(firstAlbum.title)|\(firstAlbum.artist)|\(artist.name)"
                     cell.currentArtworkKey = artKey
-                    AlbumArtworkCache.shared.loadArtwork(forAlbum: firstAlbum.title, artist: firstAlbum.artist) { [weak cell] image in
+                    AlbumArtworkCache.shared.loadThumbnail(forAlbum: firstAlbum.title, artist: firstAlbum.artist) { [weak cell] image in
                         guard let cell, cell.currentArtworkKey == artKey, let image,
                               var updated = cell.contentConfiguration as? UIListContentConfiguration else { return }
                         updated.image = image
@@ -879,12 +880,14 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             return
         }
         var snapshot = dataSource.snapshot()
-        let affected = snapshot.itemIdentifiers.filter {
-            switch $0 {
-            case .song, .album, .recentAlbum: return true
-            default: return false
+        let affected = collectionView.indexPathsForVisibleItems
+            .compactMap { dataSource.itemIdentifier(for: $0) }
+            .filter {
+                switch $0 {
+                case .song, .album, .recentAlbum: return true
+                default: return false
+                }
             }
-        }
         guard !affected.isEmpty else { return }
         snapshot.reconfigureItems(affected)
         dataSource.apply(snapshot, animatingDifferences: false)
@@ -1182,6 +1185,25 @@ extension LibraryViewController: UICollectionViewDelegate {
             }
         default:
             return nil
+        }
+    }
+}
+
+extension LibraryViewController: UICollectionViewDataSourcePrefetching {
+    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        for indexPath in indexPaths {
+            switch dataSource.itemIdentifier(for: indexPath) {
+            case .album(let album), .recentAlbum(let album):
+                AlbumArtworkCache.shared.preloadThumbnail(forAlbum: album.title, artist: album.artist)
+            case .song(let track):
+                AlbumArtworkCache.shared.preloadThumbnail(forAlbum: track.albumTitle, artist: track.artist)
+            case .artist(let artist):
+                if let album = viewModel.firstAlbum(forArtist: artist.name) {
+                    AlbumArtworkCache.shared.preloadThumbnail(forAlbum: album.title, artist: album.artist)
+                }
+            default:
+                break
+            }
         }
     }
 }
