@@ -79,6 +79,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private var staleScrubTicks = 0
     private var lastTrackKey: String?
     private var lastIsPlaying: Bool?
+    private var lastAppliedArtwork: UIImage?
+    private var peekArtworkKey: String?
     private var hasAppliedInitialState = false
     private var hasAnimatedAppearance = false
     private var breatheAnimator: UIViewPropertyAnimator?
@@ -892,6 +894,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             lastTrackKey = trackKey
             invalidateScrubForTrackChange()
             applyTrackMetadata(state)
+        } else if let artwork = state.artwork, artwork !== lastAppliedArtwork {
+            setArtwork(artwork)
+            updateBackdropPalette(artwork: artwork, state: state)
         }
         if state.isPlaying != lastIsPlaying {
             lastIsPlaying = state.isPlaying
@@ -992,6 +997,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func setArtwork(_ image: UIImage?) {
+        lastAppliedArtwork = image
         applyCompactArtwork(image)
         if isInteractiveTrackTransitionActive {
             deferredArtwork = .some(image)
@@ -1639,12 +1645,27 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func configurePeekArtwork(with track: Track?) {
-        if let artwork = track?.artwork {
-            peekArtworkView.contentMode = .scaleAspectFill
-            peekArtworkView.image = artwork
-        } else {
+        guard let track else {
             peekArtworkView.contentMode = .center
             peekArtworkView.image = UIImage(systemName: "music.note")
+            return
+        }
+        let cached = track.artwork
+            ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+            ?? AlbumArtworkCache.shared.thumbnail(forAlbum: track.albumTitle, artist: track.artist)
+        if let cached {
+            peekArtworkView.contentMode = .scaleAspectFill
+            peekArtworkView.image = cached
+            return
+        }
+        peekArtworkView.contentMode = .center
+        peekArtworkView.image = UIImage(systemName: "music.note")
+        let key = "\(track.albumTitle)\0\(track.artist)"
+        peekArtworkKey = key
+        AlbumArtworkCache.shared.loadThumbnail(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
+            guard let self, self.peekArtworkKey == key, let image else { return }
+            self.peekArtworkView.contentMode = .scaleAspectFill
+            self.peekArtworkView.image = image
         }
     }
 

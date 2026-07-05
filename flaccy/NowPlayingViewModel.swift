@@ -66,10 +66,12 @@ final class NowPlayingViewModel {
 
         var artwork: UIImage?
         if let track {
-            artwork = track.artwork
+            let full = track.artwork
                 ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+            artwork = full
+                ?? AlbumArtworkCache.shared.thumbnail(forAlbum: track.albumTitle, artist: track.artist)
 
-            if artwork == nil {
+            if full == nil {
                 let key = "\(track.albumTitle)\0\(track.artist)"
                 if loadingArtworkKey != key {
                     loadingArtworkKey = key
