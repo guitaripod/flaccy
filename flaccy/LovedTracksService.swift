@@ -129,11 +129,14 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         "\(title.lowercased())\u{0}\(artist.lowercased())"
     }
 
+    private static let documentsPath = FileManager.default
+        .urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL.path
+
     private func relativePath(for url: URL) -> String {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let docs = Self.documentsPath
         let path = url.standardizedFileURL.path
-        guard path.hasPrefix(docs.path) else { return url.lastPathComponent }
-        let relative = String(path.dropFirst(docs.path.count))
+        guard path.hasPrefix(docs) else { return url.lastPathComponent }
+        let relative = String(path.dropFirst(docs.count))
         return relative.hasPrefix("/") ? String(relative.dropFirst()) : relative
     }
 }
