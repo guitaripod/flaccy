@@ -256,8 +256,19 @@ final class AudioPlayer: AudioPlaying {
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
     }
 
+    /// Single gating choke point for starting playback: every entry that begins
+    /// audio (library taps, stations, radio, resume-from-idle) funnels through
+    /// play(_:startingAt:) or the resume branch of togglePlayPause, and both
+    /// defer to the paywall once the trial has expired without a purchase.
+    private func playbackIsGated() -> Bool {
+        guard !PurchaseManager.shared.allowsPlayback else { return false }
+        PurchaseManager.shared.requestPaywall()
+        return true
+    }
+
     func play(_ tracks: [Track], startingAt index: Int) {
         guard !tracks.isEmpty, index >= 0, index < tracks.count else { return }
+        if playbackIsGated() { return }
         checkScrobbleOnSkip()
         originalQueue = tracks
         if shuffleEnabled {
@@ -279,6 +290,7 @@ final class AudioPlayer: AudioPlaying {
     func togglePlayPause() {
         guard let player else { return }
         impactLight.impactOccurred()
+        if !isPlaying, playbackIsGated() { return }
         if !isPlaying, player.currentItem == nil, queue.indices.contains(currentIndex) {
             loadTrack(at: currentIndex)
             return

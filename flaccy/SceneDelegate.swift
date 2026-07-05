@@ -83,6 +83,17 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleQueueTapped), name: MiniPlayerView.queueTapped, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handlePaywallRequired), name: PurchaseManager.paywallRequired, object: nil
+        )
+    }
+
+    @objc private func handlePaywallRequired() {
+        guard let root = window?.rootViewController else { return }
+        var top = root
+        while let presented = top.presentedViewController { top = presented }
+        guard !(top is PaywallViewController) else { return }
+        PaywallViewController.presentSheet(from: top)
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
