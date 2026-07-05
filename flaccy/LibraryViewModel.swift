@@ -9,6 +9,7 @@ nonisolated enum LibraryItem: Hashable, Sendable {
     case playlist(PlaylistItem)
     case suggestedPlaylist(SuggestedPlaylist)
     case charts
+    case wantlist
 }
 
 nonisolated struct ArtistItem: Hashable, Sendable {
@@ -746,6 +747,7 @@ final class LibraryViewModel {
             var playlistItems: [LibraryItem] = []
             if query.isEmpty {
                 playlistItems.append(.charts)
+                playlistItems.append(.wantlist)
                 playlistItems.append(contentsOf: (cachedSuggestions ?? []).map { .suggestedPlaylist($0) })
             }
             let filtered = query.isEmpty

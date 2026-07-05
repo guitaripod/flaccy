@@ -750,7 +750,7 @@ final class ArtistCardCell: UICollectionViewCell {
     func configure(_ item: RecapArtistItem, tint: UIColor) {
         initialLabel.text = String(item.name.prefix(1)).uppercased()
         nameLabel.text = item.name
-        playsLabel.text = "\(RecapFormat.compact(item.playCount)) plays"
+        playsLabel.text = item.playCount > 0 ? "\(RecapFormat.compact(item.playCount)) plays" : "New to you"
         rankLabel.text = "\(item.rank)"
         disc.backgroundColor = tint.withAlphaComponent(0.28)
 

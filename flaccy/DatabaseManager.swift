@@ -140,6 +140,39 @@ nonisolated struct LyricsRecord: Codable, FetchableRecord, PersistableRecord, Id
     var instrumental: Bool
 }
 
+nonisolated struct WantlistRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
+
+    static let databaseTableName = "wantlist"
+
+    var id: Int64?
+    var normKey: String
+    var kind: String
+    var title: String
+    var artist: String
+    var imageURL: String?
+    var state: String
+    var source: String
+    var score: Double
+    var reason: String
+    var playCount: Int
+    var addedAt: Date
+    var resolvedAt: Date?
+    var acknowledged: Bool
+}
+
+nonisolated struct NewReleaseRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
+
+    static let databaseTableName = "newReleaseCache"
+
+    var id: Int64?
+    var artist: String
+    var albumTitle: String
+    var releaseDate: Date
+    var imageURL: String?
+    var storeURL: String?
+    var fetchedAt: Date
+}
+
 nonisolated final class DatabaseManager: Sendable {
 
     static let shared = DatabaseManager()
@@ -331,7 +364,111 @@ nonisolated final class DatabaseManager: Sendable {
             }
         }
 
+        migrator.registerMigration("v7") { db in
+            try db.create(table: "wantlist") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("normKey", .text).notNull().unique()
+                t.column("kind", .text).notNull()
+                t.column("title", .text).notNull()
+                t.column("artist", .text).notNull()
+                t.column("imageURL", .text)
+                t.column("state", .text).notNull()
+                t.column("source", .text).notNull()
+                t.column("score", .double).notNull().defaults(to: 0)
+                t.column("reason", .text).notNull().defaults(to: "")
+                t.column("playCount", .integer).notNull().defaults(to: 0)
+                t.column("addedAt", .datetime).notNull()
+                t.column("resolvedAt", .datetime)
+                t.column("acknowledged", .boolean).notNull().defaults(to: false)
+            }
+            try db.create(index: "wantlist_on_state", on: "wantlist", columns: ["state"])
+
+            try db.create(table: "newReleaseCache") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("artist", .text).notNull()
+                t.column("albumTitle", .text).notNull()
+                t.column("releaseDate", .datetime).notNull()
+                t.column("imageURL", .text)
+                t.column("storeURL", .text)
+                t.column("fetchedAt", .datetime).notNull()
+                t.uniqueKey(["artist", "albumTitle"])
+            }
+        }
+
         return migrator
+    }
+
+    func fetchWantlist(states: [String]) throws -> [WantlistRecord] {
+        try dbQueue.read { db in
+            try WantlistRecord
+                .filter(states.contains(Column("state")))
+                .order(Column("score").desc, Column("addedAt").desc)
+                .fetchAll(db)
+        }
+    }
+
+    /// Inserts unseen suggestions and refreshes still-wanted ones; rows the
+    /// user has dismissed or acquired are left untouched so a suggestion can
+    /// never resurrect itself.
+    func mergeWantlistSuggestions(_ records: [WantlistRecord]) throws {
+        try dbQueue.write { db in
+            for record in records {
+                if var existing = try WantlistRecord.filter(Column("normKey") == record.normKey).fetchOne(db) {
+                    guard existing.state == WantlistState.wanted.rawValue else { continue }
+                    existing.score = record.score
+                    existing.reason = record.reason
+                    existing.playCount = record.playCount
+                    if existing.imageURL == nil { existing.imageURL = record.imageURL }
+                    try existing.update(db)
+                } else {
+                    try record.insert(db)
+                }
+            }
+        }
+    }
+
+    func updateWantlistState(normKey: String, state: String, resolvedAt: Date?) throws {
+        try dbQueue.write { db in
+            try db.execute(
+                sql: "UPDATE wantlist SET state = ?, resolvedAt = ? WHERE normKey = ?",
+                arguments: [state, resolvedAt, normKey]
+            )
+        }
+    }
+
+    func acknowledgeWantlist() throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "UPDATE wantlist SET acknowledged = 1 WHERE acknowledged = 0")
+        }
+    }
+
+    func unacknowledgedWantedCount() throws -> Int {
+        try dbQueue.read { db in
+            try WantlistRecord
+                .filter(Column("state") == WantlistState.wanted.rawValue && Column("acknowledged") == false)
+                .fetchCount(db)
+        }
+    }
+
+    func replaceNewReleases(_ records: [NewReleaseRecord]) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM newReleaseCache")
+            for record in records {
+                try record.insert(db)
+            }
+        }
+    }
+
+    func fetchNewReleases() throws -> [NewReleaseRecord] {
+        try dbQueue.read { db in
+            try NewReleaseRecord.order(Column("releaseDate").desc).fetchAll(db)
+        }
+    }
+
+    func newReleasesFetchedAt() throws -> Date? {
+        try dbQueue.read { db in
+            try Date.fetchOne(db, sql: "SELECT MAX(fetchedAt) FROM newReleaseCache")
+        }
     }
 
     @discardableResult

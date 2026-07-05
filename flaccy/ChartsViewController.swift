@@ -639,19 +639,44 @@ extension ChartsViewController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemsAt indexPaths: [IndexPath], point: CGPoint) -> UIContextMenuConfiguration? {
         guard let indexPath = indexPaths.first,
-              case .track(let item) = dataSource.itemIdentifier(for: indexPath),
-              item.isLocal, let url = item.localTrackID,
-              let track = Library.shared.allTracks.first(where: { $0.fileURL == url }) else { return nil }
+              let identifier = dataSource.itemIdentifier(for: indexPath) else { return nil }
 
-        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            guard let self else { return nil }
-            return TrackContextMenu.build(
-                for: track,
-                in: self,
-                push: { [weak self] viewController in
-                    self?.navigationController?.pushViewController(viewController, animated: true)
-                }
-            )
+        switch identifier {
+        case .track(let item) where item.isLocal:
+            guard let url = item.localTrackID,
+                  let track = Library.shared.allTracks.first(where: { $0.fileURL == url }) else { return nil }
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+                guard let self else { return nil }
+                return TrackContextMenu.build(
+                    for: track,
+                    in: self,
+                    push: { [weak self] viewController in
+                        self?.navigationController?.pushViewController(viewController, animated: true)
+                    }
+                )
+            }
+        case .track(let item):
+            return wantlistAddMenu(kind: .track, title: item.name, artist: item.artist, imageURL: nil)
+        case .album(let item) where !item.isLocal:
+            return wantlistAddMenu(kind: .album, title: item.name, artist: item.artist, imageURL: item.imageURL)
+        case .artist(let item) where !item.isLocal:
+            return wantlistAddMenu(kind: .artist, title: "", artist: item.name, imageURL: nil)
+        default:
+            return nil
+        }
+    }
+
+    private func wantlistAddMenu(kind: WantlistKind, title: String, artist: String, imageURL: String?) -> UIContextMenuConfiguration {
+        UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            UIMenu(children: [
+                UIAction(title: "Add to Wantlist", image: UIImage(systemName: "sparkle.magnifyingglass")) { _ in
+                    WantlistService.shared.addManual(kind: kind, title: title, artist: artist, imageURL: imageURL)
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    if let view = self?.view {
+                        ToastView.show("Added to Wantlist", in: view, style: .success)
+                    }
+                },
+            ])
         }
     }
 

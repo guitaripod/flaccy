@@ -85,6 +85,33 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             await viewModel.loadLibrary()
             viewModel.restorePlaybackState()
         }
+
+        observeWantlist()
+    }
+
+    private func observeWantlist() {
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(wantlistDidChange), name: WantlistService.didChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(wantlistDidResolve(_:)), name: WantlistService.didResolveItems, object: nil
+        )
+    }
+
+    @objc private func wantlistDidChange() {
+        var snapshot = dataSource.snapshot()
+        guard snapshot.itemIdentifiers.contains(.wantlist) else { return }
+        snapshot.reconfigureItems([.wantlist])
+        dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    @objc private func wantlistDidResolve(_ notification: Notification) {
+        guard let names = notification.userInfo?["names"] as? [String], !names.isEmpty else { return }
+        let summary = names.count == 1
+            ? "Crossed off your Wantlist: \(names[0])"
+            : "Crossed off your Wantlist: \(names[0]) and \(names.count - 1) more"
+        ToastView.show(summary, in: view, style: .success)
+        wantlistDidChange()
     }
 
     private func setupSearchController() {
@@ -639,6 +666,22 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             cell.accessories = [.disclosureIndicator()]
         }
 
+        let wantlistRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Int> { cell, _, _ in
+            var content = UIListContentConfiguration.subtitleCell()
+            content.text = "Wantlist"
+            let unseen = WantlistService.shared.unseenCount()
+            content.secondaryText = unseen > 0
+                ? "\(unseen) new suggestion\(unseen == 1 ? "" : "s")"
+                : "Music to get & discoveries"
+            content.secondaryTextProperties.color = unseen > 0 ? .systemTeal : .secondaryLabel
+            content.image = UIImage(systemName: "sparkle.magnifyingglass")
+            content.imageProperties.tintColor = .systemTeal
+            content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
+            content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
+            cell.contentConfiguration = content
+            cell.accessories = [.disclosureIndicator()]
+        }
+
         let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewCell>(
             elementKind: UICollectionView.elementKindSectionHeader
         ) { supplementaryView, _, _ in
@@ -701,6 +744,10 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             case .charts:
                 return collectionView.dequeueConfiguredReusableCell(
                     using: chartsRegistration, for: indexPath, item: 0
+                )
+            case .wantlist:
+                return collectionView.dequeueConfiguredReusableCell(
+                    using: wantlistRegistration, for: indexPath, item: 0
                 )
             }
         }
@@ -1011,6 +1058,9 @@ extension LibraryViewController: UICollectionViewDelegate {
             ToastView.show("Playing \(suggestion.title)", in: view, style: .success)
         case .charts:
             let vc = ChartsViewController()
+            navigationController?.pushViewController(vc, animated: true)
+        case .wantlist:
+            let vc = WantlistViewController()
             navigationController?.pushViewController(vc, animated: true)
         }
     }
