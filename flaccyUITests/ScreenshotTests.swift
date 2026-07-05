@@ -68,6 +68,14 @@ final class ScreenshotTests: XCTestCase {
         toggleLayoutToGrid(app)
     }
 
+    func testPaywallShot() throws {
+        let app = launchApp()
+        sleep(6)
+        openSettings(app)
+        tapIfExists(app.cells["Unlock Lifetime"], in: app)
+        capture(app, wait: 4, name: "dark-11-paywall")
+    }
+
     private func toggleLayoutToList(_ app: XCUIApplication) {
         tapIfExists(app.buttons["Layout: Grid. Double tap to change."], in: app)
     }

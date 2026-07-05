@@ -1,0 +1,31 @@
+{
+  "configurations" : [
+    {
+      "id" : "F1ACC1E0-0000-4000-8000-000000000003",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "storeKitConfiguration" : {
+      "identifier" : "flaccyUITests/Flaccy.storekit"
+    },
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:flaccy.xcodeproj",
+      "identifier" : "2C2776C92F7D0282007FF196",
+      "name" : "flaccy"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:flaccy.xcodeproj",
+        "identifier" : "AA00UITESTTARGET00000001",
+        "name" : "flaccyUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
