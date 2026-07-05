@@ -227,7 +227,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
     private func initialArtwork() -> UIImage? {
         guard let album = albums.first else { return nil }
-        return album.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist)
+        return album.artwork ?? AlbumArtworkCache.shared.thumbnail(forAlbum: album.title, artist: album.artist)
     }
 
     private func applyPalette(from image: UIImage?, animated: Bool) {
@@ -486,7 +486,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         let genre = albums.compactMap(\.genre).first
         let firstAlbum = albums.first
         let artwork = firstAlbum.flatMap { album in
-            album.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist)
+            album.artwork ?? AlbumArtworkCache.shared.thumbnail(forAlbum: album.title, artist: album.artist)
         }
 
         let headerInfo = ArtistHeaderInfo(
@@ -820,7 +820,7 @@ final class ArtistHeaderCell: UICollectionViewCell {
         artistImageView.contentMode = .center
         artistImageView.image = UIImage(systemName: "person.crop.circle.fill")
         guard let albumTitle = info.firstAlbumTitle else { return }
-        AlbumArtworkCache.shared.loadArtwork(forAlbum: albumTitle, artist: info.name) { [weak self] image in
+        AlbumArtworkCache.shared.loadThumbnail(forAlbum: albumTitle, artist: info.name) { [weak self] image in
             guard let self, let image, self.showsFallbackImage else { return }
             self.artistImageView.contentMode = .scaleAspectFill
             self.artistImageView.image = image

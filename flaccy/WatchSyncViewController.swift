@@ -831,11 +831,11 @@ final class WatchAlbumSyncCell: UITableViewCell {
     private func loadArtwork(for album: Album) {
         let artworkKey = album.id
         currentArtworkKey = artworkKey
-        if let art = album.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist) {
+        if let art = album.artwork ?? AlbumArtworkCache.shared.thumbnail(forAlbum: album.title, artist: album.artist) {
             setArtwork(art)
         } else {
             setPlaceholder()
-            AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { [weak self] image in
+            AlbumArtworkCache.shared.loadThumbnail(forAlbum: album.title, artist: album.artist) { [weak self] image in
                 guard let self, let image, self.currentArtworkKey == artworkKey else { return }
                 self.setArtwork(image)
             }

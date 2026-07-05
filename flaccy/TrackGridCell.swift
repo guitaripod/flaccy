@@ -111,7 +111,7 @@ final class TrackGridCell: UICollectionViewCell {
         qualityBadge.configure(with: track)
         lovedBadge.isHidden = !loved
 
-        if let cached = AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist) {
+        if let cached = AlbumArtworkCache.shared.thumbnail(forAlbum: track.albumTitle, artist: track.artist) {
             artworkView.contentMode = .scaleAspectFill
             artworkView.image = cached
             currentArtworkKey = nil
@@ -120,7 +120,7 @@ final class TrackGridCell: UICollectionViewCell {
             artworkView.image = UIImage(systemName: "music.note")
             let key = "\(track.albumTitle)|\(track.artist)"
             currentArtworkKey = key
-            AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
+            AlbumArtworkCache.shared.loadThumbnail(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
                 guard let self, self.currentArtworkKey == key, let image else { return }
                 self.artworkView.contentMode = .scaleAspectFill
                 self.artworkView.image = image

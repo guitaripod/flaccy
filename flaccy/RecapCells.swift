@@ -191,7 +191,7 @@ final class AsyncImageView: UIImageView {
         token = current
         setPlaceholder(placeholder)
         beginShimmer()
-        if let cached = AlbumArtworkCache.shared.artwork(forAlbum: title, artist: artist) {
+        if let cached = AlbumArtworkCache.shared.thumbnail(forAlbum: title, artist: artist) {
             Self.decodeQueue.async { [weak self] in
                 guard let self, let thumb = Self.prepared(cached) else { return }
                 self.deliver(thumb, keys: [thumbKey], token: current)
@@ -199,7 +199,7 @@ final class AsyncImageView: UIImageView {
             return
         }
 
-        AlbumArtworkCache.shared.loadArtwork(forAlbum: title, artist: artist) { [weak self] image in
+        AlbumArtworkCache.shared.loadThumbnail(forAlbum: title, artist: artist) { [weak self] image in
             guard let self, self.token == current else { return }
             guard let image else {
                 AppLogger.debug("Recap art miss \(title) / \(artist), remote=\(remoteURL != nil), fallback=\(remoteFallback != nil)", category: .content)

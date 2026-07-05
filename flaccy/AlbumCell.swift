@@ -112,14 +112,14 @@ final class AlbumCell: UICollectionViewCell {
         if let artwork = album.artwork {
             currentArtworkKey = nil
             applyArtwork(artwork)
-        } else if let cached = AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist) {
+        } else if let cached = AlbumArtworkCache.shared.thumbnail(forAlbum: album.title, artist: album.artist) {
             currentArtworkKey = nil
             applyArtwork(cached)
         } else {
             let key = "\(album.title)|\(album.artist)"
             currentArtworkKey = key
             beginSkeleton()
-            AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { [weak self] image in
+            AlbumArtworkCache.shared.loadThumbnail(forAlbum: album.title, artist: album.artist) { [weak self] image in
                 guard let self, self.currentArtworkKey == key else { return }
                 if let image {
                     self.applyArtwork(image)
