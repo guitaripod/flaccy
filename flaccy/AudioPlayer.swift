@@ -101,16 +101,25 @@ final class AudioPlayer: AudioPlaying {
         return queue[currentIndex]
     }
 
+    /// Reads off `playingItem` rather than the queue player so the value never
+    /// jumps to the preloaded next item during the auto-advance window, where
+    /// `player.currentItem` has already switched but bookkeeping hasn't.
     var currentTime: TimeInterval {
-        guard let player else { return 0 }
-        let t = CMTimeGetSeconds(player.currentTime())
-        return t.isNaN ? 0 : t
+        guard let item = playingItem ?? player?.currentItem else { return 0 }
+        let t = CMTimeGetSeconds(item.currentTime())
+        return t.isFinite && t >= 0 ? t : 0
     }
 
+    /// Anchored to `playingItem` for the same auto-advance-race reason as
+    /// `currentTime`, and falls back to the track's metadata duration while the
+    /// asset is still loading (an unresolved AVPlayerItem reports indefinite),
+    /// so the timeline never shows a stale or zero total.
     var duration: TimeInterval {
-        guard let item = player?.currentItem else { return 0 }
-        let d = CMTimeGetSeconds(item.duration)
-        return d.isNaN ? 0 : d
+        if let item = playingItem ?? player?.currentItem {
+            let d = CMTimeGetSeconds(item.duration)
+            if d.isFinite, d > 0 { return d }
+        }
+        return currentTrack?.duration ?? 0
     }
 
     private init() {
@@ -342,20 +351,35 @@ final class AudioPlayer: AudioPlaying {
     }
 
     func seek(to time: TimeInterval) {
-        let cmTime = CMTime(seconds: time, preferredTimescale: 600)
-        player?.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+        guard let player, player.currentItem === playingItem else { return }
+        let cmTime = CMTime(seconds: clampedSeekTarget(time), preferredTimescale: 600)
+        player.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             self?.updateNowPlayingInfo()
             NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
         }
     }
 
     func seekSmooth(to time: CMTime, tolerance: CMTime, completion: @escaping () -> Void) {
-        player?.seek(to: time, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] finished in
+        guard let player, player.currentItem === playingItem else {
+            completion()
+            return
+        }
+        let target = CMTime(seconds: clampedSeekTarget(CMTimeGetSeconds(time)), preferredTimescale: 600)
+        player.seek(to: target, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] finished in
             if finished {
                 self?.updateNowPlayingInfo()
             }
             completion()
         }
+    }
+
+    /// Keeps every seek inside the real item bounds, stopping a hair short of
+    /// the end so a scrub released at 100% plays out naturally instead of
+    /// slamming item-end and force-advancing the queue mid-gesture.
+    private func clampedSeekTarget(_ time: TimeInterval) -> TimeInterval {
+        let total = duration
+        guard total > 0 else { return max(0, time) }
+        return min(max(0, time), max(0, total - 0.25))
     }
 
     func toggleShuffle() {

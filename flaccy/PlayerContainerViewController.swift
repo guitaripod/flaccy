@@ -184,6 +184,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     private func setupGesture() {
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handleMorphPan(_:)))
         pan.delegate = self
+        pan.delaysTouchesEnded = false
         cardView.addGestureRecognizer(pan)
     }
 
@@ -529,6 +530,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     private func startDisplayLink(_ selector: Selector) {
         stopDisplayLink()
         let link = CADisplayLink(target: self, selector: selector)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 80, maximum: 120, preferred: 120)
         link.add(to: .main, forMode: .common)
         displayLink = link
     }
@@ -578,22 +580,33 @@ extension PlayerContainerViewController: UIGestureRecognizerDelegate {
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
-        let velocity = pan.velocity(in: view)
-        guard abs(velocity.y) > abs(velocity.x) else { return false }
         switch state {
-        case .dock:
-            return velocity.y < 0 && dockVisible
-        case .full:
-            return velocity.y > 0 && npc.morphCollapseAllowed(at: pan.location(in: npc.view))
         case .dragging, .settling:
             return true
+        case .dock:
+            let drag = dominantDrag(of: pan)
+            return abs(drag.y) > abs(drag.x) && drag.y < 0 && dockVisible
+        case .full:
+            let drag = dominantDrag(of: pan)
+            return abs(drag.y) > abs(drag.x) && drag.y > 0
+                && npc.morphCollapseAllowed(at: pan.location(in: npc.view))
         }
+    }
+
+    /// Direction from accumulated translation rather than instantaneous
+    /// velocity: at recognition time velocity is often (0,0) for a slow drag,
+    /// which used to refuse legitimate downward swipes and let the horizontal
+    /// track-change pan steal the touch.
+    private func dominantDrag(of pan: UIPanGestureRecognizer) -> CGPoint {
+        let translation = pan.translation(in: view)
+        if hypot(translation.x, translation.y) > 2 { return translation }
+        return pan.velocity(in: view)
     }
 
     func gestureRecognizer(
         _ gestureRecognizer: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
     ) -> Bool {
-        false
+        other.view is UIScrollView
     }
 }

@@ -14,6 +14,7 @@ final class ScrubberView: UISlider {
 
     private(set) var isScrubbing = false
     private(set) var duration: TimeInterval = 0
+    private var isAbortingScrub = false
     private var lastDetentZone = 0
     private let detentGenerator = UISelectionFeedbackGenerator()
     private let grabGenerator = UIImpactFeedbackGenerator(style: .light)
@@ -65,6 +66,10 @@ final class ScrubberView: UISlider {
 
     override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
         guard duration > 0 else { return false }
+        if isScrubbing {
+            AppLogger.warning("scrub beginTracking while already scrubbing — recovering stale scrub", category: .ui)
+            finishScrub()
+        }
         isScrubbing = true
         AppLogger.debug("scrub beginTracking", category: .ui)
         grabGenerator.impactOccurred()
@@ -94,6 +99,26 @@ final class ScrubberView: UISlider {
         finishScrub()
     }
 
+    /// UIControl's endTracking is not guaranteed to arrive — an ancestor
+    /// gesture recognizer can swallow the touch-up — so the raw touch events
+    /// are a second line of defense that ends the scrub no matter what the
+    /// control-tracking machinery saw.
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        if isScrubbing {
+            AppLogger.warning("scrub finished via touchesEnded fallback", category: .ui)
+            finishScrub()
+        }
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
+        if isScrubbing {
+            AppLogger.warning("scrub finished via touchesCancelled fallback", category: .ui)
+            finishScrub()
+        }
+    }
+
     override func accessibilityIncrement() {
         onAccessibilityAdjust?(min(currentTime + 15, duration))
     }
@@ -113,10 +138,22 @@ final class ScrubberView: UISlider {
         return Float(min(max(touch.location(in: self).x / width, 0), 1))
     }
 
+    /// Ends an in-flight scrub without emitting `onScrubEnded`, for when the
+    /// track changes underneath the gesture and seeking to the grabbed
+    /// position would land on the wrong song.
+    func abortScrub() {
+        guard isScrubbing else { return }
+        AppLogger.debug("scrub aborted (track changed)", category: .ui)
+        isAbortingScrub = true
+        cancelTracking(with: nil)
+        isAbortingScrub = false
+    }
+
     private func finishScrub() {
         guard isScrubbing else { return }
         isScrubbing = false
         animateTrackHeight()
+        guard !isAbortingScrub else { return }
         onScrubEnded?(currentTime)
     }
 

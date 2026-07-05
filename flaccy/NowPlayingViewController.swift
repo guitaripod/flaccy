@@ -75,6 +75,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     private var isSeeking = false
     private var chaseTime: TimeInterval = 0
+    private var seekGeneration = 0
+    private var staleScrubTicks = 0
     private var lastTrackKey: String?
     private var lastIsPlaying: Bool?
     private var hasAppliedInitialState = false
@@ -408,6 +410,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         artworkContainer.isUserInteractionEnabled = true
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handleTrackPan(_:)))
         pan.delegate = self
+        pan.delaysTouchesEnded = false
         artworkContainer.addGestureRecognizer(pan)
 
         let tilt = UILongPressGestureRecognizer(target: self, action: #selector(handleTilt(_:)))
@@ -887,17 +890,51 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         let trackKey = "\(state.title)\0\(state.artist)\0\(state.albumTitle)"
         if trackKey != lastTrackKey {
             lastTrackKey = trackKey
+            invalidateScrubForTrackChange()
             applyTrackMetadata(state)
         }
         if state.isPlaying != lastIsPlaying {
             lastIsPlaying = state.isPlaying
             applyPlaybackState(isPlaying: state.isPlaying)
         }
+        recoverFromStaleScrubIfNeeded()
+        scrubber.setProgress(currentTime: state.currentTime, duration: state.duration)
         if !scrubber.isScrubbing {
-            scrubber.setProgress(currentTime: state.currentTime, duration: state.duration)
             scrubber.accessibilityValue = state.currentTimeFormatted
             currentTimeLabel.text = state.currentTimeFormatted
             remainingTimeLabel.text = state.remainingTimeFormatted
+        }
+    }
+
+    /// Watchdog for a scrub whose touch died without the slider ever hearing
+    /// about it (endTracking swallowed by an ancestor recognizer): once the
+    /// control reports it is no longer tracking a touch but the scrub state is
+    /// still latched, the scrub is force-ended two progress ticks in a row
+    /// later, seeking to the grabbed position and releasing the UI.
+    private func recoverFromStaleScrubIfNeeded() {
+        guard scrubber.isScrubbing, !scrubber.isTracking else {
+            staleScrubTicks = 0
+            return
+        }
+        staleScrubTicks += 1
+        guard staleScrubTicks >= 2 else { return }
+        staleScrubTicks = 0
+        AppLogger.warning("Recovering stale scrub via progress watchdog", category: .ui)
+        scrubber.abortScrub()
+        scrubEnded(at: scrubber.currentTime)
+    }
+
+    /// A track change makes any in-flight scrub or chase seek meaningless —
+    /// its target was computed against the old item's timeline — so the scrub
+    /// is aborted without seeking and pending chase completions are orphaned.
+    private func invalidateScrubForTrackChange() {
+        seekGeneration += 1
+        chaseTime = 0
+        guard scrubber.isScrubbing || scrubBubble.alpha > 0 else { return }
+        scrubber.abortScrub()
+        UIView.animate(withDuration: 0.12) { self.scrubBubble.alpha = 0 }
+        if presentedViewController == nil, view.window != nil {
+            backdropView.setPaused(false)
         }
     }
 
@@ -1249,6 +1286,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     private func seekToChaseTime() {
         isSeeking = true
+        let generation = seekGeneration
         let target = chaseTime
         let cmTime = CMTime(seconds: target, preferredTimescale: 600)
         let tolerance = scrubber.isScrubbing
@@ -1258,6 +1296,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         AudioPlayer.shared.seekSmooth(to: cmTime, tolerance: tolerance) { [weak self] in
             guard let self else { return }
             self.isSeeking = false
+            guard generation == self.seekGeneration else { return }
             AppLogger.debug(
                 "seek complete target=\(target) chase=\(self.chaseTime) scrubbing=\(self.scrubber.isScrubbing)",
                 category: .ui
@@ -1348,8 +1387,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         guard let hit = view.hitTest(point, with: nil) else { return true }
         var node: UIView? = hit
         while let current = node, current !== view {
-            if current === scrubber || current === volumeSlider
-                || current === actionRowContainer || current === transportStack {
+            if current === scrubber || current === volumeSlider {
                 return false
             }
             if let scroll = current as? UIScrollView,
@@ -1736,12 +1774,15 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
 extension NowPlayingViewController: UIGestureRecognizerDelegate {
 
-    /// Restricts the track pan to horizontally dominant drags so vertical
-    /// drags still reach the sheet's interactive dismissal.
+    /// Restricts the track pan to strictly horizontally dominant drags,
+    /// judged by accumulated translation (velocity is unreliable at
+    /// recognition time), so vertical drags over the artwork always fall
+    /// through to the container's collapse pan.
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
-        let velocity = pan.velocity(in: view)
-        return abs(velocity.x) >= abs(velocity.y)
+        let translation = pan.translation(in: view)
+        let drag = hypot(translation.x, translation.y) > 2 ? translation : pan.velocity(in: view)
+        return abs(drag.x) > abs(drag.y)
     }
 }
 
