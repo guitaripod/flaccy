@@ -76,6 +76,39 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 4, name: "dark-11-paywall")
     }
 
+    func testSortSanity() throws {
+        let app = launchApp()
+        sleep(6)
+        openSortMenuAndPick(app, option: "Artist")
+        capture(app, wait: 2, name: "sort-albums-artist")
+        openSortMenuAndPick(app, option: "Year")
+        capture(app, wait: 2, name: "sort-albums-year")
+        openSortMenuAndPick(app, option: "Title")
+        capture(app, wait: 2, name: "sort-albums-title")
+
+        app.buttons["Artists"].firstMatch.tap()
+        sleep(2)
+        openSortMenuAndPick(app, option: "Album Count")
+        capture(app, wait: 2, name: "sort-artists-count")
+        openSortMenuAndPick(app, option: "Name")
+        capture(app, wait: 2, name: "sort-artists-name")
+    }
+
+    private func openSortMenuAndPick(_ app: XCUIApplication, option: String) {
+        let nav = app.navigationBars.firstMatch
+        let sortButton = nav.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] 'sort' OR identifier CONTAINS 'arrow'")
+        ).firstMatch
+        if sortButton.exists && sortButton.isHittable {
+            sortButton.tap()
+        } else {
+            nav.buttons.element(boundBy: nav.buttons.count - 1).tap()
+        }
+        sleep(1)
+        tapIfExists(app.buttons[option], in: app)
+        sleep(1)
+    }
+
     private func toggleLayoutToList(_ app: XCUIApplication) {
         tapIfExists(app.buttons["Layout: Grid. Double tap to change."], in: app)
     }
