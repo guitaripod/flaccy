@@ -4,12 +4,11 @@
 1. Copy `flaccy/Secrets.swift.example` to `flaccy/Secrets.swift`
 2. Fill in your API keys:
    - **Last.fm**: Create an app at https://www.last.fm/api/account/create
-   - **Groq**: Get a key at https://console.groq.com/keys
 3. `Secrets.swift` is gitignored and will not be committed
 
 ## Key Technical Details
 - **Database**: GRDB (SQLite) for library persistence, metadata, scrobble queue
-- **AI**: Groq API (llama-3.3-70b) for music identification and metadata cleanup
+- **AI**: Groq (llama-3.3-70b) via the flaccy-api proxy Worker (guitaripod/flaccy-api, flaccy-api.midgarcorp.cc) for music identification and metadata cleanup — no API key in the app
 - **Scrobbling**: Last.fm API with ASWebAuthenticationSession OAuth
 - **Audio**: AVQueuePlayer for gapless FLAC playback
 - **UI Pattern**: Fully programmatic UIKit (no storyboards/XIBs)

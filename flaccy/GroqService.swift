@@ -41,9 +41,16 @@ final class GroqService: MetadataClassifying {
 
     static let shared: MetadataClassifying = GroqService()
 
-    nonisolated private static let apiKey = Secrets.groqApiKey
-    nonisolated private static let endpoint = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
+    nonisolated private static let endpoint = URL(string: "https://flaccy-api.midgarcorp.cc/v1/metadata")!
     nonisolated private static let model = "llama-3.3-70b-versatile"
+
+    nonisolated private static let deviceIdentifier: String = {
+        let key = "flaccy.deviceIdentifier"
+        if let existing = UserDefaults.standard.string(forKey: key) { return existing }
+        let fresh = UUID().uuidString
+        UserDefaults.standard.set(fresh, forKey: key)
+        return fresh
+    }()
 
     private let session: URLSession
 
@@ -54,7 +61,6 @@ final class GroqService: MetadataClassifying {
     }
 
     nonisolated func analyzeLibrary(tracks: [TrackContext]) async -> IdentifiedMusic? {
-        guard Self.apiKey != "YOUR_GROQ_API_KEY" else { return nil }
         guard !tracks.isEmpty else { return nil }
 
         let trackDescriptions = tracks.enumerated().map { index, track in
@@ -105,8 +111,6 @@ final class GroqService: MetadataClassifying {
     }
 
     nonisolated func classifyGenre(artist: String, album: String, trackTitles: [String]) async -> GenreClassification? {
-        guard Self.apiKey != "YOUR_GROQ_API_KEY" else { return nil }
-
         let tracks = trackTitles.joined(separator: ", ")
 
         let request = ChatRequest(
@@ -134,7 +138,7 @@ final class GroqService: MetadataClassifying {
         do {
             var urlRequest = URLRequest(url: Self.endpoint)
             urlRequest.httpMethod = "POST"
-            urlRequest.setValue("Bearer \(Self.apiKey)", forHTTPHeaderField: "Authorization")
+            urlRequest.setValue(Self.deviceIdentifier, forHTTPHeaderField: "X-Device-ID")
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
             urlRequest.httpBody = try JSONEncoder().encode(chatRequest)
 
