@@ -149,8 +149,10 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
     }
 
     /// Backfills the local `scrobbles` table from Last.fm recent-tracks pages,
-    /// deduplicating against existing rows by timestamp+track.
-    func importHistory(maxPages: Int = 50) async {
+    /// deduplicating against existing rows by timestamp+track. The page bound
+    /// only guards against a runaway pagination loop; at 200 rows per page it
+    /// admits two million scrobbles, so any real account imports completely.
+    func importHistory(maxPages: Int = 10_000) async {
         guard lastFM.isAuthenticated else { return }
 
         let existing = (try? db.fetchAllScrobbleRows()) ?? []
