@@ -17,10 +17,10 @@ final class ScreenshotTests: XCTestCase {
 
         app.buttons["Albums"].firstMatch.tap()
         sleep(2)
-        openAlbum(app, named: "Lateralus")
+        openAlbum(app, named: "Parallax Hours")
         capture(app, wait: 6, name: "dark-03-album-detail")
 
-        startPlayback(app, trackNamed: "Schism")
+        startPlayback(app, trackNamed: "Slow Machine")
         expandNowPlaying(app)
         capture(app, wait: 6, name: "dark-04-now-playing")
 
@@ -135,6 +135,7 @@ final class ScreenshotTests: XCTestCase {
 
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchArguments.append("--seed-screenshots")
         app.launch()
         return app
     }
@@ -170,7 +171,7 @@ final class ScreenshotTests: XCTestCase {
     }
 
     private func expandNowPlaying(_ app: XCUIApplication) {
-        let mini = app.otherElements["Schism, Tool"].firstMatch
+        let mini = app.otherElements["Slow Machine, Meridian Wolde"].firstMatch
         if mini.waitForExistence(timeout: 5) && mini.isHittable {
             mini.tap()
         } else {

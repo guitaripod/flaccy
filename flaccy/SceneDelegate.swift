@@ -12,6 +12,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         options connectionOptions: UIScene.ConnectionOptions
     ) {
         guard let windowScene = scene as? UIWindowScene else { return }
+
+        #if targetEnvironment(simulator)
+        ScreenshotSeeder.seedIfRequested()
+        #endif
+
         let window = UIWindow(windowScene: windowScene)
 
         let nav = UINavigationController(rootViewController: LibraryViewController())
