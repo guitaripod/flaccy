@@ -13,16 +13,18 @@ enum SampleContent {
     }
 
     private static let tracks: [Demo] = [
-        Demo(folder: "Demo Artist/Neon Nights", file: "01 - Sunrise", frequency: 261.63, seconds: 6),
-        Demo(folder: "Demo Artist/Neon Nights", file: "02 - Midnight Drive", frequency: 329.63, seconds: 6),
-        Demo(folder: "Demo Artist/Neon Nights", file: "03 - Afterglow", frequency: 392.00, seconds: 6),
-        Demo(folder: "Aurora/Glacier", file: "01 - Drift", frequency: 220.00, seconds: 5),
-        Demo(folder: "Aurora/Glacier", file: "02 - Tides", frequency: 277.18, seconds: 5),
+        Demo(folder: "Meridian Wolde/Parallax Hours", file: "01 - Cirrus", frequency: 261.63, seconds: 6),
+        Demo(folder: "Meridian Wolde/Parallax Hours", file: "02 - Slow Machine", frequency: 329.63, seconds: 6),
+        Demo(folder: "Meridian Wolde/Parallax Hours", file: "03 - Ghost Harbor", frequency: 392.00, seconds: 6),
+        Demo(folder: "Kestrel Vale/Aurorae", file: "01 - Glass Horizon", frequency: 220.00, seconds: 5),
+        Demo(folder: "Kestrel Vale/Aurorae", file: "02 - Polar Light", frequency: 277.18, seconds: 5),
+        Demo(folder: "Novaeu/Paper Cities", file: "01 - Neon Rain", frequency: 246.94, seconds: 5),
+        Demo(folder: "Novaeu/Paper Cities", file: "02 - Tin Rooftops", frequency: 293.66, seconds: 5),
     ]
 
     static func seedIfNeeded(in documentsDirectory: URL) async {
         let fileManager = FileManager.default
-        let marker = documentsDirectory.appendingPathComponent("Demo Artist")
+        let marker = documentsDirectory.appendingPathComponent("Meridian Wolde")
         guard !fileManager.fileExists(atPath: marker.path) else { return }
 
         for track in tracks { write(track, in: documentsDirectory, fileManager: fileManager) }
