@@ -51,6 +51,7 @@ final class SongsTableViewModel {
     private var allRows: [Row] = []
     private var searchQuery = LibrarySearchState.query
     private var loadGeneration = 0
+    private var publishGeneration = 0
 
     private static let sortColumnKey = "flaccy.mac.songsSortColumn"
     private static let sortAscendingKey = "flaccy.mac.songsSortAscending"
@@ -123,23 +124,38 @@ final class SongsTableViewModel {
         publish()
     }
 
+    /// Filtering and localized sorting of the full library happen off the
+    /// main actor (they run on every track change, love toggle, and search
+    /// keystroke); a generation token drops stale results.
     private func publish() {
-        rowsPublisher.send(sorted(filtered(allRows)))
+        publishGeneration += 1
+        let generation = publishGeneration
+        let rows = allRows
+        let query = searchQuery
+        let column = sortColumn
+        let ascending = sortAscending
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let result = Self.sorted(Self.filtered(rows, query: query), column: column, ascending: ascending)
+            await MainActor.run { [weak self] in
+                guard let self, self.publishGeneration == generation else { return }
+                self.rowsPublisher.send(result)
+            }
+        }
     }
 
-    private func filtered(_ rows: [Row]) -> [Row] {
-        let query = fold(searchQuery)
+    nonisolated private static func filtered(_ rows: [Row], query rawQuery: String) -> [Row] {
+        let query = fold(rawQuery)
         guard !query.isEmpty else { return rows }
         return rows.filter {
             fold("\($0.track.title)\n\($0.track.artist)\n\($0.track.albumTitle)").contains(query)
         }
     }
 
-    private func fold(_ s: String) -> String {
+    nonisolated private static func fold(_ s: String) -> String {
         s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 
-    private func sorted(_ rows: [Row]) -> [Row] {
+    nonisolated private static func sorted(_ rows: [Row], column sortColumn: Column, ascending sortAscending: Bool) -> [Row] {
         let ascending = sortAscending
         func compareTitles(_ a: Row, _ b: Row) -> Bool {
             a.track.title.localizedCaseInsensitiveCompare(b.track.title) == .orderedAscending
@@ -183,7 +199,7 @@ final class SongsTableViewModel {
         }
     }
 
-    private func qualityRank(_ track: Track) -> Int {
+    nonisolated private static func qualityRank(_ track: Track) -> Int {
         (track.isLossless ? 1 << 24 : 0) + (track.bitDepth ?? 0) * 100_000 + (track.sampleRate ?? 0)
     }
 }

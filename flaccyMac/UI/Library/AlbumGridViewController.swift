@@ -190,9 +190,12 @@ final class AlbumGridViewController: NSViewController {
                   let album = Self.album(from: item) else { return cell }
             gridItem.configure(with: album, loved: self.viewModel.isLovedAlbum(album))
             gridItem.onDoubleClick = { [weak self] in self?.play(album) }
-            gridItem.onOpen = { [weak self] in self?.onOpenAlbum?(album) }
-            gridItem.onMenu = { [weak gridItem] in
-                MacTrackMenuFactory.menu(for: album, anchor: gridItem?.view)
+            gridItem.onOpen = { [weak self] in
+                guard let self else { return }
+                self.onOpenAlbum?(self.resolvedAlbum(album))
+            }
+            gridItem.onMenu = { [weak self, weak gridItem] in
+                MacTrackMenuFactory.menu(for: self?.resolvedAlbum(album) ?? album, anchor: gridItem?.view)
             }
             return cell
         }
@@ -319,9 +322,17 @@ final class AlbumGridViewController: NSViewController {
     }
 
     private func play(_ album: Album) {
-        guard !album.tracks.isEmpty else { return }
-        AppLogger.info("Playing album \(album.title) — \(album.artist)", category: .playback)
-        AudioPlayer.shared.play(album.tracks, startingAt: 0)
+        let resolved = resolvedAlbum(album)
+        guard !resolved.tracks.isEmpty else { return }
+        AppLogger.info("Playing album \(resolved.title) — \(resolved.artist)", category: .playback)
+        AudioPlayer.shared.play(resolved.tracks, startingAt: 0)
+    }
+
+    /// Album identity is title+artist only, so a cell configured before a
+    /// library reload can hold a stale track list; actions re-resolve against
+    /// the live library before playing or opening.
+    private func resolvedAlbum(_ album: Album) -> Album {
+        Library.shared.albums.first { $0 == album } ?? album
     }
 }
 

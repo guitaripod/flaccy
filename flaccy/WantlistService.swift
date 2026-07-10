@@ -209,7 +209,7 @@ final class WantlistService {
         let cutoff = Date().addingTimeInterval(-Self.releaseWindow)
         for (index, artist) in watchlist.enumerated() {
             if index > 0 {
-                try? await Task.sleep(for: .seconds(3))
+                try? await Task.sleep(for: .seconds(1))
             }
             guard let found = await Self.fetchITunesAlbums(artist: artist) else {
                 failedArtists.append(artist)

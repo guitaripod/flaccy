@@ -20,10 +20,19 @@ final class OnboardingPanelView: NSView {
     /// notification while a reload is still marked in-flight, so hiding on
     /// isLoading would dismiss the panel the moment the empty first scan runs.
     static var visibility: Visibility {
-        if !LibraryRoot.shared.isUsingDefaultRoot || !Library.shared.allTracks.isEmpty {
+        if !LibraryRoot.shared.isUsingDefaultRoot || LibraryRoot.shared.isFallbackActive
+            || !Library.shared.allTracks.isEmpty {
             return .hide
         }
-        return Library.shared.isLoading ? .keep : .show
+        if Library.shared.isLoading { return .keep }
+        return databaseHasTracks ? .hide : .show
+    }
+
+    /// The in-memory library is empty until the first reload completes, so a
+    /// returning user's launch checks the database directly instead of
+    /// flashing the welcome panel over an existing library.
+    private static var databaseHasTracks: Bool {
+        !((try? DatabaseManager.shared.fetchAllTrackRelativePaths().isEmpty) ?? true)
     }
 
     override init(frame frameRect: NSRect) {

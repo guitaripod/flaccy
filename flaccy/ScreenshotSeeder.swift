@@ -246,7 +246,8 @@ enum ScreenshotSeeder {
             artist: heroArtist,
             syncedLyrics: synced,
             plainLyrics: nil,
-            instrumental: false
+            instrumental: false,
+            fetchedAt: Date()
         )
         try? db.saveLyrics(record)
     }

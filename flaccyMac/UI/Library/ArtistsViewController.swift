@@ -139,7 +139,7 @@ final class ArtistsViewController: NSViewController {
         case .none:
             emptyStateView.isHidden = true
         case .noLibrary:
-            emptyStateView.isHidden = false
+            emptyStateView.isHidden = OnboardingPanelView.visibility != .hide
             emptyStateView.showNoLibrary()
         case .noSearchResults(let query):
             emptyStateView.isHidden = false

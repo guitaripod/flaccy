@@ -25,6 +25,11 @@ enum DebugDrive {
                 await exerciseLibrary(window: window)
             }
         }
+        if CommandLine.arguments.contains("--exercise-stack") {
+            Task {
+                await exerciseStack(window: window)
+            }
+        }
         guard CommandLine.arguments.contains("--exercise-transport") else { return }
         AppLogger.info("DebugDrive: transport exercise armed", category: .general)
         Task {
@@ -118,6 +123,52 @@ enum DebugDrive {
         }
         try? await Task.sleep(for: .seconds(3))
         capture(window: window, name: name)
+    }
+
+    /// Pops mid-push at varying offsets inside the 240ms slide animation to
+    /// prove overlapping transitions can never leave the section root hidden.
+    private static func exerciseStack(window: NSWindow?) async {
+        var attempts = 0
+        while Library.shared.albums.isEmpty, attempts < 40 {
+            try? await Task.sleep(for: .milliseconds(500))
+            attempts += 1
+        }
+        try? await Task.sleep(for: .seconds(1))
+        guard let album = Library.shared.albums.first else {
+            AppLogger.error("DebugDrive: no album for stack exercise", category: .general)
+            return
+        }
+        for delayMs in [20, 60, 120, 180, 230, 300] {
+            LibraryNavigator.revealAlbum(title: album.title, artist: album.artist)
+            try? await Task.sleep(for: .milliseconds(delayMs))
+            findStack(window: window)?.pop()
+            try? await Task.sleep(for: .milliseconds(delayMs))
+        }
+        LibraryNavigator.revealAlbum(title: album.title, artist: album.artist)
+        try? await Task.sleep(for: .milliseconds(100))
+        findStack(window: window)?.popToRoot()
+        try? await Task.sleep(for: .seconds(1))
+        guard let stack = findStack(window: window), let root = stack.stack.first else {
+            AppLogger.error("DebugDrive: stack exercise found no ContentStackController", category: .general)
+            return
+        }
+        AppLogger.info(
+            "DebugDrive: stack exercise complete — depth \(stack.stack.count), rootHidden=\(root.view.isHidden), rootAlpha=\(root.view.alphaValue)",
+            category: .general
+        )
+    }
+
+    private static func findStack(window: NSWindow?) -> ContentStackController? {
+        guard let root = window?.contentViewController else { return nil }
+        return descendToStack(root)
+    }
+
+    private static func descendToStack(_ controller: NSViewController) -> ContentStackController? {
+        if let stack = controller as? ContentStackController { return stack }
+        for child in controller.children {
+            if let stack = descendToStack(child) { return stack }
+        }
+        return nil
     }
 
     private static func startHeroPlayback() {

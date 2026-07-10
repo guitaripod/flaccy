@@ -95,6 +95,7 @@ final class ContentStackController: NSViewController {
         if reduceMotion {
             outgoing.view.isHidden = true
             completion?()
+            settleTopViewController()
             return
         }
         let width = view.bounds.width
@@ -108,11 +109,25 @@ final class ContentStackController: NSViewController {
             incoming.view.alphaValue = 1
             incoming.view.layer?.transform = CATransform3DIdentity
             outgoing.view.alphaValue = 0
-        }, completionHandler: {
-            outgoing.view.isHidden = true
-            outgoing.view.alphaValue = 1
+        }, completionHandler: { [weak self, weak outgoing] in
+            guard let self else { return }
+            if let outgoing, outgoing !== self.stack.last {
+                outgoing.view.isHidden = true
+                outgoing.view.alphaValue = 1
+            }
             completion?()
+            self.settleTopViewController()
         })
+    }
+
+    /// Overlapping transitions (push immediately followed by pop) fire stale
+    /// completions against views that have since become the top again; always
+    /// forcing the top view visible makes those completions harmless.
+    private func settleTopViewController() {
+        guard let top = stack.last else { return }
+        top.view.isHidden = false
+        top.view.alphaValue = 1
+        top.view.layer?.transform = CATransform3DIdentity
     }
 
     private func pin(_ subview: NSView) {

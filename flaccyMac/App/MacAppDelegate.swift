@@ -52,6 +52,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
         startLibraryPipeline()
         observeAppEvents()
+        notifyLibraryRootFallbackIfNeeded()
         #if DEBUG
         DebugDrive.runIfRequested(window: windowController.window)
         runStageBDriveIfRequested()
@@ -111,11 +112,12 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(paywallRequired), name: PurchaseManager.paywallRequired, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(refreshRecapSchedule), name: NSApplication.didBecomeActiveNotification, object: nil
+            self, selector: #selector(appDidBecomeActive), name: NSApplication.didBecomeActiveNotification, object: nil
         )
     }
 
-    @objc private func refreshRecapSchedule() {
+    @objc private func appDidBecomeActive() {
+        LibraryRoot.shared.retryFallbackResolutionIfNeeded()
         Task {
             await MacRecapNotificationScheduler.shared.refreshSchedule()
         }
@@ -128,6 +130,30 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             style: .success, in: mainWindowController?.window
         )
         Task { await Library.shared.reload() }
+    }
+
+    private func notifyLibraryRootFallbackIfNeeded() {
+        guard LibraryRoot.shared.isFallbackActive, let window = mainWindowController?.window else { return }
+        AppLogger.warning("Library root offline at launch; prompting user", category: .content)
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Music Folder Unavailable"
+        alert.informativeText = "Your music folder couldn't be reached — reconnect the drive to pick up where you left off, or choose a new folder. Your library, playlists and stats stay intact until it's back."
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Choose New Folder…")
+        alert.beginSheetModal(for: window) { [weak self] response in
+            if response == .alertSecondButtonReturn {
+                self?.chooseMusicFolder(nil)
+            }
+        }
+    }
+
+    private func libraryRootIsWritableForImport(in window: NSWindow?) -> Bool {
+        guard !LibraryRoot.shared.isFallbackActive else {
+            MacToast.show("Music folder unavailable — reconnect the drive or choose a new folder.", style: .error, in: window)
+            return false
+        }
+        return true
     }
 
     @objc private func paywallRequired() {
@@ -165,6 +191,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func importFiles(_ sender: Any?) {
         guard let window = mainWindowController?.window else { return }
+        guard libraryRootIsWritableForImport(in: window) else { return }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
@@ -176,8 +203,8 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             guard response == .OK, !panel.urls.isEmpty else { return }
             let urls = panel.urls
             Task {
-                await Library.shared.importFiles(from: urls)
-                MacToast.show("Imported \(urls.count) item\(urls.count == 1 ? "" : "s")", style: .success, in: window)
+                let outcome = await Library.shared.importFiles(from: urls)
+                MacToast.showImportOutcome(outcome, in: window)
             }
         }
     }

@@ -175,7 +175,11 @@ final class LibraryViewModel {
         return map
     }
 
+    #if os(macOS)
+    private static var documentsPath: String { LibraryPaths.root.path }
+    #else
     private static let documentsPath = LibraryPaths.root.path
+    #endif
 
     private func relativePath(for url: URL) -> String {
         let docs = Self.documentsPath

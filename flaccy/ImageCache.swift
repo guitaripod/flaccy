@@ -58,6 +58,7 @@ final class ImageCache {
 
         let cost = estimateCost(of: diskImage)
         memoryCache.setObject(diskImage, forKey: cacheKey, cost: cost)
+        touchDiskFile(filePath)
         return diskImage
     }
 
@@ -86,7 +87,19 @@ final class ImageCache {
         guard let diskImage else { return nil }
         let cost = estimateCost(of: diskImage)
         memoryCache.setObject(diskImage, forKey: cacheKey, cost: cost)
+        touchDiskFile(filePath)
         return diskImage
+    }
+
+    /// Refreshes the file's modification date on a disk-cache hit so the
+    /// age-based prune measures real use instead of the original write time —
+    /// otherwise images displayed daily still expire at the 90-day mark.
+    private func touchDiskFile(_ url: URL) {
+        ioQueue.async {
+            try? FileManager.default.setAttributes(
+                [.modificationDate: Date()], ofItemAtPath: url.path
+            )
+        }
     }
 
     func store(_ image: PlatformImage, forKey key: String) {

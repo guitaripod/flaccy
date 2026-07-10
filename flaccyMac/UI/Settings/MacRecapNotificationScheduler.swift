@@ -115,9 +115,25 @@ final class MacRecapNotificationScheduler {
         }
 
         center.removePendingNotificationRequests(withIdentifiers: [Self.periodicIdentifier, Self.yearlyIdentifier])
-        await schedulePeriodic(frequency: frequency)
-        await scheduleYearly()
+        let yearData = await computeYearData()
+        let storyPNG = makeStoryPNG(data: yearData)
+        await schedulePeriodic(frequency: frequency, storyPNG: storyPNG)
+        await scheduleYearly(storyPNG: storyPNG)
         UserDefaults.standard.set(Date(), forKey: Self.lastRefreshKey)
+    }
+
+    /// The full-year scrobble fetch and aggregation run off the main actor;
+    /// only the cheap library-duration snapshot is gathered here.
+    private func computeYearData() async -> YearInMusicData {
+        let year = Calendar.current.component(.year, from: Date())
+        var durations: [String: Int] = [:]
+        for track in Library.shared.allTracks where track.duration > 0 {
+            durations[LastFMStatsService.trackKey(track.title, track.artist)] = Int(track.duration)
+        }
+        let snapshot = durations
+        return await Task.detached(priority: .utility) {
+            YearInMusicService.shared.compute(year: year, libraryDurations: snapshot)
+        }.value
     }
 
     private func hasPendingRequests() async -> Bool {
@@ -125,26 +141,26 @@ final class MacRecapNotificationScheduler {
         return pending.contains { $0.identifier == Self.periodicIdentifier || $0.identifier == Self.yearlyIdentifier }
     }
 
-    private func schedulePeriodic(frequency: RecapNotificationFrequency) async {
+    private func schedulePeriodic(frequency: RecapNotificationFrequency, storyPNG: Data?) async {
         guard frequency != .off, let fireDate = nextPeriodicDate(frequency: frequency) else { return }
         let content = UNMutableNotificationContent()
         switch frequency {
         case .monthly:
             content.title = "Your Monthly Recap 🎧"
-            content.body = teaserBody(period: .month, fallback: "A whole month of listening, wrapped up and ready.")
+            content.body = await teaserBody(period: .month, fallback: "A whole month of listening, wrapped up and ready.")
         case .weekly, .off:
             content.title = "Your Weekly Recap 🎧"
-            content.body = teaserBody(period: .week, fallback: "Seven days of listening, wrapped up and ready.")
+            content.body = await teaserBody(period: .week, fallback: "Seven days of listening, wrapped up and ready.")
         }
         content.sound = .default
         content.userInfo = [Self.destinationUserInfoKey: Self.yearInMusicDestination]
-        if let attachment = makeStoryAttachment() {
+        if let attachment = makeStoryAttachment(pngData: storyPNG) {
             content.attachments = [attachment]
         }
         await schedule(content: content, identifier: Self.periodicIdentifier, at: fireDate)
     }
 
-    private func scheduleYearly() async {
+    private func scheduleYearly(storyPNG: Data?) async {
         guard let fireDate = nextYearlyDeliveryDate() else { return }
         let year = Calendar.current.component(.year, from: fireDate)
         let content = UNMutableNotificationContent()
@@ -152,7 +168,7 @@ final class MacRecapNotificationScheduler {
         content.body = "Minutes, top artists, obsessions — your whole year, ready to share."
         content.sound = .default
         content.userInfo = [Self.destinationUserInfoKey: Self.yearInMusicDestination]
-        if let attachment = makeStoryAttachment() {
+        if let attachment = makeStoryAttachment(pngData: storyPNG) {
             content.attachments = [attachment]
         }
         await schedule(content: content, identifier: Self.yearlyIdentifier, at: fireDate)
@@ -172,25 +188,33 @@ final class MacRecapNotificationScheduler {
         return fireDate
     }
 
-    private func teaserBody(period: ChartPeriod, fallback: String) -> String {
-        let rows = (try? DatabaseManager.shared.fetchScrobbleRows(from: period.cutoffDate, to: Date())) ?? []
+    private func teaserBody(period: ChartPeriod, fallback: String) async -> String {
+        let cutoff = period.cutoffDate
+        let rows = await Task.detached(priority: .utility) {
+            (try? DatabaseManager.shared.fetchScrobbleRows(from: cutoff, to: Date())) ?? []
+        }.value
         var counts: [String: Int] = [:]
         for row in rows { counts[row.artist, default: 0] += 1 }
         guard let topArtist = counts.max(by: { $0.value < $1.value })?.key else { return fallback }
         return "\(topArtist) has been on repeat — \(RecapFormat.count(rows.count)) plays and counting. See your recap."
     }
 
-    private func makeStoryAttachment() -> UNNotificationAttachment? {
-        let year = Calendar.current.component(.year, from: Date())
-        let data = YearInMusicService.shared.compute(year: year)
+    /// Renders the shared story card once per refresh; the periodic and
+    /// yearly requests each get their own file copy because the notification
+    /// store takes ownership of an attachment's file.
+    private func makeStoryPNG(data: YearInMusicData) -> Data? {
         guard data.hasContent else { return nil }
         let artwork = StoryArtwork.resolve(for: data)
-        let seed = data.topArtists.first.map { "\($0.name)\(year)" } ?? "flaccy\(year)"
+        let seed = data.topArtists.first.map { "\($0.name)\(data.year)" } ?? "flaccy\(data.year)"
         let theme = StoryTheme.all(seedPalette: ArtworkPaletteExtractor.fallbackPalette(seed: seed))[0]
         guard let image = StoryCardRenderer.makeImage(
             slide: .overview, data: data, artwork: artwork, theme: theme, scale: 2
-        ), let pngData = image.pngData() else { return nil }
+        ) else { return nil }
+        return image.pngData()
+    }
 
+    private func makeStoryAttachment(pngData: Data?) -> UNNotificationAttachment? {
+        guard let pngData else { return nil }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("recap-notification-\(UUID().uuidString)")
             .appendingPathExtension("png")

@@ -18,12 +18,19 @@ final class YearInMusicService {
     }
 
     func compute(year: Int) -> YearInMusicData {
+        compute(year: year, libraryDurations: libraryDurations())
+    }
+
+    /// Duration-injected variant callable off the main actor: the scrobble
+    /// fetch and aggregation are the expensive part, and everything they
+    /// touch (the database, pure math) is thread-safe.
+    nonisolated func compute(year: Int, libraryDurations: [String: Int]) -> YearInMusicData {
         let calendar = Calendar.current
         let start = calendar.date(from: DateComponents(year: year)) ?? .distantPast
         let end = calendar.date(from: DateComponents(year: year + 1)) ?? .distantFuture
         let rows = (try? db.fetchScrobbleRows(from: start, to: end)) ?? []
 
-        let durations = libraryDurations()
+        let durations = libraryDurations
         var totalSeconds = 0
         var artistCounts: [String: Int] = [:]
         var albumCounts: [String: (album: String, artist: String, count: Int)] = [:]
@@ -108,7 +115,7 @@ final class YearInMusicService {
         return durations
     }
 
-    private func longestStreak(days: Set<Date>, calendar: Calendar) -> Int {
+    nonisolated private func longestStreak(days: Set<Date>, calendar: Calendar) -> Int {
         var longest = 0
         for day in days {
             guard let previous = calendar.date(byAdding: .day, value: -1, to: day),
@@ -124,7 +131,7 @@ final class YearInMusicService {
         return longest
     }
 
-    private func persona(plays: Int, distinctArtists: Int, hourCounts: [Int]) -> String {
+    nonisolated private func persona(plays: Int, distinctArtists: Int, hourCounts: [Int]) -> String {
         guard plays > 0 else { return "Newcomer" }
         let diversity = Double(distinctArtists) / Double(plays)
         let nightPlays = (0..<6).reduce(0) { $0 + hourCounts[$1] } + hourCounts[23]

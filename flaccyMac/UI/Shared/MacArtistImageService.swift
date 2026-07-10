@@ -29,7 +29,7 @@ final class MacArtistImageService {
         guard !trimmed.isEmpty else { return nil }
         let key = "artist-photo|\(trimmed.lowercased())"
 
-        if let cached = ImageCache.shared.image(forKey: key) {
+        if let cached = await ImageCache.shared.loadImage(forKey: key) {
             return cached
         }
         if let miss = missCache.object(forKey: key as NSString),

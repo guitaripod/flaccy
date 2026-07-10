@@ -138,6 +138,7 @@ nonisolated struct LyricsRecord: Codable, FetchableRecord, PersistableRecord, Id
     var syncedLyrics: String?
     var plainLyrics: String?
     var instrumental: Bool
+    var fetchedAt: Date?
 }
 
 nonisolated struct WantlistRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
@@ -399,6 +400,12 @@ nonisolated final class DatabaseManager: Sendable {
             try db.drop(index: "scrobbles_on_submitted")
             try db.create(index: "scrobbles_on_submitted_timestamp", on: "scrobbles", columns: ["submitted", "timestamp"])
             try db.create(index: "scrobbles_on_timestamp", on: "scrobbles", columns: ["timestamp"])
+        }
+
+        migrator.registerMigration("v9") { db in
+            try db.alter(table: "lyrics") { t in
+                t.add(column: "fetchedAt", .datetime)
+            }
         }
 
         return migrator

@@ -215,15 +215,19 @@ final class AudioDropView: NSView {
         highlight.isHidden = true
         let urls = droppableURLs(from: sender)
         guard !urls.isEmpty, !isImporting else { return false }
+        guard !LibraryRoot.shared.isFallbackActive else {
+            MacToast.show("Music folder unavailable — reconnect the drive or choose a new folder.", style: .error, in: window)
+            return false
+        }
         isImporting = true
         AppLogger.info("Importing \(urls.count) dropped item(s)", category: .content)
         MacToast.show(
             "Importing \(urls.count) item\(urls.count == 1 ? "" : "s")…", style: .info, in: window
         )
         Task { [weak self] in
-            await Library.shared.importFiles(from: urls)
+            let outcome = await Library.shared.importFiles(from: urls)
             self?.isImporting = false
-            MacToast.show("Import finished", style: .success, in: self?.window)
+            MacToast.showImportOutcome(outcome, in: self?.window)
         }
         return true
     }

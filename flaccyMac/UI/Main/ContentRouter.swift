@@ -95,8 +95,10 @@ final class ContentRouter: NSViewController {
         revealArtist(name)
     }
 
+    /// Always posts the section notification — even when the target section is
+    /// already current — because MainSplitViewController relies on it to close
+    /// the Now Playing overlay before the reveal is pushed underneath it.
     private func switchTo(_ section: SidebarSection) {
-        guard currentSection != section else { return }
         NotificationCenter.default.post(
             name: .flaccyShowSection,
             object: nil,

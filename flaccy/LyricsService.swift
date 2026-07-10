@@ -30,8 +30,11 @@ final class LyricsService {
         Task { _ = await fetchLyrics(track: track, artist: artist, album: album) }
     }
 
+    private static let notFoundTTL: TimeInterval = 30 * 24 * 3600
+
     func fetchLyrics(track: String, artist: String, album: String) async -> LyricsResult? {
-        if let cached = try? DatabaseManager.shared.fetchLyrics(trackTitle: track, artist: artist) {
+        let cached = try? DatabaseManager.shared.fetchLyrics(trackTitle: track, artist: artist)
+        if let cached, !isExpiredMiss(cached) {
             var syncedLines: [LyricLine]?
             if let synced = cached.syncedLyrics {
                 syncedLines = parseLRC(synced)
@@ -55,7 +58,7 @@ final class LyricsService {
             guard let http = response as? HTTPURLResponse else { return nil }
 
             if http.statusCode == 404 {
-                return cacheNotFound(track: track, artist: artist)
+                return cacheNotFound(track: track, artist: artist, replacing: cached?.id)
             }
             guard http.statusCode == 200 else { return nil }
 
@@ -70,11 +73,13 @@ final class LyricsService {
             }
 
             let record = LyricsRecord(
+                id: cached?.id,
                 trackTitle: track,
                 artist: artist,
                 syncedLyrics: syncedRaw,
                 plainLyrics: plainRaw,
-                instrumental: instrumental
+                instrumental: instrumental,
+                fetchedAt: Date()
             )
             try? DatabaseManager.shared.saveLyrics(record)
 
@@ -87,16 +92,27 @@ final class LyricsService {
 
     /// Persists an empty record when lrclib has no lyrics for the track, so
     /// subsequent plays hit the database instead of re-issuing the request.
-    private func cacheNotFound(track: String, artist: String) -> LyricsResult {
+    private func cacheNotFound(track: String, artist: String, replacing existingID: Int64?) -> LyricsResult {
         let record = LyricsRecord(
+            id: existingID,
             trackTitle: track,
             artist: artist,
             syncedLyrics: nil,
             plainLyrics: nil,
-            instrumental: false
+            instrumental: false,
+            fetchedAt: Date()
         )
         try? DatabaseManager.shared.saveLyrics(record)
         return LyricsResult(syncedLines: nil, plainText: nil, isInstrumental: false)
+    }
+
+    /// A cached row with no lyrics and no instrumental flag is a remembered
+    /// lrclib miss; it expires after a month so lyrics published later are
+    /// eventually fetched. Legacy miss rows without a timestamp count as expired.
+    private func isExpiredMiss(_ record: LyricsRecord) -> Bool {
+        guard record.syncedLyrics == nil, record.plainLyrics == nil, !record.instrumental else { return false }
+        guard let fetchedAt = record.fetchedAt else { return true }
+        return Date().timeIntervalSince(fetchedAt) > Self.notFoundTTL
     }
 
     nonisolated private func parseLRC(_ lrc: String) -> [LyricLine] {

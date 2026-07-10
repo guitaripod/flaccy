@@ -96,6 +96,7 @@ final class AudioPlayer: AudioPlaying {
     private var stationSeedArtist: String?
     private var isBuildingStation = false
     private var autoplayContinuationInFlight = false
+    private var pendingQueueExhaustion = false
 
     /// When enabled, an exhausted queue is extended with a similar-artist / most-played
     /// continuation instead of stopping, so music never just ends. Persisted; default on.
@@ -161,6 +162,9 @@ final class AudioPlayer: AudioPlaying {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleWillEnterForeground), name: NSApplication.didBecomeActiveNotification, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleLibraryRootChanged), name: LibraryRoot.didChange, object: nil
+        )
         #endif
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleItemFailedToPlayToEnd(_:)), name: .AVPlayerItemFailedToPlayToEndTime, object: nil
@@ -209,6 +213,18 @@ final class AudioPlayer: AudioPlaying {
     @objc private func handleWillEnterForeground() {
         Task { await retryPendingScrobbles() }
     }
+
+    #if os(macOS)
+    /// Changing the library root revokes the old folder's sandbox extension,
+    /// so every queued URL becomes unopenable; tearing the queue down through
+    /// the deleted-tracks path stops playback cleanly instead of dying at the
+    /// next track boundary.
+    @objc private func handleLibraryRootChanged() {
+        guard !queue.isEmpty else { return }
+        AppLogger.info("Library root changed; clearing playback queue of \(queue.count) tracks", category: .playback)
+        handleDeletedTracks(Set(queue.map(\.fileURL)))
+    }
+    #endif
 
     #if os(iOS)
     @objc private func handleInterruption(_ notification: Notification) {
@@ -292,9 +308,6 @@ final class AudioPlayer: AudioPlaying {
     private func applyPlaybackState(_ playing: Bool) {
         isPlaying = playing
         updateNowPlayingInfo()
-        #if os(macOS)
-        MPNowPlayingInfoCenter.default().playbackState = playing ? .playing : .paused
-        #endif
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
     }
 
@@ -743,6 +756,11 @@ final class AudioPlayer: AudioPlaying {
         preloadedIndex = nil
 
         if autoplaySimilarWhenQueueEnds, repeatMode == .off, !sleepAtEndOfTrack {
+            if autoplayContinuationInFlight {
+                AppLogger.info("Queue exhausted at index \(currentIndex) with continuation build in flight, deferring", category: .playback)
+                pendingQueueExhaustion = true
+                return
+            }
             AppLogger.info("Queue exhausted at index \(currentIndex), attempting autoplay continuation", category: .playback)
             buildAutoplayContinuation { [weak self] appended in
                 guard let self else { return }
@@ -818,6 +836,7 @@ final class AudioPlayer: AudioPlaying {
         if playbackIsGated() { return }
         currentIndex = index
         userPausedPlayback = false
+        pendingQueueExhaustion = false
 
         removePlayerObservers()
 
@@ -1031,7 +1050,13 @@ final class AudioPlayer: AudioPlaying {
             return .success
         }
 
+        #if os(iOS)
+        center.skipForwardCommand.isEnabled = false
+        center.skipBackwardCommand.isEnabled = false
+        #else
         center.skipForwardCommand.isEnabled = true
+        center.skipBackwardCommand.isEnabled = true
+        #endif
         center.skipForwardCommand.preferredIntervals = [15]
         center.skipForwardCommand.addTarget { [weak self] event in
             let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
@@ -1042,7 +1067,6 @@ final class AudioPlayer: AudioPlaying {
             return .success
         }
 
-        center.skipBackwardCommand.isEnabled = true
         center.skipBackwardCommand.preferredIntervals = [15]
         center.skipBackwardCommand.addTarget { [weak self] event in
             let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
@@ -1114,7 +1138,14 @@ final class AudioPlayer: AudioPlaying {
         }
     }
 
+    /// The macOS system playbackState is derived here — the one sink every
+    /// state transition already flows through — so paths that mutate
+    /// `isPlaying` directly (loadTrack, auto-advance, queue exhaustion) can
+    /// never leave the menu-bar Now Playing widget stale.
     private func updateNowPlayingInfo() {
+        #if os(macOS)
+        MPNowPlayingInfoCenter.default().playbackState = isPlaying ? .playing : .paused
+        #endif
         guard let track = currentTrack else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
@@ -1429,6 +1460,7 @@ final class AudioPlayer: AudioPlaying {
         guard !fresh.isEmpty else {
             AppLogger.info("Autoplay continuation produced no new tracks", category: .playback)
             completion?(false)
+            resolvePendingExhaustion(appended: false)
             return
         }
         queue.append(contentsOf: fresh)
@@ -1437,6 +1469,22 @@ final class AudioPlayer: AudioPlaying {
         resyncPreloadedItems()
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
         completion?(true)
+        resolvePendingExhaustion(appended: true)
+    }
+
+    /// Resumes playback when the queue exhausted while this continuation was
+    /// still building: the exhaustion path deferred to us, so a late-arriving
+    /// batch starts playing instead of leaving the player silently stopped.
+    private func resolvePendingExhaustion(appended: Bool) {
+        guard pendingQueueExhaustion else { return }
+        pendingQueueExhaustion = false
+        guard playingItem == nil else { return }
+        if appended, queue.indices.contains(currentIndex + 1) {
+            AppLogger.info("Resuming deferred exhaustion with continuation at index \(currentIndex + 1)", category: .playback)
+            loadTrack(at: currentIndex + 1)
+        } else {
+            finishQueueExhausted()
+        }
     }
 
     /// Shuffle that de-weights recently-played tracks using each track's `lastPlayed`

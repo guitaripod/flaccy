@@ -29,6 +29,16 @@ enum MacToast {
 
     private static var currentToast: NSView?
 
+    static func showImportOutcome(_ outcome: LibraryImportOutcome, in window: NSWindow?) {
+        if outcome.failed == 0 {
+            show("Imported \(outcome.imported) item\(outcome.imported == 1 ? "" : "s")", style: .success, in: window)
+        } else if outcome.imported == 0 {
+            show("Import failed — couldn't copy into the library folder.", style: .error, in: window)
+        } else {
+            show("Imported \(outcome.imported), \(outcome.failed) failed — check the library folder's permissions.", style: .error, in: window)
+        }
+    }
+
     static func show(_ message: String, style: Style = .info, in window: NSWindow?) {
         guard let contentView = window?.contentView else { return }
         currentToast?.removeFromSuperview()

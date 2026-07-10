@@ -1,10 +1,13 @@
+import AppKit
 import Foundation
 
 /// Resolves the folder the mac library indexes in place. Defaults to a
 /// container-private `Data/Music` folder that needs no permission prompt;
 /// a user-chosen folder persists as an app-scoped security bookmark whose
 /// access stays open for the app's lifetime so scans and playback URLs
-/// resolve at any time.
+/// resolve at any time. When the bookmarked folder is unreachable (external
+/// drive unmounted) the root falls back to the default folder in an explicit
+/// offline state so callers can suspend destructive work until it returns.
 nonisolated final class LibraryRoot: @unchecked Sendable {
 
     static let shared = LibraryRoot()
@@ -15,8 +18,42 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
     private let lock = NSLock()
     private var resolvedURL: URL?
     private var scopedURL: URL?
+    private var fallbackActive = false
+    private var mountObserver: NSObjectProtocol?
 
     static var current: URL { shared.url }
+
+    /// True when a persisted bookmark exists but did not resolve to a
+    /// reachable folder, so the returned root is a stand-in and the real
+    /// library is temporarily offline.
+    var isFallbackActive: Bool {
+        _ = url
+        lock.lock()
+        defer { lock.unlock() }
+        return fallbackActive
+    }
+
+    /// Re-resolves an offline bookmark (called on volume mounts and app
+    /// activation); posts `didChange` only when the real folder comes back.
+    func retryFallbackResolutionIfNeeded() {
+        lock.lock()
+        guard fallbackActive else {
+            lock.unlock()
+            return
+        }
+        scopedURL?.stopAccessingSecurityScopedResource()
+        scopedURL = nil
+        resolvedURL = nil
+        let resolved = resolveLocked()
+        resolvedURL = resolved
+        let recovered = !fallbackActive
+        lock.unlock()
+        guard recovered else { return }
+        AppLogger.info("Library root reconnected at \(resolved.path)", category: .content)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: Self.didChange, object: nil)
+        }
+    }
 
     var url: URL {
         lock.lock()
@@ -59,11 +96,26 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
     }
 
     private func resolveLocked() -> URL {
-        if let bookmark = UserDefaults.standard.data(forKey: Self.bookmarkKey),
-           let resolved = resolveBookmarkLocked(bookmark) {
-            return resolved
+        if let bookmark = UserDefaults.standard.data(forKey: Self.bookmarkKey) {
+            if let resolved = resolveBookmarkLocked(bookmark) {
+                fallbackActive = false
+                return resolved
+            }
+            fallbackActive = true
+            observeMountsLocked()
+            return Self.ensuredDefaultRoot()
         }
+        fallbackActive = false
         return Self.ensuredDefaultRoot()
+    }
+
+    private func observeMountsLocked() {
+        guard mountObserver == nil else { return }
+        mountObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didMountNotification, object: nil, queue: nil
+        ) { [weak self] _ in
+            self?.retryFallbackResolutionIfNeeded()
+        }
     }
 
     private func resolveBookmarkLocked(_ bookmark: Data) -> URL? {

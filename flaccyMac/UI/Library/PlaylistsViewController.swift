@@ -17,6 +17,8 @@ final class PlaylistsViewController: NSViewController {
     private let emptyStateView = NSStackView()
     private var entries: [Entry] = []
     private var searchQuery = LibrarySearchState.query
+    private var reloadGeneration = 0
+    private var searchDebounce: Task<Void, Never>?
 
     override func loadView() {
         view = NSView()
@@ -96,10 +98,30 @@ final class PlaylistsViewController: NSViewController {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        searchDebounce?.cancel()
     }
 
+    /// The library-path join and per-playlist track fetches run off the main
+    /// actor (the fetch contends with background sync writes on the database
+    /// queue); a generation token drops stale results.
     @objc private func reload() {
+        reloadGeneration += 1
+        let generation = reloadGeneration
         let allTracks = Library.shared.allTracks
+        let query = searchQuery
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let entries = Self.fetchEntries(allTracks: allTracks, searchQuery: query)
+            await MainActor.run { [weak self] in
+                guard let self, self.reloadGeneration == generation else { return }
+                self.entries = entries
+                self.tableView.reloadData()
+                self.emptyStateView.isHidden = !entries.isEmpty || !query.isEmpty
+                AppLogger.debug("Playlists list showing \(entries.count) playlists", category: .ui)
+            }
+        }
+    }
+
+    nonisolated private static func fetchEntries(allTracks: [Track], searchQuery: String) -> [Entry] {
         let tracksByPath = Dictionary(
             allTracks.map { (LibraryPathResolver.relativePath(for: $0.fileURL), $0) },
             uniquingKeysWith: { first, _ in first }
@@ -107,7 +129,7 @@ final class PlaylistsViewController: NSViewController {
         do {
             let records = try DatabaseManager.shared.fetchAllPlaylists()
             let query = searchQuery.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            entries = try records.compactMap { record in
+            return try records.compactMap { record in
                 guard let id = record.id else { return nil }
                 if !query.isEmpty {
                     let folded = record.name.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
@@ -119,16 +141,18 @@ final class PlaylistsViewController: NSViewController {
             }
         } catch {
             AppLogger.error("Playlist fetch failed: \(error.localizedDescription)", category: .database)
-            entries = []
+            return []
         }
-        tableView.reloadData()
-        emptyStateView.isHidden = !entries.isEmpty || !searchQuery.isEmpty
-        AppLogger.debug("Playlists list showing \(entries.count) playlists", category: .ui)
     }
 
     @objc private func searchQueryChanged(_ notification: Notification) {
         searchQuery = notification.userInfo?[LibraryNavigator.Key.query] as? String ?? ""
-        reload()
+        searchDebounce?.cancel()
+        searchDebounce = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled else { return }
+            self?.reload()
+        }
     }
 
     @objc private func rowDoubleClicked() {

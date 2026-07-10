@@ -51,7 +51,7 @@ enum LibrarySearchState {
     }
 }
 
-enum LibraryPathResolver {
+nonisolated enum LibraryPathResolver {
 
     /// The library-root-relative path used as the track's identity in the
     /// database (playlists, loved state, playback restore all key on it).

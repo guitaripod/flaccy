@@ -6,13 +6,19 @@ import UIKit
 import AppKit
 #endif
 
+nonisolated struct LibraryImportOutcome: Sendable {
+    let imported: Int
+    let failed: Int
+}
+
 protocol LibraryProviding: AnyObject {
     var albums: [Album] { get }
     var allTracks: [Track] { get }
     var isLoading: Bool { get }
     func reload() async
     func resetAndReload() async
-    func importFiles(from urls: [URL]) async
+    @discardableResult
+    func importFiles(from urls: [URL]) async -> LibraryImportOutcome
     func deleteTracks(_ tracks: [Track]) async
 }
 
@@ -97,7 +103,10 @@ final class Library: LibraryProviding {
         await enrichAndPublish()
     }
 
-    func importFiles(from urls: [URL]) async {
+    @discardableResult
+    func importFiles(from urls: [URL]) async -> LibraryImportOutcome {
+        var imported = 0
+        var failed = 0
         for url in urls {
             let accessing = url.startAccessingSecurityScopedResource()
             defer { if accessing { url.stopAccessingSecurityScopedResource() } }
@@ -105,12 +114,15 @@ final class Library: LibraryProviding {
             let destination = uniqueDestination(for: url)
             do {
                 try FileManager.default.copyItem(at: url, to: destination)
+                imported += 1
                 AppLogger.info("Imported: \(url.lastPathComponent)", category: .content)
             } catch {
+                failed += 1
                 AppLogger.error("Import failed: \(error.localizedDescription)", category: .content)
             }
         }
         await reload()
+        return LibraryImportOutcome(imported: imported, failed: failed)
     }
 
     /// Deleting the files is the single source of truth — the reload's file
@@ -132,6 +144,15 @@ final class Library: LibraryProviding {
     @discardableResult
     @concurrent
     nonisolated private func syncFilesWithDatabase() async -> Bool {
+        #if os(macOS)
+        guard !LibraryRoot.shared.isFallbackActive else {
+            AppLogger.warning(
+                "Sync skipped: bookmarked library folder is unavailable; database left untouched",
+                category: .content
+            )
+            return false
+        }
+        #endif
         let fm = FileManager.default
         guard let enumerator = fm.enumerator(
             at: documentsDirectory, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]
@@ -159,6 +180,10 @@ final class Library: LibraryProviding {
         let newPaths = diskPaths.subtracting(knownPaths)
         let removedPaths = knownPaths.subtracting(diskPaths)
 
+        #if os(macOS)
+        let rootChanged = recordCurrentRootIdentity()
+        #endif
+
         if newPaths.isEmpty && removedPaths.isEmpty {
             AppLogger.info("Sync: \(diskPaths.count) files, no changes", category: .content)
             return false
@@ -166,12 +191,18 @@ final class Library: LibraryProviding {
 
         if !removedPaths.isEmpty {
             #if os(macOS)
-            guard !diskPaths.isEmpty else {
+            guard !diskPaths.isEmpty || rootChanged else {
                 AppLogger.warning(
                     "Sync: library root scanned empty while database holds \(knownPaths.count) tracks; skipping destructive cleanup",
                     category: .content
                 )
                 return false
+            }
+            if rootChanged {
+                AppLogger.warning(
+                    "Sync: library root changed; pruning \(removedPaths.count) rows indexed from the previous root",
+                    category: .content
+                )
             }
             #endif
             do {
@@ -227,6 +258,21 @@ final class Library: LibraryProviding {
     }
 
     private static let insertBatchSize = 50
+
+    #if os(macOS)
+    private static let rootIdentityKey = "flaccy.mac.libraryRootIdentity"
+
+    /// Records which root the database rows were indexed from, returning true
+    /// when the current root differs from the recorded one — the only case in
+    /// which pruning rows against an empty scan is an intentional fresh start
+    /// rather than a transient failure.
+    nonisolated private func recordCurrentRootIdentity() -> Bool {
+        let identity = documentsDirectory.standardizedFileURL.path
+        let recorded = UserDefaults.standard.string(forKey: Self.rootIdentityKey)
+        UserDefaults.standard.set(identity, forKey: Self.rootIdentityKey)
+        return recorded != nil && recorded != identity
+    }
+    #endif
 
     nonisolated private func insertBatch(_ records: [TrackRecord]) {
         guard !records.isEmpty else { return }
