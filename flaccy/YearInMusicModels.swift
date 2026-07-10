@@ -1,4 +1,8 @@
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Immutable snapshot of one calendar year of listening, computed entirely from
 /// local scrobbles so the Year in Music works offline.
@@ -59,59 +63,64 @@ nonisolated enum StoryFormat: Sendable {
 /// A named gradient + accent the user can pick in the share configurator.
 struct StoryTheme: Equatable {
     let name: String
-    let gradientColors: [UIColor]
-    let accent: UIColor
+    let gradientColors: [PlatformColor]
+    let accent: PlatformColor
 
     /// The selectable themes; the first is derived from the user's own listening
     /// palette so every library gets a signature look.
     static func all(seedPalette: ArtworkPalette) -> [StoryTheme] {
         let first = seedPalette.colors.first ?? .systemIndigo
         var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
+        #if canImport(UIKit)
         first.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        #else
+        let rgb = first.usingColorSpace(.deviceRGB) ?? first
+        rgb.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        #endif
         let neighborHue = (hue + 0.09).truncatingRemainder(dividingBy: 1)
         let aurora = StoryTheme(
             name: "Aurora",
             gradientColors: [
-                UIColor(hue: hue, saturation: max(0.45, saturation * 0.9), brightness: 0.32, alpha: 1),
-                UIColor(hue: neighborHue, saturation: max(0.4, saturation * 0.8), brightness: 0.18, alpha: 1),
+                PlatformColor(hue: hue, saturation: max(0.45, saturation * 0.9), brightness: 0.32, alpha: 1),
+                PlatformColor(hue: neighborHue, saturation: max(0.4, saturation * 0.8), brightness: 0.18, alpha: 1),
                 .black,
             ],
-            accent: UIColor(hue: hue, saturation: min(1, max(0.5, saturation * 0.85)), brightness: 0.9, alpha: 1)
+            accent: PlatformColor(hue: hue, saturation: min(1, max(0.5, saturation * 0.85)), brightness: 0.9, alpha: 1)
         )
         return [
             aurora,
             StoryTheme(
                 name: "Sunset",
                 gradientColors: [
-                    UIColor(red: 0.55, green: 0.12, blue: 0.25, alpha: 1),
-                    UIColor(red: 0.35, green: 0.08, blue: 0.35, alpha: 1),
+                    PlatformColor(red: 0.55, green: 0.12, blue: 0.25, alpha: 1),
+                    PlatformColor(red: 0.35, green: 0.08, blue: 0.35, alpha: 1),
                     .black,
                 ],
-                accent: UIColor(red: 1, green: 0.55, blue: 0.4, alpha: 1)
+                accent: PlatformColor(red: 1, green: 0.55, blue: 0.4, alpha: 1)
             ),
             StoryTheme(
                 name: "Ocean",
                 gradientColors: [
-                    UIColor(red: 0.02, green: 0.25, blue: 0.38, alpha: 1),
-                    UIColor(red: 0.03, green: 0.12, blue: 0.3, alpha: 1),
+                    PlatformColor(red: 0.02, green: 0.25, blue: 0.38, alpha: 1),
+                    PlatformColor(red: 0.03, green: 0.12, blue: 0.3, alpha: 1),
                     .black,
                 ],
-                accent: UIColor(red: 0.35, green: 0.85, blue: 0.9, alpha: 1)
+                accent: PlatformColor(red: 0.35, green: 0.85, blue: 0.9, alpha: 1)
             ),
             StoryTheme(
                 name: "Orchid",
                 gradientColors: [
-                    UIColor(red: 0.35, green: 0.1, blue: 0.5, alpha: 1),
-                    UIColor(red: 0.15, green: 0.05, blue: 0.3, alpha: 1),
+                    PlatformColor(red: 0.35, green: 0.1, blue: 0.5, alpha: 1),
+                    PlatformColor(red: 0.15, green: 0.05, blue: 0.3, alpha: 1),
                     .black,
                 ],
-                accent: UIColor(red: 0.85, green: 0.55, blue: 1, alpha: 1)
+                accent: PlatformColor(red: 0.85, green: 0.55, blue: 1, alpha: 1)
             ),
             StoryTheme(
                 name: "Noir",
                 gradientColors: [
-                    UIColor(white: 0.16, alpha: 1),
-                    UIColor(white: 0.06, alpha: 1),
+                    PlatformColor(white: 0.16, alpha: 1),
+                    PlatformColor(white: 0.06, alpha: 1),
                     .black,
                 ],
                 accent: .white
@@ -129,29 +138,29 @@ struct StoryTheme: Equatable {
 /// representative album by the same artist — maximizing how many tiles get real
 /// art before the renderer reaches for monogram fallbacks.
 struct StoryArtwork {
-    let collage: [UIImage?]
-    let artistRows: [UIImage?]
-    let trackRows: [UIImage?]
+    let collage: [PlatformImage?]
+    let artistRows: [PlatformImage?]
+    let trackRows: [PlatformImage?]
 
-    var artistHero: UIImage? { artistRows.first ?? nil }
-    var trackHero: UIImage? { trackRows.first ?? nil }
+    var artistHero: PlatformImage? { artistRows.first ?? nil }
+    var trackHero: PlatformImage? { trackRows.first ?? nil }
 
     static let empty = StoryArtwork(collage: [], artistRows: [], trackRows: [])
 
     static func resolve(for data: YearInMusicData) -> StoryArtwork {
         let index = RecapLibraryIndex(albums: Library.shared.albums, tracks: Library.shared.allTracks)
 
-        func exactAlbumImage(title: String, artist: String) -> UIImage? {
+        func exactAlbumImage(title: String, artist: String) -> PlatformImage? {
             if let cached = AlbumArtworkCache.shared.artwork(forAlbum: title, artist: artist) {
                 return cached
             }
             if let data = try? DatabaseManager.shared.fetchAlbumArtwork(title: title, artist: artist) {
-                return UIImage(data: data)
+                return PlatformImage(data: data)
             }
             return nil
         }
 
-        func artForArtist(_ artist: String) -> UIImage? {
+        func artForArtist(_ artist: String) -> PlatformImage? {
             if let album = index.representativeAlbum(forArtist: artist) {
                 if let art = album.artwork ?? exactAlbumImage(title: album.title, artist: album.artist) { return art }
             }
@@ -161,7 +170,7 @@ struct StoryArtwork {
             return nil
         }
 
-        func artForAlbum(name: String, artist: String) -> UIImage? {
+        func artForAlbum(name: String, artist: String) -> PlatformImage? {
             if let exact = exactAlbumImage(title: name, artist: artist) { return exact }
             if let album = index.album(name: name, artist: artist) {
                 if let art = album.artwork ?? exactAlbumImage(title: album.title, artist: album.artist) { return art }
@@ -169,7 +178,7 @@ struct StoryArtwork {
             return artForArtist(artist)
         }
 
-        func artForTrack(title: String, artist: String) -> UIImage? {
+        func artForTrack(title: String, artist: String) -> PlatformImage? {
             if let track = index.track(title: title, artist: artist) {
                 if let art = track.artwork ?? exactAlbumImage(title: track.albumTitle, artist: track.artist) { return art }
             }

@@ -1,5 +1,10 @@
 import CryptoKit
+
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 final class ImageCache {
 
@@ -8,7 +13,7 @@ final class ImageCache {
     nonisolated private static let maxDiskCacheBytes = 100 * 1024 * 1024
     nonisolated private static let maxDiskCacheAge: TimeInterval = 90 * 24 * 60 * 60
 
-    private let memoryCache = NSCache<NSString, UIImage>()
+    private let memoryCache = NSCache<NSString, PlatformImage>()
     private let diskCacheURL: URL
     private let fileManager = FileManager.default
     private let ioQueue = DispatchQueue(label: "com.midgarcorp.flaccy.imagecache", qos: .utility)
@@ -38,7 +43,7 @@ final class ImageCache {
         }
     }
 
-    func image(forKey key: String) -> UIImage? {
+    func image(forKey key: String) -> PlatformImage? {
         let cacheKey = key as NSString
         if let cached = memoryCache.object(forKey: cacheKey) {
             return cached
@@ -46,7 +51,7 @@ final class ImageCache {
 
         let filePath = diskPath(forKey: key)
         guard let data = try? Data(contentsOf: filePath),
-              let diskImage = UIImage(data: data)
+              let diskImage = PlatformImage(data: data)
         else {
             return nil
         }
@@ -59,17 +64,17 @@ final class ImageCache {
     /// Off-main variant of `image(forKey:)`: on a memory miss, performs the disk read,
     /// decode, and `preparingForDisplay()` on a background queue so main-actor callers
     /// never block on I/O or contend with pending compression writes.
-    func loadImage(forKey key: String) async -> UIImage? {
+    func loadImage(forKey key: String) async -> PlatformImage? {
         let cacheKey = key as NSString
         if let cached = memoryCache.object(forKey: cacheKey) {
             return cached
         }
 
         let filePath = diskPath(forKey: key)
-        let diskImage = await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
+        let diskImage = await withCheckedContinuation { (continuation: CheckedContinuation<PlatformImage?, Never>) in
             readQueue.async {
                 guard let data = try? Data(contentsOf: filePath),
-                      let image = UIImage(data: data)
+                      let image = PlatformImage(data: data)
                 else {
                     continuation.resume(returning: nil)
                     return
@@ -84,7 +89,7 @@ final class ImageCache {
         return diskImage
     }
 
-    func store(_ image: UIImage, forKey key: String) {
+    func store(_ image: PlatformImage, forKey key: String) {
         let cost = estimateCost(of: image)
         memoryCache.setObject(image, forKey: key as NSString, cost: cost)
 
@@ -109,7 +114,7 @@ final class ImageCache {
     }
 
     func store(data: Data, forKey key: String) {
-        guard let image = UIImage(data: data) else { return }
+        guard let image = PlatformImage(data: data) else { return }
 
         let cost = estimateCost(of: image)
         memoryCache.setObject(image, forKey: key as NSString, cost: cost)
@@ -126,9 +131,9 @@ final class ImageCache {
         }
     }
 
-    func imageFromData(_ data: Data?) -> UIImage? {
+    func imageFromData(_ data: Data?) -> PlatformImage? {
         guard let data else { return nil }
-        return UIImage(data: data)
+        return PlatformImage(data: data)
     }
 
     private func diskPath(forKey key: String) -> URL {
@@ -142,7 +147,7 @@ final class ImageCache {
         return digest.map { String(format: "%02hhx", $0) }.joined()
     }
 
-    private func estimateCost(of image: UIImage) -> Int {
+    private func estimateCost(of image: PlatformImage) -> Int {
         guard let cgImage = image.cgImage else { return 0 }
         return cgImage.bytesPerRow * cgImage.height
     }

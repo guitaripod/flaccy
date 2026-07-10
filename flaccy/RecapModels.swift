@@ -1,4 +1,4 @@
-import UIKit
+import Foundation
 
 /// The immutable snapshot the Recap dashboard renders. Computed off the main
 /// thread from local scrobbles (plus an optional Last.fm profile) so it always

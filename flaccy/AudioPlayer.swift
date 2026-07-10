@@ -2,7 +2,12 @@ import AVFoundation
 import FlaccyCore
 import MediaPlayer
 import Network
+
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 protocol AudioPlaying: AnyObject {
     var queue: [Track] { get }
@@ -32,6 +37,9 @@ protocol AudioPlaying: AnyObject {
     func moveInQueue(from sourceIndex: Int, to destinationIndex: Int)
     func insertNext(_ track: Track)
     func addToQueue(_ track: Track)
+    #if os(macOS)
+    var volume: Float { get set }
+    #endif
     var sleepTimerRemaining: TimeInterval? { get }
     var sleepAtEndOfTrack: Bool { get }
     func setSleepTimer(minutes: Int)
@@ -60,9 +68,7 @@ final class AudioPlayer: AudioPlaying {
     private var playingItem: AVPlayerItem?
     private var preloadedItem: AVPlayerItem?
     private var preloadedIndex: Int?
-    private let impactLight = UIImpactFeedbackGenerator(style: .light)
-    private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
-    private let selectionFeedback = UISelectionFeedbackGenerator()
+    private let feedback = PlaybackFeedback()
 
     private var sleepTimer: Timer?
     private(set) var sleepTimerRemaining: TimeInterval?
@@ -129,6 +135,7 @@ final class AudioPlayer: AudioPlaying {
 
     private init() {
         configureRemoteCommands()
+        #if os(iOS)
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleWillResignActive), name: UIApplication.willResignActiveNotification, object: nil
         )
@@ -144,6 +151,17 @@ final class AudioPlayer: AudioPlaying {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleMediaServicesReset), name: AVAudioSession.mediaServicesWereResetNotification, object: nil
         )
+        #elseif os(macOS)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleWillResignActive), name: NSApplication.willResignActiveNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleWillResignActive), name: NSApplication.willTerminateNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleWillEnterForeground), name: NSApplication.didBecomeActiveNotification, object: nil
+        )
+        #endif
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleItemFailedToPlayToEnd(_:)), name: .AVPlayerItemFailedToPlayToEndTime, object: nil
         )
@@ -192,6 +210,7 @@ final class AudioPlayer: AudioPlaying {
         Task { await retryPendingScrobbles() }
     }
 
+    #if os(iOS)
     @objc private func handleInterruption(_ notification: Notification) {
         guard let info = notification.userInfo,
               let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
@@ -257,6 +276,7 @@ final class AudioPlayer: AudioPlaying {
             NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
         }
     }
+    #endif
 
     /// Skips past an item that cannot finish decoding so one corrupt file never stalls the whole queue.
     @objc private func handleItemFailedToPlayToEnd(_ notification: Notification) {
@@ -272,6 +292,9 @@ final class AudioPlayer: AudioPlaying {
     private func applyPlaybackState(_ playing: Bool) {
         isPlaying = playing
         updateNowPlayingInfo()
+        #if os(macOS)
+        MPNowPlayingInfoCenter.default().playbackState = playing ? .playing : .paused
+        #endif
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
     }
 
@@ -310,7 +333,7 @@ final class AudioPlayer: AudioPlaying {
             queue = tracks
             currentIndex = index
         }
-        impactMedium.impactOccurred()
+        feedback.medium()
         loadTrack(at: currentIndex)
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
     }
@@ -320,12 +343,12 @@ final class AudioPlayer: AudioPlaying {
         guard let player else {
             if playbackIsGated() { return }
             if queue.indices.contains(currentIndex) {
-                impactLight.impactOccurred()
+                feedback.light()
                 loadTrack(at: currentIndex)
             }
             return
         }
-        impactLight.impactOccurred()
+        feedback.light()
         if !isPlaying, playbackIsGated() { return }
         if !isPlaying, player.currentItem == nil, queue.indices.contains(currentIndex) {
             loadTrack(at: currentIndex)
@@ -346,7 +369,7 @@ final class AudioPlayer: AudioPlaying {
         checkScrobbleOnSkip()
         guard currentIndex + 1 < queue.count else {
             if repeatMode == .all && !queue.isEmpty {
-                selectionFeedback.selectionChanged()
+                feedback.selection()
                 loadTrack(at: 0)
             } else {
                 player?.pause()
@@ -354,13 +377,13 @@ final class AudioPlayer: AudioPlaying {
             }
             return
         }
-        selectionFeedback.selectionChanged()
+        feedback.selection()
         loadTrack(at: currentIndex + 1)
     }
 
     func previousTrack() {
         if currentTime > 3 {
-            selectionFeedback.selectionChanged()
+            feedback.selection()
             player?.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
                 self?.updateNowPlayingInfo()
                 NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
@@ -372,7 +395,7 @@ final class AudioPlayer: AudioPlaying {
             player?.seek(to: .zero)
             return
         }
-        selectionFeedback.selectionChanged()
+        feedback.selection()
         loadTrack(at: currentIndex - 1)
     }
 
@@ -457,7 +480,7 @@ final class AudioPlayer: AudioPlaying {
 
     func toggleShuffle() {
         shuffleEnabled.toggle()
-        impactLight.impactOccurred()
+        feedback.light()
 
         if queue.count > 1 {
             let current = currentTrack
@@ -494,7 +517,7 @@ final class AudioPlayer: AudioPlaying {
         case .all: repeatMode = .one
         case .one: repeatMode = .off
         }
-        impactLight.impactOccurred()
+        feedback.light()
         resyncPreloadedItems()
         NotificationCenter.default.post(name: AudioPlayer.shuffleRepeatDidChange, object: nil)
     }
@@ -510,14 +533,14 @@ final class AudioPlayer: AudioPlaying {
             }
         }
         resyncPreloadedItems()
-        impactMedium.impactOccurred()
+        feedback.medium()
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
     }
 
     func jumpToIndex(_ index: Int) {
         guard index >= 0, index < queue.count else { return }
         checkScrobbleOnSkip()
-        selectionFeedback.selectionChanged()
+        feedback.selection()
         loadTrack(at: index)
     }
 
@@ -532,7 +555,7 @@ final class AudioPlayer: AudioPlaying {
             currentIndex -= 1
         }
         resyncPreloadedItems()
-        impactLight.impactOccurred()
+        feedback.light()
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
     }
 
@@ -563,7 +586,7 @@ final class AudioPlayer: AudioPlaying {
             originalQueue.append(track)
         }
         resyncPreloadedItems()
-        impactLight.impactOccurred()
+        feedback.light()
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
         if wasEmpty {
             NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
@@ -575,7 +598,7 @@ final class AudioPlayer: AudioPlaying {
         queue.append(track)
         originalQueue.append(track)
         resyncPreloadedItems()
-        impactLight.impactOccurred()
+        feedback.light()
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
         if wasEmpty {
             NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
@@ -599,14 +622,14 @@ final class AudioPlayer: AudioPlaying {
             }
         }
         NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
-        impactLight.impactOccurred()
+        feedback.light()
     }
 
     func setSleepTimerEndOfTrack() {
         cancelSleepTimer()
         sleepAtEndOfTrack = true
         NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
-        impactLight.impactOccurred()
+        feedback.light()
     }
 
     func cancelSleepTimer() {
@@ -621,6 +644,9 @@ final class AudioPlayer: AudioPlaying {
         let player = AVQueuePlayer(items: [item])
         player.automaticallyWaitsToMinimizeStalling = false
         player.actionAtItemEnd = .advance
+        #if os(macOS)
+        player.volume = volume
+        #endif
         installTimeControlObservation(on: player)
         installCurrentItemObservation(on: player)
         return player
@@ -754,8 +780,31 @@ final class AudioPlayer: AudioPlaying {
     }
 
     private func activateSession() {
+        #if os(iOS)
         try? AVAudioSession.sharedInstance().setActive(true)
+        #endif
     }
+
+    #if os(macOS)
+    private static let volumeDefaultsKey = "flaccy.mac.volume"
+
+    static let volumeDidChange = Notification.Name("PlayerVolumeDidChange")
+
+    /// App-level output volume driving `AVQueuePlayer.volume`, persisted across
+    /// launches; the desktop convention, leaving hardware volume untouched.
+    var volume: Float {
+        get {
+            guard UserDefaults.standard.object(forKey: Self.volumeDefaultsKey) != nil else { return 0.8 }
+            return min(1, max(0, UserDefaults.standard.float(forKey: Self.volumeDefaultsKey)))
+        }
+        set {
+            let clamped = min(1, max(0, newValue))
+            UserDefaults.standard.set(clamped, forKey: Self.volumeDefaultsKey)
+            player?.volume = clamped
+            NotificationCenter.default.post(name: Self.volumeDidChange, object: nil)
+        }
+    }
+    #endif
 
     private func removePlayerObservers() {
         if let observer = timeObserver {
@@ -1054,7 +1103,7 @@ final class AudioPlayer: AudioPlaying {
         }
     }
 
-    private func resolveArtwork(for track: Track) -> UIImage? {
+    private func resolveArtwork(for track: Track) -> PlatformImage? {
         track.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
     }
 
@@ -1098,7 +1147,7 @@ final class AudioPlayer: AudioPlaying {
 
     func saveQueueState() {
         guard !(isRestoringQueue && queue.isEmpty) else { return }
-        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let docsDir = LibraryPaths.root
         let paths = queue.map { relativePath(for: $0, docsDir: docsDir) }
         UserDefaults.standard.set(paths, forKey: "flaccy.queue.paths")
         if shuffleEnabled {
@@ -1180,9 +1229,9 @@ final class AudioPlayer: AudioPlaying {
     /// album through the shared downsampled cache instead of decoding each
     /// track's embedded cover, so a restored queue never pins duplicate
     /// full-size images.
-    private func restoredTrack(from record: TrackRecord, artworkByAlbum: inout [String: UIImage?]) -> Track {
+    private func restoredTrack(from record: TrackRecord, artworkByAlbum: inout [String: PlatformImage?]) -> Track {
         let key = "\(record.albumTitle)|\(record.artist)"
-        let artwork: UIImage?
+        let artwork: PlatformImage?
         if let cached = artworkByAlbum[key] {
             artwork = cached
         } else {
@@ -1203,7 +1252,7 @@ final class AudioPlayer: AudioPlaying {
     ) {
         guard queue.isEmpty, playingItem == nil else { return }
 
-        var artworkByAlbum: [String: UIImage?] = [:]
+        var artworkByAlbum: [String: PlatformImage?] = [:]
         var restoredTracks: [Track] = []
         var restoredPaths: [String] = []
         for (path, record) in records {
@@ -1400,7 +1449,7 @@ final class AudioPlayer: AudioPlaying {
 
     private func recencyWeights() -> [URL: Double] {
         guard let keys = try? DatabaseManager.shared.fetchTrackSortKeys() else { return [:] }
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        let docs = LibraryPaths.root
         let now = Date()
         let halfLife: Double = 3 * 24 * 3600
         var map: [URL: Double] = [:]
@@ -1463,5 +1512,34 @@ final class AudioPlayer: AudioPlaying {
             olderThan: Date().addingTimeInterval(-14 * 86_400)
         )
         return try DatabaseManager.shared.fetchPendingScrobbles()
+    }
+}
+
+/// Transport feedback: real haptic generators on iOS, silent on macOS where
+/// hover and pressed states carry the same role.
+private struct PlaybackFeedback {
+
+    #if os(iOS)
+    private let impactLight = UIImpactFeedbackGenerator(style: .light)
+    private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
+    private let selectionFeedback = UISelectionFeedbackGenerator()
+    #endif
+
+    func light() {
+        #if os(iOS)
+        impactLight.impactOccurred()
+        #endif
+    }
+
+    func medium() {
+        #if os(iOS)
+        impactMedium.impactOccurred()
+        #endif
+    }
+
+    func selection() {
+        #if os(iOS)
+        selectionFeedback.selectionChanged()
+        #endif
     }
 }

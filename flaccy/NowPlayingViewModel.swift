@@ -1,6 +1,11 @@
 import Combine
 import Foundation
+
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 final class NowPlayingViewModel {
 
@@ -9,7 +14,7 @@ final class NowPlayingViewModel {
         let artist: String
         let albumTitle: String
         let artistAlbum: String
-        let artwork: UIImage?
+        let artwork: PlatformImage?
         let isPlaying: Bool
         let currentTime: TimeInterval
         let duration: TimeInterval
@@ -64,7 +69,7 @@ final class NowPlayingViewModel {
         let total = audioPlayer.duration
         let remaining = max(0, total - current)
 
-        var artwork: UIImage?
+        var artwork: PlatformImage?
         if let track {
             let full = track.artwork
                 ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)

@@ -1,4 +1,4 @@
-import UIKit
+import Foundation
 
 nonisolated struct Album: Sendable, Hashable, Identifiable {
 
@@ -6,7 +6,7 @@ nonisolated struct Album: Sendable, Hashable, Identifiable {
 
     let title: String
     let artist: String
-    let artwork: UIImage?
+    let artwork: PlatformImage?
     let tracks: [Track]
     let year: String?
     let genre: String?

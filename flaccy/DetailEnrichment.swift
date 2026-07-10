@@ -1,8 +1,14 @@
+#if canImport(UIKit)
 import UIKit
+#else
+import Foundation
+#endif
 
 /// Glass chips and pills for the album/artist detail headers, matching the
 /// app's Liquid Glass language with a Reduce Transparency fallback.
 enum DetailChip {
+
+#if canImport(UIKit)
 
     /// A rounded glass capsule label used for genre tags.
     static func genre(_ text: String) -> UIView {
@@ -88,6 +94,7 @@ enum DetailChip {
         scroll.isHidden = chips.isEmpty
         return scroll
     }
+#endif
 
     /// The album's peak lossless-first quality badge, derived from the track
     /// with the highest sample rate then bit depth, e.g. "FLAC · 24/96".

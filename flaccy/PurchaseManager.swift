@@ -15,7 +15,11 @@ final class PurchaseManager {
     static let stateDidChange = Notification.Name("PurchaseStateDidChange")
     static let paywallRequired = Notification.Name("PaywallRequired")
 
+    #if os(macOS)
+    static let lifetimeProductID = "com.midgarcorp.flaccy.mac.lifetime"
+    #else
     static let lifetimeProductID = "com.midgarcorp.flaccy.lifetime"
+    #endif
     static let trialLengthDays = 7
 
     private(set) var state: EntitlementState = .trial(daysRemaining: trialLengthDays)
@@ -167,7 +171,11 @@ final class PurchaseManager {
 /// stored after-first-unlock and never synced to iCloud.
 private enum TrialClock {
 
+    #if os(macOS)
+    private static let service = "com.midgarcorp.flaccy.mac"
+    #else
     private static let service = "com.midgarcorp.flaccy.trial"
+    #endif
     private static let account = "trialStart"
 
     static func ensureStartDate() -> Date {

@@ -1,4 +1,4 @@
-import UIKit
+import Foundation
 
 /// The visual density of the Albums and Songs lists, cycled from a single
 /// nav-bar button and persisted across launches. Grid is a cover wall, list is

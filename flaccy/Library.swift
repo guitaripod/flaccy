@@ -1,5 +1,10 @@
 import Foundation
+
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 protocol LibraryProviding: AnyObject {
     var albums: [Album] { get }
@@ -26,7 +31,7 @@ final class Library: LibraryProviding {
     private let db = DatabaseManager.shared
 
     nonisolated private var documentsDirectory: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        LibraryPaths.root
     }
 
     private var isReloading = false
@@ -160,6 +165,15 @@ final class Library: LibraryProviding {
         }
 
         if !removedPaths.isEmpty {
+            #if os(macOS)
+            guard !diskPaths.isEmpty else {
+                AppLogger.warning(
+                    "Sync: library root scanned empty while database holds \(knownPaths.count) tracks; skipping destructive cleanup",
+                    category: .content
+                )
+                return false
+            }
+            #endif
             do {
                 try db.deleteTracksNotIn(relativePaths: diskPaths)
             } catch {
@@ -404,14 +418,18 @@ final class Library: LibraryProviding {
     nonisolated private func relativePath(for url: URL) -> String {
         let docsPath = documentsDirectory.standardizedFileURL.path
         let filePath = url.standardizedFileURL.path
+        var relative = url.lastPathComponent
         if filePath.hasPrefix(docsPath) {
-            let relative = String(filePath.dropFirst(docsPath.count))
+            relative = String(filePath.dropFirst(docsPath.count))
             if relative.hasPrefix("/") {
-                return String(relative.dropFirst())
+                relative = String(relative.dropFirst())
             }
-            return relative
         }
-        return url.lastPathComponent
+        #if os(macOS)
+        return canonicalSyncPath(relative)
+        #else
+        return relative
+        #endif
     }
 
     private static let analysisRetryInterval: TimeInterval = 24 * 60 * 60

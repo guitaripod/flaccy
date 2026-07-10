@@ -1,5 +1,5 @@
+import Foundation
 import MusicKit
-import UIKit
 
 nonisolated struct MusicKitSongMatch: Sendable {
     let title: String

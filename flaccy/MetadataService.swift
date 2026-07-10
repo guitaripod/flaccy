@@ -1,6 +1,11 @@
 import FlaccyCore
 import Foundation
+
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 enum MetadataService {
 
@@ -14,7 +19,7 @@ enum MetadataService {
         let artist = result.artist ?? pathInfo.artist ?? "Unknown Artist"
         let albumTitle = result.albumTitle ?? pathInfo.album ?? "Unknown Album"
         let trackNumber = result.trackNumber > 0 ? result.trackNumber : fileInfo.trackNumber
-        let artwork = result.artworkData.flatMap(UIImage.init(data:))
+        let artwork = result.artworkData.flatMap(PlatformImage.init(data:))
 
         return Track(
             fileURL: url,
@@ -43,8 +48,7 @@ enum MetadataService {
     }
 
     nonisolated private static func parsePathInfo(from url: URL) -> PathInfo {
-        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
-        let docsPath = docsDir.path
+        let docsPath = LibraryPaths.root.path
         let filePath = url.standardizedFileURL.deletingLastPathComponent().path
 
         guard filePath.count > docsPath.count else {

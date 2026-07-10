@@ -1,5 +1,10 @@
 import Combine
+
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 nonisolated enum LibraryItem: Hashable, Sendable {
     case album(Album)
@@ -15,7 +20,7 @@ nonisolated enum LibraryItem: Hashable, Sendable {
 nonisolated struct ArtistItem: Hashable, Sendable {
     let name: String
     let albumCount: Int
-    let artwork: UIImage?
+    let artwork: PlatformImage?
 
     nonisolated static func == (lhs: ArtistItem, rhs: ArtistItem) -> Bool {
         lhs.name == rhs.name
@@ -170,8 +175,7 @@ final class LibraryViewModel {
         return map
     }
 
-    private static let documentsPath = FileManager.default
-        .urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL.path
+    private static let documentsPath = LibraryPaths.root.path
 
     private func relativePath(for url: URL) -> String {
         let docs = Self.documentsPath
@@ -392,7 +396,7 @@ final class LibraryViewModel {
                 cachedSortedSongs = result
                 return result
             }
-            let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+            let docsDir = LibraryPaths.root
             var lastPlayedByURL = [URL: Date]()
             for key in sortKeys {
                 if let date = key.lastPlayed {

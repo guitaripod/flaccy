@@ -1,4 +1,4 @@
-import UIKit
+import Foundation
 
 nonisolated struct Track: Sendable, Hashable, Identifiable {
 
@@ -10,7 +10,7 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
     let albumTitle: String
     let trackNumber: Int
     let duration: TimeInterval
-    let artwork: UIImage?
+    let artwork: PlatformImage?
     let dbID: Int64?
     var codec: String?
     var bitDepth: Int?
@@ -51,9 +51,8 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
         hasher.combine(fileURL)
     }
 
-    static func from(record: TrackRecord, artwork: UIImage?) -> Track {
-        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
-        let absoluteURL = docsDir.appendingPathComponent(record.fileURL)
+    static func from(record: TrackRecord, artwork: PlatformImage?) -> Track {
+        let absoluteURL = LibraryPaths.root.appendingPathComponent(record.fileURL)
         return Track(
             fileURL: absoluteURL,
             title: record.title,
@@ -71,9 +70,8 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
         )
     }
 
-    static func from(light record: LightTrackRecord, artwork: UIImage?) -> Track {
-        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
-        let absoluteURL = docsDir.appendingPathComponent(record.fileURL)
+    static func from(light record: LightTrackRecord, artwork: PlatformImage?) -> Track {
+        let absoluteURL = LibraryPaths.root.appendingPathComponent(record.fileURL)
         return Track(
             fileURL: absoluteURL,
             title: record.title,

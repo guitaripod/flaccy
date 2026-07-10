@@ -1,5 +1,5 @@
 import Combine
-import UIKit
+import Foundation
 
 /// Drives the Recap dashboard: computes a `RecapData` snapshot for the selected
 /// period from local scrobbles (offline-first) enriched with the Last.fm profile,

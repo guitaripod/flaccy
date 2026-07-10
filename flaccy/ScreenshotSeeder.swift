@@ -1,7 +1,12 @@
-#if targetEnvironment(simulator)
+#if targetEnvironment(simulator) || (os(macOS) && DEBUG)
 import CoreGraphics
 import Foundation
+
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Populates the Simulator with an entirely fictional demo library — invented
 /// artists, albums, tracks, and original procedurally-generated cover art — so
@@ -21,7 +26,7 @@ enum ScreenshotSeeder {
         let db = DatabaseManager.shared
         guard (try? db.fetchAllTrackRelativePaths())?.isEmpty ?? true else { return }
 
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let documents = LibraryPaths.root
         writeAudioFiles(for: catalog, in: documents)
         insertTracks(for: catalog, db: db)
         insertAlbumInfo(for: catalog, db: db)
@@ -286,7 +291,7 @@ private enum CoverArtRenderer {
         drawMotif(album.motif, in: ctx, size: s, accent: album.accent)
         drawVignette(in: ctx, size: s)
         guard let image = ctx.makeImage() else { return nil }
-        return UIImage(cgImage: image).jpegData(compressionQuality: 0.9)
+        return PlatformImage(cgImage: image).jpegData(compressionQuality: 0.9)
     }
 
     private static func drawMotif(_ motif: Int, in ctx: CGContext, size s: CGFloat, accent: CGColor) {

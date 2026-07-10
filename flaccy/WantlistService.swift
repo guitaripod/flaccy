@@ -1,6 +1,5 @@
 import AVFoundation
 import Foundation
-import UIKit
 
 nonisolated enum WantlistState: String, Sendable {
     case wanted, dismissed, acquired

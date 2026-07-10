@@ -1,8 +1,13 @@
-import UIKit
 import simd
 
+#if canImport(UIKit)
+import UIKit
+#else
+import AppKit
+#endif
+
 struct ArtworkPalette: Equatable {
-    let colors: [UIColor]
+    let colors: [PlatformColor]
 
     var simdColors: [SIMD4<Float>] {
         colors.map { color in
@@ -10,12 +15,17 @@ struct ArtworkPalette: Equatable {
             var g: CGFloat = 0
             var b: CGFloat = 0
             var a: CGFloat = 0
+            #if canImport(UIKit)
             color.getRed(&r, green: &g, blue: &b, alpha: &a)
+            #else
+            let rgb = color.usingColorSpace(.deviceRGB) ?? color
+            rgb.getRed(&r, green: &g, blue: &b, alpha: &a)
+            #endif
             return SIMD4<Float>(Float(r), Float(g), Float(b), 1)
         }
     }
 
-    var dominant: UIColor { colors.first ?? .systemIndigo }
+    var dominant: PlatformColor { colors.first ?? .systemIndigo }
 }
 
 enum ArtworkPaletteExtractor {
@@ -29,7 +39,7 @@ enum ArtworkPaletteExtractor {
     }
 
     static func palette(
-        for image: UIImage?,
+        for image: PlatformImage?,
         cacheKey: String,
         fallbackSeed: String,
         completion: @escaping (ArtworkPalette) -> Void
@@ -60,7 +70,7 @@ enum ArtworkPaletteExtractor {
         let baseHue = CGFloat(hash % 360) / 360
         let offsets: [CGFloat] = [0, 0.09, 0.5, 0.16]
         let colors = offsets.enumerated().map { index, offset in
-            UIColor(
+            PlatformColor(
                 hue: (baseHue + offset).truncatingRemainder(dividingBy: 1),
                 saturation: index == 2 ? 0.45 : 0.65,
                 brightness: index.isMultiple(of: 2) ? 0.62 : 0.42,
@@ -72,7 +82,7 @@ enum ArtworkPaletteExtractor {
 
     /// Downsamples the artwork to a tiny bitmap and runs a short k-means pass (k = 4)
     /// so extraction stays cheap enough for the utility queue on every track change.
-    private static func extract(from image: UIImage) -> ArtworkPalette? {
+    private static func extract(from image: PlatformImage) -> ArtworkPalette? {
         guard let pixels = downsampledPixels(from: image, dimension: 24), !pixels.isEmpty else {
             AppLogger.warning("Palette extraction failed to downsample artwork", category: .ui)
             return nil
@@ -107,7 +117,7 @@ enum ArtworkPaletteExtractor {
         }
         weighted.sort { $0.1 > $1.1 }
         let colors = weighted.map { entry in
-            UIColor(
+            PlatformColor(
                 red: CGFloat(entry.0.x),
                 green: CGFloat(entry.0.y),
                 blue: CGFloat(entry.0.z),
@@ -122,7 +132,7 @@ enum ArtworkPaletteExtractor {
         return (0..<4).map { pixels[min($0 * stride, pixels.count - 1)] }
     }
 
-    private static func downsampledPixels(from image: UIImage, dimension: Int) -> [SIMD3<Float>]? {
+    private static func downsampledPixels(from image: PlatformImage, dimension: Int) -> [SIMD3<Float>]? {
         guard let cgImage = image.cgImage else { return nil }
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let bytesPerRow = dimension * 4

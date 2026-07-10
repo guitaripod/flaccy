@@ -1,5 +1,10 @@
-import UIKit
 import ImageIO
+
+#if canImport(UIKit)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// Two-tier artwork cache. List and grid cells use the thumbnail tier, decoded
 /// straight from the source bytes at a small pixel size via ImageIO so a
@@ -13,10 +18,10 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
     private static let thumbnailMaxPixelSize: CGFloat = 480
     private static let fullMaxPixelSize: CGFloat = 1600
 
-    private let memoryCache = NSCache<NSString, UIImage>()
+    private let memoryCache = NSCache<NSString, PlatformImage>()
     private let loadQueue = DispatchQueue(label: "com.midgarcorp.flaccy.artwork", qos: .userInitiated, attributes: .concurrent)
     private var pending = Set<String>()
-    private var completionsByKey = [String: [(UIImage?) -> Void]]()
+    private var completionsByKey = [String: [(PlatformImage?) -> Void]]()
     private let pendingLock = NSLock()
 
     private init() {
@@ -24,19 +29,19 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
         memoryCache.totalCostLimit = 100 * 1024 * 1024
     }
 
-    func artwork(forAlbum title: String, artist: String) -> UIImage? {
+    func artwork(forAlbum title: String, artist: String) -> PlatformImage? {
         memoryCache.object(forKey: cacheKey(title: title, artist: artist, tier: .full) as NSString)
     }
 
-    func thumbnail(forAlbum title: String, artist: String) -> UIImage? {
+    func thumbnail(forAlbum title: String, artist: String) -> PlatformImage? {
         memoryCache.object(forKey: cacheKey(title: title, artist: artist, tier: .thumbnail) as NSString)
     }
 
-    func loadArtwork(forAlbum title: String, artist: String, completion: @escaping (UIImage?) -> Void) {
+    func loadArtwork(forAlbum title: String, artist: String, completion: @escaping (PlatformImage?) -> Void) {
         load(title: title, artist: artist, tier: .full, completion: completion)
     }
 
-    func loadThumbnail(forAlbum title: String, artist: String, completion: @escaping (UIImage?) -> Void) {
+    func loadThumbnail(forAlbum title: String, artist: String, completion: @escaping (PlatformImage?) -> Void) {
         load(title: title, artist: artist, tier: .thumbnail, completion: completion)
     }
 
@@ -57,7 +62,7 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
         }
     }
 
-    private func load(title: String, artist: String, tier: Tier, completion: ((UIImage?) -> Void)?) {
+    private func load(title: String, artist: String, tier: Tier, completion: ((PlatformImage?) -> Void)?) {
         let key = cacheKey(title: title, artist: artist, tier: tier)
 
         if let cached = memoryCache.object(forKey: key as NSString) {
@@ -78,7 +83,7 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
         loadQueue.async { [weak self] in
             guard let self else { return }
 
-            var image: UIImage?
+            var image: PlatformImage?
             if let data = try? DatabaseManager.shared.fetchAlbumArtwork(title: title, artist: artist) {
                 image = Self.decode(data, maxPixelSize: tier.maxPixelSize)
                 if let image {
@@ -101,10 +106,10 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
     /// Decodes at most `maxPixelSize` on the longest edge without ever
     /// materializing the full-resolution bitmap, and returns an image that is
     /// already decoded so first display costs nothing on the main thread.
-    private static func decode(_ data: Data, maxPixelSize: CGFloat) -> UIImage? {
+    private static func decode(_ data: Data, maxPixelSize: CGFloat) -> PlatformImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
-            return UIImage(data: data)
+            return PlatformImage(data: data)
         }
         let thumbnailOptions = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -113,9 +118,9 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
         ] as CFDictionary
         guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
-            return UIImage(data: data)
+            return PlatformImage(data: data)
         }
-        return UIImage(cgImage: cgImage)
+        return PlatformImage(cgImage: cgImage)
     }
 
     private func cacheKey(title: String, artist: String, tier: Tier) -> String {
@@ -123,7 +128,7 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
     }
 }
 
-nonisolated private extension UIImage {
+nonisolated private extension PlatformImage {
     var memoryCost: Int {
         guard let cgImage else { return 0 }
         return cgImage.bytesPerRow * cgImage.height
