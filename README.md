@@ -1,96 +1,103 @@
 <p align="center">
   <h1 align="center">flaccy</h1>
-  <p align="center">Lossless music player for iOS. AI-organized. Last.fm connected. Share anywhere.</p>
+  <p align="center">Lossless music player for iPhone, Apple Watch, Mac, and Linux. AI-organized. Last.fm connected. Share anywhere.</p>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/iOS%2018.6+-blue?logo=apple" alt="Platform">
+  <img src="https://img.shields.io/badge/iOS%2018.6+-blue?logo=apple" alt="iOS">
+  <img src="https://img.shields.io/badge/watchOS%2011+-blue?logo=apple" alt="watchOS">
+  <img src="https://img.shields.io/badge/macOS%2026+-blue?logo=apple" alt="macOS">
+  <img src="https://img.shields.io/badge/Linux%20(GTK4)-yellow?logo=linux&logoColor=white" alt="Linux">
   <img src="https://img.shields.io/badge/swift-5.0-orange?logo=swift" alt="Swift">
-  <img src="https://img.shields.io/badge/Groq%20LLM-purple" alt="AI">
+  <img src="https://img.shields.io/badge/rust-2021-brown?logo=rust" alt="Rust">
   <img src="https://img.shields.io/badge/Last.fm-red?logo=lastdotfm" alt="Last.fm">
-  <img src="https://img.shields.io/badge/MusicKit-pink?logo=apple" alt="MusicKit">
 </p>
 
 <p align="center">
   <img src="screenshot.png" alt="flaccy" width="100%">
 </p>
 
-Drop your music files onto your iPhone via USB or the Files app. flaccy scans the directory structure, sends file paths to a Groq LLM to identify artists, albums, and track names, then fetches cover art and metadata from Last.fm and Apple Music. No manual tagging.
+Point flaccy at your music files. It scans the directory structure, sends file paths to an LLM (Groq llama-3.3-70b via a proxy — no API key needed) to identify artists, albums, and track names, then fetches cover art and metadata from Last.fm and Apple Music. No manual tagging.
+
+## Platforms
+
+| Platform | What it is | Get it |
+|---|---|---|
+| **iPhone** | The full app: gapless playback, AI organization, scrobbling, charts, Year in Music, wantlist, lyrics, stations | [App Store](https://apps.apple.com/app/id6787493695) |
+| **Apple Watch** | Standalone phone-free player — sync tracks, play offline through AirPods | Bundled with the iOS app |
+| **Mac** | Native AppKit app with Liquid Glass: full feature parity plus folder watching, menu bar player, media keys, multi-column sorting, keyboard-first browsing | Mac App Store — in review |
+| **Linux** | Native GTK4/libadwaita player: gapless GStreamer playback, MPRIS media keys, scrobbling, synced lyrics, listening stats | `curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh \| sh` or `yay -S flaccy-bin` |
 
 ## Features
 
 ### Playback
-- **Gapless playback** with AVQueuePlayer across all supported formats
-- **Audio formats** — FLAC, M4A, AAC, ALAC, MP3, WAV, AIFF, CAF
-- **Shuffle & repeat** — shuffle queue, repeat all, repeat one
-- **Sleep timer** — 15/30/45/60 minutes or end of current track
-- **AirPlay** streaming to external speakers and devices
-- **Dynamic Island** Live Activity with real-time track info
-- **Queue persistence** — kill the app, relaunch, resume where you left off
+- **Gapless playback** across all supported formats — FLAC, M4A, AAC, ALAC, MP3, WAV, AIFF, CAF
+- **Quality badges** — codec, bit depth, and sample rate on every track (FLAC · 24/96)
+- **Shuffle & repeat** — history-aware weighted shuffle, repeat all, repeat one
+- **Autoplay continuation** — the queue never ends; flaccy extends it from your own library
+- **Sleep timer**, **AirPlay**, and **queue persistence** across launches
+- Media keys, Control Center, and lock-screen controls (MPRIS on Linux)
 
 ### Library
-- **Albums, Songs, Artists, Playlists** — four browsable tabs with search across all
-- **Sorting** — albums by title/artist/year/recently added; songs by title/artist/recently played/date added; artists by name/album count
-- **Alphabetical index** — quick-jump scrubber on list views
-- **Recently played** — horizontal album carousel on the albums tab
-- **Playlists** — create, reorder tracks, long-press to add from anywhere
-- **Context menus everywhere** — play next, add to queue, add to playlist, share
-
-### AI Library Organization
-- **Groq LLM** (llama-3.3-70b) identifies music from file paths and scene release names
-- Cleans metadata, assigns correct track numbers, identifies artists and albums
-- Runs only on unanalyzed tracks — skips what's already been processed
+- **Albums, Songs, Artists, Playlists** with search, sorting, and filter chips (Lossless / Hi-Res / Loved)
+- **AI organization** — messy folder names and scene releases identified and cleaned automatically
+- **Folder watching** (Mac) — files you add appear instantly, indexed in place from any folder
+- **Context menus everywhere** — play next, queue, station, playlist, share, lyrics
 
 ### Last.fm
-- **Scrobbling** — in-app OAuth, automatic scrobbles with offline queue and batch retry
-- **Now playing** updates in real-time as you listen
-- **Charts** — your Last.fm top tracks by period (week/month/3 months/6 months/year/all time), matched against your local library with play/shuffle
-- **Artist bios** and album metadata enrichment
+- **Scrobbling** with offline write-ahead queue and automatic retry — identical semantics on every platform
+- **Loved tracks**, **charts by period**, listening clock, streak heatmap
+- **Recap & Year in Music** — shareable story cards and posters (full-resolution export on Mac)
+- Artist bios, album metadata enrichment, similar-artist discovery
+
+### Discovery
+- **Stations** — start a radio queue from any song, artist, or your whole library
+- **Suggested playlists** — Heavy Rotation, On Repeat, Rediscover
+- **Wantlist** — tracks albums you're hunting for, resolves automatically when you acquire them
+- **Songlink sharing** — share any track as a universal link (Spotify, YouTube, Tidal, Apple Music…)
 
 ### Synced Lyrics
-- Fetched from LRCLIB with karaoke-style scrolling display
-- Current line highlighted, tap any line to seek
-- Falls back to plain text lyrics or instrumental indicator
+- LRCLIB karaoke-style scrolling, current line highlighted, click/tap any line to seek
 
-### Sharing via Songlink
-- **Share any track or album** to streaming platforms via song.link
-- Uses **MusicKit** to find tracks on Apple Music, then Songlink resolves links for Spotify, YouTube, Tidal, Amazon Music, Deezer, SoundCloud, and more
-- **Streaming links sheet** — tap a platform to share its specific link, copy the universal link, or open the share sheet
-- Available from every context menu, album headers, and the now playing screen
+## Repository layout
 
-### Now Playing
-- Full-screen artwork with swipe gestures (left/right for next/previous)
-- Progress scrubbing with time display
-- Tappable artist name navigates to artist detail
-- Controls: AirPlay, sleep timer, share, lyrics, queue
+```
+flaccy/                 iOS app (programmatic UIKit, MVVM) — many files shared with the Mac target
+flaccyMac/              macOS app (programmatic AppKit, Liquid Glass, MVVM)
+flaccyWatch Watch App/  standalone watchOS app (SwiftUI + Observation)
+FlaccyCore/             shared SPM package: models, playback protocol, scanner, logging, sync contract
+linux/                  Linux app (Rust, GTK4 + libadwaita + GStreamer + rusqlite)
+scripts/                target generators (ruby xcodeproj): add_mac_target.rb, add_watch_target.rb
+```
 
-### Album Art
-- Cascade: embedded artwork → Last.fm → Apple Music (via MusicKit)
-- Lazy loading — artwork fetched on demand per album, cached in memory
-- SQLite-backed persistent storage
-
-## Setup
+## Setup (Apple platforms)
 
 ```
 git clone https://github.com/guitaripod/flaccy.git
 cd flaccy
 cp flaccy/Secrets.swift.example flaccy/Secrets.swift
-# Edit Secrets.swift with your API keys
+# Edit Secrets.swift with your Last.fm API key (optional — app works without it)
 open flaccy.xcodeproj
 ```
 
-**API keys** (both optional — app works without them):
 - [Last.fm](https://www.last.fm/api/account/create) — scrobbling, artist bios, album art, charts
-- [Groq](https://console.groq.com/keys) — AI metadata cleanup
+- **MusicKit** — enable in the Apple Developer portal (Identifiers → your App ID → App Services → MusicKit). Used for Songlink sharing and Apple Music artwork fallback; degrades gracefully without it.
+- AI metadata cleanup needs no key — it goes through the flaccy-api proxy Worker.
 
-**MusicKit** — enable in Apple Developer portal (Identifiers → your App ID → App Services → MusicKit). Required for Songlink sharing and Apple Music artwork fallback.
+## Setup (Linux)
+
+```
+cd linux && cargo build --release
+```
+
+GTK4, libadwaita ≥ 1.7, and GStreamer (base + good plugins) required. Building without `FLACCY_LASTFM_KEY`/`FLACCY_LASTFM_SECRET` env vars just disables scrobbling. See [linux/README.md](linux/README.md).
 
 ## Stack
 
-Programmatic UIKit · MVVM · GRDB (SQLite) · AVQueuePlayer · MusicKit · ActivityKit · Combine
+Apple: Programmatic UIKit & AppKit · SwiftUI (watch) · MVVM · GRDB (SQLite) · AVQueuePlayer · MusicKit · Combine — one dependency: [GRDB.swift](https://github.com/groue/GRDB.swift)
 
-One dependency: [GRDB.swift](https://github.com/groue/GRDB.swift)
+Linux: Rust · gtk4-rs + libadwaita · GStreamer (playbin3) · rusqlite · lofty · mpris-server
 
 ## Requirements
 
-iOS 18.6+ · iPhone · Xcode 26+
+iOS 18.6+ / watchOS 11+ / macOS 26+ · Xcode 26+ — Linux: any distro with GTK 4.14+ (x86_64 prebuilt, or build from source)
