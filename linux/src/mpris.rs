@@ -3,7 +3,7 @@ use crate::events::AppEvent;
 use crate::library::Track;
 use gtk::glib;
 use mpris_server::zbus::zvariant::ObjectPath;
-use mpris_server::{Metadata, PlaybackStatus, Player, Time};
+use mpris_server::{LoopStatus, Metadata, PlaybackStatus, Player, Time};
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -81,6 +81,30 @@ pub fn start(core: &Rc<AppCore>) {
                 core.set_volume(volume.clamp(0.0, 1.0));
             });
         }
+        {
+            let core = Rc::clone(&core);
+            player.connect_set_shuffle(move |_, wanted| {
+                if core.player.shuffle_enabled() != wanted {
+                    core.player.toggle_shuffle();
+                }
+            });
+        }
+        {
+            let core = Rc::clone(&core);
+            player.connect_set_loop_status(move |_, wanted| {
+                let target = match wanted {
+                    LoopStatus::None => crate::player::RepeatMode::Off,
+                    LoopStatus::Playlist => crate::player::RepeatMode::All,
+                    LoopStatus::Track => crate::player::RepeatMode::One,
+                };
+                for _ in 0..3 {
+                    if core.player.repeat_mode() == target {
+                        break;
+                    }
+                    core.player.cycle_repeat();
+                }
+            });
+        }
 
         glib::spawn_future_local(player.run());
         *core.mpris.borrow_mut() = Some(Rc::clone(&player));
@@ -115,6 +139,22 @@ pub fn start(core: &Rc<AppCore>) {
                     player.set_position(time);
                     glib::spawn_future_local(async move {
                         let _ = player.seeked(time).await;
+                    });
+                }
+                AppEvent::ShuffleChanged(enabled) => {
+                    let enabled = *enabled;
+                    glib::spawn_future_local(async move {
+                        let _ = player.set_shuffle(enabled).await;
+                    });
+                }
+                AppEvent::RepeatChanged(mode) => {
+                    let status = match mode {
+                        crate::player::RepeatMode::Off => LoopStatus::None,
+                        crate::player::RepeatMode::All => LoopStatus::Playlist,
+                        crate::player::RepeatMode::One => LoopStatus::Track,
+                    };
+                    glib::spawn_future_local(async move {
+                        let _ = player.set_loop_status(status).await;
                     });
                 }
                 AppEvent::VolumeChanged(volume) => {

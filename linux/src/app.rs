@@ -26,6 +26,12 @@ pub struct AppCore {
     pub current_play: RefCell<Option<crate::scrobbler::CurrentPlay>>,
     pub drain_in_flight: Rc<Cell<bool>>,
     pub mpris: RefCell<Option<Rc<mpris_server::Player>>>,
+    pub enrich_tx: RefCell<Option<async_channel::Sender<crate::enrichment::EnrichRequest>>>,
+    pub import_in_flight: Cell<bool>,
+    pub sample_in_flight: Cell<bool>,
+    pub sleep_remaining: Cell<Option<i64>>,
+    pub sleep_end_of_track: Cell<bool>,
+    pub autoplay_in_flight: Cell<bool>,
 }
 
 impl AppCore {
@@ -58,6 +64,12 @@ impl AppCore {
             current_play: RefCell::new(None),
             drain_in_flight: Rc::new(Cell::new(false)),
             mpris: RefCell::new(None),
+            enrich_tx: RefCell::new(None),
+            import_in_flight: Cell::new(false),
+            sample_in_flight: Cell::new(false),
+            sleep_remaining: Cell::new(None),
+            sleep_end_of_track: Cell::new(false),
+            autoplay_in_flight: Cell::new(false),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
@@ -70,6 +82,7 @@ impl AppCore {
 
     pub fn reload_library(&self) {
         let library = library::load(&self.db);
+        self.update_history_weights();
         crate::logger::info(
             "library",
             &format!(
@@ -83,13 +96,31 @@ impl AppCore {
         self.hub.emit(&AppEvent::LibraryReloaded);
     }
 
+    fn update_history_weights(&self) {
+        let now = chrono::Utc::now().timestamp();
+        let weights = self
+            .db
+            .track_sort_keys()
+            .into_iter()
+            .map(|(rel, last_played)| (rel, crate::station::history_weight(last_played, now)))
+            .collect();
+        self.player.set_history_weights(weights);
+    }
+
+    pub fn toast(&self, message: &str) {
+        self.hub.emit(&AppEvent::Toast(message.to_string()));
+    }
+
     pub fn start(self: &Rc<Self>, _window: &adw::ApplicationWindow) {
         self.reload_library();
         self.start_tick();
         crate::mpris::start(self);
         crate::scrobbler::startup_maintenance(self);
+        crate::enrichment::start(self);
+        self.wire_autoplay();
         self.rescan();
         self.schedule_periodic_drain();
+        self.schedule_enrichment_pass();
         if config::demo_mode() {
             self.schedule_demo_autoplay();
         }
@@ -116,6 +147,12 @@ impl AppCore {
             };
             let start = album.tracks.iter().position(|t| t.title == wanted).unwrap_or(0);
             core.play_tracks(album.tracks.clone(), start);
+            if std::env::var_os("FLACCY_DEMO_QUEUE").is_some() {
+                core.hub.emit(&AppEvent::QueueToggled(true));
+            }
+            if std::env::var_os("FLACCY_DEMO_SLEEP").is_some() {
+                core.set_sleep_timer_minutes(30);
+            }
             glib::ControlFlow::Break
         });
     }
@@ -264,6 +301,286 @@ impl AppCore {
         });
     }
 
+    /// Runs the library-wide background enrichment pass a few seconds after
+    /// launch so startup scan and first paint are never blocked by it.
+    fn schedule_enrichment_pass(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(Duration::from_secs(6), move || {
+            if let Some(core) = weak.upgrade() {
+                crate::enrichment::schedule_background_pass(&core);
+            }
+        });
+    }
+
+    pub fn set_sleep_timer_minutes(self: &Rc<Self>, minutes: i64) {
+        self.sleep_end_of_track.set(false);
+        self.sleep_remaining.set(Some(minutes * 60));
+        self.emit_sleep_state();
+        crate::logger::info("playback", &format!("sleep timer set: {minutes} min"));
+        self.ensure_sleep_tick();
+    }
+
+    pub fn set_sleep_timer_end_of_track(self: &Rc<Self>) {
+        self.sleep_remaining.set(None);
+        self.sleep_end_of_track.set(true);
+        self.emit_sleep_state();
+        crate::logger::info("playback", "sleep timer set: end of track");
+    }
+
+    pub fn cancel_sleep_timer(&self) {
+        self.sleep_remaining.set(None);
+        self.sleep_end_of_track.set(false);
+        self.emit_sleep_state();
+        crate::logger::info("playback", "sleep timer cancelled");
+    }
+
+    fn emit_sleep_state(&self) {
+        self.hub.emit(&AppEvent::SleepTimerChanged {
+            remaining_seconds: self.sleep_remaining.get(),
+            end_of_track: self.sleep_end_of_track.get(),
+        });
+    }
+
+    fn ensure_sleep_tick(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local(Duration::from_secs(1), move || {
+            let Some(core) = weak.upgrade() else {
+                return glib::ControlFlow::Break;
+            };
+            let Some(remaining) = core.sleep_remaining.get() else {
+                return glib::ControlFlow::Break;
+            };
+            let next = remaining - 1;
+            if next <= 0 {
+                core.sleep_remaining.set(None);
+                core.emit_sleep_state();
+                if core.player.is_playing() {
+                    core.player.toggle_play_pause();
+                }
+                crate::logger::info("playback", "sleep timer fired: paused");
+                return glib::ControlFlow::Break;
+            }
+            core.sleep_remaining.set(Some(next));
+            core.emit_sleep_state();
+            glib::ControlFlow::Continue
+        });
+    }
+
+    /// Starts an artist station: similar-artists are resolved off-main (with
+    /// the 30-day cache), the station is built with Efraimidis–Spirakis
+    /// weighting and artist spacing, then played with the station seed set so
+    /// autoplay continuation stays on-theme.
+    pub fn start_artist_station(self: &Rc<Self>, seed_artist: &str) {
+        self.start_station(seed_artist.to_string(), None);
+    }
+
+    pub fn start_track_station(self: &Rc<Self>, rel_path: &str) {
+        let library = self.library.borrow().clone();
+        let Some(track) = library.track_by_rel_path(rel_path).cloned() else { return };
+        self.start_station(track.artist.clone(), Some(track));
+    }
+
+    fn start_station(self: &Rc<Self>, seed_artist: String, seed_track: Option<Track>) {
+        let library = self.library.borrow().clone();
+        let pool = library.tracks.clone();
+        let library_artists: Vec<String> =
+            library.artists.iter().map(|a| a.name.clone()).collect();
+        let db_path = self.db_path.clone();
+        let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());
+        let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
+        let seed_for_thread = seed_artist.clone();
+        std::thread::Builder::new()
+            .name("flaccy-station".into())
+            .spawn(move || {
+                let similar = crate::db::Db::open(&db_path)
+                    .map(|db| {
+                        let client = crate::lastfm::LastFmClient::new(session_key);
+                        crate::enrichment::similar_in_library_blocking(
+                            &db,
+                            client.as_ref(),
+                            &seed_for_thread,
+                            &library_artists,
+                        )
+                    })
+                    .unwrap_or_default();
+                let excluding = std::collections::HashSet::new();
+                let station = match &seed_track {
+                    Some(track) => crate::station::track_station(
+                        track,
+                        &similar,
+                        &pool,
+                        &excluding,
+                        crate::station::STATION_SIZE,
+                    ),
+                    None => crate::station::artist_station(
+                        &seed_for_thread,
+                        &similar,
+                        &pool,
+                        &excluding,
+                        crate::station::STATION_SIZE,
+                    ),
+                };
+                let _ = tx.send_blocking(station);
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok(station) = rx.recv().await else { return };
+            let Some(core) = weak.upgrade() else { return };
+            if station.is_empty() {
+                core.toast("Not enough music for a station");
+                return;
+            }
+            crate::logger::info(
+                "playback",
+                &format!("station started: seed '{seed_artist}', {} tracks", station.len()),
+            );
+            crate::scrobbler::checkpoint_skip(&core);
+            core.player
+                .play_queue_with_seed(station, 0, Some(seed_artist));
+        });
+    }
+
+    /// Autoplay continuation: when the queue nears exhaustion (repeat off),
+    /// appends a station-built batch seeded by the station seed artist or the
+    /// current track's artist, so the music never ends.
+    fn wire_autoplay(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.hub.subscribe(move |event| {
+            let Some(core) = weak.upgrade() else { return false };
+            if let AppEvent::TrackChanged(Some(_)) = event {
+                core.maybe_schedule_autoplay();
+            }
+            true
+        });
+    }
+
+    fn maybe_schedule_autoplay(self: &Rc<Self>) {
+        if !self.config.borrow().autoplay_continuation {
+            return;
+        }
+        if self.autoplay_in_flight.get() {
+            return;
+        }
+        if self.player.repeat_mode() != crate::player::RepeatMode::Off {
+            return;
+        }
+        let (current, len) = self.player.current_index_and_len();
+        if len == 0 || current + 2 < len {
+            return;
+        }
+        let Some(current_track) = self.player.current_track() else { return };
+        let seed_artist = self
+            .player
+            .station_seed()
+            .unwrap_or_else(|| current_track.artist.clone());
+        self.autoplay_in_flight.set(true);
+        crate::logger::info(
+            "playback",
+            &format!("autoplay continuation building (seed '{seed_artist}')"),
+        );
+
+        let library = self.library.borrow().clone();
+        let pool = library.tracks.clone();
+        let library_artists: Vec<String> =
+            library.artists.iter().map(|a| a.name.clone()).collect();
+        let snapshot = self.player.queue_snapshot();
+        let excluding: std::collections::HashSet<String> =
+            snapshot.queue.iter().map(|t| t.rel_path.clone()).collect();
+        let db_path = self.db_path.clone();
+        let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());
+        let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
+        let seed_for_thread = seed_artist.clone();
+        std::thread::Builder::new()
+            .name("flaccy-autoplay".into())
+            .spawn(move || {
+                let batch = crate::db::Db::open(&db_path)
+                    .map(|db| {
+                        let client = crate::lastfm::LastFmClient::new(session_key);
+                        let similar = crate::enrichment::similar_in_library_blocking(
+                            &db,
+                            client.as_ref(),
+                            &seed_for_thread,
+                            &library_artists,
+                        );
+                        let station = crate::station::artist_station(
+                            &seed_for_thread,
+                            &similar,
+                            &pool,
+                            &excluding,
+                            crate::station::CONTINUATION_BATCH_SIZE,
+                        );
+                        if !station.is_empty() {
+                            return station;
+                        }
+                        crate::station::library_radio(
+                            &pool,
+                            &db.play_counts_by_track(),
+                            &excluding,
+                            crate::station::CONTINUATION_BATCH_SIZE,
+                        )
+                    })
+                    .unwrap_or_default();
+                let _ = tx.send_blocking(batch);
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let batch = rx.recv().await.unwrap_or_default();
+            let Some(core) = weak.upgrade() else { return };
+            core.autoplay_in_flight.set(false);
+            if batch.is_empty() {
+                crate::logger::info("playback", "autoplay continuation found nothing to add");
+                return;
+            }
+            crate::logger::info(
+                "playback",
+                &format!("autoplay continuation appended {} tracks", batch.len()),
+            );
+            core.player.append_tracks(batch);
+        });
+    }
+
+    /// Copies dropped audio files/folders into the library root and rescans.
+    pub fn import_dropped_paths(self: &Rc<Self>, paths: Vec<std::path::PathBuf>) {
+        let root = self.music_root();
+        let (tx, rx) = async_channel::bounded::<(usize, usize)>(1);
+        std::thread::Builder::new()
+            .name("flaccy-dnd".into())
+            .spawn(move || {
+                let mut copied = 0;
+                let mut skipped = 0;
+                for path in paths {
+                    copy_into_library(&path, &root, &mut copied, &mut skipped);
+                }
+                let _ = tx.send_blocking((copied, skipped));
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok((copied, skipped)) = rx.recv().await else { return };
+            let Some(core) = weak.upgrade() else { return };
+            crate::logger::info(
+                "library",
+                &format!("drag-drop import: {copied} copied, {skipped} skipped"),
+            );
+            if copied > 0 {
+                core.toast(&format!(
+                    "Imported {copied} file{}{}",
+                    if copied == 1 { "" } else { "s" },
+                    if skipped > 0 {
+                        format!(" · {skipped} skipped")
+                    } else {
+                        String::new()
+                    }
+                ));
+                core.rescan();
+            } else {
+                core.toast("Nothing to import — drop audio files or folders");
+            }
+        });
+    }
+
     fn wire_scrobbler(self: &Rc<Self>) {
         let core = Rc::downgrade(self);
         self.hub.subscribe(move |event| {
@@ -271,6 +588,11 @@ impl AppCore {
             match event {
                 AppEvent::TrackChanged(track) => {
                     crate::scrobbler::on_track_started(&core, track.clone());
+                    if core.sleep_end_of_track.replace(false) && core.player.is_playing() {
+                        core.player.toggle_play_pause();
+                        core.emit_sleep_state();
+                        crate::logger::info("playback", "sleep timer (end of track) fired: paused");
+                    }
                 }
                 AppEvent::NaturalEnd(track) => {
                     crate::scrobbler::on_natural_end(&core, track);
@@ -335,6 +657,59 @@ impl Library {
     }
 }
 
+const IMPORT_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
+
+fn copy_into_library(source: &std::path::Path, root: &std::path::Path, copied: &mut usize, skipped: &mut usize) {
+    if source.is_dir() {
+        let Ok(entries) = std::fs::read_dir(source) else {
+            *skipped += 1;
+            return;
+        };
+        for entry in entries.flatten() {
+            copy_into_library(&entry.path(), root, copied, skipped);
+        }
+        return;
+    }
+    let extension = source
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    if !IMPORT_EXTENSIONS.contains(&extension.as_str()) {
+        *skipped += 1;
+        return;
+    }
+    if source.starts_with(root) {
+        *skipped += 1;
+        return;
+    }
+    let Some(name) = source.file_name() else {
+        *skipped += 1;
+        return;
+    };
+    let target_dir = root.join("Imported");
+    if std::fs::create_dir_all(&target_dir).is_err() {
+        *skipped += 1;
+        return;
+    }
+    let mut destination = target_dir.join(name);
+    let mut counter = 1;
+    while destination.exists() {
+        let stem = source.file_stem().unwrap_or_default().to_string_lossy();
+        destination = target_dir.join(format!("{stem} ({counter}).{extension}"));
+        counter += 1;
+    }
+    match std::fs::copy(source, &destination) {
+        Ok(_) => *copied += 1,
+        Err(err) => {
+            crate::logger::error(
+                "library",
+                &format!("import copy failed for {}: {err}", source.display()),
+            );
+            *skipped += 1;
+        }
+    }
+}
+
 pub fn activate(app: &adw::Application, smoke: bool) {
     if let Some(window) = app.active_window() {
         window.present();
@@ -344,4 +719,31 @@ pub fn activate(app: &adw::Application, smoke: bool) {
     let window = ui::window::build(app, &core);
     core.start(&window);
     window.present();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::copy_into_library;
+
+    #[test]
+    fn copies_audio_skips_other_and_duplicates() {
+        let temp = std::env::temp_dir().join(format!("flaccy-dnd-test-{}", std::process::id()));
+        let source = temp.join("src");
+        let root = temp.join("root");
+        std::fs::create_dir_all(source.join("nested")).expect("mkdir");
+        std::fs::create_dir_all(&root).expect("mkdir root");
+        std::fs::write(source.join("song.flac"), b"x").expect("write");
+        std::fs::write(source.join("nested/deep.mp3"), b"y").expect("write");
+        std::fs::write(source.join("notes.txt"), b"z").expect("write");
+        let mut copied = 0;
+        let mut skipped = 0;
+        copy_into_library(&source, &root, &mut copied, &mut skipped);
+        assert_eq!(copied, 2);
+        assert_eq!(skipped, 1);
+        assert!(root.join("Imported/song.flac").exists());
+        assert!(root.join("Imported/deep.mp3").exists());
+        copy_into_library(&source.join("song.flac"), &root, &mut copied, &mut skipped);
+        assert!(root.join("Imported/song (1).flac").exists());
+        let _ = std::fs::remove_dir_all(&temp);
+    }
 }

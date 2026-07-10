@@ -1,7 +1,9 @@
 mod app;
 mod config;
 mod db;
+mod enrichment;
 mod events;
+mod importer;
 mod lastfm;
 mod library;
 mod logger;
@@ -9,8 +11,13 @@ mod lyrics;
 mod mpris;
 mod palette;
 mod player;
+mod recap;
+mod samples;
 mod scanner;
 mod scrobbler;
+mod songlink;
+mod station;
+mod suggested;
 mod ui;
 
 use adw::prelude::*;

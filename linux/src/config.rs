@@ -12,6 +12,9 @@ pub struct Config {
     pub window_height: i32,
     pub volume: f64,
     pub appearance: String,
+    pub autoplay_continuation: bool,
+    pub import_page_cursor: u32,
+    pub sidebar_index: i32,
 }
 
 impl Default for Config {
@@ -22,6 +25,9 @@ impl Default for Config {
             window_height: 760,
             volume: 0.9,
             appearance: "system".to_string(),
+            autoplay_continuation: true,
+            import_page_cursor: 1,
+            sidebar_index: 0,
         }
     }
 }

@@ -21,6 +21,28 @@ pub enum AppEvent {
     LastFmChanged,
     SearchChanged(String),
     LyricsToggled(bool),
+    QueueChanged,
+    Toast(String),
+    QueueToggled(bool),
+    SleepTimerChanged {
+        remaining_seconds: Option<i64>,
+        end_of_track: bool,
+    },
+    AlbumEnriched {
+        title: String,
+        artist: String,
+    },
+    HistoryImport {
+        imported: usize,
+        page: u32,
+        total_pages: u32,
+        done: bool,
+    },
+    SampleDownload {
+        text: String,
+        done: bool,
+        failed: bool,
+    },
 }
 
 type Subscriber = Rc<dyn Fn(&AppEvent) -> bool>;

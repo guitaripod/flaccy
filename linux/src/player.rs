@@ -2,7 +2,6 @@ use crate::events::{AppEvent, EventHub};
 use crate::library::Track;
 use gst::prelude::*;
 use gtk::glib;
-use rand::seq::SliceRandom;
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -33,6 +32,13 @@ struct Shared {
     shuffle: bool,
     pending_advance: Option<Track>,
     root: PathBuf,
+    station_seed: Option<String>,
+    history_weights: std::collections::HashMap<String, f64>,
+}
+
+pub struct QueueSnapshot {
+    pub queue: Vec<Track>,
+    pub current: usize,
 }
 
 /// Resolves the queue index of a gapless-committed track after possible queue
@@ -99,6 +105,8 @@ impl Player {
             shuffle: false,
             pending_advance: None,
             root,
+            station_seed: None,
+            history_weights: std::collections::HashMap::new(),
         }));
 
         {
@@ -174,6 +182,14 @@ impl Player {
         }
     }
 
+    /// Updates the per-track history weights (max(0.05, age/(age+3d)) from
+    /// lastPlayed) that bias shuffle away from recently played tracks.
+    pub fn set_history_weights(&self, weights: std::collections::HashMap<String, f64>) {
+        if let Ok(mut guard) = self.shared.lock() {
+            guard.history_weights = weights;
+        }
+    }
+
     fn on_stream_start(&self) {
         let advanced = {
             let Ok(mut guard) = self.shared.lock() else { return };
@@ -197,6 +213,7 @@ impl Player {
                 ),
             );
             self.hub.emit(&AppEvent::TrackChanged(current));
+            self.hub.emit(&AppEvent::QueueChanged);
         }
     }
 
@@ -227,6 +244,10 @@ impl Player {
     }
 
     pub fn play_queue(&self, tracks: Vec<Track>, start: usize) {
+        self.play_queue_with_seed(tracks, start, None);
+    }
+
+    pub fn play_queue_with_seed(&self, tracks: Vec<Track>, start: usize, seed: Option<String>) {
         if tracks.is_empty() {
             return;
         }
@@ -235,13 +256,16 @@ impl Player {
             guard.original = tracks.clone();
             if guard.shuffle {
                 let chosen = tracks[start.min(tracks.len() - 1)].clone();
-                let mut rest: Vec<Track> = tracks
+                let rest: Vec<Track> = tracks
                     .iter()
                     .enumerate()
                     .filter(|(i, _)| *i != start.min(tracks.len() - 1))
                     .map(|(_, t)| t.clone())
                     .collect();
-                rest.shuffle(&mut rand::rng());
+                let weights = guard.history_weights.clone();
+                let rest = crate::station::weighted_shuffle(rest, |t| {
+                    *weights.get(&t.rel_path).unwrap_or(&1.0)
+                });
                 let mut queue = vec![chosen];
                 queue.extend(rest);
                 guard.queue = queue;
@@ -251,10 +275,12 @@ impl Player {
                 guard.current = start.min(guard.queue.len() - 1);
             }
             guard.pending_advance = None;
+            guard.station_seed = seed;
             guard.queue[guard.current].clone()
         };
         self.load_and_play(&track);
         self.hub.emit(&AppEvent::TrackChanged(Some(track)));
+        self.hub.emit(&AppEvent::QueueChanged);
     }
 
     fn load_and_play(&self, track: &Track) {
@@ -365,6 +391,7 @@ impl Player {
         };
         self.load_and_play(&track);
         self.hub.emit(&AppEvent::TrackChanged(Some(track)));
+        self.hub.emit(&AppEvent::QueueChanged);
     }
 
     pub fn insert_next(&self, track: Track) {
@@ -384,6 +411,8 @@ impl Player {
             .map(|p| p + 1)
             .unwrap_or(guard.original.len());
         guard.original.insert(original_pos, track);
+        drop(guard);
+        self.hub.emit(&AppEvent::QueueChanged);
     }
 
     pub fn add_to_queue(&self, track: Track) {
@@ -395,6 +424,8 @@ impl Player {
         }
         guard.queue.push(track.clone());
         guard.original.push(track);
+        drop(guard);
+        self.hub.emit(&AppEvent::QueueChanged);
     }
 
     pub fn toggle_shuffle(&self) {
@@ -405,14 +436,17 @@ impl Player {
                 if !guard.queue.is_empty() {
                     guard.original = guard.queue.clone();
                     let current = guard.queue[guard.current].clone();
-                    let mut rest: Vec<Track> = guard
+                    let rest: Vec<Track> = guard
                         .queue
                         .iter()
                         .enumerate()
                         .filter(|(i, _)| *i != guard.current)
                         .map(|(_, t)| t.clone())
                         .collect();
-                    rest.shuffle(&mut rand::rng());
+                    let weights = guard.history_weights.clone();
+                    let rest = crate::station::weighted_shuffle(rest, |t| {
+                        *weights.get(&t.rel_path).unwrap_or(&1.0)
+                    });
                     let mut queue = vec![current];
                     queue.extend(rest);
                     guard.queue = queue;
@@ -434,6 +468,7 @@ impl Player {
             guard.shuffle
         };
         self.hub.emit(&AppEvent::ShuffleChanged(enabled));
+        self.hub.emit(&AppEvent::QueueChanged);
     }
 
     pub fn cycle_repeat(&self) {
@@ -508,6 +543,102 @@ impl Player {
     #[allow(dead_code)]
     pub fn has_previous(&self) -> bool {
         self.shared.lock().map(|g| !g.queue.is_empty()).unwrap_or(false)
+    }
+
+    pub fn queue_snapshot(&self) -> QueueSnapshot {
+        self.shared
+            .lock()
+            .map(|g| QueueSnapshot {
+                queue: g.queue.clone(),
+                current: g.current,
+            })
+            .unwrap_or(QueueSnapshot {
+                queue: Vec::new(),
+                current: 0,
+            })
+    }
+
+    pub fn station_seed(&self) -> Option<String> {
+        self.shared.lock().ok().and_then(|g| g.station_seed.clone())
+    }
+
+    /// Removes an upcoming or history queue entry (never the current track),
+    /// keeping the current index pointing at the same track.
+    pub fn remove_at(&self, index: usize) {
+        {
+            let Ok(mut guard) = self.shared.lock() else { return };
+            if index >= guard.queue.len() || index == guard.current {
+                return;
+            }
+            let removed = guard.queue.remove(index);
+            if let Some(pos) = guard
+                .original
+                .iter()
+                .position(|t| t.rel_path == removed.rel_path)
+            {
+                guard.original.remove(pos);
+            }
+            if index < guard.current {
+                guard.current -= 1;
+            }
+        }
+        self.hub.emit(&AppEvent::QueueChanged);
+    }
+
+    /// Moves an up-next entry (index > current) to another up-next slot.
+    pub fn move_queue_entry(&self, from: usize, to: usize) {
+        {
+            let Ok(mut guard) = self.shared.lock() else { return };
+            let len = guard.queue.len();
+            if from >= len || to >= len || from <= guard.current || to <= guard.current {
+                return;
+            }
+            let moved = guard.queue.remove(from);
+            guard.queue.insert(to, moved);
+        }
+        self.hub.emit(&AppEvent::QueueChanged);
+    }
+
+    pub fn clear_up_next(&self) {
+        {
+            let Ok(mut guard) = self.shared.lock() else { return };
+            let keep = guard.current + 1;
+            if keep >= guard.queue.len() {
+                return;
+            }
+            let dropped: Vec<String> = guard.queue[keep..]
+                .iter()
+                .map(|t| t.rel_path.clone())
+                .collect();
+            guard.queue.truncate(keep);
+            guard
+                .original
+                .retain(|t| !dropped.contains(&t.rel_path));
+        }
+        self.hub.emit(&AppEvent::QueueChanged);
+    }
+
+    /// Appends a continuation batch to the tail of the queue (autoplay /
+    /// station continuation), mirroring into the original order.
+    pub fn append_tracks(&self, tracks: Vec<Track>) {
+        if tracks.is_empty() {
+            return;
+        }
+        {
+            let Ok(mut guard) = self.shared.lock() else { return };
+            for track in tracks {
+                guard.queue.push(track.clone());
+                guard.original.push(track);
+            }
+        }
+        self.hub.emit(&AppEvent::QueueChanged);
+    }
+
+    pub fn current_index_and_len(&self) -> (usize, usize) {
+        self.shared
+            .lock()
+            .map(|g| (g.current, g.queue.len()))
+            .unwrap_or((0, 0))
     }
 
     pub fn gst_state_is_playing(&self) -> bool {
