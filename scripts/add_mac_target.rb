@@ -114,6 +114,14 @@ settings = {
 mac_target.build_configurations.each do |config|
   config.build_settings.merge!(settings)
   config.build_settings.delete('IPHONEOS_DEPLOYMENT_TARGET')
+  if config.name == 'Release'
+    config.build_settings.merge!(
+      'CODE_SIGN_STYLE' => 'Manual',
+      'CODE_SIGN_IDENTITY' => 'Apple Distribution',
+      'PROVISIONING_PROFILE_SPECIFIER' => 'flaccy-mac-appstore-2026',
+      'DEVELOPMENT_TEAM' => TEAM
+    )
+  end
 end
 
 mac_group = project.main_group.children.find do |c|
@@ -169,6 +177,48 @@ end
 link_package_product(project, mac_target, 'FlaccyCore')
 link_package_product(project, mac_target, 'GRDB', grdb_pkg)
 
+UITEST_NAME = 'flaccyMacUITests'
+uitest_target = project.targets.find { |t| t.name == UITEST_NAME }
+if uitest_target
+  puts 'Mac UI test target already exists; refreshing settings'
+else
+  uitest_target = project.new_target(:ui_test_bundle, UITEST_NAME, :osx, '26.0')
+  puts 'Created mac UI test target'
+end
+uitest_settings = {
+  'SDKROOT' => 'macosx',
+  'MACOSX_DEPLOYMENT_TARGET' => '26.0',
+  'PRODUCT_NAME' => UITEST_NAME,
+  'PRODUCT_BUNDLE_IDENTIFIER' => "#{MAC_BUNDLE_ID}.uitests",
+  'GENERATE_INFOPLIST_FILE' => 'YES',
+  'CODE_SIGN_STYLE' => 'Automatic',
+  'DEVELOPMENT_TEAM' => TEAM,
+  'SWIFT_VERSION' => '5.0',
+  'TEST_TARGET_NAME' => MAC_NAME,
+  'LD_RUNPATH_SEARCH_PATHS' => '$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks',
+}
+uitest_target.build_configurations.each do |config|
+  config.build_settings.merge!(uitest_settings)
+  config.build_settings.delete('IPHONEOS_DEPLOYMENT_TARGET')
+  config.build_settings.delete('INFOPLIST_FILE')
+end
+uitest_target.add_dependency(mac_target) unless uitest_target.dependencies.any? { |d| d.target == mac_target }
+
+uitest_group = project.main_group.children.find do |c|
+  c.is_a?(Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup) && c.path == UITEST_NAME
+end
+unless uitest_group
+  uitest_group = project.new(Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup)
+  uitest_group.path = UITEST_NAME
+  uitest_group.source_tree = '<group>'
+  project.main_group.children << uitest_group
+  puts 'Created flaccyMacUITests synchronized root group'
+end
+unless uitest_target.file_system_synchronized_groups.include?(uitest_group)
+  uitest_target.file_system_synchronized_groups << uitest_group
+  puts 'Attached flaccyMacUITests group to UI test target'
+end
+
 project.save
 puts 'Saved project.'
 
@@ -179,6 +229,14 @@ unless File.exist?(scheme_path)
   scheme.set_launch_target(mac_target)
   scheme.save_as(PROJECT, MAC_NAME, true)
   puts 'Created shared scheme flaccyMac'
+end
+
+scheme = Xcodeproj::XCScheme.new(scheme_path)
+unless scheme.test_action.testables.any? { |t| t.buildable_references.any? { |r| r.target_name == UITEST_NAME } }
+  testable = Xcodeproj::XCScheme::TestAction::TestableReference.new(uitest_target)
+  scheme.test_action.add_testable(testable)
+  scheme.save!
+  puts 'Added flaccyMacUITests to flaccyMac scheme test action'
 end
 
 scheme_xml = File.read(scheme_path)

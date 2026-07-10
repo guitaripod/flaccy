@@ -22,7 +22,9 @@ final class MainWindowController: NSWindowController {
         window.toolbarStyle = .unified
         window.minSize = NSSize(width: 960, height: 600)
         window.center()
-        window.setFrameAutosaveName("FlaccyMainWindow")
+        if Self.debugWindowSize() == nil {
+            window.setFrameAutosaveName("FlaccyMainWindow")
+        }
         window.isReleasedWhenClosed = false
 
         self.init(window: window)
@@ -33,6 +35,10 @@ final class MainWindowController: NSWindowController {
         window.toolbar = toolbar
 
         contentViewController = RootContainerViewController()
+        if let size = Self.debugWindowSize() {
+            window.setContentSize(size)
+            window.center()
+        }
         installSpaceKeyMonitor()
         NotificationCenter.default.addObserver(
             self, selector: #selector(focusSearchField), name: .flaccyFocusSearch, object: nil
@@ -44,6 +50,21 @@ final class MainWindowController: NSWindowController {
         if let spaceKeyMonitor {
             NSEvent.removeMonitor(spaceKeyMonitor)
         }
+    }
+
+    /// DEBUG-only fixed content size for the screenshot rig, parsed from a
+    /// `--window-size 1440x900` launch argument so captures are exactly the
+    /// aspect the Mac App Store expects regardless of any saved frame.
+    private static func debugWindowSize() -> NSSize? {
+        #if DEBUG
+        guard let index = CommandLine.arguments.firstIndex(of: "--window-size"),
+              index + 1 < CommandLine.arguments.count else { return nil }
+        let parts = CommandLine.arguments[index + 1].lowercased().split(separator: "x")
+        guard parts.count == 2, let width = Double(parts[0]), let height = Double(parts[1]) else { return nil }
+        return NSSize(width: width, height: height)
+        #else
+        return nil
+        #endif
     }
 
     @objc private func focusSearchField() {

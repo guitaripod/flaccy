@@ -21,6 +21,7 @@
 		8493917450A16A02594F223F /* flaccyWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8E47E1D598B706E94B056080 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C433D55BD6A1974A842EC01C /* GRDB */; };
 		94EEA69301AB52580318B7E7 /* WatchTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9DDE13019C6B5BC73D42B17 /* WatchTheme.swift */; };
+		A1D00E014A13D8A615E7C46D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1AB36944B652EA1E9E81BEA /* Cocoa.framework */; };
 		CA99A2EA58555ABCCFD86321 /* SampleContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B013C8839D5A863DFE6791 /* SampleContent.swift */; };
 		D3446621CB91CB204AD64EAF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC3821FD60497EF57CD4BDC8 /* RootView.swift */; };
 		D3957B9F09EDCDDDB9BFD553 /* flaccyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BE96F0B1F12FFE3EBA355F /* flaccyWatchApp.swift */; };
@@ -31,6 +32,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		0CFC9E09C3D8DC5D193A6D86 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C2776C22F7D0282007FF196 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 87865B95620E8A89697320AA;
+			remoteInfo = flaccyMac;
+		};
 		313486C10012669327EF7ED8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 2C2776C22F7D0282007FF196 /* Project object */;
@@ -77,6 +85,7 @@
 		3AC28FB864167FA1CD5F9AC4 /* ArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ArtworkView.swift; path = Support/ArtworkView.swift; sourceTree = "<group>"; };
 		483CF523EE5ED3E295BFF6B1 /* Flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A7C11ED2F7D000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		5174AF607781A6F23E0F345D /* flaccyMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		61186AD73843676DB85FD70F /* AlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AlbumDetailView.swift; path = Views/AlbumDetailView.swift; sourceTree = "<group>"; };
 		64EF0C9A9CD815CA8E65E069 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flaccyWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -182,6 +191,13 @@
 			path = flaccy;
 			sourceTree = "<group>";
 		};
+		8B3F5C02CFF1C98FB1BF8562 /* flaccyMacUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = flaccyMacUITests;
+			sourceTree = "<group>";
+		};
 		AA00UITESTGROUP000000001 /* flaccyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -207,6 +223,14 @@
 			files = (
 				20364068D2334231B84E65AD /* Foundation.framework in Frameworks */,
 				4114B9F2DAEFCEF2104A7CF6 /* FlaccyCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A01E7021744B1A5074BA345B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1D00E014A13D8A615E7C46D /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -261,6 +285,7 @@
 				F7E3E335AA05BD4FE7CF88E7 /* Frameworks */,
 				1330E0EC564CA79898E235B1 /* flaccyWatch Watch App */,
 				2B3287BCA5BE0FDC3FC9217B /* flaccyMac */,
+				8B3F5C02CFF1C98FB1BF8562 /* flaccyMacUITests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -271,6 +296,7 @@
 				AA00UITESTPRODUCT0000001 /* flaccyUITests.xctest */,
 				714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */,
 				483CF523EE5ED3E295BFF6B1 /* Flaccy.app */,
+				5174AF607781A6F23E0F345D /* flaccyMacUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -329,6 +355,27 @@
 			productName = flaccy;
 			productReference = 2C2776CA2F7D0282007FF196 /* flaccy.app */;
 			productType = "com.apple.product-type.application";
+		};
+		84B9A2B3431462EE44D357D9 /* flaccyMacUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BBE98267987F6FEFF70459CA /* Build configuration list for PBXNativeTarget "flaccyMacUITests" */;
+			buildPhases = (
+				0BDB63D47DCAB4B9C650D38B /* Sources */,
+				A01E7021744B1A5074BA345B /* Frameworks */,
+				42D42BCE8EB26176CE418C2C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				33516B05625BA55377141A2A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				8B3F5C02CFF1C98FB1BF8562 /* flaccyMacUITests */,
+			);
+			name = flaccyMacUITests;
+			productName = flaccyMacUITests;
+			productReference = 5174AF607781A6F23E0F345D /* flaccyMacUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		87865B95620E8A89697320AA /* flaccyMac */ = {
 			isa = PBXNativeTarget;
@@ -432,6 +479,7 @@
 				AA00UITESTTARGET00000001 /* flaccyUITests */,
 				DE0477C1A3CAE5D10A3D4168 /* flaccyWatch Watch App */,
 				87865B95620E8A89697320AA /* flaccyMac */,
+				84B9A2B3431462EE44D357D9 /* flaccyMacUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -453,6 +501,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		42D42BCE8EB26176CE418C2C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FC84BA3367066B92C2872F7C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -463,6 +518,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0BDB63D47DCAB4B9C650D38B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		2C2776C62F7D0282007FF196 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -505,6 +567,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		33516B05625BA55377141A2A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = flaccyMac;
+			target = 87865B95620E8A89697320AA /* flaccyMac */;
+			targetProxy = 0CFC9E09C3D8DC5D193A6D86 /* PBXContainerItemProxy */;
+		};
 		AA00UITESTDEPENDENCY0001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = flaccy;
@@ -550,6 +618,26 @@
 				WATCHOS_DEPLOYMENT_TARGET = 11.0;
 			};
 			name = Debug;
+		};
+		1C6050FACC00855BEC65BCA7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = P4DQK6SRKR;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccy.mac.uitests;
+				PRODUCT_NAME = flaccyMacUITests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = flaccyMac;
+			};
+			name = Release;
 		};
 		2C2776DE2F7D0283007FF196 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -750,13 +838,34 @@
 			};
 			name = Release;
 		};
+		6CDFCF61E55D797B131A081B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = P4DQK6SRKR;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccy.mac.uitests;
+				PRODUCT_NAME = flaccyMacUITests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = flaccyMac;
+			};
+			name = Debug;
+		};
 		996BB35AE35AACDC0C415DC0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = flaccyMac/flaccyMac.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = P4DQK6SRKR;
@@ -772,6 +881,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.midgarcorp.flaccy.mac;
 				PRODUCT_NAME = Flaccy;
+				PROVISIONING_PROFILE_SPECIFIER = "flaccy-mac-appstore-2026";
 				SDKROOT = macosx;
 				SKIP_INSTALL = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -930,6 +1040,15 @@
 			buildConfigurations = (
 				996BB35AE35AACDC0C415DC0 /* Release */,
 				D5B7FE5614FB924D2A9B2948 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BBE98267987F6FEFF70459CA /* Build configuration list for PBXNativeTarget "flaccyMacUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1C6050FACC00855BEC65BCA7 /* Release */,
+				6CDFCF61E55D797B131A081B /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

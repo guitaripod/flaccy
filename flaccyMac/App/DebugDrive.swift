@@ -37,17 +37,25 @@ enum DebugDrive {
         case album(String)
         case artist(String)
         case onboarding
+        case nowPlayingLyrics
+        case queuePanel
     }
 
     private static func plannedShot() -> Shot? {
         if CommandLine.arguments.contains("--shot-onboarding") { return .onboarding }
         if CommandLine.arguments.contains("--shot-playlists") { return .section(.playlists) }
+        if CommandLine.arguments.contains("--shot-nowplaying-lyrics") { return .nowPlayingLyrics }
+        if CommandLine.arguments.contains("--shot-queue") { return .queuePanel }
         if let name = value(after: "--shot-section") {
             let section: SidebarSection? = switch name {
             case "albums": .albums
             case "songs": .songs
             case "artists": .artists
             case "playlists": .playlists
+            case "wantlist": .wantlist
+            case "charts": .charts
+            case "yearinmusic": .yearInMusic
+            case "guide": .listeningGuide
             default: nil
             }
             if let section { return .section(section) }
@@ -82,7 +90,7 @@ enum DebugDrive {
                 name: .flaccyShowSection, object: nil,
                 userInfo: [SectionNotificationKey.section: section.rawValue]
             )
-            name = "flaccy-shot-\(section.title.lowercased())"
+            name = "flaccy-shot-\(section.title.lowercased().replacingOccurrences(of: " ", with: "-"))"
         case .album(let title):
             if let album = Library.shared.albums.first(where: { $0.title == title }) {
                 LibraryNavigator.revealAlbum(title: album.title, artist: album.artist)
@@ -93,11 +101,35 @@ enum DebugDrive {
         case .artist(let artist):
             LibraryNavigator.revealArtist(artist)
             name = "flaccy-shot-artist"
+        case .nowPlayingLyrics:
+            startHeroPlayback()
+            try? await Task.sleep(for: .seconds(2))
+            NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
+            try? await Task.sleep(for: .seconds(2))
+            NotificationCenter.default.post(name: .flaccyToggleLyrics, object: nil)
+            name = "flaccy-shot-nowplaying-lyrics"
+        case .queuePanel:
+            startHeroPlayback()
+            try? await Task.sleep(for: .seconds(2))
+            NotificationCenter.default.post(name: .flaccyToggleQueue, object: nil)
+            name = "flaccy-shot-queue"
         case .onboarding:
             return
         }
         try? await Task.sleep(for: .seconds(3))
         capture(window: window, name: name)
+    }
+
+    private static func startHeroPlayback() {
+        let hero = Library.shared.albums.first { $0.title == "Parallax Hours" } ?? Library.shared.albums.first
+        guard let hero, !hero.tracks.isEmpty else {
+            AppLogger.error("DebugDrive: no album available for hero playback", category: .general)
+            return
+        }
+        AudioPlayer.shared.volume = 0.02
+        let index = hero.tracks.firstIndex { $0.title == "Slow Machine" } ?? 0
+        AudioPlayer.shared.play(hero.tracks, startingAt: index)
+        AudioPlayer.shared.seek(to: 58)
     }
 
     private static func capture(window: NSWindow?, name: String) {
@@ -111,7 +143,7 @@ enum DebugDrive {
             try? tree.write(to: URL(fileURLWithPath: treePath), atomically: true, encoding: .utf8)
             AppLogger.info("DebugDrive: view tree dumped to \(treePath)", category: .general)
         }
-        guard let data = cachedDisplayPNG(window) else {
+        guard let data = windowServerPNG(window) ?? cachedDisplayPNG(window) else {
             AppLogger.error("DebugDrive: no capture path produced an image", category: .general)
             return
         }
@@ -122,6 +154,37 @@ enum DebugDrive {
         } catch {
             AppLogger.error("DebugDrive: window capture failed: \(error.localizedDescription)", category: .general)
         }
+    }
+
+    private typealias SLSMainConnectionIDFunc = @convention(c) () -> Int32
+    private typealias SLSHWCaptureWindowListFunc = @convention(c) (
+        Int32, UnsafeMutablePointer<UInt32>, Int32, UInt32
+    ) -> Unmanaged<CFArray>?
+
+    /// Captures the window as composited by WindowServer (glass, vibrancy and
+    /// shadows render for real), which works without Screen Recording TCC for
+    /// windows the process itself owns. Uses SkyLight SPI, which is fine here:
+    /// this is a DEBUG-only screenshot rig that never ships in Release.
+    private static func windowServerPNG(_ window: NSWindow?) -> Data? {
+        guard let window, window.windowNumber > 0,
+              let skyLight = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY),
+              let connectionSymbol = dlsym(skyLight, "SLSMainConnectionID"),
+              let captureSymbol = dlsym(skyLight, "SLSHWCaptureWindowList")
+        else { return nil }
+        let mainConnection = unsafeBitCast(connectionSymbol, to: SLSMainConnectionIDFunc.self)
+        let captureWindows = unsafeBitCast(captureSymbol, to: SLSHWCaptureWindowListFunc.self)
+        var windowID = UInt32(window.windowNumber)
+        let ignoreClipShapeAndBestResolution: UInt32 = (1 << 11) | (1 << 8)
+        guard let images = captureWindows(
+                  mainConnection(), &windowID, 1, ignoreClipShapeAndBestResolution
+              )?.takeRetainedValue() as? [CGImage],
+              let image = images.first, image.width > 1
+        else {
+            AppLogger.error("DebugDrive: WindowServer capture unavailable, falling back to cacheDisplay", category: .general)
+            return nil
+        }
+        let rep = NSBitmapImageRep(cgImage: image)
+        return rep.representation(using: .png, properties: [:])
     }
 
     private static func cachedDisplayPNG(_ window: NSWindow?) -> Data? {
