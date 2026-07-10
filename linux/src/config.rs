@@ -11,6 +11,7 @@ pub struct Config {
     pub window_width: i32,
     pub window_height: i32,
     pub volume: f64,
+    pub appearance: String,
 }
 
 impl Default for Config {
@@ -20,6 +21,7 @@ impl Default for Config {
             window_width: 1200,
             window_height: 760,
             volume: 0.9,
+            appearance: "system".to_string(),
         }
     }
 }

@@ -1,11 +1,13 @@
 use crate::events::AppEvent;
 use crate::ui::Ui;
 use adw::prelude::*;
+use gtk::glib;
 use gtk::pango;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-const CLOCK_TINT: (f64, f64, f64) = (0.45, 0.78, 1.0);
+const CLOCK_TINT_DARK: (f64, f64, f64) = (0.45, 0.78, 1.0);
+const CLOCK_TINT_LIGHT: (f64, f64, f64) = (0.08, 0.42, 0.75);
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let content = gtk::Box::builder()
@@ -33,12 +35,23 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.add_named(&scroll, Some("stats"));
 
     let buckets: Rc<RefCell<[i64; 24]>> = Rc::new(RefCell::new([0; 24]));
+    let current_clock: Rc<RefCell<Option<glib::WeakRef<gtk::DrawingArea>>>> =
+        Rc::new(RefCell::new(None));
+    {
+        let current_clock = Rc::clone(&current_clock);
+        adw::StyleManager::default().connect_dark_notify(move |_| {
+            if let Some(clock) = current_clock.borrow().as_ref().and_then(|w| w.upgrade()) {
+                clock.queue_draw();
+            }
+        });
+    }
 
     let rebuild = {
         let content = content.clone();
         let stack = stack.clone();
         let ui = Rc::clone(ui);
         let buckets = Rc::clone(&buckets);
+        let current_clock = Rc::clone(&current_clock);
         Rc::new(move || {
             while let Some(child) = content.first_child() {
                 content.remove(&child);
@@ -68,10 +81,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 .build();
             {
                 let buckets = Rc::clone(&buckets);
-                clock.set_draw_func(move |_, cr, width, height| {
-                    draw_listening_clock(cr, width as f64, height as f64, &buckets.borrow());
+                clock.set_draw_func(move |area, cr, width, height| {
+                    draw_listening_clock(area, cr, width as f64, height as f64, &buckets.borrow());
                 });
             }
+            *current_clock.borrow_mut() = Some(clock.downgrade());
             content.append(&clock);
 
             let lists = gtk::Box::builder()
@@ -180,10 +194,23 @@ fn top_list(title: &str, rows: &[(String, i64)]) -> gtk::Widget {
 }
 
 /// Port of the iOS ListeningClockView radial-spoke drawing: 24 spokes starting
-/// at −π/2, base track spokes at 8% white width 3, data spokes tinted with
+/// at −π/2, base track spokes at 8% foreground width 3, data spokes tinted with
 /// alpha .45+.55×fraction width 5, tip radius proportional between inner
 /// (0.42×outer) and outer, peak hour label centered.
-fn draw_listening_clock(cr: &gtk::cairo::Context, width: f64, height: f64, buckets: &[i64; 24]) {
+fn draw_listening_clock(
+    area: &gtk::DrawingArea,
+    cr: &gtk::cairo::Context,
+    width: f64,
+    height: f64,
+    buckets: &[i64; 24],
+) {
+    let fg = area.color();
+    let (fg_r, fg_g, fg_b) = (fg.red() as f64, fg.green() as f64, fg.blue() as f64);
+    let tint = if adw::StyleManager::default().is_dark() {
+        CLOCK_TINT_DARK
+    } else {
+        CLOCK_TINT_LIGHT
+    };
     let center_x = width / 2.0;
     let center_y = height / 2.0;
     let outer = (width.min(height)) / 2.0 - 6.0;
@@ -202,7 +229,7 @@ fn draw_listening_clock(cr: &gtk::cairo::Context, width: f64, height: f64, bucke
             center_x + angle.cos() * outer,
             center_y + angle.sin() * outer,
         );
-        cr.set_source_rgba(1.0, 1.0, 1.0, 0.08);
+        cr.set_source_rgba(fg_r, fg_g, fg_b, 0.08);
         cr.set_line_width(3.0);
         cr.move_to(start.0, start.1);
         cr.line_to(track_end.0, track_end.1);
@@ -211,12 +238,7 @@ fn draw_listening_clock(cr: &gtk::cairo::Context, width: f64, height: f64, bucke
         if buckets[hour] > 0 {
             let tip = inner + (outer - inner) * fraction;
             let end = (center_x + angle.cos() * tip, center_y + angle.sin() * tip);
-            cr.set_source_rgba(
-                CLOCK_TINT.0,
-                CLOCK_TINT.1,
-                CLOCK_TINT.2,
-                0.45 + 0.55 * fraction,
-            );
+            cr.set_source_rgba(tint.0, tint.1, tint.2, 0.45 + 0.55 * fraction);
             cr.set_line_width(5.0);
             cr.move_to(start.0, start.1);
             cr.line_to(end.0, end.1);
@@ -241,14 +263,14 @@ fn draw_listening_clock(cr: &gtk::cairo::Context, width: f64, height: f64, bucke
         gtk::cairo::FontWeight::Bold,
     );
     cr.set_font_size(24.0);
-    cr.set_source_rgba(1.0, 1.0, 1.0, 1.0);
+    cr.set_source_rgba(fg_r, fg_g, fg_b, 1.0);
     let text = format!("{:02}:00", peak);
     if let Ok(extents) = cr.text_extents(&text) {
         cr.move_to(center_x - extents.width() / 2.0, center_y + 4.0);
         let _ = cr.show_text(&text);
     }
     cr.set_font_size(10.0);
-    cr.set_source_rgba(1.0, 1.0, 1.0, 0.5);
+    cr.set_source_rgba(fg_r, fg_g, fg_b, 0.5);
     if let Ok(extents) = cr.text_extents("PEAK") {
         cr.move_to(center_x - extents.width() / 2.0, center_y + 22.0);
         let _ = cr.show_text("PEAK");

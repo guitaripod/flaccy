@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
     load_css();
-    adw::StyleManager::default().set_color_scheme(adw::ColorScheme::ForceDark);
+    apply_color_scheme(&core.config.borrow().appearance);
     gtk::Window::set_default_icon_name("cc.midgarcorp.Flaccy");
 
     let (width, height) = {
@@ -83,6 +83,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                     progress.set_fraction(0.0);
                     revealer.set_reveal_child(true);
                     rescan_button.set_sensitive(false);
+                    let spinner = gtk::Spinner::new();
+                    spinner.start();
+                    rescan_button.set_child(Some(&spinner));
+                    rescan_button.set_tooltip_text(Some("Scanning…"));
                 }
                 AppEvent::ScanProgress(done, total) => {
                     if *total > 0 {
@@ -94,6 +98,8 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                 AppEvent::ScanFinished { .. } => {
                     revealer.set_reveal_child(false);
                     rescan_button.set_sensitive(true);
+                    rescan_button.set_icon_name("view-refresh-symbolic");
+                    rescan_button.set_tooltip_text(Some("Rescan Library"));
                 }
                 _ => {}
             });
@@ -191,13 +197,18 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     core.hub
         .subscribe_widget(&toast_overlay, |overlay, event| {
             if let AppEvent::ScanFinished { added, removed } = event {
-                if *added > 0 || *removed > 0 {
+                let toast = if *added > 0 || *removed > 0 {
                     let toast = adw::Toast::new(&format!(
                         "Library updated · {added} added · {removed} removed"
                     ));
                     toast.set_timeout(4);
-                    overlay.add_toast(toast);
-                }
+                    toast
+                } else {
+                    let toast = adw::Toast::new("Library up to date");
+                    toast.set_timeout(2);
+                    toast
+                };
+                overlay.add_toast(toast);
             }
         });
 
@@ -401,6 +412,15 @@ fn attach_space_handler(ui: &Rc<Ui>) {
         glib::Propagation::Proceed
     });
     ui.window.add_controller(controller);
+}
+
+pub fn apply_color_scheme(appearance: &str) {
+    let scheme = match appearance {
+        "light" => adw::ColorScheme::ForceLight,
+        "dark" => adw::ColorScheme::ForceDark,
+        _ => adw::ColorScheme::Default,
+    };
+    adw::StyleManager::default().set_color_scheme(scheme);
 }
 
 fn load_css() {

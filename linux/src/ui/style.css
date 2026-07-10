@@ -19,7 +19,7 @@
 }
 
 .quality-badge {
-  background-color: alpha(white, 0.12);
+  background-color: alpha(@window_fg_color, 0.12);
   border-radius: 6px;
   padding: 1px 7px;
   font-size: 10px;
@@ -80,7 +80,7 @@
 }
 
 .stat-tile {
-  background-color: alpha(white, 0.06);
+  background-color: alpha(@window_fg_color, 0.06);
   border-radius: 12px;
   padding: 16px 20px;
 }
@@ -92,7 +92,7 @@
 }
 
 .accent-toggle {
-  color: #73c7ff;
+  color: @accent_color;
 }
 
 .play-pill {

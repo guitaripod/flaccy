@@ -15,6 +15,7 @@ pub fn present(ui: &Rc<Ui>) {
         .icon_name("emblem-system-symbolic")
         .build();
 
+    page.add(&appearance_group(ui));
     page.add(&library_group(ui));
     if lastfm::keys_available() {
         page.add(&lastfm_group(ui));
@@ -23,6 +24,38 @@ pub fn present(ui: &Rc<Ui>) {
 
     dialog.add(&page);
     dialog.present(Some(&ui.window));
+}
+
+fn appearance_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder().title("Appearance").build();
+    let model = gtk::StringList::new(&["System", "Light", "Dark"]);
+    let row = adw::ComboRow::builder()
+        .title("Color Scheme")
+        .subtitle("Follow the system or force a look")
+        .model(&model)
+        .build();
+    let selected = match ui.core.config.borrow().appearance.as_str() {
+        "light" => 1,
+        "dark" => 2,
+        _ => 0,
+    };
+    row.set_selected(selected);
+    {
+        let ui = Rc::clone(ui);
+        row.connect_selected_notify(move |row| {
+            let appearance = match row.selected() {
+                1 => "light",
+                2 => "dark",
+                _ => "system",
+            };
+            ui.core.config.borrow_mut().appearance = appearance.to_string();
+            ui.core.save_config();
+            crate::ui::window::apply_color_scheme(appearance);
+            crate::logger::info("ui", &format!("appearance set to {appearance}"));
+        });
+    }
+    group.add(&row);
+    group
 }
 
 fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
