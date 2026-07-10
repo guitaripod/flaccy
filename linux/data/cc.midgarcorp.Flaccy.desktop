@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Flaccy
+GenericName=Music Player
+Comment=Lossless music player. Last.fm connected. Gapless.
+Icon=cc.midgarcorp.Flaccy
+TryExec=flaccy
+Exec=flaccy
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;flac;player;audio;scrobble;
+StartupWMClass=cc.midgarcorp.Flaccy

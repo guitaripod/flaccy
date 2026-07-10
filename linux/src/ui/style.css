@@ -1,0 +1,102 @@
+.cover {
+  border-radius: 10px;
+}
+
+.cover-large {
+  border-radius: 12px;
+}
+
+.album-title {
+  font-weight: 600;
+}
+
+.dim {
+  opacity: 0.55;
+}
+
+.dim-more {
+  opacity: 0.35;
+}
+
+.quality-badge {
+  background-color: alpha(white, 0.12);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.loved-heart {
+  color: #ff476b;
+}
+
+.transport {
+  padding: 8px 14px;
+}
+
+.transport-title {
+  font-weight: 600;
+}
+
+.track-number {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.45;
+}
+
+.duration-label {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.55;
+}
+
+.time-label {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.lyric-line {
+  font-size: 16px;
+  font-weight: 600;
+  opacity: 0.35;
+  padding: 6px 4px;
+}
+
+.lyric-line-current {
+  font-size: 16px;
+  font-weight: 700;
+  opacity: 1.0;
+  padding: 6px 4px;
+}
+
+.stat-value {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.stat-caption {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.5;
+}
+
+.stat-tile {
+  background-color: alpha(white, 0.06);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.top-list-rank {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  opacity: 0.4;
+}
+
+.accent-toggle {
+  color: #73c7ff;
+}
+
+.play-pill {
+  border-radius: 9999px;
+  min-width: 44px;
+  min-height: 44px;
+}
