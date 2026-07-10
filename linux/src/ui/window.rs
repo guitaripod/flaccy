@@ -116,6 +116,8 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     stack.add_named(&ui::artists::build(&ui), Some("artists"));
     stack.add_named(&ui::playlists::build(&ui), Some("playlists"));
     stack.add_named(&ui::stats::build(&ui), Some("stats"));
+    stack.add_named(&ui::wantlist::build(&ui), Some("wantlist"));
+    stack.add_named(&ui::guide::build(&ui), Some("guide"));
 
     let sidebar = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::Single)
@@ -128,17 +130,22 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         ("system-users-symbolic", "Artists"),
         ("view-list-symbolic", "Playlists"),
         ("utilities-system-monitor-symbolic", "Stats"),
+        ("starred-symbolic", "Wantlist"),
+        ("dialog-information-symbolic", "Guide"),
     ] {
         sidebar.append(&sidebar_row(icon, label));
     }
+    attach_wantlist_badge(core, &sidebar);
     {
         let stack = stack.clone();
         let nav = nav.clone();
         let core_for_rows = Rc::clone(core);
         sidebar.connect_row_selected(move |_, row| {
             let Some(row) = row else { return };
-            let names = ["albums", "songs", "artists", "playlists", "stats"];
-            let index = row.index().clamp(0, 4) as usize;
+            let names = [
+                "albums", "songs", "artists", "playlists", "stats", "wantlist", "guide",
+            ];
+            let index = row.index().clamp(0, 6) as usize;
             core_for_rows.config.borrow_mut().sidebar_index = index as i32;
             core_for_rows.save_config();
             crate::logger::info("ui", &format!("sidebar selected: {}", names[index]));
@@ -150,7 +157,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     }
     {
         let sidebar = sidebar.clone();
-        let saved_index = core.config.borrow().sidebar_index.clamp(0, 4);
+        let saved_index = core.config.borrow().sidebar_index.clamp(0, 6);
         glib::idle_add_local_once(move || {
             let index = if config::demo_mode() {
                 demo_start_view_index()
@@ -286,6 +293,36 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     window
 }
 
+/// Keeps an unseen-count badge on the Wantlist sidebar row, cleared when the
+/// page is opened (WantlistSeen) and refreshed after every wantlist change.
+fn attach_wantlist_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
+    let Some(row) = sidebar.row_at_index(5) else { return };
+    let Some(row_box) = row.child().and_downcast::<gtk::Box>() else { return };
+    let badge = gtk::Label::new(None);
+    badge.add_css_class("wantlist-badge");
+    badge.set_hexpand(true);
+    badge.set_halign(gtk::Align::End);
+    badge.set_visible(false);
+    row_box.append(&badge);
+
+    let update = {
+        let core = Rc::clone(core);
+        let badge = badge.clone();
+        move || {
+            let count = core.db.unseen_wanted_count();
+            badge.set_visible(count > 0);
+            if count > 0 {
+                badge.set_label(&count.to_string());
+            }
+        }
+    };
+    update();
+    core.hub.subscribe_widget(&badge, move |_, event| match event {
+        AppEvent::WantlistChanged | AppEvent::WantlistSeen => update(),
+        _ => {}
+    });
+}
+
 fn sidebar_row(icon: &str, label: &str) -> gtk::ListBoxRow {
     let row_box = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -408,6 +445,22 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
         if let Some(album) = library.album_by_key(key) {
             crate::songlink::copy_link(&ui.core, album.title.clone(), album.artist.clone(), true);
         }
+    });
+    add_string_action(ui, "album-enrich", |ui, key| {
+        let library = ui.core.library.borrow().clone();
+        let Some(album) = library.album_by_key(key) else { return };
+        let complete = ui
+            .core
+            .db
+            .album_info_status(&album.title, &album.artist)
+            .map(|s| s.year.is_some() && s.genre.is_some() && s.has_cover)
+            .unwrap_or(false);
+        if complete {
+            ui.core.toast("Metadata already complete");
+            return;
+        }
+        crate::enrichment::request_album(&ui.core, &album.title, &album.artist);
+        ui.core.toast(&format!("Enriching {}…", album.title));
     });
     add_string_action(ui, "album-station", |ui, key| {
         let library = ui.core.library.borrow().clone();
@@ -707,6 +760,8 @@ fn demo_start_view_index() -> i32 {
         Some("artists") => 2,
         Some("playlists") => 3,
         Some("stats") => 4,
+        Some("wantlist") => 5,
+        Some("guide") => 6,
         _ => 0,
     }
 }

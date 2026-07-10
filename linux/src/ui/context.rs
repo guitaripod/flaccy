@@ -52,6 +52,7 @@ pub fn album_menu(key: &str) -> gio::Menu {
     let extra_section = gio::Menu::new();
     extra_section.append_item(&item("Start Station", "win.album-station", key));
     extra_section.append_item(&item("Copy song.link", "win.album-songlink", key));
+    extra_section.append_item(&item("Enrich Metadata", "win.album-enrich", key));
     menu.append_section(None, &extra_section);
     menu
 }

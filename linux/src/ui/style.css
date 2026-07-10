@@ -135,3 +135,38 @@
   padding: 2px 12px;
   font-size: 12px;
 }
+
+.genre-chip {
+  background-color: alpha(@window_fg_color, 0.1);
+  border-radius: 9999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.guide-card {
+  background-color: alpha(@window_fg_color, 0.05);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.guide-takeaway {
+  background-color: alpha(@accent_bg_color, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+
+.wantlist-badge {
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
+  border-radius: 9999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.yim-value {
+  font-size: 22px;
+  font-weight: 800;
+}

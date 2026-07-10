@@ -317,6 +317,12 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
     info.add_css_class("caption");
     meta.append(&info);
 
+    let playcount = gtk::Label::builder().xalign(0.0).visible(false).build();
+    playcount.add_css_class("dim");
+    playcount.add_css_class("caption");
+    meta.append(&playcount);
+    load_user_playcount(ui, album, &playcount);
+
     crate::enrichment::request_album(&ui.core, &album.title, &album.artist);
     {
         let ui_ref = Rc::clone(ui);
@@ -495,6 +501,41 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         .child(&overlay)
         .build();
     ui.nav.push(&page);
+}
+
+/// Personal Last.fm play count for this album ("You've played this N times"),
+/// fetched via album.getInfo with the username param when authenticated.
+fn load_user_playcount(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
+    let Some(session) = ui.core.session.borrow().clone() else { return };
+    let Some(client) = crate::lastfm::LastFmClient::new(Some(session.key.clone())) else {
+        return;
+    };
+    let artist = album.artist.clone();
+    let title = album.title.clone();
+    let (tx, rx) = async_channel::bounded::<Option<i64>>(1);
+    std::thread::Builder::new()
+        .name("flaccy-album-plays".into())
+        .spawn(move || {
+            let count = client
+                .fetch_album_user_playcount(&artist, &title, &session.username)
+                .unwrap_or(None);
+            let _ = tx.send_blocking(count);
+        })
+        .ok();
+    let weak = label.downgrade();
+    gtk::glib::spawn_future_local(async move {
+        let Ok(Some(count)) = rx.recv().await else { return };
+        if count <= 0 {
+            return;
+        }
+        if let Some(label) = weak.upgrade() {
+            label.set_label(&format!(
+                "You've played this {count} time{} on Last.fm",
+                if count == 1 { "" } else { "s" }
+            ));
+            label.set_visible(true);
+        }
+    });
 }
 
 fn album_quality_summary(album: &Album) -> Option<String> {

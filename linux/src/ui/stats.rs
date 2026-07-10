@@ -122,13 +122,17 @@ fn build_loader(ui: &Rc<Ui>, state: &Rc<StatsState>, render: &Action) -> Action 
         state.loading.set(true);
         let db_path = ui.core.db_path.clone();
         let period = state.period.get();
+        let session = ui.core.session.borrow().clone();
         let (tx, rx) = async_channel::bounded::<Option<RecapData>>(1);
         std::thread::Builder::new()
             .name("flaccy-stats".into())
             .spawn(move || {
                 let data = Db::open(&db_path).ok().map(|db| {
                     let rows: Vec<ScrobbleRow> = db.fetch_all_scrobble_rows();
-                    recap::compute(&rows, period, chrono::Utc::now().timestamp())
+                    let mut data =
+                        recap::compute(&rows, period, chrono::Utc::now().timestamp());
+                    backfill_from_lastfm(&mut data, period, session.as_ref());
+                    data
                 });
                 let _ = tx.send_blocking(data);
             })
@@ -143,6 +147,53 @@ fn build_loader(ui: &Rc<Ui>, state: &Rc<StatsState>, render: &Action) -> Action 
             render();
         });
     })
+}
+
+/// Replaces the local top lists with Last.fm's server-side period charts when
+/// authenticated (iOS backfillFromNetwork): the server aggregates the full
+/// history, while local rows may be import-capped. Local lists remain the
+/// offline fallback whenever the network returns empty.
+fn backfill_from_lastfm(
+    data: &mut RecapData,
+    period: Period,
+    session: Option<&crate::config::Session>,
+) {
+    let Some(session) = session else {
+        crate::logger::info("charts", "charts: local stats only (not authenticated)");
+        return;
+    };
+    let Some(client) = crate::lastfm::LastFmClient::new(Some(session.key.clone())) else {
+        return;
+    };
+    let api_period = period.api_value();
+    match client.fetch_top_artists(&session.username, api_period, 10) {
+        Ok(artists) if !artists.is_empty() => {
+            data.top_artists = artists;
+            crate::logger::info("charts", &format!("charts backfill: artists from Last.fm ({api_period})"));
+        }
+        Ok(_) => {}
+        Err(err) => crate::logger::warn("charts", &format!("charts backfill artists failed: {err}")),
+    }
+    match client.fetch_top_albums(&session.username, api_period, 10) {
+        Ok(albums) if !albums.is_empty() => {
+            data.top_albums = albums
+                .into_iter()
+                .map(|(album, artist, count, _)| (format!("{album} — {artist}"), count))
+                .collect();
+        }
+        Ok(_) => {}
+        Err(err) => crate::logger::warn("charts", &format!("charts backfill albums failed: {err}")),
+    }
+    match client.fetch_top_tracks(&session.username, api_period, 10) {
+        Ok(tracks) if !tracks.is_empty() => {
+            data.top_tracks = tracks
+                .into_iter()
+                .map(|(title, artist, count)| (format!("{title} — {artist}"), count))
+                .collect();
+        }
+        Ok(_) => {}
+        Err(err) => crate::logger::warn("charts", &format!("charts backfill tracks failed: {err}")),
+    }
 }
 
 fn build_renderer(
@@ -173,8 +224,8 @@ fn build_renderer(
         stack.set_visible_child_name("stats");
 
         content.append(&period_picker(&state, &loader));
-        let _ = &ui;
         content.append(&tiles_row(&data));
+        content.append(&actions_row(&ui, &state));
         content.append(&import_row(&ui));
 
         content.append(&section_title("STREAKS"));
@@ -236,6 +287,108 @@ fn tiles_row(data: &RecapData) -> gtk::Widget {
     tiles.append(&stat_tile(&data.streak_days.to_string(), "DAY STREAK"));
     tiles.append(&stat_tile(data.persona, "PERSONA"));
     tiles.upcast()
+}
+
+/// Share-card and Year in Music entry points for the current recap.
+fn actions_row(ui: &Rc<Ui>, state: &Rc<StatsState>) -> gtk::Widget {
+    let row = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(10)
+        .build();
+
+    let share = gtk::Button::with_label("Share Card");
+    share.add_css_class("pill");
+    share.set_tooltip_text(Some("Export this recap as a 1080×1350 image"));
+    {
+        let ui = Rc::clone(ui);
+        let state = Rc::clone(state);
+        share.connect_clicked(move |_| {
+            let Some(data) = state.data.borrow().clone() else { return };
+            let period_name = state.period.get().display_name();
+            let username = ui
+                .core
+                .session
+                .borrow()
+                .as_ref()
+                .map(|s| s.username.clone());
+            let Some(card) = crate::render::recap_share_card(&data, period_name, username.as_deref())
+            else {
+                ui.core.toast("Couldn't render the card");
+                return;
+            };
+            present_share_options(&ui, card);
+        });
+    }
+    row.append(&share);
+
+    let yim = gtk::Button::with_label("Year in Music");
+    yim.add_css_class("pill");
+    {
+        let ui = Rc::clone(ui);
+        yim.connect_clicked(move |_| {
+            let db_path = ui.core.db_path.clone();
+            let (tx, rx) = async_channel::bounded::<Vec<i32>>(1);
+            std::thread::Builder::new()
+                .name("flaccy-yim-years".into())
+                .spawn(move || {
+                    let years = Db::open(&db_path)
+                        .map(|db| recap::scrobble_years(&db.fetch_all_scrobble_rows()))
+                        .unwrap_or_default();
+                    let _ = tx.send_blocking(years);
+                })
+                .ok();
+            let ui = Rc::clone(&ui);
+            glib::spawn_future_local(async move {
+                let years = rx.recv().await.unwrap_or_default();
+                crate::ui::year_in_music::present(&ui, years);
+            });
+        });
+    }
+    row.append(&yim);
+    row.upcast()
+}
+
+/// Save-or-copy chooser for a rendered share card: Save PNG… opens a file
+/// dialog; Copy Image puts the PNG on the clipboard.
+fn present_share_options(ui: &Rc<Ui>, card: crate::render::Card) {
+    let dialog = adw::AlertDialog::builder()
+        .heading("Share Recap")
+        .body("Export the card as a PNG file or copy it to the clipboard.")
+        .build();
+    dialog.add_response("cancel", "Cancel");
+    dialog.add_response("copy", "Copy Image");
+    dialog.add_response("save", "Save PNG…");
+    dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
+    let window = ui.window.clone();
+    let ui = Rc::clone(ui);
+    let pending: Rc<RefCell<Option<crate::render::Card>>> = Rc::new(RefCell::new(Some(card)));
+    dialog.connect_response(None, move |_, response| {
+        match response {
+            "save" => {
+                let Some(card) = pending.borrow_mut().take() else { return };
+                crate::ui::year_in_music::save_card(&ui, card, "flaccy-recap.png");
+            }
+            "copy" => {
+                let Some(card) = pending.borrow_mut().take() else { return };
+                let Some(bytes) = card.png_bytes() else {
+                    ui.core.toast("Copy failed");
+                    return;
+                };
+                match gtk::gdk::Texture::from_bytes(&glib::Bytes::from_owned(bytes)) {
+                    Ok(texture) => {
+                        ui.window.clipboard().set_texture(&texture);
+                        ui.core.toast("Recap card copied to clipboard");
+                    }
+                    Err(err) => {
+                        crate::logger::error("ui", &format!("clipboard copy failed: {err}"));
+                        ui.core.toast("Copy failed");
+                    }
+                }
+            }
+            _ => {}
+        }
+    });
+    dialog.present(Some(&window));
 }
 
 fn import_row(ui: &Rc<Ui>) -> gtk::Widget {

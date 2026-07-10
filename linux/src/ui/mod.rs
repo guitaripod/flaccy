@@ -2,6 +2,7 @@ pub mod albums;
 pub mod artists;
 pub mod artwork;
 pub mod context;
+pub mod guide;
 pub mod lyrics_panel;
 pub mod playlists;
 pub mod queue_panel;
@@ -10,7 +11,9 @@ pub mod songs;
 pub mod suggested_shelf;
 pub mod stats;
 pub mod transport;
+pub mod wantlist;
 pub mod window;
+pub mod year_in_music;
 
 use crate::app::AppCore;
 use std::cell::RefCell;

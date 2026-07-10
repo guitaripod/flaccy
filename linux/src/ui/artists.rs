@@ -190,8 +190,17 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
     title_box.append(&station);
     header.append(&title_box);
 
+    let chips = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(6)
+        .margin_top(10)
+        .margin_start(24)
+        .margin_end(24)
+        .build();
+
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.append(&header);
+    content.append(&chips);
     if let Some(bio) = ui.core.db.artist_bio(artist).filter(|b| !b.is_empty()) {
         let bio_label = gtk::Label::builder()
             .label(&bio)
@@ -205,6 +214,16 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         content.append(&bio_label);
     }
     content.append(&flow);
+    let similar_box = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(8)
+        .margin_start(24)
+        .margin_end(24)
+        .margin_bottom(24)
+        .build();
+    content.append(&similar_box);
+
+    load_artist_extras(ui, artist, &avatar, &chips, &similar_box);
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
@@ -216,6 +235,177 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         .child(&scroll)
         .build();
     ui.nav.push(&page);
+}
+
+/// Last.fm's generic star placeholder, rejected by URL content hash exactly as
+/// the iOS ArtistImageService does.
+const LASTFM_PLACEHOLDER_HASH: &str = "2a96cbd8b46e442fc41c2b86b821562f";
+
+struct ArtistExtras {
+    image: Option<(u32, u32, Vec<u8>)>,
+    tags: Vec<String>,
+    similar: Vec<String>,
+}
+
+/// Fetches the artist photo (disk-cached), Last.fm genre chips (first 6 top
+/// tags) and the similar-artists-in-library row on a worker thread, then
+/// fills the header widgets.
+fn load_artist_extras(
+    ui: &Rc<Ui>,
+    artist: &str,
+    avatar: &adw::Avatar,
+    chips: &gtk::Box,
+    similar_box: &gtk::Box,
+) {
+    let artist = artist.to_string();
+    let db_path = ui.core.db_path.clone();
+    let session_key = ui.core.session.borrow().as_ref().map(|s| s.key.clone());
+    let library_artists: Vec<String> = ui
+        .core
+        .library
+        .borrow()
+        .artists
+        .iter()
+        .map(|a| a.name.clone())
+        .collect();
+    let (tx, rx) = async_channel::bounded::<ArtistExtras>(1);
+    let artist_for_thread = artist.clone();
+    std::thread::Builder::new()
+        .name("flaccy-artist-page".into())
+        .spawn(move || {
+            let Ok(db) = crate::db::Db::open(&db_path) else { return };
+            let client = crate::lastfm::LastFmClient::new(session_key);
+            let image = db
+                .artist_image_url(&artist_for_thread)
+                .filter(|url| !url.contains(LASTFM_PLACEHOLDER_HASH))
+                .and_then(|url| load_artist_image(&artist_for_thread, &url));
+            let tags = client
+                .as_ref()
+                .and_then(|c| c.fetch_top_tags(&artist_for_thread, 6).ok())
+                .unwrap_or_default();
+            let similar = crate::enrichment::similar_in_library_blocking(
+                &db,
+                client.as_ref(),
+                &artist_for_thread,
+                &library_artists,
+            )
+            .into_iter()
+            .filter(|(name, _)| !name.eq_ignore_ascii_case(&artist_for_thread))
+            .map(|(name, _)| name)
+            .take(8)
+            .collect();
+            let _ = tx.send_blocking(ArtistExtras { image, tags, similar });
+        })
+        .ok();
+
+    let ui = Rc::clone(ui);
+    let avatar = avatar.downgrade();
+    let chips = chips.downgrade();
+    let similar_box = similar_box.downgrade();
+    gtk::glib::spawn_future_local(async move {
+        let Ok(extras) = rx.recv().await else { return };
+        if let (Some(avatar), Some((width, height, rgba))) = (avatar.upgrade(), extras.image) {
+            let texture = gtk::gdk::MemoryTexture::new(
+                width as i32,
+                height as i32,
+                gtk::gdk::MemoryFormat::R8g8b8a8,
+                &gtk::glib::Bytes::from_owned(rgba),
+                (width * 4) as usize,
+            );
+            avatar.set_custom_image(Some(&texture));
+        }
+        if let Some(chips) = chips.upgrade() {
+            let tags = if extras.tags.is_empty() {
+                library_genre_fallback(&ui, &artist)
+            } else {
+                extras.tags.clone()
+            };
+            for tag in &tags {
+                let chip = gtk::Label::new(Some(tag));
+                chip.add_css_class("genre-chip");
+                chips.append(&chip);
+            }
+        }
+        if let Some(similar_box) = similar_box.upgrade() {
+            if !extras.similar.is_empty() {
+                let heading = gtk::Label::builder()
+                    .label("SIMILAR ARTISTS IN YOUR LIBRARY")
+                    .xalign(0.0)
+                    .build();
+                heading.add_css_class("stat-caption");
+                similar_box.append(&heading);
+                let row = gtk::Box::builder()
+                    .orientation(gtk::Orientation::Horizontal)
+                    .spacing(8)
+                    .build();
+                for name in &extras.similar {
+                    let button = gtk::Button::with_label(name);
+                    button.add_css_class("pill");
+                    button.add_css_class("chip");
+                    let ui = Rc::clone(&ui);
+                    let name = name.clone();
+                    button.connect_clicked(move |_| push_artist_page(&ui, &name));
+                    row.append(&button);
+                }
+                let scroll = gtk::ScrolledWindow::builder()
+                    .vscrollbar_policy(gtk::PolicyType::Never)
+                    .hscrollbar_policy(gtk::PolicyType::Automatic)
+                    .min_content_height(52)
+                    .child(&row)
+                    .build();
+                similar_box.append(&scroll);
+            }
+        }
+    });
+}
+
+/// Offline fallback for the genre chips: the distinct genres of the artist's
+/// library albums, used when Last.fm has no top tags for the artist.
+fn library_genre_fallback(ui: &Rc<Ui>, artist: &str) -> Vec<String> {
+    let library = ui.core.library.borrow().clone();
+    let mut seen = std::collections::HashSet::new();
+    library
+        .albums
+        .iter()
+        .filter(|album| album.artist == artist)
+        .filter_map(|album| album.genre.clone())
+        .filter(|genre| !genre.is_empty() && seen.insert(genre.to_lowercase()))
+        .take(6)
+        .collect()
+}
+
+/// Downloads an artist photo (or reuses the XDG-cached copy) and decodes it to
+/// a 160px RGBA thumbnail for the avatar.
+fn load_artist_image(artist: &str, url: &str) -> Option<(u32, u32, Vec<u8>)> {
+    let cache_dir = dirs::cache_dir()?.join("flaccy").join("artists");
+    let _ = std::fs::create_dir_all(&cache_dir);
+    let cache_path = cache_dir.join(format!("{:016x}", crate::palette::fnv1a_64(artist)));
+    let data = if let Ok(data) = std::fs::read(&cache_path) {
+        data
+    } else {
+        let response = ureq::AgentBuilder::new()
+            .timeout(std::time::Duration::from_secs(15))
+            .build()
+            .get(url)
+            .call()
+            .ok()?;
+        let mut data = Vec::new();
+        use std::io::Read;
+        response
+            .into_reader()
+            .take(10 * 1024 * 1024)
+            .read_to_end(&mut data)
+            .ok()?;
+        if data.is_empty() {
+            return None;
+        }
+        let _ = std::fs::write(&cache_path, &data);
+        data
+    };
+    let decoded = image::load_from_memory(&data).ok()?;
+    let thumbnail = decoded.thumbnail(160, 160).to_rgba8();
+    let (width, height) = thumbnail.dimensions();
+    Some((width, height, thumbnail.into_raw()))
 }
 
 fn album_cell_for_artist(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
