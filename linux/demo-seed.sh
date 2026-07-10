@@ -66,3 +66,49 @@ seed_album "The Hollowmen" "Meltwater" 2024 0x134E4A 0x2DD4BF \
   "Meltwater|220" "Confluence|262" "Oxbow|311"
 
 echo "demo catalog ready at $ROOT"
+
+seed_gap_track() {
+  local artist="$1" album="$2" year="$3" title="$4" freq="$5" num="$6"
+  local dir="$ROOT/$artist/$album"
+  mkdir -p "$dir"
+  local dur=$((26 + (num * 7) % 15))
+  local padded
+  padded=$(printf '%02d' "$num")
+  ffmpeg -y -v error -f lavfi -i "sine=frequency=$freq:duration=$dur" \
+    -af "afade=t=in:d=1.5,afade=t=out:st=$((dur - 3)):d=3" \
+    -sample_fmt s16 -c:a flac \
+    -metadata TITLE="$title" -metadata ARTIST="$artist" \
+    -metadata ALBUMARTIST="$artist" -metadata ALBUM="$album" \
+    -metadata DATE="$year" -metadata TRACKNUMBER="$num" \
+    "$dir/$padded - $title.flac"
+}
+
+seed_lossy_album() {
+  local artist="$1" album="$2" year="$3"
+  shift 3
+  local dir="$ROOT/$artist/$album"
+  mkdir -p "$dir"
+  local n=0 entry title freq dur num
+  for entry in "$@"; do
+    n=$((n + 1))
+    title="${entry%%|*}"
+    freq="${entry##*|}"
+    dur=$((26 + (n * 7) % 15))
+    num=$(printf '%02d' "$n")
+    ffmpeg -y -v error -f lavfi -i "sine=frequency=$freq:duration=$dur" \
+      -af "afade=t=in:d=1.5,afade=t=out:st=$((dur - 3)):d=3" \
+      -c:a libmp3lame -q:a 2 \
+      -metadata TITLE="$title" -metadata ARTIST="$artist" \
+      -metadata ALBUMARTIST="$artist" -metadata ALBUM="$album" \
+      -metadata DATE="$year" -metadata TRACKNUMBER="$n" \
+      "$dir/$num - $title.mp3"
+  done
+  echo "seeded (mp3): $artist — $album ($n tracks)"
+}
+
+seed_gap_track "Novaeu" "Statuary" 2021 "Statuary" 220 1
+seed_gap_track "Novaeu" "Statuary" 2021 "Plinth" 262 2
+seed_gap_track "Novaeu" "Statuary" 2021 "Colonnade" 330 9
+echo "seeded (gap): Novaeu — Statuary (3 of 9 tracks)"
+seed_lossy_album "Virelle" "First Transmissions" 2019 \
+  "First Transmissions|196" "Carrier Wave|247" "Static Bloom|294"

@@ -135,8 +135,71 @@ def main() -> None:
             " WHERE title = ?",
             (year, genre, album),
         )
+    GENRES.setdefault("Statuary", ("2021", "Dream Pop"))
+    GENRES.setdefault("First Transmissions", ("2019", "Space Ambient"))
+    for album, (year, genre) in GENRES.items():
+        db.execute(
+            "UPDATE albumInfo SET year = ?, genre = ?, lastFetched = datetime('now')"
+            " WHERE title = ?",
+            (year, genre, album),
+        )
+
+    bios = {
+        "Meridian Wolde": "Meridian Wolde is a fictional electronic composer whose long-form pieces trace commuter rail lines through imagined cities. Parallax Hours, the 2024 breakthrough, was recorded entirely between midnight and dawn.",
+        "Kestrel Vale": "Kestrel Vale is a fictional post-rock quartet from a coastal town that does not exist, known for glacial crescendos and field recordings of weather that never happened.",
+        "The Hollowmen": "The Hollowmen are a fictional alt-rock trio whose riverside recording cabin lends every record its water-worn texture.",
+    }
+    for name, bio in bios.items():
+        db.execute(
+            "INSERT INTO artists (name, bio, lastFetched) VALUES (?, ?, datetime('now'))"
+            " ON CONFLICT(name) DO UPDATE SET bio = excluded.bio",
+            (name, bio),
+        )
+
+    similar = {
+        "Meridian Wolde": [("Virelle", 0.82), ("Novaeu", 0.71), ("Solveig", 0.55)],
+        "Kestrel Vale": [("The Hollowmen", 0.77), ("Meridian Wolde", 0.52)],
+    }
+    for artist, entries in similar.items():
+        for name, match in entries:
+            db.execute(
+                'INSERT INTO similarArtistCache (artist, similarName, "match", fetchedAt)'
+                " VALUES (?,?,?,datetime('now'))"
+                ' ON CONFLICT(artist, similarName) DO UPDATE SET "match" = excluded."match",'
+                " fetchedAt = excluded.fetchedAt",
+                (artist, name, match),
+            )
+
+    wantlist = [
+        ("album\x00meridianwolde\x00halationtapes", "album", "Halation Tapes", "Meridian Wolde", "history", 620.0, "48 plays on Last.fm", 48),
+        ("album\x00kestrelvale\x00driftstations", "album", "Drift Stations", "Kestrel Vale", "history", 410.0, "31 plays on Last.fm", 31),
+        ("track\x00solveig\x00vinternatt", "track", "Vinternatt", "Solveig", "loved", 500.0, "Loved on Last.fm", 0),
+        ("artist\x00\x00lumenfjord", "artist", "Lumen Fjord", "Lumen Fjord", "discovery", 96.0, "Because you play Meridian Wolde", 0),
+        ("album\x00lumenfjord\x00harbourlight", "album", "Harbour Light", "Lumen Fjord", "discovery", 96.0, "Because you play Meridian Wolde", 0),
+    ]
+    for norm_key, kind, title, artist, source, score, reason, plays in wantlist:
+        db.execute(
+            "INSERT INTO wantlist (normKey, kind, title, artist, state, source, score, reason, playCount, addedAt)"
+            " VALUES (?,?,?,?,'wanted',?,?,?,?,datetime('now'))"
+            " ON CONFLICT(normKey) DO UPDATE SET score = excluded.score",
+            (norm_key, kind, title, artist, source, score, reason, plays),
+        )
+
+    releases = [
+        ("Meridian Wolde", "Terminal Glass EP", 12),
+        ("The Hollowmen", "Undertow", 33),
+    ]
+    for artist, album, days_ago in releases:
+        db.execute(
+            "INSERT INTO newReleaseCache (artist, albumTitle, releaseDate, fetchedAt)"
+            " VALUES (?,?,datetime('now', ?),datetime('now'))"
+            " ON CONFLICT(artist, albumTitle) DO UPDATE SET releaseDate = excluded.releaseDate,"
+            " fetchedAt = excluded.fetchedAt",
+            (artist, album, f"-{days_ago} days"),
+        )
+
     db.commit()
-    print(f"seeded {len(rows)} scrobbles, playlists, lyrics, loved flags, albumInfo year/genre")
+    print(f"seeded {len(rows)} scrobbles, playlists, lyrics, loved flags, albumInfo, artists, wantlist, releases")
 
 
 if __name__ == "__main__":
