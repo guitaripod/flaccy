@@ -11,8 +11,15 @@ final class ArtistImageService {
     private let missCache = NSCache<NSString, NSDate>()
     private var inFlight: [String: Task<UIImage?, Never>] = [:]
 
-    private static let lastFMPlaceholderHash = "2a96cbd8b46e442fc41c2b86b821562f"
+    nonisolated private static let lastFMPlaceholderHash = "2a96cbd8b46e442fc41c2b86b821562f"
     private static let missTTL: TimeInterval = 60 * 30
+
+    nonisolated private static let downloadSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config)
+    }()
 
     private init() {
         missCache.countLimit = 300
@@ -73,7 +80,7 @@ final class ArtistImageService {
         else { return nil }
 
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await downloadSession.data(from: url)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200,
                   let image = UIImage(data: data)
             else { return nil }

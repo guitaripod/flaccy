@@ -4,6 +4,7 @@ import Foundation
 ///
 /// The iOS `AudioPlayer` and the watchOS `WatchAudioPlayer` both fulfill this
 /// shape; UI layers and view models program against the protocol.
+@MainActor
 public protocol AudioPlaybackEngine: AnyObject {
     var queue: [MediaItem] { get }
     var currentIndex: Int { get }

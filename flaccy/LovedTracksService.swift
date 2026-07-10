@@ -65,7 +65,7 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         if newValue { lovedPaths.insert(path) } else { lovedPaths.remove(path) }
         lock.unlock()
 
-        NotificationCenter.default.post(name: Self.didChange, object: nil, userInfo: ["fileURL": path, "loved": newValue])
+        postDidChange(userInfo: ["fileURL": path, "loved": newValue])
 
         await flushPendingLoves()
         return newValue
@@ -121,7 +121,15 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         reloadCache()
 
         if !toLove.isEmpty || !toUnlove.isEmpty {
-            NotificationCenter.default.post(name: Self.didChange, object: nil)
+            postDidChange()
+        }
+    }
+
+    /// Posts `didChange` on the main thread so selector-based UIKit observers
+    /// never run off main, regardless of which executor the caller is on.
+    private func postDidChange(userInfo: [AnyHashable: Any]? = nil) {
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: Self.didChange, object: nil, userInfo: userInfo)
         }
     }
 

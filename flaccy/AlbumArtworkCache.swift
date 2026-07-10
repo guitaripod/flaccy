@@ -6,7 +6,7 @@ import ImageIO
 /// 3000×3000 embedded FLAC cover never gets fully decoded just to fill a 44pt
 /// row. The full tier serves Now Playing and album headers, capped at a size
 /// that still fills any screen edge-to-edge.
-final class AlbumArtworkCache {
+nonisolated final class AlbumArtworkCache: @unchecked Sendable {
 
     static let shared = AlbumArtworkCache()
 
@@ -123,7 +123,7 @@ final class AlbumArtworkCache {
     }
 }
 
-private extension UIImage {
+nonisolated private extension UIImage {
     var memoryCost: Int {
         guard let cgImage else { return 0 }
         return cgImage.bytesPerRow * cgImage.height

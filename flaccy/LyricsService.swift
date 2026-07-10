@@ -52,7 +52,12 @@ final class LyricsService {
 
         do {
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            guard let http = response as? HTTPURLResponse else { return nil }
+
+            if http.statusCode == 404 {
+                return cacheNotFound(track: track, artist: artist)
+            }
+            guard http.statusCode == 200 else { return nil }
 
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             let instrumental = json?["instrumental"] as? Bool ?? false
@@ -78,6 +83,20 @@ final class LyricsService {
             AppLogger.error("Lyrics fetch failed: \(error.localizedDescription)", category: .content)
             return nil
         }
+    }
+
+    /// Persists an empty record when lrclib has no lyrics for the track, so
+    /// subsequent plays hit the database instead of re-issuing the request.
+    private func cacheNotFound(track: String, artist: String) -> LyricsResult {
+        let record = LyricsRecord(
+            trackTitle: track,
+            artist: artist,
+            syncedLyrics: nil,
+            plainLyrics: nil,
+            instrumental: false
+        )
+        try? DatabaseManager.shared.saveLyrics(record)
+        return LyricsResult(syncedLines: nil, plainText: nil, isInstrumental: false)
     }
 
     nonisolated private func parseLRC(_ lrc: String) -> [LyricLine] {

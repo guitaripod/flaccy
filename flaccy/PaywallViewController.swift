@@ -1,5 +1,11 @@
+import SafariServices
 import StoreKit
 import UIKit
+
+enum LegalLinks {
+    static let privacyURL = URL(string: "https://mako.midgarcorp.cc/privacy/flaccy")!
+    static let termsURL = URL(string: "https://mako.midgarcorp.cc/terms/flaccy")!
+}
 
 final class PaywallViewController: UIViewController {
 
@@ -153,6 +159,45 @@ final class PaywallViewController: UIViewController {
 
         configureStatusLabel()
         contentStack.addArrangedSubview(statusLabel)
+        contentStack.setCustomSpacing(10, after: statusLabel)
+
+        contentStack.addArrangedSubview(makeLegalLinksRow())
+    }
+
+    private func makeLegalLinksRow() -> UIView {
+        let row = UIStackView(arrangedSubviews: [
+            makeLegalLinkButton(title: "Privacy Policy", url: LegalLinks.privacyURL),
+            makeLegalLinkButton(title: "Terms of Use", url: LegalLinks.termsURL),
+        ])
+        row.axis = .horizontal
+        row.spacing = 12
+        row.alignment = .center
+
+        let container = UIStackView(arrangedSubviews: [row])
+        container.axis = .vertical
+        container.alignment = .center
+        return container
+    }
+
+    private func makeLegalLinkButton(title: String, url: URL) -> UIButton {
+        var config = UIButton.Configuration.plain()
+        config.attributedTitle = AttributedString(
+            title,
+            attributes: AttributeContainer([.font: UIFont.scaled(.footnote, size: 13, weight: .regular)])
+        )
+        config.baseForegroundColor = UIColor.white.withAlphaComponent(0.55)
+        config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4)
+        let button = UIButton(configuration: config)
+        button.addAction(UIAction { [weak self] _ in
+            self?.presentLegalPage(url)
+        }, for: .touchUpInside)
+        return button
+    }
+
+    private func presentLegalPage(_ url: URL) {
+        let safari = SFSafariViewController(url: url)
+        safari.preferredControlTintColor = Self.accent
+        present(safari, animated: true)
     }
 
     private func makeHeaderView() -> UIView {

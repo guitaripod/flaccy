@@ -25,7 +25,7 @@ final class Library: LibraryProviding {
 
     private let db = DatabaseManager.shared
 
-    private var documentsDirectory: URL {
+    nonisolated private var documentsDirectory: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
     }
 
@@ -65,7 +65,13 @@ final class Library: LibraryProviding {
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         isLoading = false
 
-        await enrichMissingMetadata()
+        await enrichAndPublish()
+    }
+
+    private func enrichAndPublish() async {
+        guard await enrichMissingMetadata(for: albums) else { return }
+        await loadFromDatabase()
+        NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
     }
 
     func resetAndReload() async {
@@ -83,7 +89,7 @@ final class Library: LibraryProviding {
         logLibraryState()
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         isLoading = false
-        await enrichMissingMetadata()
+        await enrichAndPublish()
     }
 
     func importFiles(from urls: [URL]) async {
@@ -119,7 +125,8 @@ final class Library: LibraryProviding {
     }
 
     @discardableResult
-    private func syncFilesWithDatabase() async -> Bool {
+    @concurrent
+    nonisolated private func syncFilesWithDatabase() async -> Bool {
         let fm = FileManager.default
         guard let enumerator = fm.enumerator(
             at: documentsDirectory, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]
@@ -189,21 +196,35 @@ final class Library: LibraryProviding {
                 }
             }
 
+            var buffer: [TrackRecord] = []
             for await record in group {
                 guard let record else { continue }
-                do {
-                    try db.insertTrack(record)
-                } catch {
-                    AppLogger.error("Insert track error: \(error.localizedDescription)", category: .database)
+                buffer.append(record)
+                if buffer.count >= Self.insertBatchSize {
+                    insertBatch(buffer)
+                    buffer.removeAll(keepingCapacity: true)
                 }
             }
+            insertBatch(buffer)
         }
 
         AppLogger.info("Sync: \(diskPaths.count) files on disk, \(newPaths.count) new, \(removedPaths.count) removed", category: .content)
         return true
     }
 
-    private func analyzeLibrary(dirtyOnly: Bool) async {
+    private static let insertBatchSize = 50
+
+    nonisolated private func insertBatch(_ records: [TrackRecord]) {
+        guard !records.isEmpty else { return }
+        do {
+            try db.insertTracks(records)
+        } catch {
+            AppLogger.error("Insert tracks error: \(error.localizedDescription)", category: .database)
+        }
+    }
+
+    @concurrent
+    nonisolated private func analyzeLibrary(dirtyOnly: Bool) async {
         do {
             let allDBTracks = try db.fetchAllTracks()
             guard !allDBTracks.isEmpty else { return }
@@ -263,7 +284,7 @@ final class Library: LibraryProviding {
                         dbTrack.aiAnalyzed = true
 
                         do {
-                            try db.updateTrack(dbTrack)
+                            try db.updateTrackPreservingArtwork(dbTrack)
                             totalUpdated += 1
                         } catch {
                             AppLogger.error("Track update failed: \(error.localizedDescription)", category: .database)
@@ -292,32 +313,7 @@ final class Library: LibraryProviding {
 
     private func loadFromDatabase() async {
         do {
-            let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight()
-
-            var loadedAlbums: [Album] = []
-            loadedAlbums.reserveCapacity(albumsWithTracks.count)
-
-            for (albumInfo, trackRecords) in albumsWithTracks {
-                let cachedArt = AlbumArtworkCache.shared.artwork(
-                    forAlbum: trackRecords.first?.albumTitle ?? "",
-                    artist: trackRecords.first?.artist ?? ""
-                )
-
-                let tracks = trackRecords.map { record in
-                    Track.from(light: record, artwork: cachedArt)
-                }
-
-                guard let first = tracks.first else { continue }
-                loadedAlbums.append(Album(
-                    title: first.albumTitle,
-                    artist: first.artist,
-                    artwork: cachedArt,
-                    tracks: tracks,
-                    year: albumInfo?.year,
-                    genre: albumInfo?.genre
-                ))
-            }
-
+            let loadedAlbums = try await fetchAlbumsFromDatabase()
             albums = loadedAlbums
             allTracks = loadedAlbums.flatMap(\.tracks)
         } catch {
@@ -325,11 +321,40 @@ final class Library: LibraryProviding {
         }
     }
 
+    /// Builds the album list without decoded artwork: pinning full-tier
+    /// bitmaps inside long-lived model structs would defeat
+    /// `AlbumArtworkCache` eviction, and every reader already handles nil.
+    @concurrent
+    nonisolated private func fetchAlbumsFromDatabase() async throws -> [Album] {
+        let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight()
+
+        var loadedAlbums: [Album] = []
+        loadedAlbums.reserveCapacity(albumsWithTracks.count)
+
+        for (albumInfo, trackRecords) in albumsWithTracks {
+            let tracks = trackRecords.map { record in
+                Track.from(light: record, artwork: nil)
+            }
+
+            guard let first = tracks.first else { continue }
+            loadedAlbums.append(Album(
+                title: first.albumTitle,
+                artist: first.artist,
+                artwork: nil,
+                tracks: tracks,
+                year: albumInfo?.year,
+                genre: albumInfo?.genre
+            ))
+        }
+        return loadedAlbums
+    }
+
     private func logLibraryState() {
         AppLogger.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
     }
 
-    private func enrichMissingMetadata() async {
+    @concurrent
+    nonisolated private func enrichMissingMetadata(for albums: [Album]) async -> Bool {
         var enrichedAny = false
 
         for album in albums {
@@ -373,13 +398,10 @@ final class Library: LibraryProviding {
             }
         }
 
-        if enrichedAny {
-            await loadFromDatabase()
-            NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
-        }
+        return enrichedAny
     }
 
-    private func relativePath(for url: URL) -> String {
+    nonisolated private func relativePath(for url: URL) -> String {
         let docsPath = documentsDirectory.standardizedFileURL.path
         let filePath = url.standardizedFileURL.path
         if filePath.hasPrefix(docsPath) {

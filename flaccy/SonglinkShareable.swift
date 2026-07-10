@@ -1,43 +1,106 @@
 import UIKit
+import ObjectiveC
 
 protocol SonglinkShareable: UIViewController {}
+
+private final class SonglinkLookupHandle {
+    let task: Task<Void, Never>
+
+    init(task: Task<Void, Never>) {
+        self.task = task
+    }
+
+    func cancel() {
+        task.cancel()
+    }
+
+    deinit {
+        task.cancel()
+    }
+}
+
+private final class SonglinkLoadingOverlay: UIView {
+    var onCancelTap: (() -> Void)?
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        onCancelTap?()
+    }
+
+    func dismiss() {
+        onCancelTap = nil
+        UIView.animate(withDuration: 0.2) {
+            self.alpha = 0
+        } completion: { _ in
+            self.removeFromSuperview()
+        }
+    }
+}
+
+private var songlinkLookupHandleKey: UInt8 = 0
 
 extension SonglinkShareable {
 
     func shareTrackViaSonglink(title: String, artist: String, from sourceView: UIView) {
-        let overlay = showSonglinkLoading()
-        Task {
-            let result = await SonglinkService.shared.lookup(title: title, artist: artist)
-            overlay.removeFromSuperview()
-            guard let result else {
-                ToastView.show("Couldn't find this track on streaming platforms", in: sourceView, style: .error)
-                return
-            }
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            presentStreamingLinks(result: result)
+        startSonglinkLookup(
+            failureMessage: "Couldn't find this track on streaming platforms",
+            sourceView: sourceView
+        ) {
+            await SonglinkService.shared.lookup(title: title, artist: artist)
         }
     }
 
     func shareAlbumViaSonglink(title: String, artist: String, from sourceView: UIView) {
-        let overlay = showSonglinkLoading()
-        Task {
-            let result = await SonglinkService.shared.lookupAlbum(title: title, artist: artist)
-            overlay.removeFromSuperview()
-            guard let result else {
-                ToastView.show("Couldn't find this album on streaming platforms", in: sourceView, style: .error)
-                return
-            }
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            presentStreamingLinks(result: result)
+        startSonglinkLookup(
+            failureMessage: "Couldn't find this album on streaming platforms",
+            sourceView: sourceView
+        ) {
+            await SonglinkService.shared.lookupAlbum(title: title, artist: artist)
         }
     }
 
-    private func showSonglinkLoading() -> UIView {
-        let overlay = UIView()
+    private var songlinkLookupHandle: SonglinkLookupHandle? {
+        get { objc_getAssociatedObject(self, &songlinkLookupHandleKey) as? SonglinkLookupHandle }
+        set { objc_setAssociatedObject(self, &songlinkLookupHandleKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
+    /// Cancels any in-flight lookup, then runs a new one behind a tap-to-cancel
+    /// loading overlay without retaining the presenting view controller.
+    private func startSonglinkLookup(
+        failureMessage: String,
+        sourceView: UIView,
+        lookup: @escaping () async -> SonglinkResult?
+    ) {
+        songlinkLookupHandle?.cancel()
+        let overlay = showSonglinkLoading()
+        let task = Task { [weak self, weak sourceView] in
+            let result = await lookup()
+            overlay.dismiss()
+            guard !Task.isCancelled, let self else { return }
+            guard let result else {
+                if let sourceView {
+                    ToastView.show(failureMessage, in: sourceView, style: .error)
+                }
+                return
+            }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            self.presentStreamingLinks(result: result)
+        }
+        let handle = SonglinkLookupHandle(task: task)
+        overlay.onCancelTap = { [weak overlay] in
+            handle.cancel()
+            overlay?.dismiss()
+        }
+        songlinkLookupHandle = handle
+    }
+
+    private func showSonglinkLoading() -> SonglinkLoadingOverlay {
+        let overlay = SonglinkLoadingOverlay()
         overlay.translatesAutoresizingMaskIntoConstraints = false
 
         let blur = LiquidGlass.view(cornerRadius: 14)
         blur.translatesAutoresizingMaskIntoConstraints = false
+        blur.isUserInteractionEnabled = false
 
         let spinner = UIActivityIndicatorView(style: .medium)
         spinner.startAnimating()
@@ -47,7 +110,16 @@ extension SonglinkShareable {
         label.font = .systemFont(ofSize: 13, weight: .medium)
         label.textColor = .secondaryLabel
 
-        let stack = UIStackView(arrangedSubviews: [spinner, label])
+        let hint = UILabel()
+        hint.text = "Tap to cancel"
+        hint.font = .systemFont(ofSize: 11, weight: .regular)
+        hint.textColor = .tertiaryLabel
+
+        let textStack = UIStackView(arrangedSubviews: [label, hint])
+        textStack.axis = .vertical
+        textStack.spacing = 2
+
+        let stack = UIStackView(arrangedSubviews: [spinner, textStack])
         stack.spacing = 10
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false

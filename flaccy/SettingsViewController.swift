@@ -104,6 +104,9 @@ final class SettingsViewController: UITableViewController {
     private let notificationFeedback = UINotificationFeedbackGenerator()
 
     private var dataSource: DataSource!
+    private var storageUsed: String?
+    private var lastFMImportProgress: Int?
+    private var isRescanning = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -117,6 +120,7 @@ final class SettingsViewController: UITableViewController {
         configureDataSource()
         tableView.tableFooterView = makeVersionFooter()
         applySnapshot(animated: false)
+        refreshStorageUsed()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -179,7 +183,7 @@ final class SettingsViewController: UITableViewController {
                 .importFiles,
                 .rescanLibrary,
                 .libraryStats(albums: Library.shared.albums.count, tracks: Library.shared.allTracks.count),
-                .storage(used: calculateStorageUsed()),
+                .storage(used: storageUsed ?? "…"),
             ],
             toSection: .library
         )
@@ -256,10 +260,21 @@ final class SettingsViewController: UITableViewController {
 
         case .importLastFM:
             content.image = RowIcon.image(systemName: "square.and.arrow.down.on.square", tint: .systemPink)
-            content.text = "Import Last.fm History"
-            content.textProperties.color = .tintColor
-            cell.accessibilityLabel = "Import Last.fm History"
-            cell.accessibilityHint = "Backfills your listening stats from Last.fm"
+            if let imported = lastFMImportProgress {
+                content.text = "Importing Last.fm History"
+                if imported > 0 { content.secondaryText = "\(imported)" }
+                cell.accessoryView = makeSpinnerAccessory()
+                cell.selectionStyle = .none
+                cell.accessibilityLabel = "Importing Last.fm History"
+                if imported > 0 {
+                    cell.accessibilityValue = "\(imported) scrobble\(imported == 1 ? "" : "s") imported"
+                }
+            } else {
+                content.text = "Import Last.fm History"
+                content.textProperties.color = .tintColor
+                cell.accessibilityLabel = "Import Last.fm History"
+                cell.accessibilityHint = "Backfills your listening stats from Last.fm"
+            }
 
         case .yearInMusic:
             content.image = RowIcon.image(systemName: "sparkles", tint: .systemIndigo)
@@ -324,10 +339,18 @@ final class SettingsViewController: UITableViewController {
 
         case .rescanLibrary:
             content.image = RowIcon.image(systemName: "arrow.clockwise", tint: .systemIndigo)
-            content.text = "Rescan Library"
-            content.textProperties.color = .tintColor
-            cell.accessibilityLabel = "Rescan Library"
-            cell.accessibilityHint = "Re-analyzes all tracks"
+            if isRescanning {
+                content.text = "Rescanning Library"
+                content.textProperties.color = .secondaryLabel
+                cell.accessoryView = makeSpinnerAccessory()
+                cell.selectionStyle = .none
+                cell.accessibilityLabel = "Rescanning Library"
+            } else {
+                content.text = "Rescan Library"
+                content.textProperties.color = .tintColor
+                cell.accessibilityLabel = "Rescan Library"
+                cell.accessibilityHint = "Re-analyzes all tracks"
+            }
 
         case .libraryStats(let albums, let tracks):
             content.image = RowIcon.image(systemName: "chart.bar.fill", tint: .systemTeal)
@@ -350,6 +373,12 @@ final class SettingsViewController: UITableViewController {
 
         cell.contentConfiguration = content
         return cell
+    }
+
+    private func makeSpinnerAccessory() -> UIActivityIndicatorView {
+        let spinner = UIActivityIndicatorView(style: .medium)
+        spinner.startAnimating()
+        return spinner
     }
 
     private func makeGaplessSwitch() -> UISwitch {
@@ -431,6 +460,8 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: return false
         case .lifetime(let state): return state != .purchased
+        case .importLastFM: return lastFMImportProgress == nil
+        case .rescanLibrary: return !isRescanning
         default: return true
         }
     }
@@ -548,13 +579,49 @@ final class SettingsViewController: UITableViewController {
         dismiss(animated: true)
     }
 
+    /// Runs the history backfill with the import row rendered as an in-progress
+    /// spinner. `importHistory()` reports nothing itself, so live progress is
+    /// derived by polling the local scrobble count against a pre-import baseline,
+    /// mirroring `ChartsViewModel.importHistory`.
     private func handleImportLastFM() {
+        guard lastFMImportProgress == nil else { return }
         impactLight.impactOccurred()
-        Task {
-            await LastFMStatsService.shared.importHistory()
-            notificationFeedback.notificationOccurred(.success)
-            applySnapshot(animated: true)
+        lastFMImportProgress = 0
+        reconfigureRow(.importLastFM)
+        let baseline = Self.scrobbleCount()
+
+        let progressTask = Task.detached(priority: .utility) { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                guard !Task.isCancelled, self != nil else { return }
+                let delta = max(0, Self.scrobbleCount() - baseline)
+                await MainActor.run { [weak self] in
+                    guard let self, self.lastFMImportProgress != nil else { return }
+                    self.lastFMImportProgress = delta
+                    self.reconfigureRow(.importLastFM)
+                }
+            }
         }
+
+        Task { [weak self] in
+            await LastFMStatsService.shared.importHistory()
+            progressTask.cancel()
+            guard let self else { return }
+            self.lastFMImportProgress = nil
+            self.notificationFeedback.notificationOccurred(.success)
+            self.applySnapshot(animated: true)
+        }
+    }
+
+    private func reconfigureRow(_ row: Row) {
+        var snapshot = dataSource.snapshot()
+        guard snapshot.itemIdentifiers.contains(row) else { return }
+        snapshot.reconfigureItems([row])
+        dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    private nonisolated static func scrobbleCount() -> Int {
+        (try? DatabaseManager.shared.scrobbleCountInRange(from: .distantPast, to: .distantFuture)) ?? 0
     }
 
     private func handleYearInMusicTap() {
@@ -585,6 +652,7 @@ final class SettingsViewController: UITableViewController {
     }
 
     private func handleRescanTap() {
+        guard !isRescanning, !Library.shared.isLoading else { return }
         impactMedium.impactOccurred()
         let alert = UIAlertController(
             title: "Rescan Library",
@@ -598,23 +666,38 @@ final class SettingsViewController: UITableViewController {
         present(alert, animated: true)
     }
 
+    /// Runs the rescan with only the rescan row disabled and spinning, so the
+    /// sheet stays dismissible; the singleton `Library` carries the work if this
+    /// controller is deallocated mid-scan.
     private func performRescan() {
-        let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.startAnimating()
-        navigationItem.rightBarButtonItem = UIBarButtonItem(customView: spinner)
-        navigationItem.rightBarButtonItem?.isEnabled = false
-        view.isUserInteractionEnabled = false
+        isRescanning = true
+        reconfigureRow(.rescanLibrary)
 
-        Task {
+        Task { [weak self] in
             await Library.shared.resetAndReload()
-            view.isUserInteractionEnabled = true
-            navigationItem.rightBarButtonItem = makeDoneButton()
-            notificationFeedback.notificationOccurred(.success)
-            applySnapshot(animated: true)
+            guard let self else { return }
+            self.isRescanning = false
+            self.reconfigureRow(.rescanLibrary)
+            self.notificationFeedback.notificationOccurred(.success)
+            self.applySnapshot(animated: true)
+            self.refreshStorageUsed()
         }
     }
 
-    private func calculateStorageUsed() -> String {
+    /// Recomputes the Documents-tree size off the main thread and re-renders the
+    /// storage row when it lands; every other snapshot renders the cached value.
+    private func refreshStorageUsed() {
+        Task.detached(priority: .utility) { [weak self] in
+            let used = Self.calculateStorageUsed()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.storageUsed = used
+                self.applySnapshot(animated: false)
+            }
+        }
+    }
+
+    private nonisolated static func calculateStorageUsed() -> String {
         let fm = FileManager.default
         let docsURL = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
         var totalSize: Int64 = 0

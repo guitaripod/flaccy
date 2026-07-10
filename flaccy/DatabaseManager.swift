@@ -395,6 +395,12 @@ nonisolated final class DatabaseManager: Sendable {
             }
         }
 
+        migrator.registerMigration("v8") { db in
+            try db.drop(index: "scrobbles_on_submitted")
+            try db.create(index: "scrobbles_on_submitted_timestamp", on: "scrobbles", columns: ["submitted", "timestamp"])
+            try db.create(index: "scrobbles_on_timestamp", on: "scrobbles", columns: ["timestamp"])
+        }
+
         return migrator
     }
 
@@ -510,11 +516,18 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    /// Inserts each row independently inside the batch transaction so one
+    /// conflicting row (e.g. a duplicate fileURL from a concurrent import)
+    /// never rolls back the other tracks in the batch.
     func insertTracks(_ tracks: [TrackRecord]) throws {
         guard !tracks.isEmpty else { return }
         try dbQueue.write { db in
             for track in tracks {
-                try track.insert(db)
+                do {
+                    try track.insert(db)
+                } catch {
+                    AppLogger.error("Skipped track insert for \(track.fileURL): \(error.localizedDescription)", category: .database)
+                }
             }
         }
     }
@@ -686,7 +699,7 @@ nonisolated final class DatabaseManager: Sendable {
     }
 
     func resetAllAIAnalyzed() throws {
-        try dbQueue.write { db in
+        _ = try dbQueue.write { db in
             try TrackRecord
                 .updateAll(db, Column("aiAnalyzed").set(to: false))
         }

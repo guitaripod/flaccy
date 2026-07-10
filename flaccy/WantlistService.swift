@@ -103,14 +103,22 @@ final class WantlistService {
             if source == .gap || source == .upgrade {
                 guard !openDeficiencies.contains(item.normKey) else { continue }
                 if ownership.ownsAlbum(name: item.title, artist: item.artist) {
-                    resolved.append(item)
-                    try? database.updateWantlistState(
-                        normKey: item.normKey, state: WantlistState.acquired.rawValue, resolvedAt: Date()
-                    )
+                    do {
+                        try database.updateWantlistState(
+                            normKey: item.normKey, state: WantlistState.acquired.rawValue, resolvedAt: Date()
+                        )
+                        resolved.append(item)
+                    } catch {
+                        AppLogger.error("Wantlist resolve write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
+                    }
                 } else {
-                    try? database.updateWantlistState(
-                        normKey: item.normKey, state: WantlistState.dismissed.rawValue, resolvedAt: Date()
-                    )
+                    do {
+                        try database.updateWantlistState(
+                            normKey: item.normKey, state: WantlistState.dismissed.rawValue, resolvedAt: Date()
+                        )
+                    } catch {
+                        AppLogger.error("Wantlist retire write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
+                    }
                 }
                 continue
             }
@@ -122,10 +130,14 @@ final class WantlistService {
             case nil: owned = false
             }
             guard owned else { continue }
-            resolved.append(item)
-            try? database.updateWantlistState(
-                normKey: item.normKey, state: WantlistState.acquired.rawValue, resolvedAt: Date()
-            )
+            do {
+                try database.updateWantlistState(
+                    normKey: item.normKey, state: WantlistState.acquired.rawValue, resolvedAt: Date()
+                )
+                resolved.append(item)
+            } catch {
+                AppLogger.error("Wantlist resolve write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
+            }
         }
         guard !resolved.isEmpty else { return }
         let names = resolved.map { $0.kind == WantlistKind.artist.rawValue ? $0.artist : $0.title }
@@ -194,14 +206,27 @@ final class WantlistService {
             .prefix(Self.releaseArtistLimit)
 
         var releases: [NewReleaseRecord] = []
+        var failedArtists: [String] = []
         let cutoff = Date().addingTimeInterval(-Self.releaseWindow)
-        for artist in watchlist {
-            let found = await Self.fetchITunesAlbums(artist: artist)
+        for (index, artist) in watchlist.enumerated() {
+            if index > 0 {
+                try? await Task.sleep(for: .seconds(3))
+            }
+            guard let found = await Self.fetchITunesAlbums(artist: artist) else {
+                failedArtists.append(artist)
+                continue
+            }
             for album in found {
                 guard album.releaseDate > cutoff,
                       !ownership.ownsAlbum(name: album.albumTitle, artist: album.artist) else { continue }
                 releases.append(album)
             }
+        }
+        if !failedArtists.isEmpty {
+            AppLogger.error("New-release watch: fetch failed for \(failedArtists.joined(separator: ", "))", category: .content)
+            let failed = Set(failedArtists.map { $0.lowercased() })
+            let retained = ((try? database.fetchNewReleases()) ?? []).filter { failed.contains($0.artist.lowercased()) }
+            releases.append(contentsOf: retained)
         }
         do {
             try database.replaceNewReleases(releases)
@@ -212,7 +237,7 @@ final class WantlistService {
         return true
     }
 
-    private nonisolated static func fetchITunesAlbums(artist: String) async -> [NewReleaseRecord] {
+    private nonisolated static func fetchITunesAlbums(artist: String) async -> [NewReleaseRecord]? {
         var components = URLComponents(string: "https://itunes.apple.com/search")!
         components.queryItems = [
             URLQueryItem(name: "term", value: artist),
@@ -221,9 +246,10 @@ final class WantlistService {
             URLQueryItem(name: "limit", value: "25"),
         ]
         guard let url = components.url,
-              let (data, _) = try? await URLSession.shared.data(from: url),
+              let (data, response) = try? await URLSession.shared.data(from: url),
+              (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let results = json["results"] as? [[String: Any]] else { return [] }
+              let results = json["results"] as? [[String: Any]] else { return nil }
 
         let formatter = ISO8601DateFormatter()
         let now = Date()

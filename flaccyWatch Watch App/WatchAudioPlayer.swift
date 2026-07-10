@@ -25,14 +25,21 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
     @ObservationIgnored private var timeObserver: Any?
     @ObservationIgnored private var endObserver: NSObjectProtocol?
     @ObservationIgnored private var failedToEndObserver: NSObjectProtocol?
+    @ObservationIgnored private var sessionObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var statusObservations: [ObjectIdentifier: NSKeyValueObservation] = [:]
+    @ObservationIgnored private var timeControlObservation: NSKeyValueObservation?
+    @ObservationIgnored private var cachedArtwork: (trackID: String, artwork: MPMediaItemArtwork)?
     @ObservationIgnored private var consecutiveFailures = 0
+    @ObservationIgnored private var playIntentGeneration = 0
+    @ObservationIgnored private var isActivationPending = false
+    @ObservationIgnored private var wasPlayingBeforeInterruption = false
     @ObservationIgnored private var originalQueue: [MediaItem] = []
 
     init(documentsDirectory: URL) {
         self.documentsDirectory = documentsDirectory
         configureSession()
         configureRemoteCommands()
+        observeAudioSession()
     }
 
     var currentItem: MediaItem? {
@@ -72,15 +79,15 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
             return
         }
         guard let player else { return }
-        if isPlaying {
+        if isActivationPending {
+            cancelPendingPlayIntent()
+            player.pause()
+        } else if isPlaying {
             player.pause()
         } else {
-            activateSession()
-            player.play()
+            activateSessionAndPlay()
         }
-        isPlaying.toggle()
         WKInterfaceDevice.current().play(.click)
-        updateNowPlayingInfo()
     }
 
     /// An explicit skip always advances — repeat-one governs only automatic
@@ -181,14 +188,12 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
         player?.volume = Float(volume)
 
         preloadNextItem(after: index)
-        activateSession()
-        player?.play()
-        isPlaying = true
         currentTime = 0
 
         addTimeObserver()
         observeEnd(of: item)
         updateNowPlayingInfo()
+        activateSessionAndPlay()
         AppLogger.info("Watch now playing: \(track.title) — \(track.artist)", category: .playback)
     }
 
@@ -202,16 +207,14 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
 
         if currentIndex + 1 < queue.count {
             currentIndex += 1
-            guard let nextItem = player?.currentItem else {
+            guard let nextItem = verifiedCurrentPlayerItem() else {
                 loadTrack(at: currentIndex)
                 return
             }
             currentTime = 0
             observeEnd(of: nextItem)
             preloadNextItem(after: currentIndex)
-            activateSession()
-            player?.play()
-            isPlaying = true
+            activateSessionAndPlay()
             updateNowPlayingInfo()
             AppLogger.info("Watch gapless advance: \(queue[currentIndex].title)", category: .playback)
         } else if repeatMode == .all, !queue.isEmpty {
@@ -220,6 +223,18 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
         } else {
             stopPlayback()
         }
+    }
+
+    /// The end-of-track notification races AVQueuePlayer's `.advance`
+    /// transition, so `currentItem` may still be the just-finished item; only
+    /// trust it when its URL matches the track the bookkeeping expects,
+    /// otherwise the caller must rebuild deterministically via `loadTrack`.
+    private func verifiedCurrentPlayerItem() -> AVPlayerItem? {
+        guard let item = player?.currentItem,
+              let url = (item.asset as? AVURLAsset)?.url,
+              url == queue[currentIndex].fileURL(in: documentsDirectory)
+        else { return nil }
+        return item
     }
 
     private func preloadNextItem(after index: Int) {
@@ -274,16 +289,38 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
     }
 
     private func stopPlayback() {
+        cancelPendingPlayIntent()
         player?.pause()
-        isPlaying = false
         updateNowPlayingInfo()
+    }
+
+    /// Invalidates any activation completion still in flight so a stale play
+    /// intent can never restart audio after the user or the system stopped it.
+    private func cancelPendingPlayIntent() {
+        playIntentGeneration += 1
+        isActivationPending = false
     }
 
     private func makeConfiguredPlayer(with item: AVPlayerItem) -> AVQueuePlayer {
         let player = AVQueuePlayer(items: [item])
         player.automaticallyWaitsToMinimizeStalling = false
         player.actionAtItemEnd = .advance
+        installTimeControlObservation(on: player)
         return player
+    }
+
+    /// Derives `isPlaying` from the player's `timeControlStatus` so
+    /// system-initiated pauses (interruptions, Bluetooth route loss, resource
+    /// contention) keep the UI and now-playing state in sync with reality.
+    private func installTimeControlObservation(on player: AVQueuePlayer) {
+        timeControlObservation = player.observe(\.timeControlStatus, options: [.new]) { [weak self] observedPlayer, _ in
+            let playing = observedPlayer.timeControlStatus != .paused
+            Task { @MainActor in
+                guard let self, self.isPlaying != playing else { return }
+                self.isPlaying = playing
+                self.updateNowPlayingInfo()
+            }
+        }
     }
 
     private func configureSession() {
@@ -294,12 +331,101 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
         }
     }
 
-    private func activateSession() {
-        do {
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            AppLogger.error("Watch audio session activate failed: \(error.localizedDescription)", category: .playback)
+    /// Long-form audio on watchOS must be activated with the asynchronous
+    /// `activate(options:completionHandler:)` — it is what presents the
+    /// Bluetooth route picker, and the synchronous `setActive(true)` throws for
+    /// long-form sessions — so every play is gated behind it. Once the session
+    /// is active, subsequent activations complete immediately.
+    private func activateSessionAndPlay() {
+        playIntentGeneration += 1
+        let generation = playIntentGeneration
+        isActivationPending = true
+        AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
+            Task { @MainActor in
+                guard let self, generation == self.playIntentGeneration else { return }
+                self.isActivationPending = false
+                if success {
+                    self.player?.play()
+                } else {
+                    AppLogger.error(
+                        "Watch audio session activate failed: \(error?.localizedDescription ?? "unknown error")",
+                        category: .playback
+                    )
+                    self.isPlaying = false
+                    self.updateNowPlayingInfo()
+                    WKInterfaceDevice.current().play(.failure)
+                }
+            }
         }
+    }
+
+    private func observeAudioSession() {
+        let center = NotificationCenter.default
+        sessionObservers.append(center.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
+        ) { [weak self] notification in
+            guard let info = notification.userInfo,
+                  let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+            else { return }
+            let options = AVAudioSession.InterruptionOptions(
+                rawValue: info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            )
+            Task { @MainActor in self?.handleInterruption(type: type, options: options) }
+        })
+        sessionObservers.append(center.addObserver(
+            forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main
+        ) { [weak self] notification in
+            guard let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+                  let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
+                  reason == .oldDeviceUnavailable
+            else { return }
+            Task { @MainActor in self?.handleRouteLoss() }
+        })
+        sessionObservers.append(center.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.handleMediaServicesReset() }
+        })
+    }
+
+    private func handleInterruption(type: AVAudioSession.InterruptionType, options: AVAudioSession.InterruptionOptions) {
+        switch type {
+        case .began:
+            wasPlayingBeforeInterruption = isPlaying || isActivationPending
+            cancelPendingPlayIntent()
+            player?.pause()
+        case .ended:
+            if wasPlayingBeforeInterruption, options.contains(.shouldResume) {
+                activateSessionAndPlay()
+            }
+            wasPlayingBeforeInterruption = false
+        @unknown default:
+            break
+        }
+    }
+
+    /// Route loss (headphones disconnect) must both pause and invalidate any
+    /// activation completion in flight, or a stale play intent restarts audio
+    /// on the speaker after the earbuds drop.
+    private func handleRouteLoss() {
+        cancelPendingPlayIntent()
+        player?.pause()
+    }
+
+    /// mediaserverd crashes invalidate every AVFoundation object the app
+    /// holds, so tear the player down completely; the next play/pause tap
+    /// rebuilds it from scratch via `loadTrack`.
+    private func handleMediaServicesReset() {
+        AppLogger.warning("Watch media services were reset, tearing down player", category: .playback)
+        cancelPendingPlayIntent()
+        removeObservers()
+        timeControlObservation = nil
+        player = nil
+        isPlaying = false
+        consecutiveFailures = 0
+        configureSession()
+        updateNowPlayingInfo()
     }
 
     private func addTimeObserver() {
@@ -309,7 +435,6 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
                 guard let self else { return }
                 let seconds = CMTimeGetSeconds(time)
                 self.currentTime = seconds.isNaN ? 0 : seconds
-                self.updateNowPlayingInfo()
             }
         }
     }
@@ -317,8 +442,12 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
     private func observeEnd(of item: AVPlayerItem) {
         endObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.handleTrackFinished() }
+        ) { [weak self] notification in
+            guard let finished = notification.object as? AVPlayerItem else { return }
+            Task { @MainActor in
+                self?.statusObservations.removeValue(forKey: ObjectIdentifier(finished))
+                self?.handleTrackFinished()
+            }
         }
         failedToEndObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main
@@ -390,9 +519,25 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
         ]
-        if let data = track.artworkData, let image = UIImage(data: data) {
-            info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        if let artwork = artwork(for: track) {
+            info[MPMediaItemPropertyArtwork] = artwork
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    /// Decoding artwork is too expensive to repeat on every now-playing
+    /// refresh, so the decoded `MPMediaItemArtwork` is cached per track and
+    /// rebuilt only when the current track changes.
+    private func artwork(for track: MediaItem) -> MPMediaItemArtwork? {
+        if let cachedArtwork, cachedArtwork.trackID == track.id {
+            return cachedArtwork.artwork
+        }
+        guard let data = track.artworkData, let image = UIImage(data: data) else {
+            cachedArtwork = nil
+            return nil
+        }
+        let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        cachedArtwork = (track.id, artwork)
+        return artwork
     }
 }

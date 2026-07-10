@@ -1047,7 +1047,9 @@ final class LastFMService {
 
     nonisolated private func performGET(params: [String: String]) async throws -> Data {
         var components = URLComponents(string: Self.baseURL)!
-        components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+        components.percentEncodedQuery = params
+            .map { "\(percentEncode($0.key))=\(percentEncode($0.value))" }
+            .joined(separator: "&")
 
         guard let url = components.url else {
             throw LastFMError.invalidURL

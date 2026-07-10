@@ -131,6 +131,7 @@ final class LibraryViewModel {
 
     private(set) var currentSegment: Segment = .albums
     private var searchQuery: String = ""
+    var isSearching: Bool { !searchQuery.isEmpty }
     private(set) var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "albumSort") ?? "") ?? .title
     private(set) var songSort: SongSort = SongSort(rawValue: UserDefaults.standard.string(forKey: "songSort") ?? "") ?? .title
     private(set) var scrobbleRange: ChartPeriod = ChartPeriod(rawValue: UserDefaults.standard.string(forKey: "songScrobbleRange") ?? "") ?? .allTime

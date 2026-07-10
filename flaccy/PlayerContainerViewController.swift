@@ -204,8 +204,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         updateOverlayCapture()
     }
 
-    // MARK: Dock synchronization
-
     func syncDock(track: Track?, isPlaying: Bool) {
         if let track {
             miniPlayer.configure(with: track, isPlaying: isPlaying)
@@ -238,8 +236,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         updateOverlayCapture()
     }
 
-    // MARK: Programmatic transitions
-
     func expand() {
         guard state == .dock else { return }
         beginMorphSession(from: .dock)
@@ -271,8 +267,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         startSpring(to: 0, initialPointVelocity: 0)
     }
 
-    // MARK: Geometry
-
     private func recomputeGeometry() {
         view.layoutIfNeeded()
         let height = view.bounds.height
@@ -289,8 +283,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         fullArtRect = npc.artworkMorphFrame()
         fullArtCornerRadius = npc.artworkMorphCornerRadius
     }
-
-    // MARK: Morph driver
 
     /// The single source of truth: maps `t` onto the card geometry, the chrome
     /// cross-fades, and the flying artwork proxy in one pass.
@@ -347,8 +339,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         thresholdGenerator.impactOccurred(intensity: past ? 1 : 0.7)
         thresholdGenerator.prepare()
     }
-
-    // MARK: Session lifecycle
 
     private func beginMorphSession(from terminal: MorphState) {
         sessionStartTerminal = terminal
@@ -434,8 +424,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         overlay.dockRect = dockVisible ? cardView.frame : .zero
     }
 
-    // MARK: Pan handling
-
     @objc private func handleMorphPan(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: view).y
         let velocity = gesture.velocity(in: view).y
@@ -474,8 +462,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         let target: CGFloat = expanding ? (commit ? 1 : 0) : (commit ? 0 : 1)
         startSpring(to: target, initialPointVelocity: velocity)
     }
-
-    // MARK: Settle animation
 
     private func startSpring(to target: CGFloat, initialPointVelocity: CGFloat) {
         if target == 1 {
@@ -557,8 +543,6 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         miniPlayer.setMorphArtworkHidden(hasArt)
         npc.setArtworkHiddenForMorph(hasArt)
     }
-
-    // MARK: Interpolation helpers
 
     private func lerp(_ a: CGFloat, _ b: CGFloat, _ t: CGFloat) -> CGFloat { a + (b - a) * t }
 

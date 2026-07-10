@@ -5,10 +5,18 @@ final class ImageCache {
 
     static let shared = ImageCache()
 
+    nonisolated private static let maxDiskCacheBytes = 100 * 1024 * 1024
+    nonisolated private static let maxDiskCacheAge: TimeInterval = 90 * 24 * 60 * 60
+
     private let memoryCache = NSCache<NSString, UIImage>()
     private let diskCacheURL: URL
     private let fileManager = FileManager.default
     private let ioQueue = DispatchQueue(label: "com.midgarcorp.flaccy.imagecache", qos: .utility)
+    private let readQueue = DispatchQueue(
+        label: "com.midgarcorp.flaccy.imagecache.read",
+        qos: .userInitiated,
+        attributes: .concurrent
+    )
 
     private init() {
         memoryCache.totalCostLimit = 50 * 1024 * 1024
@@ -23,6 +31,11 @@ final class ImageCache {
                 AppLogger.error("Failed to create image cache directory: \(error.localizedDescription)", category: .content)
             }
         }
+
+        let cacheDirectory = diskCacheURL
+        ioQueue.async {
+            Self.pruneDiskCache(at: cacheDirectory)
+        }
     }
 
     func image(forKey key: String) -> UIImage? {
@@ -32,12 +45,40 @@ final class ImageCache {
         }
 
         let filePath = diskPath(forKey: key)
-        guard let data = ioQueue.sync(execute: { try? Data(contentsOf: filePath) }),
+        guard let data = try? Data(contentsOf: filePath),
               let diskImage = UIImage(data: data)
         else {
             return nil
         }
 
+        let cost = estimateCost(of: diskImage)
+        memoryCache.setObject(diskImage, forKey: cacheKey, cost: cost)
+        return diskImage
+    }
+
+    /// Off-main variant of `image(forKey:)`: on a memory miss, performs the disk read,
+    /// decode, and `preparingForDisplay()` on a background queue so main-actor callers
+    /// never block on I/O or contend with pending compression writes.
+    func loadImage(forKey key: String) async -> UIImage? {
+        let cacheKey = key as NSString
+        if let cached = memoryCache.object(forKey: cacheKey) {
+            return cached
+        }
+
+        let filePath = diskPath(forKey: key)
+        let diskImage = await withCheckedContinuation { (continuation: CheckedContinuation<UIImage?, Never>) in
+            readQueue.async {
+                guard let data = try? Data(contentsOf: filePath),
+                      let image = UIImage(data: data)
+                else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: image.preparingForDisplay() ?? image)
+            }
+        }
+
+        guard let diskImage else { return nil }
         let cost = estimateCost(of: diskImage)
         memoryCache.setObject(diskImage, forKey: cacheKey, cost: cost)
         return diskImage
@@ -104,5 +145,53 @@ final class ImageCache {
     private func estimateCost(of image: UIImage) -> Int {
         guard let cgImage = image.cgImage else { return 0 }
         return cgImage.bytesPerRow * cgImage.height
+    }
+
+    /// Bounds the disk tier once per launch: evicts least-recently-used files until the
+    /// directory fits within `maxDiskCacheBytes`, and drops anything untouched for
+    /// longer than `maxDiskCacheAge`.
+    private nonisolated static func pruneDiskCache(at directory: URL) {
+        let fileManager = FileManager.default
+        let keys: Set<URLResourceKey> = [.fileSizeKey, .contentModificationDateKey, .contentAccessDateKey]
+        guard let files = try? fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: Array(keys),
+            options: .skipsHiddenFiles
+        ) else { return }
+
+        let now = Date()
+        let entries = files
+            .compactMap { url -> (url: URL, size: Int, lastUsed: Date)? in
+                guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
+                let lastUsed = max(
+                    values.contentAccessDate ?? .distantPast,
+                    values.contentModificationDate ?? .distantPast
+                )
+                return (url, values.fileSize ?? 0, lastUsed)
+            }
+            .sorted { $0.lastUsed < $1.lastUsed }
+
+        var totalSize = entries.reduce(0) { $0 + $1.size }
+        var removedCount = 0
+        for entry in entries {
+            let expired = now.timeIntervalSince(entry.lastUsed) > maxDiskCacheAge
+            guard totalSize > maxDiskCacheBytes || expired else { break }
+            do {
+                try fileManager.removeItem(at: entry.url)
+                totalSize -= entry.size
+                removedCount += 1
+            } catch {
+                Task { @MainActor in
+                    AppLogger.error("Failed to prune image cache file: \(error.localizedDescription)", category: .content)
+                }
+            }
+        }
+
+        if removedCount > 0 {
+            let summary = "Pruned \(removedCount) image cache files, \(totalSize) bytes remain"
+            Task { @MainActor in
+                AppLogger.info(summary, category: .content)
+            }
+        }
     }
 }

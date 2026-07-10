@@ -60,9 +60,86 @@ final class GroqService: MetadataClassifying {
         session = URLSession(configuration: config)
     }
 
+    nonisolated private static let maxBatchSize = 40
+    nonisolated private static let minBatchSize = 5
+
     nonisolated func analyzeLibrary(tracks: [TrackContext]) async -> IdentifiedMusic? {
         guard !tracks.isEmpty else { return nil }
 
+        let albums = await analyzeBatch(tracks)
+        guard !albums.isEmpty else { return nil }
+
+        let merged = Self.mergeDuplicateAlbums(albums)
+        await AppLogger.info("Groq analyzed library: \(merged.count) albums identified", category: .content)
+        return IdentifiedMusic(albums: merged)
+    }
+
+    nonisolated private func analyzeBatch(_ tracks: [TrackContext]) async -> [IdentifiedAlbum] {
+        if tracks.count > Self.maxBatchSize {
+            return await bisectAndAnalyze(tracks)
+        }
+
+        let request = Self.makeAnalysisRequest(tracks: tracks)
+
+        switch await performRequest(request) {
+        case .success(let data):
+            do {
+                return try JSONDecoder().decode(IdentifiedMusic.self, from: data).albums
+            } catch {
+                await AppLogger.error("Failed to decode library analysis: \(error.localizedDescription)", category: .content)
+                return await splitOrGiveUp(tracks, reason: "undecodable response")
+            }
+        case .payloadTooLarge:
+            return await splitOrGiveUp(tracks, reason: "payload too large")
+        case .truncated:
+            return await splitOrGiveUp(tracks, reason: "response truncated at token limit")
+        case .failure:
+            return []
+        }
+    }
+
+    /// Bisects a failed or oversized batch and retries each half, giving up once
+    /// the batch is at or below the minimum size where splitting cannot help.
+    nonisolated private func splitOrGiveUp(_ tracks: [TrackContext], reason: String) async -> [IdentifiedAlbum] {
+        guard tracks.count > Self.minBatchSize else {
+            await AppLogger.warning("Giving up on batch of \(tracks.count) tracks: \(reason)", category: .content)
+            return []
+        }
+        await AppLogger.info("Splitting batch of \(tracks.count) tracks: \(reason)", category: .content)
+        return await bisectAndAnalyze(tracks)
+    }
+
+    nonisolated private func bisectAndAnalyze(_ tracks: [TrackContext]) async -> [IdentifiedAlbum] {
+        let mid = tracks.count / 2
+        let firstHalf = await analyzeBatch(Array(tracks[..<mid]))
+        let secondHalf = await analyzeBatch(Array(tracks[mid...]))
+        return firstHalf + secondHalf
+    }
+
+    /// Recombines albums that were split across batches so the caller sees one
+    /// entry per artist/album pair with the union of its identified tracks.
+    nonisolated private static func mergeDuplicateAlbums(_ albums: [IdentifiedAlbum]) -> [IdentifiedAlbum] {
+        var order: [String] = []
+        var byKey: [String: IdentifiedAlbum] = [:]
+        for album in albums {
+            let key = "\(album.artist.lowercased())|\(album.album.lowercased())"
+            if let existing = byKey[key] {
+                byKey[key] = IdentifiedAlbum(
+                    artist: existing.artist,
+                    album: existing.album,
+                    year: existing.year ?? album.year,
+                    genre: existing.genre ?? album.genre,
+                    tracks: existing.tracks + album.tracks
+                )
+            } else {
+                order.append(key)
+                byKey[key] = album
+            }
+        }
+        return order.compactMap { byKey[$0] }
+    }
+
+    nonisolated private static func makeAnalysisRequest(tracks: [TrackContext]) -> ChatRequest {
         let trackDescriptions = tracks.enumerated().map { index, track in
             var parts = ["\(index + 1). Path: \(track.relativePath)"]
             if track.currentArtist != "Unknown Artist" { parts.append("Artist: \(track.currentArtist)") }
@@ -72,7 +149,7 @@ final class GroqService: MetadataClassifying {
             return parts.joined(separator: " | ")
         }.joined(separator: "\n")
 
-        let request = ChatRequest(
+        return ChatRequest(
             model: Self.model,
             messages: [
                 ChatMessage(role: "system", content: """
@@ -97,17 +174,6 @@ final class GroqService: MetadataClassifying {
             max_completion_tokens: 8192,
             response_format: ResponseFormat(type: "json_object")
         )
-
-        guard let data = await performRequest(request) else { return nil }
-
-        do {
-            let result = try JSONDecoder().decode(IdentifiedMusic.self, from: data)
-            await AppLogger.info("Groq analyzed library: \(result.albums.count) albums identified", category: .content)
-            return result
-        } catch {
-            await AppLogger.error("Failed to decode library analysis: \(error.localizedDescription)", category: .content)
-            return nil
-        }
     }
 
     nonisolated func classifyGenre(artist: String, album: String, trackTitles: [String]) async -> GenreClassification? {
@@ -124,7 +190,7 @@ final class GroqService: MetadataClassifying {
             response_format: ResponseFormat(type: "json_object")
         )
 
-        guard let data = await performRequest(request) else { return nil }
+        guard case .success(let data) = await performRequest(request) else { return nil }
 
         do {
             return try JSONDecoder().decode(GenreClassification.self, from: data)
@@ -134,7 +200,7 @@ final class GroqService: MetadataClassifying {
         }
     }
 
-    nonisolated private func performRequest(_ chatRequest: ChatRequest, retryCount: Int = 0) async -> Data? {
+    nonisolated private func performRequest(_ chatRequest: ChatRequest, retryCount: Int = 0) async -> RequestOutcome {
         do {
             var urlRequest = URLRequest(url: Self.endpoint)
             urlRequest.httpMethod = "POST"
@@ -144,7 +210,7 @@ final class GroqService: MetadataClassifying {
 
             let (data, response) = try await session.data(for: urlRequest)
 
-            guard let http = response as? HTTPURLResponse else { return nil }
+            guard let http = response as? HTTPURLResponse else { return .failure }
 
             if http.statusCode == 429 && retryCount < 3 {
                 let waitSeconds = [10, 20, 40][retryCount]
@@ -153,30 +219,42 @@ final class GroqService: MetadataClassifying {
                 return await performRequest(chatRequest, retryCount: retryCount + 1)
             }
 
-            if http.statusCode == 413 && retryCount == 0 {
-                await AppLogger.warning("Groq request too large, cannot retry", category: .content)
-                return nil
+            if http.statusCode == 413 {
+                await AppLogger.warning("Groq request too large", category: .content)
+                return .payloadTooLarge
             }
 
             guard (200...299).contains(http.statusCode) else {
                 if let body = String(data: data, encoding: .utf8) {
                     await AppLogger.error("Groq API \(http.statusCode): \(body.prefix(200))", category: .content)
                 }
-                return nil
+                return .failure
             }
 
             let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
-            guard let content = chatResponse.choices.first?.message.content else {
+            guard let choice = chatResponse.choices.first else {
                 await AppLogger.error("Groq API returned empty response", category: .content)
-                return nil
+                return .failure
             }
 
-            return Data(content.utf8)
+            if choice.finish_reason == "length" {
+                await AppLogger.warning("Groq response truncated at token limit", category: .content)
+                return .truncated
+            }
+
+            return .success(Data(choice.message.content.utf8))
         } catch {
             await AppLogger.error("Groq API error: \(error.localizedDescription)", category: .content)
-            return nil
+            return .failure
         }
     }
+}
+
+private nonisolated enum RequestOutcome {
+    case success(Data)
+    case payloadTooLarge
+    case truncated
+    case failure
 }
 
 private nonisolated struct ChatRequest: Encodable {
@@ -200,5 +278,6 @@ private nonisolated struct ChatResponse: Decodable {
     let choices: [Choice]
     struct Choice: Decodable {
         let message: ChatMessage
+        let finish_reason: String?
     }
 }

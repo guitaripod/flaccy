@@ -16,6 +16,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
     private let mosaicView = StackedArtworkMosaicView()
     private var hasAnimatedAppearance = false
     private var hasLoadedOnce = false
+    private var mosaicGeneration = 0
 
     init(playlistId: Int64, playlistName: String, audioPlayer: AudioPlaying = AudioPlayer.shared) {
         self.playlistId = playlistId
@@ -188,23 +189,10 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
             playlistTrackRecords = try db.fetchPlaylistTracks(playlistId: playlistId)
             let allDBTracks = try db.fetchAllTracks()
             let tracksByURL = Dictionary(allDBTracks.map { ($0.fileURL, $0) }, uniquingKeysWith: { first, _ in first })
-            let albumsWithTracks = try db.fetchAlbumsWithTracks()
-
-            var artworkByAlbumKey = [String: UIImage]()
-            for (albumInfo, albumTracks) in albumsWithTracks {
-                guard let first = albumTracks.first else { continue }
-                let key = "\(first.albumTitle)\0\(first.artist)"
-                if let data = albumInfo?.coverArtData, let img = UIImage(data: data) {
-                    artworkByAlbumKey[key] = img
-                } else if let data = first.artworkData, let img = UIImage(data: data) {
-                    artworkByAlbumKey[key] = img
-                }
-            }
 
             tracks = playlistTrackRecords.compactMap { playlistTrack in
                 guard let record = tracksByURL[playlistTrack.trackFileURL] else { return nil }
-                let key = "\(record.albumTitle)\0\(record.artist)"
-                return Track.from(record: record, artwork: artworkByAlbumKey[key])
+                return Track.from(record: record, artwork: nil)
             }
 
             tableView.reloadData()
@@ -215,8 +203,32 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
+    /// Resolves up to four distinct album thumbnails through AlbumArtworkCache
+    /// and applies them once every load lands, discarding results superseded
+    /// by a newer mosaic refresh.
     private func updateMosaic() {
-        let covers = distinctCovers(limit: 4)
+        mosaicGeneration += 1
+        let generation = mosaicGeneration
+        let albumKeys = distinctAlbumKeys(limit: 4)
+        guard !albumKeys.isEmpty else {
+            applyMosaicCovers([])
+            return
+        }
+        var coversByIndex = [Int: UIImage]()
+        var remaining = albumKeys.count
+        for (index, key) in albumKeys.enumerated() {
+            AlbumArtworkCache.shared.loadThumbnail(forAlbum: key.albumTitle, artist: key.artist) { [weak self] image in
+                guard let self, self.mosaicGeneration == generation else { return }
+                if let image { coversByIndex[index] = image }
+                remaining -= 1
+                if remaining == 0 {
+                    self.applyMosaicCovers(albumKeys.indices.compactMap { coversByIndex[$0] })
+                }
+            }
+        }
+    }
+
+    private func applyMosaicCovers(_ covers: [UIImage]) {
         let apply = { self.mosaicView.setCovers(covers) }
         if hasLoadedOnce, !UIAccessibility.isReduceMotionEnabled {
             UIView.transition(with: mosaicView, duration: 0.3, options: [.transitionCrossDissolve, .beginFromCurrentState], animations: apply)
@@ -228,17 +240,16 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
             : "Playlist artwork, \(covers.count) album cover\(covers.count == 1 ? "" : "s")"
     }
 
-    private func distinctCovers(limit: Int) -> [UIImage] {
+    private func distinctAlbumKeys(limit: Int) -> [(albumTitle: String, artist: String)] {
         var seenAlbumKeys = Set<String>()
-        var covers: [UIImage] = []
+        var albumKeys: [(albumTitle: String, artist: String)] = []
         for track in tracks {
-            guard covers.count < limit else { break }
-            guard let artwork = track.artwork else { continue }
+            guard albumKeys.count < limit else { break }
             let key = "\(track.albumTitle)\0\(track.artist)"
             guard seenAlbumKeys.insert(key).inserted else { continue }
-            covers.append(artwork)
+            albumKeys.append((track.albumTitle, track.artist))
         }
-        return covers
+        return albumKeys
     }
 
     private func playTapped() {

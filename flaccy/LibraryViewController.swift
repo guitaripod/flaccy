@@ -351,6 +351,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         collectionView.delegate = self
         collectionView.prefetchDataSource = self
         collectionView.backgroundColor = .clear
+        collectionView.keyboardDismissMode = .onDrag
 
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([

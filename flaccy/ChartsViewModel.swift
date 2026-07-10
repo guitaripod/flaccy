@@ -137,19 +137,18 @@ final class ChartsViewModel {
     /// database as pages are imported, so the delta is a real, rising count.
     func importHistory() {
         guard lastFM.isAuthenticated, !importStatePublisher.value.isImporting else { return }
-        let baseline = stats.totalPlays(period: .allTime)
+        let baseline = Self.scrobbleCount()
         importStatePublisher.send(.importing(imported: 0))
         AppLogger.info("Recap history import started (baseline \(baseline) scrobbles)", category: .sync)
 
-        let progressTask = Task { [weak self] in
+        let progressTask = Task.detached { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 800_000_000)
-                guard !Task.isCancelled, let self else { return }
-                let delta = max(0, self.stats.totalPlays(period: .allTime) - baseline)
-                await MainActor.run {
-                    if self.importStatePublisher.value.isImporting {
-                        self.importStatePublisher.send(.importing(imported: delta))
-                    }
+                guard !Task.isCancelled, self != nil else { return }
+                let delta = max(0, Self.scrobbleCount() - baseline)
+                await MainActor.run { [weak self] in
+                    guard let self, self.importStatePublisher.value.isImporting else { return }
+                    self.importStatePublisher.send(.importing(imported: delta))
                 }
             }
         }
@@ -158,7 +157,7 @@ final class ChartsViewModel {
             guard let self else { return }
             await self.stats.importHistory()
             progressTask.cancel()
-            let imported = max(0, self.stats.totalPlays(period: .allTime) - baseline)
+            let imported = max(0, Self.scrobbleCount() - baseline)
             UserDefaults.standard.set(true, forKey: self.importStateKey)
             AppLogger.info("Recap history import finished (\(imported) new scrobbles)", category: .sync)
             await MainActor.run {
@@ -166,5 +165,12 @@ final class ChartsViewModel {
                 self.load(period: self.selectedPeriod)
             }
         }
+    }
+
+    /// Total scrobble count via SQL `COUNT(*)`, avoiding the O(N) full-table
+    /// decode of `LastFMStatsService.totalPlays` — cheap enough to poll while
+    /// the importer is writing to the same serial database queue.
+    private nonisolated static func scrobbleCount() -> Int {
+        (try? DatabaseManager.shared.scrobbleCountInRange(from: .distantPast, to: .distantFuture)) ?? 0
     }
 }

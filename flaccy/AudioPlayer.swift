@@ -73,7 +73,11 @@ final class AudioPlayer: AudioPlaying {
     private var originalQueue: [Track] = []
     private var lastKnownPlaybackPosition: TimeInterval = 0
     private var isRetryingScrobbles: Bool = false
+    private var scrobbleRetryRequested: Bool = false
+    private var isRestoringQueue: Bool = false
     private var wasNetworkAvailable: Bool = false
+    private var wasPlayingBeforeInterruption = false
+    private var userPausedPlayback = false
     private let pathMonitor = NWPathMonitor()
 
     private(set) var queue: [Track] = []
@@ -199,17 +203,21 @@ final class AudioPlayer: AudioPlaying {
             guard let self else { return }
             switch type {
             case .began:
+                self.wasPlayingBeforeInterruption =
+                    self.isPlaying || (self.playingItem != nil && !self.userPausedPlayback)
                 if self.isPlaying {
                     self.player?.pause()
                     self.applyPlaybackState(false)
                 }
             case .ended:
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue ?? 0)
-                if options.contains(.shouldResume) {
+                if self.wasPlayingBeforeInterruption, options.contains(.shouldResume) {
+                    self.userPausedPlayback = false
                     self.activateSession()
                     self.player?.play()
                     self.applyPlaybackState(true)
                 }
+                self.wasPlayingBeforeInterruption = false
             @unknown default:
                 break
             }
@@ -224,6 +232,7 @@ final class AudioPlayer: AudioPlaying {
         else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self, self.isPlaying else { return }
+            self.userPausedPlayback = true
             self.player?.pause()
             self.applyPlaybackState(false)
         }
@@ -267,8 +276,9 @@ final class AudioPlayer: AudioPlaying {
     }
 
     /// Single gating choke point for starting playback: every entry that begins
-    /// audio (library taps, stations, radio, resume-from-idle) funnels through
-    /// play(_:startingAt:) or the resume branch of togglePlayPause, and both
+    /// audio (library taps, stations, radio, skips, queue jumps, remote commands)
+    /// loads through loadTrack(at:), and the direct-resume branch of
+    /// togglePlayPause re-checks before resuming an already-loaded item; both
     /// defer to the paywall once the trial has expired without a purchase.
     private func playbackIsGated() -> Bool {
         guard !PurchaseManager.shared.allowsPlayback else { return false }
@@ -277,8 +287,16 @@ final class AudioPlayer: AudioPlaying {
     }
 
     func play(_ tracks: [Track], startingAt index: Int) {
+        play(tracks, startingAt: index, stationSeed: nil)
+    }
+
+    /// Every queue replacement flows through here so the autoplay-continuation
+    /// seed is deterministically set for stations and cleared for ordinary
+    /// plays, never leaking a stale station artist into unrelated listening.
+    private func play(_ tracks: [Track], startingAt index: Int, stationSeed: String?) {
         guard !tracks.isEmpty, index >= 0, index < tracks.count else { return }
         if playbackIsGated() { return }
+        stationSeedArtist = stationSeed
         checkScrobbleOnSkip()
         originalQueue = tracks
         if shuffleEnabled {
@@ -298,7 +316,15 @@ final class AudioPlayer: AudioPlaying {
     }
 
     func togglePlayPause() {
-        guard let player else { return }
+        wasPlayingBeforeInterruption = false
+        guard let player else {
+            if playbackIsGated() { return }
+            if queue.indices.contains(currentIndex) {
+                impactLight.impactOccurred()
+                loadTrack(at: currentIndex)
+            }
+            return
+        }
         impactLight.impactOccurred()
         if !isPlaying, playbackIsGated() { return }
         if !isPlaying, player.currentItem == nil, queue.indices.contains(currentIndex) {
@@ -306,8 +332,10 @@ final class AudioPlayer: AudioPlaying {
             return
         }
         if isPlaying {
+            userPausedPlayback = true
             player.pause()
         } else {
+            userPausedPlayback = false
             activateSession()
             player.play()
         }
@@ -318,18 +346,16 @@ final class AudioPlayer: AudioPlaying {
         checkScrobbleOnSkip()
         guard currentIndex + 1 < queue.count else {
             if repeatMode == .all && !queue.isEmpty {
-                currentIndex = 0
                 selectionFeedback.selectionChanged()
-                loadTrack(at: currentIndex)
+                loadTrack(at: 0)
             } else {
                 player?.pause()
                 applyPlaybackState(false)
             }
             return
         }
-        currentIndex += 1
         selectionFeedback.selectionChanged()
-        loadTrack(at: currentIndex)
+        loadTrack(at: currentIndex + 1)
     }
 
     func previousTrack() {
@@ -346,9 +372,8 @@ final class AudioPlayer: AudioPlaying {
             player?.seek(to: .zero)
             return
         }
-        currentIndex -= 1
         selectionFeedback.selectionChanged()
-        loadTrack(at: currentIndex)
+        loadTrack(at: currentIndex - 1)
     }
 
     func seek(to time: TimeInterval) {
@@ -415,10 +440,12 @@ final class AudioPlayer: AudioPlaying {
             currentIndex = remaining.firstIndex { $0.fileURL == playingURL } ?? 0
             resyncPreloadedItems()
         } else {
+            let survivorsBefore = queue[..<currentIndex].filter { !urls.contains($0.fileURL) }.count
             queue = remaining
-            currentIndex = min(currentIndex, remaining.count - 1)
+            currentIndex = min(survivorsBefore, remaining.count - 1)
             loadTrack(at: currentIndex)
             if !wasPlaying {
+                userPausedPlayback = true
                 player?.pause()
                 isPlaying = false
                 updateNowPlayingInfo()
@@ -490,9 +517,8 @@ final class AudioPlayer: AudioPlaying {
     func jumpToIndex(_ index: Int) {
         guard index >= 0, index < queue.count else { return }
         checkScrobbleOnSkip()
-        currentIndex = index
         selectionFeedback.selectionChanged()
-        loadTrack(at: currentIndex)
+        loadTrack(at: index)
     }
 
     func removeFromQueue(at index: Int) {
@@ -528,6 +554,7 @@ final class AudioPlayer: AudioPlaying {
     }
 
     func insertNext(_ track: Track) {
+        let wasEmpty = queue.isEmpty
         let insertIndex = min(currentIndex + 1, queue.count)
         queue.insert(track, at: insertIndex)
         if let current = currentTrack, let origIdx = originalQueue.firstIndex(of: current) {
@@ -538,14 +565,21 @@ final class AudioPlayer: AudioPlaying {
         resyncPreloadedItems()
         impactLight.impactOccurred()
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        if wasEmpty {
+            NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
+        }
     }
 
     func addToQueue(_ track: Track) {
+        let wasEmpty = queue.isEmpty
         queue.append(track)
         originalQueue.append(track)
         resyncPreloadedItems()
         impactLight.impactOccurred()
         NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        if wasEmpty {
+            NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
+        }
     }
 
     func setSleepTimer(minutes: Int) {
@@ -558,6 +592,7 @@ final class AudioPlayer: AudioPlaying {
                 NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
                 if remaining <= 1 {
                     self.cancelSleepTimer()
+                    self.userPausedPlayback = true
                     self.player?.pause()
                     self.applyPlaybackState(false)
                 }
@@ -636,9 +671,7 @@ final class AudioPlayer: AudioPlaying {
             handleQueueExhausted()
             return
         }
-        if !hasScrobbled {
-            performScrobble()
-        }
+        scrobbleAtNaturalEndIfEligible()
 
         let previousIndex = currentIndex
         currentIndex = nextIndex
@@ -657,9 +690,11 @@ final class AudioPlayer: AudioPlaying {
 
         if sleepAtEndOfTrack {
             cancelSleepTimer()
+            userPausedPlayback = true
             player?.pause()
             applyPlaybackState(false)
         } else {
+            userPausedPlayback = false
             activateSession()
             player?.play()
             isPlaying = true
@@ -676,9 +711,7 @@ final class AudioPlayer: AudioPlaying {
 
     private func handleQueueExhausted() {
         guard playingItem != nil else { return }
-        if !hasScrobbled {
-            performScrobble()
-        }
+        scrobbleAtNaturalEndIfEligible()
         playingItem = nil
         preloadedItem = nil
         preloadedIndex = nil
@@ -733,6 +766,9 @@ final class AudioPlayer: AudioPlaying {
 
     private func loadTrack(at index: Int) {
         guard index >= 0, index < queue.count else { return }
+        if playbackIsGated() { return }
+        currentIndex = index
+        userPausedPlayback = false
 
         removePlayerObservers()
 
@@ -836,66 +872,60 @@ final class AudioPlayer: AudioPlaying {
         return elapsed >= threshold
     }
 
-    private func performScrobble() {
+    /// A track that reaches its natural end always counts locally (play count,
+    /// Recap stats), but only tracks meeting the Last.fm eligibility rule are
+    /// submitted, so sub-30-second interludes are never scrobbled remotely
+    /// just because they finished.
+    private func scrobbleAtNaturalEndIfEligible() {
+        guard !hasScrobbled, let track = currentTrack else { return }
+        let eligibleForLastFM = track.duration > 0
+            && meetsScrobbleCriteria(elapsed: track.duration, trackDuration: track.duration)
+        performScrobble(submitToLastFM: eligibleForLastFM)
+    }
+
+    /// Write-ahead persists the scrobble, then flushes through the pending
+    /// queue as the single Last.fm submission path, so a foreground or
+    /// network-restore retry can never double-submit an in-flight scrobble.
+    private func performScrobble(submitToLastFM: Bool = true) {
         guard let track = currentTrack else { return }
         hasScrobbled = true
         let startTime = trackStartTime ?? Date()
         let trackDuration = Int(track.duration)
-
         let dbID = track.dbID
+        let scrobblesToLastFM = submitToLastFM && LastFMService.shared.isAuthenticated
+        let record = ScrobbleRecord(
+            trackTitle: track.title,
+            artist: track.artist,
+            albumTitle: track.albumTitle,
+            timestamp: startTime,
+            duration: trackDuration,
+            submitted: !scrobblesToLastFM
+        )
 
-        Task { [track, startTime, trackDuration, dbID] in
-            if let dbID {
-                do {
-                    try DatabaseManager.shared.incrementPlayCount(trackId: dbID)
-                } catch {
-                    AppLogger.error("Failed to increment play count: \(error.localizedDescription)", category: .database)
-                }
-            }
-
-            let scrobblesToLastFM = LastFMService.shared.isAuthenticated
-            let record = ScrobbleRecord(
-                trackTitle: track.title,
-                artist: track.artist,
-                albumTitle: track.albumTitle,
-                timestamp: startTime,
-                duration: trackDuration,
-                submitted: !scrobblesToLastFM
-            )
-            do {
-                try DatabaseManager.shared.insertScrobble(record)
-            } catch {
-                AppLogger.error("Failed to persist scrobble: \(error.localizedDescription)", category: .database)
-            }
-
+        Task { [record, dbID, scrobblesToLastFM] in
+            await Task.detached {
+                Self.persistScrobble(record, playCountTrackID: dbID)
+            }.value
             guard scrobblesToLastFM else { return }
-
-            let success = await LastFMService.shared.scrobble(
-                track: track.title,
-                artist: track.artist,
-                album: track.albumTitle,
-                timestamp: startTime,
-                duration: trackDuration
-            )
-
-            if success {
-                self.markScrobbleSubmitted(trackTitle: track.title, timestamp: startTime)
-            } else {
-                AppLogger.info("Scrobble left pending for retry: \(track.title)", category: .sync)
-            }
+            await self.retryPendingScrobbles()
         }
     }
 
-    /// Marks the write-ahead pending row as submitted after a successful network scrobble, matching on title plus timestamp since insertScrobble does not return the row id.
-    private func markScrobbleSubmitted(trackTitle: String, timestamp: Date) {
+    /// Bumps the play count and inserts the write-ahead scrobble row off the
+    /// main actor so crossing the scrobble threshold never causes a database
+    /// hitch mid-playback.
+    private nonisolated static func persistScrobble(_ record: ScrobbleRecord, playCountTrackID: Int64?) {
+        if let playCountTrackID {
+            do {
+                try DatabaseManager.shared.incrementPlayCount(trackId: playCountTrackID)
+            } catch {
+                AppLogger.error("Failed to increment play count: \(error.localizedDescription)", category: .database)
+            }
+        }
         do {
-            let pending = try DatabaseManager.shared.fetchPendingScrobbles()
-            let ids = pending
-                .filter { $0.trackTitle == trackTitle && abs($0.timestamp.timeIntervalSince(timestamp)) < 1 }
-                .compactMap(\.id)
-            try DatabaseManager.shared.markScrobblesSubmitted(ids: ids)
+            try DatabaseManager.shared.insertScrobble(record)
         } catch {
-            AppLogger.error("Failed to mark scrobble submitted: \(error.localizedDescription)", category: .database)
+            AppLogger.error("Failed to persist scrobble: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -952,10 +982,76 @@ final class AudioPlayer: AudioPlaying {
             return .success
         }
 
-        center.skipForwardCommand.isEnabled = false
-        center.skipBackwardCommand.isEnabled = false
+        center.skipForwardCommand.isEnabled = true
+        center.skipForwardCommand.preferredIntervals = [15]
+        center.skipForwardCommand.addTarget { [weak self] event in
+            let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.seek(to: self.currentTime + interval)
+            }
+            return .success
+        }
+
+        center.skipBackwardCommand.isEnabled = true
+        center.skipBackwardCommand.preferredIntervals = [15]
+        center.skipBackwardCommand.addTarget { [weak self] event in
+            let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.seek(to: max(0, self.currentTime - interval))
+            }
+            return .success
+        }
+
+        center.changeShuffleModeCommand.isEnabled = true
+        center.changeShuffleModeCommand.addTarget { [weak self] event in
+            guard let shuffleEvent = event as? MPChangeShuffleModeCommandEvent else { return .commandFailed }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                let wantsShuffle = shuffleEvent.shuffleType != .off
+                if wantsShuffle != self.shuffleEnabled { self.toggleShuffle() }
+            }
+            return .success
+        }
+
+        center.changeRepeatModeCommand.isEnabled = true
+        center.changeRepeatModeCommand.addTarget { [weak self] event in
+            guard let repeatEvent = event as? MPChangeRepeatModeCommandEvent else { return .commandFailed }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                let target: RepeatMode =
+                    repeatEvent.repeatType == .all ? .all : repeatEvent.repeatType == .one ? .one : .off
+                while self.repeatMode != target { self.cycleRepeatMode() }
+            }
+            return .success
+        }
+
+        center.likeCommand.isEnabled = true
+        center.likeCommand.localizedTitle = "Love on Last.fm"
+        center.likeCommand.addTarget { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self, let track = self.currentTrack else { return }
+                Task { _ = await LovedTracksService.shared.toggleLove(track: track) }
+            }
+            return .success
+        }
+
         center.seekForwardCommand.isEnabled = false
         center.seekBackwardCommand.isEnabled = false
+        syncRemoteCommandState()
+    }
+
+    /// Keeps the system UI's shuffle/repeat/like toggles showing the app's
+    /// actual state (CarPlay and the expanded now-playing controls read these).
+    private func syncRemoteCommandState() {
+        let center = MPRemoteCommandCenter.shared()
+        center.changeShuffleModeCommand.currentShuffleType = shuffleEnabled ? .items : .off
+        center.changeRepeatModeCommand.currentRepeatType =
+            repeatMode == .all ? .all : repeatMode == .one ? .one : .off
+        if let track = currentTrack {
+            center.likeCommand.isActive = LovedTracksService.shared.isLoved(track: track)
+        }
     }
 
     private func resolveArtwork(for track: Track) -> UIImage? {
@@ -997,20 +1093,20 @@ final class AudioPlayer: AudioPlaying {
         }
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        syncRemoteCommandState()
     }
 
     func saveQueueState() {
+        guard !(isRestoringQueue && queue.isEmpty) else { return }
         let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
-        let paths = queue.map { track -> String in
-            let trackPath = track.fileURL.standardizedFileURL.path
-            let docsPath = docsDir.path
-            if trackPath.hasPrefix(docsPath) {
-                let rel = String(trackPath.dropFirst(docsPath.count))
-                return rel.hasPrefix("/") ? String(rel.dropFirst()) : rel
-            }
-            return track.fileURL.lastPathComponent
-        }
+        let paths = queue.map { relativePath(for: $0, docsDir: docsDir) }
         UserDefaults.standard.set(paths, forKey: "flaccy.queue.paths")
+        if shuffleEnabled {
+            let originalPaths = originalQueue.map { relativePath(for: $0, docsDir: docsDir) }
+            UserDefaults.standard.set(originalPaths, forKey: "flaccy.queue.originalPaths")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "flaccy.queue.originalPaths")
+        }
         UserDefaults.standard.set(currentIndex, forKey: "flaccy.queue.index")
         if paths.indices.contains(currentIndex) {
             UserDefaults.standard.set(paths[currentIndex], forKey: "flaccy.queue.currentPath")
@@ -1022,6 +1118,20 @@ final class AudioPlayer: AudioPlaying {
         UserDefaults.standard.set(repeatMode == .all ? 1 : repeatMode == .one ? 2 : 0, forKey: "flaccy.queue.repeat")
     }
 
+    private func relativePath(for track: Track, docsDir: URL) -> String {
+        let trackPath = track.fileURL.standardizedFileURL.path
+        let docsPath = docsDir.path
+        if trackPath.hasPrefix(docsPath) {
+            let rel = String(trackPath.dropFirst(docsPath.count))
+            return rel.hasPrefix("/") ? String(rel.dropFirst()) : rel
+        }
+        return track.fileURL.lastPathComponent
+    }
+
+    /// Reads the persisted queue keys synchronously, then resolves the saved
+    /// paths into records off the main actor before hydrating tracks and
+    /// rebuilding the paused player, so restoring a long queue never stalls
+    /// launch with per-track database reads.
     func restoreQueueState() {
         guard let paths = UserDefaults.standard.stringArray(forKey: "flaccy.queue.paths"),
               !paths.isEmpty else { return }
@@ -1031,26 +1141,84 @@ final class AudioPlayer: AudioPlaying {
         let savedShuffle = UserDefaults.standard.bool(forKey: "flaccy.queue.shuffle")
         let savedRepeat = UserDefaults.standard.integer(forKey: "flaccy.queue.repeat")
         let savedCurrentPath = UserDefaults.standard.string(forKey: "flaccy.queue.currentPath")
+        let savedOriginalPaths = savedShuffle
+            ? UserDefaults.standard.stringArray(forKey: "flaccy.queue.originalPaths")
+            : nil
 
+        isRestoringQueue = true
+        Task { [weak self] in
+            let fetched = await Task.detached {
+                Self.fetchRestorableRecords(paths: paths, originalPaths: savedOriginalPaths)
+            }.value
+            defer { self?.isRestoringQueue = false }
+            self?.applyRestoredQueue(
+                records: fetched.records,
+                originalRecords: fetched.originalRecords,
+                savedIndex: savedIndex,
+                savedElapsed: savedElapsed,
+                savedShuffle: savedShuffle,
+                savedRepeat: savedRepeat,
+                savedCurrentPath: savedCurrentPath
+            )
+        }
+    }
+
+    private nonisolated static func fetchRestorableRecords(
+        paths: [String], originalPaths: [String]?
+    ) -> (records: [(path: String, record: TrackRecord)], originalRecords: [TrackRecord]?) {
+        let records = paths.compactMap { path -> (path: String, record: TrackRecord)? in
+            guard let record = try? DatabaseManager.shared.fetchTrack(byRelativePath: path) else { return nil }
+            return (path, record)
+        }
+        let originalRecords = originalPaths?.compactMap {
+            try? DatabaseManager.shared.fetchTrack(byRelativePath: $0)
+        }
+        return (records, originalRecords)
+    }
+
+    /// Hydrates a restored record into a Track, resolving artwork once per
+    /// album through the shared downsampled cache instead of decoding each
+    /// track's embedded cover, so a restored queue never pins duplicate
+    /// full-size images.
+    private func restoredTrack(from record: TrackRecord, artworkByAlbum: inout [String: UIImage?]) -> Track {
+        let key = "\(record.albumTitle)|\(record.artist)"
+        let artwork: UIImage?
+        if let cached = artworkByAlbum[key] {
+            artwork = cached
+        } else {
+            artwork = AlbumArtworkCache.shared.artwork(forAlbum: record.albumTitle, artist: record.artist)
+            artworkByAlbum[key] = artwork
+        }
+        return Track.from(record: record, artwork: artwork)
+    }
+
+    private func applyRestoredQueue(
+        records: [(path: String, record: TrackRecord)],
+        originalRecords: [TrackRecord]?,
+        savedIndex: Int,
+        savedElapsed: Double,
+        savedShuffle: Bool,
+        savedRepeat: Int,
+        savedCurrentPath: String?
+    ) {
+        guard queue.isEmpty, playingItem == nil else { return }
+
+        var artworkByAlbum: [String: UIImage?] = [:]
         var restoredTracks: [Track] = []
         var restoredPaths: [String] = []
-        for path in paths {
-            guard let record = try? DatabaseManager.shared.fetchTrack(byRelativePath: path) else { continue }
-            let artwork: UIImage?
-            if let albumInfo = try? DatabaseManager.shared.fetchAlbumInfo(title: record.albumTitle, artist: record.artist),
-               let data = albumInfo.coverArtData {
-                artwork = UIImage(data: data)
-            } else {
-                artwork = ImageCache.shared.imageFromData(record.artworkData)
-            }
-            restoredTracks.append(Track.from(record: record, artwork: artwork))
+        for (path, record) in records {
+            restoredTracks.append(restoredTrack(from: record, artworkByAlbum: &artworkByAlbum))
             restoredPaths.append(path)
         }
 
         guard !restoredTracks.isEmpty else { return }
 
         queue = restoredTracks
-        originalQueue = restoredTracks
+        if let originalRecords, !originalRecords.isEmpty {
+            originalQueue = originalRecords.map { restoredTrack(from: $0, artworkByAlbum: &artworkByAlbum) }
+        } else {
+            originalQueue = restoredTracks
+        }
 
         let resumeElapsed: Double
         if let savedCurrentPath, let idx = restoredPaths.firstIndex(of: savedCurrentPath) {
@@ -1068,6 +1236,9 @@ final class AudioPlayer: AudioPlaying {
         repeatMode = savedRepeat == 1 ? .all : savedRepeat == 2 ? .one : .off
 
         rebuildPlayerPaused(at: resumeElapsed)
+        if let track = currentTrack {
+            ensureArtworkLoaded(for: track)
+        }
 
         NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
         NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
@@ -1096,6 +1267,7 @@ final class AudioPlayer: AudioPlaying {
         preloadNextItem(after: currentIndex)
         player?.pause()
         isPlaying = false
+        userPausedPlayback = true
 
         if position > 0 {
             let cmTime = CMTime(seconds: position, preferredTimescale: 600)
@@ -1113,11 +1285,12 @@ final class AudioPlayer: AudioPlaying {
         isBuildingStation = true
         let pool = Library.shared.allTracks
         AppLogger.info("Building artist station for \(seedArtist) from \(pool.count) library tracks", category: .playback)
-        Task { [weak self] in
+        Task.detached { [weak self] in
             let tracks = await StationBuilder.artistStation(
                 seedArtist: seedArtist, pool: pool, excluding: [], limit: StationBuilder.stationSize
             )
-            DispatchQueue.main.async { self?.startBuiltStation(tracks, seedArtist: seedArtist) }
+            guard let self else { return }
+            await MainActor.run { self.startBuiltStation(tracks, seedArtist: seedArtist) }
         }
     }
 
@@ -1128,11 +1301,12 @@ final class AudioPlayer: AudioPlaying {
         isBuildingStation = true
         let pool = Library.shared.allTracks
         AppLogger.info("Building track station for \(seedTrack.title) - \(seedTrack.artist)", category: .playback)
-        Task { [weak self] in
+        Task.detached { [weak self] in
             let tracks = await StationBuilder.trackStation(
                 seedTrack: seedTrack, pool: pool, excluding: [], limit: StationBuilder.stationSize
             )
-            DispatchQueue.main.async { self?.startBuiltStation(tracks, seedArtist: seedTrack.artist) }
+            guard let self else { return }
+            await MainActor.run { self.startBuiltStation(tracks, seedArtist: seedTrack.artist) }
         }
     }
 
@@ -1143,24 +1317,24 @@ final class AudioPlayer: AudioPlaying {
         isBuildingStation = true
         let pool = Library.shared.allTracks
         AppLogger.info("Building library radio from \(pool.count) library tracks", category: .playback)
-        Task { [weak self] in
+        Task.detached { [weak self] in
             let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
             let tracks = StationBuilder.libraryRadio(
                 pool: pool, playCounts: counts, excluding: [], limit: StationBuilder.stationSize
             )
-            DispatchQueue.main.async { self?.startBuiltStation(tracks, seedArtist: nil) }
+            guard let self else { return }
+            await MainActor.run { self.startBuiltStation(tracks, seedArtist: nil) }
         }
     }
 
     private func startBuiltStation(_ tracks: [Track], seedArtist: String?) {
         isBuildingStation = false
-        stationSeedArtist = seedArtist
         guard !tracks.isEmpty else {
             AppLogger.warning("Station build produced no tracks (seed \(seedArtist ?? "library"))", category: .playback)
             return
         }
         AppLogger.info("Starting station with \(tracks.count) tracks (seed \(seedArtist ?? "library"))", category: .playback)
-        play(tracks, startingAt: 0)
+        play(tracks, startingAt: 0, stationSeed: seedArtist)
     }
 
     /// Extends the queue ahead of exhaustion so the KVO advance path always has a
@@ -1179,22 +1353,23 @@ final class AudioPlayer: AudioPlaying {
         let seedArtist = stationSeedArtist ?? currentTrack?.artist
         let seedTrack = currentTrack
         Task { [weak self] in
-            let batch: [Track]
-            if let seedArtist {
-                batch = await StationBuilder.artistStation(
-                    seedArtist: seedArtist, pool: pool, excluding: existing, limit: StationBuilder.continuationBatchSize
-                )
-            } else if let seedTrack {
-                batch = await StationBuilder.trackStation(
-                    seedTrack: seedTrack, pool: pool, excluding: existing, limit: StationBuilder.continuationBatchSize
-                )
-            } else {
+            let batch = await Task.detached { () -> [Track] in
+                if let seedArtist {
+                    return await StationBuilder.artistStation(
+                        seedArtist: seedArtist, pool: pool, excluding: existing, limit: StationBuilder.continuationBatchSize
+                    )
+                }
+                if let seedTrack {
+                    return await StationBuilder.trackStation(
+                        seedTrack: seedTrack, pool: pool, excluding: existing, limit: StationBuilder.continuationBatchSize
+                    )
+                }
                 let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
-                batch = StationBuilder.libraryRadio(
+                return StationBuilder.libraryRadio(
                     pool: pool, playCounts: counts, excluding: existing, limit: StationBuilder.continuationBatchSize
                 )
-            }
-            DispatchQueue.main.async { self?.appendContinuation(batch, then: completion) }
+            }.value
+            self?.appendContinuation(batch, then: completion)
         }
     }
 
@@ -1238,32 +1413,55 @@ final class AudioPlayer: AudioPlaying {
         return map
     }
 
+    /// Drains the pending queue in passes until it is empty or a pass makes no
+    /// progress; a call arriving while a pass is already in flight requests a
+    /// fresh drain instead of being dropped, so a row persisted mid-pass is
+    /// always picked up. All database work runs off the main actor and only
+    /// the gating flags stay on it.
     func retryPendingScrobbles() async {
-        guard !isRetryingScrobbles else { return }
+        guard !isRetryingScrobbles else {
+            scrobbleRetryRequested = true
+            return
+        }
         guard LastFMService.shared.isAuthenticated else { return }
         isRetryingScrobbles = true
         defer { isRetryingScrobbles = false }
+        repeat {
+            scrobbleRetryRequested = false
+            await drainPendingScrobblesOnce()
+        } while scrobbleRetryRequested
+    }
+
+    private func drainPendingScrobblesOnce() async {
         do {
-            try DatabaseManager.shared.retirePendingScrobbles(
-                olderThan: Date().addingTimeInterval(-14 * 86_400)
-            )
-            let pending = try DatabaseManager.shared.fetchPendingScrobbles()
-            guard !pending.isEmpty else { return }
+            var pending = try await Task.detached { try Self.retireStaleAndFetchPending() }.value
+            while !pending.isEmpty {
+                AppLogger.info("Retrying \(pending.count) pending scrobbles", category: .sync)
 
-            AppLogger.info("Retrying \(pending.count) pending scrobbles", category: .sync)
+                let tuples = pending.compactMap { record -> (id: Int64, track: String, artist: String, album: String, timestamp: Date, duration: Int)? in
+                    guard let id = record.id else { return nil }
+                    return (id: id, track: record.trackTitle, artist: record.artist, album: record.albumTitle, timestamp: record.timestamp, duration: record.duration)
+                }
+                let submittedIds = await LastFMService.shared.submitPendingScrobbles(scrobbles: tuples)
+                AppLogger.info("Scrobble retry: \(submittedIds.count)/\(pending.count) submitted", category: .sync)
+                guard !submittedIds.isEmpty else { break }
 
-            let tuples = pending.compactMap { record -> (id: Int64, track: String, artist: String, album: String, timestamp: Date, duration: Int)? in
-                guard let id = record.id else { return nil }
-                return (id: id, track: record.trackTitle, artist: record.artist, album: record.albumTitle, timestamp: record.timestamp, duration: record.duration)
+                pending = try await Task.detached { () throws -> [ScrobbleRecord] in
+                    try DatabaseManager.shared.markScrobblesSubmitted(ids: submittedIds)
+                    return try DatabaseManager.shared.fetchPendingScrobbles()
+                }.value
             }
-            let submittedIds = await LastFMService.shared.submitPendingScrobbles(scrobbles: tuples)
-
-            if !submittedIds.isEmpty {
-                try DatabaseManager.shared.markScrobblesSubmitted(ids: submittedIds)
-            }
-            AppLogger.info("Scrobble retry: \(submittedIds.count)/\(pending.count) submitted", category: .sync)
         } catch {
             AppLogger.error("Scrobble retry failed: \(error.localizedDescription)", category: .sync)
         }
+    }
+
+    /// Retires pending scrobbles Last.fm would reject as too old, then returns
+    /// the remaining submission backlog; runs off the main actor.
+    private nonisolated static func retireStaleAndFetchPending() throws -> [ScrobbleRecord] {
+        try DatabaseManager.shared.retirePendingScrobbles(
+            olderThan: Date().addingTimeInterval(-14 * 86_400)
+        )
+        return try DatabaseManager.shared.fetchPendingScrobbles()
     }
 }

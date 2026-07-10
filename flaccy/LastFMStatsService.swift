@@ -16,6 +16,18 @@ extension ChartPeriod {
     }
 }
 
+struct RecapMetrics {
+    let totalPlays: Int
+    let totalMinutes: Int
+    let topArtists: [ChartArtist]
+    let topAlbums: [ChartAlbum]
+    let topTracks: [ChartTrack]
+    let listeningClock: [Int]
+    let streakDays: Int
+    let heatmap: [Date: Int]
+    let persona: String
+}
+
 /// Local listening statistics computed entirely from the `scrobbles` table so
 /// they work offline. `importHistory()` backfills that table from Last.fm; every
 /// other method reads only local rows.
@@ -29,45 +41,40 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
     private init() {}
 
     private func rows(in period: ChartPeriod) -> [ScrobbleRecord] {
+        guard period != .allTime else { return (try? db.fetchAllScrobbleRows()) ?? [] }
+        return (try? db.fetchScrobbleRows(from: period.cutoffDate, to: .distantFuture)) ?? []
+    }
+
+    /// Computes every Recap metric from a single full-table fetch, instead of
+    /// one fetch per metric. The streak uses the unfiltered rows; everything
+    /// else uses the rows inside the period cutoff.
+    func recapMetrics(period: ChartPeriod) -> RecapMetrics {
         let all = (try? db.fetchAllScrobbleRows()) ?? []
-        guard period != .allTime else { return all }
-        let cutoff = period.cutoffDate
-        return all.filter { $0.timestamp >= cutoff }
+        let scoped = period == .allTime ? all : all.filter { $0.timestamp >= period.cutoffDate }
+        let clock = Self.listeningClock(from: scoped)
+        return RecapMetrics(
+            totalPlays: scoped.count,
+            totalMinutes: Self.totalMinutes(from: scoped),
+            topArtists: Self.topArtists(from: scoped, limit: 10),
+            topAlbums: Self.topAlbums(from: scoped, limit: 9),
+            topTracks: Self.topTracks(from: scoped, limit: 10),
+            listeningClock: clock,
+            streakDays: Self.streakDays(from: all),
+            heatmap: Self.dayHeatmap(from: scoped),
+            persona: Self.persona(from: scoped, clock: clock)
+        )
     }
 
     func topArtists(period: ChartPeriod, limit: Int = 50) -> [ChartArtist] {
-        var counts: [String: Int] = [:]
-        for row in rows(in: period) { counts[row.artist, default: 0] += 1 }
-        return counts.sorted { $0.value > $1.value }
-            .prefix(limit)
-            .enumerated()
-            .map { ChartArtist(rank: $0.offset + 1, name: $0.element.key, playCount: $0.element.value) }
+        Self.topArtists(from: rows(in: period), limit: limit)
     }
 
     func topAlbums(period: ChartPeriod, limit: Int = 50) -> [ChartAlbum] {
-        var counts: [String: (album: String, artist: String, count: Int)] = [:]
-        for row in rows(in: period) {
-            let key = "\(row.albumTitle)\u{0}\(row.artist)"
-            let existing = counts[key]
-            counts[key] = (row.albumTitle, row.artist, (existing?.count ?? 0) + 1)
-        }
-        return counts.values.sorted { $0.count > $1.count }
-            .prefix(limit)
-            .enumerated()
-            .map { ChartAlbum(rank: $0.offset + 1, name: $0.element.album, artistName: $0.element.artist, playCount: $0.element.count, imageURL: nil) }
+        Self.topAlbums(from: rows(in: period), limit: limit)
     }
 
     func topTracks(period: ChartPeriod, limit: Int = 50) -> [ChartTrack] {
-        var counts: [String: (title: String, artist: String, count: Int)] = [:]
-        for row in rows(in: period) {
-            let key = "\(row.trackTitle)\u{0}\(row.artist)"
-            let existing = counts[key]
-            counts[key] = (row.trackTitle, row.artist, (existing?.count ?? 0) + 1)
-        }
-        return counts.values.sorted { $0.count > $1.count }
-            .prefix(limit)
-            .enumerated()
-            .map { ChartTrack(rank: $0.offset + 1, name: $0.element.title, artistName: $0.element.artist, playCount: $0.element.count) }
+        Self.topTracks(from: rows(in: period), limit: limit)
     }
 
     /// Per-track scrobble counts over the period, keyed by a lowercased
@@ -85,31 +92,88 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
     }
 
     func totalPlays(period: ChartPeriod = .allTime) -> Int {
-        rows(in: period).count
+        let from = period == .allTime ? Date.distantPast : period.cutoffDate
+        return (try? db.scrobbleCountInRange(from: from, to: .distantFuture)) ?? 0
     }
 
     func totalMinutes(period: ChartPeriod = .allTime) -> Int {
-        rows(in: period).reduce(0) { $0 + $1.duration } / 60
+        Self.totalMinutes(from: rows(in: period))
     }
 
     /// Play counts bucketed by hour-of-day (index 0...23) in the local calendar.
     func listeningClock(period: ChartPeriod = .allTime) -> [Int] {
+        Self.listeningClock(from: rows(in: period))
+    }
+
+    /// Number of consecutive days ending today on which at least one scrobble
+    /// happened.
+    func currentStreakDays() -> Int {
+        Self.streakDays(from: (try? db.fetchAllScrobbleRows()) ?? [])
+    }
+
+    /// Play counts keyed by the start of each day, over the given period.
+    func dayHeatmap(period: ChartPeriod = .year) -> [Date: Int] {
+        Self.dayHeatmap(from: rows(in: period))
+    }
+
+    func persona(period: ChartPeriod = .allTime) -> String {
+        let scoped = rows(in: period)
+        return Self.persona(from: scoped, clock: Self.listeningClock(from: scoped))
+    }
+
+    private static func topArtists(from rows: [ScrobbleRecord], limit: Int) -> [ChartArtist] {
+        var counts: [String: Int] = [:]
+        for row in rows { counts[row.artist, default: 0] += 1 }
+        return counts.sorted { $0.value > $1.value }
+            .prefix(limit)
+            .enumerated()
+            .map { ChartArtist(rank: $0.offset + 1, name: $0.element.key, playCount: $0.element.value) }
+    }
+
+    private static func topAlbums(from rows: [ScrobbleRecord], limit: Int) -> [ChartAlbum] {
+        var counts: [String: (album: String, artist: String, count: Int)] = [:]
+        for row in rows {
+            let key = "\(row.albumTitle)\u{0}\(row.artist)"
+            let existing = counts[key]
+            counts[key] = (row.albumTitle, row.artist, (existing?.count ?? 0) + 1)
+        }
+        return counts.values.sorted { $0.count > $1.count }
+            .prefix(limit)
+            .enumerated()
+            .map { ChartAlbum(rank: $0.offset + 1, name: $0.element.album, artistName: $0.element.artist, playCount: $0.element.count, imageURL: nil) }
+    }
+
+    private static func topTracks(from rows: [ScrobbleRecord], limit: Int) -> [ChartTrack] {
+        var counts: [String: (title: String, artist: String, count: Int)] = [:]
+        for row in rows {
+            let key = "\(row.trackTitle)\u{0}\(row.artist)"
+            let existing = counts[key]
+            counts[key] = (row.trackTitle, row.artist, (existing?.count ?? 0) + 1)
+        }
+        return counts.values.sorted { $0.count > $1.count }
+            .prefix(limit)
+            .enumerated()
+            .map { ChartTrack(rank: $0.offset + 1, name: $0.element.title, artistName: $0.element.artist, playCount: $0.element.count) }
+    }
+
+    private static func totalMinutes(from rows: [ScrobbleRecord]) -> Int {
+        rows.reduce(0) { $0 + $1.duration } / 60
+    }
+
+    private static func listeningClock(from rows: [ScrobbleRecord]) -> [Int] {
         var buckets = [Int](repeating: 0, count: 24)
         let calendar = Calendar.current
-        for row in rows(in: period) {
+        for row in rows {
             let hour = calendar.component(.hour, from: row.timestamp)
             if hour >= 0 && hour < 24 { buckets[hour] += 1 }
         }
         return buckets
     }
 
-    /// Number of consecutive days ending today on which at least one scrobble
-    /// happened.
-    func currentStreakDays() -> Int {
-        let all = (try? db.fetchAllScrobbleRows()) ?? []
-        guard !all.isEmpty else { return 0 }
+    private static func streakDays(from rows: [ScrobbleRecord]) -> Int {
+        guard !rows.isEmpty else { return 0 }
         let calendar = Calendar.current
-        let days = Set(all.map { calendar.startOfDay(for: $0.timestamp) })
+        let days = Set(rows.map { calendar.startOfDay(for: $0.timestamp) })
 
         var streak = 0
         var day = calendar.startOfDay(for: Date())
@@ -121,24 +185,21 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
         return streak
     }
 
-    /// Play counts keyed by the start of each day, over the given period.
-    func dayHeatmap(period: ChartPeriod = .year) -> [Date: Int] {
+    private static func dayHeatmap(from rows: [ScrobbleRecord]) -> [Date: Int] {
         var map: [Date: Int] = [:]
         let calendar = Calendar.current
-        for row in rows(in: period) {
+        for row in rows {
             let day = calendar.startOfDay(for: row.timestamp)
             map[day, default: 0] += 1
         }
         return map
     }
 
-    func persona(period: ChartPeriod = .allTime) -> String {
-        let scrobbles = rows(in: period)
-        guard !scrobbles.isEmpty else { return "Newcomer" }
-        let distinctArtists = Set(scrobbles.map { $0.artist.lowercased() }).count
-        let plays = scrobbles.count
+    private static func persona(from rows: [ScrobbleRecord], clock: [Int]) -> String {
+        guard !rows.isEmpty else { return "Newcomer" }
+        let distinctArtists = Set(rows.map { $0.artist.lowercased() }).count
+        let plays = rows.count
         let diversity = Double(distinctArtists) / Double(plays)
-        let clock = listeningClock(period: period)
         let nightPlays = (0..<6).reduce(0) { $0 + clock[$1] } + clock[23]
         let nightRatio = Double(nightPlays) / Double(max(plays, 1))
 
