@@ -218,6 +218,141 @@ impl LastFmClient {
         }
     }
 
+    fn unsigned_get(&self, params: BTreeMap<String, String>) -> Result<serde_json::Value, String> {
+        let mut query: Vec<String> = params
+            .iter()
+            .map(|(k, v)| format!("{}={}", percent_encode(k), percent_encode(v)))
+            .collect();
+        query.push("format=json".to_string());
+        let url = format!("{}?{}", BASE_URL, query.join("&"));
+        let response = Self::agent().get(&url).call();
+        let text = match response {
+            Ok(resp) => resp.into_string().map_err(|e| format!("{e}"))?,
+            Err(ureq::Error::Status(_, resp)) => resp.into_string().map_err(|e| format!("{e}"))?,
+            Err(e) => return Err(format!("{e}")),
+        };
+        serde_json::from_str(&text).map_err(|e| format!("{e}"))
+    }
+
+    /// album.getInfo → (largest image URL, musicBrainzID).
+    pub fn fetch_album_info(
+        &self,
+        artist: &str,
+        album: &str,
+    ) -> Result<(Option<String>, Option<String>), String> {
+        let mut params = self.base_params("album.getInfo");
+        params.insert("artist".to_string(), artist.to_string());
+        params.insert("album".to_string(), album.to_string());
+        params.insert("autocorrect".to_string(), "1".to_string());
+        let json = self.unsigned_get(params)?;
+        let album_dict = &json["album"];
+        if album_dict.is_null() {
+            return Err(format!("album.getInfo: {}", json["message"].as_str().unwrap_or("no album")));
+        }
+        Ok((
+            largest_image(&album_dict["image"]),
+            album_dict["mbid"].as_str().filter(|s| !s.is_empty()).map(String::from),
+        ))
+    }
+
+    /// artist.getInfo → (bio summary, image URL, musicBrainzID).
+    pub fn fetch_artist_info(
+        &self,
+        artist: &str,
+    ) -> Result<(Option<String>, Option<String>, Option<String>), String> {
+        let mut params = self.base_params("artist.getInfo");
+        params.insert("artist".to_string(), artist.to_string());
+        params.insert("autocorrect".to_string(), "1".to_string());
+        let json = self.unsigned_get(params)?;
+        let dict = &json["artist"];
+        if dict.is_null() {
+            return Err(format!("artist.getInfo: {}", json["message"].as_str().unwrap_or("no artist")));
+        }
+        let bio = dict["bio"]["summary"]
+            .as_str()
+            .map(strip_lastfm_link)
+            .filter(|s| !s.is_empty());
+        Ok((
+            bio,
+            largest_image(&dict["image"]),
+            dict["mbid"].as_str().filter(|s| !s.is_empty()).map(String::from),
+        ))
+    }
+
+    /// artist.getSimilar (limit 100) → [(name, match)].
+    pub fn fetch_similar_artists(&self, artist: &str) -> Result<Vec<(String, f64)>, String> {
+        let mut params = self.base_params("artist.getSimilar");
+        params.insert("artist".to_string(), artist.to_string());
+        params.insert("autocorrect".to_string(), "1".to_string());
+        params.insert("limit".to_string(), "100".to_string());
+        let json = self.unsigned_get(params)?;
+        let list = json["similarartists"]["artist"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        Ok(list
+            .iter()
+            .filter_map(|entry| {
+                let name = entry["name"].as_str()?.to_string();
+                let matched = entry["match"]
+                    .as_f64()
+                    .or_else(|| entry["match"].as_str().and_then(|s| s.parse().ok()))
+                    .unwrap_or(0.0);
+                Some((name, matched))
+            })
+            .collect())
+    }
+
+    /// user.getRecentTracks for history import. Returns (tracks, totalPages)
+    /// where each track is (uts, title, artist, album); now-playing rows carry
+    /// no uts and are skipped.
+    pub fn fetch_recent_tracks(
+        &self,
+        username: &str,
+        page: u32,
+        limit: u32,
+    ) -> Result<(Vec<(i64, String, String, String)>, u32), String> {
+        let mut params = self.base_params("user.getRecentTracks");
+        params.insert("user".to_string(), username.to_string());
+        params.insert("page".to_string(), page.to_string());
+        params.insert("limit".to_string(), limit.to_string());
+        let json = self.unsigned_get(params)?;
+        let recent = &json["recenttracks"];
+        if recent.is_null() {
+            return Err(format!(
+                "user.getRecentTracks: {}",
+                json["message"].as_str().unwrap_or("no data")
+            ));
+        }
+        let total_pages = recent["@attr"]["totalPages"]
+            .as_str()
+            .and_then(|s| s.parse().ok())
+            .or_else(|| recent["@attr"]["totalPages"].as_u64().map(|v| v as u32))
+            .unwrap_or(1);
+        let list: Vec<serde_json::Value> = match &recent["track"] {
+            serde_json::Value::Array(array) => array.clone(),
+            single @ serde_json::Value::Object(_) => vec![single.clone()],
+            _ => Vec::new(),
+        };
+        let tracks = list
+            .iter()
+            .filter_map(|entry| {
+                let uts = entry["date"]["uts"]
+                    .as_str()
+                    .and_then(|s| s.parse::<i64>().ok())?;
+                let title = entry["name"].as_str()?.to_string();
+                let artist = entry["artist"]["#text"]
+                    .as_str()
+                    .or_else(|| entry["artist"]["name"].as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let album = entry["album"]["#text"].as_str().unwrap_or("").to_string();
+                Some((uts, title, artist, album))
+            })
+            .collect();
+        Ok((tracks, total_pages))
+    }
+
     pub fn set_love(&self, title: &str, artist: &str, love: bool) -> Result<(), String> {
         let Some(sk) = &self.session_key else {
             return Err("not authenticated".to_string());
@@ -235,6 +370,33 @@ impl LastFmClient {
             ));
         }
         Ok(())
+    }
+}
+
+/// Picks the largest usable image URL from a Last.fm image array
+/// (mega → extralarge → large → medium → small), skipping empty entries.
+fn largest_image(images: &serde_json::Value) -> Option<String> {
+    let list = images.as_array()?;
+    for wanted in ["mega", "extralarge", "large", "medium", "small"] {
+        for entry in list {
+            if entry["size"].as_str() == Some(wanted) {
+                if let Some(url) = entry["#text"].as_str().filter(|s| !s.is_empty()) {
+                    return Some(url.to_string());
+                }
+            }
+        }
+    }
+    list.iter()
+        .rev()
+        .find_map(|entry| entry["#text"].as_str().filter(|s| !s.is_empty()).map(String::from))
+}
+
+/// Removes the trailing `<a href="https://www.last.fm/...">Read more…</a>`
+/// boilerplate Last.fm appends to bio summaries.
+fn strip_lastfm_link(bio: &str) -> String {
+    match bio.find("<a href") {
+        Some(index) => bio[..index].trim().to_string(),
+        None => bio.trim().to_string(),
     }
 }
 

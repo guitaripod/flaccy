@@ -49,6 +49,22 @@ pub struct PlaylistTrackRow {
     pub rel_path: String,
 }
 
+#[derive(Clone, Debug)]
+pub struct ScrobbleRow {
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub timestamp_unix: i64,
+    pub duration: i64,
+}
+
+pub struct AlbumInfoStatus {
+    pub year: Option<String>,
+    pub genre: Option<String>,
+    pub has_cover: bool,
+    pub last_fetched_unix: Option<i64>,
+}
+
 pub struct LyricsRow {
     pub synced: Option<String>,
     pub plain: Option<String>,
@@ -91,6 +107,7 @@ impl Db {
         let _ = conn.pragma_update(None, "foreign_keys", "ON");
         let db = Self { conn };
         db.migrate()?;
+        db.backfill_enrichment_markers()?;
         Ok(db)
     }
 
@@ -111,6 +128,28 @@ impl Db {
                 Self::open(path)
             }
         }
+    }
+
+    /// One-time backfill (guarded by user_version): scan-era albumInfo rows
+    /// carry a lastFetched stamped by the cover hoist, which would wrongly
+    /// suppress the first metadata enrichment pass — clear it for rows that
+    /// have never been enriched.
+    fn backfill_enrichment_markers(&self) -> Result<(), rusqlite::Error> {
+        let version: i64 = self
+            .conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap_or(0);
+        if version >= 1 {
+            return Ok(());
+        }
+        self.conn.execute(
+            "UPDATE albumInfo SET lastFetched = NULL
+             WHERE coverArtURL IS NULL AND musicBrainzID IS NULL
+               AND year IS NULL AND genre IS NULL",
+            [],
+        )?;
+        self.conn.pragma_update(None, "user_version", 1)?;
+        Ok(())
     }
 
     fn migrate(&self) -> Result<(), rusqlite::Error> {
@@ -186,6 +225,22 @@ impl Db {
                 plainLyrics TEXT,
                 instrumental BOOLEAN NOT NULL DEFAULT 0,
                 UNIQUE(trackTitle, artist)
+            );
+            CREATE TABLE IF NOT EXISTS artists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                bio TEXT,
+                imageURL TEXT,
+                musicBrainzID TEXT,
+                lastFetched DATETIME
+            );
+            CREATE TABLE IF NOT EXISTS similarArtistCache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                artist TEXT NOT NULL,
+                similarName TEXT NOT NULL,
+                \"match\" DOUBLE NOT NULL DEFAULT 0,
+                fetchedAt DATETIME NOT NULL,
+                UNIQUE(artist, similarName)
             );",
         )
     }
@@ -237,11 +292,11 @@ impl Db {
         data: &[u8],
     ) -> Result<(), rusqlite::Error> {
         self.conn.execute(
-            "INSERT INTO albumInfo (title, artist, coverArtData, lastFetched)
-             VALUES (?1, ?2, ?3, ?4)
+            "INSERT INTO albumInfo (title, artist, coverArtData)
+             VALUES (?1, ?2, ?3)
              ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
              WHERE albumInfo.coverArtData IS NULL",
-            params![title, artist, data, now_string()],
+            params![title, artist, data],
         )?;
         Ok(())
     }
@@ -604,70 +659,185 @@ impl Db {
         Ok(())
     }
 
-    pub fn scrobble_stats(&self) -> ScrobbleStats {
-        let total_plays: i64 = self
-            .conn
-            .query_row("SELECT COUNT(*) FROM scrobbles", [], |row| row.get(0))
-            .unwrap_or(0);
-        let total_minutes: i64 = self
-            .conn
-            .query_row(
-                "SELECT COALESCE(SUM(duration), 0) / 60 FROM scrobbles",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0);
-        let top_artists = self.top_rows(
-            "SELECT artist, COUNT(*) c FROM scrobbles GROUP BY artist ORDER BY c DESC LIMIT 10",
-        );
-        let top_albums = self.top_rows(
-            "SELECT albumTitle || ' — ' || artist, COUNT(*) c FROM scrobbles
-             GROUP BY albumTitle, artist ORDER BY c DESC LIMIT 10",
-        );
-        let top_tracks = self.top_rows(
-            "SELECT trackTitle || ' — ' || artist, COUNT(*) c FROM scrobbles
-             GROUP BY trackTitle, artist ORDER BY c DESC LIMIT 10",
-        );
-        let mut clock = [0i64; 24];
-        if let Ok(mut stmt) = self.conn.prepare(
-            "SELECT CAST(strftime('%H', timestamp, 'localtime') AS INTEGER), COUNT(*)
-             FROM scrobbles GROUP BY 1",
-        ) {
-            let rows =
-                stmt.query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)));
-            if let Ok(rows) = rows {
-                for (hour, count) in rows.flatten() {
-                    clock[(hour.rem_euclid(24)) as usize] += count;
-                }
-            }
-        }
-        ScrobbleStats {
-            total_plays,
-            total_minutes,
-            top_artists,
-            top_albums,
-            top_tracks,
-            clock,
-        }
-    }
-
-    fn top_rows(&self, sql: &str) -> Vec<(String, i64)> {
-        let Ok(mut stmt) = self.conn.prepare(sql) else {
+    pub fn fetch_all_scrobble_rows(&self) -> Vec<ScrobbleRow> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT trackTitle, artist, albumTitle, timestamp, duration
+             FROM scrobbles ORDER BY timestamp",
+        ) else {
             return Vec::new();
         };
-        let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)));
+        let rows = stmt.query_map([], |row| {
+            Ok(ScrobbleRow {
+                title: row.get(0)?,
+                artist: row.get(1)?,
+                album: row.get(2)?,
+                timestamp_unix: unix_from_string(&row.get::<_, String>(3)?),
+                duration: row.get(4)?,
+            })
+        });
         match rows {
             Ok(rows) => rows.flatten().collect(),
             Err(_) => Vec::new(),
         }
     }
+
+    pub fn play_counts_by_track(&self) -> Vec<(String, String, i64)> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT trackTitle, artist, COUNT(*) FROM scrobbles GROUP BY trackTitle, artist",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        });
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    pub fn track_sort_keys(&self) -> HashMap<String, Option<i64>> {
+        let mut result = HashMap::new();
+        let Ok(mut stmt) = self.conn.prepare("SELECT fileURL, lastPlayed FROM tracks") else {
+            return result;
+        };
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, Option<String>>(1)?,
+            ))
+        });
+        if let Ok(rows) = rows {
+            for (path, last_played) in rows.flatten() {
+                result.insert(path, last_played.map(|s| unix_from_string(&s)));
+            }
+        }
+        result
+    }
+
+    pub fn album_info_status(&self, title: &str, artist: &str) -> Option<AlbumInfoStatus> {
+        self.conn
+            .query_row(
+                "SELECT year, genre, coverArtData IS NOT NULL, lastFetched
+                 FROM albumInfo WHERE title = ?1 AND artist = ?2",
+                params![title, artist],
+                |row| {
+                    Ok(AlbumInfoStatus {
+                        year: row.get(0)?,
+                        genre: row.get(1)?,
+                        has_cover: row.get(2)?,
+                        last_fetched_unix: row
+                            .get::<_, Option<String>>(3)?
+                            .map(|s| unix_from_string(&s)),
+                    })
+                },
+            )
+            .optional()
+            .ok()
+            .flatten()
+    }
+
+    /// Writes enrichment results into albumInfo, only filling fields that are
+    /// still missing (iOS fill-missing semantics), and always bumping
+    /// lastFetched so failed/empty lookups are not retried immediately.
+    pub fn apply_album_enrichment(
+        &self,
+        title: &str,
+        artist: &str,
+        year: Option<&str>,
+        genre: Option<&str>,
+        cover_url: Option<&str>,
+        cover_data: Option<&[u8]>,
+        mbid: Option<&str>,
+    ) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "INSERT INTO albumInfo (title, artist, year, genre, coverArtURL, coverArtData, musicBrainzID, lastFetched)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+             ON CONFLICT(title, artist) DO UPDATE SET
+                year = COALESCE(albumInfo.year, excluded.year),
+                genre = COALESCE(albumInfo.genre, excluded.genre),
+                coverArtURL = COALESCE(albumInfo.coverArtURL, excluded.coverArtURL),
+                coverArtData = COALESCE(albumInfo.coverArtData, excluded.coverArtData),
+                musicBrainzID = COALESCE(albumInfo.musicBrainzID, excluded.musicBrainzID),
+                lastFetched = excluded.lastFetched",
+            params![title, artist, year, genre, cover_url, cover_data, mbid, now_string()],
+        )?;
+        Ok(())
+    }
+
+    pub fn upsert_artist_info(
+        &self,
+        name: &str,
+        bio: Option<&str>,
+        image_url: Option<&str>,
+        mbid: Option<&str>,
+    ) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "INSERT INTO artists (name, bio, imageURL, musicBrainzID, lastFetched)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(name) DO UPDATE SET
+                bio = COALESCE(excluded.bio, artists.bio),
+                imageURL = COALESCE(excluded.imageURL, artists.imageURL),
+                musicBrainzID = COALESCE(excluded.musicBrainzID, artists.musicBrainzID),
+                lastFetched = excluded.lastFetched",
+            params![name, bio, image_url, mbid, now_string()],
+        )?;
+        Ok(())
+    }
+
+    pub fn artist_bio(&self, name: &str) -> Option<String> {
+        self.conn
+            .query_row(
+                "SELECT bio FROM artists WHERE name = ?1",
+                params![name],
+                |row| row.get(0),
+            )
+            .optional()
+            .ok()
+            .flatten()
+            .flatten()
+    }
+
+    pub fn similar_artists(&self, artist: &str) -> Vec<(String, f64, i64)> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT similarName, \"match\", fetchedAt FROM similarArtistCache
+             WHERE artist = ?1 ORDER BY \"match\" DESC",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map(params![artist], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, f64>(1)?,
+                unix_from_string(&row.get::<_, String>(2)?),
+            ))
+        });
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    pub fn replace_similar_artists(
+        &self,
+        artist: &str,
+        entries: &[(String, f64)],
+    ) -> Result<(), rusqlite::Error> {
+        let now = now_string();
+        self.conn.execute(
+            "DELETE FROM similarArtistCache WHERE artist = ?1",
+            params![artist],
+        )?;
+        for (name, matched) in entries {
+            self.conn.execute(
+                "INSERT INTO similarArtistCache (artist, similarName, \"match\", fetchedAt)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(artist, similarName) DO UPDATE SET
+                    \"match\" = excluded.\"match\", fetchedAt = excluded.fetchedAt",
+                params![artist, name, matched, now],
+            )?;
+        }
+        Ok(())
+    }
 }
 
-pub struct ScrobbleStats {
-    pub total_plays: i64,
-    pub total_minutes: i64,
-    pub top_artists: Vec<(String, i64)>,
-    pub top_albums: Vec<(String, i64)>,
-    pub top_tracks: Vec<(String, i64)>,
-    pub clock: [i64; 24],
-}
