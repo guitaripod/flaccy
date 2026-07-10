@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/watchOS%2011+-blue?logo=apple" alt="watchOS">
   <img src="https://img.shields.io/badge/macOS%2026+-blue?logo=apple" alt="macOS">
   <img src="https://img.shields.io/badge/Linux%20(GTK4)-yellow?logo=linux&logoColor=white" alt="Linux">
-  <img src="https://img.shields.io/badge/swift-5.0-orange?logo=swift" alt="Swift">
+  <img src="https://img.shields.io/badge/Swift-orange?logo=swift" alt="Swift">
   <img src="https://img.shields.io/badge/rust-2021-brown?logo=rust" alt="Rust">
   <img src="https://img.shields.io/badge/Last.fm-red?logo=lastdotfm" alt="Last.fm">
 </p>

@@ -63,8 +63,16 @@ final class GroqService: MetadataClassifying {
     nonisolated private static let maxBatchSize = 40
     nonisolated private static let minBatchSize = 5
 
+    nonisolated private static func hasActiveEntitlement() async -> Bool {
+        await MainActor.run { PurchaseManager.shared.allowsPlayback }
+    }
+
     nonisolated func analyzeLibrary(tracks: [TrackContext]) async -> IdentifiedMusic? {
         guard !tracks.isEmpty else { return nil }
+        guard await Self.hasActiveEntitlement() else {
+            await AppLogger.info("Skipping AI analysis: no active entitlement", category: .content)
+            return nil
+        }
 
         let albums = await analyzeBatch(tracks)
         guard !albums.isEmpty else { return nil }
@@ -177,6 +185,7 @@ final class GroqService: MetadataClassifying {
     }
 
     nonisolated func classifyGenre(artist: String, album: String, trackTitles: [String]) async -> GenreClassification? {
+        guard await Self.hasActiveEntitlement() else { return nil }
         let tracks = trackTitles.joined(separator: ", ")
 
         let request = ChatRequest(
