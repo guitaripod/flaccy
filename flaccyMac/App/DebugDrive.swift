@@ -42,15 +42,21 @@ enum DebugDrive {
         case album(String)
         case artist(String)
         case onboarding
+        case nowPlaying
+        case playlistDetail(String)
         case nowPlayingLyrics
         case queuePanel
+        case settings(paneIndex: Int)
     }
 
     private static func plannedShot() -> Shot? {
         if CommandLine.arguments.contains("--shot-onboarding") { return .onboarding }
         if CommandLine.arguments.contains("--shot-playlists") { return .section(.playlists) }
+        if let name = value(after: "--shot-playlist") { return .playlistDetail(name) }
         if CommandLine.arguments.contains("--shot-nowplaying-lyrics") { return .nowPlayingLyrics }
+        if CommandLine.arguments.contains("--shot-nowplaying") { return .nowPlaying }
         if CommandLine.arguments.contains("--shot-queue") { return .queuePanel }
+        if let pane = value(after: "--shot-settings") { return .settings(paneIndex: Int(pane) ?? 0) }
         if let name = value(after: "--shot-section") {
             let section: SidebarSection? = switch name {
             case "albums": .albums
@@ -91,6 +97,11 @@ enum DebugDrive {
         let name: String
         switch shot {
         case .section(let section):
+            if section == .playlists {
+                seedDemoPlaylists()
+                startHeroPlayback()
+                try? await Task.sleep(for: .seconds(2))
+            }
             NotificationCenter.default.post(
                 name: .flaccyShowSection, object: nil,
                 userInfo: [SectionNotificationKey.section: section.rawValue]
@@ -106,6 +117,27 @@ enum DebugDrive {
         case .artist(let artist):
             LibraryNavigator.revealArtist(artist)
             name = "flaccy-shot-artist"
+        case .playlistDetail(let playlistName):
+            seedDemoPlaylists()
+            startHeroPlayback()
+            try? await Task.sleep(for: .seconds(2))
+            NotificationCenter.default.post(
+                name: .flaccyShowSection, object: nil,
+                userInfo: [SectionNotificationKey.section: SidebarSection.playlists.rawValue]
+            )
+            try? await Task.sleep(for: .seconds(1))
+            if let record = try? DatabaseManager.shared.fetchAllPlaylists()
+                .first(where: { $0.name == playlistName }) {
+                findStack(window: window)?.push(PlaylistDetailViewController(playlist: record))
+            } else {
+                AppLogger.error("DebugDrive: playlist not found: \(playlistName)", category: .general)
+            }
+            name = "flaccy-shot-playlist-detail"
+        case .nowPlaying:
+            startHeroPlayback()
+            try? await Task.sleep(for: .seconds(2))
+            NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
+            name = "flaccy-shot-nowplaying"
         case .nowPlayingLyrics:
             startHeroPlayback()
             try? await Task.sleep(for: .seconds(2))
@@ -118,11 +150,62 @@ enum DebugDrive {
             try? await Task.sleep(for: .seconds(2))
             NotificationCenter.default.post(name: .flaccyToggleQueue, object: nil)
             name = "flaccy-shot-queue"
+        case .settings(let paneIndex):
+            NSApp.delegate?.perform(NSSelectorFromString("showSettings:"), with: nil)
+            try? await Task.sleep(for: .seconds(2))
+            let settingsWindow = NSApp.windows.first {
+                $0.contentViewController is SettingsTabViewController
+            }
+            if let tabs = settingsWindow?.contentViewController as? SettingsTabViewController {
+                tabs.selectedTabViewItemIndex = paneIndex
+            }
+            try? await Task.sleep(for: .seconds(3))
+            capture(window: settingsWindow, name: "flaccy-shot-settings-\(paneIndex)")
+            return
         case .onboarding:
             return
         }
         try? await Task.sleep(for: .seconds(3))
+        reassertWindowSizeIfRequested(window)
+        try? await Task.sleep(for: .seconds(1))
         capture(window: window, name: name)
+    }
+
+    /// Section switches can shrink the window below the requested capture
+    /// size; re-apply the `--window-size` content size right before capture.
+    private static func reassertWindowSizeIfRequested(_ window: NSWindow?) {
+        guard let window,
+              let index = CommandLine.arguments.firstIndex(of: "--window-size"),
+              index + 1 < CommandLine.arguments.count else { return }
+        let parts = CommandLine.arguments[index + 1].lowercased().split(separator: "x")
+        guard parts.count == 2, let width = Double(parts[0]), let height = Double(parts[1]) else { return }
+        window.setContentSize(NSSize(width: width, height: height))
+    }
+
+    /// Seeds two populated playlists from the fictional catalog so the
+    /// Playlists screenshot never renders an empty state. Idempotent.
+    private static func seedDemoPlaylists() {
+        let plans: [(name: String, picks: [(String, Int)])] = [
+            ("Night Drive", [("Parallax Hours", 1), ("Signal Bloom", 3), ("Cassini", 0),
+                             ("Midnatt", 0), ("Aurorae", 1), ("Paper Cities", 0)]),
+            ("Sunday Slow", [("Tradewinds", 0), ("Ember & Ash", 4), ("Lantern Year", 1),
+                             ("Ravine", 1), ("Aurorae", 4)]),
+        ]
+        do {
+            let existing = try DatabaseManager.shared.fetchAllPlaylists().map(\.name)
+            for plan in plans where !existing.contains(plan.name) {
+                let playlist = try DatabaseManager.shared.createPlaylist(name: plan.name)
+                guard let playlistId = playlist.id else { continue }
+                let tracks = plan.picks.compactMap { title, index -> Track? in
+                    guard let album = Library.shared.albums.first(where: { $0.title == title }),
+                          album.tracks.indices.contains(index) else { return nil }
+                    return album.tracks[index]
+                }
+                PlaylistActions.add(tracks, toPlaylist: playlistId, named: plan.name, in: nil)
+            }
+        } catch {
+            AppLogger.error("DebugDrive: playlist seeding failed: \(error.localizedDescription)", category: .general)
+        }
     }
 
     /// Pops mid-push at varying offsets inside the 240ms slide animation to
@@ -184,6 +267,12 @@ enum DebugDrive {
     }
 
     private static func capture(window: NSWindow?, name: String) {
+        if let window {
+            AppLogger.info(
+                "DebugDrive: capture \(name) — frame \(window.frame), screen \(window.screen?.frame ?? .zero), backingScale \(window.backingScaleFactor)",
+                category: .general
+            )
+        }
         if let root = window?.contentViewController as? RootContainerViewController {
             let sidebar = root.splitViewController.sidebarViewController
             AppLogger.info("DebugDrive: sidebar renders \(sidebar.visibleRowCount) rows", category: .general)

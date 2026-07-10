@@ -52,7 +52,7 @@ final class ListeningGuideViewController: NSViewController {
             contentStack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -36),
         ])
         let preferredWidth = contentStack.widthAnchor.constraint(equalTo: documentView.widthAnchor, constant: -56)
-        preferredWidth.priority = .defaultHigh
+        preferredWidth.priority = NSLayoutConstraint.Priority(490)
         preferredWidth.isActive = true
 
         view = root
