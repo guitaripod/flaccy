@@ -37,6 +37,13 @@ impl Config {
     }
 }
 
+/// Marketing/demo mode: enabled by `--demo` or `FLACCY_DEMO=1`. Uses a separate
+/// GTK application id and MPRIS bus name so a demo instance (pointed at
+/// throwaway XDG dirs) can run alongside a normal instance.
+pub fn demo_mode() -> bool {
+    std::env::var_os("FLACCY_DEMO").is_some()
+}
+
 pub fn config_dir() -> PathBuf {
     dirs::config_dir().unwrap_or_default().join("flaccy")
 }

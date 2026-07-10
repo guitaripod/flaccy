@@ -147,9 +147,9 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     {
         let sidebar = sidebar.clone();
         glib::idle_add_local_once(move || {
-            if let Some(first) = sidebar.row_at_index(0) {
-                sidebar.select_row(Some(&first));
-                first.grab_focus();
+            if let Some(row) = sidebar.row_at_index(demo_start_view_index()) {
+                sidebar.select_row(Some(&row));
+                row.grab_focus();
             }
         });
     }
@@ -432,5 +432,18 @@ fn load_css() {
             &provider,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+    }
+}
+
+/// Demo mode helper: FLACCY_DEMO_VIEW picks the initially selected sidebar view
+/// (albums, songs, artists, playlists, stats) so marketing screenshots can be
+/// captured without input automation. Defaults to albums.
+fn demo_start_view_index() -> i32 {
+    match std::env::var("FLACCY_DEMO_VIEW").ok().as_deref() {
+        Some("songs") => 1,
+        Some("artists") => 2,
+        Some("playlists") => 3,
+        Some("stats") => 4,
+        _ => 0,
     }
 }

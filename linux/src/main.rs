@@ -17,9 +17,13 @@ use adw::prelude::*;
 use gtk::glib;
 
 const APP_ID: &str = "cc.midgarcorp.Flaccy";
+const DEMO_APP_ID: &str = "cc.midgarcorp.Flaccy.Demo";
 
 fn main() -> glib::ExitCode {
     let smoke = std::env::args().any(|arg| arg == "--smoke");
+    if std::env::args().any(|arg| arg == "--demo") {
+        std::env::set_var("FLACCY_DEMO", "1");
+    }
     logger::init();
     logger::info(
         "lifecycle",
@@ -40,11 +44,14 @@ fn main() -> glib::ExitCode {
         logger::warn("auth", "built without Last.fm keys; scrobbling UI hidden");
     }
 
+    let app_id = if config::demo_mode() { DEMO_APP_ID } else { APP_ID };
     let application = adw::Application::builder()
-        .application_id(APP_ID)
+        .application_id(app_id)
         .build();
     application.connect_activate(move |app| app::activate(app, smoke));
 
-    let args: Vec<String> = std::env::args().filter(|arg| arg != "--smoke").collect();
+    let args: Vec<String> = std::env::args()
+        .filter(|arg| arg != "--smoke" && arg != "--demo")
+        .collect();
     application.run_with_args(&args)
 }

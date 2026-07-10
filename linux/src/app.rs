@@ -90,9 +90,34 @@ impl AppCore {
         crate::scrobbler::startup_maintenance(self);
         self.rescan();
         self.schedule_periodic_drain();
+        if config::demo_mode() {
+            self.schedule_demo_autoplay();
+        }
         if self.smoke {
             self.schedule_smoke_test();
         }
+    }
+
+    /// Demo mode helper: once the seeded library is loaded, starts playback of
+    /// the demo hero track (FLACCY_DEMO_TRACK, default "Slow Machine") so
+    /// marketing screenshots show a live transport.
+    fn schedule_demo_autoplay(self: &Rc<Self>) {
+        let core = Rc::clone(self);
+        let wanted = std::env::var("FLACCY_DEMO_TRACK").unwrap_or_else(|_| "Slow Machine".to_string());
+        glib::timeout_add_local(Duration::from_millis(600), move || {
+            let library = core.library.borrow().clone();
+            let Some(album) = library
+                .albums
+                .iter()
+                .find(|a| a.tracks.iter().any(|t| t.title == wanted))
+                .cloned()
+            else {
+                return glib::ControlFlow::Continue;
+            };
+            let start = album.tracks.iter().position(|t| t.title == wanted).unwrap_or(0);
+            core.play_tracks(album.tracks.clone(), start);
+            glib::ControlFlow::Break
+        });
     }
 
     fn start_tick(self: &Rc<Self>) {

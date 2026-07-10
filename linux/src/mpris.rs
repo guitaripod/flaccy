@@ -10,7 +10,12 @@ use std::rc::Rc;
 pub fn start(core: &Rc<AppCore>) {
     let core = Rc::clone(core);
     glib::spawn_future_local(async move {
-        let player = match Player::builder("cc.midgarcorp.Flaccy")
+        let bus_suffix = if crate::config::demo_mode() {
+            "cc.midgarcorp.Flaccy.Demo"
+        } else {
+            "cc.midgarcorp.Flaccy"
+        };
+        let player = match Player::builder(bus_suffix)
             .identity("Flaccy")
             .desktop_entry("cc.midgarcorp.Flaccy")
             .can_play(true)
