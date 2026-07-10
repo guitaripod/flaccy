@@ -180,3 +180,18 @@ unless File.exist?(scheme_path)
   scheme.save_as(PROJECT, MAC_NAME, true)
   puts 'Created shared scheme flaccyMac'
 end
+
+scheme_xml = File.read(scheme_path)
+unless scheme_xml.include?('StoreKitConfigurationFileReference')
+  storekit_ref = <<~XML.chomp
+        <StoreKitConfigurationFileReference
+           identifier = "../../flaccyMac/Flaccy-mac.storekit">
+        </StoreKitConfigurationFileReference>
+  XML
+  scheme_xml = scheme_xml.sub(
+    %r{(<LaunchAction[^>]*>\n)},
+    "\\1#{storekit_ref}\n"
+  )
+  File.write(scheme_path, scheme_xml)
+  puts 'Wired Flaccy-mac.storekit into flaccyMac scheme'
+end

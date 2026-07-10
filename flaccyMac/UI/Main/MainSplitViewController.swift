@@ -1,15 +1,19 @@
 import AppKit
 
-/// Sidebar | content | inspector shell. The inspector column is a Stage A
-/// placeholder that the queue and lyrics panels replace in a later stage; the
-/// queue/lyrics toggles already collapse and expand it so the window chrome
-/// behaves like the finished app.
+/// Sidebar | content | inspector shell. The inspector hosts the live queue
+/// and lyrics panels; the queue/lyrics toggles collapse and expand it. The
+/// immersive Now Playing surface is managed here as a full-window overlay,
+/// and while it is up the queue/lyrics toggles route to its in-overlay
+/// panels instead of the inspector.
 final class MainSplitViewController: NSSplitViewController {
 
     let sidebarViewController = SidebarViewController()
     let contentRouter = ContentRouter()
-    private let inspectorPlaceholder = InspectorPlaceholderViewController()
+    private let inspectorHost = InspectorHostViewController()
+
+    var inspectorContentView: NSView { inspectorHost.view }
     private var inspectorItem: NSSplitViewItem?
+    private var nowPlayingController: NowPlayingViewController?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -27,7 +31,7 @@ final class MainSplitViewController: NSSplitViewController {
         contentItem.minimumThickness = 480
         addSplitViewItem(contentItem)
 
-        let inspector = NSSplitViewItem(inspectorWithViewController: inspectorPlaceholder)
+        let inspector = NSSplitViewItem(inspectorWithViewController: inspectorHost)
         inspector.minimumThickness = 260
         inspector.maximumThickness = 340
         inspector.isCollapsed = true
@@ -48,6 +52,9 @@ final class MainSplitViewController: NSSplitViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleToggleLyrics), name: .flaccyToggleLyrics, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleToggleNowPlaying), name: .flaccyToggleNowPlaying, object: nil
+        )
     }
 
     deinit {
@@ -57,29 +64,88 @@ final class MainSplitViewController: NSSplitViewController {
     @objc private func handleShowSection(_ notification: Notification) {
         guard let raw = notification.userInfo?[SectionNotificationKey.section] as? Int,
               let section = SidebarSection(rawValue: raw) else { return }
+        closeNowPlaying()
         sidebarViewController.select(section)
     }
 
     @objc private func handleToggleQueue() {
+        if let nowPlayingController {
+            nowPlayingController.togglePanel(.queue)
+            return
+        }
         toggleInspector(mode: .queue)
     }
 
     @objc private func handleToggleLyrics() {
+        if let nowPlayingController {
+            nowPlayingController.togglePanel(.lyrics)
+            return
+        }
         toggleInspector(mode: .lyrics)
     }
 
-    private func toggleInspector(mode: InspectorPlaceholderViewController.Mode) {
-        guard let inspectorItem else { return }
-        if !inspectorItem.isCollapsed, inspectorPlaceholder.mode == mode {
-            inspectorItem.animator().isCollapsed = true
-            return
+    @objc private func handleToggleNowPlaying() {
+        if nowPlayingController != nil {
+            closeNowPlaying()
+        } else {
+            openNowPlaying()
         }
-        inspectorPlaceholder.mode = mode
-        inspectorItem.animator().isCollapsed = false
+    }
+
+    private func openNowPlaying() {
+        guard nowPlayingController == nil, let contentView = view.window?.contentView else { return }
+        let controller = NowPlayingViewController()
+        controller.onClose = { [weak self] in
+            self?.closeNowPlaying()
+        }
+        nowPlayingController = controller
+        let overlay = controller.view
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(overlay)
+        NSLayoutConstraint.activate([
+            overlay.topAnchor.constraint(equalTo: contentView.topAnchor),
+            overlay.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            overlay.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+        controller.viewDidAppear()
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            overlay.alphaValue = 1
+        } else {
+            overlay.alphaValue = 0
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.28
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                overlay.animator().alphaValue = 1
+            }
+        }
+        AppLogger.info("Now Playing immersive opened", category: .ui)
+    }
+
+    private func closeNowPlaying() {
+        guard let controller = nowPlayingController else { return }
+        nowPlayingController = nil
+        let overlay = controller.view
+        let finish = {
+            controller.viewWillDisappear()
+            overlay.removeFromSuperview()
+        }
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            finish()
+        } else {
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.22
+                overlay.animator().alphaValue = 0
+            }, completionHandler: finish)
+        }
+        view.window?.makeFirstResponder(nil)
+        AppLogger.info("Now Playing immersive closed", category: .ui)
     }
 }
 
-final class InspectorPlaceholderViewController: NSViewController {
+/// Hosts the queue or lyrics panel in the inspector column, creating each
+/// panel once and swapping which one is installed.
+final class InspectorHostViewController: NSViewController {
 
     enum Mode {
         case queue
@@ -91,48 +157,75 @@ final class InspectorPlaceholderViewController: NSViewController {
             case .lyrics: "Lyrics"
             }
         }
-
-        var symbolName: String {
-            switch self {
-            case .queue: "list.bullet"
-            case .lyrics: "quote.bubble"
-            }
-        }
     }
 
-    var mode: Mode = .queue {
-        didSet { applyMode() }
-    }
-
-    private let icon = NSImageView()
+    private(set) var mode: Mode = .queue
+    private lazy var queuePanel = QueuePanelViewController()
+    private lazy var lyricsPanel = LyricsPanelViewController()
     private let titleLabel = NSTextField(labelWithString: "")
-    private let subtitleLabel = NSTextField(labelWithString: "Arriving in a later stage.")
+    private let contentContainer = NSView()
+    private var installedChild: NSViewController?
 
     override func loadView() {
         view = NSView()
 
-        icon.symbolConfiguration = .init(pointSize: 32, weight: .light)
-        icon.contentTintColor = .tertiaryLabelColor
-        titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
-        subtitleLabel.font = .systemFont(ofSize: 12)
-        subtitleLabel.textColor = .secondaryLabelColor
+        titleLabel.font = .systemFont(ofSize: 13, weight: .bold)
+        titleLabel.textColor = .labelColor
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(titleLabel)
 
-        let stack = NSStackView(views: [icon, titleLabel, subtitleLabel])
-        stack.orientation = .vertical
-        stack.spacing = 8
-        stack.alignment = .centerX
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stack)
+        contentContainer.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(contentContainer)
+
         NSLayoutConstraint.activate([
-            stack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            contentContainer.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
+            contentContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            contentContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            contentContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
-        applyMode()
+        apply(mode: mode)
     }
 
-    private func applyMode() {
-        guard isViewLoaded else { return }
-        icon.image = NSImage(systemSymbolName: mode.symbolName, accessibilityDescription: nil)
+    func show(_ mode: Mode) {
+        self.mode = mode
+        if isViewLoaded {
+            apply(mode: mode)
+        }
+    }
+
+    private func apply(mode: Mode) {
         titleLabel.stringValue = mode.title
+        let next: NSViewController = mode == .queue ? queuePanel : lyricsPanel
+        guard next !== installedChild else { return }
+        if let installedChild {
+            installedChild.view.removeFromSuperview()
+            installedChild.removeFromParent()
+        }
+        addChild(next)
+        next.view.translatesAutoresizingMaskIntoConstraints = false
+        contentContainer.addSubview(next.view)
+        NSLayoutConstraint.activate([
+            next.view.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            next.view.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            next.view.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            next.view.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
+        ])
+        installedChild = next
+    }
+}
+
+extension MainSplitViewController {
+
+    private func toggleInspector(mode: InspectorHostViewController.Mode) {
+        guard let inspectorItem else { return }
+        if !inspectorItem.isCollapsed, inspectorHost.mode == mode {
+            inspectorItem.animator().isCollapsed = true
+            return
+        }
+        inspectorHost.show(mode)
+        inspectorItem.animator().isCollapsed = false
+        AppLogger.info("Inspector expanded (\(mode.title))", category: .ui)
     }
 }

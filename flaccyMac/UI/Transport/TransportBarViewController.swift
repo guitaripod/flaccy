@@ -20,6 +20,8 @@ final class TransportBarViewController: NSViewController {
     private var queueButton: TransportButton!
     private var lyricsButton: TransportButton!
     private var nowPlayingButton: TransportButton!
+    private var sleepTimerButton: TransportButton!
+    private let sleepCountdownLabel = NSTextField(labelWithString: "")
 
     private let artworkView = NSImageView()
     private let artworkContainer = NSView()
@@ -78,8 +80,13 @@ final class TransportBarViewController: NSViewController {
         volumeIcon.symbolConfiguration = .init(pointSize: 11, weight: .medium)
         volumeIcon.contentTintColor = .secondaryLabelColor
 
+        sleepCountdownLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .semibold)
+        sleepCountdownLabel.textColor = .secondaryLabelColor
+        sleepCountdownLabel.isHidden = true
+
         let rightCluster = NSStackView(views: [
-            volumeIcon, volumeSlider, routePicker, queueButton, lyricsButton, nowPlayingButton,
+            volumeIcon, volumeSlider, routePicker, sleepTimerButton, sleepCountdownLabel,
+            queueButton, lyricsButton, nowPlayingButton,
         ])
         rightCluster.orientation = .horizontal
         rightCluster.spacing = 6
@@ -161,6 +168,10 @@ final class TransportBarViewController: NSViewController {
             symbolName: "arrow.up.left.and.arrow.down.right", pointSize: 12,
             accessibilityLabel: "Now Playing",
             target: self, action: #selector(toggleNowPlaying)
+        )
+        sleepTimerButton = TransportButton(
+            symbolName: "moon.zzz", pointSize: 13, accessibilityLabel: "Sleep timer",
+            target: self, action: #selector(showSleepTimerMenu)
         )
     }
 
@@ -252,6 +263,7 @@ final class TransportBarViewController: NSViewController {
         center.addObserver(self, selector: #selector(queueChanged), name: AudioPlayer.queueDidChange, object: nil)
         center.addObserver(self, selector: #selector(lovedChanged), name: LovedTracksService.didChange, object: nil)
         center.addObserver(self, selector: #selector(volumeDidChangeExternally), name: AudioPlayer.volumeDidChange, object: nil)
+        center.addObserver(self, selector: #selector(sleepTimerChanged), name: AudioPlayer.sleepTimerDidUpdate, object: nil)
     }
 
     private func refreshEverything() {
@@ -259,6 +271,35 @@ final class TransportBarViewController: NSViewController {
         stateChanged()
         modesChanged()
         queueChanged()
+        sleepTimerChanged()
+    }
+
+    @objc private func sleepTimerChanged() {
+        if let remaining = AudioPlayer.shared.sleepTimerRemaining {
+            let total = Int(remaining)
+            sleepCountdownLabel.stringValue = String(format: "%d:%02d", total / 60, total % 60)
+            sleepCountdownLabel.isHidden = false
+            sleepTimerButton.isActiveToggle = true
+            sleepTimerButton.setSymbol("moon.zzz.fill", pointSize: 13)
+        } else if AudioPlayer.shared.sleepAtEndOfTrack {
+            sleepCountdownLabel.stringValue = "end"
+            sleepCountdownLabel.isHidden = false
+            sleepTimerButton.isActiveToggle = true
+            sleepTimerButton.setSymbol("moon.zzz.fill", pointSize: 13)
+        } else {
+            sleepCountdownLabel.isHidden = true
+            sleepTimerButton.isActiveToggle = false
+            sleepTimerButton.setSymbol("moon.zzz", pointSize: 13)
+        }
+    }
+
+    @objc private func showSleepTimerMenu() {
+        let menu = SleepTimerMenuBuilder.build()
+        menu.popUp(
+            positioning: nil,
+            at: NSPoint(x: 0, y: sleepTimerButton.bounds.height + 6),
+            in: sleepTimerButton
+        )
     }
 
     @objc private func trackChanged() {

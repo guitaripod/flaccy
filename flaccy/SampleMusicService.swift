@@ -39,7 +39,7 @@ final class SampleMusicService {
             let (data, _) = try await URLSession.shared.data(from: Self.baseURL)
             let manifest = try JSONDecoder().decode(Manifest.self, from: data)
             attribution = manifest.attribution
-            let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let documents = LibraryPaths.root
 
             for (index, track) in manifest.tracks.enumerated() {
                 let destination = documents.appendingPathComponent(track.file)
