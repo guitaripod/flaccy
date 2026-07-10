@@ -42,6 +42,11 @@ final class SettingsTabViewController: NSTabViewController {
         addTabViewItem(item)
     }
 
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        view.window?.title = tabViewItems[selectedTabViewItemIndex].label
+    }
+
     override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
         super.tabView(tabView, didSelect: tabViewItem)
         view.window?.title = tabViewItem?.label ?? "Settings"
