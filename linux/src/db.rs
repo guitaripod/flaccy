@@ -86,6 +86,7 @@ impl Db {
             let _ = std::fs::create_dir_all(parent);
         }
         let conn = Connection::open(path)?;
+        let _ = conn.busy_timeout(std::time::Duration::from_secs(5));
         let _ = conn.pragma_update(None, "journal_mode", "WAL");
         let _ = conn.pragma_update(None, "foreign_keys", "ON");
         let db = Self { conn };
@@ -628,16 +629,15 @@ impl Db {
              GROUP BY trackTitle, artist ORDER BY c DESC LIMIT 10",
         );
         let mut clock = [0i64; 24];
-        if let Ok(mut stmt) = self.conn.prepare("SELECT timestamp FROM scrobbles") {
-            let rows = stmt.query_map([], |row| row.get::<_, String>(0));
+        if let Ok(mut stmt) = self.conn.prepare(
+            "SELECT CAST(strftime('%H', timestamp, 'localtime') AS INTEGER), COUNT(*)
+             FROM scrobbles GROUP BY 1",
+        ) {
+            let rows =
+                stmt.query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)));
             if let Ok(rows) = rows {
-                for text in rows.flatten() {
-                    let unix = unix_from_string(&text);
-                    if let Some(utc) = DateTime::<Utc>::from_timestamp(unix, 0) {
-                        let local = utc.with_timezone(&chrono::Local);
-                        use chrono::Timelike;
-                        clock[local.hour() as usize % 24] += 1;
-                    }
+                for (hour, count) in rows.flatten() {
+                    clock[(hour.rem_euclid(24)) as usize] += count;
                 }
             }
         }

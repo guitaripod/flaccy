@@ -1,9 +1,8 @@
 use crate::db::{Db, NewTrack};
-use lofty::file::TaggedFileExt;
+use lofty::file::{AudioFile, FileType, TaggedFile, TaggedFileExt};
 use lofty::prelude::*;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use unicode_normalization::UnicodeNormalization;
 
 const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
 
@@ -85,7 +84,13 @@ fn run_scan(
 fn collect_audio_files(root: &Path) -> Vec<PathBuf> {
     let mut result = Vec::new();
     let mut stack = vec![root.to_path_buf()];
+    let mut visited: HashSet<PathBuf> = HashSet::new();
     while let Some(dir) = stack.pop() {
+        if let Ok(canonical) = std::fs::canonicalize(&dir) {
+            if !visited.insert(canonical) {
+                continue;
+            }
+        }
         let Ok(entries) = std::fs::read_dir(&dir) else {
             continue;
         };
@@ -109,12 +114,14 @@ fn collect_audio_files(root: &Path) -> Vec<PathBuf> {
     result
 }
 
+/// Preserves the on-disk byte form of the relative path: Linux filesystems are
+/// normalization-sensitive, so an NFC-normalized key (the Apple
+/// canonicalSyncPath behavior) would point at a nonexistent file for
+/// NFD-named libraries copied from a Mac.
 fn relative_path(root: &Path, path: &Path) -> String {
-    let rel = path
-        .strip_prefix(root)
+    path.strip_prefix(root)
         .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|_| path.file_name().unwrap_or_default().to_string_lossy().to_string());
-    rel.nfc().collect()
+        .unwrap_or_else(|_| path.file_name().unwrap_or_default().to_string_lossy().to_string())
 }
 
 fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
@@ -162,12 +169,43 @@ fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
         album,
         track_number,
         duration,
-        codec: codec_for_extension(path),
+        codec: detect_codec(&tagged, path),
         bit_depth: properties.bit_depth().map(|b| b as i32),
         sample_rate: properties.sample_rate().map(|r| r as i32),
         channels: properties.channels().map(|c| c as i32),
         artwork,
     })
+}
+
+/// Resolves the badge codec from the detected stream format (mirroring
+/// AudioMetadataReader.readFormat, which distinguishes ALAC from AAC inside
+/// the same .m4a container), falling back to the extension map.
+fn detect_codec(tagged: &TaggedFile, path: &Path) -> Option<String> {
+    let codec = match tagged.file_type() {
+        FileType::Flac => "FLAC",
+        FileType::Mpeg => "MP3",
+        FileType::Mp4 => return mp4_codec(path).or_else(|| codec_for_extension(path)),
+        FileType::Vorbis => "OGG",
+        FileType::Opus => "OPUS",
+        FileType::Wav => "WAV",
+        FileType::Aiff => "AIFF",
+        FileType::Aac => "AAC",
+        _ => return codec_for_extension(path),
+    };
+    Some(codec.to_string())
+}
+
+fn mp4_codec(path: &Path) -> Option<String> {
+    let mut file = std::fs::File::open(path).ok()?;
+    let mp4 = lofty::mp4::Mp4File::read_from(&mut file, lofty::config::ParseOptions::new()).ok()?;
+    let codec = match mp4.properties().codec() {
+        lofty::mp4::Mp4Codec::AAC => "AAC",
+        lofty::mp4::Mp4Codec::ALAC => "ALAC",
+        lofty::mp4::Mp4Codec::MP3 => "MP3",
+        lofty::mp4::Mp4Codec::FLAC => "FLAC",
+        _ => return None,
+    };
+    Some(codec.to_string())
 }
 
 fn codec_for_extension(path: &Path) -> Option<String> {
@@ -217,22 +255,19 @@ pub fn parse_filename(filename: &str) -> ParsedFilename {
     let digit_count = filename.chars().take_while(|c| c.is_ascii_digit()).count();
     if (1..=3).contains(&digit_count) && digit_count < filename.chars().count() {
         let rest: String = filename.chars().skip(digit_count).collect();
-        let after_spaces = rest.trim_start_matches(' ');
+        let after_spaces = rest.trim_start();
         let leading_spaces = rest.len() - after_spaces.len();
         let mut chars = after_spaces.chars();
         let separator = chars.next();
         let extracted = match separator {
-            Some(c) if "-._)]".contains(c) => {
-                let title = chars.as_str().trim_start_matches(' ');
-                Some(title.to_string())
-            }
+            Some(c) if "-._)]".contains(c) => Some(chars.as_str().trim_start().to_string()),
             Some(_) if leading_spaces > 0 => Some(after_spaces.to_string()),
             _ => None,
         };
         if let Some(title) = extracted {
+            track_number = digits.parse().unwrap_or(0);
             let trimmed = title.trim();
             if !trimmed.is_empty() {
-                track_number = digits.parse().unwrap_or(0);
                 name = trimmed.to_string();
             }
         }
@@ -284,6 +319,20 @@ mod tests {
         let parsed = parse_filename("1234 Song");
         assert_eq!(parsed.track_number, 0);
         assert_eq!(parsed.title, "1234 Song");
+    }
+
+    #[test]
+    fn tab_separator_whitespace_class() {
+        let parsed = parse_filename("03\t- Some Song");
+        assert_eq!(parsed.track_number, 3);
+        assert_eq!(parsed.title, "Some Song");
+    }
+
+    #[test]
+    fn empty_title_still_takes_track_number() {
+        let parsed = parse_filename("01 - ");
+        assert_eq!(parsed.track_number, 1);
+        assert_eq!(parsed.title, "01 -");
     }
 
     #[test]

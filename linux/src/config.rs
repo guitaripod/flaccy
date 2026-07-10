@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
+use std::io::Write;
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -86,9 +87,18 @@ pub fn save_session(session: &Session) {
     if fs::create_dir_all(&dir).is_err() {
         return;
     }
-    let path = session_path();
-    if fs::write(&path, format!("{}\n{}\n", session.key, session.username)).is_ok() {
-        let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o600));
+    let result = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(session_path())
+        .and_then(|mut file| {
+            file.write_all(format!("{}\n{}\n", session.key, session.username).as_bytes())?;
+            file.set_permissions(fs::Permissions::from_mode(0o600))
+        });
+    if let Err(err) = result {
+        crate::logger::error("auth", &format!("session save failed: {err}"));
     }
 }
 

@@ -11,7 +11,11 @@ pub struct CurrentPlay {
     pub started_unix: i64,
     pub scrobbled: bool,
     pub counted: bool,
+    pub played_seconds: f64,
+    pub last_position: f64,
 }
+
+const MAX_TICK_DELTA: f64 = 1.0;
 
 fn eligibility_threshold(duration: f64) -> f64 {
     (duration / 2.0).max(30.0).min(240.0)
@@ -30,6 +34,8 @@ pub fn on_track_started(core: &Rc<AppCore>, track: Option<Track>) {
                 started_unix: chrono::Utc::now().timestamp(),
                 scrobbled: false,
                 counted: false,
+                played_seconds: 0.0,
+                last_position: 0.0,
             });
             if let Some(client) = client_for(core) {
                 if client.session_key.is_some() {
@@ -54,7 +60,12 @@ pub fn on_tick(core: &Rc<AppCore>, position: f64) {
     let ready = {
         let mut play = core.current_play.borrow_mut();
         let Some(play) = play.as_mut() else { return };
-        if play.scrobbled || position < eligibility_threshold(play.track.duration) {
+        let delta = position - play.last_position;
+        play.last_position = position;
+        if delta > 0.0 {
+            play.played_seconds += delta.min(MAX_TICK_DELTA);
+        }
+        if play.scrobbled || play.played_seconds < eligibility_threshold(play.track.duration) {
             return;
         }
         play.scrobbled = true;
@@ -67,11 +78,10 @@ pub fn on_tick(core: &Rc<AppCore>, position: f64) {
 }
 
 pub fn checkpoint_skip(core: &Rc<AppCore>) {
-    let position = core.player.position().unwrap_or(0.0);
     let ready = {
         let mut play = core.current_play.borrow_mut();
         let Some(play) = play.as_mut() else { return };
-        if play.scrobbled || position < eligibility_threshold(play.track.duration) {
+        if play.scrobbled || play.played_seconds < eligibility_threshold(play.track.duration) {
             return;
         }
         play.scrobbled = true;
@@ -189,16 +199,13 @@ fn drain_blocking(db_path: &PathBuf, client: &LastFmClient) -> usize {
         match client.scrobble_batch(&entries) {
             Ok(BatchOutcome::Submitted(ids)) => {
                 submitted_total += ids.len();
-                if let Err(err) = db.mark_scrobbles_submitted(&ids) {
-                    crate::logger::error("scrobble", &format!("mark submitted failed: {err}"));
-                }
+                mark_submitted_with_retry(&db, &ids);
             }
             Ok(BatchOutcome::Retryable { code, message }) => {
                 crate::logger::warn(
                     "scrobble",
                     &format!("batch deferred (error {code}: {message}), {} kept pending", chunk.len()),
                 );
-                break;
             }
             Err(err) => {
                 crate::logger::warn("scrobble", &format!("batch failed, kept pending: {err}"));
@@ -207,6 +214,24 @@ fn drain_blocking(db_path: &PathBuf, client: &LastFmClient) -> usize {
         }
     }
     submitted_total
+}
+
+/// Retries the local submitted-flag update because the network submit already
+/// succeeded: leaving rows pending after Last.fm accepted them would re-submit
+/// duplicates on the next drain.
+fn mark_submitted_with_retry(db: &Db, ids: &[i64]) {
+    for attempt in 0..3 {
+        match db.mark_scrobbles_submitted(ids) {
+            Ok(()) => return,
+            Err(err) => {
+                crate::logger::error(
+                    "scrobble",
+                    &format!("mark submitted failed (attempt {}): {err}", attempt + 1),
+                );
+                std::thread::sleep(std::time::Duration::from_millis(250));
+            }
+        }
+    }
 }
 
 pub fn submit_love(core: &Rc<AppCore>, rel_path: &str, title: &str, artist: &str, loved: bool) {

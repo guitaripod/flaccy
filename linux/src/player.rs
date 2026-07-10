@@ -31,14 +31,29 @@ struct Shared {
     current: usize,
     repeat: RepeatMode,
     shuffle: bool,
-    pending_advance: Option<usize>,
+    pending_advance: Option<Track>,
     root: PathBuf,
+}
+
+/// Resolves the queue index of a gapless-committed track after possible queue
+/// mutations, searching forward from the current position and wrapping so
+/// duplicates resolve to the nearest upcoming occurrence.
+fn resolve_pending_index(shared: &Shared, track: &Track) -> Option<usize> {
+    let len = shared.queue.len();
+    if len == 0 {
+        return None;
+    }
+    let start = (shared.current + 1) % len;
+    (0..len)
+        .map(|offset| (start + offset) % len)
+        .find(|&idx| shared.queue[idx].rel_path == track.rel_path)
 }
 
 pub struct Player {
     playbin: gst::Element,
     shared: Arc<Mutex<Shared>>,
     playing: Cell<bool>,
+    eos_reset: Cell<bool>,
     hub: Rc<EventHub>,
     bus_watch: std::cell::RefCell<Option<gst::bus::BusWatchGuard>>,
 }
@@ -94,9 +109,10 @@ impl Player {
                 };
                 let Ok(mut guard) = shared.lock() else { return None };
                 if let Some(next) = gapless_next_index(&guard) {
-                    if let Some(uri) = uri_for(&guard.root, &guard.queue[next]) {
+                    let track = guard.queue[next].clone();
+                    if let Some(uri) = uri_for(&guard.root, &track) {
                         playbin.set_property("uri", &uri);
-                        guard.pending_advance = Some(next);
+                        guard.pending_advance = Some(track);
                     }
                 }
                 None
@@ -107,6 +123,7 @@ impl Player {
             playbin: playbin.clone(),
             shared,
             playing: Cell::new(false),
+            eos_reset: Cell::new(false),
             hub,
             bus_watch: std::cell::RefCell::new(None),
         });
@@ -160,10 +177,12 @@ impl Player {
     fn on_stream_start(&self) {
         let advanced = {
             let Ok(mut guard) = self.shared.lock() else { return };
-            guard.pending_advance.take().map(|next| {
+            guard.pending_advance.take().map(|track| {
                 let previous = guard.queue.get(guard.current).cloned();
-                guard.current = next;
-                (previous, guard.queue.get(next).cloned())
+                if let Some(index) = resolve_pending_index(&guard, &track) {
+                    guard.current = index;
+                }
+                (previous, Some(track))
             })
         };
         if let Some((previous, current)) = advanced {
@@ -185,6 +204,16 @@ impl Player {
         if let Some(track) = self.current_track() {
             self.hub.emit(&AppEvent::NaturalEnd(track));
         }
+        let next = {
+            let Ok(mut guard) = self.shared.lock() else { return };
+            guard.pending_advance = None;
+            gapless_next_index(&guard)
+        };
+        if let Some(index) = next {
+            crate::logger::info("playback", "EOS with queued next; continuing");
+            self.jump_to(index);
+            return;
+        }
         crate::logger::info("playback", "queue exhausted (EOS)");
         let _ = self.playbin.set_state(gst::State::Paused);
         let _ = self.playbin.seek_simple(
@@ -192,6 +221,8 @@ impl Player {
             gst::ClockTime::ZERO,
         );
         self.playing.set(false);
+        self.eos_reset.set(true);
+        self.hub.emit(&AppEvent::Seeked(0.0));
         self.hub.emit(&AppEvent::PlayingChanged(false));
     }
 
@@ -239,6 +270,7 @@ impl Player {
         self.playbin.set_property("uri", &uri);
         let _ = self.playbin.set_state(gst::State::Playing);
         self.playing.set(true);
+        self.eos_reset.set(false);
         self.hub.emit(&AppEvent::PlayingChanged(true));
         crate::logger::info(
             "playback",
@@ -259,6 +291,9 @@ impl Player {
             let _ = self.playbin.set_state(gst::State::Playing);
             self.playing.set(true);
             self.hub.emit(&AppEvent::PlayingChanged(true));
+            if self.eos_reset.replace(false) {
+                self.hub.emit(&AppEvent::TrackChanged(self.current_track()));
+            }
         }
     }
 
@@ -349,7 +384,6 @@ impl Player {
             .map(|p| p + 1)
             .unwrap_or(guard.original.len());
         guard.original.insert(original_pos, track);
-        guard.pending_advance = None;
     }
 
     pub fn add_to_queue(&self, track: Track) {
@@ -397,7 +431,6 @@ impl Player {
                     .position(|t| t.rel_path == current_rel)
                     .unwrap_or(0);
             }
-            guard.pending_advance = None;
             guard.shuffle
         };
         self.hub.emit(&AppEvent::ShuffleChanged(enabled));
@@ -407,7 +440,6 @@ impl Player {
         let mode = {
             let Ok(mut guard) = self.shared.lock() else { return };
             guard.repeat = guard.repeat.cycled();
-            guard.pending_advance = None;
             guard.repeat
         };
         self.hub.emit(&AppEvent::RepeatChanged(mode));

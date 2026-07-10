@@ -2,7 +2,7 @@ use crate::events::AppEvent;
 use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::pango;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 const CLOCK_TINT: (f64, f64, f64) = (0.45, 0.78, 1.0);
@@ -88,12 +88,28 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     };
     rebuild();
 
+    let dirty = Rc::new(Cell::new(false));
     {
         let rebuild = Rc::clone(&rebuild);
+        let dirty = Rc::clone(&dirty);
+        let stack_ref = stack.clone();
         ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
-            AppEvent::LibraryReloaded | AppEvent::NaturalEnd(_) => rebuild(),
-            AppEvent::TrackChanged(_) => rebuild(),
+            AppEvent::LibraryReloaded | AppEvent::NaturalEnd(_) | AppEvent::TrackChanged(_) => {
+                if stack_ref.is_mapped() {
+                    rebuild();
+                } else {
+                    dirty.set(true);
+                }
+            }
             _ => {}
+        });
+    }
+    {
+        let rebuild = Rc::clone(&rebuild);
+        stack.connect_map(move |_| {
+            if dirty.replace(false) {
+                rebuild();
+            }
         });
     }
 

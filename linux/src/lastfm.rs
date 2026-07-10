@@ -84,20 +84,33 @@ impl LastFmClient {
         serde_json::from_str(&text).map_err(|e| format!("{e}"))
     }
 
+    /// POSTs with iOS performWithBackoff semantics: an in-body error 29 (rate
+    /// limit) is retried with exponential backoff (1s/2s/4s) up to three extra
+    /// attempts before the response is returned as-is.
     fn signed_post(&self, params: BTreeMap<String, String>) -> Result<serde_json::Value, String> {
         let body = self.signed_query(&params);
-        let response = Self::agent()
-            .post(BASE_URL)
-            .set("Content-Type", "application/x-www-form-urlencoded")
-            .send_string(&body);
-        let text = match response {
-            Ok(resp) => resp.into_string().map_err(|e| format!("{e}"))?,
-            Err(ureq::Error::Status(_, resp)) => {
-                resp.into_string().map_err(|e| format!("{e}"))?
+        let mut attempt = 0;
+        loop {
+            let response = Self::agent()
+                .post(BASE_URL)
+                .set("Content-Type", "application/x-www-form-urlencoded")
+                .send_string(&body);
+            let text = match response {
+                Ok(resp) => resp.into_string().map_err(|e| format!("{e}"))?,
+                Err(ureq::Error::Status(_, resp)) => {
+                    resp.into_string().map_err(|e| format!("{e}"))?
+                }
+                Err(e) => return Err(format!("{e}")),
+            };
+            let json: serde_json::Value =
+                serde_json::from_str(&text).map_err(|e| format!("{e}"))?;
+            if json["error"].as_i64() == Some(29) && attempt < 3 {
+                std::thread::sleep(Duration::from_secs(1 << attempt));
+                attempt += 1;
+                continue;
             }
-            Err(e) => return Err(format!("{e}")),
-        };
-        serde_json::from_str(&text).map_err(|e| format!("{e}"))
+            return Ok(json);
+        }
     }
 
     fn base_params(&self, method: &str) -> BTreeMap<String, String> {

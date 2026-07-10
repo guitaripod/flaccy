@@ -29,6 +29,13 @@ fn main() -> glib::ExitCode {
         logger::error("playback", &format!("gstreamer init failed: {err}"));
         return glib::ExitCode::FAILURE;
     }
+    if gst::ElementFactory::find("playbin3").is_none() {
+        logger::error(
+            "playback",
+            "GStreamer playbin3 element is missing; install gst-plugins-base (playback plugin)",
+        );
+        return glib::ExitCode::FAILURE;
+    }
     if !lastfm::keys_available() {
         logger::warn("auth", "built without Last.fm keys; scrobbling UI hidden");
     }
