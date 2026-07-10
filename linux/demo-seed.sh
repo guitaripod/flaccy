@@ -56,5 +56,13 @@ seed_album "Solveig" "Midnatt" 2023 0x0F172A 0x38BDF8 \
   "Midnatt|208" "Sommarnatt|262" "Frost|330"
 seed_album "The Hollowmen" "Ravine" 2021 0x292524 0x84CC16 \
   "Ravine|175" "Switchback|220" "Riverbed|262" "Cairn|294"
+seed_album "Meridian Wolde" "Vantablack Sun" 2022 0x0B0B12 0xF472B6 \
+  "Vantablack Sun|233" "Afterimage|277" "Umbra|311" "Heliopause|349"
+seed_album "Meridian Wolde" "Field Lines" 2020 0x102A43 0x60A5FA \
+  "Field Lines|208" "Magnet School|247" "Solenoid|294"
+seed_album "Kestrel Vale" "Overwinter" 2023 0x1C1917 0xA8A29E \
+  "Overwinter|196" "Snowline|233" "Thaw|277" "Firn|330"
+seed_album "The Hollowmen" "Meltwater" 2024 0x134E4A 0x2DD4BF \
+  "Meltwater|220" "Confluence|262" "Oxbow|311"
 
 echo "demo catalog ready at $ROOT"
