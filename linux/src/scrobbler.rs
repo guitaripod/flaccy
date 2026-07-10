@@ -278,6 +278,111 @@ pub fn flush_pending_love_ops(core: &Rc<AppCore>) {
     });
 }
 
+/// Splits library tracks into love/unlove reconciliation lists against the
+/// remote loved set (keys: lowercased "title\0artist"), skipping tracks with a
+/// pending local op — the journal wins until drained (iOS syncLovedFromLastFM).
+pub fn reconcile_loved(
+    tracks: &[(String, String, String, bool, bool)],
+    remote: &std::collections::HashSet<String>,
+) -> (Vec<String>, Vec<String>) {
+    let mut to_love = Vec::new();
+    let mut to_unlove = Vec::new();
+    for (rel_path, title, artist, loved, has_pending_op) in tracks {
+        if *has_pending_op {
+            continue;
+        }
+        let key = format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase());
+        let desired = remote.contains(&key);
+        if desired && !loved {
+            to_love.push(rel_path.clone());
+        } else if !desired && *loved {
+            to_unlove.push(rel_path.clone());
+        }
+    }
+    (to_love, to_unlove)
+}
+
+/// Downloads the user's loved tracks (paged, max 20 pages of 1000) and
+/// reconciles `tracks.loved` for matching library rows, then reloads the
+/// library if anything changed.
+pub fn sync_loved_from_lastfm(core: &Rc<AppCore>) {
+    let Some(session) = core.session.borrow().clone() else { return };
+    let Some(client) = LastFmClient::new(Some(session.key.clone())) else { return };
+    let db_path = core.db_path.clone();
+    let username = session.username.clone();
+    let (tx, rx) = async_channel::bounded::<usize>(1);
+    std::thread::Builder::new()
+        .name("flaccy-loved-sync".into())
+        .spawn(move || {
+            let changed = sync_loved_blocking(&db_path, &client, &username);
+            let _ = tx.send_blocking(changed);
+        })
+        .ok();
+    let weak = Rc::downgrade(core);
+    gtk::glib::spawn_future_local(async move {
+        let changed = rx.recv().await.unwrap_or(0);
+        let Some(core) = weak.upgrade() else { return };
+        if changed > 0 {
+            crate::logger::info(
+                "scrobble",
+                &format!("loved down-sync updated {changed} tracks"),
+            );
+            core.reload_library();
+        }
+    });
+}
+
+fn sync_loved_blocking(db_path: &PathBuf, client: &LastFmClient, username: &str) -> usize {
+    let mut remote: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut page = 1u32;
+    let mut total_pages;
+    loop {
+        match client.fetch_loved_tracks(username, page, 1000) {
+            Ok((tracks, pages)) => {
+                for (title, artist) in tracks {
+                    remote.insert(format!(
+                        "{}\u{0}{}",
+                        title.to_lowercase(),
+                        artist.to_lowercase()
+                    ));
+                }
+                total_pages = pages;
+            }
+            Err(err) => {
+                crate::logger::warn("scrobble", &format!("loved down-sync fetch failed: {err}"));
+                return 0;
+            }
+        }
+        page += 1;
+        if page > total_pages || page > 20 {
+            break;
+        }
+    }
+    let Ok(db) = Db::open(db_path) else { return 0 };
+    let pending: std::collections::HashSet<String> = db
+        .fetch_pending_love_ops()
+        .into_iter()
+        .map(|op| op.rel_path)
+        .collect();
+    let rows: Vec<(String, String, String, bool, bool)> = db
+        .fetch_all_tracks()
+        .into_iter()
+        .map(|t| {
+            let has_pending = pending.contains(&t.rel_path);
+            (t.rel_path, t.title, t.artist, t.loved, has_pending)
+        })
+        .collect();
+    let (to_love, to_unlove) = reconcile_loved(&rows, &remote);
+    let changed = to_love.len() + to_unlove.len();
+    if let Err(err) = db.mark_loved(&to_love, true) {
+        crate::logger::error("database", &format!("loved down-sync write failed: {err}"));
+    }
+    if let Err(err) = db.mark_loved(&to_unlove, false) {
+        crate::logger::error("database", &format!("loved down-sync write failed: {err}"));
+    }
+    changed
+}
+
 pub fn startup_maintenance(core: &Rc<AppCore>) {
     let cutoff = chrono::Utc::now().timestamp() - 14 * 24 * 3600;
     let retired = core.db.retire_pending_scrobbles_older_than(cutoff);
@@ -286,6 +391,54 @@ pub fn startup_maintenance(core: &Rc<AppCore>) {
     }
     drain_pending(core);
     flush_pending_love_ops(core);
+    sync_loved_from_lastfm(core);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::reconcile_loved;
+    use std::collections::HashSet;
+
+    fn row(rel: &str, title: &str, artist: &str, loved: bool, pending: bool) -> (String, String, String, bool, bool) {
+        (rel.to_string(), title.to_string(), artist.to_string(), loved, pending)
+    }
+
+    #[test]
+    fn reconcile_applies_remote_state_case_insensitively() {
+        let mut remote = HashSet::new();
+        remote.insert("song a\u{0}artist x".to_string());
+        let tracks = vec![
+            row("a", "Song A", "Artist X", false, false),
+            row("b", "Song B", "Artist X", true, false),
+            row("c", "Song C", "Artist X", false, false),
+        ];
+        let (to_love, to_unlove) = reconcile_loved(&tracks, &remote);
+        assert_eq!(to_love, vec!["a"]);
+        assert_eq!(to_unlove, vec!["b"]);
+    }
+
+    #[test]
+    fn reconcile_pending_ops_win() {
+        let mut remote = HashSet::new();
+        remote.insert("song a\u{0}artist x".to_string());
+        let tracks = vec![
+            row("a", "Song A", "Artist X", false, true),
+            row("b", "Song B", "Artist X", true, true),
+        ];
+        let (to_love, to_unlove) = reconcile_loved(&tracks, &remote);
+        assert!(to_love.is_empty());
+        assert!(to_unlove.is_empty());
+    }
+
+    #[test]
+    fn reconcile_noop_when_in_sync() {
+        let mut remote = HashSet::new();
+        remote.insert("song a\u{0}artist x".to_string());
+        let tracks = vec![row("a", "Song A", "Artist X", true, false)];
+        let (to_love, to_unlove) = reconcile_loved(&tracks, &remote);
+        assert!(to_love.is_empty());
+        assert!(to_unlove.is_empty());
+    }
 }
 
 pub fn disconnect_cleanup(core: &Rc<AppCore>) {

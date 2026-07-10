@@ -12,6 +12,7 @@ mod mpris;
 mod palette;
 mod player;
 mod recap;
+mod render;
 mod samples;
 mod scanner;
 mod scrobbler;
@@ -19,6 +20,7 @@ mod songlink;
 mod station;
 mod suggested;
 mod ui;
+mod wantlist;
 
 use adw::prelude::*;
 use gtk::glib;

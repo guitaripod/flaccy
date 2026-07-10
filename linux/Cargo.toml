@@ -8,6 +8,7 @@ description = "Lossless music player for Linux"
 [dependencies]
 gtk = { package = "gtk4", version = "0.11", features = ["v4_18"] }
 adw = { package = "libadwaita", version = "0.9", features = ["v1_7"] }
+cairo-rs = { version = "0.22", features = ["png"] }
 gst = { package = "gstreamer", version = "0.25" }
 rusqlite = { version = "0.32", features = ["bundled"] }
 lofty = "0.22"

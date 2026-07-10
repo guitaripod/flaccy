@@ -65,6 +65,28 @@ pub struct AlbumInfoStatus {
     pub last_fetched_unix: Option<i64>,
 }
 
+#[derive(Clone, Debug)]
+pub struct WantlistItemRow {
+    pub norm_key: String,
+    pub kind: String,
+    pub title: String,
+    pub artist: String,
+    pub image_url: Option<String>,
+    pub source: String,
+    pub score: f64,
+    pub reason: String,
+    pub play_count: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct NewReleaseRow {
+    pub artist: String,
+    pub album: String,
+    pub release_unix: i64,
+    pub image_url: Option<String>,
+    pub store_url: Option<String>,
+}
+
 pub struct LyricsRow {
     pub synced: Option<String>,
     pub plain: Option<String>,
@@ -241,6 +263,33 @@ impl Db {
                 \"match\" DOUBLE NOT NULL DEFAULT 0,
                 fetchedAt DATETIME NOT NULL,
                 UNIQUE(artist, similarName)
+            );
+            CREATE TABLE IF NOT EXISTS wantlist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                normKey TEXT NOT NULL UNIQUE,
+                kind TEXT NOT NULL,
+                title TEXT NOT NULL,
+                artist TEXT NOT NULL,
+                imageURL TEXT,
+                state TEXT NOT NULL,
+                source TEXT NOT NULL,
+                score DOUBLE NOT NULL DEFAULT 0,
+                reason TEXT NOT NULL DEFAULT '',
+                playCount INTEGER NOT NULL DEFAULT 0,
+                addedAt DATETIME NOT NULL,
+                resolvedAt DATETIME,
+                acknowledged BOOLEAN NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS wantlist_on_state ON wantlist(state);
+            CREATE TABLE IF NOT EXISTS newReleaseCache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                artist TEXT NOT NULL,
+                albumTitle TEXT NOT NULL,
+                releaseDate DATETIME NOT NULL,
+                imageURL TEXT,
+                storeURL TEXT,
+                fetchedAt DATETIME NOT NULL,
+                UNIQUE(artist, albumTitle)
             );",
         )
     }
@@ -798,6 +847,19 @@ impl Db {
             .flatten()
     }
 
+    pub fn artist_image_url(&self, name: &str) -> Option<String> {
+        self.conn
+            .query_row(
+                "SELECT imageURL FROM artists WHERE name = ?1",
+                params![name],
+                |row| row.get(0),
+            )
+            .optional()
+            .ok()
+            .flatten()
+            .flatten()
+    }
+
     pub fn similar_artists(&self, artist: &str) -> Vec<(String, f64, i64)> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT similarName, \"match\", fetchedAt FROM similarArtistCache
@@ -816,6 +878,163 @@ impl Db {
             Ok(rows) => rows.flatten().collect(),
             Err(_) => Vec::new(),
         }
+    }
+
+    pub fn mark_loved(&self, rel_paths: &[String], loved: bool) -> Result<(), rusqlite::Error> {
+        for rel_path in rel_paths {
+            self.conn.execute(
+                "UPDATE tracks SET loved = ?1 WHERE fileURL = ?2 AND lovedPendingOp IS NULL",
+                params![loved, rel_path],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn fetch_wanted_items(&self) -> Vec<WantlistItemRow> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT normKey, kind, title, artist, imageURL, source, score, reason, playCount
+             FROM wantlist WHERE state = 'wanted' ORDER BY score DESC, addedAt DESC",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map([], |row| {
+            Ok(WantlistItemRow {
+                norm_key: row.get(0)?,
+                kind: row.get(1)?,
+                title: row.get(2)?,
+                artist: row.get(3)?,
+                image_url: row.get(4)?,
+                source: row.get(5)?,
+                score: row.get(6)?,
+                reason: row.get(7)?,
+                play_count: row.get(8)?,
+            })
+        });
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// Upserts computed suggestions without resurrecting dismissed or acquired
+    /// rows (iOS mergeWantlistSuggestions semantics): fresh metadata only lands
+    /// on rows still in the wanted state; unknown keys insert as wanted.
+    pub fn merge_wantlist_suggestions(
+        &self,
+        suggestions: &[WantlistItemRow],
+    ) -> Result<(), rusqlite::Error> {
+        let now = now_string();
+        for item in suggestions {
+            self.conn.execute(
+                "INSERT INTO wantlist
+                 (normKey, kind, title, artist, imageURL, state, source, score, reason, playCount, addedAt, acknowledged)
+                 VALUES (?1, ?2, ?3, ?4, ?5, 'wanted', ?6, ?7, ?8, ?9, ?10, ?11)
+                 ON CONFLICT(normKey) DO UPDATE SET
+                    score = excluded.score,
+                    reason = excluded.reason,
+                    playCount = excluded.playCount,
+                    imageURL = COALESCE(excluded.imageURL, wantlist.imageURL)
+                 WHERE wantlist.state = 'wanted'",
+                params![
+                    item.norm_key,
+                    item.kind,
+                    item.title,
+                    item.artist,
+                    item.image_url,
+                    item.source,
+                    item.score,
+                    item.reason,
+                    item.play_count,
+                    now,
+                    item.source == "manual",
+                ],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn set_wantlist_state(&self, norm_key: &str, state: &str) -> Result<(), rusqlite::Error> {
+        let resolved_at = if state == "wanted" {
+            None
+        } else {
+            Some(now_string())
+        };
+        self.conn.execute(
+            "UPDATE wantlist SET state = ?1, resolvedAt = ?2 WHERE normKey = ?3",
+            params![state, resolved_at, norm_key],
+        )?;
+        Ok(())
+    }
+
+    pub fn unseen_wanted_count(&self) -> i64 {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*) FROM wantlist WHERE state = 'wanted' AND acknowledged = 0",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+    }
+
+    pub fn acknowledge_wantlist(&self) -> Result<(), rusqlite::Error> {
+        self.conn
+            .execute("UPDATE wantlist SET acknowledged = 1 WHERE state = 'wanted'", [])?;
+        Ok(())
+    }
+
+    pub fn fetch_new_releases(&self) -> Vec<NewReleaseRow> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT artist, albumTitle, releaseDate, imageURL, storeURL FROM newReleaseCache
+             ORDER BY releaseDate DESC",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map([], |row| {
+            Ok(NewReleaseRow {
+                artist: row.get(0)?,
+                album: row.get(1)?,
+                release_unix: unix_from_string(&row.get::<_, String>(2)?),
+                image_url: row.get(3)?,
+                store_url: row.get(4)?,
+            })
+        });
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    pub fn new_releases_fetched_at(&self) -> Option<i64> {
+        self.conn
+            .query_row(
+                "SELECT MAX(fetchedAt) FROM newReleaseCache",
+                [],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .ok()
+            .flatten()
+            .map(|s| unix_from_string(&s))
+    }
+
+    pub fn replace_new_releases(&self, releases: &[NewReleaseRow]) -> Result<(), rusqlite::Error> {
+        let now = now_string();
+        self.conn.execute("DELETE FROM newReleaseCache", [])?;
+        for release in releases {
+            self.conn.execute(
+                "INSERT OR REPLACE INTO newReleaseCache
+                 (artist, albumTitle, releaseDate, imageURL, storeURL, fetchedAt)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    release.artist,
+                    release.album,
+                    string_from_unix(release.release_unix),
+                    release.image_url,
+                    release.store_url,
+                    now
+                ],
+            )?;
+        }
+        Ok(())
     }
 
     pub fn replace_similar_artists(

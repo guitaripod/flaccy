@@ -32,6 +32,7 @@ pub struct AppCore {
     pub sleep_remaining: Cell<Option<i64>>,
     pub sleep_end_of_track: Cell<bool>,
     pub autoplay_in_flight: Cell<bool>,
+    pub wantlist_in_flight: Cell<bool>,
 }
 
 impl AppCore {
@@ -70,6 +71,7 @@ impl AppCore {
             sleep_remaining: Cell::new(None),
             sleep_end_of_track: Cell::new(false),
             autoplay_in_flight: Cell::new(false),
+            wantlist_in_flight: Cell::new(false),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
@@ -121,6 +123,8 @@ impl AppCore {
         self.rescan();
         self.schedule_periodic_drain();
         self.schedule_enrichment_pass();
+        self.schedule_wantlist_refresh();
+        self.wire_lastfm_sync();
         if config::demo_mode() {
             self.schedule_demo_autoplay();
         }
@@ -309,6 +313,34 @@ impl AppCore {
             if let Some(core) = weak.upgrade() {
                 crate::enrichment::schedule_background_pass(&core);
             }
+        });
+    }
+
+    /// Runs the first wantlist refresh a little after launch (post-scan) so
+    /// gaps/upgrades and — when authenticated — Last.fm suggestions are ready
+    /// by the time the page is opened.
+    fn schedule_wantlist_refresh(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(Duration::from_secs(10), move || {
+            if let Some(core) = weak.upgrade() {
+                crate::wantlist::refresh(&core);
+            }
+        });
+    }
+
+    /// Re-runs loved down-sync and the wantlist refresh whenever the Last.fm
+    /// session connects or disconnects.
+    fn wire_lastfm_sync(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.hub.subscribe(move |event| {
+            let Some(core) = weak.upgrade() else { return false };
+            if let crate::events::AppEvent::LastFmChanged = event {
+                if core.session.borrow().is_some() {
+                    crate::scrobbler::sync_loved_from_lastfm(&core);
+                }
+                crate::wantlist::refresh(&core);
+            }
+            true
         });
     }
 

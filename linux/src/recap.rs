@@ -33,6 +33,29 @@ impl Period {
         }
     }
 
+    /// Last.fm user.getTop* period parameter for this recap scope.
+    pub fn api_value(self) -> &'static str {
+        match self {
+            Period::Week => "7day",
+            Period::Month => "1month",
+            Period::ThreeMonths => "3month",
+            Period::SixMonths => "6month",
+            Period::Year => "12month",
+            Period::AllTime => "overall",
+        }
+    }
+
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Period::Week => "Last 7 Days",
+            Period::Month => "Last Month",
+            Period::ThreeMonths => "Last 3 Months",
+            Period::SixMonths => "Last 6 Months",
+            Period::Year => "Last 12 Months",
+            Period::AllTime => "All Time",
+        }
+    }
+
     pub fn cutoff_unix(self, now_unix: i64) -> Option<i64> {
         let days = match self {
             Period::Week => 7,
@@ -191,6 +214,169 @@ pub fn heatmap_grid(heatmap: &HashMap<NaiveDate, i64>, now_unix: i64) -> Option<
     })
 }
 
+/// One year of listening, computed in a single pass over the year's scrobbles
+/// (iOS YearInMusicService semantics): imported rows with duration 0 fall back
+/// to the owned track's real duration, else 210 seconds.
+pub struct YearData {
+    pub year: i32,
+    pub total_plays: i64,
+    pub total_minutes: i64,
+    pub distinct_artists: usize,
+    pub distinct_albums: usize,
+    pub distinct_tracks: usize,
+    pub top_artists: Vec<(String, i64)>,
+    pub top_albums: Vec<(String, String, i64)>,
+    pub top_tracks: Vec<(String, String, i64)>,
+    pub peak_day: Option<NaiveDate>,
+    pub peak_day_plays: i64,
+    pub peak_hour: Option<usize>,
+    pub longest_streak: i64,
+    pub persona: &'static str,
+}
+
+const FALLBACK_TRACK_SECONDS: i64 = 210;
+
+pub fn track_key(title: &str, artist: &str) -> String {
+    format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase())
+}
+
+pub fn scrobble_years(rows: &[ScrobbleRow]) -> Vec<i32> {
+    let mut years: Vec<i32> = rows
+        .iter()
+        .map(|r| local_date(r.timestamp_unix).year())
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    years.sort_by(|a, b| b.cmp(a));
+    years
+}
+
+pub fn compute_year(
+    rows: &[ScrobbleRow],
+    year: i32,
+    library_durations: &HashMap<String, i64>,
+) -> YearData {
+    let scoped: Vec<&ScrobbleRow> = rows
+        .iter()
+        .filter(|r| local_date(r.timestamp_unix).year() == year)
+        .collect();
+
+    let mut total_seconds = 0i64;
+    let mut artist_counts: HashMap<String, i64> = HashMap::new();
+    let mut album_counts: HashMap<(String, String), i64> = HashMap::new();
+    let mut track_counts: HashMap<(String, String), i64> = HashMap::new();
+    let mut day_counts: HashMap<NaiveDate, i64> = HashMap::new();
+    let mut hour_counts = [0i64; 24];
+
+    for row in &scoped {
+        if row.duration > 0 {
+            total_seconds += row.duration;
+        } else {
+            total_seconds += library_durations
+                .get(&track_key(&row.title, &row.artist))
+                .copied()
+                .unwrap_or(FALLBACK_TRACK_SECONDS);
+        }
+        *artist_counts.entry(row.artist.clone()).or_insert(0) += 1;
+        *album_counts
+            .entry((row.album.clone(), row.artist.clone()))
+            .or_insert(0) += 1;
+        *track_counts
+            .entry((row.title.clone(), row.artist.clone()))
+            .or_insert(0) += 1;
+        *day_counts.entry(local_date(row.timestamp_unix)).or_insert(0) += 1;
+        hour_counts[local_hour(row.timestamp_unix) % 24] += 1;
+    }
+
+    let mut top_artists: Vec<(String, i64)> = artist_counts.clone().into_iter().collect();
+    top_artists.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    top_artists.truncate(5);
+    let mut top_albums: Vec<(String, String, i64)> = album_counts
+        .iter()
+        .map(|((album, artist), count)| (album.clone(), artist.clone(), *count))
+        .collect();
+    top_albums.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.0.cmp(&b.0)));
+    top_albums.truncate(5);
+    let mut top_tracks: Vec<(String, String, i64)> = track_counts
+        .iter()
+        .map(|((title, artist), count)| (title.clone(), artist.clone(), *count))
+        .collect();
+    top_tracks.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.0.cmp(&b.0)));
+    top_tracks.truncate(5);
+
+    let peak = day_counts.iter().max_by_key(|(_, count)| **count);
+    let peak_hour = if hour_counts.iter().any(|c| *c > 0) {
+        hour_counts
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, count)| **count)
+            .map(|(hour, _)| hour)
+    } else {
+        None
+    };
+
+    let persona = year_persona(scoped.len(), artist_counts.len(), &hour_counts);
+
+    YearData {
+        year,
+        total_plays: scoped.len() as i64,
+        total_minutes: total_seconds / 60,
+        distinct_artists: artist_counts.len(),
+        distinct_albums: album_counts.len(),
+        distinct_tracks: track_counts.len(),
+        top_artists,
+        top_albums,
+        top_tracks,
+        peak_day: peak.map(|(date, _)| *date),
+        peak_day_plays: peak.map(|(_, count)| *count).unwrap_or(0),
+        peak_hour,
+        longest_streak: longest_streak(&day_counts.keys().copied().collect()),
+        persona,
+    }
+}
+
+fn year_persona(plays: usize, distinct_artists: usize, hour_counts: &[i64; 24]) -> &'static str {
+    if plays == 0 {
+        return "Newcomer";
+    }
+    let diversity = distinct_artists as f64 / plays as f64;
+    let night_plays: i64 = (0..6).map(|h| hour_counts[h]).sum::<i64>() + hour_counts[23];
+    let night_ratio = night_plays as f64 / plays as f64;
+    if night_ratio > 0.35 {
+        return "Night Owl";
+    }
+    if diversity > 0.6 {
+        return "Explorer";
+    }
+    if diversity < 0.2 {
+        return "Loyalist";
+    }
+    "Devotee"
+}
+
+/// Longest run of consecutive listening days: scan each day that has no
+/// predecessor and walk forward (iOS longestStreak).
+fn longest_streak(days: &HashSet<NaiveDate>) -> i64 {
+    let mut longest = 0i64;
+    for day in days {
+        let Some(previous) = day.pred_opt() else { continue };
+        if days.contains(&previous) {
+            continue;
+        }
+        let mut length = 1i64;
+        let mut cursor = *day;
+        while let Some(next) = cursor.succ_opt() {
+            if !days.contains(&next) {
+                break;
+            }
+            length += 1;
+            cursor = next;
+        }
+        longest = longest.max(length);
+    }
+    longest
+}
+
 /// Deduplication key for imported scrobbles: unix timestamp + lowercased title,
 /// matching iOS importHistory.
 pub fn import_key(timestamp_unix: i64, title: &str) -> String {
@@ -282,6 +468,86 @@ mod tests {
     fn import_key_dedupes_by_timestamp_and_title() {
         assert_eq!(import_key(100, "Song"), import_key(100, "song"));
         assert_ne!(import_key(100, "Song"), import_key(101, "Song"));
+    }
+
+    #[test]
+    fn period_api_values_match_lastfm() {
+        let expected = ["7day", "1month", "3month", "6month", "12month", "overall"];
+        for (period, value) in ALL_PERIODS.iter().zip(expected) {
+            assert_eq!(period.api_value(), value);
+        }
+    }
+
+    fn ts(year: i32, month: u32, day: u32, hour: u32) -> i64 {
+        Local
+            .with_ymd_and_hms(year, month, day, hour, 0, 0)
+            .single()
+            .expect("valid local time")
+            .timestamp()
+    }
+
+    fn year_row(title: &str, artist: &str, album: &str, unix: i64, duration: i64) -> ScrobbleRow {
+        ScrobbleRow {
+            title: title.to_string(),
+            artist: artist.to_string(),
+            album: album.to_string(),
+            timestamp_unix: unix,
+            duration,
+        }
+    }
+
+    #[test]
+    fn year_compute_scopes_totals_and_tops() {
+        let rows = vec![
+            year_row("A", "X", "AL", ts(2025, 3, 1, 12), 120),
+            year_row("A", "X", "AL", ts(2025, 3, 2, 12), 120),
+            year_row("B", "Y", "BL", ts(2025, 3, 3, 12), 60),
+            year_row("Old", "Z", "ZL", ts(2024, 6, 1, 12), 600),
+        ];
+        let data = compute_year(&rows, 2025, &HashMap::new());
+        assert_eq!(data.total_plays, 3);
+        assert_eq!(data.total_minutes, 5);
+        assert_eq!(data.distinct_artists, 2);
+        assert_eq!(data.distinct_albums, 2);
+        assert_eq!(data.distinct_tracks, 2);
+        assert_eq!(data.top_artists[0], ("X".to_string(), 2));
+        assert_eq!(data.top_tracks[0].0, "A");
+        assert_eq!(data.longest_streak, 3);
+        assert_eq!(data.peak_hour, Some(12));
+    }
+
+    #[test]
+    fn year_compute_duration_fallbacks() {
+        let rows = vec![
+            year_row("Known", "X", "AL", ts(2025, 5, 1, 10), 0),
+            year_row("Unknown", "X", "AL", ts(2025, 5, 1, 11), 0),
+        ];
+        let mut durations = HashMap::new();
+        durations.insert(track_key("Known", "X"), 300i64);
+        let data = compute_year(&rows, 2025, &durations);
+        assert_eq!(data.total_minutes, (300 + 210) / 60);
+    }
+
+    #[test]
+    fn year_compute_peak_day() {
+        let rows = vec![
+            year_row("a", "x", "l", ts(2025, 7, 4, 9), 60),
+            year_row("b", "x", "l", ts(2025, 7, 4, 10), 60),
+            year_row("c", "x", "l", ts(2025, 7, 5, 10), 60),
+        ];
+        let data = compute_year(&rows, 2025, &HashMap::new());
+        assert_eq!(data.peak_day, NaiveDate::from_ymd_opt(2025, 7, 4));
+        assert_eq!(data.peak_day_plays, 2);
+    }
+
+    #[test]
+    fn scrobble_years_descending_distinct() {
+        let rows = vec![
+            year_row("a", "x", "l", ts(2024, 1, 5, 9), 60),
+            year_row("b", "x", "l", ts(2025, 1, 5, 9), 60),
+            year_row("c", "x", "l", ts(2025, 6, 5, 9), 60),
+        ];
+        assert_eq!(scrobble_years(&rows), vec![2025, 2024]);
     }
 
     #[test]

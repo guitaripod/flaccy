@@ -43,6 +43,8 @@ pub enum AppEvent {
         done: bool,
         failed: bool,
     },
+    WantlistChanged,
+    WantlistSeen,
 }
 
 type Subscriber = Rc<dyn Fn(&AppEvent) -> bool>;

@@ -353,6 +353,186 @@ impl LastFmClient {
         Ok((tracks, total_pages))
     }
 
+    /// user.getTopArtists → [(name, playCount)] ranked.
+    pub fn fetch_top_artists(
+        &self,
+        username: &str,
+        period: &str,
+        limit: u32,
+    ) -> Result<Vec<(String, i64)>, String> {
+        let mut params = self.base_params("user.getTopArtists");
+        params.insert("user".to_string(), username.to_string());
+        params.insert("period".to_string(), period.to_string());
+        params.insert("limit".to_string(), limit.to_string());
+        let json = self.unsigned_get(params)?;
+        let list = as_object_list(&json["topartists"]["artist"]);
+        Ok(list
+            .iter()
+            .filter_map(|entry| {
+                Some((entry["name"].as_str()?.to_string(), int_value(&entry["playcount"])))
+            })
+            .collect())
+    }
+
+    /// user.getTopAlbums → [(album, artist, playCount, imageURL)] ranked.
+    pub fn fetch_top_albums(
+        &self,
+        username: &str,
+        period: &str,
+        limit: u32,
+    ) -> Result<Vec<(String, String, i64, Option<String>)>, String> {
+        let mut params = self.base_params("user.getTopAlbums");
+        params.insert("user".to_string(), username.to_string());
+        params.insert("period".to_string(), period.to_string());
+        params.insert("limit".to_string(), limit.to_string());
+        let json = self.unsigned_get(params)?;
+        let list = as_object_list(&json["topalbums"]["album"]);
+        Ok(list
+            .iter()
+            .filter_map(|entry| {
+                Some((
+                    entry["name"].as_str()?.to_string(),
+                    entry["artist"]["name"]
+                        .as_str()
+                        .or_else(|| entry["artist"]["#text"].as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    int_value(&entry["playcount"]),
+                    largest_image(&entry["image"]),
+                ))
+            })
+            .collect())
+    }
+
+    /// user.getTopTracks → [(title, artist, playCount)] ranked.
+    pub fn fetch_top_tracks(
+        &self,
+        username: &str,
+        period: &str,
+        limit: u32,
+    ) -> Result<Vec<(String, String, i64)>, String> {
+        let mut params = self.base_params("user.getTopTracks");
+        params.insert("user".to_string(), username.to_string());
+        params.insert("period".to_string(), period.to_string());
+        params.insert("limit".to_string(), limit.to_string());
+        let json = self.unsigned_get(params)?;
+        let list = as_object_list(&json["toptracks"]["track"]);
+        Ok(list
+            .iter()
+            .filter_map(|entry| {
+                Some((
+                    entry["name"].as_str()?.to_string(),
+                    entry["artist"]["name"]
+                        .as_str()
+                        .or_else(|| entry["artist"]["#text"].as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    int_value(&entry["playcount"]),
+                ))
+            })
+            .collect())
+    }
+
+    /// user.getLovedTracks → ([(title, artist)], totalPages).
+    pub fn fetch_loved_tracks(
+        &self,
+        username: &str,
+        page: u32,
+        limit: u32,
+    ) -> Result<(Vec<(String, String)>, u32), String> {
+        let mut params = self.base_params("user.getLovedTracks");
+        params.insert("user".to_string(), username.to_string());
+        params.insert("page".to_string(), page.to_string());
+        params.insert("limit".to_string(), limit.to_string());
+        let json = self.unsigned_get(params)?;
+        let loved = &json["lovedtracks"];
+        if loved.is_null() {
+            return Err(format!(
+                "user.getLovedTracks: {}",
+                json["message"].as_str().unwrap_or("no data")
+            ));
+        }
+        let total_pages = loved["@attr"]["totalPages"]
+            .as_str()
+            .and_then(|s| s.parse().ok())
+            .or_else(|| loved["@attr"]["totalPages"].as_u64().map(|v| v as u32))
+            .unwrap_or(1);
+        let tracks = as_object_list(&loved["track"])
+            .iter()
+            .filter_map(|entry| {
+                Some((
+                    entry["name"].as_str()?.to_string(),
+                    entry["artist"]["name"]
+                        .as_str()
+                        .or_else(|| entry["artist"]["#text"].as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                ))
+            })
+            .collect();
+        Ok((tracks, total_pages))
+    }
+
+    /// artist.getTopTags → first `limit` tag names.
+    pub fn fetch_top_tags(&self, artist: &str, limit: usize) -> Result<Vec<String>, String> {
+        let mut params = self.base_params("artist.getTopTags");
+        params.insert("artist".to_string(), artist.to_string());
+        params.insert("autocorrect".to_string(), "1".to_string());
+        let json = self.unsigned_get(params)?;
+        Ok(as_object_list(&json["toptags"]["tag"])
+            .iter()
+            .filter_map(|entry| entry["name"].as_str().map(String::from))
+            .take(limit)
+            .collect())
+    }
+
+    /// artist.getTopAlbums → [(album, artist, imageURL)] ranked.
+    pub fn fetch_artist_top_albums(
+        &self,
+        artist: &str,
+        limit: u32,
+    ) -> Result<Vec<(String, String, Option<String>)>, String> {
+        let mut params = self.base_params("artist.getTopAlbums");
+        params.insert("artist".to_string(), artist.to_string());
+        params.insert("autocorrect".to_string(), "1".to_string());
+        params.insert("limit".to_string(), limit.to_string());
+        let json = self.unsigned_get(params)?;
+        Ok(as_object_list(&json["topalbums"]["album"])
+            .iter()
+            .filter_map(|entry| {
+                Some((
+                    entry["name"].as_str()?.to_string(),
+                    entry["artist"]["name"]
+                        .as_str()
+                        .or_else(|| entry["artist"]["#text"].as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    largest_image(&entry["image"]),
+                ))
+            })
+            .collect())
+    }
+
+    /// album.getInfo with username → the user's personal play count.
+    pub fn fetch_album_user_playcount(
+        &self,
+        artist: &str,
+        album: &str,
+        username: &str,
+    ) -> Result<Option<i64>, String> {
+        let mut params = self.base_params("album.getInfo");
+        params.insert("artist".to_string(), artist.to_string());
+        params.insert("album".to_string(), album.to_string());
+        params.insert("autocorrect".to_string(), "1".to_string());
+        params.insert("username".to_string(), username.to_string());
+        let json = self.unsigned_get(params)?;
+        let value = &json["album"]["userplaycount"];
+        if value.is_null() {
+            return Ok(None);
+        }
+        Ok(Some(int_value(value)))
+    }
+
     pub fn set_love(&self, title: &str, artist: &str, love: bool) -> Result<(), String> {
         let Some(sk) = &self.session_key else {
             return Err("not authenticated".to_string());
@@ -398,6 +578,24 @@ fn strip_lastfm_link(bio: &str) -> String {
         Some(index) => bio[..index].trim().to_string(),
         None => bio.trim().to_string(),
     }
+}
+
+/// Last.fm returns a single object instead of an array when a list has exactly
+/// one entry; this normalizes both shapes.
+fn as_object_list(value: &serde_json::Value) -> Vec<serde_json::Value> {
+    match value {
+        serde_json::Value::Array(array) => array.clone(),
+        single @ serde_json::Value::Object(_) => vec![single.clone()],
+        _ => Vec::new(),
+    }
+}
+
+/// Numeric fields arrive as strings or numbers depending on the endpoint.
+fn int_value(value: &serde_json::Value) -> i64 {
+    value
+        .as_i64()
+        .or_else(|| value.as_str().and_then(|s| s.parse().ok()))
+        .unwrap_or(0)
 }
 
 fn ignored_code(entry: &serde_json::Value) -> i64 {
