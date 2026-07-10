@@ -10,19 +10,24 @@ use std::rc::Rc;
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let store = gio::ListStore::new::<BoxedAnyObject>();
+    let loved_only = Rc::new(std::cell::Cell::new(false));
 
     let filter = {
         let query = Rc::clone(&ui.query);
+        let loved_only = Rc::clone(&loved_only);
         gtk::CustomFilter::new(move |obj| {
+            let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
+                return true;
+            };
+            let track = boxed.borrow::<Track>();
+            if loved_only.get() && !track.loved {
+                return false;
+            }
             let query = query.borrow();
             if query.is_empty() {
                 return true;
             }
             let needle = query.to_lowercase();
-            let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
-                return true;
-            };
-            let track = boxed.borrow::<Track>();
             track.title.to_lowercase().contains(&needle)
                 || track.artist.to_lowercase().contains(&needle)
                 || track.album.to_lowercase().contains(&needle)
@@ -107,7 +112,31 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
-    let scroll = gtk::ScrolledWindow::builder().child(&column_view).build();
+    let chip_bar = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .margin_top(10)
+        .margin_bottom(4)
+        .margin_start(12)
+        .build();
+    let loved_chip = gtk::ToggleButton::builder().label("Loved ♥").build();
+    loved_chip.add_css_class("pill");
+    loved_chip.add_css_class("chip");
+    loved_chip.set_tooltip_text(Some("Show only loved tracks"));
+    {
+        let loved_only = Rc::clone(&loved_only);
+        let filter = filter.clone();
+        loved_chip.connect_toggled(move |chip| {
+            loved_only.set(chip.is_active());
+            filter.changed(gtk::FilterChange::Different);
+        });
+    }
+    chip_bar.append(&loved_chip);
+
+    let list_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    list_box.append(&chip_bar);
+    let scroll = gtk::ScrolledWindow::builder().vexpand(true).child(&column_view).build();
+    list_box.append(&scroll);
 
     let empty = adw::StatusPage::builder()
         .icon_name("emblem-music-symbolic")
@@ -117,7 +146,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let stack = gtk::Stack::new();
     stack.add_named(&empty, Some("empty"));
-    stack.add_named(&scroll, Some("list"));
+    stack.add_named(&list_box, Some("list"));
 
     let rebuild = {
         let store = store.clone();
@@ -141,7 +170,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let rebuild = rebuild.clone();
         ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
-            AppEvent::LibraryReloaded => rebuild(),
+            AppEvent::LibraryReloaded | AppEvent::LovedChanged { .. } => rebuild(),
             AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
             _ => {}
         });

@@ -1,0 +1,297 @@
+use crate::events::AppEvent;
+use crate::library::{format_time, Track};
+use crate::ui::Ui;
+use adw::prelude::*;
+use gtk::gdk;
+use gtk::pango;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+/// Queue side panel with History / Now Playing / Up Next sections: click a
+/// history row to jump back, drag-reorder Up Next, per-row remove, Clear Up
+/// Next, and a time-remaining summary. Live-updates from player events.
+pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
+    let root = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(0)
+        .build();
+
+    let header = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .margin_top(14)
+        .margin_bottom(8)
+        .margin_start(16)
+        .margin_end(16)
+        .build();
+    let title = gtk::Label::builder().label("Queue").xalign(0.0).hexpand(true).build();
+    title.add_css_class("title-4");
+    header.append(&title);
+    let clear = gtk::Button::with_label("Clear Up Next");
+    clear.add_css_class("flat");
+    clear.add_css_class("caption");
+    {
+        let ui = Rc::clone(ui);
+        clear.connect_clicked(move |_| {
+            ui.core.player.clear_up_next();
+            crate::logger::info("ui", "queue: clear up next");
+        });
+    }
+    header.append(&clear);
+    root.append(&header);
+
+    let summary = gtk::Label::builder().xalign(0.0).margin_start(16).margin_end(16).build();
+    summary.add_css_class("dim");
+    summary.add_css_class("caption");
+    root.append(&summary);
+
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .margin_top(10)
+        .margin_bottom(12)
+        .margin_start(10)
+        .margin_end(10)
+        .valign(gtk::Align::Start)
+        .build();
+    list.add_css_class("boxed-list-separate");
+
+    let empty = adw::StatusPage::builder()
+        .icon_name("view-list-symbolic")
+        .title("Nothing Queued")
+        .description("Play an album, playlist or station and the queue shows up here.")
+        .build();
+    empty.add_css_class("compact");
+
+    let stack = gtk::Stack::new();
+    stack.add_named(&empty, Some("empty"));
+    let scroll = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .vexpand(true)
+        .child(&list)
+        .build();
+    stack.add_named(&scroll, Some("list"));
+    root.append(&stack);
+
+    let indices: Rc<RefCell<Vec<usize>>> = Rc::new(RefCell::new(Vec::new()));
+
+    let rebuild = {
+        let list = list.clone();
+        let stack = stack.clone();
+        let summary = summary.clone();
+        let clear = clear.clone();
+        let indices = Rc::clone(&indices);
+        let ui = Rc::clone(ui);
+        Rc::new(move || {
+            while let Some(child) = list.first_child() {
+                list.remove(&child);
+            }
+            let snapshot = ui.core.player.queue_snapshot();
+            if snapshot.queue.is_empty() {
+                stack.set_visible_child_name("empty");
+                summary.set_label("");
+                clear.set_sensitive(false);
+                indices.borrow_mut().clear();
+                return;
+            }
+            stack.set_visible_child_name("list");
+            let current = snapshot.current;
+            let up_next_count = snapshot.queue.len().saturating_sub(current + 1);
+            clear.set_sensitive(up_next_count > 0);
+            let remaining: f64 = snapshot.queue[(current + 1).min(snapshot.queue.len())..]
+                .iter()
+                .map(|t| t.duration)
+                .sum();
+            summary.set_label(&format!(
+                "{} in history · {} up next · {} min remaining",
+                current,
+                up_next_count,
+                (remaining / 60.0).round() as i64
+            ));
+
+            let mut collected = Vec::new();
+            if current > 0 {
+                list.append(&section_row("HISTORY"));
+                collected.push(usize::MAX);
+            }
+            for (index, track) in snapshot.queue.iter().enumerate() {
+                if index == current {
+                    list.append(&section_row("NOW PLAYING"));
+                    collected.push(usize::MAX);
+                } else if index == current + 1 {
+                    list.append(&section_row("UP NEXT"));
+                    collected.push(usize::MAX);
+                }
+                let row = queue_row(&ui, track, index, current);
+                if index > current {
+                    attach_reorder(&ui, &row, index);
+                }
+                list.append(&row);
+                collected.push(index);
+            }
+            *indices.borrow_mut() = collected;
+        })
+    };
+    rebuild();
+
+    {
+        let ui_ref = Rc::clone(ui);
+        let indices = Rc::clone(&indices);
+        list.connect_row_activated(move |_, row| {
+            let index = indices
+                .borrow()
+                .get(row.index().max(0) as usize)
+                .copied()
+                .unwrap_or(usize::MAX);
+            if index == usize::MAX {
+                return;
+            }
+            let snapshot = ui_ref.core.player.queue_snapshot();
+            if index != snapshot.current {
+                crate::scrobbler::checkpoint_skip(&ui_ref.core);
+                ui_ref.core.player.jump_to(index);
+            }
+        });
+    }
+
+    {
+        let rebuild = Rc::clone(&rebuild);
+        ui.core.hub.subscribe_widget(&root, move |_, event| match event {
+            AppEvent::QueueChanged
+            | AppEvent::TrackChanged(_)
+            | AppEvent::LovedChanged { .. } => rebuild(),
+            _ => {}
+        });
+    }
+
+    root.upcast()
+}
+
+fn section_row(text: &str) -> gtk::ListBoxRow {
+    let label = gtk::Label::builder()
+        .label(text)
+        .xalign(0.0)
+        .margin_top(10)
+        .margin_bottom(2)
+        .margin_start(6)
+        .build();
+    label.add_css_class("stat-caption");
+    gtk::ListBoxRow::builder()
+        .child(&label)
+        .activatable(false)
+        .selectable(false)
+        .build()
+}
+
+fn queue_row(ui: &Rc<Ui>, track: &Track, index: usize, current: usize) -> gtk::ListBoxRow {
+    let row_box = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(10)
+        .margin_top(6)
+        .margin_bottom(6)
+        .margin_start(6)
+        .margin_end(6)
+        .build();
+
+    let artwork = gtk::Picture::builder()
+        .width_request(36)
+        .height_request(36)
+        .content_fit(gtk::ContentFit::Cover)
+        .build();
+    artwork.set_overflow(gtk::Overflow::Hidden);
+    artwork.add_css_class("cover");
+    artwork.set_paintable(Some(
+        &ui.core
+            .artwork
+            .placeholder(&format!("{}|{}", track.album, track.artist)),
+    ));
+    {
+        let weak = artwork.downgrade();
+        ui.core
+            .artwork
+            .request(&track.album, &track.artist, 36, move |texture, _| {
+                if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
+                    picture.set_paintable(Some(texture));
+                }
+            });
+    }
+    row_box.append(&artwork);
+
+    let text_box = gtk::Box::new(gtk::Orientation::Vertical, 1);
+    text_box.set_hexpand(true);
+    text_box.set_valign(gtk::Align::Center);
+    let title = gtk::Label::builder()
+        .label(&track.title)
+        .xalign(0.0)
+        .ellipsize(pango::EllipsizeMode::End)
+        .build();
+    text_box.append(&title);
+    let artist = gtk::Label::builder()
+        .label(&track.artist)
+        .xalign(0.0)
+        .ellipsize(pango::EllipsizeMode::End)
+        .build();
+    artist.add_css_class("dim");
+    artist.add_css_class("caption");
+    text_box.append(&artist);
+    row_box.append(&text_box);
+
+    if track.loved {
+        let heart = gtk::Image::from_icon_name("emblem-favorite-symbolic");
+        heart.add_css_class("loved-heart");
+        row_box.append(&heart);
+    }
+
+    let duration = gtk::Label::new(Some(&format_time(track.duration)));
+    duration.add_css_class("duration-label");
+    row_box.append(&duration);
+
+    if index != current {
+        let remove = gtk::Button::from_icon_name("window-close-symbolic");
+        remove.add_css_class("flat");
+        remove.add_css_class("circular");
+        remove.set_tooltip_text(Some("Remove from queue"));
+        let ui_ref = Rc::clone(ui);
+        remove.connect_clicked(move |_| {
+            ui_ref.core.player.remove_at(index);
+        });
+        row_box.append(&remove);
+    } else {
+        let playing = gtk::Image::from_icon_name("audio-volume-high-symbolic");
+        playing.add_css_class("accent-toggle");
+        row_box.append(&playing);
+    }
+
+    let row = gtk::ListBoxRow::builder().child(&row_box).build();
+    if index < current {
+        row.add_css_class("queue-history-row");
+    } else if index == current {
+        row.add_css_class("queue-current-row");
+    }
+    row
+}
+
+fn attach_reorder(ui: &Rc<Ui>, row: &gtk::ListBoxRow, index: usize) {
+    let drag = gtk::DragSource::builder().actions(gdk::DragAction::MOVE).build();
+    drag.connect_prepare(move |_, _, _| {
+        Some(gdk::ContentProvider::for_value(&(index as i32).to_value()))
+    });
+    row.add_controller(drag);
+
+    let drop = gtk::DropTarget::new(i32::static_type(), gdk::DragAction::MOVE);
+    {
+        let ui = Rc::clone(ui);
+        drop.connect_drop(move |_, value, _, _| {
+            let Ok(source) = value.get::<i32>() else { return false };
+            if source < 0 || source as usize == index {
+                return false;
+            }
+            ui.core.player.move_queue_entry(source as usize, index);
+            crate::logger::info(
+                "ui",
+                &format!("queue: reorder {} -> {}", source, index),
+            );
+            true
+        });
+    }
+    row.add_controller(drop);
+}

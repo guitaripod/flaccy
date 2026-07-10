@@ -22,9 +22,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .activate_on_single_click(true)
         .build();
 
+    let grid_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    grid_content.append(&crate::ui::suggested_shelf::build(ui));
+    grid_content.append(&flow);
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&flow)
+        .child(&grid_content)
         .build();
 
     let empty = adw::StatusPage::builder()
@@ -32,12 +35,45 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .title("No Music Found")
         .description("Drop FLAC or MP3 files into your music folder, then rescan.\nChoose a different folder in Preferences.")
         .build();
-    let empty_button = gtk::Button::with_label("Open Preferences");
+    let empty_actions = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(10)
+        .halign(gtk::Align::Center)
+        .build();
+    let empty_button = gtk::Button::with_label("Choose Music Folder");
     empty_button.add_css_class("pill");
     empty_button.add_css_class("suggested-action");
-    empty_button.set_halign(gtk::Align::Center);
     empty_button.set_action_name(Some("app.preferences"));
-    empty.set_child(Some(&empty_button));
+    empty_actions.append(&empty_button);
+    let sample_button = gtk::Button::with_label("Download Sample Album");
+    sample_button.add_css_class("pill");
+    {
+        let ui = Rc::clone(ui);
+        sample_button.connect_clicked(move |_| crate::samples::download(&ui.core));
+    }
+    empty_actions.append(&sample_button);
+    let sample_progress = gtk::Label::new(None);
+    sample_progress.add_css_class("dim");
+    sample_progress.add_css_class("caption");
+    sample_progress.set_visible(false);
+    empty_actions.append(&sample_progress);
+    {
+        let sample_button = sample_button.clone();
+        let sample_progress_ref = sample_progress.clone();
+        ui.core
+            .hub
+            .subscribe_widget(&empty_actions, move |_, event| {
+                if let AppEvent::SampleDownload { text, done, failed } = event {
+                    sample_progress_ref.set_visible(true);
+                    sample_progress_ref.set_label(text);
+                    sample_button.set_sensitive(*done);
+                    if *done && !failed {
+                        sample_button.set_label("Sample Album Added");
+                    }
+                }
+            });
+    }
+    empty.set_child(Some(&empty_actions));
 
     let stack = gtk::Stack::new();
     stack.add_named(&empty, Some("empty"));
@@ -165,6 +201,7 @@ fn album_cell(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
     cell.append(&subtitle);
 
     let child = gtk::FlowBoxChild::builder().child(&cell).build();
+    child.add_css_class("album-tile");
     context::attach_album_context_menu(&child, album.key());
     child
 }
@@ -257,25 +294,82 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
     artist.add_css_class("dim");
     meta.append(&artist);
 
-    let mut info_parts: Vec<String> = Vec::new();
-    if let Some(year) = album.year.as_ref().filter(|y| !y.is_empty()) {
-        info_parts.push(year.clone());
-    }
-    if let Some(genre) = album.genre.as_ref().filter(|g| !g.is_empty()) {
-        info_parts.push(genre.clone());
-    }
-    info_parts.push(format!(
-        "{} songs · {} min",
-        album.tracks.len(),
-        (album.total_duration() / 60.0).round() as i64
-    ));
+    let info_text = |year: Option<&String>, genre: Option<&String>| {
+        let mut info_parts: Vec<String> = Vec::new();
+        if let Some(year) = year.filter(|y| !y.is_empty()) {
+            info_parts.push(year.clone());
+        }
+        if let Some(genre) = genre.filter(|g| !g.is_empty()) {
+            info_parts.push(genre.clone());
+        }
+        info_parts.push(format!(
+            "{} songs · {} min",
+            album.tracks.len(),
+            (album.total_duration() / 60.0).round() as i64
+        ));
+        info_parts.join(" · ")
+    };
     let info = gtk::Label::builder()
-        .label(info_parts.join(" · "))
+        .label(info_text(album.year.as_ref(), album.genre.as_ref()))
         .xalign(0.0)
         .build();
     info.add_css_class("dim");
     info.add_css_class("caption");
     meta.append(&info);
+
+    crate::enrichment::request_album(&ui.core, &album.title, &album.artist);
+    {
+        let ui_ref = Rc::clone(ui);
+        let album_title = album.title.clone();
+        let album_artist = album.artist.clone();
+        let picture_weak = picture.downgrade();
+        let backdrop_weak = backdrop.downgrade();
+        let dominant_ref = Rc::clone(&dominant);
+        let info_for = {
+            let album = album.clone();
+            move |year: Option<&String>, genre: Option<&String>| {
+                let mut info_parts: Vec<String> = Vec::new();
+                if let Some(year) = year.filter(|y| !y.is_empty()) {
+                    info_parts.push(year.clone());
+                }
+                if let Some(genre) = genre.filter(|g| !g.is_empty()) {
+                    info_parts.push(genre.clone());
+                }
+                info_parts.push(format!(
+                    "{} songs · {} min",
+                    album.tracks.len(),
+                    (album.total_duration() / 60.0).round() as i64
+                ));
+                info_parts.join(" · ")
+            }
+        };
+        ui.core.hub.subscribe_widget(&info, move |info, event| {
+            let AppEvent::AlbumEnriched { title, artist } = event else { return };
+            if title != &album_title || artist != &album_artist {
+                return;
+            }
+            if let Some(status) = ui_ref.core.db.album_info_status(title, artist) {
+                info.set_label(&info_for(status.year.as_ref(), status.genre.as_ref()));
+            }
+            let picture_weak = picture_weak.clone();
+            let backdrop_weak = backdrop_weak.clone();
+            let dominant_ref = Rc::clone(&dominant_ref);
+            ui_ref
+                .core
+                .artwork
+                .request(title, artist, 232, move |texture, color| {
+                    if let (Some(picture), Some(texture)) = (picture_weak.upgrade(), texture) {
+                        picture.set_paintable(Some(texture));
+                    }
+                    if let Some(color) = color {
+                        *dominant_ref.borrow_mut() = Some(color);
+                        if let Some(backdrop) = backdrop_weak.upgrade() {
+                            backdrop.queue_draw();
+                        }
+                    }
+                });
+        });
+    }
 
     if let Some(badge_text) = album_quality_summary(album) {
         let badge = gtk::Label::new(Some(&badge_text));

@@ -89,6 +89,19 @@ impl ArtworkCache {
     /// Requests decoded album art; the callback fires immediately on cache hit,
     /// or later on the main loop after a worker decode. `None` means the album
     /// has no embedded art and the caller should keep its placeholder.
+    /// Drops cached textures and negative-cache entries for one album so a
+    /// freshly enriched cover is re-decoded on the next request.
+    pub fn invalidate(&self, title: &str, artist: &str) {
+        let prefix = format!("{title}|{artist}|");
+        self.textures
+            .borrow_mut()
+            .retain(|key, _| !key.starts_with(&prefix));
+        self.misses
+            .borrow_mut()
+            .retain(|key| !key.starts_with(&prefix));
+        self.lru.borrow_mut().retain(|key| !key.starts_with(&prefix));
+    }
+
     pub fn request(
         &self,
         title: &str,
@@ -96,6 +109,7 @@ impl ArtworkCache {
         size: u32,
         callback: impl Fn(Option<&gdk::MemoryTexture>, Option<(u8, u8, u8)>) + 'static,
     ) {
+        let size = size * display_scale();
         let key = format!("{title}|{artist}|{size}");
         if let Some((texture, dominant)) = self.textures.borrow().get(&key) {
             self.touch(&key);
@@ -167,6 +181,24 @@ impl ArtworkCache {
             }
         }
     }
+}
+
+/// Highest scale factor across connected monitors, so decoded textures stay
+/// crisp on HiDPI displays (GTK downscales the paintable to logical size).
+fn display_scale() -> u32 {
+    use gtk::prelude::*;
+    let Some(display) = gdk::Display::default() else { return 1 };
+    let monitors = display.monitors();
+    let mut scale = 1;
+    for index in 0..monitors.n_items() {
+        if let Some(monitor) = monitors
+            .item(index)
+            .and_then(|obj| obj.downcast::<gdk::Monitor>().ok())
+        {
+            scale = scale.max(monitor.scale_factor() as u32);
+        }
+    }
+    scale.max(1)
 }
 
 fn decode_worker(

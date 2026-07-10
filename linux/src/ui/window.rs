@@ -1,4 +1,5 @@
 use crate::app::AppCore;
+use crate::config;
 use crate::events::AppEvent;
 use crate::ui::{self, Ui};
 use adw::prelude::*;
@@ -133,10 +134,13 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     {
         let stack = stack.clone();
         let nav = nav.clone();
+        let core_for_rows = Rc::clone(core);
         sidebar.connect_row_selected(move |_, row| {
             let Some(row) = row else { return };
             let names = ["albums", "songs", "artists", "playlists", "stats"];
             let index = row.index().clamp(0, 4) as usize;
+            core_for_rows.config.borrow_mut().sidebar_index = index as i32;
+            core_for_rows.save_config();
             crate::logger::info("ui", &format!("sidebar selected: {}", names[index]));
             if nav.visible_page().and_then(|p| p.tag()).as_deref() != Some("root") {
                 nav.pop_to_tag("root");
@@ -146,8 +150,14 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     }
     {
         let sidebar = sidebar.clone();
+        let saved_index = core.config.borrow().sidebar_index.clamp(0, 4);
         glib::idle_add_local_once(move || {
-            if let Some(row) = sidebar.row_at_index(demo_start_view_index()) {
+            let index = if config::demo_mode() {
+                demo_start_view_index()
+            } else {
+                saved_index
+            };
+            if let Some(row) = sidebar.row_at_index(index) {
                 sidebar.select_row(Some(&row));
                 row.grab_focus();
             }
@@ -170,21 +180,51 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     content_box.append(&gtk::Separator::new(gtk::Orientation::Vertical));
     content_box.append(&nav);
 
+    let side_stack = gtk::Stack::builder()
+        .transition_type(gtk::StackTransitionType::Crossfade)
+        .build();
+    side_stack.add_named(&ui::lyrics_panel::build(&ui), Some("lyrics"));
+    side_stack.add_named(&ui::queue_panel::build(&ui), Some("queue"));
+
     let split = adw::OverlaySplitView::builder()
         .content(&content_box)
-        .sidebar(&ui::lyrics_panel::build(&ui))
+        .sidebar(&side_stack)
         .sidebar_position(gtk::PackType::End)
         .show_sidebar(false)
         .max_sidebar_width(400.0)
         .min_sidebar_width(320.0)
         .build();
     {
-        core.hub.subscribe_widget(&split, |split, event| {
-            if let AppEvent::LyricsToggled(show) = event {
-                if split.shows_sidebar() != *show {
-                    split.set_show_sidebar(*show);
+        let side_stack = side_stack.clone();
+        let hub = Rc::clone(&core.hub);
+        core.hub.subscribe_widget(&split, move |split, event| match event {
+            AppEvent::LyricsToggled(show) => {
+                if *show {
+                    if side_stack.visible_child_name().as_deref() == Some("queue")
+                        && split.shows_sidebar()
+                    {
+                        hub.emit(&AppEvent::QueueToggled(false));
+                    }
+                    side_stack.set_visible_child_name("lyrics");
+                    split.set_show_sidebar(true);
+                } else if side_stack.visible_child_name().as_deref() == Some("lyrics") {
+                    split.set_show_sidebar(false);
                 }
             }
+            AppEvent::QueueToggled(show) => {
+                if *show {
+                    if side_stack.visible_child_name().as_deref() == Some("lyrics")
+                        && split.shows_sidebar()
+                    {
+                        hub.emit(&AppEvent::LyricsToggled(false));
+                    }
+                    side_stack.set_visible_child_name("queue");
+                    split.set_show_sidebar(true);
+                } else if side_stack.visible_child_name().as_deref() == Some("queue") {
+                    split.set_show_sidebar(false);
+                }
+            }
+            _ => {}
         });
     }
 
@@ -196,6 +236,11 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     toast_overlay.set_child(Some(&inner));
     core.hub
         .subscribe_widget(&toast_overlay, |overlay, event| {
+            if let AppEvent::Toast(message) = event {
+                let toast = adw::Toast::new(message);
+                toast.set_timeout(3);
+                overlay.add_toast(toast);
+            }
             if let AppEvent::ScanFinished { added, removed } = event {
                 let toast = if *added > 0 || *removed > 0 {
                     let toast = adw::Toast::new(&format!(
@@ -221,6 +266,8 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     register_actions(app, &ui, &search);
     attach_space_handler(&ui);
+    attach_file_drop(&ui, &toast_overlay);
+    schedule_demo_detail(&ui);
 
     {
         let core = Rc::clone(core);
@@ -344,6 +391,94 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_string_action(ui, "track-love", |ui, rel| {
         ui.core.toggle_love(rel);
     });
+    add_string_action(ui, "track-station", |ui, rel| {
+        ui.core.start_track_station(rel);
+    });
+    add_string_action(ui, "artist-station", |ui, artist| {
+        ui.core.start_artist_station(artist);
+    });
+    add_string_action(ui, "track-songlink", |ui, rel| {
+        let library = ui.core.library.borrow().clone();
+        if let Some(track) = library.track_by_rel_path(rel) {
+            crate::songlink::copy_link(&ui.core, track.title.clone(), track.artist.clone(), false);
+        }
+    });
+    add_string_action(ui, "album-songlink", |ui, key| {
+        let library = ui.core.library.borrow().clone();
+        if let Some(album) = library.album_by_key(key) {
+            crate::songlink::copy_link(&ui.core, album.title.clone(), album.artist.clone(), true);
+        }
+    });
+    add_string_action(ui, "album-station", |ui, key| {
+        let library = ui.core.library.borrow().clone();
+        if let Some(album) = library.album_by_key(key) {
+            ui.core.start_artist_station(&album.artist.clone());
+        }
+    });
+
+    let sleep_minutes = gio::SimpleAction::new("sleep-minutes", Some(glib::VariantTy::INT32));
+    {
+        let core = Rc::clone(&ui.core);
+        sleep_minutes.connect_activate(move |_, parameter| {
+            if let Some(minutes) = parameter.and_then(|v| v.get::<i32>()) {
+                core.set_sleep_timer_minutes(minutes as i64);
+            }
+        });
+    }
+    app.add_action(&sleep_minutes);
+
+    let sleep_eot = gio::SimpleAction::new("sleep-end-of-track", None);
+    {
+        let core = Rc::clone(&ui.core);
+        sleep_eot.connect_activate(move |_, _| core.set_sleep_timer_end_of_track());
+    }
+    app.add_action(&sleep_eot);
+
+    let sleep_cancel = gio::SimpleAction::new("sleep-cancel", None);
+    {
+        let core = Rc::clone(&ui.core);
+        sleep_cancel.connect_activate(move |_, _| core.cancel_sleep_timer());
+    }
+    app.add_action(&sleep_cancel);
+
+    let next_track = gio::SimpleAction::new("next-track", None);
+    {
+        let core = Rc::clone(&ui.core);
+        next_track.connect_activate(move |_, _| {
+            core.next();
+        });
+    }
+    app.add_action(&next_track);
+
+    let previous_track = gio::SimpleAction::new("previous-track", None);
+    {
+        let core = Rc::clone(&ui.core);
+        previous_track.connect_activate(move |_, _| core.previous());
+    }
+    app.add_action(&previous_track);
+
+    let love_current = gio::SimpleAction::new("love-current", None);
+    {
+        let core = Rc::clone(&ui.core);
+        love_current.connect_activate(move |_, _| {
+            if let Some(track) = core.player.current_track() {
+                core.toggle_love(&track.rel_path);
+            }
+        });
+    }
+    app.add_action(&love_current);
+
+    let shortcuts = gio::SimpleAction::new("shortcuts", None);
+    {
+        let window = ui.window.clone();
+        shortcuts.connect_activate(move |_, _| present_shortcuts(&window));
+    }
+    app.add_action(&shortcuts);
+
+    app.set_accels_for_action("app.next-track", &["<Control>Right"]);
+    app.set_accels_for_action("app.previous-track", &["<Control>Left"]);
+    app.set_accels_for_action("app.love-current", &["<Control>l"]);
+    app.set_accels_for_action("app.shortcuts", &["<Control>question"]);
     add_string_action(ui, "playlist-new-with-track", |ui, rel| {
         ui::playlists::prompt_new_playlist(ui, Some(rel.to_string()));
     });
@@ -383,6 +518,91 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
         });
     }
     ui.window.add_action(&playlist_remove);
+}
+
+/// Accepts audio files/folders dropped anywhere on the window: copies them
+/// into the library root and rescans.
+fn attach_file_drop(ui: &Rc<Ui>, host: &impl IsA<gtk::Widget>) {
+    let drop = gtk::DropTarget::new(gdk::FileList::static_type(), gdk::DragAction::COPY);
+    let ui = Rc::clone(ui);
+    drop.connect_drop(move |_, value, _, _| {
+        let Ok(files) = value.get::<gdk::FileList>() else { return false };
+        let paths: Vec<std::path::PathBuf> =
+            files.files().iter().filter_map(|f| f.path()).collect();
+        if paths.is_empty() {
+            return false;
+        }
+        crate::logger::info(
+            "library",
+            &format!("drag-drop received {} item(s)", paths.len()),
+        );
+        ui.core.import_dropped_paths(paths);
+        true
+    });
+    host.add_controller(drop);
+}
+
+fn present_shortcuts(window: &adw::ApplicationWindow) {
+    let groups: [(&str, &[(&str, &str)]); 2] = [
+        (
+            "Playback",
+            &[
+                ("Space", "Play / Pause"),
+                ("Ctrl+→", "Next track"),
+                ("Ctrl+←", "Previous track"),
+                ("Ctrl+L", "Love current track"),
+            ],
+        ),
+        (
+            "Library",
+            &[
+                ("Ctrl+F", "Search"),
+                ("Ctrl+,", "Preferences"),
+                ("Ctrl+?", "Keyboard shortcuts"),
+                ("Ctrl+Q", "Quit"),
+            ],
+        ),
+    ];
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(18)
+        .margin_top(20)
+        .margin_bottom(24)
+        .margin_start(24)
+        .margin_end(24)
+        .build();
+    for (title, entries) in groups {
+        let section = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        let heading = gtk::Label::builder().label(title).xalign(0.0).build();
+        heading.add_css_class("heading");
+        section.append(&heading);
+        for (accel, description) in entries {
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+            let description_label = gtk::Label::builder()
+                .label(*description)
+                .xalign(0.0)
+                .hexpand(true)
+                .build();
+            row.append(&description_label);
+            let accel_label = gtk::Label::new(Some(accel));
+            accel_label.add_css_class("keycap");
+            row.append(&accel_label);
+            section.append(&row);
+        }
+        content.append(&section);
+    }
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(
+        &adw::HeaderBar::builder()
+            .title_widget(&adw::WindowTitle::new("Keyboard Shortcuts", ""))
+            .build(),
+    );
+    toolbar.set_content(Some(&content));
+    let dialog = adw::Dialog::builder()
+        .content_width(420)
+        .child(&toolbar)
+        .build();
+    dialog.present(Some(window));
 }
 
 fn add_string_action(ui: &Rc<Ui>, name: &str, handler: impl Fn(&Rc<Ui>, &str) + 'static) {
@@ -432,6 +652,49 @@ fn load_css() {
             &provider,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+    }
+}
+
+/// Demo mode helper: FLACCY_DEMO_DETAIL pushes the named album's detail page
+/// once the library is loaded, so marketing screenshots can show album detail
+/// without input automation.
+fn schedule_demo_detail(ui: &Rc<Ui>) {
+    if !config::demo_mode() {
+        return;
+    }
+    if let Some(wanted) = std::env::var("FLACCY_DEMO_DETAIL").ok() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local(std::time::Duration::from_millis(700), move || {
+            let library = ui.core.library.borrow().clone();
+            let Some(album) = library.albums.iter().find(|a| a.title == wanted).cloned() else {
+                return glib::ControlFlow::Continue;
+            };
+            crate::ui::albums::push_album_detail(&ui, &album);
+            glib::ControlFlow::Break
+        });
+    }
+    if let Some(artist) = std::env::var("FLACCY_DEMO_ARTIST").ok() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local(std::time::Duration::from_millis(700), move || {
+            let library = ui.core.library.borrow().clone();
+            if !library.artists.iter().any(|a| a.name == artist) {
+                return glib::ControlFlow::Continue;
+            }
+            crate::ui::artists::push_artist_page(&ui, &artist);
+            glib::ControlFlow::Break
+        });
+    }
+    if std::env::var_os("FLACCY_DEMO_LYRICS").is_some() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            ui.core.hub.emit(&AppEvent::LyricsToggled(true));
+        });
+    }
+    if std::env::var_os("FLACCY_DEMO_PREFS").is_some() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            ui::prefs::present(&ui);
+        });
     }
 }
 

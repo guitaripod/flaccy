@@ -131,7 +131,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.upcast()
 }
 
-fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
+pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
     let library = ui.core.library.borrow().clone();
     let albums: Vec<Album> = library
         .albums
@@ -176,12 +176,34 @@ fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         .build();
     let avatar = adw::Avatar::new(72, Some(artist), true);
     header.append(&avatar);
+    let title_box = gtk::Box::new(gtk::Orientation::Vertical, 6);
+    title_box.set_valign(gtk::Align::Center);
     let title = gtk::Label::builder().label(artist).xalign(0.0).build();
     title.add_css_class("title-1");
-    header.append(&title);
+    title_box.append(&title);
+    let station = gtk::Button::builder().label("Start Station").build();
+    station.add_css_class("pill");
+    station.add_css_class("suggested-action");
+    station.set_halign(gtk::Align::Start);
+    station.set_action_name(Some("win.artist-station"));
+    station.set_action_target_value(Some(&artist.to_variant()));
+    title_box.append(&station);
+    header.append(&title_box);
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     content.append(&header);
+    if let Some(bio) = ui.core.db.artist_bio(artist).filter(|b| !b.is_empty()) {
+        let bio_label = gtk::Label::builder()
+            .label(&bio)
+            .xalign(0.0)
+            .wrap(true)
+            .margin_top(14)
+            .margin_start(24)
+            .margin_end(24)
+            .build();
+        bio_label.add_css_class("dim");
+        content.append(&bio_label);
+    }
     content.append(&flow);
 
     let scroll = gtk::ScrolledWindow::builder()

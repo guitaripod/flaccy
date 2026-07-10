@@ -5,6 +5,7 @@ use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::glib;
 use gtk::pango;
+use gtk::gio;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Instant;
@@ -86,12 +87,14 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let previous = gtk::Button::from_icon_name("media-skip-backward-symbolic");
     previous.add_css_class("flat");
+    previous.set_tooltip_text(Some("Previous"));
     {
         let ui = Rc::clone(ui);
         previous.connect_clicked(move |_| ui.core.previous());
     }
 
     let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
+    play.set_tooltip_text(Some("Play/Pause"));
     play.add_css_class("suggested-action");
     play.add_css_class("circular");
     play.add_css_class("play-pill");
@@ -102,6 +105,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let next = gtk::Button::from_icon_name("media-skip-forward-symbolic");
     next.add_css_class("flat");
+    next.set_tooltip_text(Some("Next"));
     {
         let ui = Rc::clone(ui);
         next.connect_clicked(move |_| ui.core.next());
@@ -181,9 +185,40 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
+    let queue_toggle = gtk::ToggleButton::builder()
+        .icon_name("view-list-symbolic")
+        .tooltip_text("Queue")
+        .build();
+    queue_toggle.add_css_class("flat");
+    {
+        let ui = Rc::clone(ui);
+        queue_toggle.connect_toggled(move |button| {
+            ui.core.hub.emit(&AppEvent::QueueToggled(button.is_active()));
+        });
+    }
+
+    let sleep_menu = gio::Menu::new();
+    for minutes in [15, 30, 45, 60, 90] {
+        let item = gio::MenuItem::new(Some(&format!("{minutes} minutes")), None);
+        item.set_action_and_target_value(Some("app.sleep-minutes"), Some(&(minutes as i32).to_variant()));
+        sleep_menu.append_item(&item);
+    }
+    sleep_menu.append(Some("End of Track"), Some("app.sleep-end-of-track"));
+    sleep_menu.append(Some("Cancel Timer"), Some("app.sleep-cancel"));
+    let sleep_button = gtk::MenuButton::builder()
+        .icon_name("alarm-symbolic")
+        .tooltip_text("Sleep Timer")
+        .menu_model(&sleep_menu)
+        .build();
+    sleep_button.add_css_class("flat");
+    let sleep_label = gtk::Label::new(None);
+    sleep_label.add_css_class("time-label");
+    sleep_label.set_visible(false);
+
     let volume_icon = gtk::Image::from_icon_name("audio-volume-high-symbolic");
     volume_icon.add_css_class("dim");
     let volume = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 0.02);
+    volume.set_tooltip_text(Some("Volume (scroll to adjust)"));
     volume.set_width_request(110);
     volume.set_draw_value(false);
     volume.set_value(ui.core.config.borrow().volume);
@@ -217,6 +252,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .valign(gtk::Align::Center)
         .build();
     right.append(&quality);
+    right.append(&sleep_label);
+    right.append(&sleep_button);
+    right.append(&queue_toggle);
     right.append(&lyrics_toggle);
     right.append(&volume_icon);
     right.append(&volume);
@@ -239,6 +277,10 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let shuffle = shuffle.clone();
         let repeat = repeat.clone();
         let volume = volume.clone();
+        let sleep_label = sleep_label.clone();
+        let sleep_button = sleep_button.clone();
+        let queue_toggle = queue_toggle.clone();
+        let lyrics_toggle = lyrics_toggle.clone();
         let current_rel = Rc::clone(&current_rel);
         let last_user_seek = Rc::clone(&last_user_seek);
         ui.core.hub.subscribe_widget(&bar, move |_, event| match event {
@@ -345,6 +387,35 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             AppEvent::LovedChanged { rel_path, loved } => {
                 if current_rel.borrow().as_deref() == Some(rel_path.as_str()) {
                     set_love_appearance(&love, *loved);
+                }
+            }
+            AppEvent::SleepTimerChanged {
+                remaining_seconds,
+                end_of_track,
+            } => match (remaining_seconds, end_of_track) {
+                (Some(seconds), _) => {
+                    sleep_label.set_label(&format_time(*seconds as f64));
+                    sleep_label.set_visible(true);
+                    sleep_button.add_css_class("accent-toggle");
+                }
+                (None, true) => {
+                    sleep_label.set_label("EOT");
+                    sleep_label.set_visible(true);
+                    sleep_button.add_css_class("accent-toggle");
+                }
+                (None, false) => {
+                    sleep_label.set_visible(false);
+                    sleep_button.remove_css_class("accent-toggle");
+                }
+            },
+            AppEvent::QueueToggled(shown) => {
+                if queue_toggle.is_active() != *shown {
+                    queue_toggle.set_active(*shown);
+                }
+            }
+            AppEvent::LyricsToggled(shown) => {
+                if lyrics_toggle.is_active() != *shown {
+                    lyrics_toggle.set_active(*shown);
                 }
             }
             _ => {}

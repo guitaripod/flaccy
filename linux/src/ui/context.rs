@@ -12,6 +12,10 @@ pub fn track_menu(core: &Rc<AppCore>, rel_path: &str, loved: bool) -> gio::Menu 
     queue_section.append_item(&item("Add to Queue", "win.track-queue", rel_path));
     menu.append_section(None, &queue_section);
 
+    let station_section = gio::Menu::new();
+    station_section.append_item(&item("Start Station", "win.track-station", rel_path));
+    menu.append_section(None, &station_section);
+
     let love_section = gio::Menu::new();
     let love_label = if loved { "Unlove" } else { "Love on Last.fm" };
     love_section.append_item(&item(love_label, "win.track-love", rel_path));
@@ -28,6 +32,10 @@ pub fn track_menu(core: &Rc<AppCore>, rel_path: &str, loved: bool) -> gio::Menu 
     }
     playlist_menu.append_item(&item("New Playlist…", "win.playlist-new-with-track", rel_path));
     menu.append_submenu(Some("Add to Playlist"), &playlist_menu);
+
+    let share_section = gio::Menu::new();
+    share_section.append_item(&item("Copy song.link", "win.track-songlink", rel_path));
+    menu.append_section(None, &share_section);
     menu
 }
 
@@ -41,6 +49,10 @@ pub fn album_menu(key: &str) -> gio::Menu {
     queue_section.append_item(&item("Play Next", "win.album-play-next", key));
     queue_section.append_item(&item("Add to Queue", "win.album-queue", key));
     menu.append_section(None, &queue_section);
+    let extra_section = gio::Menu::new();
+    extra_section.append_item(&item("Start Station", "win.album-station", key));
+    extra_section.append_item(&item("Copy song.link", "win.album-songlink", key));
+    menu.append_section(None, &extra_section);
     menu
 }
 

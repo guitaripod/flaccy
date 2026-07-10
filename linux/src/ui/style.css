@@ -100,3 +100,38 @@
   min-width: 44px;
   min-height: 44px;
 }
+
+.album-tile {
+  border-radius: 12px;
+  padding: 6px;
+  transition: background-color 150ms ease;
+}
+
+.album-tile:hover {
+  background-color: alpha(@window_fg_color, 0.07);
+}
+
+.suggested-card {
+  background-color: alpha(@window_fg_color, 0.06);
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition: background-color 150ms ease;
+}
+
+.suggested-card:hover {
+  background-color: alpha(@window_fg_color, 0.1);
+}
+
+.queue-history-row {
+  opacity: 0.45;
+}
+
+.queue-current-row {
+  background-color: alpha(@accent_bg_color, 0.14);
+  border-radius: 10px;
+}
+
+.chip {
+  padding: 2px 12px;
+  font-size: 12px;
+}

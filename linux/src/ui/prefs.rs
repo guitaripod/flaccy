@@ -98,6 +98,24 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     folder_row.add_suffix(&choose);
     group.add(&folder_row);
 
+    let autoplay_row = adw::SwitchRow::builder()
+        .title("Autoplay Similar Music")
+        .subtitle("Keep the music going when the queue ends")
+        .active(ui.core.config.borrow().autoplay_continuation)
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        autoplay_row.connect_active_notify(move |row| {
+            ui.core.config.borrow_mut().autoplay_continuation = row.is_active();
+            ui.core.save_config();
+            crate::logger::info(
+                "ui",
+                &format!("autoplay continuation set to {}", row.is_active()),
+            );
+        });
+    }
+    group.add(&autoplay_row);
+
     let rescan_row = adw::ActionRow::builder()
         .title("Rescan Library")
         .subtitle("Diff the folder against the database")
