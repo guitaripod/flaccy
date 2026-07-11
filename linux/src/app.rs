@@ -33,6 +33,8 @@ pub struct AppCore {
     pub sleep_end_of_track: Cell<bool>,
     pub autoplay_in_flight: Cell<bool>,
     pub wantlist_in_flight: Cell<bool>,
+    reload_in_flight: Cell<bool>,
+    reload_pending: Cell<bool>,
 }
 
 impl AppCore {
@@ -72,6 +74,8 @@ impl AppCore {
             sleep_end_of_track: Cell::new(false),
             autoplay_in_flight: Cell::new(false),
             wantlist_in_flight: Cell::new(false),
+            reload_in_flight: Cell::new(false),
+            reload_pending: Cell::new(false),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
@@ -82,31 +86,51 @@ impl AppCore {
         self.config.borrow().music_root()
     }
 
-    pub fn reload_library(&self) {
-        let library = library::load(&self.db);
-        self.update_history_weights();
-        crate::logger::info(
-            "library",
-            &format!(
-                "library loaded: {} tracks, {} albums, {} artists",
-                library.tracks.len(),
-                library.albums.len(),
-                library.artists.len()
-            ),
-        );
-        *self.library.borrow_mut() = Rc::new(library);
-        self.hub.emit(&AppEvent::LibraryReloaded);
-    }
-
-    fn update_history_weights(&self) {
-        let now = chrono::Utc::now().timestamp();
-        let weights = self
-            .db
-            .track_sort_keys()
-            .into_iter()
-            .map(|(rel, last_played)| (rel, crate::station::history_weight(last_played, now)))
-            .collect();
-        self.player.set_history_weights(weights);
+    /// Loads the library on a dedicated thread (own SQLite connection) and
+    /// applies the result on the main loop, so a large library never stalls
+    /// the UI. Overlapping requests coalesce into one trailing reload.
+    pub fn reload_library(self: &Rc<Self>) {
+        if self.reload_in_flight.replace(true) {
+            self.reload_pending.set(true);
+            return;
+        }
+        let db_path = self.db_path.clone();
+        let (tx, rx) = async_channel::bounded::<(Library, Vec<(String, f64)>)>(1);
+        std::thread::Builder::new()
+            .name("flaccy-reload".into())
+            .spawn(move || {
+                let Ok(db) = Db::open(&db_path) else { return };
+                let library = library::load(&db);
+                let now = chrono::Utc::now().timestamp();
+                let weights = db
+                    .track_sort_keys()
+                    .into_iter()
+                    .map(|(rel, last_played)| (rel, crate::station::history_weight(last_played, now)))
+                    .collect();
+                let _ = tx.send_blocking((library, weights));
+            })
+            .ok();
+        let core = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let received = rx.recv().await;
+            core.reload_in_flight.set(false);
+            let Ok((library, weights)) = received else { return };
+            core.player.set_history_weights(weights.into_iter().collect());
+            crate::logger::info(
+                "library",
+                &format!(
+                    "library loaded: {} tracks, {} albums, {} artists",
+                    library.tracks.len(),
+                    library.albums.len(),
+                    library.artists.len()
+                ),
+            );
+            *core.library.borrow_mut() = Rc::new(library);
+            core.hub.emit(&AppEvent::LibraryReloaded);
+            if core.reload_pending.replace(false) {
+                core.reload_library();
+            }
+        });
     }
 
     pub fn toast(&self, message: &str) {

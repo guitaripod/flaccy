@@ -152,11 +152,17 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let store = store.clone();
         let stack = stack.clone();
         let ui = Rc::clone(ui);
+        let applied = std::cell::Cell::new(0u64);
         move || {
-            store.remove_all();
             let library = ui.core.library.borrow().clone();
-            for track in &library.tracks {
-                store.append(&BoxedAnyObject::new(track.clone()));
+            let fingerprint = tracks_fingerprint(&library.tracks);
+            if applied.replace(fingerprint) != fingerprint {
+                let items: Vec<BoxedAnyObject> = library
+                    .tracks
+                    .iter()
+                    .map(|track| BoxedAnyObject::new(track.clone()))
+                    .collect();
+                store.splice(0, store.n_items(), &items);
             }
             stack.set_visible_child_name(if library.tracks.is_empty() {
                 "empty"
@@ -177,6 +183,29 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     }
 
     stack.upcast()
+}
+
+/// Order-sensitive digest of every field the songs table renders or filters
+/// on, so redundant LibraryReloaded emissions (e.g. from enrichment passes
+/// that only touch album metadata) skip the expensive model rebuild.
+fn tracks_fingerprint(tracks: &[Track]) -> u64 {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for track in tracks {
+        let row = format!(
+            "{}|{}|{}|{}|{}|{}|{:?}|{:?}|{:?}",
+            track.rel_path,
+            track.title,
+            track.artist,
+            track.album,
+            track.loved,
+            track.duration,
+            track.codec,
+            track.bit_depth,
+            track.sample_rate
+        );
+        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
+    }
+    hash
 }
 
 fn string_column(

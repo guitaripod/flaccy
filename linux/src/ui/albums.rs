@@ -118,14 +118,18 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let stack = stack.clone();
         let albums = Rc::clone(&albums);
         let ui = Rc::clone(ui);
+        let applied = std::cell::Cell::new(0u64);
         move || {
-            while let Some(child) = flow.first_child() {
-                flow.remove(&child);
-            }
             let library = ui.core.library.borrow().clone();
-            *albums.borrow_mut() = library.albums.clone();
-            for album in library.albums.iter() {
-                flow.append(&album_cell(&ui, album));
+            let fingerprint = albums_fingerprint(&library.albums);
+            if applied.replace(fingerprint) != fingerprint {
+                while let Some(child) = flow.first_child() {
+                    flow.remove(&child);
+                }
+                *albums.borrow_mut() = library.albums.clone();
+                for album in library.albums.iter() {
+                    flow.append(&album_cell(&ui, album));
+                }
             }
             stack.set_visible_child_name(if library.albums.is_empty() {
                 "empty"
@@ -146,7 +150,54 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
+    {
+        let flow = flow.clone();
+        let albums = Rc::clone(&albums);
+        let ui = Rc::clone(ui);
+        ui.core.hub.clone().subscribe_widget(&stack, move |_, event| {
+            if let AppEvent::AlbumEnriched { title, artist } = event {
+                refresh_cover(&ui, &flow, &albums.borrow(), title, artist);
+            }
+        });
+    }
+
     stack.upcast()
+}
+
+/// Repaints a single grid cell's artwork after enrichment lands, so covers
+/// stream in live without a full grid rebuild.
+fn refresh_cover(ui: &Rc<Ui>, flow: &gtk::FlowBox, albums: &[Album], title: &str, artist: &str) {
+    let Some(index) = albums
+        .iter()
+        .position(|album| album.title == *title && album.artist == *artist)
+    else {
+        return;
+    };
+    let Some(child) = flow.child_at_index(index as i32) else { return };
+    let Some(picture) = child
+        .child()
+        .and_then(|cell| cell.first_child())
+        .and_then(|widget| widget.downcast::<gtk::Picture>().ok())
+    else {
+        return;
+    };
+    let weak = picture.downgrade();
+    ui.core.artwork.request(title, artist, 168, move |texture, _| {
+        if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
+            picture.set_paintable(Some(texture));
+        }
+    });
+}
+
+/// Digest of the fields the grid renders (identity plus year subtitle), so
+/// enrichment reloads that change nothing visible skip rebuilding every cell.
+fn albums_fingerprint(albums: &[Album]) -> u64 {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for album in albums {
+        let row = format!("{}|{}|{:?}|{:?}", album.title, album.artist, album.year, album.genre);
+        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
+    }
+    hash
 }
 
 fn album_cell(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {

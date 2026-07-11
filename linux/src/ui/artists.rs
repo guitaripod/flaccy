@@ -66,11 +66,16 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let stack = stack.clone();
         let names = Rc::clone(&names);
         let ui = Rc::clone(ui);
+        let applied = std::cell::Cell::new(0u64);
         move || {
+            let library = ui.core.library.borrow().clone();
+            let fingerprint = artists_fingerprint(&library.artists);
+            if applied.replace(fingerprint) == fingerprint {
+                return;
+            }
             while let Some(child) = list.first_child() {
                 list.remove(&child);
             }
-            let library = ui.core.library.borrow().clone();
             let mut collected = Vec::new();
             for artist in &library.artists {
                 collected.push(artist.name.clone());
@@ -450,4 +455,15 @@ fn album_cell_for_artist(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
     let child = gtk::FlowBoxChild::builder().child(&cell).build();
     crate::ui::context::attach_album_context_menu(&child, album.key());
     child
+}
+
+/// Digest of the rendered artist rows, so enrichment-driven reloads (which
+/// never change artist names or counts) skip rebuilding the list.
+fn artists_fingerprint(artists: &[crate::library::ArtistEntry]) -> u64 {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for artist in artists {
+        let row = format!("{}|{}|{}", artist.name, artist.album_count, artist.track_count);
+        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
+    }
+    hash
 }

@@ -69,7 +69,7 @@ pub fn start(core: &Rc<AppCore>) {
             if !reload_scheduled.replace(true) {
                 let weak_inner = Rc::downgrade(&core);
                 let flag = Rc::clone(&reload_scheduled);
-                glib::timeout_add_local_once(Duration::from_secs(2), move || {
+                glib::timeout_add_local_once(Duration::from_secs(15), move || {
                     flag.set(false);
                     if let Some(core) = weak_inner.upgrade() {
                         core.reload_library();
