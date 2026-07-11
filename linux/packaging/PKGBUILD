@@ -21,4 +21,9 @@ package() {
     install -Dm644 "data/icons/hicolor/${size}x${size}/apps/cc.midgarcorp.Flaccy.png" \
       "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/cc.midgarcorp.Flaccy.png"
   done
+  for svg in data/icons/hicolor/scalable/actions/*.svg; do
+    [[ -e "$svg" ]] || continue
+    install -Dm644 "$svg" \
+      "$pkgdir/usr/share/icons/hicolor/scalable/actions/$(basename "$svg")"
+  done
 }
