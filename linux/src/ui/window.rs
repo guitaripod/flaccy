@@ -395,17 +395,7 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     let about = gio::SimpleAction::new("about", None);
     {
         let window = window.clone();
-        about.connect_activate(move |_, _| {
-            let dialog = adw::AboutDialog::builder()
-                .application_name("Flaccy")
-                .application_icon("cc.midgarcorp.Flaccy")
-                .developer_name("Midgar Oy")
-                .version(env!("CARGO_PKG_VERSION"))
-                .comments("Lossless music player. Last.fm connected. Gapless.")
-                .website("https://midgarcorp.cc/flaccy")
-                .build();
-            dialog.present(Some(&window));
-        });
+        about.connect_activate(move |_, _| present_about(&window));
     }
     app.add_action(&about);
 
@@ -652,6 +642,32 @@ fn attach_file_drop(ui: &Rc<Ui>, host: &impl IsA<gtk::Widget>) {
     host.add_controller(drop);
 }
 
+fn present_about(window: &adw::ApplicationWindow) {
+    let dialog = adw::AboutDialog::builder()
+        .application_name("Flaccy")
+        .application_icon("cc.midgarcorp.Flaccy")
+        .developer_name("Midgar Oy")
+        .version(env!("CARGO_PKG_VERSION"))
+        .comments("Lossless music, in your color.")
+        .website("https://midgarcorp.cc/flaccy")
+        .issue_url("https://github.com/guitaripod/flaccy/issues")
+        .copyright("© 2026 Midgar Oy")
+        .license_type(gtk::License::MitX11)
+        .release_notes_version(env!("CARGO_PKG_VERSION"))
+        .release_notes(
+            "<p>Flaccy now wears the color of your music.</p>\
+             <ul>\
+             <li>Adaptive theme engine — the whole app retints to the album \
+             that's playing, or pick one of seven curated palettes.</li>\
+             <li>An immersive Now Playing view over a blurred cover.</li>\
+             <li>Ambient backdrops, glass surfaces, and a glowing \
+             now-playing pulse.</li>\
+             </ul>",
+        )
+        .build();
+    dialog.present(Some(window));
+}
+
 fn present_shortcuts(window: &adw::ApplicationWindow) {
     let groups: [(&str, &[(&str, &str)]); 2] = [
         (
@@ -865,6 +881,12 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
             ui::prefs::present(&ui);
+        });
+    }
+    if std::env::var_os("FLACCY_DEMO_ABOUT").is_some() {
+        let window = ui.window.clone();
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            present_about(&window);
         });
     }
 }
