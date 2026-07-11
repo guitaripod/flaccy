@@ -55,7 +55,42 @@ fn appearance_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
         });
     }
     group.add(&row);
+    group.add(&theme_row(ui));
     group
+}
+
+/// Theme picker: Adaptive (follows the playing album) plus curated palettes.
+/// Applying is live — the whole app retints instantly via ThemeController.
+fn theme_row(ui: &Rc<Ui>) -> adw::ComboRow {
+    use crate::theme::Theme;
+    let titles: Vec<&str> = Theme::ALL.iter().map(|t| t.title()).collect();
+    let model = gtk::StringList::new(&titles);
+    let row = adw::ComboRow::builder()
+        .title("Theme")
+        .subtitle("How Flaccy colors itself")
+        .model(&model)
+        .build();
+    let current = Theme::from_id(&ui.core.config.borrow().theme);
+    let selected = Theme::ALL.iter().position(|t| *t == current).unwrap_or(0);
+    row.set_selected(selected as u32);
+    row.set_subtitle(current.subtitle());
+    {
+        let ui = Rc::clone(ui);
+        row.connect_selected_notify(move |row| {
+            let theme = Theme::ALL
+                .get(row.selected() as usize)
+                .copied()
+                .unwrap_or(Theme::Adaptive);
+            row.set_subtitle(theme.subtitle());
+            ui.core.config.borrow_mut().theme = theme.id().to_string();
+            ui.core.save_config();
+            if let Some(controller) = crate::theme::ThemeController::current() {
+                controller.set_theme(theme);
+            }
+            crate::logger::info("ui", &format!("theme set to {}", theme.id()));
+        });
+    }
+    row
 }
 
 fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {

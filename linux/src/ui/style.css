@@ -1,9 +1,31 @@
+/* Flaccy for Linux — theme engine stylesheet.
+   The flaccy_* and accent/*_bg_color named colors are redefined at runtime by
+   theme.rs (adaptive album-art accent + presets); every rule below keys off
+   those tokens so the whole app retints live. */
+
+/* ---- ambient window wash ------------------------------------------------ */
+/* Radial accent glow pooling from the corners over the tinted window base;
+   shows through the transparent library grids. Cross-fades on palette change. */
+.flaccy-window {
+  background-image:
+    radial-gradient(circle at 14% 6%, alpha(@flaccy_wash_a, 0.40), transparent 44%),
+    radial-gradient(circle at 86% 2%, alpha(@flaccy_wash_b, 0.34), transparent 48%),
+    radial-gradient(circle at 50% 118%, alpha(@flaccy_accent, 0.26), transparent 56%);
+  transition: background-image 600ms ease, background-color 600ms ease;
+}
+
+/* ---- cover art ---------------------------------------------------------- */
 .cover {
   border-radius: 10px;
+  box-shadow: 0 1px 4px alpha(#000, 0.28), 0 4px 16px alpha(#000, 0.16);
 }
 
 .cover-large {
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow:
+    0 2px 10px alpha(#000, 0.30),
+    0 12px 40px alpha(#000, 0.22),
+    0 0 0 1px alpha(#fff, 0.05) inset;
 }
 
 .album-title {
@@ -18,20 +40,63 @@
   opacity: 0.35;
 }
 
+/* ---- badges & chips ----------------------------------------------------- */
 .quality-badge {
-  background-color: alpha(@window_fg_color, 0.12);
+  background-image: linear-gradient(160deg, alpha(@accent_bg_color, 0.22), alpha(@accent_bg_color, 0.10));
+  box-shadow: inset 0 0 0 1px alpha(@accent_bg_color, 0.30);
+  color: @accent_color;
   border-radius: 6px;
   padding: 1px 7px;
   font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .loved-heart {
   color: #ff476b;
+  -gtk-icon-shadow: 0 0 10px alpha(#ff476b, 0.55);
 }
 
+.genre-chip {
+  background-color: alpha(@window_fg_color, 0.08);
+  box-shadow: inset 0 0 0 1px alpha(@window_fg_color, 0.08);
+  border-radius: 9999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.genre-chip:hover {
+  background-color: alpha(@accent_bg_color, 0.16);
+  box-shadow: inset 0 0 0 1px alpha(@accent_bg_color, 0.35);
+}
+
+.chip {
+  padding: 2px 12px;
+  font-size: 12px;
+}
+
+.wantlist-badge {
+  background-image: linear-gradient(160deg, @accent_bg_color, mix(@accent_bg_color, #000, 0.18));
+  color: @accent_fg_color;
+  border-radius: 9999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px alpha(@accent_bg_color, 0.45);
+}
+
+/* ---- transport bar ------------------------------------------------------ */
 .transport {
-  padding: 8px 14px;
+  padding: 10px 16px;
+  background-image:
+    linear-gradient(180deg, alpha(@flaccy_accent, 0.10), transparent 62%),
+    linear-gradient(180deg, alpha(#fff, 0.03), transparent 8%);
+  box-shadow:
+    0 -1px 0 0 alpha(@window_fg_color, 0.07),
+    0 -10px 30px alpha(#000, 0.18);
+  transition: background-image 600ms ease;
 }
 
 .transport-title {
@@ -54,11 +119,124 @@
   opacity: 0.6;
 }
 
+/* Glowing accent play pill; pulses only while playing to avoid idle repaint. */
+.play-pill {
+  border-radius: 9999px;
+  min-width: 46px;
+  min-height: 46px;
+  box-shadow: 0 4px 14px alpha(@accent_bg_color, 0.42);
+  transition: box-shadow 220ms ease, transform 150ms ease;
+}
+
+.play-pill:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 22px alpha(@accent_bg_color, 0.62);
+}
+
+.play-pill:active {
+  transform: scale(0.95);
+}
+
+.transport.playing .play-pill {
+  animation: play-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes play-pulse {
+  0%, 100% { box-shadow: 0 4px 14px alpha(@accent_bg_color, 0.38); }
+  50%      { box-shadow: 0 5px 24px alpha(@accent_bg_color, 0.78); }
+}
+
+/* Accent-filled seek + volume sliders with a soft glow on the filled portion. */
+.transport scale > trough {
+  min-height: 5px;
+  border-radius: 9999px;
+  background-color: alpha(@window_fg_color, 0.14);
+}
+
+.transport scale > trough > highlight {
+  border-radius: 9999px;
+  background-image: linear-gradient(90deg, alpha(@accent_bg_color, 0.85), @accent_bg_color);
+  box-shadow: 0 0 10px alpha(@accent_bg_color, 0.5);
+}
+
+.transport scale > trough > slider {
+  min-width: 13px;
+  min-height: 13px;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 4px alpha(#000, 0.4), 0 0 0 1px alpha(@accent_bg_color, 0.3);
+  transition: transform 120ms ease;
+}
+
+.transport scale:hover > trough > slider {
+  transform: scale(1.12);
+}
+
+/* Now-playing equalizer overlaid on the mini artwork. */
+.equalizer {
+  background-color: alpha(#000, 0.42);
+  border-radius: 8px 0 8px 0;
+  padding: 4px 5px 3px 5px;
+  min-height: 18px;
+}
+
+.eq-bar {
+  min-width: 3px;
+  min-height: 12px;
+  border-radius: 2px;
+  background-color: #ffffff;
+  transform: scaleY(0.35);
+  transform-origin: bottom center;
+}
+
+.transport.playing .equalizer .eq-bar {
+  animation: eq-bounce 820ms ease-in-out infinite alternate;
+}
+
+.transport.playing .equalizer .eq-bar:nth-child(1) { animation-delay: 0ms; }
+.transport.playing .equalizer .eq-bar:nth-child(2) { animation-delay: 260ms; }
+.transport.playing .equalizer .eq-bar:nth-child(3) { animation-delay: 130ms; }
+
+@keyframes eq-bounce {
+  from { transform: scaleY(0.28); }
+  to   { transform: scaleY(1.0); }
+}
+
+/* ---- sidebar ------------------------------------------------------------ */
+.navigation-sidebar {
+  background-color: transparent;
+  padding: 6px 4px;
+}
+
+.navigation-sidebar > row {
+  border-radius: 11px;
+  margin: 1px 6px;
+  transition: background-color 160ms ease, box-shadow 200ms ease;
+}
+
+.navigation-sidebar > row:hover {
+  background-color: alpha(@window_fg_color, 0.06);
+}
+
+.navigation-sidebar > row:selected {
+  background-image: linear-gradient(120deg, alpha(@accent_bg_color, 0.30), alpha(@accent_bg_color, 0.14));
+  box-shadow:
+    inset 0 0 0 1px alpha(@accent_bg_color, 0.34),
+    0 3px 12px alpha(@accent_bg_color, 0.22);
+  color: @accent_color;
+}
+
+.navigation-sidebar > row:selected image {
+  color: @accent_color;
+}
+
+/* ---- lyrics ------------------------------------------------------------- */
 .lyric-line {
   font-size: 16px;
   font-weight: 600;
   opacity: 0.35;
   padding: 6px 4px;
+  transition: opacity 240ms ease, color 240ms ease;
 }
 
 .lyric-line-current {
@@ -66,8 +244,12 @@
   font-weight: 700;
   opacity: 1.0;
   padding: 6px 4px;
+  color: @accent_color;
+  text-shadow: 0 0 16px alpha(@accent_bg_color, 0.4);
+  transition: opacity 240ms ease, color 240ms ease;
 }
 
+/* ---- stats -------------------------------------------------------------- */
 .stat-value {
   font-size: 30px;
   font-weight: 800;
@@ -77,12 +259,26 @@
   font-size: 11px;
   font-weight: 700;
   opacity: 0.5;
+  letter-spacing: 0.08em;
 }
 
 .stat-tile {
-  background-color: alpha(@window_fg_color, 0.06);
-  border-radius: 12px;
+  background-color: alpha(@flaccy_surface, 0.55);
+  background-image: linear-gradient(160deg, alpha(#fff, 0.06), transparent 46%);
+  box-shadow:
+    inset 0 0 0 1px alpha(#fff, 0.06),
+    0 1px 3px alpha(#000, 0.2),
+    0 8px 26px alpha(#000, 0.14);
+  border-radius: 16px;
   padding: 16px 20px;
+  transition: box-shadow 220ms ease;
+}
+
+.stat-tile:hover {
+  box-shadow:
+    inset 0 0 0 1px alpha(@accent_bg_color, 0.22),
+    0 2px 6px alpha(#000, 0.24),
+    0 12px 34px alpha(@accent_bg_color, 0.14);
 }
 
 .top-list-rank {
@@ -91,82 +287,100 @@
   opacity: 0.4;
 }
 
+/* ---- accents & toggles -------------------------------------------------- */
 .accent-toggle {
   color: @accent_color;
 }
 
-.play-pill {
-  border-radius: 9999px;
-  min-width: 44px;
-  min-height: 44px;
-}
-
+/* ---- library tiles ------------------------------------------------------ */
 .album-tile {
-  border-radius: 12px;
-  padding: 6px;
-  transition: background-color 150ms ease;
+  border-radius: 14px;
+  padding: 8px;
+  transition: background-color 180ms ease, box-shadow 240ms ease, transform 180ms ease;
 }
 
 .album-tile:hover {
-  background-color: alpha(@window_fg_color, 0.07);
+  background-color: alpha(@window_fg_color, 0.06);
+  box-shadow: 0 12px 34px alpha(#000, 0.24), 0 0 0 1px alpha(@accent_bg_color, 0.16);
+  transform: translateY(-3px);
 }
 
+/* ---- made-for-you / suggested cards ------------------------------------- */
 .suggested-card {
-  background-color: alpha(@window_fg_color, 0.06);
-  border-radius: 14px;
+  background-color: alpha(@flaccy_surface, 0.5);
+  background-image: linear-gradient(150deg, alpha(@accent_bg_color, 0.12), transparent 55%);
+  box-shadow:
+    inset 0 0 0 1px alpha(#fff, 0.06),
+    0 2px 6px alpha(#000, 0.18),
+    0 10px 30px alpha(#000, 0.14);
+  border-radius: 16px;
   padding: 12px 14px;
-  transition: background-color 150ms ease;
+  transition: box-shadow 220ms ease, transform 180ms ease;
 }
 
 .suggested-card:hover {
-  background-color: alpha(@window_fg_color, 0.1);
+  box-shadow:
+    inset 0 0 0 1px alpha(@accent_bg_color, 0.28),
+    0 4px 10px alpha(#000, 0.22),
+    0 16px 40px alpha(@accent_bg_color, 0.16);
+  transform: translateY(-2px);
 }
 
+/* ---- queue -------------------------------------------------------------- */
 .queue-history-row {
   opacity: 0.45;
 }
 
 .queue-current-row {
-  background-color: alpha(@accent_bg_color, 0.14);
-  border-radius: 10px;
+  background-image: linear-gradient(120deg, alpha(@accent_bg_color, 0.20), alpha(@accent_bg_color, 0.08));
+  box-shadow: inset 0 0 0 1px alpha(@accent_bg_color, 0.24);
+  border-radius: 12px;
 }
 
-.chip {
-  padding: 2px 12px;
-  font-size: 12px;
-}
-
-.genre-chip {
-  background-color: alpha(@window_fg_color, 0.1);
-  border-radius: 9999px;
-  padding: 3px 12px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
+/* ---- guide -------------------------------------------------------------- */
 .guide-card {
-  background-color: alpha(@window_fg_color, 0.05);
-  border-radius: 14px;
+  background-color: alpha(@flaccy_surface, 0.45);
+  background-image: linear-gradient(160deg, alpha(#fff, 0.05), transparent 44%);
+  box-shadow:
+    inset 0 0 0 1px alpha(#fff, 0.05),
+    0 6px 24px alpha(#000, 0.14);
+  border-radius: 16px;
   padding: 16px 18px;
 }
 
 .guide-takeaway {
-  background-color: alpha(@accent_bg_color, 0.14);
-  border-radius: 10px;
+  background-image: linear-gradient(120deg, alpha(@accent_bg_color, 0.20), alpha(@accent_bg_color, 0.10));
+  box-shadow: inset 0 0 0 1px alpha(@accent_bg_color, 0.26);
+  border-radius: 12px;
   padding: 10px 12px;
   font-weight: 600;
 }
 
-.wantlist-badge {
-  background-color: @accent_bg_color;
-  color: @accent_fg_color;
-  border-radius: 9999px;
-  padding: 1px 8px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
+/* ---- year in music ------------------------------------------------------ */
 .yim-value {
   font-size: 22px;
   font-weight: 800;
+}
+
+/* ---- pill buttons ------------------------------------------------------- */
+button.pill.suggested-action {
+  box-shadow: 0 4px 14px alpha(@accent_bg_color, 0.4);
+  transition: box-shadow 200ms ease, transform 150ms ease;
+}
+
+button.pill.suggested-action:hover {
+  box-shadow: 0 6px 22px alpha(@accent_bg_color, 0.6);
+  transform: translateY(-1px);
+}
+
+button.pill.suggested-action:active {
+  transform: translateY(0);
+}
+
+/* ---- theme preview swatch (preferences) --------------------------------- */
+.theme-swatch {
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px alpha(#fff, 0.18), 0 2px 6px alpha(#000, 0.3);
 }

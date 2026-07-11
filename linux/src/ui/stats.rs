@@ -9,8 +9,6 @@ use gtk::pango;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-const TINT_DARK: (f64, f64, f64) = (0.45, 0.78, 1.0);
-const TINT_LIGHT: (f64, f64, f64) = (0.08, 0.42, 0.75);
 const HEATMAP_CELL: f64 = 13.0;
 const HEATMAP_GAP: f64 = 3.0;
 const HEATMAP_TOP: f64 = 18.0;
@@ -478,11 +476,7 @@ fn heatmap_widget(data: &Rc<RecapData>) -> gtk::Widget {
         area.set_draw_func(move |area, cr, _, _| {
             let fg = area.color();
             let (fg_r, fg_g, fg_b) = (fg.red() as f64, fg.green() as f64, fg.blue() as f64);
-            let tint = if adw::StyleManager::default().is_dark() {
-                TINT_DARK
-            } else {
-                TINT_LIGHT
-            };
+            let tint = crate::theme::accent_tint();
             let today = chrono::Local::now().date_naive();
             cr.select_font_face(
                 "Cantarell",
@@ -528,6 +522,9 @@ fn heatmap_widget(data: &Rc<RecapData>) -> gtk::Widget {
                 area.queue_draw();
             }
         });
+    }
+    if let Some(controller) = crate::theme::ThemeController::current() {
+        controller.connect_changed_widget(&area, |area| area.queue_draw());
     }
     area.set_has_tooltip(true);
     {
@@ -612,6 +609,9 @@ fn clock_widget(data: &Rc<RecapData>) -> gtk::Widget {
                 clock.queue_draw();
             }
         });
+    }
+    if let Some(controller) = crate::theme::ThemeController::current() {
+        controller.connect_changed_widget(&clock, |clock| clock.queue_draw());
     }
     clock.upcast()
 }
@@ -698,11 +698,7 @@ fn draw_listening_clock(
 ) {
     let fg = area.color();
     let (fg_r, fg_g, fg_b) = (fg.red() as f64, fg.green() as f64, fg.blue() as f64);
-    let tint = if adw::StyleManager::default().is_dark() {
-        TINT_DARK
-    } else {
-        TINT_LIGHT
-    };
+    let tint = crate::theme::accent_tint();
     let center_x = width / 2.0;
     let center_y = height / 2.0;
     let outer = (width.min(height)) / 2.0 - 6.0;

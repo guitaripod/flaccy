@@ -26,6 +26,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     artwork.add_css_class("cover");
     artwork.set_visible(false);
 
+    let equalizer = build_equalizer();
+    let art_overlay = gtk::Overlay::new();
+    art_overlay.set_child(Some(&artwork));
+    art_overlay.add_overlay(&equalizer);
+
     let title = gtk::Label::builder()
         .label("Not Playing")
         .xalign(0.0)
@@ -67,7 +72,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .spacing(12)
         .width_request(280)
         .build();
-    left.append(&artwork);
+    left.append(&art_overlay);
     left.append(&labels);
     left.append(&love);
 
@@ -266,6 +271,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let ui_ref = Rc::clone(ui);
         let artwork = artwork.clone();
+        let equalizer = equalizer.clone();
+        let bar_ref = bar.clone();
         let title = title.clone();
         let artist = artist.clone();
         let quality = quality.clone();
@@ -311,14 +318,24 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                             .artwork
                             .placeholder(&format!("{}|{}", track.album, track.artist)),
                     ));
+                    let (seed_color, _) =
+                        crate::palette::placeholder_colors(&format!("{}|{}", track.album, track.artist));
+                    set_adaptive_accent(Some(seed_color));
+                    if ui_ref.core.player.is_playing() {
+                        bar_ref.add_css_class("playing");
+                        equalizer.set_visible(true);
+                    }
                     let weak = artwork.downgrade();
                     ui_ref.core.artwork.request(
                         &track.album,
                         &track.artist,
                         52,
-                        move |texture, _| {
+                        move |texture, color| {
                             if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
                                 picture.set_paintable(Some(texture));
+                            }
+                            if let Some(color) = color {
+                                set_adaptive_accent(Some(color));
                             }
                         },
                     );
@@ -329,6 +346,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                     quality.set_visible(false);
                     love.set_sensitive(false);
                     artwork.set_visible(false);
+                    equalizer.set_visible(false);
+                    bar_ref.remove_css_class("playing");
+                    set_adaptive_accent(None);
                     *current_rel.borrow_mut() = None;
                 }
             },
@@ -338,6 +358,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 } else {
                     "media-playback-start-symbolic"
                 });
+                if *playing {
+                    bar_ref.add_css_class("playing");
+                    equalizer.set_visible(current_rel.borrow().is_some());
+                } else {
+                    bar_ref.remove_css_class("playing");
+                    equalizer.set_visible(false);
+                }
             }
             AppEvent::Tick { position, duration } => {
                 let user_recent = last_user_seek
@@ -423,6 +450,35 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     }
 
     bar.upcast()
+}
+
+/// Three-bar now-playing indicator overlaid bottom-trailing on the mini
+/// artwork; the bars only animate while the transport carries the `.playing`
+/// class, so paused playback triggers no idle repaint.
+fn build_equalizer() -> gtk::Box {
+    let bars = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(2)
+        .halign(gtk::Align::End)
+        .valign(gtk::Align::End)
+        .build();
+    bars.add_css_class("equalizer");
+    for _ in 0..3 {
+        let bar = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        bar.add_css_class("eq-bar");
+        bar.set_valign(gtk::Align::End);
+        bars.append(&bar);
+    }
+    bars.set_visible(false);
+    bars
+}
+
+/// Feeds the now-playing dominant color to the theme engine; a no-op unless the
+/// Adaptive theme is active, where it retints the whole app.
+fn set_adaptive_accent(color: Option<(u8, u8, u8)>) {
+    if let Some(controller) = crate::theme::ThemeController::current() {
+        controller.set_artwork_color(color);
+    }
 }
 
 fn set_love_appearance(button: &gtk::Button, loved: bool) {

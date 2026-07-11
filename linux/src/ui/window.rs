@@ -11,6 +11,9 @@ use std::rc::Rc;
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
     load_css();
     apply_color_scheme(&core.config.borrow().appearance);
+    crate::theme::ThemeController::install(crate::theme::Theme::from_id(
+        &core.config.borrow().theme,
+    ));
     gtk::Window::set_default_icon_name("cc.midgarcorp.Flaccy");
 
     let (width, height) = {
@@ -23,6 +26,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .default_width(width)
         .default_height(height)
         .build();
+    window.add_css_class("flaccy-window");
 
     let nav = adw::NavigationView::new();
     let ui = Rc::new(Ui {

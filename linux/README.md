@@ -2,6 +2,10 @@
 
 Lossless music player. GTK4/libadwaita, gapless GStreamer playback, MPRIS, Last.fm scrobbling.
 
+An adaptive theme engine retints the whole app with the dominant color of whatever's
+playing — ambient gradient backdrops, glass surfaces, a glowing now-playing pulse — or
+pick one of seven curated palettes in Preferences. Works in light and dark.
+
 ## Install
 
 ```sh

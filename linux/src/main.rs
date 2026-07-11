@@ -20,6 +20,7 @@ mod scrobbler;
 mod songlink;
 mod station;
 mod suggested;
+mod theme;
 mod ui;
 mod wantlist;
 
