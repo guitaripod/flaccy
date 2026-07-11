@@ -121,15 +121,3 @@ pub fn attach_album_context_menu(widget: &impl IsA<gtk::Widget>, key: String) {
     });
     widget.add_controller(gesture);
 }
-
-pub fn attach_artist_context_menu(widget: &impl IsA<gtk::Widget>, artist: String) {
-    let gesture = gtk::GestureClick::builder()
-        .button(gdk::BUTTON_SECONDARY)
-        .build();
-    let target = widget.clone().upcast::<gtk::Widget>();
-    gesture.connect_pressed(move |_, _, x, y| {
-        let menu = artist_menu(&artist);
-        popup_menu_at(&target, &menu, x, y);
-    });
-    widget.add_controller(gesture);
-}

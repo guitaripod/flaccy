@@ -2,33 +2,142 @@ use crate::events::AppEvent;
 use crate::library::{format_time, Album};
 use crate::ui::{context, Ui};
 use adw::prelude::*;
-use gtk::pango;
-use std::cell::RefCell;
+use gtk::glib::BoxedAnyObject;
+use gtk::{gdk, gio, glib, pango};
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
-    let flow = gtk::FlowBox::builder()
-        .selection_mode(gtk::SelectionMode::None)
-        .homogeneous(true)
-        .column_spacing(18)
-        .row_spacing(24)
+    let store = gio::ListStore::new::<BoxedAnyObject>();
+
+    let filter = {
+        let query = Rc::clone(&ui.query);
+        gtk::CustomFilter::new(move |obj| {
+            let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
+                return true;
+            };
+            let query = query.borrow();
+            if query.is_empty() {
+                return true;
+            }
+            let needle = query.to_lowercase();
+            let album = boxed.borrow::<Album>();
+            album.title.to_lowercase().contains(&needle)
+                || album.artist.to_lowercase().contains(&needle)
+        })
+    };
+    let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
+    let selection = gtk::NoSelection::new(Some(filter_model));
+
+    let bound: Rc<RefCell<HashMap<String, glib::WeakRef<gtk::Picture>>>> =
+        Rc::new(RefCell::new(HashMap::new()));
+
+    let factory = gtk::SignalListItemFactory::new();
+    factory.connect_setup(move |_, item| {
+        let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+            return;
+        };
+        let cell = build_album_cell();
+        let gesture = gtk::GestureClick::builder().button(gdk::BUTTON_SECONDARY).build();
+        let item_weak = item.downgrade();
+        let anchor = cell.clone();
+        gesture.connect_pressed(move |_, _, x, y| {
+            let Some(item) = item_weak.upgrade() else { return };
+            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
+                return;
+            };
+            let key = boxed.borrow::<Album>().key();
+            context::popup_menu_at(&anchor, &context::album_menu(&key), x, y);
+        });
+        cell.add_controller(gesture);
+        item.set_child(Some(&cell));
+    });
+    {
+        let ui = Rc::clone(ui);
+        let bound = Rc::clone(&bound);
+        factory.connect_bind(move |_, item| {
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+                return;
+            };
+            let Some(cell) = item.child() else { return };
+            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
+                return;
+            };
+            let album = boxed.borrow::<Album>();
+            let Some(picture) = cell.first_child().and_downcast::<gtk::Picture>() else {
+                return;
+            };
+            let Some(title) = picture.next_sibling().and_downcast::<gtk::Label>() else {
+                return;
+            };
+            let Some(subtitle) = title.next_sibling().and_downcast::<gtk::Label>() else {
+                return;
+            };
+            title.set_label(&album.title);
+            title.set_tooltip_text(Some(&album.title));
+            subtitle.set_label(&subtitle_text(&album));
+            picture.set_paintable(Some(&ui.core.artwork.placeholder(&album.key())));
+            let expected = album.key();
+            let item_weak = item.downgrade();
+            let weak = picture.downgrade();
+            ui.core.artwork.request(&album.title, &album.artist, 168, move |texture, _| {
+                if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
+                    if still_bound_album(&item_weak, &expected) {
+                        picture.set_paintable(Some(texture));
+                    }
+                }
+            });
+            bound.borrow_mut().insert(album.key(), picture.downgrade());
+        });
+    }
+    {
+        let bound = Rc::clone(&bound);
+        factory.connect_unbind(move |_, item| {
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+                return;
+            };
+            if let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() {
+                bound.borrow_mut().remove(&boxed.borrow::<Album>().key());
+            }
+        });
+    }
+
+    let grid = gtk::GridView::builder()
+        .model(&selection)
+        .factory(&factory)
+        .min_columns(2)
+        .max_columns(10)
+        .single_click_activate(true)
         .margin_top(24)
         .margin_bottom(24)
         .margin_start(24)
         .margin_end(24)
-        .min_children_per_line(2)
-        .max_children_per_line(10)
-        .valign(gtk::Align::Start)
-        .activate_on_single_click(true)
         .build();
+    grid.add_css_class("album-grid");
+    {
+        let ui = Rc::clone(ui);
+        grid.connect_activate(move |grid, position| {
+            let Some(boxed) = grid
+                .model()
+                .and_then(|model| model.item(position))
+                .and_downcast::<BoxedAnyObject>()
+            else {
+                return;
+            };
+            let album = boxed.borrow::<Album>().clone();
+            push_album_detail(&ui, &album);
+        });
+    }
 
-    let grid_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    grid_content.append(&crate::ui::suggested_shelf::build(ui));
-    grid_content.append(&flow);
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&grid_content)
+        .vexpand(true)
+        .child(&grid)
         .build();
+    let grid_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    grid_content.append(&crate::ui::suggested_shelf::build(ui));
+    grid_content.append(&scroll);
 
     let empty = adw::StatusPage::builder()
         .icon_name("audio-x-generic-symbolic")
@@ -77,66 +186,28 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let stack = gtk::Stack::new();
     stack.add_named(&empty, Some("empty"));
-    stack.add_named(&scroll, Some("grid"));
-
-    let albums: Rc<RefCell<Vec<Album>>> = Rc::new(RefCell::new(Vec::new()));
-
-    {
-        let albums = Rc::clone(&albums);
-        let query = Rc::clone(&ui.query);
-        flow.set_filter_func(move |child| {
-            let query = query.borrow();
-            if query.is_empty() {
-                return true;
-            }
-            let needle = query.to_lowercase();
-            let albums = albums.borrow();
-            let Some(album) = albums.get(child.index().max(0) as usize) else {
-                return true;
-            };
-            album.title.to_lowercase().contains(&needle)
-                || album.artist.to_lowercase().contains(&needle)
-        });
-    }
-
-    {
-        let albums = Rc::clone(&albums);
-        let ui = Rc::clone(ui);
-        flow.connect_child_activated(move |_, child| {
-            let album = albums
-                .borrow()
-                .get(child.index().max(0) as usize)
-                .cloned();
-            if let Some(album) = album {
-                push_album_detail(&ui, &album);
-            }
-        });
-    }
+    stack.add_named(&grid_content, Some("grid"));
 
     let rebuild = {
-        let flow = flow.clone();
+        let store = store.clone();
         let stack = stack.clone();
-        let albums = Rc::clone(&albums);
+        let scroll = scroll.clone();
         let ui = Rc::clone(ui);
-        let applied_identity = std::cell::Cell::new(0u64);
-        let applied_meta = std::cell::Cell::new(0u64);
+        let applied = Cell::new(0u64);
         move || {
             let library = ui.core.library.borrow().clone();
-            let identity = albums_identity_fingerprint(&library.albums);
-            let meta = albums_meta_fingerprint(&library.albums);
-            if applied_identity.replace(identity) != identity {
-                applied_meta.set(meta);
-                while let Some(child) = flow.first_child() {
-                    flow.remove(&child);
-                }
-                *albums.borrow_mut() = library.albums.clone();
-                for album in library.albums.iter() {
-                    flow.append(&album_cell(&ui, album));
-                }
-            } else if applied_meta.replace(meta) != meta {
-                *albums.borrow_mut() = library.albums.clone();
-                for (index, album) in library.albums.iter().enumerate() {
-                    update_cell_subtitle(&flow, index, album);
+            let fingerprint = albums_fingerprint(&library.albums);
+            if applied.replace(fingerprint) != fingerprint {
+                let saved = scroll.vadjustment().value();
+                let items: Vec<BoxedAnyObject> = library
+                    .albums
+                    .iter()
+                    .map(|album| BoxedAnyObject::new(album.clone()))
+                    .collect();
+                store.splice(0, store.n_items(), &items);
+                if saved > 0.0 {
+                    let adj = scroll.vadjustment();
+                    glib::idle_add_local_once(move || adj.set_value(saved));
                 }
             }
             stack.set_visible_child_name(if library.albums.is_empty() {
@@ -149,22 +220,39 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     rebuild();
 
     {
-        let flow = flow.clone();
         let rebuild = rebuild.clone();
+        let filter = filter.clone();
         ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
             AppEvent::LibraryReloaded => rebuild(),
-            AppEvent::SearchChanged(_) => flow.invalidate_filter(),
+            AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
             _ => {}
         });
     }
 
     {
-        let flow = flow.clone();
-        let albums = Rc::clone(&albums);
         let ui = Rc::clone(ui);
+        let bound = Rc::clone(&bound);
         ui.core.hub.clone().subscribe_widget(&stack, move |_, event| {
             if let AppEvent::AlbumEnriched { title, artist } = event {
-                refresh_cover(&ui, &flow, &albums.borrow(), title, artist);
+                ui.core.artwork.invalidate(title, artist);
+                let key = format!("{title}|{artist}");
+                let picture = bound.borrow().get(&key).and_then(|w| w.upgrade());
+                if let Some(picture) = picture {
+                    let weak = picture.downgrade();
+                    let bound = Rc::clone(&bound);
+                    ui.core.artwork.request(title, artist, 168, move |texture, _| {
+                        if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
+                            let still = bound
+                                .borrow()
+                                .get(&key)
+                                .and_then(|w| w.upgrade())
+                                .is_some_and(|current| current == picture);
+                            if still {
+                                picture.set_paintable(Some(texture));
+                            }
+                        }
+                    });
+                }
             }
         });
     }
@@ -172,48 +260,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.upcast()
 }
 
-/// Repaints a single grid cell's artwork after enrichment lands, so covers
-/// stream in live without a full grid rebuild.
-fn refresh_cover(ui: &Rc<Ui>, flow: &gtk::FlowBox, albums: &[Album], title: &str, artist: &str) {
-    let Some(index) = albums
-        .iter()
-        .position(|album| album.title == *title && album.artist == *artist)
-    else {
-        return;
-    };
-    let Some(child) = flow.child_at_index(index as i32) else { return };
-    let Some(picture) = child
-        .child()
-        .and_then(|cell| cell.first_child())
-        .and_then(|widget| widget.downcast::<gtk::Picture>().ok())
-    else {
-        return;
-    };
-    let weak = picture.downgrade();
-    ui.core.artwork.request(title, artist, 168, move |texture, _| {
-        if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
-            picture.set_paintable(Some(texture));
-        }
-    });
-}
-
-/// Digest of the album set itself; only additions, removals, or reorderings
-/// change it, so metadata-only reloads never rebuild the grid's widgets.
-fn albums_identity_fingerprint(albums: &[Album]) -> u64 {
+/// Digest of the album set plus the metadata the grid renders; any add,
+/// removal, reorder, or enriched year/genre changes it, triggering a model
+/// splice (the virtualized GridView only rebinds the handful of visible cells).
+fn albums_fingerprint(albums: &[Album]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for album in albums {
-        let row = format!("{}|{}", album.title, album.artist);
-        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
-    }
-    hash
-}
-
-/// Digest of the enrichable metadata the grid renders, used to decide when an
-/// in-place subtitle refresh of the existing cells is needed.
-fn albums_meta_fingerprint(albums: &[Album]) -> u64 {
-    let mut hash = 0xcbf2_9ce4_8422_2325u64;
-    for album in albums {
-        let row = format!("{:?}|{:?}", album.year, album.genre);
+        let row = format!("{}|{}|{:?}|{:?}", album.title, album.artist, album.year, album.genre);
         hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
     }
     hash
@@ -226,31 +279,27 @@ fn subtitle_text(album: &Album) -> String {
     }
 }
 
-/// Rewrites one existing cell's subtitle label (picture → title → subtitle
-/// order inside the cell box) without recreating the widget tree.
-fn update_cell_subtitle(flow: &gtk::FlowBox, index: usize, album: &Album) {
-    let Some(child) = flow.child_at_index(index as i32) else { return };
-    let Some(subtitle) = child
-        .child()
-        .and_then(|cell| cell.first_child())
-        .and_then(|picture| picture.next_sibling())
-        .and_then(|title| title.next_sibling())
-        .and_then(|widget| widget.downcast::<gtk::Label>().ok())
-    else {
-        return;
-    };
-    let text = subtitle_text(album);
-    if subtitle.label() != text {
-        subtitle.set_label(&text);
-    }
+/// Guards an async artwork callback against GridView cell recycling: the shared
+/// tile widget may have been rebound to a different album by the time a queued
+/// cover decode lands, so only paint if the list item still holds this album.
+fn still_bound_album(item: &glib::WeakRef<gtk::ListItem>, expected: &str) -> bool {
+    item.upgrade()
+        .and_then(|item| item.item())
+        .and_downcast::<BoxedAnyObject>()
+        .is_some_and(|boxed| boxed.borrow::<Album>().key() == expected)
 }
 
-fn album_cell(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
+/// Empty tile shell reused by the GridView factory: cover picture, title, and
+/// subtitle in fixed order (the bind step fills them and requests artwork).
+fn build_album_cell() -> gtk::Box {
     let cell = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(8)
         .width_request(168)
+        .halign(gtk::Align::Center)
+        .valign(gtk::Align::Start)
         .build();
+    cell.add_css_class("album-tile");
 
     let picture = gtk::Picture::builder()
         .width_request(168)
@@ -259,31 +308,17 @@ fn album_cell(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
         .build();
     picture.set_overflow(gtk::Overflow::Hidden);
     picture.add_css_class("cover");
-    picture.set_paintable(Some(&ui.core.artwork.placeholder(&album.key())));
-    {
-        let weak = picture.downgrade();
-        ui.core
-            .artwork
-            .request(&album.title, &album.artist, 168, move |texture, _| {
-                if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
-                    picture.set_paintable(Some(texture));
-                }
-            });
-    }
     cell.append(&picture);
 
     let title = gtk::Label::builder()
-        .label(&album.title)
         .xalign(0.0)
         .ellipsize(pango::EllipsizeMode::End)
         .max_width_chars(18)
-        .tooltip_text(&album.title)
         .build();
     title.add_css_class("album-title");
     cell.append(&title);
 
     let subtitle = gtk::Label::builder()
-        .label(subtitle_text(album))
         .xalign(0.0)
         .ellipsize(pango::EllipsizeMode::End)
         .max_width_chars(20)
@@ -292,10 +327,7 @@ fn album_cell(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
     subtitle.add_css_class("caption");
     cell.append(&subtitle);
 
-    let child = gtk::FlowBoxChild::builder().child(&cell).build();
-    child.add_css_class("album-tile");
-    context::attach_album_context_menu(&child, album.key());
-    child
+    cell
 }
 
 pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {

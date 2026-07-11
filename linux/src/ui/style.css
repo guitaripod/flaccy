@@ -293,6 +293,16 @@
 }
 
 /* ---- library tiles ------------------------------------------------------ */
+.album-grid > child {
+  padding: 12px 9px;
+  background: none;
+}
+
+.album-grid > child:hover,
+.album-grid > child:selected {
+  background: none;
+}
+
 .album-tile {
   border-radius: 14px;
   padding: 8px;
