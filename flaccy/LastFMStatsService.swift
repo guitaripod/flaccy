@@ -251,6 +251,11 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
             page += 1
         } while page <= totalPages && page <= maxPages
 
+        do {
+            try db.reconcilePlayCountsFromScrobbles()
+        } catch {
+            AppLogger.error("Play-count reconcile failed: \(error.localizedDescription)", category: .database)
+        }
         AppLogger.info("Imported \(imported) historical scrobbles", category: .sync)
     }
 }

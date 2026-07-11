@@ -160,6 +160,7 @@ final class ChartsViewModel {
             let imported = max(0, Self.scrobbleCount() - baseline)
             UserDefaults.standard.set(true, forKey: self.importStateKey)
             AppLogger.info("Recap history import finished (\(imported) new scrobbles)", category: .sync)
+            await Library.shared.reloadFromDatabase()
             await MainActor.run {
                 self.importStatePublisher.send(.done(imported: imported))
                 self.load(period: self.selectedPeriod)

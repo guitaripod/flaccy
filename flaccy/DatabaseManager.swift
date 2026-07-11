@@ -777,6 +777,21 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    /// Backfills each track's play count and last-played time from the scrobble
+    /// history (which includes imported Last.fm plays), so the Plays column and
+    /// every play-based sort reflect a freshly imported history rather than only
+    /// local playback.
+    func reconcilePlayCountsFromScrobbles() throws {
+        try dbQueue.write { db in
+            try db.execute(sql: """
+                UPDATE tracks SET
+                    playCount = (SELECT COUNT(*) FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist),
+                    lastPlayed = (SELECT MAX(s.timestamp) FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist)
+                WHERE EXISTS (SELECT 1 FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist)
+            """)
+        }
+    }
+
     func incrementPlayCount(trackId: Int64) throws {
         try dbQueue.write { db in
             if var track = try TrackRecord.fetchOne(db, id: trackId) {
