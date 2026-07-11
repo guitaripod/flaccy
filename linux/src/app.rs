@@ -95,12 +95,13 @@ impl AppCore {
             return;
         }
         let db_path = self.db_path.clone();
+        let group_album_editions = self.config.borrow().group_album_editions;
         let (tx, rx) = async_channel::bounded::<(Library, Vec<(String, f64)>)>(1);
         std::thread::Builder::new()
             .name("flaccy-reload".into())
             .spawn(move || {
                 let Ok(db) = Db::open(&db_path) else { return };
-                let library = library::load(&db);
+                let library = library::load(&db, group_album_editions);
                 let now = chrono::Utc::now().timestamp();
                 let weights = db
                     .track_sort_keys()

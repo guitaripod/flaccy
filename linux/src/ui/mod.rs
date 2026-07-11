@@ -1,6 +1,7 @@
 pub mod albums;
 pub mod artists;
 pub mod artwork;
+pub mod cleanup;
 pub mod context;
 pub mod guide;
 pub mod lyrics_panel;

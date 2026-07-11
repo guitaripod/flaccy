@@ -13,6 +13,7 @@ pub struct Config {
     pub volume: f64,
     pub appearance: String,
     pub autoplay_continuation: bool,
+    pub group_album_editions: bool,
     pub import_page_cursor: u32,
     pub sidebar_index: i32,
 }
@@ -26,6 +27,7 @@ impl Default for Config {
             volume: 0.9,
             appearance: "system".to_string(),
             autoplay_continuation: true,
+            group_album_editions: true,
             import_page_cursor: 1,
             sidebar_index: 0,
         }

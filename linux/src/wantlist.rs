@@ -18,12 +18,11 @@ const RELEASE_WINDOW_SECONDS: i64 = 120 * 24 * 3600;
 const RELEASE_ARTIST_LIMIT: usize = 15;
 const ITUNES_THROTTLE: Duration = Duration::from_secs(3);
 
-const EDITION_KEYWORDS: [&str; 24] = [
+pub const EDITION_KEYWORDS: [&str; 25] = [
     "deluxe", "edition", "remaster", "bonus", "expanded", "anniversary", "special", "extended",
     "complete", "reissue", "version", "collector", "platinum", "legacy", "super", "tour", "feat",
-    "ft.", "with", "explicit", "clean", "mono", "stereo", "single",
+    "ft.", "with", "explicit", "clean", "mono", "stereo", "single", "ep",
 ];
-const EDITION_KEYWORD_EP: &str = "ep";
 
 /// Strips diacritics and every non-alphanumeric character, lowercased —
 /// the iOS WantlistOwnership.normalize.
@@ -71,20 +70,20 @@ fn fold_diacritic(c: char) -> Vec<char> {
     folded.chars().collect()
 }
 
-fn contains_edition_keyword(segment: &str) -> bool {
+pub fn contains_edition_keyword(segment: &str, keywords: &[&str]) -> bool {
     let lowered = segment.to_lowercase();
     let words = lowered
         .split(|c: char| !c.is_alphanumeric())
         .filter(|w| !w.is_empty());
     for word in words {
-        if EDITION_KEYWORDS.contains(&word) || word == EDITION_KEYWORD_EP {
+        if keywords.contains(&word) {
             return true;
         }
     }
-    lowered.contains("ft.")
+    keywords.contains(&"ft.") && lowered.contains("ft.")
 }
 
-fn strip_decorated_brackets(value: &str) -> String {
+pub fn strip_decorated_brackets(value: &str, keywords: &[&str]) -> String {
     let mut result = value.to_string();
     for (open, close) in [('(', ')'), ('[', ']'), ('{', '}')] {
         let mut search_from = 0usize;
@@ -95,7 +94,7 @@ fn strip_decorated_brackets(value: &str) -> String {
             };
             let close_index = open_index + open.len_utf8() + close_offset;
             let segment = &result[open_index + open.len_utf8()..close_index];
-            if contains_edition_keyword(segment) {
+            if contains_edition_keyword(segment, keywords) {
                 result.replace_range(open_index..close_index + close.len_utf8(), "");
                 search_from = 0;
             } else {
@@ -108,13 +107,20 @@ fn strip_decorated_brackets(value: &str) -> String {
 
 /// Reduces a title to its edition-free base: decorated brackets removed, then
 /// dash/colon suffixes dropped when they carry an edition keyword, then fully
-/// normalized (iOS WantlistOwnership.baseTitle).
+/// normalized (iOS WantlistOwnership.baseTitle). The wantlist keyword set.
 pub fn base_title(raw: &str) -> String {
-    let mut title = strip_decorated_brackets(&raw.to_lowercase());
+    base_title_with(raw, &EDITION_KEYWORDS)
+}
+
+/// The keyword-parametrized base-title reduction backing both the wantlist
+/// (full `EDITION_KEYWORDS`) and library consolidation (`CONSOLIDATION_KEYWORDS`)
+/// so the strip logic is never forked.
+pub fn base_title_with(raw: &str, keywords: &[&str]) -> String {
+    let mut title = strip_decorated_brackets(&raw.to_lowercase(), keywords);
     for separator in [" - ", ": ", " – "] {
         if let Some(index) = title.find(separator) {
             let suffix = &title[index + separator.len()..];
-            if contains_edition_keyword(suffix) {
+            if contains_edition_keyword(suffix, keywords) {
                 title.truncate(index);
             }
         }

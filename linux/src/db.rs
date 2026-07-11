@@ -486,6 +486,90 @@ impl Db {
         Ok(())
     }
 
+    pub fn set_play_count(&self, rel_path: &str, count: i64) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "UPDATE tracks SET playCount = ?1 WHERE fileURL = ?2",
+            params![count, rel_path],
+        )?;
+        Ok(())
+    }
+
+    /// Rewrites the album title of every track in a variant pressing to the
+    /// canonical title, physically fusing library editions. Diff-based rescans
+    /// never re-read existing rows, so this persists.
+    pub fn rewrite_album_title(
+        &self,
+        from_title: &str,
+        to_title: &str,
+        artist: &str,
+    ) -> Result<usize, rusqlite::Error> {
+        self.conn.execute(
+            "UPDATE tracks SET albumTitle = ?1 WHERE artist = ?2 AND albumTitle = ?3",
+            params![to_title, artist, from_title],
+        )
+    }
+
+    /// Folds the enrichment fields of variant `albumInfo` rows into the
+    /// canonical row (COALESCE, mirroring `apply_album_enrichment`) then deletes
+    /// the now-orphaned variant rows.
+    pub fn merge_album_info(
+        &self,
+        canonical_title: &str,
+        variant_titles: &[String],
+        artist: &str,
+    ) -> Result<(), rusqlite::Error> {
+        self.conn.execute_batch("BEGIN IMMEDIATE")?;
+        let result = self.merge_album_info_inner(canonical_title, variant_titles, artist);
+        match result {
+            Ok(()) => self.conn.execute_batch("COMMIT").map(|_| ()),
+            Err(err) => {
+                let _ = self.conn.execute_batch("ROLLBACK");
+                Err(err)
+            }
+        }
+    }
+
+    fn merge_album_info_inner(
+        &self,
+        canonical_title: &str,
+        variant_titles: &[String],
+        artist: &str,
+    ) -> Result<(), rusqlite::Error> {
+        for variant in variant_titles {
+            if variant == canonical_title {
+                continue;
+            }
+            self.conn.execute(
+                "INSERT INTO albumInfo
+                    (title, artist, year, genre, coverArtURL, coverArtData, musicBrainzID, lastFetched)
+                 SELECT ?1, ?2, year, genre, coverArtURL, coverArtData, musicBrainzID, lastFetched
+                 FROM albumInfo WHERE title = ?3 AND artist = ?2
+                 ON CONFLICT(title, artist) DO UPDATE SET
+                    year = COALESCE(albumInfo.year, excluded.year),
+                    genre = COALESCE(albumInfo.genre, excluded.genre),
+                    coverArtURL = COALESCE(albumInfo.coverArtURL, excluded.coverArtURL),
+                    coverArtData = COALESCE(albumInfo.coverArtData, excluded.coverArtData),
+                    musicBrainzID = COALESCE(albumInfo.musicBrainzID, excluded.musicBrainzID)",
+                params![canonical_title, artist, variant],
+            )?;
+            self.conn.execute(
+                "DELETE FROM albumInfo WHERE title = ?1 AND artist = ?2",
+                params![variant, artist],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn delete_track_by_rel_path(&self, rel_path: &str) -> Result<(), rusqlite::Error> {
+        self.conn
+            .execute("DELETE FROM tracks WHERE fileURL = ?1", params![rel_path])?;
+        self.conn.execute(
+            "DELETE FROM playlistTracks WHERE trackFileURL = ?1",
+            params![rel_path],
+        )?;
+        Ok(())
+    }
+
     pub fn insert_scrobble(
         &self,
         title: &str,

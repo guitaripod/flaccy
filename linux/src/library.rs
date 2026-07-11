@@ -108,7 +108,7 @@ impl Library {
     }
 }
 
-pub fn load(db: &Db) -> Library {
+pub fn load(db: &Db, group_album_editions: bool) -> Library {
     let tracks = db.fetch_all_tracks();
     let meta = db.album_meta();
 
@@ -142,6 +142,9 @@ pub fn load(db: &Db) -> Library {
             })
         })
         .collect();
+    if group_album_editions {
+        albums = crate::hygiene::consolidate_albums(albums);
+    }
     albums.sort_by(|a, b| {
         a.artist
             .to_lowercase()

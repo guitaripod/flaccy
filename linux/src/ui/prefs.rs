@@ -116,18 +116,55 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
     group.add(&autoplay_row);
 
+    let group_editions_row = adw::SwitchRow::builder()
+        .title("Group Album Editions")
+        .subtitle("Fold deluxe, remaster and explicit variants into one album")
+        .active(ui.core.config.borrow().group_album_editions)
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        group_editions_row.connect_active_notify(move |row| {
+            ui.core.config.borrow_mut().group_album_editions = row.is_active();
+            ui.core.save_config();
+            crate::logger::info(
+                "ui",
+                &format!("group album editions set to {}", row.is_active()),
+            );
+            ui.core.reload_library();
+        });
+    }
+    group.add(&group_editions_row);
+
     let rescan_row = adw::ActionRow::builder()
         .title("Rescan Library")
         .subtitle("Diff the folder against the database")
         .build();
-    let rescan = gtk::Button::with_label("Rescan");
-    rescan.set_valign(gtk::Align::Center);
+    let rescan = gtk::Button::builder()
+        .child(&adw::ButtonContent::builder().icon_name("view-refresh-symbolic").label("Rescan").build())
+        .valign(gtk::Align::Center)
+        .build();
     {
         let ui = Rc::clone(ui);
         rescan.connect_clicked(move |_| ui.core.rescan());
     }
     rescan_row.add_suffix(&rescan);
     group.add(&rescan_row);
+
+    let cleanup_row = adw::ActionRow::builder()
+        .title("Clean Up Library…")
+        .subtitle("Trash duplicate files and merge album editions")
+        .build();
+    let cleanup = gtk::Button::builder()
+        .child(&adw::ButtonContent::builder().icon_name("edit-clear-all-symbolic").label("Clean Up…").build())
+        .valign(gtk::Align::Center)
+        .build();
+    cleanup.add_css_class("destructive-action");
+    {
+        let ui = Rc::clone(ui);
+        cleanup.connect_clicked(move |_| crate::ui::cleanup::present(&ui));
+    }
+    cleanup_row.add_suffix(&cleanup);
+    group.add(&cleanup_row);
 
     group
 }

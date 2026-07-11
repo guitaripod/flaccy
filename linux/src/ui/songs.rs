@@ -4,9 +4,11 @@ use crate::ui::{context, Ui};
 use adw::prelude::*;
 use gtk::glib::BoxedAnyObject;
 use gtk::pango;
-use gtk::{gio, gdk};
+use gtk::{gdk, gio};
 use std::cmp::Ordering;
 use std::rc::Rc;
+
+type MenuHandler = dyn Fn(&Track, &gtk::Widget, f64, f64);
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let store = gio::ListStore::new::<BoxedAnyObject>();
@@ -36,50 +38,92 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
 
     let column_view = gtk::ColumnView::builder()
-        .reorderable(false)
+        .reorderable(true)
         .show_row_separators(false)
         .build();
     column_view.add_css_class("data-table");
 
     let sort_model = gtk::SortListModel::new(Some(filter_model), column_view.sorter());
-    let selection = gtk::SingleSelection::new(Some(sort_model));
+    let selection = gtk::MultiSelection::new(Some(sort_model));
     column_view.set_model(Some(&selection));
 
+    let menu_handler: Rc<MenuHandler> = {
+        let ui = Rc::clone(ui);
+        let selection = selection.clone();
+        Rc::new(move |track, anchor, x, y| {
+            let selected = selected_tracks(&selection);
+            let clicked_in_selection = selected.iter().any(|t| t.rel_path == track.rel_path);
+            if selected.len() >= 2 && clicked_in_selection {
+                let has_duplicates = !crate::hygiene::find_duplicate_groups(
+                    &selected,
+                    &ui.core.music_root(),
+                )
+                .is_empty();
+                context::popup_menu_at(anchor, &bulk_menu(selected.len(), has_duplicates), x, y);
+            } else {
+                let menu = context::track_menu(&ui.core, &track.rel_path, track.loved);
+                context::popup_menu_at(anchor, &menu, x, y);
+            }
+        })
+    };
+    install_bulk_actions(&column_view, ui, &selection);
+
+    column_view.append_column(&string_column(
+        "Track #",
+        false,
+        |track| {
+            if track.track_number > 0 {
+                track.track_number.to_string()
+            } else {
+                String::new()
+            }
+        },
+        |a, b| a.track_number.cmp(&b.track_number),
+        None,
+    ));
     let title_column = string_column(
-        ui,
         "Title",
         true,
         |track| track.title.clone(),
         |a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()),
-        true,
+        Some(Rc::clone(&menu_handler)),
     );
     column_view.append_column(&title_column);
     column_view.append_column(&string_column(
-        ui,
         "Artist",
         true,
         |track| track.artist.clone(),
         |a, b| a.artist.to_lowercase().cmp(&b.artist.to_lowercase()),
-        false,
+        None,
     ));
     column_view.append_column(&string_column(
-        ui,
         "Album",
         true,
         |track| track.album.clone(),
         |a, b| a.album.to_lowercase().cmp(&b.album.to_lowercase()),
-        false,
+        None,
     ));
     column_view.append_column(&string_column(
-        ui,
         "Duration",
         false,
         |track| format_time(track.duration),
         |a, b| a.duration.partial_cmp(&b.duration).unwrap_or(Ordering::Equal),
-        false,
+        None,
     ));
     column_view.append_column(&string_column(
-        ui,
+        "Plays",
+        false,
+        |track| {
+            if track.play_count > 0 {
+                track.play_count.to_string()
+            } else {
+                String::new()
+            }
+        },
+        |a, b| a.play_count.cmp(&b.play_count),
+        None,
+    ));
+    column_view.append_column(&string_column(
         "Quality",
         false,
         |track| track.quality_badge().unwrap_or_default(),
@@ -89,7 +133,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             };
             score(a).cmp(&score(b))
         },
-        false,
+        None,
     ));
 
     column_view.sort_by_column(Some(&title_column), gtk::SortType::Ascending);
@@ -185,6 +229,129 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.upcast()
 }
 
+/// Collects the tracks currently highlighted in the multi-selection, in model
+/// order, for the bulk context-menu actions.
+fn selected_tracks(selection: &gtk::MultiSelection) -> Vec<Track> {
+    let mut tracks = Vec::new();
+    for position in 0..selection.n_items() {
+        if selection.is_selected(position) {
+            if let Some(boxed) = selection.item(position).and_downcast::<BoxedAnyObject>() {
+                tracks.push(boxed.borrow::<Track>().clone());
+            }
+        }
+    }
+    tracks
+}
+
+/// Registers the `songs.*` action group backing the multi-select context menu;
+/// each action resolves the live selection at activation time.
+fn install_bulk_actions(column_view: &gtk::ColumnView, ui: &Rc<Ui>, selection: &gtk::MultiSelection) {
+    let actions = gio::SimpleActionGroup::new();
+
+    let add = |name: &str, handler: Box<dyn Fn(Vec<Track>)>| {
+        let action = gio::SimpleAction::new(name, None);
+        let selection = selection.clone();
+        action.connect_activate(move |_, _| handler(selected_tracks(&selection)));
+        actions.add_action(&action);
+    };
+
+    {
+        let ui = Rc::clone(ui);
+        add(
+            "bulk-play",
+            Box::new(move |tracks| {
+                if !tracks.is_empty() {
+                    ui.core.play_tracks(tracks, 0);
+                }
+            }),
+        );
+    }
+    {
+        let ui = Rc::clone(ui);
+        add(
+            "bulk-play-next",
+            Box::new(move |tracks| {
+                for track in tracks.iter().rev() {
+                    ui.core.player.insert_next(track.clone());
+                }
+            }),
+        );
+    }
+    {
+        let ui = Rc::clone(ui);
+        add(
+            "bulk-queue",
+            Box::new(move |tracks| {
+                for track in &tracks {
+                    ui.core.player.add_to_queue(track.clone());
+                }
+            }),
+        );
+    }
+    {
+        let ui = Rc::clone(ui);
+        add(
+            "bulk-love",
+            Box::new(move |tracks| {
+                for track in &tracks {
+                    if !track.loved {
+                        ui.core.toggle_love(&track.rel_path);
+                    }
+                }
+            }),
+        );
+    }
+    {
+        let ui = Rc::clone(ui);
+        add(
+            "bulk-unlove",
+            Box::new(move |tracks| {
+                for track in &tracks {
+                    if track.loved {
+                        ui.core.toggle_love(&track.rel_path);
+                    }
+                }
+            }),
+        );
+    }
+    {
+        let ui = Rc::clone(ui);
+        add(
+            "bulk-dedup",
+            Box::new(move |tracks| crate::ui::cleanup::present_selection_dedup(&ui, tracks)),
+        );
+    }
+
+    column_view.insert_action_group("songs", Some(&actions));
+}
+
+fn bulk_menu(count: usize, has_duplicates: bool) -> gio::Menu {
+    let menu = gio::Menu::new();
+    let play_section = gio::Menu::new();
+    play_section.append(Some(&format!("Play {count} Songs")), Some("songs.bulk-play"));
+    menu.append_section(None, &play_section);
+
+    let queue_section = gio::Menu::new();
+    queue_section.append(Some("Play Next"), Some("songs.bulk-play-next"));
+    queue_section.append(Some("Add to Queue"), Some("songs.bulk-queue"));
+    menu.append_section(None, &queue_section);
+
+    let love_section = gio::Menu::new();
+    love_section.append(Some("Love on Last.fm"), Some("songs.bulk-love"));
+    love_section.append(Some("Unlove"), Some("songs.bulk-unlove"));
+    menu.append_section(None, &love_section);
+
+    if has_duplicates {
+        let dedup_section = gio::Menu::new();
+        dedup_section.append(
+            Some("Remove Duplicates in Selection"),
+            Some("songs.bulk-dedup"),
+        );
+        menu.append_section(None, &dedup_section);
+    }
+    menu
+}
+
 /// Order-sensitive digest of every field the songs table renders or filters
 /// on, so redundant LibraryReloaded emissions (e.g. from enrichment passes
 /// that only touch album metadata) skip the expensive model rebuild.
@@ -192,13 +359,15 @@ fn tracks_fingerprint(tracks: &[Track]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for track in tracks {
         let row = format!(
-            "{}|{}|{}|{}|{}|{}|{:?}|{:?}|{:?}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{:?}|{:?}|{:?}",
             track.rel_path,
             track.title,
             track.artist,
             track.album,
             track.loved,
             track.duration,
+            track.track_number,
+            track.play_count,
             track.codec,
             track.bit_depth,
             track.sample_rate
@@ -209,15 +378,13 @@ fn tracks_fingerprint(tracks: &[Track]) -> u64 {
 }
 
 fn string_column(
-    ui: &Rc<Ui>,
     title: &str,
     expand: bool,
     text_for: impl Fn(&Track) -> String + 'static,
     compare: impl Fn(&Track, &Track) -> Ordering + 'static,
-    with_context_menu: bool,
+    menu: Option<Rc<MenuHandler>>,
 ) -> gtk::ColumnViewColumn {
     let factory = gtk::SignalListItemFactory::new();
-    let core = Rc::clone(&ui.core);
     factory.connect_setup(move |_, item| {
         let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
         let label = gtk::Label::builder()
@@ -225,12 +392,11 @@ fn string_column(
             .ellipsize(pango::EllipsizeMode::End)
             .build();
         item.set_child(Some(&label));
-        if with_context_menu {
+        if let Some(menu) = menu.clone() {
             let gesture = gtk::GestureClick::builder()
                 .button(gdk::BUTTON_SECONDARY)
                 .build();
             let item_weak = item.downgrade();
-            let core = Rc::clone(&core);
             let label_ref = label.clone();
             gesture.connect_pressed(move |_, _, x, y| {
                 let Some(item) = item_weak.upgrade() else { return };
@@ -238,8 +404,7 @@ fn string_column(
                     return;
                 };
                 let track = boxed.borrow::<Track>().clone();
-                let menu = context::track_menu(&core, &track.rel_path, track.loved);
-                context::popup_menu_at(&label_ref, &menu, x, y);
+                menu(&track, label_ref.upcast_ref::<gtk::Widget>(), x, y);
             });
             label.add_controller(gesture);
         }
@@ -263,7 +428,11 @@ fn string_column(
         ) else {
             return gtk::Ordering::Equal;
         };
-        compare(&a.borrow::<Track>(), &b.borrow::<Track>()).into()
+        let track_a = a.borrow::<Track>();
+        let track_b = b.borrow::<Track>();
+        compare(&track_a, &track_b)
+            .then_with(|| track_a.rel_path.cmp(&track_b.rel_path))
+            .into()
     });
 
     gtk::ColumnViewColumn::builder()

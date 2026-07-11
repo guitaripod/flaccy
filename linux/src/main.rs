@@ -3,6 +3,7 @@ mod config;
 mod db;
 mod enrichment;
 mod events;
+mod hygiene;
 mod importer;
 mod lastfm;
 mod library;

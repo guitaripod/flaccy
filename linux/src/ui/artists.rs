@@ -1,5 +1,5 @@
 use crate::events::AppEvent;
-use crate::library::Album;
+use crate::library::{Album, ArtistEntry};
 use crate::ui::{albums, Ui};
 use adw::prelude::*;
 use gtk::pango;
@@ -7,39 +7,47 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
-    let list = gtk::ListBox::builder()
+    let flow = gtk::FlowBox::builder()
         .selection_mode(gtk::SelectionMode::None)
-        .margin_top(18)
-        .margin_bottom(18)
-        .margin_start(18)
-        .margin_end(18)
+        .homogeneous(true)
+        .column_spacing(18)
+        .row_spacing(24)
+        .margin_top(24)
+        .margin_bottom(24)
+        .margin_start(24)
+        .margin_end(24)
+        .min_children_per_line(2)
+        .max_children_per_line(10)
         .valign(gtk::Align::Start)
+        .activate_on_single_click(true)
         .build();
-    list.add_css_class("boxed-list");
 
-    let names: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let entries: Rc<RefCell<Vec<ArtistEntry>>> = Rc::new(RefCell::new(Vec::new()));
 
     {
         let query = Rc::clone(&ui.query);
-        let names = Rc::clone(&names);
-        list.set_filter_func(move |row| {
+        let entries = Rc::clone(&entries);
+        flow.set_filter_func(move |child| {
             let query = query.borrow();
             if query.is_empty() {
                 return true;
             }
-            names
+            entries
                 .borrow()
-                .get(row.index().max(0) as usize)
-                .map(|name| name.to_lowercase().contains(&query.to_lowercase()))
+                .get(child.index().max(0) as usize)
+                .map(|entry| entry.name.to_lowercase().contains(&query.to_lowercase()))
                 .unwrap_or(true)
         });
     }
 
     {
         let ui = Rc::clone(ui);
-        let names = Rc::clone(&names);
-        list.connect_row_activated(move |_, row| {
-            let name = names.borrow().get(row.index().max(0) as usize).cloned();
+        let entries = Rc::clone(&entries);
+        flow.connect_child_activated(move |_, child| {
+            let name = entries
+                .borrow()
+                .get(child.index().max(0) as usize)
+                .map(|entry| entry.name.clone());
             if let Some(name) = name {
                 push_artist_page(&ui, &name);
             }
@@ -54,86 +62,92 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&adw::Clamp::builder().maximum_size(760).child(&list).build())
+        .child(&flow)
         .build();
 
     let stack = gtk::Stack::new();
     stack.add_named(&empty, Some("empty"));
-    stack.add_named(&scroll, Some("list"));
+    stack.add_named(&scroll, Some("grid"));
 
     let rebuild = {
-        let list = list.clone();
+        let flow = flow.clone();
         let stack = stack.clone();
-        let names = Rc::clone(&names);
+        let entries = Rc::clone(&entries);
         let ui = Rc::clone(ui);
         let applied = std::cell::Cell::new(0u64);
         move || {
             let library = ui.core.library.borrow().clone();
             let fingerprint = artists_fingerprint(&library.artists);
-            if applied.replace(fingerprint) == fingerprint {
-                return;
+            if applied.replace(fingerprint) != fingerprint {
+                while let Some(child) = flow.first_child() {
+                    flow.remove(&child);
+                }
+                for artist in &library.artists {
+                    flow.append(&artist_cell(artist));
+                }
+                *entries.borrow_mut() = library.artists.clone();
             }
-            while let Some(child) = list.first_child() {
-                list.remove(&child);
-            }
-            let mut collected = Vec::new();
-            for artist in &library.artists {
-                collected.push(artist.name.clone());
-                let row_box = gtk::Box::builder()
-                    .orientation(gtk::Orientation::Horizontal)
-                    .spacing(14)
-                    .margin_top(8)
-                    .margin_bottom(8)
-                    .margin_start(10)
-                    .margin_end(10)
-                    .build();
-                let avatar = adw::Avatar::new(44, Some(&artist.name), true);
-                row_box.append(&avatar);
-                let text_box = gtk::Box::new(gtk::Orientation::Vertical, 2);
-                let name = gtk::Label::builder()
-                    .label(&artist.name)
-                    .xalign(0.0)
-                    .ellipsize(pango::EllipsizeMode::End)
-                    .build();
-                name.add_css_class("album-title");
-                text_box.append(&name);
-                let counts = gtk::Label::builder()
-                    .label(format!(
-                        "{} album{} · {} track{}",
-                        artist.album_count,
-                        if artist.album_count == 1 { "" } else { "s" },
-                        artist.track_count,
-                        if artist.track_count == 1 { "" } else { "s" }
-                    ))
-                    .xalign(0.0)
-                    .build();
-                counts.add_css_class("dim");
-                counts.add_css_class("caption");
-                text_box.append(&counts);
-                row_box.append(&text_box);
-                list.append(&gtk::ListBoxRow::builder().child(&row_box).build());
-            }
-            *names.borrow_mut() = collected;
             stack.set_visible_child_name(if library.artists.is_empty() {
                 "empty"
             } else {
-                "list"
+                "grid"
             });
         }
     };
     rebuild();
 
     {
-        let list = list.clone();
+        let flow = flow.clone();
         let rebuild = rebuild.clone();
         ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
             AppEvent::LibraryReloaded => rebuild(),
-            AppEvent::SearchChanged(_) => list.invalidate_filter(),
+            AppEvent::SearchChanged(_) => flow.invalidate_filter(),
             _ => {}
         });
     }
 
     stack.upcast()
+}
+
+fn artist_cell(artist: &ArtistEntry) -> gtk::FlowBoxChild {
+    let cell = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(8)
+        .width_request(168)
+        .build();
+
+    let avatar = adw::Avatar::new(120, Some(&artist.name), true);
+    avatar.set_halign(gtk::Align::Center);
+    cell.append(&avatar);
+
+    let name = gtk::Label::builder()
+        .label(&artist.name)
+        .halign(gtk::Align::Center)
+        .justify(gtk::Justification::Center)
+        .ellipsize(pango::EllipsizeMode::End)
+        .max_width_chars(18)
+        .tooltip_text(&artist.name)
+        .build();
+    name.add_css_class("album-title");
+    cell.append(&name);
+
+    let counts = gtk::Label::builder()
+        .label(format!(
+            "{} album{} · {} track{}",
+            artist.album_count,
+            if artist.album_count == 1 { "" } else { "s" },
+            artist.track_count,
+            if artist.track_count == 1 { "" } else { "s" }
+        ))
+        .halign(gtk::Align::Center)
+        .build();
+    counts.add_css_class("dim");
+    counts.add_css_class("caption");
+    cell.append(&counts);
+
+    let child = gtk::FlowBoxChild::builder().child(&cell).build();
+    child.add_css_class("album-tile");
+    child
 }
 
 pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
