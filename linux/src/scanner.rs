@@ -55,7 +55,9 @@ fn run_scan(
     let mut added = 0;
 
     for (index, path) in to_add.iter().enumerate() {
-        let _ = tx.send_blocking(ScanEvent::Progress(index + 1, total));
+        if index % 25 == 0 || index + 1 == total {
+            let _ = tx.send_blocking(ScanEvent::Progress(index + 1, total));
+        }
         let rel = relative_path(root, path);
         match read_track(path, &rel) {
             Some(track) => {

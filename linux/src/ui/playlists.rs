@@ -195,10 +195,15 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
                 list.remove(&child);
             }
             let library = ui.core.library.borrow().clone();
+            let by_rel_path: std::collections::HashMap<&str, &Track> = library
+                .tracks
+                .iter()
+                .map(|track| (track.rel_path.as_str(), track))
+                .collect();
             let rows = ui.core.db.playlist_tracks(playlist_id);
             let mut collected = Vec::new();
             for row in rows {
-                let Some(track) = library.track_by_rel_path(&row.rel_path).cloned() else {
+                let Some(track) = by_rel_path.get(row.rel_path.as_str()).map(|t| (*t).clone()) else {
                     continue;
                 };
                 collected.push((row.row_id, track.clone()));
