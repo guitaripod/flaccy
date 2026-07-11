@@ -32,19 +32,20 @@ nonisolated enum LibraryHygiene {
     /// Crane", "Earth, Wind & Fire") are preserved.
     static func primaryArtist(_ raw: String) -> String {
         var name = raw
-        for separator in [";", " / ", " × ", " vs. "] {
+        for separator in [";", " / ", " × ", " x ", " & ", " + ", " vs. ", " vs ", " feat. ", " feat ",
+                          " ft. ", " ft ", " featuring ", " (feat.", " (ft.", " (featuring", " with "] {
             if let range = name.range(of: separator, options: [.caseInsensitive]) {
                 name = String(name[..<range.lowerBound])
             }
         }
-        for marker in [" feat. ", " feat ", " ft. ", " ft ", " featuring ", " (feat.", " (ft.", " (featuring"] {
-            if let range = name.range(of: marker, options: [.caseInsensitive]) {
-                name = String(name[..<range.lowerBound])
-                break
-            }
-        }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? raw : trimmed
+    }
+
+    /// Case-insensitive grouping key for an artist credit, folding both
+    /// collaborators and casing variants ("deadmau5" / "Deadmau5") together.
+    static func artistKey(_ credit: String) -> String {
+        primaryArtist(credit).lowercased()
     }
 
     static func normalize(_ value: String) -> String {

@@ -448,9 +448,9 @@ final class LibraryViewModel {
             }
         case .recentlyPlayed:
             let played = artistLastPlayedMap()
-            let hasPlay = artists.filter { played[$0.name] != nil }
-                .sorted { (played[$0.name] ?? .distantPast) > (played[$1.name] ?? .distantPast) }
-            let noPlay = artists.filter { played[$0.name] == nil }
+            let hasPlay = artists.filter { played[$0.name.lowercased()] != nil }
+                .sorted { (played[$0.name.lowercased()] ?? .distantPast) > (played[$1.name.lowercased()] ?? .distantPast) }
+            let noPlay = artists.filter { played[$0.name.lowercased()] == nil }
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             result = hasPlay + noPlay
         }
@@ -472,7 +472,7 @@ final class LibraryViewModel {
         var map = [String: Date]()
         for meta in trackMeta.values {
             guard let lastPlayed = meta.lastPlayed else { continue }
-            let key = artistGroupKey(meta.track.artist)
+            let key = artistGroupKey(meta.track.artist).lowercased()
             if let existing = map[key] {
                 if lastPlayed > existing { map[key] = lastPlayed }
             } else {
@@ -527,16 +527,21 @@ final class LibraryViewModel {
     var artists: [ArtistItem] {
         var seen = [String: ArtistItem]()
         for album in library.albums {
-            let name = artistGroupKey(album.artist)
-            if let existing = seen[name] {
-                seen[name] = ArtistItem(
-                    name: name,
+            let display = artistGroupKey(album.artist)
+            #if os(macOS)
+            let key = display.lowercased()
+            #else
+            let key = display
+            #endif
+            if let existing = seen[key] {
+                seen[key] = ArtistItem(
+                    name: existing.name,
                     albumCount: existing.albumCount + 1,
                     artwork: existing.artwork ?? album.artwork
                 )
             } else {
-                seen[name] = ArtistItem(
-                    name: name,
+                seen[key] = ArtistItem(
+                    name: display,
                     albumCount: 1,
                     artwork: album.artwork
                 )
