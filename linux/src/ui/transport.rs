@@ -331,9 +331,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                             .artwork
                             .placeholder(&format!("{}|{}", track.album, track.artist)),
                     ));
-                    let (seed_color, _) =
-                        crate::palette::placeholder_colors(&format!("{}|{}", track.album, track.artist));
-                    set_adaptive_accent(Some(seed_color));
+                    let seed_color =
+                        crate::palette::placeholder_colors(&format!("{}|{}", track.album, track.artist)).0;
                     if ui_ref.core.player.is_playing() {
                         bar_ref.add_css_class("playing");
                         equalizer.set_visible(true);
@@ -347,9 +346,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                             if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
                                 picture.set_paintable(Some(texture));
                             }
-                            if let Some(color) = color {
-                                set_adaptive_accent(Some(color));
-                            }
+                            // One accent update per track — the cover's real
+                            // dominant color, or the placeholder color when the
+                            // album has no embedded art. The controller
+                            // coalesces + skips no-op reloads.
+                            set_adaptive_accent(Some(color.unwrap_or(seed_color)));
                         },
                     );
                 }

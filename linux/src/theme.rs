@@ -1,6 +1,8 @@
 use gtk::gdk;
+use gtk::glib;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::time::Duration;
 
 /// The palette the app is currently tinted with. Fixed presets carry a seed
 /// hue; `Adaptive` follows the now-playing artwork's dominant color.
@@ -286,6 +288,8 @@ pub struct ThemeController {
     artwork_seed: RefCell<Option<(u8, u8, u8)>>,
     accent: Cell<(u8, u8, u8)>,
     listeners: RefCell<Vec<Box<dyn Fn() -> bool>>>,
+    last_css: RefCell<String>,
+    refresh_pending: Cell<bool>,
 }
 
 /// The current accent as normalized 0..1 RGB, for Cairo-drawn surfaces (stats
@@ -321,6 +325,8 @@ impl ThemeController {
             artwork_seed: RefCell::new(None),
             accent: Cell::new((0x5b, 0x9d, 0xf5)),
             listeners: RefCell::new(Vec::new()),
+            last_css: RefCell::new(String::new()),
+            refresh_pending: Cell::new(false),
         });
         controller.refresh();
 
@@ -352,8 +358,24 @@ impl ThemeController {
     pub fn set_artwork_color(&self, color: Option<(u8, u8, u8)>) {
         *self.artwork_seed.borrow_mut() = color;
         if self.theme.get().follows_artwork() {
-            self.refresh();
+            self.schedule_refresh();
         }
+    }
+
+    /// Coalesces rapid now-playing color changes (queue clicks, skips) into a
+    /// single throttled reload, so a track change never blocks the main thread
+    /// with an app-wide restyle. The reload also self-skips when the resolved
+    /// palette is unchanged (same album, or fallback-to-fallback).
+    fn schedule_refresh(&self) {
+        if self.refresh_pending.replace(true) {
+            return;
+        }
+        glib::timeout_add_local_once(Duration::from_millis(180), || {
+            if let Some(controller) = Self::current() {
+                controller.refresh_pending.set(false);
+                controller.refresh();
+            }
+        });
     }
 
     /// Registers a widget to be notified (self-pruning on drop) whenever the
@@ -391,8 +413,13 @@ impl ThemeController {
         let theme = self.theme.get();
         let dark = adw::StyleManager::default().is_dark();
         let palette = resolve(self.seed(), theme == Theme::Mono, dark);
+        let css = generate_css(&palette);
+        if *self.last_css.borrow() == css {
+            return;
+        }
+        *self.last_css.borrow_mut() = css.clone();
         self.accent.set(palette.accent_bg);
-        self.provider.load_from_string(&generate_css(&palette));
+        self.provider.load_from_string(&css);
         self.listeners.borrow_mut().retain(|listener| listener());
     }
 }
