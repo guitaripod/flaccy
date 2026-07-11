@@ -119,7 +119,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 flow.remove(&child);
             }
             for artist in &sorted {
-                let cover = covers.borrow().get(&artist.name).cloned();
+                let cover = covers.borrow().get(&artist.name.to_lowercase()).cloned();
                 flow.append(&artist_cell(&ui, artist, cover.as_ref()));
             }
             *entries.borrow_mut() = sorted;
@@ -193,7 +193,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 fn representative_covers(albums: &[Album]) -> HashMap<String, (String, String)> {
     let mut best: HashMap<String, &Album> = HashMap::new();
     for album in albums {
-        best.entry(crate::hygiene::primary_artist(&album.artist))
+        best.entry(crate::hygiene::artist_key(&album.artist))
             .and_modify(|current| {
                 if album.tracks.len() > current.tracks.len() {
                     *current = album;
@@ -233,12 +233,12 @@ fn refresh_artist_avatar(
     title: &str,
     artist: &str,
 ) {
-    let primary = crate::hygiene::primary_artist(artist);
-    match covers.get(&primary) {
+    let key = crate::hygiene::artist_key(artist);
+    match covers.get(&key) {
         Some((rep_title, rep_artist)) if rep_title == title && rep_artist == artist => {}
         _ => return,
     }
-    let Some(index) = entries.iter().position(|entry| entry.name == primary) else {
+    let Some(index) = entries.iter().position(|entry| entry.name.to_lowercase() == key) else {
         return;
     };
     let Some(child) = flow.child_at_index(index as i32) else { return };
@@ -317,7 +317,7 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
     let albums: Vec<Album> = library
         .albums
         .iter()
-        .filter(|album| crate::hygiene::primary_artist(&album.artist) == artist)
+        .filter(|album| crate::hygiene::artist_key(&album.artist) == artist.to_lowercase())
         .cloned()
         .collect();
 
@@ -548,7 +548,7 @@ fn library_genre_fallback(ui: &Rc<Ui>, artist: &str) -> Vec<String> {
     library
         .albums
         .iter()
-        .filter(|album| crate::hygiene::primary_artist(&album.artist) == artist)
+        .filter(|album| crate::hygiene::artist_key(&album.artist) == artist.to_lowercase())
         .filter_map(|album| album.genre.clone())
         .filter(|genre| !genre.is_empty() && seen.insert(genre.to_lowercase()))
         .take(6)

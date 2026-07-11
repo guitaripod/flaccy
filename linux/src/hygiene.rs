@@ -49,29 +49,28 @@ pub fn consolidation_base_title(title: &str) -> String {
 /// "&" or "," ("Corvid & Crane") are preserved. Mirrors the macOS
 /// `LibraryHygiene.primaryArtist`.
 pub fn primary_artist(raw: &str) -> String {
-    let mut end = raw.len();
-    for sep in [";", " / ", " \u{00D7} "] {
-        if let Some(idx) = raw.find(sep) {
-            end = end.min(idx);
-        }
-    }
-    let head = &raw[..end];
-    let lower = head.to_lowercase();
-    let mut cut = head.len();
-    for marker in [
-        " feat. ", " feat ", " ft. ", " ft ", " featuring ", " (feat.", " (ft.", " (featuring",
-        " vs. ", " vs ",
+    let lower = raw.to_lowercase();
+    let mut cut = raw.len();
+    for sep in [
+        ";", " / ", " \u{00D7} ", " x ", " & ", " + ", " vs. ", " vs ", " feat. ", " feat ", " ft. ",
+        " ft ", " featuring ", " (feat.", " (ft.", " (featuring", " with ",
     ] {
-        if let Some(idx) = lower.find(marker) {
+        if let Some(idx) = lower.find(sep) {
             cut = cut.min(idx);
         }
     }
-    let result = head[..cut].trim();
+    let result = raw[..cut].trim();
     if result.is_empty() {
         raw.trim().to_string()
     } else {
         result.to_string()
     }
+}
+
+/// Case-insensitive artist grouping key, folding collaborators and casing
+/// variants ("deadmau5" / "Deadmau5") together.
+pub fn artist_key(credit: &str) -> String {
+    primary_artist(credit).to_lowercase()
 }
 
 /// The grouping key that fuses editions of the same release for display and
@@ -344,6 +343,20 @@ fn track_quality_scalar(track: &Track) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn artist_key_folds_collaborators_and_casing() {
+        let base = artist_key("deadmau5");
+        assert_eq!(artist_key("Deadmau5"), base, "casing variants group together");
+        assert_eq!(artist_key("deadmau5 & Kaskade"), base, "& collaborations fold under the lead");
+        assert_eq!(artist_key("deadmau5 feat. Rob Swire"), base, "feat. folds under the lead");
+        assert_eq!(artist_key("Deadmau5 x Skrillex"), base, "x collaborations fold under the lead");
+        assert_eq!(
+            primary_artist("Billy Newton-Davis vs. Deadmau5"),
+            "Billy Newton-Davis",
+            "the first-named artist wins"
+        );
+    }
 
     fn track(title: &str, artist: &str, album: &str, number: i32, codec: &str) -> Track {
         detailed_track(title, artist, album, number, codec, None, None)
