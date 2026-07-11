@@ -641,29 +641,29 @@ nonisolated final class DatabaseManager: Sendable {
             for merge in albumInfoMerges {
                 try db.execute(
                     sql: "INSERT OR IGNORE INTO albumInfo (title, artist) VALUES (?, ?)",
-                    arguments: [merge.canonicalTitle, merge.artist]
+                    arguments: [merge.canonicalTitle, merge.canonicalArtist]
                 )
-                for variant in merge.variantTitles where variant != merge.canonicalTitle {
+                for variant in merge.variants where !(variant.title == merge.canonicalTitle && variant.artist == merge.canonicalArtist) {
                     try db.execute(sql: """
                         UPDATE albumInfo SET
-                            coverArtURL = COALESCE(coverArtURL, (SELECT coverArtURL FROM albumInfo WHERE title = :v AND artist = :a)),
-                            coverArtData = COALESCE(coverArtData, (SELECT coverArtData FROM albumInfo WHERE title = :v AND artist = :a)),
-                            musicBrainzID = COALESCE(musicBrainzID, (SELECT musicBrainzID FROM albumInfo WHERE title = :v AND artist = :a)),
-                            year = COALESCE(year, (SELECT year FROM albumInfo WHERE title = :v AND artist = :a)),
-                            genre = COALESCE(genre, (SELECT genre FROM albumInfo WHERE title = :v AND artist = :a)),
-                            lastFetched = COALESCE(lastFetched, (SELECT lastFetched FROM albumInfo WHERE title = :v AND artist = :a))
-                        WHERE title = :c AND artist = :a
-                    """, arguments: ["v": variant, "a": merge.artist, "c": merge.canonicalTitle])
+                            coverArtURL = COALESCE(coverArtURL, (SELECT coverArtURL FROM albumInfo WHERE title = :vt AND artist = :va)),
+                            coverArtData = COALESCE(coverArtData, (SELECT coverArtData FROM albumInfo WHERE title = :vt AND artist = :va)),
+                            musicBrainzID = COALESCE(musicBrainzID, (SELECT musicBrainzID FROM albumInfo WHERE title = :vt AND artist = :va)),
+                            year = COALESCE(year, (SELECT year FROM albumInfo WHERE title = :vt AND artist = :va)),
+                            genre = COALESCE(genre, (SELECT genre FROM albumInfo WHERE title = :vt AND artist = :va)),
+                            lastFetched = COALESCE(lastFetched, (SELECT lastFetched FROM albumInfo WHERE title = :vt AND artist = :va))
+                        WHERE title = :ct AND artist = :ca
+                    """, arguments: ["vt": variant.title, "va": variant.artist, "ct": merge.canonicalTitle, "ca": merge.canonicalArtist])
                     try db.execute(
                         sql: "DELETE FROM albumInfo WHERE title = ? AND artist = ?",
-                        arguments: [variant, merge.artist]
+                        arguments: [variant.title, variant.artist]
                     )
                 }
             }
             for retitle in retitles {
                 try db.execute(
-                    sql: "UPDATE tracks SET albumTitle = ? WHERE albumTitle = ? AND artist = ?",
-                    arguments: [retitle.to, retitle.from, retitle.artist]
+                    sql: "UPDATE tracks SET albumTitle = ?, artist = ? WHERE albumTitle = ? AND artist = ?",
+                    arguments: [retitle.toTitle, retitle.toArtist, retitle.fromTitle, retitle.fromArtist]
                 )
             }
             for update in keeperUpdates {

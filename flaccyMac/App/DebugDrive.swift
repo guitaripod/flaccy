@@ -187,9 +187,19 @@ enum DebugDrive {
     private static func seedDemoPlaylists() {
         let plans: [(name: String, picks: [(String, Int)])] = [
             ("Night Drive", [("Parallax Hours", 1), ("Signal Bloom", 3), ("Cassini", 0),
-                             ("Midnatt", 0), ("Aurorae", 1), ("Paper Cities", 0)]),
+                             ("Midnatt", 0), ("Aurorae", 1), ("Paper Cities", 0), ("Almagest", 0), ("Nightglow", 1)]),
             ("Sunday Slow", [("Tradewinds", 0), ("Ember & Ash", 4), ("Lantern Year", 1),
-                             ("Ravine", 1), ("Aurorae", 4)]),
+                             ("Ravine", 1), ("Aurorae", 4), ("Ledger of Small Hours", 3), ("Saltwater Gospel", 4)]),
+            ("Deep Focus", [("Tidal Glass", 0), ("Overwinter", 0), ("Field Lines", 0), ("Vantablack Sun", 2),
+                            ("Aurorae", 2), ("Midnatt", 1)]),
+            ("Golden Hour", [("Greenhouse Hymns", 0), ("Velvet Arithmetic", 0), ("Cassini", 1),
+                             ("Saltwater Gospel", 0), ("Paper Cities", 1), ("Southern Cross", 0)]),
+            ("Lossless Showcase", [("Parallax Hours", 5), ("Field Lines", 3), ("Vantablack Sun", 0),
+                                   ("Southern Cross", 2), ("Almagest", 3), ("Tidal Glass", 2)]),
+            ("Rainy Windows", [("Radio Silence", 0), ("Statuary", 1), ("Longshore Drift", 0),
+                               ("Ember & Ash", 2), ("Paper Cities", 4)]),
+            ("Late Shift", [("Signal Bloom", 0), ("Nightglow", 0), ("Almagest", 2), ("Field Lines", 3),
+                            ("Midnatt", 3)]),
         ]
         do {
             let existing = try DatabaseManager.shared.fetchAllPlaylists().map(\.name)

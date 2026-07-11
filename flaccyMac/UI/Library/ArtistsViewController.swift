@@ -27,7 +27,7 @@ final class ArtistsViewController: NSViewController {
 
         collectionView.collectionViewLayout = layout
         collectionView.isSelectable = true
-        collectionView.allowsMultipleSelection = false
+        collectionView.allowsMultipleSelection = true
         collectionView.backgroundColors = [.clear]
         collectionView.register(
             ArtistGridItem.self, forItemWithIdentifier: ArtistGridItem.identifier
@@ -100,8 +100,15 @@ final class ArtistsViewController: NSViewController {
             let albums = Library.shared.albums.filter { $0.artist == artist.name }
             gridItem.configure(name: artist.name, albums: albums)
             gridItem.onOpen = { [weak self] in self?.onOpenArtist?(artist.name) }
-            gridItem.onMenu = { [weak gridItem] in
-                Self.artistMenu(name: artist.name, albums: albums, anchor: gridItem?.view)
+            gridItem.onMenu = { [weak self, weak gridItem] in
+                guard let self else { return nil }
+                let selected = self.collectionView.selectionIndexPaths
+                if selected.count > 1,
+                   let indexPath = self.dataSource?.indexPath(for: item),
+                   selected.contains(indexPath) {
+                    return self.bulkArtistMenu(for: self.selectedArtistNames())
+                }
+                return Self.artistMenu(name: artist.name, albums: albums, anchor: gridItem?.view)
             }
             return cell
         }
@@ -187,6 +194,31 @@ final class ArtistsViewController: NSViewController {
             return
         }
         super.keyDown(with: event)
+    }
+
+    private func selectedArtistNames() -> [String] {
+        guard let dataSource else { return [] }
+        return collectionView.selectionIndexPaths.sorted().compactMap { indexPath in
+            if case .artist(let artist) = dataSource.itemIdentifier(for: indexPath) { return artist.name }
+            return nil
+        }
+    }
+
+    private func bulkArtistMenu(for names: [String]) -> NSMenu {
+        let tracks = names.flatMap { name in Library.shared.albums.filter { $0.artist == name }.flatMap(\.tracks) }
+        let menu = NSMenu()
+        menu.addItem(ClosureMenuItem(title: "Play \(names.count) Artists", systemImage: "play.fill") {
+            guard !tracks.isEmpty else { return }
+            AudioPlayer.shared.play(tracks, startingAt: 0)
+        })
+        menu.addItem(ClosureMenuItem(title: "Shuffle All", systemImage: "shuffle") {
+            guard !tracks.isEmpty else { return }
+            AudioPlayer.shared.play(tracks.shuffled(), startingAt: 0)
+        })
+        menu.addItem(ClosureMenuItem(title: "Add \(tracks.count) Songs to Queue", systemImage: "text.append") {
+            tracks.forEach { AudioPlayer.shared.addToQueue($0) }
+        })
+        return menu
     }
 
     private static func artistMenu(name: String, albums: [Album], anchor: NSView?) -> NSMenu {

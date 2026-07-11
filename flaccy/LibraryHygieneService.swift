@@ -1,9 +1,10 @@
 import Foundation
 
 nonisolated struct AlbumRetitle: Sendable {
-    let from: String
-    let to: String
-    let artist: String
+    let fromTitle: String
+    let fromArtist: String
+    let toTitle: String
+    let toArtist: String
 }
 
 nonisolated struct KeeperUpdate: Sendable {
@@ -14,8 +15,8 @@ nonisolated struct KeeperUpdate: Sendable {
 
 nonisolated struct AlbumInfoMerge: Sendable {
     let canonicalTitle: String
-    let variantTitles: [String]
-    let artist: String
+    let canonicalArtist: String
+    let variants: [LibraryHygiene.AlbumVariant]
 }
 
 nonisolated struct HygienePlan: Sendable {
@@ -49,14 +50,12 @@ nonisolated enum LibraryHygieneService {
     @MainActor
     static func apply(_ plan: HygienePlan) async {
         let retitles = plan.consolidationGroups.flatMap { group in
-            group.variants.map { AlbumRetitle(from: $0.title, to: group.canonicalTitle, artist: $0.artist) }
+            group.variants.map {
+                AlbumRetitle(fromTitle: $0.title, fromArtist: $0.artist, toTitle: group.canonicalTitle, toArtist: group.canonicalArtist)
+            }
         }
         let merges = plan.consolidationGroups.map { group in
-            AlbumInfoMerge(
-                canonicalTitle: group.canonicalTitle,
-                variantTitles: group.variants.map(\.title),
-                artist: group.canonicalArtist
-            )
+            AlbumInfoMerge(canonicalTitle: group.canonicalTitle, canonicalArtist: group.canonicalArtist, variants: group.variants)
         }
         let keeperUpdates = plan.duplicateGroups.map { group in
             KeeperUpdate(
