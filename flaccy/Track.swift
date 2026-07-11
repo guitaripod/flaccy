@@ -17,6 +17,7 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
     var sampleRate: Int?
     var channels: Int?
     var loved: Bool = false
+    var playCount: Int = 0
 
     var isLossless: Bool {
         guard let codec else { return false }
@@ -66,7 +67,8 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
             bitDepth: record.bitDepth,
             sampleRate: record.sampleRate,
             channels: record.channels,
-            loved: record.loved
+            loved: record.loved,
+            playCount: record.playCount
         )
     }
 
@@ -85,7 +87,8 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
             bitDepth: nil,
             sampleRate: nil,
             channels: nil,
-            loved: record.loved
+            loved: record.loved,
+            playCount: record.playCount
         )
     }
 }

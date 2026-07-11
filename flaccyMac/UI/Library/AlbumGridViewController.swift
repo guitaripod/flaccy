@@ -44,7 +44,7 @@ final class AlbumGridViewController: NSViewController {
 
         collectionView.collectionViewLayout = layout
         collectionView.isSelectable = true
-        collectionView.allowsMultipleSelection = false
+        collectionView.allowsMultipleSelection = true
         collectionView.backgroundColors = [.clear]
         collectionView.register(
             AlbumGridItem.self, forItemWithIdentifier: AlbumGridItem.identifier
@@ -195,7 +195,14 @@ final class AlbumGridViewController: NSViewController {
                 self.onOpenAlbum?(self.resolvedAlbum(album))
             }
             gridItem.onMenu = { [weak self, weak gridItem] in
-                MacTrackMenuFactory.menu(for: self?.resolvedAlbum(album) ?? album, anchor: gridItem?.view)
+                guard let self else { return nil }
+                let selected = self.collectionView.selectionIndexPaths
+                if selected.count > 1,
+                   let indexPath = self.dataSource?.indexPath(for: item),
+                   selected.contains(indexPath) {
+                    return self.bulkMenu(for: self.selectedAlbums())
+                }
+                return MacTrackMenuFactory.menu(for: self.resolvedAlbum(album), anchor: gridItem?.view)
             }
             return cell
         }
@@ -326,6 +333,34 @@ final class AlbumGridViewController: NSViewController {
         guard !resolved.tracks.isEmpty else { return }
         AppLogger.info("Playing album \(resolved.title) — \(resolved.artist)", category: .playback)
         AudioPlayer.shared.play(resolved.tracks, startingAt: 0)
+    }
+
+    private func selectedAlbums() -> [Album] {
+        guard let dataSource else { return [] }
+        return collectionView.selectionIndexPaths.sorted().compactMap { indexPath in
+            dataSource.itemIdentifier(for: indexPath).flatMap(Self.album(from:)).map(resolvedAlbum)
+        }
+    }
+
+    private func bulkMenu(for albums: [Album]) -> NSMenu {
+        let tracks = albums.flatMap(\.tracks)
+        let menu = NSMenu()
+        menu.addItem(ClosureMenuItem(title: "Play \(albums.count) Albums", systemImage: "play.fill") {
+            guard !tracks.isEmpty else { return }
+            AudioPlayer.shared.play(tracks, startingAt: 0)
+        })
+        menu.addItem(ClosureMenuItem(title: "Add \(tracks.count) Songs to Queue", systemImage: "text.append") {
+            tracks.forEach { AudioPlayer.shared.addToQueue($0) }
+        })
+        menu.addItem(.separator())
+        menu.addItem(ClosureMenuItem(title: "Love All", systemImage: "heart.fill") {
+            Task {
+                for track in tracks where !LovedTracksService.shared.isLoved(track: track) {
+                    _ = await LovedTracksService.shared.toggleLove(track: track)
+                }
+            }
+        })
+        return menu
     }
 
     /// Album identity is title+artist only, so a cell configured before a

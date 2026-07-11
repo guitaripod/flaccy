@@ -30,6 +30,8 @@ final class GeneralSettingsPane: SettingsPane {
     private let autoplayCheckbox = NSButton(checkboxWithTitle: "Keep the music going when the queue ends", target: nil, action: nil)
     private let loginCheckbox = NSButton(checkboxWithTitle: "Open Flaccy at login", target: nil, action: nil)
     private let menuBarCheckbox = NSButton(checkboxWithTitle: "Show Flaccy in the menu bar", target: nil, action: nil)
+    private let groupEditionsCheckbox = NSButton(checkboxWithTitle: "Group album editions (Deluxe, Remaster…) as one album", target: nil, action: nil)
+    private let cleanUpButton = NSButton(title: "Clean Up Library…", target: nil, action: nil)
 
     override func buildForm() {
         formStack.addArrangedSubview(sectionLabel("Flaccy Lifetime"))
@@ -56,6 +58,20 @@ final class GeneralSettingsPane: SettingsPane {
         menuBarCheckbox.action = #selector(menuBarToggled)
         formStack.addArrangedSubview(menuBarCheckbox)
         addFullWidth(explanation("The menu bar player shows the current track with transport and love controls."))
+        formStack.addArrangedSubview(separator())
+
+        formStack.addArrangedSubview(sectionLabel("Library"))
+        groupEditionsCheckbox.target = self
+        groupEditionsCheckbox.action = #selector(groupEditionsToggled)
+        formStack.addArrangedSubview(groupEditionsCheckbox)
+        addFullWidth(explanation("Collapses \u{201C}Album\u{201D}, \u{201C}Album (Deluxe)\u{201D} and \u{201C}Album (Remastered)\u{201D} into one card so the wall isn\u{2019}t cluttered with near-duplicates."))
+        cleanUpButton.bezelStyle = .rounded
+        cleanUpButton.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
+        cleanUpButton.imagePosition = .imageLeading
+        cleanUpButton.target = self
+        cleanUpButton.action = #selector(cleanUpTapped)
+        addRow([cleanUpButton], spacing: 12)
+        addFullWidth(explanation("Finds duplicate tracks and merges album editions. You\u{2019}ll see exactly what changes before anything happens; removed duplicates go to the Trash."))
     }
 
     override func viewWillAppear() {
@@ -64,6 +80,7 @@ final class GeneralSettingsPane: SettingsPane {
         autoplayCheckbox.state = AudioPlayer.shared.autoplaySimilarWhenQueueEnds ? .on : .off
         loginCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menuBarCheckbox.state = MenuBarExtraSetting.isEnabled ? .on : .off
+        groupEditionsCheckbox.state = GroupAlbumEditionsSetting.isEnabled ? .on : .off
         NotificationCenter.default.addObserver(
             self, selector: #selector(entitlementChanged), name: PurchaseManager.stateDidChange, object: nil
         )
@@ -117,6 +134,14 @@ final class GeneralSettingsPane: SettingsPane {
 
     @objc private func menuBarToggled() {
         MenuBarExtraSetting.set(menuBarCheckbox.state == .on)
+    }
+
+    @objc private func groupEditionsToggled() {
+        GroupAlbumEditionsSetting.set(groupEditionsCheckbox.state == .on)
+    }
+
+    @objc private func cleanUpTapped() {
+        LibraryCleanup.run(in: view.window)
     }
 }
 

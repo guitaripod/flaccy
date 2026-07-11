@@ -610,6 +610,71 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    func setPlayCount(relativePath: String, count: Int) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "UPDATE tracks SET playCount = ? WHERE fileURL = ?", arguments: [count, relativePath])
+        }
+    }
+
+    func rewriteAlbumTitle(from oldTitle: String, to newTitle: String, artist: String) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "UPDATE tracks SET albumTitle = ? WHERE albumTitle = ? AND artist = ?", arguments: [newTitle, oldTitle, artist])
+        }
+    }
+
+    /// Applies a whole library-hygiene plan in ONE transaction: album-info of
+    /// each redundant variant is COALESCE-merged into the canonical album, the
+    /// variant tracks are retitled, and each surviving duplicate keeper inherits
+    /// the loved flag and highest play count of its group. File trashing happens
+    /// outside this call (files can't participate in a DB transaction).
+    func applyHygiene(
+        retitles: [AlbumRetitle],
+        keeperUpdates: [KeeperUpdate],
+        albumInfoMerges: [AlbumInfoMerge],
+        loserRelativePaths: [String]
+    ) throws {
+        try dbQueue.write { db in
+            for path in loserRelativePaths {
+                _ = try PlaylistTrackRecord.filter(Column("trackFileURL") == path).deleteAll(db)
+                _ = try TrackRecord.filter(Column("fileURL") == path).deleteAll(db)
+            }
+            for merge in albumInfoMerges {
+                try db.execute(
+                    sql: "INSERT OR IGNORE INTO albumInfo (title, artist) VALUES (?, ?)",
+                    arguments: [merge.canonicalTitle, merge.artist]
+                )
+                for variant in merge.variantTitles where variant != merge.canonicalTitle {
+                    try db.execute(sql: """
+                        UPDATE albumInfo SET
+                            coverArtURL = COALESCE(coverArtURL, (SELECT coverArtURL FROM albumInfo WHERE title = :v AND artist = :a)),
+                            coverArtData = COALESCE(coverArtData, (SELECT coverArtData FROM albumInfo WHERE title = :v AND artist = :a)),
+                            musicBrainzID = COALESCE(musicBrainzID, (SELECT musicBrainzID FROM albumInfo WHERE title = :v AND artist = :a)),
+                            year = COALESCE(year, (SELECT year FROM albumInfo WHERE title = :v AND artist = :a)),
+                            genre = COALESCE(genre, (SELECT genre FROM albumInfo WHERE title = :v AND artist = :a)),
+                            lastFetched = COALESCE(lastFetched, (SELECT lastFetched FROM albumInfo WHERE title = :v AND artist = :a))
+                        WHERE title = :c AND artist = :a
+                    """, arguments: ["v": variant, "a": merge.artist, "c": merge.canonicalTitle])
+                    try db.execute(
+                        sql: "DELETE FROM albumInfo WHERE title = ? AND artist = ?",
+                        arguments: [variant, merge.artist]
+                    )
+                }
+            }
+            for retitle in retitles {
+                try db.execute(
+                    sql: "UPDATE tracks SET albumTitle = ? WHERE albumTitle = ? AND artist = ?",
+                    arguments: [retitle.to, retitle.from, retitle.artist]
+                )
+            }
+            for update in keeperUpdates {
+                try db.execute(
+                    sql: "UPDATE tracks SET loved = ?, playCount = ? WHERE fileURL = ?",
+                    arguments: [update.loved, update.playCount, update.relativePath]
+                )
+            }
+        }
+    }
+
     func fetchOrCreateArtist(name: String) throws -> ArtistRecord {
         try dbQueue.write { db in
             if let existing = try ArtistRecord.filter(Column("name") == name).fetchOne(db) {
@@ -735,7 +800,7 @@ nonisolated final class DatabaseManager: Sendable {
         return "\(norm(albumTitle))\u{0}\(norm(artist))"
     }
 
-    func fetchAlbumsWithTracksLightweight() throws -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
+    func fetchAlbumsWithTracksLightweight(groupEditions: Bool = false) throws -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
         try dbQueue.read { db in
             let columns: [Column] = [
                 Column("id"), Column("fileURL"), Column("title"), Column("artist"),
@@ -781,18 +846,38 @@ nonisolated final class DatabaseManager: Sendable {
             var order: [String] = []
             var map: [String: [LightTrackRecord]] = [:]
             var displayKeyByGroup: [String: String] = [:]
+            var titleCountsByGroup: [String: [String: Int]] = [:]
             for track in allTracks {
-                let groupKey = Self.albumGroupingKey(albumTitle: track.albumTitle, artist: track.artist)
+                let groupKey = groupEditions
+                    ? LibraryHygiene.consolidationKey(title: track.albumTitle, artist: track.artist)
+                    : Self.albumGroupingKey(albumTitle: track.albumTitle, artist: track.artist)
                 if map[groupKey] == nil {
                     order.append(groupKey)
                     displayKeyByGroup[groupKey] = "\(track.albumTitle)\0\(track.artist)"
                 }
                 map[groupKey, default: []].append(track)
+                if groupEditions {
+                    titleCountsByGroup[groupKey, default: [:]][track.albumTitle, default: 0] += 1
+                }
             }
 
             return order.compactMap { groupKey in
-                guard let tracks = map[groupKey], !tracks.isEmpty else { return nil }
-                let displayKey = displayKeyByGroup[groupKey] ?? groupKey
+                guard var tracks = map[groupKey], let first = tracks.first else { return nil }
+                guard groupEditions else {
+                    let displayKey = displayKeyByGroup[groupKey] ?? groupKey
+                    return (album: albumInfoByKey[displayKey], tracks: tracks)
+                }
+                let canonicalTitle = (titleCountsByGroup[groupKey] ?? [:]).max { lhs, rhs in
+                    (lhs.value, -lhs.key.count) < (rhs.value, -rhs.key.count)
+                }?.key ?? first.albumTitle
+                tracks.sort { lhs, rhs in
+                    let lhsCanonical = lhs.albumTitle == canonicalTitle ? 0 : 1
+                    let rhsCanonical = rhs.albumTitle == canonicalTitle ? 0 : 1
+                    if lhsCanonical != rhsCanonical { return lhsCanonical < rhsCanonical }
+                    if lhs.trackNumber != rhs.trackNumber { return lhs.trackNumber < rhs.trackNumber }
+                    return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+                }
+                let displayKey = "\(canonicalTitle)\0\(first.artist)"
                 return (album: albumInfoByKey[displayKey], tracks: tracks)
             }
         }

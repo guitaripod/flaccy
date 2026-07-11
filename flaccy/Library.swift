@@ -17,6 +17,7 @@ protocol LibraryProviding: AnyObject {
     var isLoading: Bool { get }
     func reload() async
     func resetAndReload() async
+    func reloadFromDatabase() async
     @discardableResult
     func importFiles(from urls: [URL]) async -> LibraryImportOutcome
     func deleteTracks(_ tracks: [Track]) async
@@ -77,6 +78,15 @@ final class Library: LibraryProviding {
         isLoading = false
 
         await enrichAndPublish()
+    }
+
+    /// Re-reads the album/track model from the database and republishes,
+    /// unconditionally. Needed after a metadata-only mutation (album retitle,
+    /// play-count transfer) that leaves files untouched, so `reload()`'s
+    /// file-sync short-circuit would otherwise skip the refresh.
+    func reloadFromDatabase() async {
+        await loadFromDatabase()
+        NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
     }
 
     private func enrichAndPublish() async {
@@ -386,7 +396,12 @@ final class Library: LibraryProviding {
     /// `AlbumArtworkCache` eviction, and every reader already handles nil.
     @concurrent
     nonisolated private func fetchAlbumsFromDatabase() async throws -> [Album] {
-        let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight()
+        #if os(macOS)
+        let groupEditions = UserDefaults.standard.object(forKey: "groupAlbumEditions") as? Bool ?? true
+        #else
+        let groupEditions = false
+        #endif
+        let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight(groupEditions: groupEditions)
 
         var loadedAlbums: [Album] = []
         loadedAlbums.reserveCapacity(albumsWithTracks.count)

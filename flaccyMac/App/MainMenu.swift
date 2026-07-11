@@ -48,6 +48,7 @@ enum MainMenu {
         menu.addItem(withTitle: "Import Files…", action: #selector(MacAppDelegate.importFiles(_:)), keyEquivalent: "o")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Show Library in Finder", action: #selector(MacAppDelegate.revealLibraryFolder(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Clean Up Library…", action: #selector(MacAppDelegate.cleanUpLibrary(_:)), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         return submenuItem(menu)

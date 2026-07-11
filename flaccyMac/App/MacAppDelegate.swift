@@ -213,6 +213,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.activateFileViewerSelecting([LibraryRoot.current])
     }
 
+    @objc func cleanUpLibrary(_ sender: Any?) {
+        LibraryCleanup.run(in: mainWindowController?.window)
+    }
+
     @objc func showSettings(_ sender: Any?) {
         NotificationCenter.default.post(name: .flaccyShowSettings, object: nil)
         let controller = settingsWindowController ?? SettingsWindowController()

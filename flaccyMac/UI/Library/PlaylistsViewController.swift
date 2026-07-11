@@ -10,6 +10,12 @@ final class PlaylistsViewController: NSViewController {
         let record: PlaylistRecord
         let trackCount: Int
         let tracks: [Track]
+        var totalDuration: TimeInterval { tracks.reduce(0) { $0 + $1.duration } }
+        var createdAt: Date { record.createdAt }
+    }
+
+    private enum Column: String {
+        case playlist, count, duration, created
     }
 
     private let scrollView = NSScrollView()
@@ -19,27 +25,44 @@ final class PlaylistsViewController: NSViewController {
     private var searchQuery = LibrarySearchState.query
     private var reloadGeneration = 0
     private var searchDebounce: Task<Void, Never>?
+    private var sortColumn: Column = .created
+    private var sortAscending = false
 
     override func loadView() {
         view = NSView()
 
         tableView.style = .inset
-        tableView.headerView = nil
         tableView.rowHeight = 64
-        tableView.allowsMultipleSelection = false
+        tableView.usesAlternatingRowBackgroundColors = true
+        tableView.allowsMultipleSelection = true
         tableView.dataSource = self
         tableView.delegate = self
         tableView.target = self
         tableView.doubleAction = #selector(rowDoubleClicked)
         tableView.onDeleteRows = { [weak self] indexes in
-            guard let self, let index = indexes.first, index < self.entries.count else { return }
-            self.confirmDelete(self.entries[index].record)
+            self?.confirmDeleteRows(indexes)
         }
         tableView.menuProvider = { [weak self] row in
             self?.contextMenu(forRow: row)
         }
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("playlist"))
-        tableView.addTableColumn(column)
+
+        let columns: [(Column, String, CGFloat, CGFloat)] = [
+            (.playlist, "Playlist", 320, 160),
+            (.count, "Songs", 64, 48),
+            (.duration, "Time", 80, 56),
+            (.created, "Added", 130, 90),
+        ]
+        for (column, title, width, minWidth) in columns {
+            let tableColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(column.rawValue))
+            tableColumn.title = title
+            tableColumn.width = width
+            tableColumn.minWidth = minWidth
+            tableColumn.sortDescriptorPrototype = NSSortDescriptor(key: column.rawValue, ascending: true)
+            tableView.addTableColumn(tableColumn)
+        }
+        tableView.autosaveName = "flaccy.mac.playlistsTable"
+        tableView.autosaveTableColumns = true
+        tableView.sortDescriptors = [NSSortDescriptor(key: sortColumn.rawValue, ascending: sortAscending)]
 
         scrollView.documentView = tableView
         scrollView.hasVerticalScroller = true
@@ -113,7 +136,7 @@ final class PlaylistsViewController: NSViewController {
             let entries = Self.fetchEntries(allTracks: allTracks, searchQuery: query)
             await MainActor.run { [weak self] in
                 guard let self, self.reloadGeneration == generation else { return }
-                self.entries = entries
+                self.entries = self.sortedEntries(entries)
                 self.tableView.reloadData()
                 self.emptyStateView.isHidden = !entries.isEmpty || !query.isEmpty
                 AppLogger.debug("Playlists list showing \(entries.count) playlists", category: .ui)
@@ -155,10 +178,60 @@ final class PlaylistsViewController: NSViewController {
         }
     }
 
+    private func sortedEntries(_ entries: [Entry]) -> [Entry] {
+        let ascending = sortAscending
+        func by<V: Comparable>(_ key: (Entry) -> V) -> [Entry] {
+            entries.sorted {
+                let a = key($0), b = key($1)
+                if a == b { return $0.record.name.localizedCaseInsensitiveCompare($1.record.name) == .orderedAscending }
+                return ascending ? a < b : a > b
+            }
+        }
+        switch sortColumn {
+        case .playlist:
+            return entries.sorted {
+                let cmp = $0.record.name.localizedCaseInsensitiveCompare($1.record.name)
+                return ascending ? cmp == .orderedAscending : cmp == .orderedDescending
+            }
+        case .count: return by { $0.trackCount }
+        case .duration: return by { $0.totalDuration }
+        case .created: return by { $0.createdAt }
+        }
+    }
+
     @objc private func rowDoubleClicked() {
         let row = tableView.clickedRow
         guard row >= 0, row < entries.count else { return }
         onOpenPlaylist?(entries[row].record)
+    }
+
+    private func confirmDeleteRows(_ indexes: IndexSet) {
+        let records = indexes.compactMap { $0 < entries.count ? entries[$0].record : nil }
+        guard !records.isEmpty else { return }
+        if records.count == 1 {
+            confirmDelete(records[0])
+        } else {
+            confirmDeleteMultiple(records)
+        }
+    }
+
+    private func confirmDeleteMultiple(_ records: [PlaylistRecord]) {
+        guard let window = view.window else { return }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Delete \(records.count) playlists?"
+        alert.informativeText = "The playlists are removed; your music files are not touched."
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            for record in records {
+                guard let id = record.id else { continue }
+                try? DatabaseManager.shared.deletePlaylist(id: id)
+            }
+            AppLogger.info("Deleted \(records.count) playlists", category: .database)
+            NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
+        }
     }
 
     private func contextMenu(forRow row: Int) -> NSMenu? {
@@ -272,23 +345,53 @@ extension PlaylistsViewController: NSTableViewDataSource {
     func numberOfRows(in tableView: NSTableView) -> Int {
         entries.count
     }
+
+    func tableView(_ tableView: NSTableView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
+        guard let descriptor = tableView.sortDescriptors.first,
+              let key = descriptor.key,
+              let column = Column(rawValue: key) else { return }
+        sortColumn = column
+        sortAscending = descriptor.ascending
+        entries = sortedEntries(entries)
+        tableView.reloadData()
+    }
 }
 
 extension PlaylistsViewController: NSTableViewDelegate {
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        guard row < entries.count else { return nil }
+        guard row < entries.count,
+              let identifier = tableColumn?.identifier,
+              let column = Column(rawValue: identifier.rawValue) else { return nil }
         let entry = entries[row]
-        let cellID = NSUserInterfaceItemIdentifier("playlistCell")
-        let cell = tableView.makeView(withIdentifier: cellID, owner: self) as? PlaylistCellView
-            ?? PlaylistCellView(identifier: cellID)
-        cell.configure(
-            name: entry.record.name,
-            trackCount: entry.trackCount,
-            tracks: entry.tracks
-        )
+
+        if column == .playlist {
+            let cellID = NSUserInterfaceItemIdentifier("playlistCell")
+            let cell = tableView.makeView(withIdentifier: cellID, owner: self) as? PlaylistCellView
+                ?? PlaylistCellView(identifier: cellID)
+            cell.configure(name: entry.record.name, trackCount: entry.trackCount, tracks: entry.tracks)
+            return cell
+        }
+
+        let cellID = NSUserInterfaceItemIdentifier("plTextCell.\(column.rawValue)")
+        let cell = tableView.makeView(withIdentifier: cellID, owner: self) as? TextCellView
+            ?? TextCellView(identifier: cellID)
+        cell.isDimmed = true
+        switch column {
+        case .count: cell.text = "\(entry.trackCount)"
+        case .duration: cell.text = PlaybackFormat.duration(entry.totalDuration)
+        case .created: cell.text = Self.dateFormatter.string(from: entry.createdAt)
+        case .playlist: cell.text = ""
+        }
         return cell
     }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
 }
 
 final class PlaylistCellView: NSTableCellView {

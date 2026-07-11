@@ -14,6 +14,7 @@ final class SongsTableViewController: NSViewController {
     private var cancellables = Set<AnyCancellable>()
     private var rows: [SongsTableViewModel.Row] = []
     private var playingPath: String?
+    private var isReseedingSort = false
 
     override func loadView() {
         view = NSView()
@@ -43,9 +44,11 @@ final class SongsTableViewController: NSViewController {
             tableColumn.sortDescriptorPrototype = NSSortDescriptor(key: column.rawValue, ascending: true)
             tableView.addTableColumn(tableColumn)
         }
-        tableView.sortDescriptors = [
-            NSSortDescriptor(key: viewModel.sortColumn.rawValue, ascending: viewModel.sortAscending)
-        ]
+        tableView.autosaveName = "flaccy.mac.songsTable"
+        tableView.autosaveTableColumns = true
+        tableView.sortDescriptors = viewModel.sortTiers.map {
+            NSSortDescriptor(key: $0.column.rawValue, ascending: $0.ascending)
+        }
 
         scrollView.documentView = tableView
         scrollView.hasVerticalScroller = true
@@ -163,11 +166,23 @@ extension SongsTableViewController: NSTableViewDataSource {
     }
 
     func tableView(_ tableView: NSTableView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
-        guard let descriptor = tableView.sortDescriptors.first,
+        guard !isReseedingSort,
+              let descriptor = tableView.sortDescriptors.first,
               let key = descriptor.key,
               let column = SongsTableViewModel.Column(rawValue: key) else { return }
-        viewModel.setSort(column: column, ascending: descriptor.ascending)
-        AppLogger.info("Songs sorted by \(key) \(descriptor.ascending ? "asc" : "desc")", category: .ui)
+        viewModel.applyPrimarySort(column: column, ascending: descriptor.ascending)
+        let seeded = viewModel.sortTiers.map {
+            NSSortDescriptor(key: $0.column.rawValue, ascending: $0.ascending)
+        }
+        if tableView.sortDescriptors != seeded {
+            isReseedingSort = true
+            tableView.sortDescriptors = seeded
+            isReseedingSort = false
+        }
+        AppLogger.info(
+            "Songs sorted by \(viewModel.sortTiers.map { "\($0.column.rawValue)\($0.ascending ? "↑" : "↓")" }.joined(separator: ", "))",
+            category: .ui
+        )
     }
 }
 
@@ -226,13 +241,21 @@ extension SongsTableViewController: NSTableViewDelegate {
         case .title, .loved: ""
         case .artist: row.track.artist
         case .album: row.track.albumTitle
+        case .trackNumber: row.track.trackNumber > 0 ? "\(row.track.trackNumber)" : "—"
         case .duration: PlaybackFormat.duration(row.track.duration)
         case .codec: row.track.codec ?? "—"
         case .quality: qualityDetail(row.track)
         case .plays: row.plays > 0 ? "\(row.plays)" : "—"
+        case .lastPlayed: row.lastPlayed.map { relativeDateFormatter.localizedString(for: $0, relativeTo: Date()) } ?? "—"
         case .dateAdded: dateFormatter.string(from: row.dateAdded)
         }
     }
+
+    private static let relativeDateFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter
+    }()
 
     private static func qualityDetail(_ track: Track) -> String {
         guard let badge = track.qualityBadge else { return "—" }

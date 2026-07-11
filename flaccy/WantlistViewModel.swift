@@ -83,13 +83,6 @@ nonisolated struct WantlistOwnership: Sendable {
     private let artists: Set<String>
     private let trackCountByAlbumKey: [String: Int]
 
-    private static let editionKeywords = [
-        "deluxe", "edition", "remaster", "bonus", "expanded", "anniversary",
-        "special", "extended", "complete", "reissue", "version", "collector",
-        "platinum", "legacy", "super", "tour", "feat", "ft.", "with", "explicit",
-        "clean", "mono", "stereo", "single", "ep",
-    ]
-
     init(albums: [Album], tracks: [Track]) {
         var byArtist: [String: [String]] = [:]
         for album in albums {
@@ -106,7 +99,7 @@ nonisolated struct WantlistOwnership: Sendable {
     }
 
     static func matchKey(title: String, artist: String) -> String {
-        normalize(artist) + "\u{0}" + baseTitle(title)
+        LibraryHygiene.matchKey(title: title, artist: artist)
     }
 
     func ownsAlbum(name: String, artist: String) -> Bool {
@@ -133,49 +126,11 @@ nonisolated struct WantlistOwnership: Sendable {
     }
 
     private static func baseTitle(_ raw: String) -> String {
-        var title = stripDecoratedBrackets(from: raw.lowercased())
-        for separator in [" - ", ": ", " – "] {
-            if let range = title.range(of: separator),
-               containsEditionKeyword(String(title[range.upperBound...])) {
-                title = String(title[..<range.lowerBound])
-            }
-        }
-        return normalize(title)
-    }
-
-    private static func stripDecoratedBrackets(from value: String) -> String {
-        var result = value
-        for (open, close) in [("(", ")"), ("[", "]"), ("{", "}")] {
-            var searchStart = result.startIndex
-            while let openRange = result.range(of: open, range: searchStart..<result.endIndex),
-                  let closeRange = result.range(of: close, range: openRange.upperBound..<result.endIndex) {
-                let segment = String(result[openRange.upperBound..<closeRange.lowerBound])
-                if containsEditionKeyword(segment) {
-                    result.removeSubrange(openRange.lowerBound..<closeRange.upperBound)
-                    searchStart = result.startIndex
-                } else {
-                    searchStart = closeRange.upperBound
-                }
-            }
-        }
-        return result
-    }
-
-    private static func containsEditionKeyword(_ segment: String) -> Bool {
-        let words = segment.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-        return words.contains { editionKeywords.contains($0) }
-            || segment.lowercased().contains("ft.")
+        LibraryHygiene.baseTitle(raw)
     }
 
     private static func normalize(_ value: String) -> String {
-        let folded = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
-        var result = String.UnicodeScalarView()
-        for scalar in folded.unicodeScalars where CharacterSet.alphanumerics.contains(scalar) {
-            result.append(scalar)
-        }
-        return String(result)
+        LibraryHygiene.normalize(value)
     }
 }
 
