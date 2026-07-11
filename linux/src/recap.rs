@@ -69,6 +69,7 @@ impl Period {
     }
 }
 
+#[derive(Clone)]
 pub struct RecapData {
     pub total_plays: i64,
     pub total_minutes: i64,
@@ -217,6 +218,7 @@ pub fn heatmap_grid(heatmap: &HashMap<NaiveDate, i64>, now_unix: i64) -> Option<
 /// One year of listening, computed in a single pass over the year's scrobbles
 /// (iOS YearInMusicService semantics): imported rows with duration 0 fall back
 /// to the owned track's real duration, else 210 seconds.
+#[derive(Clone)]
 pub struct YearData {
     pub year: i32,
     pub total_plays: i64,

@@ -14,14 +14,6 @@ impl Card {
         Some((Self { surface }, cr))
     }
 
-    pub fn write_png(&self, path: &std::path::Path) -> Result<(), String> {
-        let mut file = std::fs::File::create(path).map_err(|e| format!("{e}"))?;
-        self.surface
-            .clone()
-            .write_to_png(&mut file)
-            .map_err(|e| format!("{e}"))
-    }
-
     pub fn png_bytes(&self) -> Option<Vec<u8>> {
         let mut bytes = Vec::new();
         self.surface.clone().write_to_png(&mut bytes).ok()?;

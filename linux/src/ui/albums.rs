@@ -118,17 +118,25 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let stack = stack.clone();
         let albums = Rc::clone(&albums);
         let ui = Rc::clone(ui);
-        let applied = std::cell::Cell::new(0u64);
+        let applied_identity = std::cell::Cell::new(0u64);
+        let applied_meta = std::cell::Cell::new(0u64);
         move || {
             let library = ui.core.library.borrow().clone();
-            let fingerprint = albums_fingerprint(&library.albums);
-            if applied.replace(fingerprint) != fingerprint {
+            let identity = albums_identity_fingerprint(&library.albums);
+            let meta = albums_meta_fingerprint(&library.albums);
+            if applied_identity.replace(identity) != identity {
+                applied_meta.set(meta);
                 while let Some(child) = flow.first_child() {
                     flow.remove(&child);
                 }
                 *albums.borrow_mut() = library.albums.clone();
                 for album in library.albums.iter() {
                     flow.append(&album_cell(&ui, album));
+                }
+            } else if applied_meta.replace(meta) != meta {
+                *albums.borrow_mut() = library.albums.clone();
+                for (index, album) in library.albums.iter().enumerate() {
+                    update_cell_subtitle(&flow, index, album);
                 }
             }
             stack.set_visible_child_name(if library.albums.is_empty() {
@@ -189,15 +197,52 @@ fn refresh_cover(ui: &Rc<Ui>, flow: &gtk::FlowBox, albums: &[Album], title: &str
     });
 }
 
-/// Digest of the fields the grid renders (identity plus year subtitle), so
-/// enrichment reloads that change nothing visible skip rebuilding every cell.
-fn albums_fingerprint(albums: &[Album]) -> u64 {
+/// Digest of the album set itself; only additions, removals, or reorderings
+/// change it, so metadata-only reloads never rebuild the grid's widgets.
+fn albums_identity_fingerprint(albums: &[Album]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for album in albums {
-        let row = format!("{}|{}|{:?}|{:?}", album.title, album.artist, album.year, album.genre);
+        let row = format!("{}|{}", album.title, album.artist);
         hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
     }
     hash
+}
+
+/// Digest of the enrichable metadata the grid renders, used to decide when an
+/// in-place subtitle refresh of the existing cells is needed.
+fn albums_meta_fingerprint(albums: &[Album]) -> u64 {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for album in albums {
+        let row = format!("{:?}|{:?}", album.year, album.genre);
+        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
+    }
+    hash
+}
+
+fn subtitle_text(album: &Album) -> String {
+    match &album.year {
+        Some(year) if !year.is_empty() => format!("{} · {}", album.artist, year),
+        _ => album.artist.clone(),
+    }
+}
+
+/// Rewrites one existing cell's subtitle label (picture → title → subtitle
+/// order inside the cell box) without recreating the widget tree.
+fn update_cell_subtitle(flow: &gtk::FlowBox, index: usize, album: &Album) {
+    let Some(child) = flow.child_at_index(index as i32) else { return };
+    let Some(subtitle) = child
+        .child()
+        .and_then(|cell| cell.first_child())
+        .and_then(|picture| picture.next_sibling())
+        .and_then(|title| title.next_sibling())
+        .and_then(|widget| widget.downcast::<gtk::Label>().ok())
+    else {
+        return;
+    };
+    let text = subtitle_text(album);
+    if subtitle.label() != text {
+        subtitle.set_label(&text);
+    }
 }
 
 fn album_cell(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
@@ -237,12 +282,8 @@ fn album_cell(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
     title.add_css_class("album-title");
     cell.append(&title);
 
-    let subtitle_text = match &album.year {
-        Some(year) if !year.is_empty() => format!("{} · {}", album.artist, year),
-        _ => album.artist.clone(),
-    };
     let subtitle = gtk::Label::builder()
-        .label(&subtitle_text)
+        .label(subtitle_text(album))
         .xalign(0.0)
         .ellipsize(pango::EllipsizeMode::End)
         .max_width_chars(20)

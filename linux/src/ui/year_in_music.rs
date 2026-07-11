@@ -241,17 +241,29 @@ fn top_section(title: &str, rows: &[(String, i64)]) -> gtk::Widget {
 
 fn export(ui: &Rc<Ui>, data: &Rc<RefCell<Option<Rc<YearData>>>>, story: bool) {
     let Some(data) = data.borrow().clone() else { return };
-    let Some(card) = crate::render::year_in_music_card(&data, story) else {
-        ui.core.toast("Couldn't render the card");
-        return;
-    };
     let kind = if story { "story" } else { "post" };
     let suggested = format!("flaccy-year-in-music-{}-{}.png", data.year, kind);
-    save_card(ui, card, &suggested);
+    let (tx, rx) = async_channel::bounded::<Option<Vec<u8>>>(1);
+    let owned = (*data).clone();
+    std::thread::Builder::new()
+        .name("flaccy-card".into())
+        .spawn(move || {
+            let bytes =
+                crate::render::year_in_music_card(&owned, story).and_then(|card| card.png_bytes());
+            let _ = tx.send_blocking(bytes);
+        })
+        .ok();
+    let ui = Rc::clone(ui);
+    glib::spawn_future_local(async move {
+        match rx.recv().await {
+            Ok(Some(bytes)) => save_card(&ui, bytes, &suggested),
+            _ => ui.core.toast("Couldn't render the card"),
+        }
+    });
 }
 
 /// Presents a save dialog and writes the rendered card as PNG.
-pub fn save_card(ui: &Rc<Ui>, card: crate::render::Card, suggested_name: &str) {
+pub fn save_card(ui: &Rc<Ui>, png: Vec<u8>, suggested_name: &str) {
     let dialog = gtk::FileDialog::builder()
         .title("Export PNG")
         .initial_name(suggested_name)
@@ -264,7 +276,7 @@ pub fn save_card(ui: &Rc<Ui>, card: crate::render::Card, suggested_name: &str) {
     dialog.save(Some(&window), None::<&gio::Cancellable>, move |result| {
         let Ok(file) = result else { return };
         let Some(path) = file.path() else { return };
-        match card.write_png(&path) {
+        match std::fs::write(&path, &png).map_err(|e| format!("{e}")) {
             Ok(()) => {
                 crate::logger::info("ui", &format!("card exported to {}", path.display()));
                 ui.core.toast(&format!("Saved {}", path.display()));

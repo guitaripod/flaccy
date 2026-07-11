@@ -311,12 +311,24 @@ fn actions_row(ui: &Rc<Ui>, state: &Rc<StatsState>) -> gtk::Widget {
                 .borrow()
                 .as_ref()
                 .map(|s| s.username.clone());
-            let Some(card) = crate::render::recap_share_card(&data, period_name, username.as_deref())
-            else {
-                ui.core.toast("Couldn't render the card");
-                return;
-            };
-            present_share_options(&ui, card);
+            let (tx, rx) = async_channel::bounded::<Option<Vec<u8>>>(1);
+            let owned = (*data).clone();
+            std::thread::Builder::new()
+                .name("flaccy-card".into())
+                .spawn(move || {
+                    let bytes =
+                        crate::render::recap_share_card(&owned, period_name, username.as_deref())
+                            .and_then(|card| card.png_bytes());
+                    let _ = tx.send_blocking(bytes);
+                })
+                .ok();
+            let ui = Rc::clone(&ui);
+            glib::spawn_future_local(async move {
+                match rx.recv().await {
+                    Ok(Some(bytes)) => present_share_options(&ui, bytes),
+                    _ => ui.core.toast("Couldn't render the card"),
+                }
+            });
         });
     }
     row.append(&share);
@@ -350,7 +362,7 @@ fn actions_row(ui: &Rc<Ui>, state: &Rc<StatsState>) -> gtk::Widget {
 
 /// Save-or-copy chooser for a rendered share card: Save PNG… opens a file
 /// dialog; Copy Image puts the PNG on the clipboard.
-fn present_share_options(ui: &Rc<Ui>, card: crate::render::Card) {
+fn present_share_options(ui: &Rc<Ui>, png: Vec<u8>) {
     let dialog = adw::AlertDialog::builder()
         .heading("Share Recap")
         .body("Export the card as a PNG file or copy it to the clipboard.")
@@ -361,19 +373,15 @@ fn present_share_options(ui: &Rc<Ui>, card: crate::render::Card) {
     dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
     let window = ui.window.clone();
     let ui = Rc::clone(ui);
-    let pending: Rc<RefCell<Option<crate::render::Card>>> = Rc::new(RefCell::new(Some(card)));
+    let pending: Rc<RefCell<Option<Vec<u8>>>> = Rc::new(RefCell::new(Some(png)));
     dialog.connect_response(None, move |_, response| {
         match response {
             "save" => {
-                let Some(card) = pending.borrow_mut().take() else { return };
-                crate::ui::year_in_music::save_card(&ui, card, "flaccy-recap.png");
+                let Some(bytes) = pending.borrow_mut().take() else { return };
+                crate::ui::year_in_music::save_card(&ui, bytes, "flaccy-recap.png");
             }
             "copy" => {
-                let Some(card) = pending.borrow_mut().take() else { return };
-                let Some(bytes) = card.png_bytes() else {
-                    ui.core.toast("Copy failed");
-                    return;
-                };
+                let Some(bytes) = pending.borrow_mut().take() else { return };
                 match gtk::gdk::Texture::from_bytes(&glib::Bytes::from_owned(bytes)) {
                     Ok(texture) => {
                         ui.window.clipboard().set_texture(&texture);
