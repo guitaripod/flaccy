@@ -85,6 +85,16 @@ def main() -> None:
                              "Night Arithmetic", "Umbra", "Frost", "Rings"],
         "Morning Frost": ["Overwinter", "Snowline", "Aurorae", "Paper Cities",
                           "Field Lines", "Thaw", "Sommarnatt"],
+        "Deep Focus": ["Tidal Glass", "Almagest", "Solenoid", "Meltwater",
+                       "Ionosphere", "Springtide"],
+        "Golden Hour": ["Greenhouse Hymns", "Saltwater Gospel", "Ember & Ash",
+                        "Southern Cross", "Ledger", "Peony"],
+        "Lossless Showcase": ["Parallax Hours", "Southern Cross", "Vantablack Sun",
+                              "Tidal Glass", "Field Lines", "Confluence"],
+        "Rainy Windows": ["Radio Silence", "Statuary", "Longshore Drift",
+                          "Paper Cities", "Tallow Light"],
+        "Coastlines": ["Longshore Drift", "Foreshore", "Harbor Lantern", "Brine",
+                       "Neap", "Estuary", "Sealskin"],
     }
     for name, titles in playlists.items():
         cur = db.execute(

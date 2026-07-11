@@ -57,6 +57,18 @@ pub fn album_menu(key: &str) -> gio::Menu {
     menu
 }
 
+pub fn artist_menu(artist: &str) -> gio::Menu {
+    let menu = gio::Menu::new();
+    let play_section = gio::Menu::new();
+    play_section.append_item(&item("Play", "win.artist-play", artist));
+    play_section.append_item(&item("Shuffle", "win.artist-shuffle", artist));
+    menu.append_section(None, &play_section);
+    let station_section = gio::Menu::new();
+    station_section.append_item(&item("Start Station", "win.artist-station", artist));
+    menu.append_section(None, &station_section);
+    menu
+}
+
 fn item(label: &str, action: &str, target: &str) -> gio::MenuItem {
     let entry = gio::MenuItem::new(Some(label), None);
     entry.set_action_and_target_value(Some(action), Some(&target.to_variant()));
@@ -105,6 +117,18 @@ pub fn attach_album_context_menu(widget: &impl IsA<gtk::Widget>, key: String) {
     let target = widget.clone().upcast::<gtk::Widget>();
     gesture.connect_pressed(move |_, _, x, y| {
         let menu = album_menu(&key);
+        popup_menu_at(&target, &menu, x, y);
+    });
+    widget.add_controller(gesture);
+}
+
+pub fn attach_artist_context_menu(widget: &impl IsA<gtk::Widget>, artist: String) {
+    let gesture = gtk::GestureClick::builder()
+        .button(gdk::BUTTON_SECONDARY)
+        .build();
+    let target = widget.clone().upcast::<gtk::Widget>();
+    gesture.connect_pressed(move |_, _, x, y| {
+        let menu = artist_menu(&artist);
         popup_menu_at(&target, &menu, x, y);
     });
     widget.add_controller(gesture);

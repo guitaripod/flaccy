@@ -1,5 +1,5 @@
-use crate::db::Db;
-use crate::hygiene::{self, ConsolidationGroup, DuplicateGroup};
+use crate::db::{AlbumInfoMerge, AlbumRetitle, Db, KeeperUpdate};
+use crate::hygiene::{self, AlbumVariant, ConsolidationGroup, DuplicateGroup};
 use crate::library::{self, Track};
 use crate::ui::Ui;
 use adw::prelude::*;
@@ -23,7 +23,7 @@ impl CleanupPlan {
     fn merge_count(&self) -> usize {
         self.consolidations
             .iter()
-            .map(|group| group.variant_titles.len())
+            .map(|group| group.variants.len())
             .sum()
     }
 
@@ -146,7 +146,7 @@ fn detail_view(plan: &CleanupPlan) -> gtk::ScrolledWindow {
         }
         content.append(&detail_line(&format!(
             "Merge {} into “{}” — {}",
-            join_variants(&group.variant_titles),
+            join_variants(&group.variants),
             group.canonical_title,
             group.artist
         )));
@@ -195,10 +195,10 @@ fn keeper_quality(track: &Track) -> String {
     track.quality_badge().unwrap_or_else(|| "best".to_string())
 }
 
-fn join_variants(variants: &[String]) -> String {
+fn join_variants(variants: &[AlbumVariant]) -> String {
     variants
         .iter()
-        .map(|title| format!("“{title}”"))
+        .map(|variant| format!("“{}”", variant.title))
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -276,36 +276,58 @@ fn apply_blocking(db_path: &Path, root: &Path, plan: CleanupPlan) -> CleanupResu
         crate::logger::error("library", "cleanup apply: database open failed");
         return CleanupResult { removed: 0, merged: 0 };
     };
-    let mut merged = 0;
-    for group in &plan.consolidations {
-        for variant in &group.variant_titles {
-            if let Err(err) = db.rewrite_album_title(variant, &group.canonical_title, &group.artist)
-            {
-                crate::logger::error("library", &format!("title rewrite failed: {err}"));
-                continue;
-            }
-            merged += 1;
-        }
-        if let Err(err) =
-            db.merge_album_info(&group.canonical_title, &group.variant_titles, &group.artist)
-        {
-            crate::logger::error("library", &format!("album_info merge failed: {err}"));
-        }
+
+    let retitles: Vec<AlbumRetitle> = plan
+        .consolidations
+        .iter()
+        .flat_map(|group| {
+            group.variants.iter().map(move |variant| AlbumRetitle {
+                from_title: variant.title.clone(),
+                from_artist: variant.artist.clone(),
+                to_title: group.canonical_title.clone(),
+                to_artist: group.artist.clone(),
+            })
+        })
+        .collect();
+    let album_info_merges: Vec<AlbumInfoMerge> = plan
+        .consolidations
+        .iter()
+        .map(|group| AlbumInfoMerge {
+            canonical_title: group.canonical_title.clone(),
+            canonical_artist: group.artist.clone(),
+            variants: group
+                .variants
+                .iter()
+                .map(|variant| (variant.title.clone(), variant.artist.clone()))
+                .collect(),
+        })
+        .collect();
+    let keeper_updates: Vec<KeeperUpdate> = plan
+        .duplicates
+        .iter()
+        .map(|group| KeeperUpdate {
+            rel_path: group.keeper.rel_path.clone(),
+            loved: group.loved,
+            play_count: group.play_count,
+        })
+        .collect();
+    let loser_rel_paths: Vec<String> = plan
+        .duplicates
+        .iter()
+        .flat_map(|group| group.losers.iter().map(|loser| loser.rel_path.clone()))
+        .collect();
+    let merged = retitles.len();
+
+    if let Err(err) =
+        db.apply_cleanup(&retitles, &keeper_updates, &album_info_merges, &loser_rel_paths)
+    {
+        crate::logger::error("library", &format!("cleanup apply failed: {err}"));
+        return CleanupResult { removed: 0, merged: 0 };
     }
 
     let mut removed = 0;
-    for group in &plan.duplicates {
-        if group.loved && !group.keeper.loved {
-            let _ = db.set_loved(&group.keeper.rel_path, true, None);
-        }
-        if group.play_count > group.keeper.play_count {
-            let _ = db.set_play_count(&group.keeper.rel_path, group.play_count);
-        }
-        for loser in &group.losers {
-            if !trash_file(&root.join(&loser.rel_path)) {
-                continue;
-            }
-            let _ = db.delete_track_by_rel_path(&loser.rel_path);
+    for rel_path in &loser_rel_paths {
+        if trash_file(&root.join(rel_path)) {
             removed += 1;
         }
     }

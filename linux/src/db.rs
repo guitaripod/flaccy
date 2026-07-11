@@ -93,6 +93,26 @@ pub struct LyricsRow {
     pub instrumental: bool,
 }
 
+pub struct AlbumRetitle {
+    pub from_title: String,
+    pub from_artist: String,
+    pub to_title: String,
+    pub to_artist: String,
+}
+
+pub struct KeeperUpdate {
+    pub rel_path: String,
+    pub loved: bool,
+    pub play_count: i64,
+}
+
+pub struct AlbumInfoMerge {
+    pub canonical_title: String,
+    pub canonical_artist: String,
+    /// `(variant_title, variant_artist)` pairs folded into the canonical album.
+    pub variants: Vec<(String, String)>,
+}
+
 pub fn default_db_path() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_default()
@@ -494,70 +514,96 @@ impl Db {
         Ok(())
     }
 
-    /// Rewrites the album title of every track in a variant pressing to the
-    /// canonical title, physically fusing library editions. Diff-based rescans
-    /// never re-read existing rows, so this persists.
+    /// Retitles every track of a variant pressing onto the canonical album,
+    /// converging the artist too so raw spellings that normalize-equal collapse
+    /// to one. Diff-based rescans never re-read existing rows, so this persists.
     pub fn rewrite_album_title(
         &self,
         from_title: &str,
+        from_artist: &str,
         to_title: &str,
-        artist: &str,
+        to_artist: &str,
     ) -> Result<usize, rusqlite::Error> {
         self.conn.execute(
-            "UPDATE tracks SET albumTitle = ?1 WHERE artist = ?2 AND albumTitle = ?3",
-            params![to_title, artist, from_title],
+            "UPDATE tracks SET albumTitle = ?1, artist = ?2 WHERE albumTitle = ?3 AND artist = ?4",
+            params![to_title, to_artist, from_title, from_artist],
         )
     }
 
-    /// Folds the enrichment fields of variant `albumInfo` rows into the
-    /// canonical row (COALESCE, mirroring `apply_album_enrichment`) then deletes
-    /// the now-orphaned variant rows.
-    pub fn merge_album_info(
+    /// COALESCE-folds each variant `albumInfo` row — including its `lastFetched`
+    /// cache stamp, so a fused edition is not re-enriched — into the canonical
+    /// album, then deletes the orphaned variant row. Runs on the current
+    /// connection so `apply_cleanup` can wrap it in a single transaction.
+    fn merge_album_info(
         &self,
         canonical_title: &str,
-        variant_titles: &[String],
-        artist: &str,
+        canonical_artist: &str,
+        variants: &[(String, String)],
     ) -> Result<(), rusqlite::Error> {
-        self.conn.execute_batch("BEGIN IMMEDIATE")?;
-        let result = self.merge_album_info_inner(canonical_title, variant_titles, artist);
-        match result {
-            Ok(()) => self.conn.execute_batch("COMMIT").map(|_| ()),
-            Err(err) => {
-                let _ = self.conn.execute_batch("ROLLBACK");
-                Err(err)
-            }
-        }
-    }
-
-    fn merge_album_info_inner(
-        &self,
-        canonical_title: &str,
-        variant_titles: &[String],
-        artist: &str,
-    ) -> Result<(), rusqlite::Error> {
-        for variant in variant_titles {
-            if variant == canonical_title {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO albumInfo (title, artist) VALUES (?1, ?2)",
+            params![canonical_title, canonical_artist],
+        )?;
+        for (variant_title, variant_artist) in variants {
+            if variant_title == canonical_title && variant_artist == canonical_artist {
                 continue;
             }
             self.conn.execute(
-                "INSERT INTO albumInfo
-                    (title, artist, year, genre, coverArtURL, coverArtData, musicBrainzID, lastFetched)
-                 SELECT ?1, ?2, year, genre, coverArtURL, coverArtData, musicBrainzID, lastFetched
-                 FROM albumInfo WHERE title = ?3 AND artist = ?2
-                 ON CONFLICT(title, artist) DO UPDATE SET
-                    year = COALESCE(albumInfo.year, excluded.year),
-                    genre = COALESCE(albumInfo.genre, excluded.genre),
-                    coverArtURL = COALESCE(albumInfo.coverArtURL, excluded.coverArtURL),
-                    coverArtData = COALESCE(albumInfo.coverArtData, excluded.coverArtData),
-                    musicBrainzID = COALESCE(albumInfo.musicBrainzID, excluded.musicBrainzID)",
-                params![canonical_title, artist, variant],
+                "UPDATE albumInfo SET
+                    coverArtURL = COALESCE(coverArtURL, (SELECT coverArtURL FROM albumInfo WHERE title = ?1 AND artist = ?2)),
+                    coverArtData = COALESCE(coverArtData, (SELECT coverArtData FROM albumInfo WHERE title = ?1 AND artist = ?2)),
+                    musicBrainzID = COALESCE(musicBrainzID, (SELECT musicBrainzID FROM albumInfo WHERE title = ?1 AND artist = ?2)),
+                    year = COALESCE(year, (SELECT year FROM albumInfo WHERE title = ?1 AND artist = ?2)),
+                    genre = COALESCE(genre, (SELECT genre FROM albumInfo WHERE title = ?1 AND artist = ?2)),
+                    lastFetched = COALESCE(lastFetched, (SELECT lastFetched FROM albumInfo WHERE title = ?1 AND artist = ?2))
+                 WHERE title = ?3 AND artist = ?4",
+                params![variant_title, variant_artist, canonical_title, canonical_artist],
             )?;
             self.conn.execute(
                 "DELETE FROM albumInfo WHERE title = ?1 AND artist = ?2",
-                params![variant, artist],
+                params![variant_title, variant_artist],
             )?;
         }
         Ok(())
+    }
+
+    /// Applies a whole library-hygiene plan in ONE transaction (mirrors the
+    /// macOS `applyHygiene`): losers are unlinked from playlists and the track
+    /// table, each redundant variant's `albumInfo` is folded into the canonical
+    /// album, variant tracks are retitled onto the canonical title/artist, and
+    /// each surviving keeper inherits its group's loved flag and highest play
+    /// count. Trashing the loser files happens after this commits — files can
+    /// not join a DB transaction.
+    pub fn apply_cleanup(
+        &self,
+        retitles: &[AlbumRetitle],
+        keeper_updates: &[KeeperUpdate],
+        album_info_merges: &[AlbumInfoMerge],
+        loser_rel_paths: &[String],
+    ) -> Result<(), rusqlite::Error> {
+        let tx = self.conn.unchecked_transaction()?;
+        for path in loser_rel_paths {
+            self.delete_track_by_rel_path(path)?;
+        }
+        for merge in album_info_merges {
+            self.merge_album_info(&merge.canonical_title, &merge.canonical_artist, &merge.variants)?;
+        }
+        for retitle in retitles {
+            self.rewrite_album_title(
+                &retitle.from_title,
+                &retitle.from_artist,
+                &retitle.to_title,
+                &retitle.to_artist,
+            )?;
+        }
+        for update in keeper_updates {
+            self.set_play_count(&update.rel_path, update.play_count)?;
+            tx.execute(
+                "UPDATE tracks SET loved = ?1 WHERE fileURL = ?2",
+                params![update.loved, update.rel_path],
+            )?;
+        }
+        tx.commit()
     }
 
     pub fn delete_track_by_rel_path(&self, rel_path: &str) -> Result<(), rusqlite::Error> {
@@ -653,6 +699,14 @@ impl Db {
     pub fn delete_playlist(&self, id: i64) -> Result<(), rusqlite::Error> {
         self.conn
             .execute("DELETE FROM playlists WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn rename_playlist(&self, id: i64, name: &str) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "UPDATE playlists SET name = ?1 WHERE id = ?2",
+            params![name, id],
+        )?;
         Ok(())
     }
 
@@ -1144,3 +1198,210 @@ impl Db {
     }
 }
 
+#[cfg(test)]
+mod cleanup_tests {
+    use super::*;
+    use crate::hygiene::{self, ConsolidationGroup, DuplicateGroup};
+    use crate::library;
+
+    struct TempDb {
+        path: PathBuf,
+        db: Db,
+    }
+
+    impl TempDb {
+        fn open() -> Self {
+            let path = std::env::temp_dir()
+                .join(format!("flaccy-cleanup-test-{}.sqlite", std::process::id()));
+            remove_all(&path);
+            let db = Db::open(&path).expect("temp db opens");
+            Self { path, db }
+        }
+    }
+
+    impl Drop for TempDb {
+        fn drop(&mut self) {
+            remove_all(&self.path);
+        }
+    }
+
+    fn remove_all(path: &Path) {
+        let _ = std::fs::remove_file(path);
+        for suffix in ["-wal", "-shm"] {
+            let _ = std::fs::remove_file(PathBuf::from(format!("{}{}", path.display(), suffix)));
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn insert(
+        db: &Db,
+        rel_path: &str,
+        title: &str,
+        artist: &str,
+        album: &str,
+        track_number: i32,
+        duration: f64,
+        codec: &str,
+        bit_depth: Option<i32>,
+        sample_rate: Option<i32>,
+    ) {
+        db.insert_track(&NewTrack {
+            rel_path: rel_path.to_string(),
+            title: title.to_string(),
+            artist: artist.to_string(),
+            album: album.to_string(),
+            track_number,
+            duration,
+            codec: Some(codec.to_string()),
+            bit_depth,
+            sample_rate,
+            channels: Some(2),
+            artwork: None,
+        })
+        .expect("insert track");
+    }
+
+    fn plan_vectors(
+        consolidations: &[ConsolidationGroup],
+        duplicates: &[DuplicateGroup],
+    ) -> (Vec<AlbumRetitle>, Vec<KeeperUpdate>, Vec<AlbumInfoMerge>, Vec<String>) {
+        let retitles = consolidations
+            .iter()
+            .flat_map(|group| {
+                group.variants.iter().map(move |variant| AlbumRetitle {
+                    from_title: variant.title.clone(),
+                    from_artist: variant.artist.clone(),
+                    to_title: group.canonical_title.clone(),
+                    to_artist: group.artist.clone(),
+                })
+            })
+            .collect();
+        let merges = consolidations
+            .iter()
+            .map(|group| AlbumInfoMerge {
+                canonical_title: group.canonical_title.clone(),
+                canonical_artist: group.artist.clone(),
+                variants: group
+                    .variants
+                    .iter()
+                    .map(|variant| (variant.title.clone(), variant.artist.clone()))
+                    .collect(),
+            })
+            .collect();
+        let keeper_updates = duplicates
+            .iter()
+            .map(|group| KeeperUpdate {
+                rel_path: group.keeper.rel_path.clone(),
+                loved: group.loved,
+                play_count: group.play_count,
+            })
+            .collect();
+        let loser_rel_paths = duplicates
+            .iter()
+            .flat_map(|group| group.losers.iter().map(|loser| loser.rel_path.clone()))
+            .collect();
+        (retitles, keeper_updates, merges, loser_rel_paths)
+    }
+
+    /// End-to-end proof of the "Clean Up Library" apply path against a real
+    /// on-disk SQLite database: a Deluxe edition folds into its standard release
+    /// (title AND normalize-equal artist converging), and two exact-duplicate
+    /// pairs collapse to their highest-fidelity keeper, atomically and
+    /// idempotently.
+    #[test]
+    fn apply_cleanup_folds_editions_and_dedupes() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        let root = std::env::temp_dir();
+
+        insert(db, "aurora/01.flac", "Opening", "Aurora Band", "Aurora", 1, 200.0, "flac", Some(24), Some(96000));
+        insert(db, "aurora/02.flac", "Second", "Aurora Band", "Aurora", 2, 210.0, "flac", Some(24), Some(96000));
+        insert(db, "aurora/03.flac", "Third", "Aurora Band", "Aurora", 3, 220.0, "flac", Some(24), Some(96000));
+        insert(db, "aurora/04.flac", "Fourth", "Aurora Band", "Aurora", 4, 230.0, "flac", Some(24), Some(96000));
+        insert(db, "aurora-deluxe/01.flac", "Opening", "aurora band", "Aurora (Deluxe Edition)", 1, 200.5, "flac", Some(16), Some(44100));
+        insert(db, "aurora-deluxe/12.flac", "Bonus Cut", "aurora band", "Aurora (Deluxe Edition)", 12, 180.0, "flac", Some(16), Some(44100));
+
+        insert(db, "nova/01.flac", "Dusk", "Nova", "Nightfall", 1, 250.0, "flac", Some(24), Some(96000));
+        insert(db, "nova/01.mp3", "Dusk", "Nova", "Nightfall", 1, 250.0, "mp3", None, Some(44100));
+
+        db.set_play_count("aurora/01.flac", 5).expect("play count");
+        db.set_play_count("aurora-deluxe/01.flac", 9).expect("play count");
+        db.set_loved("aurora-deluxe/01.flac", true, None).expect("loved");
+        db.set_play_count("nova/01.flac", 3).expect("play count");
+        db.set_play_count("nova/01.mp3", 1).expect("play count");
+        db.set_loved("nova/01.mp3", true, None).expect("loved");
+
+        db.apply_album_enrichment(
+            "Aurora (Deluxe Edition)",
+            "aurora band",
+            Some("2021"),
+            Some("Dream Pop"),
+            None,
+            None,
+            None,
+        )
+        .expect("seed variant albumInfo");
+
+        let raw = library::load(db, false);
+        let consolidations = hygiene::consolidation_groups(&raw.albums);
+        let duplicates = hygiene::find_duplicate_groups(&raw.tracks, &root);
+
+        assert_eq!(consolidations.len(), 1, "one edition group");
+        assert_eq!(consolidations[0].canonical_title, "Aurora", "standard is the fuller pressing");
+        assert_eq!(consolidations[0].artist, "Aurora Band", "canonical carries the clean artist spelling");
+        assert_eq!(consolidations[0].variants.len(), 1);
+        assert_eq!(consolidations[0].variants[0].artist, "aurora band", "variant keeps its raw artist");
+        assert_eq!(duplicates.len(), 2, "the shared track and the FLAC/MP3 pair");
+
+        let (retitles, keeper_updates, merges, losers) = plan_vectors(&consolidations, &duplicates);
+        db.apply_cleanup(&retitles, &keeper_updates, &merges, &losers)
+            .expect("apply cleanup");
+
+        let tracks = db.fetch_all_tracks();
+        let by_path = |rel: &str| tracks.iter().find(|t| t.rel_path == rel);
+
+        assert!(
+            !tracks.iter().any(|t| t.album == "Aurora (Deluxe Edition)"),
+            "no track keeps the Deluxe title"
+        );
+        let bonus = by_path("aurora-deluxe/12.flac").expect("bonus track survives");
+        assert_eq!(bonus.album, "Aurora", "bonus track retitled to the canonical album");
+        assert_eq!(bonus.artist, "Aurora Band", "bonus track artist converged to canonical");
+
+        assert!(by_path("aurora-deluxe/01.flac").is_none(), "Deluxe duplicate loser is gone");
+        assert!(by_path("nova/01.mp3").is_none(), "MP3 duplicate loser is gone");
+
+        let nova_keeper = by_path("nova/01.flac").expect("FLAC keeper survives");
+        assert_eq!(nova_keeper.codec.as_deref(), Some("flac"), "the FLAC is kept");
+        assert_eq!(nova_keeper.play_count, 3, "keeper takes the max play count");
+        assert!(nova_keeper.loved, "keeper takes the OR of loved");
+
+        let aurora_keeper = by_path("aurora/01.flac").expect("Aurora keeper survives");
+        assert_eq!(aurora_keeper.play_count, 9, "shared-track keeper takes the max play count");
+        assert!(aurora_keeper.loved, "shared-track keeper inherits loved from the loser");
+
+        let canonical_info = db
+            .album_info_status("Aurora", "Aurora Band")
+            .expect("canonical albumInfo exists");
+        assert_eq!(canonical_info.year.as_deref(), Some("2021"), "variant year folded in");
+        assert_eq!(canonical_info.genre.as_deref(), Some("Dream Pop"), "variant genre folded in");
+        assert!(
+            canonical_info.last_fetched_unix.is_some(),
+            "variant lastFetched cache stamp preserved on the canonical row"
+        );
+        assert!(
+            db.album_info_status("Aurora (Deluxe Edition)", "aurora band").is_none(),
+            "variant albumInfo row removed"
+        );
+
+        let after = library::load(db, false);
+        assert!(
+            hygiene::consolidation_groups(&after.albums).is_empty(),
+            "re-running finds no edition to merge"
+        );
+        assert!(
+            hygiene::find_duplicate_groups(&after.tracks, &root).is_empty(),
+            "re-running finds no duplicates"
+        );
+    }
+}

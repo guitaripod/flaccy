@@ -108,7 +108,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 count.add_css_class("dim");
                 count.add_css_class("caption");
                 row_box.append(&count);
-                list.append(&gtk::ListBoxRow::builder().child(&row_box).build());
+                let list_row = gtk::ListBoxRow::builder().child(&row_box).build();
+                attach_playlist_list_menu(&list_row, playlist.id);
+                list.append(&list_row);
             }
             *ids.borrow_mut() = collected;
             stack.set_visible_child_name(if playlists.is_empty() { "empty" } else { "list" });
@@ -350,6 +352,126 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
 
     let page = adw::NavigationPage::builder().title(&name).child(&scroll).build();
     ui.nav.push(&page);
+}
+
+fn attach_playlist_list_menu(row: &gtk::ListBoxRow, playlist_id: i64) {
+    let gesture = gtk::GestureClick::builder()
+        .button(gdk::BUTTON_SECONDARY)
+        .build();
+    let target = row.clone();
+    gesture.connect_pressed(move |_, _, x, y| {
+        context::popup_menu_at(&target, &playlist_list_menu(playlist_id), x, y);
+    });
+    row.add_controller(gesture);
+}
+
+fn playlist_list_menu(playlist_id: i64) -> gtk::gio::Menu {
+    let menu = gtk::gio::Menu::new();
+    let play_section = gtk::gio::Menu::new();
+    play_section.append_item(&playlist_item("Play", "win.playlist-play", playlist_id));
+    play_section.append_item(&playlist_item("Shuffle", "win.playlist-shuffle", playlist_id));
+    menu.append_section(None, &play_section);
+    let manage_section = gtk::gio::Menu::new();
+    manage_section.append_item(&playlist_item("Rename…", "win.playlist-rename", playlist_id));
+    manage_section.append_item(&playlist_item("Delete", "win.playlist-delete", playlist_id));
+    menu.append_section(None, &manage_section);
+    menu
+}
+
+fn playlist_item(label: &str, action: &str, playlist_id: i64) -> gtk::gio::MenuItem {
+    let entry = gtk::gio::MenuItem::new(Some(label), None);
+    entry.set_action_and_target_value(Some(action), Some(&playlist_id.to_variant()));
+    entry
+}
+
+/// Resolves a playlist's stored track order against the live library, dropping
+/// rows whose file has since left the library.
+fn resolve_playlist_tracks(ui: &Rc<Ui>, playlist_id: i64) -> Vec<Track> {
+    let library = ui.core.library.borrow().clone();
+    let by_rel_path: std::collections::HashMap<&str, &Track> = library
+        .tracks
+        .iter()
+        .map(|track| (track.rel_path.as_str(), track))
+        .collect();
+    ui.core
+        .db
+        .playlist_tracks(playlist_id)
+        .into_iter()
+        .filter_map(|row| by_rel_path.get(row.rel_path.as_str()).map(|track| (*track).clone()))
+        .collect()
+}
+
+pub fn play_playlist(ui: &Rc<Ui>, playlist_id: i64, shuffle: bool) {
+    let tracks = resolve_playlist_tracks(ui, playlist_id);
+    if tracks.is_empty() {
+        ui.core.toast("Playlist has no playable tracks");
+        return;
+    }
+    if shuffle != ui.core.player.shuffle_enabled() {
+        ui.core.player.toggle_shuffle();
+    }
+    ui.core.play_tracks(tracks, 0);
+}
+
+pub fn prompt_rename_playlist(ui: &Rc<Ui>, playlist_id: i64) {
+    let current = ui.core.db.playlist_name(playlist_id).unwrap_or_default();
+    let dialog = adw::AlertDialog::builder()
+        .heading("Rename Playlist")
+        .body("Choose a new name.")
+        .close_response("cancel")
+        .default_response("rename")
+        .build();
+    dialog.add_response("cancel", "Cancel");
+    dialog.add_response("rename", "Rename");
+    dialog.set_response_appearance("rename", adw::ResponseAppearance::Suggested);
+
+    let entry = gtk::Entry::builder()
+        .text(&current)
+        .activates_default(true)
+        .build();
+    dialog.set_extra_child(Some(&entry));
+
+    let window = ui.window.clone();
+    let ui = Rc::clone(ui);
+    dialog.connect_response(None, move |_, response| {
+        if response != "rename" {
+            return;
+        }
+        let name = entry.text().trim().to_string();
+        if name.is_empty() {
+            return;
+        }
+        match ui.core.db.rename_playlist(playlist_id, &name) {
+            Ok(()) => {
+                crate::logger::info("database", &format!("renamed playlist {playlist_id} to '{name}'"));
+                ui.core.hub.emit(&AppEvent::LibraryReloaded);
+            }
+            Err(err) => {
+                crate::logger::error("database", &format!("rename playlist failed: {err}"));
+            }
+        }
+    });
+    dialog.present(Some(&window));
+}
+
+pub fn confirm_delete_playlist(ui: &Rc<Ui>, playlist_id: i64) {
+    let dialog = adw::AlertDialog::builder()
+        .heading("Delete Playlist?")
+        .body("This removes the playlist. Your music files stay untouched.")
+        .close_response("cancel")
+        .build();
+    dialog.add_response("cancel", "Cancel");
+    dialog.add_response("delete", "Delete");
+    dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+    let window = ui.window.clone();
+    let ui = Rc::clone(ui);
+    dialog.connect_response(None, move |_, response| {
+        if response == "delete" {
+            let _ = ui.core.db.delete_playlist(playlist_id);
+            ui.core.hub.emit(&AppEvent::LibraryReloaded);
+        }
+    });
+    dialog.present(Some(&window));
 }
 
 fn attach_playlist_row_menu(

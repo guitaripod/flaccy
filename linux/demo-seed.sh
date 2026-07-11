@@ -64,6 +64,26 @@ seed_album "Kestrel Vale" "Overwinter" 2023 0x1C1917 0xA8A29E \
   "Overwinter|196" "Snowline|233" "Thaw|277" "Firn|330"
 seed_album "The Hollowmen" "Meltwater" 2024 0x134E4A 0x2DD4BF \
   "Meltwater|220" "Confluence|262" "Oxbow|311"
+seed_album "Cobalt Fields" "Signal Bloom" 2024 0x14235C 0x5FA8FF \
+  "Signal Bloom|305" "Static Garden|278" "Lowband|246" "Nightshift|331"
+seed_album "Ashgrove" "Lantern Year" 2019 0x3A2E14 0xE6C36F \
+  "Lantern Year|223" "Threshing Song|254" "Hollow Oak|211"
+seed_album "Halden Reef" "Tidal Glass" 2023 0x0C333A 0x63E0D0 \
+  "Tidal Glass|356" "Neap|278" "Springtide|341" "Estuary|299"
+seed_album "Corvid & Crane" "Ledger of Small Hours" 2022 0x352A16 0xDDBE76 \
+  "Ledger|232" "Magpie Song|258" "Rooksmoor|214" "Tallow Light|271"
+seed_album "Ptolemy Sound" "Almagest" 2024 0x151E5A 0x6E9BFF \
+  "Almagest|312" "Epicycle|287" "Retrograde|264" "Zenith Rise|331"
+seed_album "Aster Bloom" "Greenhouse Hymns" 2023 0x2A1748 0xCF9CFF \
+  "Greenhouse Hymns|251" "Peony|268" "Terrarium|239" "Chlorophyll|292"
+seed_album "Bright Antares" "Southern Cross" 2021 0x103628 0x93E6B6 \
+  "Southern Cross|372" "Coalsack|314" "Acrux|398"
+seed_album "Odessa Grey" "Saltwater Gospel" 2022 0x431A28 0xFF93A8 \
+  "Saltwater Gospel|274" "Brine|248" "Harbor Lantern|291" "Low Country|236"
+seed_album "Fenwick Lyle" "Radio Silence" 2023 0x3C2A12 0xF0BE63 \
+  "Radio Silence|227" "Shortwave|241" "Dead Air|213" "Carrier Tone|258"
+seed_album "Selkie" "Longshore Drift" 2024 0x123640 0x7FD6C4 \
+  "Longshore Drift|269" "Sealskin|244" "Foreshore|288"
 
 echo "demo catalog ready at $ROOT"
 

@@ -26,10 +26,16 @@ pub struct DuplicateGroup {
     pub play_count: i64,
 }
 
+#[derive(Clone)]
+pub struct AlbumVariant {
+    pub title: String,
+    pub artist: String,
+}
+
 pub struct ConsolidationGroup {
     pub canonical_title: String,
     pub artist: String,
-    pub variant_titles: Vec<String>,
+    pub variants: Vec<AlbumVariant>,
 }
 
 /// The edition-free base title under the consolidation keyword set.
@@ -167,17 +173,21 @@ pub fn consolidation_groups(albums: &[Album]) -> Vec<ConsolidationGroup> {
             continue;
         }
         let canonical = canonical_album(&members);
-        let mut variant_titles: Vec<String> = members
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut variants: Vec<AlbumVariant> = members
             .iter()
             .filter(|album| album.title != canonical.title)
-            .map(|album| album.title.clone())
+            .filter(|album| seen.insert(album.title.clone()))
+            .map(|album| AlbumVariant {
+                title: album.title.clone(),
+                artist: album.artist.clone(),
+            })
             .collect();
-        variant_titles.sort();
-        variant_titles.dedup();
+        variants.sort_by(|a, b| a.title.cmp(&b.title));
         groups.push(ConsolidationGroup {
             canonical_title: canonical.title.clone(),
             artist: canonical.artist.clone(),
-            variant_titles,
+            variants,
         });
     }
     groups.sort_by(|a, b| {
@@ -432,7 +442,8 @@ mod tests {
         assert_eq!(groups.len(), 1, "only the two-variant release consolidates");
         let group = &groups[0];
         assert_eq!(group.canonical_title, "Album (Deluxe Edition)", "the fuller pressing wins");
-        assert_eq!(group.variant_titles, vec!["Album".to_string()]);
+        assert_eq!(group.variants.len(), 1);
+        assert_eq!(group.variants[0].title, "Album");
     }
 
     #[test]

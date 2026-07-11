@@ -434,6 +434,12 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_string_action(ui, "artist-station", |ui, artist| {
         ui.core.start_artist_station(artist);
     });
+    add_string_action(ui, "artist-play", |ui, artist| {
+        ui.core.play_artist(artist, false);
+    });
+    add_string_action(ui, "artist-shuffle", |ui, artist| {
+        ui.core.play_artist(artist, true);
+    });
     add_string_action(ui, "track-songlink", |ui, rel| {
         let library = ui.core.library.borrow().clone();
         if let Some(track) = library.track_by_rel_path(rel) {
@@ -571,6 +577,19 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
         });
     }
     ui.window.add_action(&playlist_remove);
+
+    add_int64_action(ui, "playlist-play", |ui, id| {
+        ui::playlists::play_playlist(ui, id, false);
+    });
+    add_int64_action(ui, "playlist-shuffle", |ui, id| {
+        ui::playlists::play_playlist(ui, id, true);
+    });
+    add_int64_action(ui, "playlist-rename", |ui, id| {
+        ui::playlists::prompt_rename_playlist(ui, id);
+    });
+    add_int64_action(ui, "playlist-delete", |ui, id| {
+        ui::playlists::confirm_delete_playlist(ui, id);
+    });
 }
 
 /// Accepts audio files/folders dropped anywhere on the window: copies them
@@ -664,6 +683,17 @@ fn add_string_action(ui: &Rc<Ui>, name: &str, handler: impl Fn(&Rc<Ui>, &str) + 
     action.connect_activate(move |_, parameter| {
         if let Some(value) = parameter.and_then(|v| v.get::<String>()) {
             handler(&ui_for_handler, &value);
+        }
+    });
+    ui.window.add_action(&action);
+}
+
+fn add_int64_action(ui: &Rc<Ui>, name: &str, handler: impl Fn(&Rc<Ui>, i64) + 'static) {
+    let action = gio::SimpleAction::new(name, Some(glib::VariantTy::INT64));
+    let ui_for_handler = Rc::clone(ui);
+    action.connect_activate(move |_, parameter| {
+        if let Some(value) = parameter.and_then(|v| v.get::<i64>()) {
+            handler(&ui_for_handler, value);
         }
     });
     ui.window.add_action(&action);

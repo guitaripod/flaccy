@@ -147,6 +147,7 @@ fn artist_cell(artist: &ArtistEntry) -> gtk::FlowBoxChild {
 
     let child = gtk::FlowBoxChild::builder().child(&cell).build();
     child.add_css_class("album-tile");
+    crate::ui::context::attach_artist_context_menu(&child, artist.name.clone());
     child
 }
 

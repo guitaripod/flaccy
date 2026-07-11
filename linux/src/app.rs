@@ -258,6 +258,29 @@ impl AppCore {
         self.play_tracks(album.tracks.clone(), start);
     }
 
+    pub fn play_artist(self: &Rc<Self>, artist: &str, shuffle: bool) {
+        let library = self.library.borrow().clone();
+        let tracks: Vec<Track> = library
+            .albums
+            .iter()
+            .filter(|album| album.artist == artist)
+            .flat_map(|album| album.tracks.iter().cloned())
+            .collect();
+        if tracks.is_empty() {
+            return;
+        }
+        if shuffle != self.player.shuffle_enabled() {
+            self.player.toggle_shuffle();
+        }
+        let start = if shuffle {
+            let seed = format!("{artist}{}", chrono::Utc::now().timestamp_micros());
+            (crate::palette::fnv1a_64(&seed) % tracks.len() as u64) as usize
+        } else {
+            0
+        };
+        self.play_tracks(tracks, start);
+    }
+
     pub fn next(self: &Rc<Self>) {
         crate::scrobbler::checkpoint_skip(self);
         self.player.next();
