@@ -74,14 +74,22 @@ fn theme_row(ui: &Rc<Ui>) -> adw::ComboRow {
     let selected = Theme::ALL.iter().position(|t| *t == current).unwrap_or(0);
     row.set_selected(selected as u32);
     row.set_subtitle(current.subtitle());
+
+    let swatch = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    swatch.add_css_class("theme-swatch");
+    swatch.set_valign(gtk::Align::Center);
+    apply_swatch(&swatch, current);
+    row.add_prefix(&swatch);
     {
         let ui = Rc::clone(ui);
+        let swatch = swatch.clone();
         row.connect_selected_notify(move |row| {
             let theme = Theme::ALL
                 .get(row.selected() as usize)
                 .copied()
                 .unwrap_or(Theme::Adaptive);
             row.set_subtitle(theme.subtitle());
+            apply_swatch(&swatch, theme);
             ui.core.config.borrow_mut().theme = theme.id().to_string();
             ui.core.save_config();
             if let Some(controller) = crate::theme::ThemeController::current() {
@@ -91,6 +99,14 @@ fn theme_row(ui: &Rc<Ui>) -> adw::ComboRow {
         });
     }
     row
+}
+
+/// Swaps the `swatch-<id>` class so the picker's dot previews the theme color.
+fn apply_swatch(swatch: &gtk::Box, theme: crate::theme::Theme) {
+    for other in crate::theme::Theme::ALL {
+        swatch.remove_css_class(&format!("swatch-{}", other.id()));
+    }
+    swatch.add_css_class(&format!("swatch-{}", theme.id()));
 }
 
 fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {

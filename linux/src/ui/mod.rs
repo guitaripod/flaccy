@@ -5,6 +5,7 @@ pub mod cleanup;
 pub mod context;
 pub mod guide;
 pub mod lyrics_panel;
+pub mod now_playing;
 pub mod playlists;
 pub mod queue_panel;
 pub mod prefs;

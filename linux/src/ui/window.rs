@@ -855,6 +855,12 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
             ui.core.hub.emit(&AppEvent::LyricsToggled(true));
         });
     }
+    if std::env::var_os("FLACCY_DEMO_NOWPLAYING").is_some() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1500), move || {
+            ui::now_playing::present(&ui);
+        });
+    }
     if std::env::var_os("FLACCY_DEMO_PREFS").is_some() {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {

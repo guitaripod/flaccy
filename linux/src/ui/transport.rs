@@ -30,6 +30,19 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let art_overlay = gtk::Overlay::new();
     art_overlay.set_child(Some(&artwork));
     art_overlay.add_overlay(&equalizer);
+    art_overlay.add_css_class("mini-art");
+    art_overlay.set_cursor_from_name(Some("pointer"));
+    art_overlay.set_tooltip_text(Some("Now Playing"));
+    {
+        let ui = Rc::clone(ui);
+        let click = gtk::GestureClick::new();
+        click.connect_released(move |_, _, _, _| {
+            if ui.core.player.current_track().is_some() {
+                crate::ui::now_playing::present(&ui);
+            }
+        });
+        art_overlay.add_controller(click);
+    }
 
     let title = gtk::Label::builder()
         .label("Not Playing")
