@@ -25,8 +25,8 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 |---|---|---|
 | **iPhone** | The full app: gapless playback, AI organization, scrobbling, charts, Year in Music, wantlist, lyrics, stations | [App Store](https://apps.apple.com/app/id6787493695) |
 | **Apple Watch** | Standalone phone-free player — sync tracks, play offline through AirPods | Bundled with the iOS app |
-| **Mac** | Native AppKit app with Liquid Glass: full feature parity plus folder watching, menu bar player, media keys, multi-column sorting, keyboard-first browsing | Mac App Store — in review |
-| **Linux** | Native GTK4/libadwaita player: gapless GStreamer playback, MPRIS media keys, scrobbling, synced lyrics, listening stats | `curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh \| sh` or `yay -S flaccy-bin` |
+| **Mac** | Native AppKit app with Liquid Glass and an adaptive artwork palette that tints the whole window to what's playing: full feature parity plus folder watching, menu bar player, media keys, multi-column sorting, keyboard-first browsing | Mac App Store — in review |
+| **Linux** | Native GTK4/libadwaita player with an adaptive theme engine, gapless GStreamer playback, MPRIS media keys, scrobbling, synced lyrics, listening stats | `curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh \| sh` or `yay -S flaccy-bin` |
 
 ## Features
 
@@ -58,6 +58,11 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 
 ### Synced Lyrics
 - LRCLIB karaoke-style scrolling, current line highlighted, click/tap any line to seek
+
+### Adaptive design
+- **Color of what's playing** — Mac and Linux extract the dominant palette from the current cover and retint the whole app; ambient backdrops, glass surfaces, and accent everything follow the music
+- **Liquid Glass** (Mac, AppKit `NSGlassEffectView`) and a **runtime theme engine** (Linux — Adaptive plus seven curated palettes)
+- Immersive Now Playing over a blurred, palette-washed cover on every platform; light and dark throughout
 
 ## Repository layout
 

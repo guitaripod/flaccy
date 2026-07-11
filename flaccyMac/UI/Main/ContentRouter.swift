@@ -11,14 +11,29 @@ final class ContentRouter: NSViewController {
     private var currentChild: NSViewController?
     private var sectionControllers: [SidebarSection: NSViewController] = [:]
     private var onboardingView: OnboardingPanelView?
+    private let backdrop = AmbientBackdropView()
 
     override func loadView() {
         view = NSView()
         view.wantsLayer = true
+
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(backdrop)
+        NSLayoutConstraint.activate([
+            backdrop.topAnchor.constraint(equalTo: view.topAnchor),
+            backdrop.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            backdrop.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            backdrop.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+        backdrop.apply(NowPlayingPaletteService.shared.current, animated: false)
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        NowPlayingPaletteService.shared.start()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(nowPlayingPaletteChanged), name: .flaccyNowPlayingPaletteChanged, object: nil
+        )
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleRevealAlbum(_:)), name: .flaccyRevealAlbum, object: nil
         )
@@ -171,6 +186,10 @@ final class ContentRouter: NSViewController {
             stack.push(self.makeArtistDetail(other, in: stack))
         }
         return detail
+    }
+
+    @objc private func nowPlayingPaletteChanged() {
+        backdrop.apply(NowPlayingPaletteService.shared.current, animated: true)
     }
 
     @objc private func refreshOnboarding() {
