@@ -103,12 +103,14 @@ final class LibraryViewModel {
     }
 
     enum ArtistSort: String, CaseIterable {
-        case name, albumCount
+        case name, albumCount, mostPlayed, recentlyPlayed
 
         var displayName: String {
             switch self {
             case .name: "Name"
             case .albumCount: "Album Count"
+            case .mostPlayed: "Most Played"
+            case .recentlyPlayed: "Recently Played"
             }
         }
 
@@ -116,6 +118,8 @@ final class LibraryViewModel {
             switch self {
             case .name: "textformat.abc"
             case .albumCount: "number"
+            case .mostPlayed: "flame"
+            case .recentlyPlayed: "clock.arrow.circlepath"
             }
         }
     }
@@ -433,9 +437,48 @@ final class LibraryViewModel {
                     ? $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
                     : $0.albumCount > $1.albumCount
             }
+        case .mostPlayed:
+            let plays = artistPlayCounts()
+            result = artists.sorted {
+                let c0 = plays[$0.name.lowercased()] ?? 0
+                let c1 = plays[$1.name.lowercased()] ?? 0
+                return c0 == c1
+                    ? $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                    : c0 > c1
+            }
+        case .recentlyPlayed:
+            let played = artistLastPlayedMap()
+            let hasPlay = artists.filter { played[$0.name] != nil }
+                .sorted { (played[$0.name] ?? .distantPast) > (played[$1.name] ?? .distantPast) }
+            let noPlay = artists.filter { played[$0.name] == nil }
+                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            result = hasPlay + noPlay
         }
         cachedSortedArtists = result
         return result
+    }
+
+    /// Total Last.fm scrobbles per artist for the current scrobble range,
+    /// keyed by lowercased artist name.
+    private func artistPlayCounts() -> [String: Int] {
+        var map = [String: Int]()
+        for entry in LastFMStatsService.shared.topArtists(period: scrobbleRange, limit: 1000) {
+            map[entry.name.lowercased(), default: 0] += entry.playCount
+        }
+        return map
+    }
+
+    private func artistLastPlayedMap() -> [String: Date] {
+        var map = [String: Date]()
+        for meta in trackMeta.values {
+            guard let lastPlayed = meta.lastPlayed else { continue }
+            if let existing = map[meta.track.artist] {
+                if lastPlayed > existing { map[meta.track.artist] = lastPlayed }
+            } else {
+                map[meta.track.artist] = lastPlayed
+            }
+        }
+        return map
     }
 
     var recentlyPlayedAlbums: [Album] {
