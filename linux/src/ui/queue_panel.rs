@@ -3,9 +3,16 @@ use crate::library::{format_time, Track};
 use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::gdk;
+use gtk::glib;
 use gtk::pango;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+/// Rendered queue window sizes — the queue can hold thousands of tracks, so
+/// only a bounded slice around the now-playing row becomes widgets (the rest
+/// is summarized), keeping every rebuild off the main-thread hot path.
+const HISTORY_LIMIT: usize = 20;
+const UP_NEXT_LIMIT: usize = 120;
 
 /// Queue side panel with History / Now Playing / Up Next sections: click a
 /// history row to jump back, drag-reorder Up Next, per-row remove, Clear Up
@@ -77,11 +84,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let rebuild = {
         let list = list.clone();
         let stack = stack.clone();
+        let scroll = scroll.clone();
         let summary = summary.clone();
         let clear = clear.clone();
         let indices = Rc::clone(&indices);
         let ui = Rc::clone(ui);
-        Rc::new(move || {
+        Rc::new(move |pin_now_playing: bool| {
             while let Some(child) = list.first_child() {
                 list.remove(&child);
             }
@@ -108,12 +116,21 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 (remaining / 60.0).round() as i64
             ));
 
+            let history_start = current.saturating_sub(HISTORY_LIMIT);
+            let up_next_end = (current + 1 + UP_NEXT_LIMIT).min(snapshot.queue.len());
+
             let mut collected = Vec::new();
+            let mut now_playing_row: Option<gtk::ListBoxRow> = None;
             if current > 0 {
+                if history_start > 0 {
+                    list.append(&info_row(&format!("{} earlier", history_start)));
+                    collected.push(usize::MAX);
+                }
                 list.append(&section_row("HISTORY"));
                 collected.push(usize::MAX);
             }
-            for (index, track) in snapshot.queue.iter().enumerate() {
+            for index in history_start..up_next_end {
+                let track = &snapshot.queue[index];
                 if index == current {
                     list.append(&section_row("NOW PLAYING"));
                     collected.push(usize::MAX);
@@ -125,13 +142,29 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 if index > current {
                     attach_reorder(&ui, &row, index);
                 }
+                if index == current {
+                    now_playing_row = Some(row.clone());
+                }
                 list.append(&row);
                 collected.push(index);
             }
+            if up_next_end < snapshot.queue.len() {
+                list.append(&info_row(&format!(
+                    "{} more up next",
+                    snapshot.queue.len() - up_next_end
+                )));
+                collected.push(usize::MAX);
+            }
             *indices.borrow_mut() = collected;
+
+            if pin_now_playing {
+                if let Some(row) = now_playing_row {
+                    scroll_row_to_top(&scroll, &list, &row);
+                }
+            }
         })
     };
-    rebuild();
+    rebuild(false);
 
     {
         let ui_ref = Rc::clone(ui);
@@ -156,11 +189,15 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let rebuild = Rc::clone(&rebuild);
         ui.core.hub.subscribe_widget(&root, move |_, event| match event {
-            AppEvent::QueueChanged
-            | AppEvent::TrackChanged(_)
-            | AppEvent::LovedChanged { .. } => rebuild(),
+            AppEvent::TrackChanged(_) => rebuild(true),
+            AppEvent::QueueChanged | AppEvent::LovedChanged { .. } => rebuild(false),
             _ => {}
         });
+    }
+
+    {
+        let rebuild = Rc::clone(&rebuild);
+        root.connect_map(move |_| rebuild(true));
     }
 
     root.upcast()
@@ -175,6 +212,52 @@ fn section_row(text: &str) -> gtk::ListBoxRow {
         .margin_start(6)
         .build();
     label.add_css_class("stat-caption");
+    gtk::ListBoxRow::builder()
+        .child(&label)
+        .activatable(false)
+        .selectable(false)
+        .build()
+}
+
+/// Pins the now-playing row to the top of the queue viewport (history scrolls
+/// above it). Runs on the row's frame-clock tick so the scroll happens after
+/// GTK has allocated the freshly rebuilt rows; self-terminates once positioned
+/// or after a few frames, and forces no persistent wakeups.
+fn scroll_row_to_top(scroll: &gtk::ScrolledWindow, list: &gtk::ListBox, row: &gtk::ListBoxRow) {
+    let scroll = scroll.clone();
+    let list = list.clone();
+    let frames = std::cell::Cell::new(0u8);
+    row.add_tick_callback(move |row, _| {
+        if row.parent().is_none() {
+            return glib::ControlFlow::Break;
+        }
+        frames.set(frames.get() + 1);
+        let origin = gtk::graphene::Point::new(0.0, 0.0);
+        if let Some(point) = row.compute_point(&list, &origin) {
+            let adj = scroll.vadjustment();
+            let max = (adj.upper() - adj.page_size()).max(0.0);
+            adj.set_value((point.y() as f64).min(max));
+        }
+        if frames.get() >= 10 {
+            glib::ControlFlow::Break
+        } else {
+            glib::ControlFlow::Continue
+        }
+    });
+}
+
+/// Non-interactive "N earlier / N more up next" marker for the ends of a
+/// queue too large to fully render.
+fn info_row(text: &str) -> gtk::ListBoxRow {
+    let label = gtk::Label::builder()
+        .label(text)
+        .xalign(0.0)
+        .margin_top(6)
+        .margin_bottom(6)
+        .margin_start(10)
+        .build();
+    label.add_css_class("dim");
+    label.add_css_class("caption");
     gtk::ListBoxRow::builder()
         .child(&label)
         .activatable(false)
