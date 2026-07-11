@@ -99,15 +99,17 @@ enum DebugDrive {
         case .section(let section):
             if section == .playlists {
                 seedDemoPlaylists()
-                startHeroPlayback()
-                try? await Task.sleep(for: .seconds(2))
             }
+            startHeroPlayback()
+            try? await Task.sleep(for: .seconds(2))
             NotificationCenter.default.post(
                 name: .flaccyShowSection, object: nil,
                 userInfo: [SectionNotificationKey.section: section.rawValue]
             )
             name = "flaccy-shot-\(section.title.lowercased().replacingOccurrences(of: " ", with: "-"))"
         case .album(let title):
+            startHeroPlayback()
+            try? await Task.sleep(for: .seconds(2))
             if let album = Library.shared.albums.first(where: { $0.title == title }) {
                 LibraryNavigator.revealAlbum(title: album.title, artist: album.artist)
             } else {
@@ -115,6 +117,8 @@ enum DebugDrive {
             }
             name = "flaccy-shot-album"
         case .artist(let artist):
+            startHeroPlayback()
+            try? await Task.sleep(for: .seconds(2))
             LibraryNavigator.revealArtist(artist)
             name = "flaccy-shot-artist"
         case .playlistDetail(let playlistName):

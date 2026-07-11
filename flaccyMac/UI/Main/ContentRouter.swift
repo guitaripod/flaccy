@@ -11,7 +11,7 @@ final class ContentRouter: NSViewController {
     private var currentChild: NSViewController?
     private var sectionControllers: [SidebarSection: NSViewController] = [:]
     private var onboardingView: OnboardingPanelView?
-    private let backdrop = AmbientBackdropView()
+    private let backdrop = AmbientBackdropView(vivid: true)
 
     override func loadView() {
         view = NSView()

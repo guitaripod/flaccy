@@ -104,6 +104,12 @@ final class BackdropView: NSView {
     }
 
     private func applyPauseState() {
+        #if DEBUG
+        if CommandLine.arguments.contains("--seed-screenshots") {
+            mtkView?.isPaused = false
+            return
+        }
+        #endif
         let occluded = window.map { !$0.occlusionState.contains(.visible) } ?? true
         mtkView?.isPaused = externallyPaused || occluded
     }
