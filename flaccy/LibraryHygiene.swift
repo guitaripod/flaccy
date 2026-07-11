@@ -195,6 +195,10 @@ nonisolated enum LibraryHygiene {
     }
 
     private static func aggregateQuality(_ album: Album) -> Int {
-        album.tracks.reduce(0) { $0 + (isLossless($1.codec) ? 1 : 0) }
+        album.tracks.reduce(0) { total, track in
+            total + (isLossless(track.codec) ? 1_000_000_000 : 0)
+                + (track.bitDepth ?? 0) * 1_000_000
+                + (track.sampleRate ?? 0)
+        }
     }
 }

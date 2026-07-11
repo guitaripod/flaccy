@@ -21,14 +21,34 @@ enum LibraryCleanup {
 
     @MainActor
     static func run(in window: NSWindow?) {
-        let albums = Library.shared.albums
-        let tracks = Library.shared.allTracks
         Task {
             let plan = await Task.detached(priority: .userInitiated) {
-                LibraryHygieneService.computePlan(albums: albums, tracks: tracks)
+                let (albums, tracks) = rawLibrarySnapshot()
+                return LibraryHygieneService.computePlan(albums: albums, tracks: tracks)
             }.value
             presentPreview(plan, in: window)
         }
+    }
+
+    /// Builds an un-consolidated album/track snapshot straight from full track
+    /// records (with codec/bit-depth for accurate quality ranking). The plan
+    /// must see raw edition variants — `Library.shared.albums` is already
+    /// display-consolidated by default, which would hide every merge.
+    nonisolated private static func rawLibrarySnapshot() -> (albums: [Album], tracks: [Track]) {
+        guard let records = try? DatabaseManager.shared.fetchAllTracks() else { return ([], []) }
+        let tracks = records.map { Track.from(record: $0, artwork: nil) }
+        var order: [String] = []
+        var byKey: [String: [Track]] = [:]
+        for track in tracks {
+            let key = "\(track.albumTitle)\u{0}\(track.artist)"
+            if byKey[key] == nil { order.append(key) }
+            byKey[key, default: []].append(track)
+        }
+        let albums = order.compactMap { key -> Album? in
+            guard let grouped = byKey[key], let first = grouped.first else { return nil }
+            return Album(title: first.albumTitle, artist: first.artist, artwork: nil, tracks: grouped, year: nil, genre: nil)
+        }
+        return (albums, tracks)
     }
 
     @MainActor

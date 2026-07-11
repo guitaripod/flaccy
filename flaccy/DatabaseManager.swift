@@ -868,7 +868,7 @@ nonisolated final class DatabaseManager: Sendable {
                     return (album: albumInfoByKey[displayKey], tracks: tracks)
                 }
                 let canonicalTitle = (titleCountsByGroup[groupKey] ?? [:]).max { lhs, rhs in
-                    (lhs.value, -lhs.key.count) < (rhs.value, -rhs.key.count)
+                    (lhs.value, -lhs.key.count, lhs.key) < (rhs.value, -rhs.key.count, rhs.key)
                 }?.key ?? first.albumTitle
                 tracks.sort { lhs, rhs in
                     let lhsCanonical = lhs.albumTitle == canonicalTitle ? 0 : 1
