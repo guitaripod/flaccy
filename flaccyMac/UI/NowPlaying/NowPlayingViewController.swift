@@ -638,7 +638,7 @@ final class NowPlayingViewController: NSViewController {
 
     @objc private func artistTapped() {
         guard let track = player.currentTrack else { return }
-        LibraryNavigator.revealArtist(track.artist)
+        LibraryNavigator.revealArtist(LibraryHygiene.primaryArtist(track.artist))
         closeTapped()
     }
 

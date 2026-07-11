@@ -155,7 +155,7 @@ final class ArtistDetailViewController: NSViewController {
     }
 
     @objc private func refresh() {
-        albums = Library.shared.albums.filter { $0.artist == artistName }
+        albums = Library.shared.albums.filter { LibraryHygiene.primaryArtist($0.artist) == artistName }
         let trackCount = albums.reduce(0) { $0 + $1.tracks.count }
         statsLabel.stringValue =
             "\(albums.count) album\(albums.count == 1 ? "" : "s") · \(trackCount) song\(trackCount == 1 ? "" : "s") in your library"

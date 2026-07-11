@@ -64,7 +64,7 @@ enum MacTrackMenuFactory {
         }
         if options.includeGoToArtist {
             menu.addItem(ClosureMenuItem(title: "Go to Artist", systemImage: "music.microphone") {
-                LibraryNavigator.revealArtist(track.artist)
+                LibraryNavigator.revealArtist(LibraryHygiene.primaryArtist(track.artist))
             })
         }
         menu.addItem(ClosureMenuItem(title: "View Lyrics", systemImage: "quote.bubble") {

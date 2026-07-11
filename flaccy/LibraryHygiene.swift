@@ -25,6 +25,28 @@ nonisolated enum LibraryHygiene {
         .subtracting(["single", "ep", "with", "feat", "ft.", "version"])
         .union(["remastered", "remasters", "remix", "remixed", "remixes", "reissued"])
 
+    /// The lead artist of a possibly-collaborative credit: the portion before
+    /// the first multi-artist separator, with any trailing "feat."/"featuring"
+    /// clause stripped. Only splits on separators that unambiguously join
+    /// artists (";", "/", "×") so single names containing "&" or "," ("Corvid &
+    /// Crane", "Earth, Wind & Fire") are preserved.
+    static func primaryArtist(_ raw: String) -> String {
+        var name = raw
+        for separator in [";", " / ", " × ", " vs. "] {
+            if let range = name.range(of: separator, options: [.caseInsensitive]) {
+                name = String(name[..<range.lowerBound])
+            }
+        }
+        for marker in [" feat. ", " feat ", " ft. ", " ft ", " featuring ", " (feat.", " (ft.", " (featuring"] {
+            if let range = name.range(of: marker, options: [.caseInsensitive]) {
+                name = String(name[..<range.lowerBound])
+                break
+            }
+        }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? raw : trimmed
+    }
+
     static func normalize(_ value: String) -> String {
         let folded = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
         var result = String.UnicodeScalarView()

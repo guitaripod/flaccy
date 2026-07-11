@@ -463,7 +463,7 @@ final class LibraryViewModel {
     private func artistPlayCounts() -> [String: Int] {
         var map = [String: Int]()
         for entry in LastFMStatsService.shared.topArtists(period: scrobbleRange, limit: 1000) {
-            map[entry.name.lowercased(), default: 0] += entry.playCount
+            map[artistGroupKey(entry.name).lowercased(), default: 0] += entry.playCount
         }
         return map
     }
@@ -472,10 +472,11 @@ final class LibraryViewModel {
         var map = [String: Date]()
         for meta in trackMeta.values {
             guard let lastPlayed = meta.lastPlayed else { continue }
-            if let existing = map[meta.track.artist] {
-                if lastPlayed > existing { map[meta.track.artist] = lastPlayed }
+            let key = artistGroupKey(meta.track.artist)
+            if let existing = map[key] {
+                if lastPlayed > existing { map[key] = lastPlayed }
             } else {
-                map[meta.track.artist] = lastPlayed
+                map[key] = lastPlayed
             }
         }
         return map
@@ -512,18 +513,30 @@ final class LibraryViewModel {
         return result
     }
 
+    /// The Artists-tab grouping key for a possibly-collaborative credit. On the
+    /// desktop this folds "Artist feat. X" / "Artist;X" under the lead artist;
+    /// iOS keeps the raw credit unchanged.
+    nonisolated func artistGroupKey(_ credit: String) -> String {
+        #if os(macOS)
+        return LibraryHygiene.primaryArtist(credit)
+        #else
+        return credit
+        #endif
+    }
+
     var artists: [ArtistItem] {
         var seen = [String: ArtistItem]()
         for album in library.albums {
-            if let existing = seen[album.artist] {
-                seen[album.artist] = ArtistItem(
-                    name: album.artist,
+            let name = artistGroupKey(album.artist)
+            if let existing = seen[name] {
+                seen[name] = ArtistItem(
+                    name: name,
                     albumCount: existing.albumCount + 1,
                     artwork: existing.artwork ?? album.artwork
                 )
             } else {
-                seen[album.artist] = ArtistItem(
-                    name: album.artist,
+                seen[name] = ArtistItem(
+                    name: name,
                     albumCount: 1,
                     artwork: album.artwork
                 )
