@@ -236,7 +236,7 @@ fn queue_row(ui: &Rc<Ui>, track: &Track, index: usize, current: usize) -> gtk::L
     row_box.append(&text_box);
 
     if track.loved {
-        let heart = gtk::Image::from_icon_name("emblem-favorite-symbolic");
+        let heart = gtk::Image::from_icon_name("emote-love-symbolic");
         heart.add_css_class("loved-heart");
         row_box.append(&heart);
     }

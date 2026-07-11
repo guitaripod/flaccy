@@ -54,6 +54,12 @@ for size in "${SIZES[@]}"; do
   fi
 done
 
+for svg in "$HERE"/data/icons/hicolor/scalable/actions/*.svg; do
+  [[ -f "$svg" ]] || continue
+  mkdir -p "$ICON_BASE/scalable/actions"
+  install -m 644 "$svg" "$ICON_BASE/scalable/actions/$(basename "$svg")"
+done
+
 refresh_caches
 
 echo "installed: $BIN_DIR/flaccy"

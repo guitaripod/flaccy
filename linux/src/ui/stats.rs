@@ -40,7 +40,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
 
     let empty = adw::StatusPage::builder()
-        .icon_name("utilities-system-monitor-symbolic")
+        .icon_name("flaccy-stats-symbolic")
         .title("No Listening History")
         .description("Play some music and your stats will build up here — or import your Last.fm history.")
         .build();

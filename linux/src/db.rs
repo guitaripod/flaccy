@@ -247,6 +247,7 @@ impl Db {
             );
             CREATE INDEX IF NOT EXISTS scrobbles_on_submitted_timestamp ON scrobbles(submitted, timestamp);
             CREATE INDEX IF NOT EXISTS scrobbles_on_timestamp ON scrobbles(timestamp);
+            CREATE INDEX IF NOT EXISTS scrobbles_on_trackTitle_artist ON scrobbles(trackTitle, artist);
             CREATE TABLE IF NOT EXISTS playlists (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -669,6 +670,39 @@ impl Db {
         Ok(())
     }
 
+    /// Inserts a page of imported scrobbles inside one transaction so a large
+    /// history import commits per-page (hundreds) instead of per-row (tens of
+    /// thousands), keeping the pull fast and easy on the disk.
+    pub fn insert_scrobbles_batch(
+        &self,
+        rows: &[(String, String, String, i64, i64, bool)],
+    ) -> Result<usize, rusqlite::Error> {
+        if rows.is_empty() {
+            return Ok(0);
+        }
+        let tx = self.conn.unchecked_transaction()?;
+        let mut inserted = 0usize;
+        {
+            let mut stmt = tx.prepare(
+                "INSERT INTO scrobbles (trackTitle, artist, albumTitle, timestamp, duration, submitted)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )?;
+            for (title, artist, album, timestamp_unix, duration, submitted) in rows {
+                stmt.execute(params![
+                    title,
+                    artist,
+                    album,
+                    string_from_unix(*timestamp_unix),
+                    duration,
+                    submitted
+                ])?;
+                inserted += 1;
+            }
+        }
+        tx.commit()?;
+        Ok(inserted)
+    }
+
     pub fn fetch_pending_scrobbles(&self) -> Vec<PendingScrobble> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT id, trackTitle, artist, albumTitle, timestamp, duration
@@ -873,6 +907,12 @@ impl Db {
             params![title, artist, synced, plain, instrumental],
         )?;
         Ok(())
+    }
+
+    pub fn scrobble_count(&self) -> i64 {
+        self.conn
+            .query_row("SELECT COUNT(*) FROM scrobbles", [], |row| row.get(0))
+            .unwrap_or(0)
     }
 
     pub fn fetch_all_scrobble_rows(&self) -> Vec<ScrobbleRow> {

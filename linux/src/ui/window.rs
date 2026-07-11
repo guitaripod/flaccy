@@ -159,10 +159,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     sidebar.add_css_class("navigation-sidebar");
     for (icon, label) in [
         ("media-optical-symbolic", "Albums"),
-        ("emblem-music-symbolic", "Songs"),
+        ("audio-x-generic-symbolic", "Songs"),
         ("system-users-symbolic", "Artists"),
         ("view-list-symbolic", "Playlists"),
-        ("utilities-system-monitor-symbolic", "Stats"),
+        ("flaccy-stats-symbolic", "Stats"),
         ("starred-symbolic", "Wantlist"),
         ("dialog-information-symbolic", "Guide"),
     ] {

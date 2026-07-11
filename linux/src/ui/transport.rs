@@ -45,7 +45,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     labels.append(&title);
     labels.append(&artist);
 
-    let love = gtk::Button::from_icon_name("emblem-favorite-symbolic");
+    let love = gtk::Button::from_icon_name("emote-love-symbolic");
     love.add_css_class("flat");
     love.set_valign(gtk::Align::Center);
     love.set_tooltip_text(Some("Love on Last.fm"));

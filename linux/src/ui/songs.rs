@@ -183,7 +183,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     list_box.append(&scroll);
 
     let empty = adw::StatusPage::builder()
-        .icon_name("emblem-music-symbolic")
+        .icon_name("audio-x-generic-symbolic")
         .title("No Songs")
         .description("Your library is empty. Add music to your music folder and rescan.")
         .build();

@@ -31,7 +31,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
 
     let empty = adw::StatusPage::builder()
-        .icon_name("emblem-music-symbolic")
+        .icon_name("audio-x-generic-symbolic")
         .title("No Music Found")
         .description("Drop FLAC or MP3 files into your music folder, then rescan.\nChoose a different folder in Preferences.")
         .build();
@@ -528,7 +528,7 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
             .tooltip_text(&track.title)
             .build();
         row_box.append(&track_title);
-        let heart = gtk::Image::from_icon_name("emblem-favorite-symbolic");
+        let heart = gtk::Image::from_icon_name("emote-love-symbolic");
         heart.add_css_class("loved-heart");
         heart.set_visible(track.loved);
         row_box.append(&heart);
