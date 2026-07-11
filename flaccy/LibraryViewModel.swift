@@ -440,17 +440,17 @@ final class LibraryViewModel {
         case .mostPlayed:
             let plays = artistPlayCounts()
             result = artists.sorted {
-                let c0 = plays[$0.name.lowercased()] ?? 0
-                let c1 = plays[$1.name.lowercased()] ?? 0
+                let c0 = plays[artistMatchKey($0.name)] ?? 0
+                let c1 = plays[artistMatchKey($1.name)] ?? 0
                 return c0 == c1
                     ? $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
                     : c0 > c1
             }
         case .recentlyPlayed:
             let played = artistLastPlayedMap()
-            let hasPlay = artists.filter { played[$0.name.lowercased()] != nil }
-                .sorted { (played[$0.name.lowercased()] ?? .distantPast) > (played[$1.name.lowercased()] ?? .distantPast) }
-            let noPlay = artists.filter { played[$0.name.lowercased()] == nil }
+            let hasPlay = artists.filter { played[artistMatchKey($0.name)] != nil }
+                .sorted { (played[artistMatchKey($0.name)] ?? .distantPast) > (played[artistMatchKey($1.name)] ?? .distantPast) }
+            let noPlay = artists.filter { played[artistMatchKey($0.name)] == nil }
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             result = hasPlay + noPlay
         }
@@ -463,7 +463,7 @@ final class LibraryViewModel {
     private func artistPlayCounts() -> [String: Int] {
         var map = [String: Int]()
         for entry in LastFMStatsService.shared.topArtists(period: scrobbleRange, limit: 1000) {
-            map[artistGroupKey(entry.name).lowercased(), default: 0] += entry.playCount
+            map[artistMatchKey(entry.name), default: 0] += entry.playCount
         }
         return map
     }
@@ -472,7 +472,7 @@ final class LibraryViewModel {
         var map = [String: Date]()
         for meta in trackMeta.values {
             guard let lastPlayed = meta.lastPlayed else { continue }
-            let key = artistGroupKey(meta.track.artist).lowercased()
+            let key = artistMatchKey(meta.track.artist)
             if let existing = map[key] {
                 if lastPlayed > existing { map[key] = lastPlayed }
             } else {
@@ -524,15 +524,22 @@ final class LibraryViewModel {
         #endif
     }
 
+    /// The normalized key two credits must share to be the same artist. On the
+    /// desktop this folds collaborators, casing, diacritics and punctuation
+    /// together; iOS keeps the raw credit.
+    nonisolated func artistMatchKey(_ credit: String) -> String {
+        #if os(macOS)
+        return LibraryHygiene.artistKey(credit)
+        #else
+        return credit
+        #endif
+    }
+
     var artists: [ArtistItem] {
         var seen = [String: ArtistItem]()
         for album in library.albums {
             let display = artistGroupKey(album.artist)
-            #if os(macOS)
-            let key = display.lowercased()
-            #else
-            let key = display
-            #endif
+            let key = artistMatchKey(album.artist)
             if let existing = seen[key] {
                 seen[key] = ArtistItem(
                     name: existing.name,

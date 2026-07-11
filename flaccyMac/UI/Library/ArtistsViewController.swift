@@ -97,7 +97,7 @@ final class ArtistsViewController: NSViewController {
             )
             guard let gridItem = cell as? ArtistGridItem,
                   case .artist(let artist) = item else { return cell }
-            let albums = Library.shared.albums.filter { LibraryHygiene.artistKey($0.artist) == artist.name.lowercased() }
+            let albums = Library.shared.albums.filter { LibraryHygiene.artistKey($0.artist) == LibraryHygiene.artistKey(artist.name) }
             gridItem.configure(name: artist.name, albums: albums)
             gridItem.onOpen = { [weak self] in self?.onOpenArtist?(artist.name) }
             gridItem.onMenu = { [weak self, weak gridItem] in
@@ -205,7 +205,7 @@ final class ArtistsViewController: NSViewController {
     }
 
     private func bulkArtistMenu(for names: [String]) -> NSMenu {
-        let tracks = names.flatMap { name in Library.shared.albums.filter { LibraryHygiene.artistKey($0.artist) == name.lowercased() }.flatMap(\.tracks) }
+        let tracks = names.flatMap { name in Library.shared.albums.filter { LibraryHygiene.artistKey($0.artist) == LibraryHygiene.artistKey(name) }.flatMap(\.tracks) }
         let menu = NSMenu()
         menu.addItem(ClosureMenuItem(title: "Play \(names.count) Artists", systemImage: "play.fill") {
             guard !tracks.isEmpty else { return }

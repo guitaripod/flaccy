@@ -42,10 +42,12 @@ nonisolated enum LibraryHygiene {
         return trimmed.isEmpty ? raw : trimmed
     }
 
-    /// Case-insensitive grouping key for an artist credit, folding both
-    /// collaborators and casing variants ("deadmau5" / "Deadmau5") together.
+    /// Aggressive artist grouping key: the lead artist, diacritic-folded and
+    /// stripped of case, whitespace and punctuation, so "deadmau5"/"Deadmau5",
+    /// "Beyoncé"/"Beyonce", "Jay-Z"/"Jay Z" and "deadmau5 & Kaskade" all collapse
+    /// to one artist.
     static func artistKey(_ credit: String) -> String {
-        primaryArtist(credit).lowercased()
+        normalize(primaryArtist(credit))
     }
 
     static func normalize(_ value: String) -> String {
