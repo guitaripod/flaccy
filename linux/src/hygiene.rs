@@ -67,10 +67,12 @@ pub fn primary_artist(raw: &str) -> String {
     }
 }
 
-/// Case-insensitive artist grouping key, folding collaborators and casing
-/// variants ("deadmau5" / "Deadmau5") together.
+/// Aggressive artist grouping key: the lead artist, diacritic-folded and
+/// stripped of case, whitespace and punctuation, so "deadmau5"/"Deadmau5",
+/// "Beyoncé"/"Beyonce", "Jay-Z"/"Jay Z" and "deadmau5 & Kaskade" all collapse
+/// to one artist.
 pub fn artist_key(credit: &str) -> String {
-    primary_artist(credit).to_lowercase()
+    normalize(&primary_artist(credit))
 }
 
 /// The grouping key that fuses editions of the same release for display and
@@ -355,6 +357,13 @@ mod tests {
             primary_artist("Billy Newton-Davis vs. Deadmau5"),
             "Billy Newton-Davis",
             "the first-named artist wins"
+        );
+        assert_eq!(artist_key("Beyoncé"), artist_key("Beyonce"), "diacritics fold");
+        assert_eq!(artist_key("Jay-Z"), artist_key("Jay Z"), "punctuation and whitespace fold");
+        assert_eq!(
+            artist_key("Takahito Eguchi  & Noriko Matsueda"),
+            artist_key("Takahito Eguchi & Noriko Matsueda"),
+            "double-spaced collaborations fold"
         );
     }
 

@@ -150,6 +150,26 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     rescan_row.add_suffix(&rescan);
     group.add(&rescan_row);
 
+    let artwork_row = adw::ActionRow::builder()
+        .title("Find Missing Artwork")
+        .subtitle("Re-fetch covers for albums that don't have one yet")
+        .build();
+    let artwork = gtk::Button::builder()
+        .child(&adw::ButtonContent::builder().icon_name("image-x-generic-symbolic").label("Find Artwork").build())
+        .valign(gtk::Align::Center)
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        artwork.connect_clicked(move |btn| {
+            let queued = ui.core.db.reset_missing_cover_retry();
+            crate::enrichment::schedule_background_pass(&ui.core);
+            btn.set_sensitive(false);
+            ui.core.toast(&format!("Looking up artwork for {queued} albums…"));
+        });
+    }
+    artwork_row.add_suffix(&artwork);
+    group.add(&artwork_row);
+
     let cleanup_row = adw::ActionRow::builder()
         .title("Clean Up Library…")
         .subtitle("Trash duplicate files and merge album editions")

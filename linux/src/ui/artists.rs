@@ -119,7 +119,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 flow.remove(&child);
             }
             for artist in &sorted {
-                let cover = covers.borrow().get(&artist.name.to_lowercase()).cloned();
+                let cover = covers.borrow().get(&crate::hygiene::artist_key(&artist.name)).cloned();
                 flow.append(&artist_cell(&ui, artist, cover.as_ref()));
             }
             *entries.borrow_mut() = sorted;
@@ -238,7 +238,7 @@ fn refresh_artist_avatar(
         Some((rep_title, rep_artist)) if rep_title == title && rep_artist == artist => {}
         _ => return,
     }
-    let Some(index) = entries.iter().position(|entry| entry.name.to_lowercase() == key) else {
+    let Some(index) = entries.iter().position(|entry| crate::hygiene::artist_key(&entry.name) == key) else {
         return;
     };
     let Some(child) = flow.child_at_index(index as i32) else { return };
@@ -317,7 +317,7 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
     let albums: Vec<Album> = library
         .albums
         .iter()
-        .filter(|album| crate::hygiene::artist_key(&album.artist) == artist.to_lowercase())
+        .filter(|album| crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist))
         .cloned()
         .collect();
 
@@ -548,7 +548,7 @@ fn library_genre_fallback(ui: &Rc<Ui>, artist: &str) -> Vec<String> {
     library
         .albums
         .iter()
-        .filter(|album| crate::hygiene::artist_key(&album.artist) == artist.to_lowercase())
+        .filter(|album| crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist))
         .filter_map(|album| album.genre.clone())
         .filter(|genre| !genre.is_empty() && seen.insert(genre.to_lowercase()))
         .take(6)

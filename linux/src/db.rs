@@ -370,6 +370,19 @@ impl Db {
         Ok(())
     }
 
+    /// Clears the enrichment retry stamp for every album still missing cover
+    /// art, so the next background pass re-attempts them immediately (e.g. after
+    /// adding the Cover Art Archive source) instead of waiting out the 30-day
+    /// retry window. Returns the number of albums queued for a retry.
+    pub fn reset_missing_cover_retry(&self) -> usize {
+        self.conn
+            .execute(
+                "UPDATE albumInfo SET lastFetched = NULL WHERE coverArtData IS NULL",
+                [],
+            )
+            .unwrap_or(0)
+    }
+
     pub fn fetch_album_artwork(&self, title: &str, artist: &str) -> Option<Vec<u8>> {
         self.conn
             .query_row(

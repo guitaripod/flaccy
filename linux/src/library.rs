@@ -159,7 +159,7 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     for album in &albums {
         let primary = crate::hygiene::primary_artist(&album.artist);
         let entry = artist_map
-            .entry(primary.to_lowercase())
+            .entry(crate::hygiene::artist_key(&album.artist))
             .or_insert_with(|| (primary.clone(), 0, 0, 0, None));
         entry.1 += 1;
         entry.2 += album.tracks.len();

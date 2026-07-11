@@ -263,7 +263,7 @@ impl AppCore {
         let tracks: Vec<Track> = library
             .albums
             .iter()
-            .filter(|album| crate::hygiene::artist_key(&album.artist) == artist.to_lowercase())
+            .filter(|album| crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist))
             .flat_map(|album| album.tracks.iter().cloned())
             .collect();
         if tracks.is_empty() {

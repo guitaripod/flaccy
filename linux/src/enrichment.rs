@@ -218,11 +218,19 @@ fn enrich_one(
     let mut genre: Option<String> = None;
     musicbrainz.wait();
     if let Some(release) = fetch_musicbrainz_release(&request.artist, &request.title) {
-        if mbid.is_none() {
-            mbid = Some(release.0);
+        if !has_cover && cover_data.is_none() {
+            if let Some(rgid) = &release.release_group_id {
+                cover_data = fetch_cover_art_archive("release-group", rgid);
+            }
+            if cover_data.is_none() {
+                cover_data = fetch_cover_art_archive("release", &release.id);
+            }
         }
-        year = release.1;
-        genre = release.2;
+        year = release.year;
+        genre = release.genre;
+        if mbid.is_none() {
+            mbid = Some(release.id);
+        }
     }
 
     let result = db.apply_album_enrichment(
@@ -300,10 +308,14 @@ fn download_bytes(url: &str) -> Option<Vec<u8>> {
     }
 }
 
-fn fetch_musicbrainz_release(
-    artist: &str,
-    album: &str,
-) -> Option<(String, Option<String>, Option<String>)> {
+struct MusicBrainzRelease {
+    id: String,
+    release_group_id: Option<String>,
+    year: Option<String>,
+    genre: Option<String>,
+}
+
+fn fetch_musicbrainz_release(artist: &str, album: &str) -> Option<MusicBrainzRelease> {
     let query = format!("release:{album} AND artist:{artist}");
     let url = format!(
         "https://musicbrainz.org/ws/2/release/?query={}&limit=1&fmt=json",
@@ -320,6 +332,7 @@ fn fetch_musicbrainz_release(
     let json: serde_json::Value = serde_json::from_str(&text).ok()?;
     let release = json["releases"].as_array()?.first()?.clone();
     let id = release["id"].as_str()?.to_string();
+    let release_group_id = release["release-group"]["id"].as_str().map(String::from);
     let year = release["date"]
         .as_str()
         .filter(|d| d.len() >= 4)
@@ -330,7 +343,22 @@ fn fetch_musicbrainz_release(
             .and_then(|t| t["name"].as_str())
             .map(String::from)
     });
-    Some((id, year, genre))
+    Some(MusicBrainzRelease {
+        id,
+        release_group_id,
+        year,
+        genre,
+    })
+}
+
+/// Cover Art Archive front cover for a MusicBrainz release or release-group,
+/// downsized to 500px. This is the Linux stand-in for the iOS Apple Music
+/// artwork fallback: it covers albums whose files have no embedded art and
+/// which Last.fm has no image for.
+fn fetch_cover_art_archive(entity: &str, mbid: &str) -> Option<Vec<u8>> {
+    download_bytes(&format!(
+        "https://coverartarchive.org/{entity}/{mbid}/front-500"
+    ))
 }
 
 /// Blocking similar-artists lookup with the 30-day similarArtistCache window,
