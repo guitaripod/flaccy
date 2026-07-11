@@ -306,6 +306,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     register_actions(app, &ui, &search);
     attach_space_handler(&ui);
+    attach_type_to_search(&ui, &search);
     attach_file_drop(&ui, &toast_overlay);
     schedule_demo_detail(&ui);
 
@@ -730,6 +731,50 @@ fn add_int64_action(ui: &Rc<Ui>, name: &str, handler: impl Fn(&Rc<Ui>, i64) + 's
         }
     });
     ui.window.add_action(&action);
+}
+
+/// Type-to-search: pressing a printable key while a list/grid view (not a text
+/// field) has focus jumps into the header search and filters the current view.
+/// Runs in the capture phase so it beats the views' own type-ahead; Space is
+/// left to the play/pause handler, and modifier combos fall through to
+/// accelerators.
+fn attach_type_to_search(ui: &Rc<Ui>, search: &gtk::SearchEntry) {
+    let controller = gtk::EventControllerKey::new();
+    controller.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let key_window = ui.window.clone();
+    let key_search = search.clone();
+    controller.connect_key_pressed(move |_, key, _, modifiers| {
+        let editing = gtk::prelude::GtkWindowExt::focus(&key_window)
+            .map(|widget| widget.is::<gtk::Text>() || widget.is::<gtk::Entry>())
+            .unwrap_or(false);
+        if editing {
+            return glib::Propagation::Proceed;
+        }
+        if modifiers.intersects(
+            gdk::ModifierType::CONTROL_MASK | gdk::ModifierType::ALT_MASK | gdk::ModifierType::SUPER_MASK,
+        ) {
+            return glib::Propagation::Proceed;
+        }
+        let Some(ch) = key.to_unicode() else {
+            return glib::Propagation::Proceed;
+        };
+        if ch.is_control() || ch.is_whitespace() {
+            return glib::Propagation::Proceed;
+        }
+        key_search.grab_focus();
+        let mut text = key_search.text().to_string();
+        text.push(ch);
+        key_search.set_text(&text);
+        key_search.set_position(-1);
+        glib::Propagation::Stop
+    });
+    ui.window.add_controller(controller);
+
+    let stop_window = ui.window.clone();
+    search.connect_stop_search(move |entry| {
+        entry.set_text("");
+        gtk::prelude::GtkWindowExt::set_focus(&stop_window, gtk::Widget::NONE);
+    });
 }
 
 fn attach_space_handler(ui: &Rc<Ui>) {

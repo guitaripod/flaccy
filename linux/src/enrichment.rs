@@ -239,6 +239,10 @@ fn enrich_one(
         }
     }
 
+    if !has_cover && cover_data.is_none() {
+        cover_data = fetch_deezer_album_cover(&request.artist, &request.title);
+    }
+
     let result = db.apply_album_enrichment(
         &request.title,
         &request.artist,
@@ -260,7 +264,9 @@ fn enrich_one(
         if enriched_artists.insert(request.artist.to_lowercase()) {
             general.wait();
             match client.fetch_artist_info(&request.artist) {
-                Ok((bio, image_url, artist_mbid)) => {
+                Ok((bio, lastfm_image, artist_mbid)) => {
+                    let image_url =
+                        fetch_deezer_artist_image(&request.artist).or(lastfm_image);
                     if let Err(err) = db.upsert_artist_info(
                         &request.artist,
                         bio.as_deref(),
@@ -365,6 +371,40 @@ fn fetch_cover_art_archive(entity: &str, mbid: &str) -> Option<Vec<u8>> {
     download_bytes(&format!(
         "https://coverartarchive.org/{entity}/{mbid}/front-500"
     ))
+}
+
+/// Deezer album cover (no API key) — a broad streaming-catalog fallback that
+/// covers many releases MusicBrainz/Cover Art Archive don't, matching how
+/// Strawberry pulls art from multiple providers.
+fn fetch_deezer_album_cover(artist: &str, album: &str) -> Option<Vec<u8>> {
+    let query = format!("artist:\"{artist}\" album:\"{album}\"");
+    let url = format!(
+        "https://api.deezer.com/search/album?q={}&limit=1",
+        url_encode(&query)
+    );
+    let text = agent().get(&url).call().ok()?.into_string().ok()?;
+    let json: serde_json::Value = serde_json::from_str(&text).ok()?;
+    let cover = json["data"][0]["cover_xl"]
+        .as_str()
+        .or_else(|| json["data"][0]["cover_big"].as_str())
+        .filter(|url| !url.is_empty())?;
+    download_bytes(cover)
+}
+
+/// Deezer artist photo URL (no API key) — a real portrait source, unlike
+/// Last.fm which now serves a placeholder for every artist.
+fn fetch_deezer_artist_image(artist: &str) -> Option<String> {
+    let url = format!(
+        "https://api.deezer.com/search/artist?q={}&limit=1",
+        url_encode(artist)
+    );
+    let text = agent().get(&url).call().ok()?.into_string().ok()?;
+    let json: serde_json::Value = serde_json::from_str(&text).ok()?;
+    json["data"][0]["picture_xl"]
+        .as_str()
+        .or_else(|| json["data"][0]["picture_big"].as_str())
+        .filter(|url| !url.is_empty())
+        .map(String::from)
 }
 
 /// Blocking similar-artists lookup with the 30-day similarArtistCache window,
