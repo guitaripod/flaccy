@@ -3,8 +3,17 @@ use crate::library::{Album, ArtistEntry};
 use crate::ui::{albums, Ui};
 use adw::prelude::*;
 use gtk::pango;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::rc::Rc;
+
+#[derive(Clone, Copy, PartialEq)]
+enum ArtistSort {
+    Name,
+    MostPlayed,
+    RecentlyPlayed,
+    TrackCount,
+}
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let flow = gtk::FlowBox::builder()
@@ -23,6 +32,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
 
     let entries: Rc<RefCell<Vec<ArtistEntry>>> = Rc::new(RefCell::new(Vec::new()));
+    let covers: Rc<RefCell<HashMap<String, (String, String)>>> =
+        Rc::new(RefCell::new(HashMap::new()));
+    let sort_mode = Rc::new(Cell::new(ArtistSort::Name));
 
     {
         let query = Rc::clone(&ui.query);
@@ -62,30 +74,68 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
+        .vexpand(true)
         .child(&flow)
         .build();
 
+    let sort_dropdown =
+        gtk::DropDown::from_strings(&["Name", "Most Played", "Recently Played", "Track Count"]);
+    sort_dropdown.set_valign(gtk::Align::Center);
+    sort_dropdown.set_tooltip_text(Some("Sort artists"));
+    let sort_label = gtk::Label::new(Some("Sort"));
+    sort_label.add_css_class("dim");
+    sort_label.add_css_class("caption");
+    let header = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .margin_top(18)
+        .margin_start(24)
+        .margin_end(24)
+        .halign(gtk::Align::End)
+        .build();
+    header.append(&sort_label);
+    header.append(&sort_dropdown);
+
+    let grid_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    grid_box.append(&header);
+    grid_box.append(&scroll);
+
     let stack = gtk::Stack::new();
     stack.add_named(&empty, Some("empty"));
-    stack.add_named(&scroll, Some("grid"));
+    stack.add_named(&grid_box, Some("grid"));
+
+    let repopulate: Rc<dyn Fn()> = {
+        let flow = flow.clone();
+        let entries = Rc::clone(&entries);
+        let covers = Rc::clone(&covers);
+        let sort_mode = Rc::clone(&sort_mode);
+        let ui = Rc::clone(ui);
+        Rc::new(move || {
+            let library = ui.core.library.borrow().clone();
+            *covers.borrow_mut() = representative_covers(&library.albums);
+            let mut sorted = library.artists.clone();
+            sort_artists(&mut sorted, sort_mode.get());
+            while let Some(child) = flow.first_child() {
+                flow.remove(&child);
+            }
+            for artist in &sorted {
+                let cover = covers.borrow().get(&artist.name).cloned();
+                flow.append(&artist_cell(&ui, artist, cover.as_ref()));
+            }
+            *entries.borrow_mut() = sorted;
+        })
+    };
 
     let rebuild = {
-        let flow = flow.clone();
         let stack = stack.clone();
-        let entries = Rc::clone(&entries);
         let ui = Rc::clone(ui);
-        let applied = std::cell::Cell::new(0u64);
+        let repopulate = Rc::clone(&repopulate);
+        let applied = Cell::new(0u64);
         move || {
             let library = ui.core.library.borrow().clone();
             let fingerprint = artists_fingerprint(&library.artists);
             if applied.replace(fingerprint) != fingerprint {
-                while let Some(child) = flow.first_child() {
-                    flow.remove(&child);
-                }
-                for artist in &library.artists {
-                    flow.append(&artist_cell(artist));
-                }
-                *entries.borrow_mut() = library.artists.clone();
+                repopulate();
             }
             stack.set_visible_child_name(if library.artists.is_empty() {
                 "empty"
@@ -97,6 +147,22 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     rebuild();
 
     {
+        let sort_mode = Rc::clone(&sort_mode);
+        let repopulate = Rc::clone(&repopulate);
+        sort_dropdown.connect_selected_notify(move |dropdown| {
+            let mode = match dropdown.selected() {
+                1 => ArtistSort::MostPlayed,
+                2 => ArtistSort::RecentlyPlayed,
+                3 => ArtistSort::TrackCount,
+                _ => ArtistSort::Name,
+            };
+            if sort_mode.replace(mode) != mode {
+                repopulate();
+            }
+        });
+    }
+
+    {
         let flow = flow.clone();
         let rebuild = rebuild.clone();
         ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
@@ -106,10 +172,95 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
+    {
+        let flow = flow.clone();
+        let entries = Rc::clone(&entries);
+        let covers = Rc::clone(&covers);
+        let ui = Rc::clone(ui);
+        ui.core.hub.clone().subscribe_widget(&stack, move |_, event| {
+            if let AppEvent::AlbumEnriched { title, artist } = event {
+                refresh_artist_avatar(&ui, &flow, &entries.borrow(), &covers.borrow(), title, artist);
+            }
+        });
+    }
+
     stack.upcast()
 }
 
-fn artist_cell(artist: &ArtistEntry) -> gtk::FlowBoxChild {
+/// Picks each artist's cover-source album — the one with the most tracks, so a
+/// stray single doesn't win over the artist's main record — keyed by artist
+/// name to the album's `(title, artist)` artwork-cache lookup pair.
+fn representative_covers(albums: &[Album]) -> HashMap<String, (String, String)> {
+    let mut best: HashMap<String, &Album> = HashMap::new();
+    for album in albums {
+        best.entry(crate::hygiene::primary_artist(&album.artist))
+            .and_modify(|current| {
+                if album.tracks.len() > current.tracks.len() {
+                    *current = album;
+                }
+            })
+            .or_insert(album);
+    }
+    best.into_iter()
+        .map(|(artist, album)| (artist, (album.title.clone(), album.artist.clone())))
+        .collect()
+}
+
+fn sort_artists(artists: &mut [ArtistEntry], mode: ArtistSort) {
+    let by_name = |a: &ArtistEntry, b: &ArtistEntry| a.name.to_lowercase().cmp(&b.name.to_lowercase());
+    match mode {
+        ArtistSort::Name => artists.sort_by(by_name),
+        ArtistSort::MostPlayed => {
+            artists.sort_by(|a, b| b.play_count.cmp(&a.play_count).then_with(|| by_name(a, b)))
+        }
+        ArtistSort::RecentlyPlayed => {
+            artists.sort_by(|a, b| b.last_played.cmp(&a.last_played).then_with(|| by_name(a, b)))
+        }
+        ArtistSort::TrackCount => {
+            artists.sort_by(|a, b| b.track_count.cmp(&a.track_count).then_with(|| by_name(a, b)))
+        }
+    }
+}
+
+/// Repaints a single artist card's avatar once its cover-source album is
+/// enriched, mirroring the albums grid's live cover streaming without a full
+/// grid rebuild.
+fn refresh_artist_avatar(
+    ui: &Rc<Ui>,
+    flow: &gtk::FlowBox,
+    entries: &[ArtistEntry],
+    covers: &HashMap<String, (String, String)>,
+    title: &str,
+    artist: &str,
+) {
+    let primary = crate::hygiene::primary_artist(artist);
+    match covers.get(&primary) {
+        Some((rep_title, rep_artist)) if rep_title == title && rep_artist == artist => {}
+        _ => return,
+    }
+    let Some(index) = entries.iter().position(|entry| entry.name == primary) else {
+        return;
+    };
+    let Some(child) = flow.child_at_index(index as i32) else { return };
+    let Some(avatar) = child
+        .child()
+        .and_then(|cell| cell.first_child())
+        .and_then(|widget| widget.downcast::<adw::Avatar>().ok())
+    else {
+        return;
+    };
+    let weak = avatar.downgrade();
+    ui.core.artwork.request(title, artist, 120, move |texture, _| {
+        if let (Some(avatar), Some(texture)) = (weak.upgrade(), texture) {
+            avatar.set_custom_image(Some(texture));
+        }
+    });
+}
+
+/// Builds one artist card: an `adw::Avatar` seeded with the artist's initials
+/// as the offline fallback, overpainted with the representative album's cover
+/// (from the shared artwork cache) once it decodes.
+fn artist_cell(ui: &Rc<Ui>, artist: &ArtistEntry, cover: Option<&(String, String)>) -> gtk::FlowBoxChild {
     let cell = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(8)
@@ -118,6 +269,16 @@ fn artist_cell(artist: &ArtistEntry) -> gtk::FlowBoxChild {
 
     let avatar = adw::Avatar::new(120, Some(&artist.name), true);
     avatar.set_halign(gtk::Align::Center);
+    if let Some((title, album_artist)) = cover {
+        let weak = avatar.downgrade();
+        ui.core
+            .artwork
+            .request(title, album_artist, 120, move |texture, _| {
+                if let (Some(avatar), Some(texture)) = (weak.upgrade(), texture) {
+                    avatar.set_custom_image(Some(texture));
+                }
+            });
+    }
     cell.append(&avatar);
 
     let name = gtk::Label::builder()
@@ -156,7 +317,7 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
     let albums: Vec<Album> = library
         .albums
         .iter()
-        .filter(|album| album.artist == artist)
+        .filter(|album| crate::hygiene::primary_artist(&album.artist) == artist)
         .cloned()
         .collect();
 
@@ -387,7 +548,7 @@ fn library_genre_fallback(ui: &Rc<Ui>, artist: &str) -> Vec<String> {
     library
         .albums
         .iter()
-        .filter(|album| album.artist == artist)
+        .filter(|album| crate::hygiene::primary_artist(&album.artist) == artist)
         .filter_map(|album| album.genre.clone())
         .filter(|genre| !genre.is_empty() && seen.insert(genre.to_lowercase()))
         .take(6)
@@ -477,7 +638,14 @@ fn album_cell_for_artist(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
 fn artists_fingerprint(artists: &[crate::library::ArtistEntry]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for artist in artists {
-        let row = format!("{}|{}|{}", artist.name, artist.album_count, artist.track_count);
+        let row = format!(
+            "{}|{}|{}|{}|{:?}",
+            artist.name,
+            artist.album_count,
+            artist.track_count,
+            artist.play_count,
+            artist.last_played
+        );
         hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
     }
     hash

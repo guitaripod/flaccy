@@ -506,6 +506,22 @@ impl Db {
         Ok(())
     }
 
+    /// Backfills each track's play count and last-played time from the scrobble
+    /// history (which includes imported Last.fm plays), so the Plays column and
+    /// every play-based sort reflect a freshly imported history rather than only
+    /// local playback.
+    pub fn reconcile_play_counts_from_scrobbles(&self) {
+        let result = self.conn.execute_batch(
+            "UPDATE tracks SET
+                playCount = (SELECT COUNT(*) FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist),
+                lastPlayed = (SELECT MAX(s.timestamp) FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist)
+             WHERE EXISTS (SELECT 1 FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist)",
+        );
+        if let Err(err) = result {
+            crate::logger::error("import", &format!("play-count reconcile failed: {err}"));
+        }
+    }
+
     pub fn set_play_count(&self, rel_path: &str, count: i64) -> Result<(), rusqlite::Error> {
         self.conn.execute(
             "UPDATE tracks SET playCount = ?1 WHERE fileURL = ?2",

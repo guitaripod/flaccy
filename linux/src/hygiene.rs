@@ -43,6 +43,37 @@ pub fn consolidation_base_title(title: &str) -> String {
     base_title_with(title, &CONSOLIDATION_KEYWORDS)
 }
 
+/// The lead artist of a possibly-collaborative credit: the portion before the
+/// first unambiguous multi-artist separator (";", " / ", " × "), with any
+/// trailing "feat."/"featuring"/"vs" clause stripped. Single names containing
+/// "&" or "," ("Corvid & Crane") are preserved. Mirrors the macOS
+/// `LibraryHygiene.primaryArtist`.
+pub fn primary_artist(raw: &str) -> String {
+    let mut end = raw.len();
+    for sep in [";", " / ", " \u{00D7} "] {
+        if let Some(idx) = raw.find(sep) {
+            end = end.min(idx);
+        }
+    }
+    let head = &raw[..end];
+    let lower = head.to_lowercase();
+    let mut cut = head.len();
+    for marker in [
+        " feat. ", " feat ", " ft. ", " ft ", " featuring ", " (feat.", " (ft.", " (featuring",
+        " vs. ", " vs ",
+    ] {
+        if let Some(idx) = lower.find(marker) {
+            cut = cut.min(idx);
+        }
+    }
+    let result = head[..cut].trim();
+    if result.is_empty() {
+        raw.trim().to_string()
+    } else {
+        result.to_string()
+    }
+}
+
 /// The grouping key that fuses editions of the same release for display and
 /// cleanup: artist ⊕ edition-free base title, exact base-title equality.
 pub fn consolidation_key(title: &str, artist: &str) -> String {

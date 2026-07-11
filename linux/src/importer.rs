@@ -56,6 +56,7 @@ pub fn start(core: &Rc<AppCore>) {
                 done: progress.done,
             });
             if progress.done {
+                core.reload_library();
                 break;
             }
         }
@@ -126,6 +127,9 @@ fn run_import(
             }
         }
         let done = page >= total_pages || page >= MAX_PAGES;
+        if done {
+            db.reconcile_play_counts_from_scrobbles();
+        }
         let _ = tx.send_blocking(Progress {
             imported,
             page: if done { page } else { page + 1 },

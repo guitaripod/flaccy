@@ -82,6 +82,8 @@ pub struct ArtistEntry {
     pub name: String,
     pub album_count: usize,
     pub track_count: usize,
+    pub play_count: i64,
+    pub last_played: Option<i64>,
 }
 
 pub struct Library {
@@ -152,18 +154,28 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
             .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
     });
 
-    let mut artist_map: HashMap<String, (usize, usize)> = HashMap::new();
+    let last_played = db.track_sort_keys();
+    let mut artist_map: HashMap<String, (usize, usize, i64, Option<i64>)> = HashMap::new();
     for album in &albums {
-        let entry = artist_map.entry(album.artist.clone()).or_insert((0, 0));
+        let key = crate::hygiene::primary_artist(&album.artist);
+        let entry = artist_map.entry(key).or_insert((0, 0, 0, None));
         entry.0 += 1;
         entry.1 += album.tracks.len();
+        for track in &album.tracks {
+            entry.2 += track.play_count;
+            if let Some(played) = last_played.get(&track.rel_path).copied().flatten() {
+                entry.3 = Some(entry.3.map_or(played, |current| current.max(played)));
+            }
+        }
     }
     let mut artists: Vec<ArtistEntry> = artist_map
         .into_iter()
-        .map(|(name, (album_count, track_count))| ArtistEntry {
+        .map(|(name, (album_count, track_count, play_count, last_played))| ArtistEntry {
             name,
             album_count,
             track_count,
+            play_count,
+            last_played,
         })
         .collect();
     artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
