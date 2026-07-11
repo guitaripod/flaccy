@@ -430,6 +430,7 @@ impl AppCore {
         }
         let core = Rc::clone(self);
         let db_path = self.db_path.clone();
+        let resume_cursor = self.config.borrow().import_page_cursor;
         let (tx, rx) = async_channel::bounded::<i64>(1);
         std::thread::Builder::new()
             .name("flaccy-import-check".into())
@@ -440,10 +441,12 @@ impl AppCore {
             .ok();
         glib::spawn_future_local(async move {
             let count = rx.recv().await.unwrap_or(i64::MAX);
-            if count < AUTO_IMPORT_THRESHOLD {
+            if crate::importer::should_auto_import(resume_cursor, count, AUTO_IMPORT_THRESHOLD) {
                 crate::logger::info(
                     "import",
-                    &format!("auto-import: {count} local scrobbles below threshold, pulling Last.fm history"),
+                    &format!(
+                        "auto-import: {count} local scrobbles, cursor at page {resume_cursor}; pulling Last.fm history"
+                    ),
                 );
                 crate::importer::start(&core);
             }

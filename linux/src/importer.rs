@@ -24,6 +24,14 @@ struct Progress {
     completed: bool,
 }
 
+/// Whether the post-launch auto-import should fire. Resume an import that was
+/// interrupted (cursor advanced past page 1 → a prior pull never reached the
+/// end, which resets it to 1) even if the partial history is already large, or
+/// seed a library whose local history is still essentially empty.
+pub fn should_auto_import(cursor: u32, scrobble_count: i64, threshold: i64) -> bool {
+    cursor > 1 || scrobble_count < threshold
+}
+
 /// Imports the user's full Last.fm listening history into the local scrobbles
 /// table (duration 0, submitted, deduped by timestamp+title), resuming from
 /// the persisted page cursor. Progress is streamed back to the main loop.
@@ -210,5 +218,30 @@ fn fetch_page_with_retry(
                 std::thread::sleep(Duration::from_millis(backoff));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_auto_import;
+
+    const THRESHOLD: i64 = 50;
+
+    #[test]
+    fn seeds_when_local_history_empty() {
+        assert!(should_auto_import(1, 0, THRESHOLD));
+        assert!(should_auto_import(1, 6, THRESHOLD));
+    }
+
+    #[test]
+    fn skips_once_populated_and_complete() {
+        assert!(!should_auto_import(1, THRESHOLD, THRESHOLD));
+        assert!(!should_auto_import(1, 161_000, THRESHOLD));
+    }
+
+    #[test]
+    fn resumes_interrupted_import_even_when_partial_history_is_large() {
+        assert!(should_auto_import(190, 37_000, THRESHOLD));
+        assert!(should_auto_import(2, 400, THRESHOLD));
     }
 }

@@ -1473,4 +1473,71 @@ mod cleanup_tests {
             "re-running finds no duplicates"
         );
     }
+
+    #[test]
+    fn insert_scrobbles_batch_commits_all_rows() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        assert_eq!(db.scrobble_count(), 0);
+
+        let rows: Vec<(String, String, String, i64, i64, bool)> = (0..5)
+            .map(|i| {
+                (
+                    format!("Track {i}"),
+                    "Artist".to_string(),
+                    "Album".to_string(),
+                    1_700_000_000 + i as i64,
+                    0,
+                    true,
+                )
+            })
+            .collect();
+        assert_eq!(db.insert_scrobbles_batch(&rows).expect("batch insert"), 5);
+        assert_eq!(db.scrobble_count(), 5);
+
+        assert_eq!(db.insert_scrobbles_batch(&[]).expect("empty batch"), 0);
+        assert_eq!(db.scrobble_count(), 5, "an empty batch is a no-op");
+    }
+
+    #[test]
+    fn reconcile_backfills_play_counts_from_scrobbles() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        insert(db, "a/01.flac", "Loved Song", "The Band", "Record", 1, 200.0, "flac", Some(24), Some(96000));
+        insert(db, "a/02.flac", "Never Played", "The Band", "Record", 2, 210.0, "flac", Some(24), Some(96000));
+
+        let scrobbles: Vec<(String, String, String, i64, i64, bool)> =
+            [1_700_000_100i64, 1_700_000_200, 1_700_000_300]
+                .iter()
+                .map(|ts| {
+                    (
+                        "Loved Song".to_string(),
+                        "The Band".to_string(),
+                        "Record".to_string(),
+                        *ts,
+                        0,
+                        true,
+                    )
+                })
+                .collect();
+        db.insert_scrobbles_batch(&scrobbles).expect("insert scrobbles");
+
+        db.reconcile_play_counts_from_scrobbles();
+
+        let tracks = db.fetch_all_tracks();
+        let loved = tracks.iter().find(|t| t.title == "Loved Song").expect("track present");
+        let never = tracks.iter().find(|t| t.title == "Never Played").expect("track present");
+        assert_eq!(loved.play_count, 3, "reconciled to the scrobble count");
+        assert_eq!(never.play_count, 0, "a track with no scrobbles is left untouched");
+
+        let last_played: Option<String> = db
+            .conn
+            .query_row(
+                "SELECT lastPlayed FROM tracks WHERE title = 'Loved Song'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("query lastPlayed");
+        assert!(last_played.is_some(), "lastPlayed stamped from MAX(scrobble timestamp)");
+    }
 }
