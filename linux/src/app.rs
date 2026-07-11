@@ -35,6 +35,8 @@ pub struct AppCore {
     pub wantlist_in_flight: Cell<bool>,
     reload_in_flight: Cell<bool>,
     reload_pending: Cell<bool>,
+    enrich_total: Cell<usize>,
+    enrich_done: Cell<usize>,
 }
 
 impl AppCore {
@@ -76,6 +78,8 @@ impl AppCore {
             wantlist_in_flight: Cell::new(false),
             reload_in_flight: Cell::new(false),
             reload_pending: Cell::new(false),
+            enrich_total: Cell::new(0),
+            enrich_done: Cell::new(0),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
@@ -136,6 +140,27 @@ impl AppCore {
 
     pub fn toast(&self, message: &str) {
         self.hub.emit(&AppEvent::Toast(message.to_string()));
+    }
+
+    /// Tracks enrichment so the UI can show a running "finding artwork"
+    /// progress. Counting is balanced — every queued album (see
+    /// enrichment::request_album) is matched by one completion — and silent at
+    /// queue time so a bulk pass doesn't emit hundreds of updates; the indicator
+    /// appears as soon as the first album completes.
+    pub fn add_enrichment_pending(&self) {
+        self.enrich_total.set(self.enrich_total.get() + 1);
+    }
+
+    pub fn note_enrichment_done(&self) {
+        self.enrich_done.set(self.enrich_done.get() + 1);
+        if self.enrich_done.get() >= self.enrich_total.get() {
+            self.enrich_total.set(0);
+            self.enrich_done.set(0);
+        }
+        self.hub.emit(&AppEvent::EnrichmentProgress {
+            done: self.enrich_done.get(),
+            total: self.enrich_total.get(),
+        });
     }
 
     pub fn start(self: &Rc<Self>, _window: &adw::ApplicationWindow) {

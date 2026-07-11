@@ -32,6 +32,10 @@ pub enum AppEvent {
         title: String,
         artist: String,
     },
+    EnrichmentProgress {
+        done: usize,
+        total: usize,
+    },
     HistoryImport {
         imported: usize,
         page: u32,

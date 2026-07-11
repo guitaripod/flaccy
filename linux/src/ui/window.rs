@@ -44,6 +44,39 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     }
     header.pack_start(&rescan_button);
 
+    let enrich_spinner = gtk::Spinner::new();
+    let enrich_label = gtk::Label::new(None);
+    enrich_label.add_css_class("caption");
+    enrich_label.add_css_class("dim");
+    let enrich_box = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(6)
+        .margin_start(4)
+        .build();
+    enrich_box.append(&enrich_spinner);
+    enrich_box.append(&enrich_label);
+    let enrich_revealer = gtk::Revealer::builder()
+        .child(&enrich_box)
+        .transition_type(gtk::RevealerTransitionType::SlideRight)
+        .build();
+    header.pack_start(&enrich_revealer);
+    {
+        let spinner = enrich_spinner.clone();
+        let label = enrich_label.clone();
+        core.hub.subscribe_widget(&enrich_revealer, move |revealer, event| {
+            if let AppEvent::EnrichmentProgress { done, total } = event {
+                if *total > 0 {
+                    spinner.start();
+                    label.set_text(&format!("Finding artwork… {done}/{total}"));
+                    revealer.set_reveal_child(true);
+                } else {
+                    spinner.stop();
+                    revealer.set_reveal_child(false);
+                }
+            }
+        });
+    }
+
     let menu = gio::Menu::new();
     menu.append(Some("Rescan Library"), Some("app.rescan"));
     menu.append(Some("Preferences"), Some("app.preferences"));

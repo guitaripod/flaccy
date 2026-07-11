@@ -58,6 +58,7 @@ pub fn start(core: &Rc<AppCore>) {
     glib::spawn_future_local(async move {
         while let Ok((title, artist, changed)) = done_rx.recv().await {
             let Some(core) = weak.upgrade() else { break };
+            core.note_enrichment_done();
             if !changed {
                 continue;
             }
@@ -82,10 +83,15 @@ pub fn start(core: &Rc<AppCore>) {
 
 pub fn request_album(core: &Rc<AppCore>, title: &str, artist: &str) {
     if let Some(tx) = core.enrich_tx.borrow().as_ref() {
-        let _ = tx.send_blocking(EnrichRequest {
-            title: title.to_string(),
-            artist: artist.to_string(),
-        });
+        if tx
+            .send_blocking(EnrichRequest {
+                title: title.to_string(),
+                artist: artist.to_string(),
+            })
+            .is_ok()
+        {
+            core.add_enrichment_pending();
+        }
     }
 }
 
