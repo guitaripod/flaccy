@@ -157,23 +157,14 @@ fn enrich_worker(
     let mut seen: HashSet<String> = HashSet::new();
 
     while let Ok(request) = rx.recv_blocking() {
-        let dedupe = format!("{}|{}", request.title, request.artist);
-        if !seen.insert(dedupe) {
-            continue;
-        }
-        let now = chrono::Utc::now().timestamp();
-        let status = db.album_info_status(&request.title, &request.artist);
-        if !needs_enrichment(status.as_ref(), now) {
-            continue;
-        }
-        let changed = enrich_one(
+        let changed = resolve_request(
             &db,
             client.as_ref(),
             &mut general,
             &mut musicbrainz,
             &mut enriched_artists,
+            &mut seen,
             &request,
-            status.as_ref(),
         );
         if tx
             .send_blocking((request.title, request.artist, changed))
@@ -182,6 +173,39 @@ fn enrich_worker(
             break;
         }
     }
+}
+
+/// Resolves one request to whether it changed anything, ALWAYS returning so the
+/// worker reports exactly one completion per request. Deduped or already-complete
+/// albums resolve to `false` (no change) rather than being dropped: dropping them
+/// would leave AppCore's pending/done counter unbalanced, freezing the header
+/// progress label (e.g. "Finding artwork… 1/4") for the rest of the session.
+fn resolve_request(
+    db: &Db,
+    client: Option<&LastFmClient>,
+    general: &mut Throttle,
+    musicbrainz: &mut Throttle,
+    enriched_artists: &mut HashSet<String>,
+    seen: &mut HashSet<String>,
+    request: &EnrichRequest,
+) -> bool {
+    if !seen.insert(format!("{}|{}", request.title, request.artist)) {
+        return false;
+    }
+    let now = chrono::Utc::now().timestamp();
+    let status = db.album_info_status(&request.title, &request.artist);
+    if !needs_enrichment(status.as_ref(), now) {
+        return false;
+    }
+    enrich_one(
+        db,
+        client,
+        general,
+        musicbrainz,
+        enriched_artists,
+        request,
+        status.as_ref(),
+    )
 }
 
 fn enrich_one(
