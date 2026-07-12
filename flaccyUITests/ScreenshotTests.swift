@@ -72,8 +72,24 @@ final class ScreenshotTests: XCTestCase {
         let app = launchApp()
         sleep(6)
         openSettings(app)
-        tapIfExists(app.cells["Unlock Lifetime"], in: app)
+        tapIfExists(app.buttons["unlockLifetime"], in: app)
         capture(app, wait: 4, name: "dark-11-paywall")
+    }
+
+    func testSettingsShot() throws {
+        let app = launchApp()
+        sleep(6)
+        openSettings(app)
+        capture(app, wait: 2, name: "settings-01-hero")
+
+        tapIfExists(app.buttons["Light"], in: app)
+        capture(app, wait: 2, name: "settings-02-light")
+
+        tapIfExists(app.buttons["Dark"], in: app)
+        capture(app, wait: 2, name: "settings-03-dark")
+
+        app.swipeUp()
+        capture(app, wait: 2, name: "settings-04-scrolled")
     }
 
     func testSortSanity() throws {

@@ -1,4 +1,5 @@
 import AuthenticationServices
+import StoreKit
 import UIKit
 
 final class SettingsViewController: UITableViewController {
@@ -6,7 +7,7 @@ final class SettingsViewController: UITableViewController {
     var onImportFiles: (() -> Void)?
 
     nonisolated private enum Section: Int, CaseIterable, Hashable {
-        case unlock
+        case appearance
         case lastFM
         case recap
         case playback
@@ -16,7 +17,7 @@ final class SettingsViewController: UITableViewController {
 
         var header: String? {
             switch self {
-            case .unlock: return nil
+            case .appearance: return "Appearance"
             case .lastFM: return "Last.fm"
             case .recap: return "Year in Music"
             case .playback: return "Playback"
@@ -28,7 +29,7 @@ final class SettingsViewController: UITableViewController {
 
         var footer: String? {
             switch self {
-            case .unlock: return nil
+            case .appearance: return "System follows your device's light and dark setting."
             case .lastFM: return nil
             case .recap: return "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story."
             case .playback: return "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends."
@@ -40,7 +41,7 @@ final class SettingsViewController: UITableViewController {
     }
 
     nonisolated private enum Row: Hashable {
-        case lifetime(EntitlementState)
+        case appearance(AppAppearance)
         case lastFMAccount(username: String?)
         case pendingScrobbles(count: Int)
         case importLastFM
@@ -103,8 +104,10 @@ final class SettingsViewController: UITableViewController {
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
     private let notificationFeedback = UINotificationFeedbackGenerator()
 
+    private let headerView = SettingsHeaderView()
     private var dataSource: DataSource!
     private var storageUsed: String?
+    private var playsCount: Int?
     private var lastFMImportProgress: Int?
     private var isRescanning = false
 
@@ -114,18 +117,39 @@ final class SettingsViewController: UITableViewController {
         tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellReuseIdentifier)
+        tableView.register(AppearanceCell.self, forCellReuseIdentifier: AppearanceCell.reuseID)
         view.backgroundColor = .systemGroupedBackground
 
         navigationItem.rightBarButtonItem = makeDoneButton()
         configureDataSource()
+        configureHeader()
         tableView.tableFooterView = makeVersionFooter()
         applySnapshot(animated: false)
+        refreshHeader()
         refreshStorageUsed()
+        refreshPlaysCount()
+        loadPriceIfNeeded()
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(purchaseStateChanged),
+            name: PurchaseManager.stateDidChange, object: nil
+        )
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         applySnapshot(animated: false)
+        refreshHeader()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        sizeHeaderToFit()
+    }
+
+    @objc private func purchaseStateChanged() {
+        refreshHeader()
+        applySnapshot(animated: true)
     }
 
     private func makeDoneButton() -> UIBarButtonItem {
@@ -136,6 +160,43 @@ final class SettingsViewController: UITableViewController {
                 self?.dismiss(animated: true)
             }
         )
+    }
+
+    private func configureHeader() {
+        headerView.onUnlockTapped = { [weak self] in
+            guard let self else { return }
+            self.impactMedium.impactOccurred()
+            PaywallViewController.presentSheet(from: self)
+        }
+        tableView.tableHeaderView = headerView
+    }
+
+    private func refreshHeader() {
+        headerView.configure(
+            state: PurchaseManager.shared.state,
+            priceText: PurchaseManager.shared.product?.displayPrice,
+            albums: Library.shared.albums.count,
+            tracks: Library.shared.allTracks.count,
+            plays: playsCount
+        )
+        sizeHeaderToFit()
+    }
+
+    /// A `tableHeaderView` is frame-driven, so its Auto Layout height is measured
+    /// and stamped whenever the width or content changes, re-assigning the header
+    /// to force the table to adopt the new height.
+    private func sizeHeaderToFit() {
+        let width = tableView.bounds.width
+        guard width > 0 else { return }
+        let height = headerView.systemLayoutSizeFitting(
+            CGSize(width: width, height: UIView.layoutFittingCompressedSize.height),
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        ).height
+        if abs(headerView.frame.height - height) > 0.5 || abs(headerView.frame.width - width) > 0.5 {
+            headerView.frame = CGRect(x: 0, y: 0, width: width, height: height)
+            tableView.tableHeaderView = headerView
+        }
     }
 
     private func configureDataSource() {
@@ -156,7 +217,7 @@ final class SettingsViewController: UITableViewController {
     private func applySnapshot(animated: Bool) {
         var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
         snapshot.appendSections(Section.allCases)
-        snapshot.appendItems([.lifetime(PurchaseManager.shared.state)], toSection: .unlock)
+        snapshot.appendItems([.appearance(AppAppearance.current)], toSection: .appearance)
 
         let authenticated = LastFMService.shared.isAuthenticated
         var lastFMRows: [Row] = [.lastFMAccount(username: authenticated ? LastFMService.shared.username : nil)]
@@ -192,6 +253,10 @@ final class SettingsViewController: UITableViewController {
     }
 
     private func cell(for row: Row, at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
+        if case .appearance(let current) = row {
+            return appearanceCell(current: current, in: tableView, at: indexPath)
+        }
+
         let cell = tableView.dequeueReusableCell(withIdentifier: Self.cellReuseIdentifier, for: indexPath)
         cell.accessoryType = .none
         cell.accessoryView = nil
@@ -209,31 +274,8 @@ final class SettingsViewController: UITableViewController {
         content.imageProperties.maximumSize = CGSize(width: RowIcon.side, height: RowIcon.side)
 
         switch row {
-        case .lifetime(let state):
-            content.image = RowIcon.image(systemName: "crown.fill", tint: .systemYellow)
-            switch state {
-            case .purchased:
-                content.text = "Lifetime"
-                content.secondaryText = "Unlocked ✓"
-                cell.selectionStyle = .none
-                cell.accessibilityTraits = .staticText
-                cell.accessibilityLabel = "Lifetime"
-                cell.accessibilityValue = "Unlocked"
-            case .trial(let daysRemaining):
-                content.text = "Unlock Lifetime"
-                content.secondaryText = "Trial — \(daysRemaining) day\(daysRemaining == 1 ? "" : "s") left"
-                cell.accessoryType = .disclosureIndicator
-                cell.accessibilityLabel = "Unlock Lifetime"
-                cell.accessibilityValue = content.secondaryText
-                cell.accessibilityHint = "Shows the one-time purchase that unlocks flaccy forever"
-            case .expired:
-                content.text = "Unlock Lifetime"
-                content.secondaryText = "Trial ended"
-                cell.accessoryType = .disclosureIndicator
-                cell.accessibilityLabel = "Unlock Lifetime"
-                cell.accessibilityValue = "Trial ended"
-                cell.accessibilityHint = "Shows the one-time purchase that unlocks flaccy forever"
-            }
+        case .appearance:
+            break
 
         case .lastFMAccount(let username):
             content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemRed)
@@ -375,6 +417,19 @@ final class SettingsViewController: UITableViewController {
         return cell
     }
 
+    private func appearanceCell(current: AppAppearance, in tableView: UITableView, at indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: AppearanceCell.reuseID, for: indexPath) as! AppearanceCell
+        cell.configure(selected: current)
+        cell.onChange = { [weak self] appearance in
+            guard let self else { return }
+            self.selectionFeedback.selectionChanged()
+            AppAppearance.current = appearance
+            AppearanceApplier.apply(appearance, animated: true)
+            AppLogger.info("Appearance set to \(appearance.displayName)", category: .ui)
+        }
+        return cell
+    }
+
     private func makeSpinnerAccessory() -> UIActivityIndicatorView {
         let spinner = UIActivityIndicatorView(style: .medium)
         spinner.startAnimating()
@@ -458,8 +513,7 @@ final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
         switch row {
-        case .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: return false
-        case .lifetime(let state): return state != .purchased
+        case .appearance, .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: return false
         case .importLastFM: return lastFMImportProgress == nil
         case .rescanLibrary: return !isRescanning
         default: return true
@@ -470,7 +524,6 @@ final class SettingsViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return }
         switch row {
-        case .lifetime(let state): handleLifetimeTap(state)
         case .lastFMAccount: handleLastFMTap()
         case .pendingScrobbles: handleRetryScrobbles()
         case .importLastFM: handleImportLastFM()
@@ -481,14 +534,8 @@ final class SettingsViewController: UITableViewController {
         case .watchSync: handleWatchTap()
         case .importFiles: handleImportTap()
         case .rescanLibrary: handleRescanTap()
-        case .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: break
+        case .appearance, .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: break
         }
-    }
-
-    private func handleLifetimeTap(_ state: EntitlementState) {
-        guard state != .purchased else { return }
-        impactMedium.impactOccurred()
-        PaywallViewController.presentSheet(from: self)
     }
 
     private func handleLastFMTap() {
@@ -610,6 +657,7 @@ final class SettingsViewController: UITableViewController {
             self.lastFMImportProgress = nil
             self.notificationFeedback.notificationOccurred(.success)
             self.applySnapshot(animated: true)
+            self.refreshPlaysCount()
         }
     }
 
@@ -680,7 +728,9 @@ final class SettingsViewController: UITableViewController {
             self.reconfigureRow(.rescanLibrary)
             self.notificationFeedback.notificationOccurred(.success)
             self.applySnapshot(animated: true)
+            self.refreshHeader()
             self.refreshStorageUsed()
+            self.refreshPlaysCount()
         }
     }
 
@@ -694,6 +744,27 @@ final class SettingsViewController: UITableViewController {
                 self.storageUsed = used
                 self.applySnapshot(animated: false)
             }
+        }
+    }
+
+    /// Counts total plays off the main thread for the hero dashboard, filling the
+    /// stat once it lands.
+    private func refreshPlaysCount() {
+        Task.detached(priority: .utility) { [weak self] in
+            let plays = Self.scrobbleCount()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.playsCount = plays
+                self.refreshHeader()
+            }
+        }
+    }
+
+    private func loadPriceIfNeeded() {
+        guard PurchaseManager.shared.product == nil else { return }
+        Task { [weak self] in
+            await PurchaseManager.shared.loadProductIfNeeded()
+            self?.refreshHeader()
         }
     }
 
@@ -719,5 +790,42 @@ final class SettingsViewController: UITableViewController {
         }
         let megabytes = Double(totalSize) / 1_048_576
         return String(format: "%.0f MB", megabytes)
+    }
+}
+
+/// A settings row hosting a full-width segmented control for the light/dark
+/// override, applied live as the user drags across it.
+private final class AppearanceCell: UITableViewCell {
+
+    static let reuseID = "AppearanceCell"
+
+    var onChange: ((AppAppearance) -> Void)?
+
+    private let segmented = UISegmentedControl(items: AppAppearance.allCases.map(\.displayName))
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        selectionStyle = .none
+        segmented.translatesAutoresizingMaskIntoConstraints = false
+        segmented.addTarget(self, action: #selector(changed), for: .valueChanged)
+        contentView.addSubview(segmented)
+        NSLayoutConstraint.activate([
+            segmented.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
+            segmented.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
+            segmented.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            segmented.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    func configure(selected: AppAppearance) {
+        segmented.selectedSegmentIndex = selected.rawValue
+    }
+
+    @objc private func changed() {
+        guard let appearance = AppAppearance(rawValue: segmented.selectedSegmentIndex) else { return }
+        onChange?(appearance)
     }
 }

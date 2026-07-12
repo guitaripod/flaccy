@@ -69,6 +69,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         rootVC.addChild(playerContainer)
         playerContainer.didMove(toParent: rootVC)
 
+        window.overrideUserInterfaceStyle = AppAppearance.current.userInterfaceStyle
         window.rootViewController = rootVC
         window.makeKeyAndVisible()
         self.window = window
