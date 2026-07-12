@@ -15,6 +15,7 @@ pub fn present(ui: &Rc<Ui>) {
         .icon_name("emblem-system-symbolic")
         .build();
 
+    page.add(&hero_group(ui));
     page.add(&appearance_group(ui));
     page.add(&library_group(ui));
     if lastfm::keys_available() {
@@ -24,6 +25,126 @@ pub fn present(ui: &Rc<Ui>) {
 
     dialog.add(&page);
     dialog.present(Some(&ui.window));
+}
+
+/// A branded banner atop Preferences: an app glyph, the wordmark, and a live
+/// dashboard of the library — Albums, Tracks and all-time Plays. Its background
+/// keys off the same accent tokens as the rest of the app, so it retints with
+/// the active theme.
+fn hero_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::new();
+    group.add(&build_hero(ui));
+    group
+}
+
+fn build_hero(ui: &Rc<Ui>) -> gtk::Box {
+    let hero = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(20)
+        .build();
+    hero.add_css_class("flaccy-hero");
+    hero.append(&hero_identity());
+
+    let (albums, tracks) = {
+        let library = ui.core.library.borrow().clone();
+        (library.albums.len(), library.tracks.len())
+    };
+    let plays = ui.core.db.scrobble_count().max(0) as u64;
+
+    let (albums_col, albums_value) = stat_column(&group_thousands(albums as u64), "Albums");
+    let (tracks_col, tracks_value) = stat_column(&group_thousands(tracks as u64), "Tracks");
+    let (plays_col, plays_value) = stat_column(&group_thousands(plays), "Plays");
+
+    let stats = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    stats.add_css_class("flaccy-hero-stats");
+    stats.append(&albums_col);
+    stats.append(&hero_divider());
+    stats.append(&tracks_col);
+    stats.append(&hero_divider());
+    stats.append(&plays_col);
+    hero.append(&stats);
+
+    let hero_ui = Rc::clone(ui);
+    ui.core.hub.subscribe_widget(&hero, move |_hero, event| {
+        let changed = matches!(
+            event,
+            AppEvent::LibraryReloaded
+                | AppEvent::ScanFinished { .. }
+                | AppEvent::NaturalEnd(_)
+                | AppEvent::HistoryImport { done: true, .. }
+        );
+        if !changed {
+            return;
+        }
+        let library = hero_ui.core.library.borrow().clone();
+        albums_value.set_label(&group_thousands(library.albums.len() as u64));
+        tracks_value.set_label(&group_thousands(library.tracks.len() as u64));
+        plays_value.set_label(&group_thousands(hero_ui.core.db.scrobble_count().max(0) as u64));
+    });
+
+    hero
+}
+
+fn hero_identity() -> gtk::Box {
+    let glyph = gtk::Image::from_icon_name("audio-x-generic-symbolic");
+    glyph.set_pixel_size(24);
+    glyph.add_css_class("flaccy-hero-glyph");
+    glyph.set_valign(gtk::Align::Center);
+
+    let wordmark = gtk::Label::builder().label("flaccy").xalign(0.0).build();
+    wordmark.add_css_class("flaccy-hero-title");
+    let tagline = gtk::Label::builder()
+        .label("Your lossless library")
+        .xalign(0.0)
+        .build();
+    tagline.add_css_class("flaccy-hero-tagline");
+
+    let labels = gtk::Box::new(gtk::Orientation::Vertical, 1);
+    labels.set_valign(gtk::Align::Center);
+    labels.append(&wordmark);
+    labels.append(&tagline);
+
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 14);
+    row.append(&glyph);
+    row.append(&labels);
+    row
+}
+
+/// One dashboard column: a big count over a letterspaced caption. Returns the
+/// value label so the count can be refreshed live.
+fn stat_column(value: &str, caption: &str) -> (gtk::Box, gtk::Label) {
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 3);
+    column.set_hexpand(true);
+    column.set_halign(gtk::Align::Center);
+    let value_label = gtk::Label::new(Some(value));
+    value_label.add_css_class("stat-value");
+    let caption_label = gtk::Label::new(Some(caption));
+    caption_label.add_css_class("stat-caption");
+    column.append(&value_label);
+    column.append(&caption_label);
+    (column, value_label)
+}
+
+fn hero_divider() -> gtk::Box {
+    let divider = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    divider.add_css_class("flaccy-hero-divider");
+    divider.set_valign(gtk::Align::Center);
+    divider
+}
+
+/// Formats an integer with thousands separators (locale-agnostic commas), so
+/// the dashboard reads "6,945" rather than "6945".
+fn group_thousands(n: u64) -> String {
+    let digits = n.to_string();
+    let len = digits.len();
+    let mut out = String::with_capacity(len + (len.saturating_sub(1)) / 3);
+    for (i, ch) in digits.chars().enumerate() {
+        if i > 0 && (len - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(ch);
+    }
+    out
 }
 
 fn appearance_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {

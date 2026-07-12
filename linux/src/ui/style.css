@@ -498,3 +498,53 @@ button.pill.suggested-action:active {
 .swatch-verdant   { background-color: #34d399; }
 .swatch-sunset    { background-image: linear-gradient(135deg, #fb8b24, #e01b24); }
 .swatch-mono      { background-color: #9ca3af; }
+
+/* ---- preferences hero --------------------------------------------------- */
+/* Branded banner + live library dashboard atop Preferences. Keys off the same
+   accent tokens as .flaccy-window, so it retints with the theme. */
+.flaccy-hero {
+  padding: 22px 22px 20px 22px;
+  border-radius: 20px;
+  background-image:
+    radial-gradient(circle at 10% -6%, alpha(@flaccy_wash_a, 0.55), transparent 52%),
+    radial-gradient(circle at 94% 4%, alpha(@flaccy_wash_b, 0.42), transparent 56%),
+    linear-gradient(160deg, alpha(@flaccy_accent, 0.22), alpha(@flaccy_surface, 0.32));
+  box-shadow:
+    inset 0 0 0 1px alpha(#fff, 0.06),
+    0 2px 6px alpha(#000, 0.18),
+    0 14px 40px alpha(#000, 0.18);
+  transition: background-image 600ms ease;
+}
+
+.flaccy-hero-glyph {
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 13px;
+  color: #ffffff;
+  background-image: linear-gradient(135deg, #ff4d6d, #9d4edd 46%, #2dd4bf);
+  box-shadow:
+    0 4px 14px alpha(#000, 0.28),
+    inset 0 0 0 1px alpha(#fff, 0.16);
+}
+
+.flaccy-hero-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.flaccy-hero-tagline {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.flaccy-hero-stats {
+  margin-top: 2px;
+}
+
+.flaccy-hero-divider {
+  min-width: 1px;
+  min-height: 34px;
+  background-color: alpha(@window_fg_color, 0.14);
+}
