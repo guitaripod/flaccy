@@ -58,7 +58,12 @@ public enum LibraryScanner {
         let grouped = Dictionary(grouping: items) { "\($0.albumTitle)|\($0.artist)" }
         let albums: [MediaAlbum] = grouped.values.compactMap { group in
             guard let first = group.first else { return nil }
-            let sorted = group.sorted { $0.trackNumber < $1.trackNumber }
+            let sorted = TrackOrdering.ordered(
+                group,
+                number: { $0.trackNumber },
+                path: { $0.relativePath },
+                title: { $0.title }
+            )
             return MediaAlbum(title: first.albumTitle, artist: first.artist, items: sorted)
         }
         return albums.sorted(by: Self.albumOrder)

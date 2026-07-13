@@ -1,4 +1,5 @@
 import AppKit
+import FlaccyCore
 
 /// Immersive album page: palette-driven ambient backdrop, artwork card,
 /// metadata chips with Last.fm enrichment, glass play/shuffle capsules, a
@@ -197,7 +198,12 @@ final class AlbumDetailViewController: NSViewController {
     private func rebuildTracks() {
         trackRows.forEach { $0.removeFromSuperview() }
         trackRows = []
-        let sorted = album.tracks.sorted { $0.trackNumber < $1.trackNumber }
+        let sorted = TrackOrdering.ordered(
+            album.tracks,
+            number: { $0.trackNumber },
+            path: { $0.fileURL.path },
+            title: { $0.title }
+        )
         let currentPath = AudioPlayer.shared.currentTrack?.fileURL
         for (index, track) in sorted.enumerated() {
             let row = DetailTrackRowView()
@@ -293,7 +299,12 @@ final class AlbumDetailViewController: NSViewController {
     }
 
     private func play(shuffled: Bool) {
-        let sorted = album.tracks.sorted { $0.trackNumber < $1.trackNumber }
+        let sorted = TrackOrdering.ordered(
+            album.tracks,
+            number: { $0.trackNumber },
+            path: { $0.fileURL.path },
+            title: { $0.title }
+        )
         guard !sorted.isEmpty else { return }
         AppLogger.info("Playing album \(album.title) (shuffled: \(shuffled))", category: .playback)
         AudioPlayer.shared.play(shuffled ? sorted.shuffled() : sorted, startingAt: 0)

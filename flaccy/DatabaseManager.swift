@@ -1,4 +1,5 @@
 import Foundation
+import FlaccyCore
 import GRDB
 
 nonisolated struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
@@ -877,23 +878,32 @@ nonisolated final class DatabaseManager: Sendable {
             }
 
             return order.compactMap { groupKey in
-                guard var tracks = map[groupKey], let first = tracks.first else { return nil }
+                guard let tracks = map[groupKey], let first = tracks.first else { return nil }
                 guard groupEditions else {
                     let displayKey = displayKeyByGroup[groupKey] ?? groupKey
-                    return (album: albumInfoByKey[displayKey], tracks: tracks)
+                    let orderedTracks = TrackOrdering.ordered(
+                        tracks,
+                        number: { $0.trackNumber },
+                        path: { $0.fileURL },
+                        title: { $0.title }
+                    )
+                    return (album: albumInfoByKey[displayKey], tracks: orderedTracks)
                 }
                 let canonicalTitle = (titleCountsByGroup[groupKey] ?? [:]).max { lhs, rhs in
                     (lhs.value, -lhs.key.count, lhs.key) < (rhs.value, -rhs.key.count, rhs.key)
                 }?.key ?? first.albumTitle
-                tracks.sort { lhs, rhs in
-                    let lhsCanonical = lhs.albumTitle == canonicalTitle ? 0 : 1
-                    let rhsCanonical = rhs.albumTitle == canonicalTitle ? 0 : 1
-                    if lhsCanonical != rhsCanonical { return lhsCanonical < rhsCanonical }
-                    if lhs.trackNumber != rhs.trackNumber { return lhs.trackNumber < rhs.trackNumber }
-                    return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+                let byCanonical = Dictionary(grouping: tracks) { $0.albumTitle == canonicalTitle ? 0 : 1 }
+                let orderedTracks = [0, 1].flatMap { canonicalRank -> [LightTrackRecord] in
+                    guard let group = byCanonical[canonicalRank] else { return [] }
+                    return TrackOrdering.ordered(
+                        group,
+                        number: { $0.trackNumber },
+                        path: { $0.fileURL },
+                        title: { $0.title }
+                    )
                 }
                 let displayKey = "\(canonicalTitle)\0\(first.artist)"
-                return (album: albumInfoByKey[displayKey], tracks: tracks)
+                return (album: albumInfoByKey[displayKey], tracks: orderedTracks)
             }
         }
     }

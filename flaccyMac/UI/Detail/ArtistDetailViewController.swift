@@ -1,4 +1,5 @@
 import AppKit
+import FlaccyCore
 
 /// Immersive artist page: circular photo header over a palette backdrop,
 /// genre chips, library stats, Play All / Shuffle All / Start Station glass
@@ -266,7 +267,14 @@ final class ArtistDetailViewController: NSViewController {
     }
 
     private func playAll(shuffled: Bool) {
-        let tracks = albums.flatMap { $0.tracks.sorted { $0.trackNumber < $1.trackNumber } }
+        let tracks = albums.flatMap { album in
+            TrackOrdering.ordered(
+                album.tracks,
+                number: { $0.trackNumber },
+                path: { $0.fileURL.path },
+                title: { $0.title }
+            )
+        }
         guard !tracks.isEmpty else { return }
         AppLogger.info("Playing all by \(artistName) (shuffled: \(shuffled))", category: .playback)
         AudioPlayer.shared.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0)
