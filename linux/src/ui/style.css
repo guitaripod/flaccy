@@ -108,6 +108,30 @@
   opacity: 0.45;
 }
 
+.disc-header {
+  margin-bottom: 2px;
+}
+
+.disc-header-icon {
+  color: @accent_color;
+  opacity: 0.9;
+}
+
+.disc-header-label {
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: @accent_color;
+}
+
+.disc-header-meta {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  opacity: 0.5;
+}
+
 .duration-label {
   font-variant-numeric: tabular-nums;
   opacity: 0.55;

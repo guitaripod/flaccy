@@ -304,11 +304,7 @@ fn merge_album_group(group: Vec<Album>) -> Album {
         .into_iter()
         .filter_map(|key| best.remove(&key))
         .collect();
-    tracks.sort_by(|a, b| {
-        a.track_number
-            .cmp(&b.track_number)
-            .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
-    });
+    crate::library::sort_album_tracks(&mut tracks);
     Album {
         title,
         artist,

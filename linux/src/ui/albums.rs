@@ -1,5 +1,5 @@
 use crate::events::AppEvent;
-use crate::library::{format_time, Album};
+use crate::library::{format_time, Album, Track};
 use crate::ui::{context, Ui};
 use adw::prelude::*;
 use gtk::glib::BoxedAnyObject;
@@ -330,6 +330,120 @@ fn build_album_cell() -> gtk::Box {
     cell
 }
 
+/// A section header announcing a physical disc or vinyl side, e.g.
+/// "Side A · 4 songs · 18 min", evoking the divider between records in a set.
+fn disc_header(label: &str, count: usize, duration: f64) -> gtk::Box {
+    let row = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .margin_top(10)
+        .margin_start(4)
+        .margin_end(6)
+        .build();
+    row.add_css_class("disc-header");
+    let icon = gtk::Image::from_icon_name("media-optical-symbolic");
+    icon.add_css_class("disc-header-icon");
+    row.append(&icon);
+    let name = gtk::Label::builder().label(label).xalign(0.0).build();
+    name.add_css_class("disc-header-label");
+    row.append(&name);
+    let songs = if count == 1 {
+        "1 song".to_string()
+    } else {
+        format!("{count} songs")
+    };
+    let meta = gtk::Label::builder()
+        .label(format!(
+            "{songs} · {} min",
+            (duration / 60.0).round().max(1.0) as i64
+        ))
+        .hexpand(true)
+        .xalign(1.0)
+        .build();
+    meta.add_css_class("disc-header-meta");
+    row.append(&meta);
+    row
+}
+
+/// Builds one boxed track list for a slice of an album's tracks. `base` is the
+/// slice's offset within `all_tracks` so activating a row queues the whole
+/// album from the correct position regardless of which disc section it sits in.
+fn build_track_list(
+    ui: &Rc<Ui>,
+    all_tracks: &Rc<Vec<Track>>,
+    base: usize,
+    tracks: &[Track],
+) -> gtk::ListBox {
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .build();
+    list.add_css_class("boxed-list");
+    for track in tracks {
+        let row_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(12)
+            .margin_top(10)
+            .margin_bottom(10)
+            .margin_start(12)
+            .margin_end(12)
+            .build();
+        let number = gtk::Label::builder()
+            .label(if track.track_number > 0 {
+                track.track_number.to_string()
+            } else {
+                "·".to_string()
+            })
+            .width_chars(3)
+            .xalign(1.0)
+            .build();
+        number.add_css_class("track-number");
+        row_box.append(&number);
+        let track_title = gtk::Label::builder()
+            .label(&track.title)
+            .xalign(0.0)
+            .hexpand(true)
+            .ellipsize(pango::EllipsizeMode::End)
+            .tooltip_text(&track.title)
+            .build();
+        row_box.append(&track_title);
+        let heart = gtk::Image::from_icon_name("emote-love-symbolic");
+        heart.add_css_class("loved-heart");
+        heart.set_visible(track.loved);
+        row_box.append(&heart);
+        if let Some(badge_text) = track.quality_badge() {
+            let badge = gtk::Label::new(Some(&badge_text));
+            badge.add_css_class("quality-badge");
+            row_box.append(&badge);
+        }
+        let duration = gtk::Label::new(Some(&format_time(track.duration)));
+        duration.add_css_class("duration-label");
+        row_box.append(&duration);
+
+        let row = gtk::ListBoxRow::builder().child(&row_box).build();
+        context::attach_track_context_menu(&row, &ui.core, track.rel_path.clone());
+        {
+            let rel = track.rel_path.clone();
+            ui.core.hub.subscribe_widget(&heart, move |heart, event| {
+                if let AppEvent::LovedChanged { rel_path, loved } = event {
+                    if rel_path == &rel {
+                        heart.set_visible(*loved);
+                    }
+                }
+            });
+        }
+        list.append(&row);
+    }
+    {
+        let all_tracks = Rc::clone(all_tracks);
+        let ui = Rc::clone(ui);
+        list.connect_row_activated(move |_, row| {
+            let index = base + row.index().max(0) as usize;
+            ui.core.play_tracks((*all_tracks).clone(), index);
+        });
+    }
+    list
+}
+
 pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
     let dominant: Rc<RefCell<Option<(u8, u8, u8)>>> = Rc::new(RefCell::new(None));
 
@@ -528,74 +642,6 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
     meta.append(&buttons);
     header.append(&meta);
 
-    let list = gtk::ListBox::builder()
-        .selection_mode(gtk::SelectionMode::None)
-        .build();
-    list.add_css_class("boxed-list");
-    for track in &album.tracks {
-        let row_box = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .spacing(12)
-            .margin_top(10)
-            .margin_bottom(10)
-            .margin_start(12)
-            .margin_end(12)
-            .build();
-        let number = gtk::Label::builder()
-            .label(if track.track_number > 0 {
-                track.track_number.to_string()
-            } else {
-                "·".to_string()
-            })
-            .width_chars(3)
-            .xalign(1.0)
-            .build();
-        number.add_css_class("track-number");
-        row_box.append(&number);
-        let track_title = gtk::Label::builder()
-            .label(&track.title)
-            .xalign(0.0)
-            .hexpand(true)
-            .ellipsize(pango::EllipsizeMode::End)
-            .tooltip_text(&track.title)
-            .build();
-        row_box.append(&track_title);
-        let heart = gtk::Image::from_icon_name("emote-love-symbolic");
-        heart.add_css_class("loved-heart");
-        heart.set_visible(track.loved);
-        row_box.append(&heart);
-        if let Some(badge_text) = track.quality_badge() {
-            let badge = gtk::Label::new(Some(&badge_text));
-            badge.add_css_class("quality-badge");
-            row_box.append(&badge);
-        }
-        let duration = gtk::Label::new(Some(&format_time(track.duration)));
-        duration.add_css_class("duration-label");
-        row_box.append(&duration);
-
-        let row = gtk::ListBoxRow::builder().child(&row_box).build();
-        context::attach_track_context_menu(&row, &ui.core, track.rel_path.clone());
-        {
-            let rel = track.rel_path.clone();
-            ui.core.hub.subscribe_widget(&heart, move |heart, event| {
-                if let AppEvent::LovedChanged { rel_path, loved } = event {
-                    if rel_path == &rel {
-                        heart.set_visible(*loved);
-                    }
-                }
-            });
-        }
-        list.append(&row);
-    }
-    {
-        let tracks = album.tracks.clone();
-        let ui = Rc::clone(ui);
-        list.connect_row_activated(move |_, row| {
-            let index = row.index().max(0) as usize;
-            ui.core.play_tracks(tracks.clone(), index);
-        });
-    }
-
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(24)
@@ -605,7 +651,23 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         .margin_end(32)
         .build();
     content.append(&header);
-    content.append(&list);
+
+    let all_tracks = Rc::new(album.tracks.clone());
+    match crate::library::disc_sections(&album.tracks) {
+        Some(sections) => {
+            let mut base = 0usize;
+            for section in &sections {
+                content.append(&disc_header(
+                    &section.label,
+                    section.tracks.len(),
+                    section.duration(),
+                ));
+                content.append(&build_track_list(ui, &all_tracks, base, &section.tracks));
+                base += section.tracks.len();
+            }
+        }
+        None => content.append(&build_track_list(ui, &all_tracks, 0, &album.tracks)),
+    }
 
     let clamp = adw::Clamp::builder()
         .maximum_size(920)
