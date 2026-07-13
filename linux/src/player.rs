@@ -159,10 +159,12 @@ impl Player {
                     }
                     MessageView::Eos(_) => player.on_eos(),
                     MessageView::Error(err) => {
+                        let gerror = err.error();
                         crate::logger::error(
                             "playback",
-                            &format!("pipeline error: {} ({:?})", err.error(), err.debug()),
+                            &format!("pipeline error: {} ({:?})", gerror, err.debug()),
                         );
+                        player.report_playback_error(&gerror);
                         player.stop();
                     }
                     _ => {}
@@ -215,6 +217,24 @@ impl Player {
             self.hub.emit(&AppEvent::TrackChanged(current));
             self.hub.emit(&AppEvent::QueueChanged);
         }
+    }
+
+    /// Surfaces a failed pipeline as a toast, with a codec-specific hint for the
+    /// common missing-decoder case (AAC/M4A/ALAC need gst-libav, which the base
+    /// runtime deps don't pull in).
+    fn report_playback_error(&self, error: &glib::Error) {
+        let title = self
+            .current_track()
+            .map(|track| track.title)
+            .unwrap_or_else(|| "this track".to_string());
+        let message = if error.matches(gst::CoreError::MissingPlugin) {
+            format!(
+                "Can't play “{title}” — a codec is missing. Install gst-libav (AAC/M4A/ALAC and more) and restart Flaccy."
+            )
+        } else {
+            format!("Can't play “{title}” — {error}")
+        };
+        self.hub.emit(&AppEvent::Toast(message));
     }
 
     fn on_eos(&self) {

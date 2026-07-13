@@ -62,9 +62,9 @@ if [ -n "${missing:-}" ]; then
   echo "WARNING: missing runtime libraries:"
   echo "$missing" | sed 's/^/  /'
   echo "Install the GTK4/libadwaita/GStreamer runtime for your distro:"
-  echo "  Arch:          sudo pacman -S gtk4 libadwaita gstreamer gst-plugins-base gst-plugins-good"
-  echo "  Debian/Ubuntu: sudo apt install libgtk-4-1 libadwaita-1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good"
-  echo "  Fedora:        sudo dnf install gtk4 libadwaita gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good"
+  echo "  Arch:          sudo pacman -S gtk4 libadwaita gstreamer gst-plugins-base gst-plugins-good gst-libav"
+  echo "  Debian/Ubuntu: sudo apt install libgtk-4-1 libadwaita-1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav"
+  echo "  Fedora:        sudo dnf install gtk4 libadwaita gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-libav"
 fi
 
 echo ""

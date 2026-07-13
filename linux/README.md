@@ -14,9 +14,11 @@ curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-
 
 Installs to `~/.local` (no sudo). x86_64, glibc ≥ 2.34 (Ubuntu 22.04+, Debian 12+, Fedora 35+, current Arch). On older or musl-based distros, build from source. Requires system GTK4, libadwaita, and GStreamer:
 
-- Arch: `sudo pacman -S gtk4 libadwaita gstreamer gst-plugins-base gst-plugins-good`
-- Debian/Ubuntu: `sudo apt install libgtk-4-1 libadwaita-1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`
-- Fedora: `sudo dnf install gtk4 libadwaita gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good`
+- Arch: `sudo pacman -S gtk4 libadwaita gstreamer gst-plugins-base gst-plugins-good gst-libav`
+- Debian/Ubuntu: `sudo apt install libgtk-4-1 libadwaita-1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav`
+- Fedora: `sudo dnf install gtk4 libadwaita gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-libav`
+
+`gst-libav` supplies the AAC/M4A/ALAC (and other ffmpeg-backed) decoders — without it, FLAC and MP3 play but AAC/M4A files won't. Flaccy names the missing codec in a toast if you hit one.
 
 ### Arch (AUR)
 
