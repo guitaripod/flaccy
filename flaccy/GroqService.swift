@@ -168,9 +168,15 @@ final class GroqService: MetadataClassifying {
                     Your task:
                     1. IDENTIFY the correct artist for each track. Use your knowledge of music — if you see tracks like "Schism", "Lateralus", "Parabola" you should know these are by Tool.
                     2. GROUP tracks into the correct albums. Don't put tracks from different albums together. Use your knowledge of discographies.
-                    3. CLEAN UP track titles — remove track numbers, file extensions, underscores, dashes used as separators, and other artifacts. "01 - The Grudge.flac" becomes "The Grudge".
+                    3. CLEAN UP track titles — remove track numbers, file extensions, underscores, dashes used purely as separators, and other artifacts. "01 - The Grudge.flac" becomes "The Grudge".
                     4. ASSIGN correct track numbers based on the official album track listing.
                     5. Include year and genre for each album if you know them.
+
+                    PRESERVE VERSION IDENTITY — this is critical. A track is NOT the same as its original when it is a remix, edit, bootleg, mashup, cover, live/acoustic/instrumental version, or an altered speed/pitch version (e.g. "sped up", "slowed + reverb", "nightcore", "8D"). For these:
+                    - KEEP the full version qualifier in the title verbatim, e.g. "All The Things She Said (DJ Gollum sped up)" — do NOT strip it down to "All The Things She Said".
+                    - CREDIT the remixer/editor as the artist (e.g. "DJ Gollum"), NOT the original performer, unless the file clearly attributes it otherwise.
+                    - Treat a dash or parentheses that introduces such a qualifier as meaningful, NOT a separator artifact to be removed.
+                    When unsure whether a qualifier is a version marker, KEEP it. Never invent a canonical title that discards information present in the original metadata.
 
                     The "filename" field in each track MUST be the exact last component of the original path (e.g., "01 - The Grudge.flac") so it can be matched back to the file.
 
