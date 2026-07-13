@@ -14,7 +14,7 @@ use std::time::Instant;
 /// Pushed onto the navigation stack from the mini-player artwork.
 pub fn present(ui: &Rc<Ui>) {
     if ui
-        .nav
+        .shell
         .visible_page()
         .and_then(|page| page.tag())
         .as_deref()
@@ -158,14 +158,20 @@ pub fn present(ui: &Rc<Ui>) {
     lyrics.set_tooltip_text(Some("Lyrics"));
     {
         let ui = Rc::clone(ui);
-        lyrics.connect_clicked(move |_| ui.core.hub.emit(&AppEvent::LyricsToggled(true)));
+        lyrics.connect_clicked(move |_| {
+            ui.shell.pop();
+            ui.core.hub.emit(&AppEvent::LyricsToggled(true));
+        });
     }
     let queue = gtk::Button::from_icon_name("view-list-symbolic");
     queue.add_css_class("flat");
     queue.set_tooltip_text(Some("Queue"));
     {
         let ui = Rc::clone(ui);
-        queue.connect_clicked(move |_| ui.core.hub.emit(&AppEvent::QueueToggled(true)));
+        queue.connect_clicked(move |_| {
+            ui.shell.pop();
+            ui.core.hub.emit(&AppEvent::QueueToggled(true));
+        });
     }
     let secondary = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -205,7 +211,7 @@ pub fn present(ui: &Rc<Ui>) {
 
     let header = adw::HeaderBar::builder()
         .title_widget(&adw::WindowTitle::new("Now Playing", ""))
-        .show_end_title_buttons(false)
+        .show_end_title_buttons(true)
         .build();
     header.add_css_class("flat");
     let toolbar = adw::ToolbarView::new();
@@ -250,7 +256,7 @@ pub fn present(ui: &Rc<Ui>) {
         .tag("now-playing")
         .child(&toolbar)
         .build();
-    ui.nav.push(&page);
+    ui.shell.push(&page);
 }
 
 fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {

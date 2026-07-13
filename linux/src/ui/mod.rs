@@ -24,6 +24,7 @@ use std::rc::Rc;
 pub struct Ui {
     pub core: Rc<AppCore>,
     pub nav: adw::NavigationView,
+    pub shell: adw::NavigationView,
     pub window: adw::ApplicationWindow,
     pub query: Rc<RefCell<String>>,
 }

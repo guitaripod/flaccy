@@ -33,7 +33,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .margin_start(12)
         .margin_end(12)
         .build();
-    list.add_css_class("background");
 
     let plain_view = gtk::Label::builder()
         .xalign(0.0)

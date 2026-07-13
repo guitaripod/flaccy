@@ -29,9 +29,11 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     window.add_css_class("flaccy-window");
 
     let nav = adw::NavigationView::new();
+    let shell = adw::NavigationView::new();
     let ui = Rc::new(Ui {
         core: Rc::clone(core),
         nav: nav.clone(),
+        shell: shell.clone(),
         window: window.clone(),
         query: Rc::new(RefCell::new(String::new())),
     });
@@ -227,6 +229,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     let side_stack = gtk::Stack::builder()
         .transition_type(gtk::StackTransitionType::Crossfade)
         .build();
+    side_stack.add_css_class("side-panel");
     side_stack.add_named(&ui::lyrics_panel::build(&ui), Some("lyrics"));
     side_stack.add_named(&ui::queue_panel::build(&ui), Some("queue"));
 
@@ -306,7 +309,15 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     toolbar_view.set_content(Some(&toast_overlay));
     toolbar_view.add_bottom_bar(&ui::transport::build(&ui));
 
-    window.set_content(Some(&toolbar_view));
+    let shell_root = adw::NavigationPage::builder()
+        .title("Flaccy")
+        .tag("shell")
+        .child(&toolbar_view)
+        .build();
+    shell.add(&shell_root);
+    shell.set_pop_on_escape(true);
+
+    window.set_content(Some(&shell));
 
     register_actions(app, &ui, &search);
     attach_space_handler(&ui);
@@ -652,16 +663,18 @@ fn present_about(window: &adw::ApplicationWindow) {
         .website("https://midgarcorp.cc/flaccy")
         .issue_url("https://github.com/guitaripod/flaccy/issues")
         .copyright("© 2026 Midgar Oy")
-        .license_type(gtk::License::MitX11)
+        .license_type(gtk::License::Gpl30)
         .release_notes_version(env!("CARGO_PKG_VERSION"))
         .release_notes(
-            "<p>Flaccy now wears the color of your music.</p>\
+            "<p>A remastered, full-window Now Playing.</p>\
              <ul>\
+             <li>Now Playing fills the whole window over a blurred, \
+             accent-washed cover — the sidebar and transport bar step aside, \
+             and a tap of Escape or the back button returns you.</li>\
+             <li>The library grids and the queue and lyrics panels now float \
+             cleanly over the ambient wash, in focus and out.</li>\
              <li>Adaptive theme engine — the whole app retints to the album \
              that's playing, or pick one of seven curated palettes.</li>\
-             <li>An immersive Now Playing view over a blurred cover.</li>\
-             <li>Ambient backdrops, glass surfaces, and a glowing \
-             now-playing pulse.</li>\
              </ul>",
         )
         .build();
@@ -763,7 +776,16 @@ fn attach_type_to_search(ui: &Rc<Ui>, search: &gtk::SearchEntry) {
     controller.set_propagation_phase(gtk::PropagationPhase::Capture);
     let key_window = ui.window.clone();
     let key_search = search.clone();
+    let key_shell = ui.shell.clone();
     controller.connect_key_pressed(move |_, key, _, modifiers| {
+        if key_shell
+            .visible_page()
+            .and_then(|page| page.tag())
+            .as_deref()
+            == Some("now-playing")
+        {
+            return glib::Propagation::Proceed;
+        }
         let editing = gtk::prelude::GtkWindowExt::focus(&key_window)
             .map(|widget| widget.is::<gtk::Text>() || widget.is::<gtk::Entry>())
             .unwrap_or(false);

@@ -254,6 +254,29 @@
   color: @accent_color;
 }
 
+/* ---- transparent library surfaces --------------------------------------- */
+/* The ambient .flaccy-window wash is meant to show through the library grids
+   and side panels. GTK's default view/sidebar backgrounds are opaque and swap
+   to a dimmed variant under :backdrop (unfocused window) — that shift is what
+   reads as a stray color behind the queue, lyrics, and albums. Force these
+   surfaces transparent in both focused and backdrop states so only the wash
+   shows. Cards with their own explicit fills (stat-tile, guide-card, …) set
+   background-color directly and are unaffected. */
+.album-grid,
+.album-grid:backdrop,
+.side-panel,
+.side-panel:backdrop,
+.side-panel scrolledwindow,
+.side-panel scrolledwindow:backdrop,
+.side-panel viewport,
+.side-panel list,
+.side-panel list:backdrop,
+overlay-split-view > .sidebar-pane,
+overlay-split-view > .sidebar-pane:backdrop {
+  background: none;
+  background-color: transparent;
+}
+
 /* ---- lyrics ------------------------------------------------------------- */
 .lyric-line {
   font-size: 16px;
