@@ -1,6 +1,6 @@
 use crate::events::AppEvent;
 use crate::library::format_time;
-use crate::player::RepeatMode;
+use crate::ui::controls::{apply_repeat, set_adaptive_accent, set_love_appearance};
 use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::glib;
@@ -401,23 +401,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             AppEvent::ShuffleChanged(enabled) => {
                 shuffle.set_active(*enabled);
             }
-            AppEvent::RepeatChanged(mode) => match mode {
-                RepeatMode::Off => {
-                    repeat.set_icon_name("media-playlist-repeat-symbolic");
-                    repeat.set_opacity(0.5);
-                    repeat.remove_css_class("accent-toggle");
-                }
-                RepeatMode::All => {
-                    repeat.set_icon_name("media-playlist-repeat-symbolic");
-                    repeat.set_opacity(1.0);
-                    repeat.add_css_class("accent-toggle");
-                }
-                RepeatMode::One => {
-                    repeat.set_icon_name("media-playlist-repeat-song-symbolic");
-                    repeat.set_opacity(1.0);
-                    repeat.add_css_class("accent-toggle");
-                }
-            },
+            AppEvent::RepeatChanged(mode) => apply_repeat(&repeat, *mode),
             AppEvent::VolumeChanged(value) => {
                 if (volume.value() - value).abs() > 0.001 {
                     volume_guard.set(true);
@@ -487,20 +471,3 @@ fn build_equalizer() -> gtk::Box {
     bars
 }
 
-/// Feeds the now-playing dominant color to the theme engine; a no-op unless the
-/// Adaptive theme is active, where it retints the whole app.
-fn set_adaptive_accent(color: Option<(u8, u8, u8)>) {
-    if let Some(controller) = crate::theme::ThemeController::current() {
-        controller.set_artwork_color(color);
-    }
-}
-
-fn set_love_appearance(button: &gtk::Button, loved: bool) {
-    if loved {
-        button.add_css_class("loved-heart");
-        button.set_tooltip_text(Some("Unlove"));
-    } else {
-        button.remove_css_class("loved-heart");
-        button.set_tooltip_text(Some("Love on Last.fm"));
-    }
-}

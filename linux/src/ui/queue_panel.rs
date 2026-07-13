@@ -5,7 +5,7 @@ use adw::prelude::*;
 use gtk::gdk;
 use gtk::glib;
 use gtk::pango;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 /// Rendered queue window sizes — the queue can hold thousands of tracks, so
@@ -17,7 +17,38 @@ const UP_NEXT_LIMIT: usize = 120;
 /// Queue side panel with History / Now Playing / Up Next sections: click a
 /// history row to jump back, drag-reorder Up Next, per-row remove, Clear Up
 /// Next, and a time-remaining summary. Live-updates from player events.
-pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
+/// Placement options so the sidebar and the in-view (Now Playing lens) share
+/// one implementation. The in-view instance drops its own "Queue" title (the
+/// ViewStack switcher labels it) and lets Now Playing drive the rebuild after
+/// the crossfade instead of rebuilding on its own map.
+pub struct QueueOptions {
+    pub show_title: bool,
+    pub bottom_margin: i32,
+    pub self_map_rebuild: bool,
+    /// Whether the panel starts live. The sidebar is always live; the in-view
+    /// instance starts inactive so it doesn't rebuild ~140 rows on every track
+    /// change while its column is collapsed — Now Playing activates it on reveal.
+    pub initial_active: bool,
+}
+
+impl QueueOptions {
+    pub fn sidebar() -> Self {
+        Self { show_title: true, bottom_margin: 12, self_map_rebuild: true, initial_active: true }
+    }
+    pub fn in_view() -> Self {
+        Self { show_title: false, bottom_margin: 8, self_map_rebuild: false, initial_active: false }
+    }
+}
+
+pub struct QueuePanel {
+    pub widget: gtk::Widget,
+    /// Activate/deactivate the panel: while inactive it ignores queue events;
+    /// activating rebuilds and pins the now-playing row. Drive it from the
+    /// reveal toggle for the in-view instance.
+    pub set_active: Rc<dyn Fn(bool)>,
+}
+
+pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
     let root = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(0)
@@ -33,8 +64,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
     let title = gtk::Label::builder().label("Queue").xalign(0.0).hexpand(true).build();
     title.add_css_class("title-4");
-    header.append(&title);
+    if opts.show_title {
+        header.append(&title);
+    }
     let clear = gtk::Button::with_label("Clear Up Next");
+    clear.set_hexpand(true);
+    clear.set_halign(gtk::Align::End);
     clear.add_css_class("flat");
     clear.add_css_class("caption");
     {
@@ -55,7 +90,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let list = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .margin_top(10)
-        .margin_bottom(12)
+        .margin_bottom(opts.bottom_margin)
         .margin_start(10)
         .margin_end(10)
         .valign(gtk::Align::Start)
@@ -186,21 +221,38 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
+    let active = Rc::new(Cell::new(opts.initial_active));
     {
         let rebuild = Rc::clone(&rebuild);
-        ui.core.hub.subscribe_widget(&root, move |_, event| match event {
-            AppEvent::TrackChanged(_) => rebuild(true),
-            AppEvent::QueueChanged | AppEvent::LovedChanged { .. } => rebuild(false),
-            _ => {}
+        let active = Rc::clone(&active);
+        ui.core.hub.subscribe_widget(&root, move |_, event| {
+            if !active.get() {
+                return;
+            }
+            match event {
+                AppEvent::TrackChanged(_) => rebuild(true),
+                AppEvent::QueueChanged | AppEvent::LovedChanged { .. } => rebuild(false),
+                _ => {}
+            }
         });
     }
 
-    {
+    if opts.self_map_rebuild {
         let rebuild = Rc::clone(&rebuild);
         root.connect_map(move |_| rebuild(true));
     }
 
-    root.upcast()
+    let set_active: Rc<dyn Fn(bool)> = {
+        let rebuild = Rc::clone(&rebuild);
+        let active = Rc::clone(&active);
+        Rc::new(move |now_active: bool| {
+            active.set(now_active);
+            if now_active {
+                rebuild(true);
+            }
+        })
+    };
+    QueuePanel { widget: root.upcast(), set_active }
 }
 
 fn section_row(text: &str) -> gtk::ListBoxRow {

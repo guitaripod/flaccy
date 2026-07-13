@@ -230,8 +230,14 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .transition_type(gtk::StackTransitionType::Crossfade)
         .build();
     side_stack.add_css_class("side-panel");
-    side_stack.add_named(&ui::lyrics_panel::build(&ui), Some("lyrics"));
-    side_stack.add_named(&ui::queue_panel::build(&ui), Some("queue"));
+    side_stack.add_named(
+        &ui::lyrics_panel::build(&ui, ui::lyrics_panel::LyricsOptions::sidebar()).widget,
+        Some("lyrics"),
+    );
+    side_stack.add_named(
+        &ui::queue_panel::build(&ui, ui::queue_panel::QueueOptions::sidebar()).widget,
+        Some("queue"),
+    );
 
     let split = adw::OverlaySplitView::builder()
         .content(&content_box)
@@ -666,13 +672,16 @@ fn present_about(window: &adw::ApplicationWindow) {
         .license_type(gtk::License::Gpl30)
         .release_notes_version(env!("CARGO_PKG_VERSION"))
         .release_notes(
-            "<p>A remastered, full-window Now Playing.</p>\
+            "<p>A remastered, full-window Now Playing with lyrics and queue \
+             side by side.</p>\
              <ul>\
-             <li>Now Playing fills the whole window over a blurred, \
-             accent-washed cover — the sidebar and transport bar step aside, \
-             and a tap of Escape or the back button returns you.</li>\
-             <li>The library grids and the queue and lyrics panels now float \
-             cleanly over the ambient wash, in focus and out.</li>\
+             <li>Toggle Lyrics and Up Next to bring them in beside the cover — \
+             show any one, two, or all three at once, each an equal column, \
+             sliding in over the blurred wash.</li>\
+             <li>Tap a synced lyric to seek; reorder, remove, or jump around \
+             the queue — all without leaving the player.</li>\
+             <li>One persistent transport underneath, and Escape or the back \
+             button returns you to the library.</li>\
              <li>Adaptive theme engine — the whole app retints to the album \
              that's playing, or pick one of seven curated palettes.</li>\
              </ul>",

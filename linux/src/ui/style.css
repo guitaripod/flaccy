@@ -520,6 +520,69 @@ button.pill.suggested-action:active {
   box-shadow: 0 1px 5px alpha(#000, 0.45), 0 0 0 1px alpha(@accent_bg_color, 0.35);
 }
 
+/* ---- now playing: in-view lenses (Player / Lyrics / Up Next) ------------ */
+/* The blurred wash is the outermost layer; the ToolbarView (header + switched
+   ViewStack + persistent transport dock) floats over it fully transparent so
+   the cover bleeds behind every lens. */
+.np-toolbar,
+.np-viewstack,
+.np-view {
+  background: none;
+  background-color: transparent;
+}
+
+.np-view scrolledwindow,
+.np-view viewport,
+.np-view list {
+  background: none;
+  background-color: transparent;
+}
+
+/* Lyrics / Up Next columns beside the hero art — glass panels floating over
+   the wash, revealed by the header toggles. */
+.np-side {
+  background-color: alpha(@window_bg_color, 0.44);
+  border-radius: 18px;
+  margin: 12px 8px 12px 8px;
+  box-shadow:
+    inset 0 0 0 1px alpha(#fff, 0.06),
+    0 12px 40px alpha(#000, 0.28);
+}
+
+/* Header pill toggles that reveal the side columns; light up in the accent
+   when their column is showing. */
+.np-toggle {
+  border-radius: 9999px;
+  padding: 3px 14px;
+  transition: background-color 160ms ease, box-shadow 200ms ease;
+}
+
+.np-toggle:checked {
+  background-color: alpha(@accent_bg_color, 0.85);
+  color: @accent_fg_color;
+  box-shadow: 0 2px 10px alpha(@accent_bg_color, 0.4);
+}
+
+/* Persistent transport dock — a frosted bar; the ToolbarView reserves its
+   height so the queue's last row is never occluded. */
+.np-transport {
+  background-color: alpha(@window_bg_color, 0.72);
+  border-top: 1px solid alpha(@window_fg_color, 0.08);
+  padding: 10px 20px 14px 20px;
+}
+
+/* Hi-res / quality chip under the title in the Player lens. */
+.np-chip {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  background-color: alpha(@accent_bg_color, 0.18);
+  box-shadow: inset 0 0 0 1px alpha(@accent_bg_color, 0.30);
+  color: @accent_color;
+}
+
 .mini-art {
   transition: transform 150ms ease;
 }

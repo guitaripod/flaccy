@@ -9,7 +9,33 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Instant;
 
-pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
+/// Placement options so the sidebar and the in-view (Now Playing lens) share
+/// one implementation instead of forking. The in-view instance hides its own
+/// header (the ViewStack switcher labels it) and ignores the global
+/// `LyricsToggled` event so it doesn't double-fetch with the sidebar instance.
+pub struct LyricsOptions {
+    pub show_header: bool,
+    pub bottom_margin: i32,
+    pub react_to_global_toggle: bool,
+}
+
+impl LyricsOptions {
+    pub fn sidebar() -> Self {
+        Self { show_header: true, bottom_margin: 120, react_to_global_toggle: true }
+    }
+    pub fn in_view() -> Self {
+        Self { show_header: false, bottom_margin: 8, react_to_global_toggle: false }
+    }
+}
+
+pub struct LyricsPanel {
+    pub widget: gtk::Widget,
+    /// Activate/deactivate the panel: activating fetches lyrics for the current
+    /// track. Drive it from the ViewStack lens switch for the in-view instance.
+    pub set_active: Rc<dyn Fn(bool)>,
+}
+
+pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
     let header = gtk::Label::builder()
         .label("Lyrics")
         .xalign(0.0)
@@ -29,7 +55,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let list = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .margin_top(8)
-        .margin_bottom(120)
+        .margin_bottom(opts.bottom_margin)
         .margin_start(12)
         .margin_end(12)
         .build();
@@ -69,8 +95,10 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.set_vexpand(true);
 
     let panel = gtk::Box::new(gtk::Orientation::Vertical, 4);
-    panel.append(&header);
-    panel.append(&subtitle);
+    if opts.show_header {
+        panel.append(&header);
+        panel.append(&subtitle);
+    }
     panel.append(&stack);
 
     let state: Rc<RefCell<PanelState>> = Rc::new(RefCell::new(PanelState::default()));
@@ -178,37 +206,49 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         })
     };
 
+    let set_active: Rc<dyn Fn(bool)> = {
+        let visible = Rc::clone(&visible);
+        let state = Rc::clone(&state);
+        let fetch_for = Rc::clone(&fetch_for);
+        let ui = Rc::clone(ui);
+        Rc::new(move |active: bool| {
+            visible.set(active);
+            if active {
+                let track = state
+                    .borrow()
+                    .track
+                    .clone()
+                    .or_else(|| ui.core.player.current_track());
+                if let Some(track) = track {
+                    state.borrow_mut().track = Some(track.clone());
+                    fetch_for(&track);
+                }
+            }
+        })
+    };
+
     {
-        let ui_ref = Rc::clone(ui);
         let state = Rc::clone(&state);
         let visible = Rc::clone(&visible);
         let fetch_for = Rc::clone(&fetch_for);
         let list = list.clone();
         let synced_scroll = synced_scroll.clone();
         let last_user_scroll = Rc::clone(&last_user_scroll);
+        let react_to_global_toggle = opts.react_to_global_toggle;
+        let toggle_set_active = Rc::clone(&set_active);
+        let panel_map = panel.clone();
         ui.core.hub.subscribe_widget(&panel, move |_, event| match event {
             AppEvent::TrackChanged(track) => {
                 state.borrow_mut().track = track.clone();
-                if visible.get() {
+                if visible.get() && panel_map.is_mapped() {
                     if let Some(track) = track {
                         fetch_for(track);
                     }
                 }
             }
             AppEvent::LyricsToggled(shown) => {
-                visible.set(*shown);
-                if *shown {
-                    let track = state.borrow().track.clone();
-                    match track {
-                        Some(track) => fetch_for(&track),
-                        None => {
-                            let current = ui_ref.core.player.current_track();
-                            state.borrow_mut().track = current.clone();
-                            if let Some(track) = current {
-                                fetch_for(&track);
-                            }
-                        }
-                    }
+                if react_to_global_toggle {
+                    toggle_set_active(*shown);
                 }
             }
             AppEvent::Tick { position, .. } => {
@@ -264,7 +304,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
-    panel.upcast()
+    LyricsPanel { widget: panel.upcast(), set_active }
 }
 
 #[derive(Default)]
