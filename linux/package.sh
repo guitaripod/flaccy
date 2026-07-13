@@ -16,7 +16,7 @@ fi
 echo "Syncing sources to $REMOTE:$REMOTE_DIR..."
 rsync -a --delete --exclude target \
   "$HERE/Cargo.toml" "$HERE/Cargo.lock" "$HERE/src" "$HERE/data" \
-  "$HERE/install.sh" "$HERE/README.md" \
+  "$HERE/install.sh" "$HERE/README.md" "$HERE/LICENSE" \
   "$REMOTE:$REMOTE_DIR/"
 
 echo "Building release on $REMOTE..."
@@ -26,7 +26,7 @@ cd ~/Dev/flaccy-linux
 cargo build --release
 rm -rf /tmp/flaccy-pkg
 mkdir -p /tmp/flaccy-pkg/flaccy-linux-x86_64
-cp target/release/flaccy install.sh README.md /tmp/flaccy-pkg/flaccy-linux-x86_64/
+cp target/release/flaccy install.sh README.md LICENSE /tmp/flaccy-pkg/flaccy-linux-x86_64/
 cp -r data /tmp/flaccy-pkg/flaccy-linux-x86_64/
 chmod 755 /tmp/flaccy-pkg/flaccy-linux-x86_64/flaccy /tmp/flaccy-pkg/flaccy-linux-x86_64/install.sh
 cd /tmp/flaccy-pkg

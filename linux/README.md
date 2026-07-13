@@ -12,7 +12,7 @@ pick one of seven curated palettes in Preferences. Works in light and dark.
 curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh | sh
 ```
 
-Installs to `~/.local` (no sudo). x86_64 only. Requires system GTK4, libadwaita, and GStreamer:
+Installs to `~/.local` (no sudo). x86_64, glibc ≥ 2.34 (Ubuntu 22.04+, Debian 12+, Fedora 35+, current Arch). On older or musl-based distros, build from source. Requires system GTK4, libadwaita, and GStreamer:
 
 - Arch: `sudo pacman -S gtk4 libadwaita gstreamer gst-plugins-base gst-plugins-good`
 - Debian/Ubuntu: `sudo apt install libgtk-4-1 libadwaita-1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`
@@ -41,3 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-
 ```
 
 (or `./install.sh --uninstall` from a source checkout / extracted tarball; `pacman -R flaccy-bin` for the AUR package)
+
+## License
+
+GPL-3.0-only. See [LICENSE](LICENSE).
