@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## Cross-client parity (read first)
+
+**Flaccy is the product, not any single app.** It ships as four clients — iOS (`flaccy/`), macOS (`flaccyMac/`), watchOS (`flaccyWatch Watch App/`), and Linux (`linux/`, Rust + GTK) — and they must be **as great and in-sync as possible**. A feature, fix, or behavior that lands on one client is incomplete until it lands on the others (or the gap is deliberately recorded).
+
+- **When you change behavior on one client, port it to all the others in the same unit of work.** If a client genuinely can't get it (platform limitation) or you can't verify it (e.g. no Xcode on this Linux box), say so explicitly and leave a tracked note — never silently ship a one-client fix.
+- **Share logic, don't fork it.** The three Apple clients share `FlaccyCore` (pure Swift/Foundation where possible) — put cross-client logic there and route every call site through it instead of copy-pasting sorts/parsers. The Linux client is a separate Rust codebase, so it mirrors the same behavior in Rust; keep the two implementations semantically identical and cover both with tests.
+- **Parity applies to behavior AND experience.** Ordering, grouping, metadata handling, naming, empty states, and the overall feel should match across clients, adapted to each platform's idioms (UIKit / AppKit / SwiftUI / GTK) — not reinvented.
+- Pure shared logic (e.g. `FlaccyCore` ordering/parsing) can be compiled and unit-tested standalone on this Linux box via swiftly even when the full app can't build here — use that to verify cross-client logic before claiming it works.
+
 ## Setup
 1. Copy `flaccy/Secrets.swift.example` to `flaccy/Secrets.swift`
 2. Fill in your API keys:
