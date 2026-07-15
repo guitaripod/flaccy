@@ -76,17 +76,17 @@ pub fn artist_key(credit: &str) -> String {
 }
 
 /// The grouping key that fuses editions of the same release for display and
-/// cleanup: artist ⊕ edition-free base title, exact base-title equality.
+/// cleanup: lead artist (feat. stripped) ⊕ edition-free base title.
 pub fn consolidation_key(title: &str, artist: &str) -> String {
-    format!("{}\u{0}{}", normalize(artist), consolidation_base_title(title))
+    format!("{}\u{0}{}", artist_key(artist), consolidation_base_title(title))
 }
 
-/// The identity of one physical track across encodings: artist ⊕ edition-free
+/// The identity of one physical track across encodings: lead artist ⊕ edition-free
 /// album ⊕ track number ⊕ title. Two files sharing it are the same recording.
 pub fn dup_key(track: &Track) -> String {
     format!(
         "{}\u{0}{}\u{0}{}\u{0}{}",
-        normalize(&track.artist),
+        artist_key(&track.artist),
         consolidation_base_title(&track.album),
         track.track_number,
         normalize(&track.title)
@@ -303,6 +303,11 @@ fn merge_album_group(group: Vec<Album>) -> Album {
     let mut tracks: Vec<Track> = order
         .into_iter()
         .filter_map(|key| best.remove(&key))
+        .map(|mut track| {
+            track.album = title.clone();
+            track.artist = artist.clone();
+            track
+        })
         .collect();
     crate::library::sort_album_tracks(&mut tracks);
     Album {
@@ -514,5 +519,102 @@ mod tests {
         let plain = track("Song", "Artist", "Album", 3, "flac");
         let deluxe = track("Song", "Artist", "Album (Deluxe Edition)", 3, "mp3");
         assert_eq!(dup_key(&plain), dup_key(&deluxe));
+    }
+
+    #[test]
+    fn featuring_credits_share_album_and_dup_keys() {
+        let plain = track("In Da Club", "50 Cent", "Get Rich Or Die Tryin'", 5, "flac");
+        let feat = track(
+            "Patiently Waiting",
+            "50 Cent Feat. Eminem",
+            "Get Rich Or Die Tryin'",
+            3,
+            "flac",
+        );
+        let feat2 = track(
+            "21 Questions",
+            "50 Cent Feat. Nate Dogg",
+            "Get Rich Or Die Tryin'",
+            14,
+            "flac",
+        );
+        assert_eq!(
+            consolidation_key(&plain.album, &plain.artist),
+            consolidation_key(&feat.album, &feat.artist),
+            "feat. credits must not spawn a separate album key"
+        );
+        assert_eq!(
+            consolidation_key(&feat.album, &feat.artist),
+            consolidation_key(&feat2.album, &feat2.artist)
+        );
+        assert_eq!(artist_key("50 Cent Feat. Eminem"), artist_key("50 Cent"));
+        assert_eq!(
+            artist_key("50 Cent  Feat. Lloyd Banks Of G Unit & Eminem"),
+            artist_key("50 Cent")
+        );
+    }
+
+    #[test]
+    fn consolidate_albums_keeps_best_copy_and_bonus_tracks() {
+        let standard = Album {
+            title: "Album".into(),
+            artist: "Artist".into(),
+            year: Some("2010".into()),
+            genre: None,
+            tracks: vec![
+                detailed_track("Song A", "Artist", "Album", 1, "flac", Some(16), Some(44100)),
+                detailed_track("Song B", "Artist", "Album", 2, "flac", Some(16), Some(44100)),
+            ],
+        };
+        let deluxe = Album {
+            title: "Album (Deluxe Edition)".into(),
+            artist: "Artist".into(),
+            year: None,
+            genre: Some("Rock".into()),
+            tracks: vec![
+                detailed_track(
+                    "Song A",
+                    "Artist",
+                    "Album (Deluxe Edition)",
+                    1,
+                    "flac",
+                    Some(24),
+                    Some(96000),
+                ),
+                detailed_track(
+                    "Song B",
+                    "Artist",
+                    "Album (Deluxe Edition)",
+                    2,
+                    "flac",
+                    Some(24),
+                    Some(96000),
+                ),
+                detailed_track(
+                    "Bonus",
+                    "Artist",
+                    "Album (Deluxe Edition)",
+                    3,
+                    "flac",
+                    Some(24),
+                    Some(96000),
+                ),
+            ],
+        };
+        let other = album("Unrelated", "Artist", 4);
+        let result = consolidate_albums(vec![standard, deluxe, other]);
+        assert_eq!(result.len(), 2, "unrelated album stays separate");
+        let fused = result
+            .iter()
+            .find(|a| consolidation_key(&a.title, &a.artist) == consolidation_key("Album", "Artist"))
+            .expect("edition group fused");
+        assert_eq!(fused.title, "Album (Deluxe Edition)");
+        assert_eq!(fused.tracks.len(), 3, "shared tracks collapse; bonus remains");
+        assert_eq!(fused.year.as_deref(), Some("2010"));
+        assert_eq!(fused.genre.as_deref(), Some("Rock"));
+        let song_a = fused.tracks.iter().find(|t| t.title == "Song A").unwrap();
+        assert_eq!(song_a.bit_depth, Some(24));
+        assert_eq!(song_a.sample_rate, Some(96000));
+        assert_eq!(song_a.album, "Album (Deluxe Edition)");
     }
 }

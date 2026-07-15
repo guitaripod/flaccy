@@ -503,7 +503,7 @@ final class LibrarySettingsPane: SettingsPane {
         groupEditionsCheckbox.target = self
         groupEditionsCheckbox.action = #selector(groupEditionsToggled)
         formStack.addArrangedSubview(groupEditionsCheckbox)
-        addFullWidth(explanation("Collapses \u{201C}Album\u{201D}, \u{201C}Album (Deluxe)\u{201D} and \u{201C}Album (Remastered)\u{201D} into one card so the wall isn\u{2019}t cluttered with near-duplicates."))
+        addFullWidth(explanation("Collapses \u{201C}Album\u{201D}, \u{201C}Album (Deluxe)\u{201D} and \u{201C}Album (Remastered)\u{201D} into one card and keeps a single best-quality copy of each shared song so Albums and Songs stay free of near-duplicates."))
         cleanUpButton.bezelStyle = .rounded
         cleanUpButton.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         cleanUpButton.imagePosition = .imageLeading

@@ -43,6 +43,10 @@ nonisolated struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sen
     var lastPlayed: Date?
     var playCount: Int
     var loved: Bool = false
+    var codec: String?
+    var bitDepth: Int?
+    var sampleRate: Int?
+    var channels: Int?
 }
 
 nonisolated struct WeeklyChartCacheRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
@@ -803,9 +807,9 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
-    /// Normalizes album+artist into a grouping key so tracks whose titles differ
-    /// only by case, surrounding whitespace, or punctuation still collapse into
-    /// one album (AI metadata cleanup can rewrite them slightly per track).
+    /// Normalizes album+lead-artist into a grouping key so tracks whose titles
+    /// differ only by case/punctuation, or whose ARTIST tags carry per-track
+    /// featuring credits ("50 Cent Feat. Eminem"), still collapse into one album.
     static func albumGroupingKey(albumTitle: String, artist: String) -> String {
         func norm(_ s: String) -> String {
             s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
@@ -813,16 +817,21 @@ nonisolated final class DatabaseManager: Sendable {
                 .filter { !$0.isEmpty }
                 .joined(separator: " ")
         }
-        return "\(norm(albumTitle))\u{0}\(norm(artist))"
+        return "\(norm(albumTitle))\u{0}\(LibraryHygiene.artistKey(artist))"
     }
 
-    func fetchAlbumsWithTracksLightweight(groupEditions: Bool = false) throws -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
+    /// Loads every album as a raw pressings-level group (exact album title +
+    /// artist). Edition folding happens in `LibraryHygiene.consolidateAlbums`
+    /// after these light records become `Track`s, so quality ranking and
+    /// `duplicateKey` dedupe stay in one place shared with Linux.
+    func fetchAlbumsWithTracksLightweight() throws -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
         try dbQueue.read { db in
             let columns: [Column] = [
                 Column("id"), Column("fileURL"), Column("title"), Column("artist"),
                 Column("albumTitle"), Column("trackNumber"), Column("duration"),
                 Column("dateAdded"), Column("lastPlayed"), Column("playCount"),
-                Column("loved"),
+                Column("loved"), Column("codec"), Column("bitDepth"),
+                Column("sampleRate"), Column("channels"),
             ]
 
             let allTracks = try LightTrackRecord.fetchAll(db,
@@ -839,7 +848,6 @@ nonisolated final class DatabaseManager: Sendable {
                 FROM albumInfo
             """)
             var albumInfoByKey = [String: AlbumInfoRecord]()
-            var albumsWithArt = Set<String>()
             for row in allAlbumInfos {
                 let info = AlbumInfoRecord(
                     id: row["id"],
@@ -854,72 +862,96 @@ nonisolated final class DatabaseManager: Sendable {
                 )
                 let key = "\(info.title)\0\(info.artist)"
                 albumInfoByKey[key] = info
-                if (row["hasCoverArt"] as? Int) == 1 {
-                    albumsWithArt.insert(key)
-                }
             }
 
             var order: [String] = []
             var map: [String: [LightTrackRecord]] = [:]
-            var displayKeyByGroup: [String: String] = [:]
-            var titleCountsByGroup: [String: [String: Int]] = [:]
             for track in allTracks {
-                let groupKey = groupEditions
-                    ? LibraryHygiene.consolidationKey(title: track.albumTitle, artist: track.artist)
-                    : Self.albumGroupingKey(albumTitle: track.albumTitle, artist: track.artist)
-                if map[groupKey] == nil {
-                    order.append(groupKey)
-                    displayKeyByGroup[groupKey] = "\(track.albumTitle)\0\(track.artist)"
-                }
+                let groupKey = Self.albumGroupingKey(albumTitle: track.albumTitle, artist: track.artist)
+                if map[groupKey] == nil { order.append(groupKey) }
                 map[groupKey, default: []].append(track)
-                if groupEditions {
-                    titleCountsByGroup[groupKey, default: [:]][track.albumTitle, default: 0] += 1
-                }
             }
 
             return order.compactMap { groupKey in
-                guard let tracks = map[groupKey], let first = tracks.first else { return nil }
-                guard groupEditions else {
-                    let displayKey = displayKeyByGroup[groupKey] ?? groupKey
-                    let orderedTracks = TrackOrdering.ordered(
-                        tracks,
-                        number: { $0.trackNumber },
-                        path: { $0.fileURL },
-                        title: { $0.title }
-                    )
-                    return (album: albumInfoByKey[displayKey], tracks: orderedTracks)
-                }
-                let canonicalTitle = (titleCountsByGroup[groupKey] ?? [:]).max { lhs, rhs in
-                    (lhs.value, -lhs.key.count, lhs.key) < (rhs.value, -rhs.key.count, rhs.key)
-                }?.key ?? first.albumTitle
-                let byCanonical = Dictionary(grouping: tracks) { $0.albumTitle == canonicalTitle ? 0 : 1 }
-                let orderedTracks = [0, 1].flatMap { canonicalRank -> [LightTrackRecord] in
-                    guard let group = byCanonical[canonicalRank] else { return [] }
-                    return TrackOrdering.ordered(
-                        group,
-                        number: { $0.trackNumber },
-                        path: { $0.fileURL },
-                        title: { $0.title }
-                    )
-                }
-                let displayKey = "\(canonicalTitle)\0\(first.artist)"
-                return (album: albumInfoByKey[displayKey], tracks: orderedTracks)
+                guard let tracks = map[groupKey], !tracks.isEmpty else { return nil }
+                let displayTitle = Self.majorityValue(tracks.map(\.albumTitle))
+                let displayArtist = Self.majorityValue(tracks.map { LibraryHygiene.primaryArtist($0.artist) })
+                let orderedTracks = TrackOrdering.ordered(
+                    tracks,
+                    number: { $0.trackNumber },
+                    path: { $0.fileURL },
+                    title: { $0.title }
+                )
+                let albumInfo = albumInfoByKey["\(displayTitle)\0\(displayArtist)"]
+                    ?? tracks.lazy.compactMap { albumInfoByKey["\($0.albumTitle)\0\($0.artist)"] }.first
+                return (album: albumInfo, tracks: orderedTracks)
             }
         }
     }
 
+    private static func majorityValue(_ values: [String]) -> String {
+        var counts: [String: Int] = [:]
+        for value in values {
+            counts[value, default: 0] += 1
+        }
+        return counts.max { lhs, rhs in
+            if lhs.value != rhs.value { return lhs.value < rhs.value }
+            return lhs.key.count > rhs.key.count
+        }?.key ?? values[0]
+    }
+
     /// Returns the larger of the enrichment cover and the embedded file artwork,
     /// since either source can be the low-resolution one for a given album.
+    /// When the exact title misses (common after edition grouping folds a
+    /// remaster into a deluxe card), falls back to the largest art among any
+    /// album that shares the consolidation key.
     func fetchAlbumArtwork(title: String, artist: String) throws -> Data? {
         try dbQueue.read { db in
-            let cover: Data? = try Row.fetchOne(db, sql: "SELECT coverArtData FROM albumInfo WHERE title = ? AND artist = ? AND coverArtData IS NOT NULL", arguments: [title, artist])?["coverArtData"]
-            let embedded: Data? = try Row.fetchOne(db, sql: "SELECT artworkData FROM tracks WHERE albumTitle = ? AND artist = ? AND artworkData IS NOT NULL ORDER BY LENGTH(artworkData) DESC LIMIT 1", arguments: [title, artist])?["artworkData"]
-            switch (cover, embedded) {
-            case let (c?, e?): return e.count > c.count ? e : c
-            case let (c?, nil): return c
-            case let (nil, e?): return e
-            default: return nil
+            if let exact = try Self.artworkPair(db: db, title: title, artist: artist) {
+                return exact
             }
+            let targetKey = LibraryHygiene.consolidationKey(title: title, artist: artist)
+            let titles = try String.fetchAll(
+                db,
+                sql: "SELECT DISTINCT albumTitle FROM tracks WHERE artist = ?",
+                arguments: [artist]
+            )
+            var best: Data?
+            for variantTitle in titles {
+                guard LibraryHygiene.consolidationKey(title: variantTitle, artist: artist) == targetKey else {
+                    continue
+                }
+                guard let candidate = try Self.artworkPair(db: db, title: variantTitle, artist: artist) else {
+                    continue
+                }
+                if best.map({ candidate.count > $0.count }) ?? true {
+                    best = candidate
+                }
+            }
+            return best
+        }
+    }
+
+    private static func artworkPair(db: Database, title: String, artist: String) throws -> Data? {
+        let cover: Data? = try Row.fetchOne(
+            db,
+            sql: "SELECT coverArtData FROM albumInfo WHERE title = ? AND artist = ? AND coverArtData IS NOT NULL",
+            arguments: [title, artist]
+        )?["coverArtData"]
+        let embedded: Data? = try Row.fetchOne(
+            db,
+            sql: """
+                SELECT artworkData FROM tracks
+                WHERE albumTitle = ? AND artist = ? AND artworkData IS NOT NULL
+                ORDER BY LENGTH(artworkData) DESC LIMIT 1
+                """,
+            arguments: [title, artist]
+        )?["artworkData"]
+        switch (cover, embedded) {
+        case let (c?, e?): return e.count > c.count ? e : c
+        case let (c?, nil): return c
+        case let (nil, e?): return e
+        default: return nil
         }
     }
 

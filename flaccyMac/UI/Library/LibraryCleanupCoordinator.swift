@@ -1,18 +1,5 @@
 import AppKit
 
-enum GroupAlbumEditionsSetting {
-    static let key = "groupAlbumEditions"
-
-    static var isEnabled: Bool {
-        UserDefaults.standard.object(forKey: key) as? Bool ?? true
-    }
-
-    static func set(_ enabled: Bool) {
-        UserDefaults.standard.set(enabled, forKey: key)
-        Task { await Library.shared.reloadFromDatabase() }
-    }
-}
-
 /// Drives the desktop "Clean Up Library" flow: compute a dry-run plan off the
 /// main actor, show a preview the user must confirm, then apply it. Destructive
 /// only in the sense that duplicate files are moved to the Trash (recoverable);

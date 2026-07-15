@@ -271,26 +271,40 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     let tracks = db.fetch_all_tracks();
     let meta = db.album_meta();
 
+    // Group by edition-free album title + lead artist so per-track featuring
+    // credits ("50 Cent Feat. Eminem") do not each spawn a one-song album.
     let mut grouped: HashMap<String, Vec<Track>> = HashMap::new();
     for track in &tracks {
-        grouped
-            .entry(format!("{}|{}", track.album, track.artist))
-            .or_default()
-            .push(track.clone());
+        let key = format!(
+            "{}\u{0}{}",
+            crate::wantlist::normalize(&track.album),
+            crate::hygiene::artist_key(&track.artist)
+        );
+        grouped.entry(key).or_default().push(track.clone());
     }
 
     let mut albums: Vec<Album> = grouped
         .into_values()
         .filter_map(|mut group| {
-            let first = group.first()?.clone();
+            let title = majority_value(group.iter().map(|t| t.album.as_str()));
+            let artist = majority_value(
+                group
+                    .iter()
+                    .map(|t| crate::hygiene::primary_artist(&t.artist)),
+            );
             sort_album_tracks(&mut group);
             let (year, genre) = meta
-                .get(&(first.album.clone(), first.artist.clone()))
+                .get(&(title.clone(), artist.clone()))
                 .cloned()
+                .or_else(|| {
+                    group.iter().find_map(|t| {
+                        meta.get(&(t.album.clone(), t.artist.clone())).cloned()
+                    })
+                })
                 .unwrap_or((None, None));
             Some(Album {
-                title: first.album,
-                artist: first.artist,
+                title,
+                artist,
                 year,
                 genre,
                 tracks: group,
@@ -306,6 +320,15 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
             .cmp(&b.artist.to_lowercase())
             .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
     });
+
+    // Songs list must match the album surface: when editions are folded, every
+    // shared track collapses to one best-quality keeper. When grouping is off,
+    // keep the raw file inventory so every pressing remains addressable.
+    let tracks = if group_album_editions {
+        albums.iter().flat_map(|album| album.tracks.iter().cloned()).collect()
+    } else {
+        tracks
+    };
 
     let last_played = db.track_sort_keys();
     let mut artist_map: HashMap<String, (String, usize, usize, i64, Option<i64>)> = HashMap::new();
@@ -342,9 +365,96 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     }
 }
 
+fn majority_value<I, S>(values: I) -> String
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    let mut first: Option<String> = None;
+    for value in values {
+        let s = value.as_ref().to_string();
+        if first.is_none() {
+            first = Some(s.clone());
+        }
+        *counts.entry(s).or_default() += 1;
+    }
+    counts
+        .into_iter()
+        .max_by(|(ka, ca), (kb, cb)| ca.cmp(cb).then_with(|| kb.len().cmp(&ka.len())))
+        .map(|(k, _)| k)
+        .or(first)
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod sort_tests {
     use super::*;
+
+    #[test]
+    fn featuring_tracks_group_into_one_album() {
+        let tracks = vec![
+            TrackRow {
+                id: 1,
+                rel_path: "a/01.flac".into(),
+                title: "Intro".into(),
+                artist: "50 Cent".into(),
+                album: "Get Rich Or Die Tryin'".into(),
+                track_number: 1,
+                duration: 60.0,
+                codec: Some("FLAC".into()),
+                bit_depth: Some(16),
+                sample_rate: Some(44100),
+                channels: Some(2),
+                loved: false,
+                play_count: 0,
+            },
+            TrackRow {
+                id: 2,
+                rel_path: "a/03.flac".into(),
+                title: "Patiently Waiting".into(),
+                artist: "50 Cent Feat. Eminem".into(),
+                album: "Get Rich Or Die Tryin'".into(),
+                track_number: 3,
+                duration: 200.0,
+                codec: Some("FLAC".into()),
+                bit_depth: Some(16),
+                sample_rate: Some(44100),
+                channels: Some(2),
+                loved: false,
+                play_count: 0,
+            },
+            TrackRow {
+                id: 3,
+                rel_path: "a/14.flac".into(),
+                title: "21 Questions".into(),
+                artist: "50 Cent Feat. Nate Dogg".into(),
+                album: "Get Rich Or Die Tryin'".into(),
+                track_number: 14,
+                duration: 220.0,
+                codec: Some("FLAC".into()),
+                bit_depth: Some(16),
+                sample_rate: Some(44100),
+                channels: Some(2),
+                loved: false,
+                play_count: 0,
+            },
+        ];
+        let mut grouped: HashMap<String, Vec<Track>> = HashMap::new();
+        for track in &tracks {
+            let key = format!(
+                "{}\u{0}{}",
+                crate::wantlist::normalize(&track.album),
+                crate::hygiene::artist_key(&track.artist)
+            );
+            grouped.entry(key).or_default().push(track.clone());
+        }
+        assert_eq!(grouped.len(), 1, "all featuring credits collapse to one album");
+        let group = grouped.into_values().next().unwrap();
+        assert_eq!(group.len(), 3);
+        let artist = majority_value(group.iter().map(|t| crate::hygiene::primary_artist(&t.artist)));
+        assert_eq!(artist, "50 Cent");
+    }
 
     fn track(rel_path: &str, track_number: i32, title: &str) -> Track {
         TrackRow {

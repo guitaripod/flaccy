@@ -396,12 +396,7 @@ final class Library: LibraryProviding {
     /// `AlbumArtworkCache` eviction, and every reader already handles nil.
     @concurrent
     nonisolated private func fetchAlbumsFromDatabase() async throws -> [Album] {
-        #if os(macOS)
-        let groupEditions = UserDefaults.standard.object(forKey: "groupAlbumEditions") as? Bool ?? true
-        #else
-        let groupEditions = false
-        #endif
-        let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight(groupEditions: groupEditions)
+        let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight()
 
         var loadedAlbums: [Album] = []
         loadedAlbums.reserveCapacity(albumsWithTracks.count)
@@ -410,22 +405,38 @@ final class Library: LibraryProviding {
             let tracks = trackRecords.map { record in
                 Track.from(light: record, artwork: nil)
             }
-
-            guard let first = tracks.first else { continue }
+            guard !tracks.isEmpty else { continue }
+            let title = Self.majorityValue(tracks.map(\.albumTitle))
+            let artist = Self.majorityValue(tracks.map { LibraryHygiene.primaryArtist($0.artist) })
             loadedAlbums.append(Album(
-                title: first.albumTitle,
-                artist: first.artist,
+                title: title,
+                artist: artist,
                 artwork: nil,
                 tracks: tracks,
                 year: albumInfo?.year,
                 genre: albumInfo?.genre
             ))
         }
+
+        if GroupAlbumEditionsSetting.isEnabled {
+            loadedAlbums = LibraryHygiene.consolidateAlbums(loadedAlbums)
+        }
         return loadedAlbums
     }
 
     private func logLibraryState() {
         AppLogger.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
+    }
+
+    nonisolated private static func majorityValue(_ values: [String]) -> String {
+        var counts: [String: Int] = [:]
+        for value in values {
+            counts[value, default: 0] += 1
+        }
+        return counts.max { lhs, rhs in
+            if lhs.value != rhs.value { return lhs.value < rhs.value }
+            return lhs.key.count > rhs.key.count
+        }?.key ?? values[0]
     }
 
     @concurrent

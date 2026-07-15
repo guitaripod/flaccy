@@ -1,4 +1,5 @@
 import Foundation
+import FlaccyCore
 
 /// Shared library-hygiene primitives: edition-aware title/artist normalization,
 /// duplicate-track grouping, and album-variation consolidation. This is the
@@ -78,8 +79,10 @@ nonisolated enum LibraryHygiene {
         normalize(artist) + "\u{0}" + baseTitle(title, keywords: keywords)
     }
 
+    /// Album identity for edition folding: lead artist only (feat./with stripped)
+    /// so a track tagged "50 Cent Feat. Eminem" still sits on the 50 Cent album.
     static func consolidationKey(title: String, artist: String) -> String {
-        normalize(artist) + "\u{0}" + consolidationBaseTitle(title)
+        artistKey(artist) + "\u{0}" + consolidationBaseTitle(title)
     }
 
     private static func stripDecoratedBrackets(from value: String, keywords: Set<String>) -> String {
@@ -117,7 +120,7 @@ nonisolated enum LibraryHygiene {
 
     static func duplicateKey(_ track: Track) -> String {
         [
-            normalize(track.artist),
+            artistKey(track.artist),
             consolidationBaseTitle(track.albumTitle),
             String(track.trackNumber),
             normalize(track.title),
@@ -221,9 +224,85 @@ nonisolated enum LibraryHygiene {
 
     private static func aggregateQuality(_ album: Album) -> Int {
         album.tracks.reduce(0) { total, track in
-            total + (isLossless(track.codec) ? 1_000_000_000 : 0)
-                + (track.bitDepth ?? 0) * 1_000_000
-                + (track.sampleRate ?? 0)
+            total + trackQualityScalar(track)
         }
+    }
+
+    static func trackQualityScalar(_ track: Track) -> Int {
+        (isLossless(track.codec) ? 1_000_000_000 : 0)
+            + (track.bitDepth ?? 0) * 1_000_000
+            + (track.sampleRate ?? 0)
+    }
+
+    /// Fuses editions of the same release into one display album: the canonical
+    /// title/artist, the union of every variant's tracks deduplicated by
+    /// `duplicateKey` keeping the highest-fidelity copy, and the richest
+    /// available metadata. Mirrors Linux `hygiene::consolidate_albums`.
+    static func consolidateAlbums(_ albums: [Album]) -> [Album] {
+        var order: [String] = []
+        var byKey: [String: [Album]] = [:]
+        for album in albums {
+            let key = consolidationKey(title: album.title, artist: album.artist)
+            if byKey[key] == nil { order.append(key) }
+            byKey[key, default: []].append(album)
+        }
+        return order.compactMap { key in
+            guard let group = byKey[key] else { return nil }
+            if group.count == 1 { return group[0] }
+            return mergeAlbumGroup(group)
+        }
+    }
+
+    private static func mergeAlbumGroup(_ group: [Album]) -> Album {
+        let canonical = group.max { lhs, rhs in
+            (lhs.tracks.count, -lhs.title.count, aggregateQuality(lhs))
+                < (rhs.tracks.count, -rhs.title.count, aggregateQuality(rhs))
+        } ?? group[0]
+        let title = canonical.title
+        let artist = canonical.artist
+        let year = canonical.year.flatMap { $0.isEmpty ? nil : $0 }
+            ?? group.lazy.compactMap(\.year).first { !$0.isEmpty }
+        let genre = canonical.genre.flatMap { $0.isEmpty ? nil : $0 }
+            ?? group.lazy.compactMap(\.genre).first { !$0.isEmpty }
+
+        var order: [String] = []
+        var best: [String: Track] = [:]
+        for album in group {
+            for track in album.tracks {
+                let key = duplicateKey(track)
+                if let existing = best[key] {
+                    if trackQualityScalar(track) > trackQualityScalar(existing) {
+                        best[key] = track
+                    } else if trackQualityScalar(track) == trackQualityScalar(existing) {
+                        let lID = track.dbID ?? Int64.max
+                        let rID = existing.dbID ?? Int64.max
+                        if lID < rID || (lID == rID && track.fileURL.path < existing.fileURL.path) {
+                            best[key] = track
+                        }
+                    }
+                } else {
+                    order.append(key)
+                    best[key] = track
+                }
+            }
+        }
+        let merged = order.compactMap { key -> Track? in
+            guard let track = best[key] else { return nil }
+            return track.relabeled(albumTitle: title, artist: artist)
+        }
+        let tracks = TrackOrdering.ordered(
+            merged,
+            number: { $0.trackNumber },
+            path: { $0.fileURL.path },
+            title: { $0.title }
+        )
+        return Album(
+            title: title,
+            artist: artist,
+            artwork: canonical.artwork,
+            tracks: tracks,
+            year: year,
+            genre: genre
+        )
     }
 }

@@ -290,7 +290,7 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
 
     let group_editions_row = adw::SwitchRow::builder()
         .title("Group Album Editions")
-        .subtitle("Fold deluxe, remaster and explicit variants into one album")
+        .subtitle("Fold deluxe, remaster and explicit variants into one album; keep one best copy of each song")
         .active(ui.core.config.borrow().group_album_editions)
         .build();
     {

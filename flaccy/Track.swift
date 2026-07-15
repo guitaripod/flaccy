@@ -83,12 +83,32 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
             duration: record.duration,
             artwork: artwork,
             dbID: record.id,
-            codec: nil,
-            bitDepth: nil,
-            sampleRate: nil,
-            channels: nil,
+            codec: record.codec,
+            bitDepth: record.bitDepth,
+            sampleRate: record.sampleRate,
+            channels: record.channels,
             loved: record.loved,
             playCount: record.playCount
+        )
+    }
+
+    func relabeled(albumTitle: String, artist: String) -> Track {
+        guard albumTitle != self.albumTitle || artist != self.artist else { return self }
+        return Track(
+            fileURL: fileURL,
+            title: title,
+            artist: artist,
+            albumTitle: albumTitle,
+            trackNumber: trackNumber,
+            duration: duration,
+            artwork: artwork,
+            dbID: dbID,
+            codec: codec,
+            bitDepth: bitDepth,
+            sampleRate: sampleRate,
+            channels: channels,
+            loved: loved,
+            playCount: playCount
         )
     }
 }

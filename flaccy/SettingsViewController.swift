@@ -35,7 +35,7 @@ final class SettingsViewController: UITableViewController {
             case .playback: return "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends."
             case .guide: return "How Bluetooth, AAC, and lossless files really affect what you hear."
             case .watch: return nil
-            case .library: return nil
+            case .library: return "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song."
             }
         }
     }
@@ -55,6 +55,7 @@ final class SettingsViewController: UITableViewController {
         case watchSync(syncedCount: Int)
         case importFiles
         case rescanLibrary
+        case groupAlbumEditions
         case libraryStats(albums: Int, tracks: Int)
         case storage(used: String)
     }
@@ -244,6 +245,7 @@ final class SettingsViewController: UITableViewController {
             [
                 .importFiles,
                 .rescanLibrary,
+                .groupAlbumEditions,
                 .libraryStats(albums: Library.shared.albums.count, tracks: Library.shared.allTracks.count),
                 .storage(used: storageUsed ?? "…"),
             ],
@@ -402,6 +404,15 @@ final class SettingsViewController: UITableViewController {
                 cell.accessibilityHint = "Re-analyzes all tracks"
             }
 
+        case .groupAlbumEditions:
+            content.image = RowIcon.image(systemName: "square.stack.3d.up", tint: .systemPurple)
+            content.text = "Group Album Editions"
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = .none
+            cell.accessoryView = makeGroupEditionsSwitch()
+            cell.accessibilityLabel = "Group Album Editions"
+            cell.accessibilityHint = "Folds deluxe, remaster, and explicit variants into one album"
+
         case .libraryStats(let albums, let tracks):
             content.image = RowIcon.image(systemName: "chart.bar.fill", tint: .systemTeal)
             content.text = "Library"
@@ -452,6 +463,18 @@ final class SettingsViewController: UITableViewController {
             guard let toggle = action.sender as? UISwitch else { return }
             self?.selectionFeedback.selectionChanged()
             UserDefaults.standard.set(toggle.isOn, forKey: "gaplessPlayback")
+        }, for: .valueChanged)
+        return toggle
+    }
+
+    private func makeGroupEditionsSwitch() -> UISwitch {
+        let toggle = UISwitch()
+        toggle.isOn = GroupAlbumEditionsSetting.isEnabled
+        toggle.accessibilityLabel = "Group Album Editions"
+        toggle.addAction(UIAction { [weak self] action in
+            guard let toggle = action.sender as? UISwitch else { return }
+            self?.selectionFeedback.selectionChanged()
+            GroupAlbumEditionsSetting.set(toggle.isOn)
         }, for: .valueChanged)
         return toggle
     }
@@ -521,7 +544,7 @@ final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
         switch row {
-        case .appearance, .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: return false
+        case .appearance, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .libraryStats, .storage: return false
         case .importLastFM: return lastFMImportProgress == nil
         case .rescanLibrary: return !isRescanning
         default: return true
@@ -543,7 +566,7 @@ final class SettingsViewController: UITableViewController {
         case .watchSync: handleWatchTap()
         case .importFiles: handleImportTap()
         case .rescanLibrary: handleRescanTap()
-        case .appearance, .gaplessPlayback, .autoplaySimilar, .libraryStats, .storage: break
+        case .appearance, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .libraryStats, .storage: break
         }
     }
 
