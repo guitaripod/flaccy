@@ -552,8 +552,10 @@ extension ArtistDetailViewController: UICollectionViewDelegate {
             navigationController?.pushViewController(vc, animated: true)
         case .popularTrack(let track):
             guard let owned = track.ownedTrack else { return }
+            let queue = popularTracks.compactMap(\.ownedTrack)
+            guard let startIndex = queue.firstIndex(where: { $0.fileURL == owned.fileURL }) else { return }
             impactLight.impactOccurred()
-            AudioPlayer.shared.play([owned], startingAt: 0)
+            AudioPlayer.shared.play(queue, startingAt: startIndex)
         case .header, .message:
             break
         }
@@ -903,7 +905,9 @@ final class PopularTrackCell: UICollectionViewCell {
 
         isAccessibilityElement = true
         accessibilityLabel = item.name
-        accessibilityValue = owned ? "In your library. Double tap to play." : "Not in your library"
+        accessibilityValue = owned
+            ? "In your library. Double tap to play from here through the rest of popular tracks."
+            : "Not in your library"
         accessibilityTraits = owned ? .button : .staticText
     }
 
