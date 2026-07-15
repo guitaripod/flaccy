@@ -98,6 +98,11 @@ final class AudioPlayer: AudioPlaying {
     private var isBuildingStation = false
     private var autoplayContinuationInFlight = false
     private var pendingQueueExhaustion = false
+    /// Sticky cover for the current track so pause/progress Now Playing refreshes
+    /// never publish a dictionary without artwork (NSCache eviction / brief load
+    /// races otherwise blank the lock-screen and Dynamic Island art).
+    private var nowPlayingArtworkImage: PlatformImage?
+    private var nowPlayingArtworkKey: String?
 
     /// When enabled, an exhausted queue is extended with a similar-artist / most-played
     /// continuation instead of stopping, so music never just ends. Persisted; default on.
@@ -173,7 +178,18 @@ final class AudioPlayer: AudioPlaying {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleLastFMAuthChange), name: LastFMService.authDidChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleLovedTracksDidChange), name: LovedTracksService.didChange, object: nil
+        )
         startNetworkMonitoring()
+    }
+
+    /// Keeps the system Now Playing heart (lock screen / Dynamic Island) in
+    /// sync when love is toggled from anywhere — remote command, in-app, etc.
+    @objc private func handleLovedTracksDidChange() {
+        DispatchQueue.main.async { [weak self] in
+            self?.syncRemoteCommandState()
+        }
     }
 
     /// Retries pending scrobbles whenever connectivity is restored, so plays queued offline are submitted without waiting for the next app launch.
@@ -1047,16 +1063,21 @@ final class AudioPlayer: AudioPlaying {
             return .success
         }
 
+        // Next/previous must stay enabled for lock screen + expanded Dynamic
+        // Island transport. Skip-interval commands steal those slots on iOS.
+        center.nextTrackCommand.isEnabled = true
         center.nextTrackCommand.addTarget { [weak self] _ in
             DispatchQueue.main.async { self?.nextTrack() }
             return .success
         }
 
+        center.previousTrackCommand.isEnabled = true
         center.previousTrackCommand.addTarget { [weak self] _ in
             DispatchQueue.main.async { self?.previousTrack() }
             return .success
         }
 
+        center.changePlaybackPositionCommand.isEnabled = true
         center.changePlaybackPositionCommand.addTarget { [weak self] event in
             guard let positionEvent = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
@@ -1065,24 +1086,27 @@ final class AudioPlayer: AudioPlaying {
             return .success
         }
 
+        // iOS system Now Playing (lock screen / Dynamic Island) only shows one
+        // side-button pair. Skip intervals replace next/previous there, so they
+        // stay off on iOS; macOS and the in-app player still use ±15s.
         #if os(iOS)
         center.skipForwardCommand.isEnabled = false
         center.skipBackwardCommand.isEnabled = false
+        center.skipForwardCommand.preferredIntervals = []
+        center.skipBackwardCommand.preferredIntervals = []
         #else
         center.skipForwardCommand.isEnabled = true
         center.skipBackwardCommand.isEnabled = true
-        #endif
         center.skipForwardCommand.preferredIntervals = [15]
+        center.skipBackwardCommand.preferredIntervals = [15]
         center.skipForwardCommand.addTarget { [weak self] event in
             let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.seek(to: self.currentTime + interval)
+                self.seek(to: min(self.duration, self.currentTime + interval))
             }
             return .success
         }
-
-        center.skipBackwardCommand.preferredIntervals = [15]
         center.skipBackwardCommand.addTarget { [weak self] event in
             let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
             DispatchQueue.main.async {
@@ -1091,6 +1115,7 @@ final class AudioPlayer: AudioPlaying {
             }
             return .success
         }
+        #endif
 
         center.changeShuffleModeCommand.isEnabled = true
         center.changeShuffleModeCommand.addTarget { [weak self] event in
@@ -1117,10 +1142,19 @@ final class AudioPlayer: AudioPlaying {
 
         center.likeCommand.isEnabled = true
         center.likeCommand.localizedTitle = "Love on Last.fm"
+        center.likeCommand.localizedShortTitle = "Love"
         center.likeCommand.addTarget { [weak self] _ in
-            DispatchQueue.main.async {
-                guard let self, let track = self.currentTrack else { return }
-                Task { _ = await LovedTracksService.shared.toggleLove(track: track) }
+            guard let self, let track = self.currentTrack else { return .commandFailed }
+            // Flip the system heart immediately so Dynamic Island / lock screen
+            // update without waiting for the app to come foreground.
+            let next = !LovedTracksService.shared.isLoved(track: track)
+            MPRemoteCommandCenter.shared().likeCommand.isActive = next
+            Task {
+                let result = await LovedTracksService.shared.toggleLove(track: track)
+                await MainActor.run {
+                    MPRemoteCommandCenter.shared().likeCommand.isActive = result
+                    self.syncRemoteCommandState()
+                }
             }
             return .success
         }
@@ -1130,40 +1164,108 @@ final class AudioPlayer: AudioPlaying {
         syncRemoteCommandState()
     }
 
-    /// Keeps the system UI's shuffle/repeat/like toggles showing the app's
-    /// actual state (CarPlay and the expanded now-playing controls read these).
+    /// Keeps the system UI's shuffle/repeat/like toggles and next/previous
+    /// availability showing the app's actual state (lock screen, expanded
+    /// Dynamic Island, Control Center, CarPlay all read these).
     private func syncRemoteCommandState() {
         let center = MPRemoteCommandCenter.shared()
+        let hasTrack = currentTrack != nil
+        center.nextTrackCommand.isEnabled = hasTrack
+        center.previousTrackCommand.isEnabled = hasTrack
+        center.changePlaybackPositionCommand.isEnabled = hasTrack
+        center.likeCommand.isEnabled = hasTrack
+        #if os(iOS)
+        center.skipForwardCommand.isEnabled = false
+        center.skipBackwardCommand.isEnabled = false
+        #endif
         center.changeShuffleModeCommand.currentShuffleType = shuffleEnabled ? .items : .off
         center.changeRepeatModeCommand.currentRepeatType =
             repeatMode == .all ? .all : repeatMode == .one ? .one : .off
         if let track = currentTrack {
             center.likeCommand.isActive = LovedTracksService.shared.isLoved(track: track)
+        } else {
+            center.likeCommand.isActive = false
         }
     }
 
+    private func artworkCacheKey(for track: Track) -> String {
+        "\(track.albumTitle)\u{0}\(track.artist)"
+    }
+
+    /// Full art preferred, thumbnail as a stopgap so system Now Playing never
+    /// has to wait for the large decode (or sit empty after a cache eviction).
     private func resolveArtwork(for track: Track) -> PlatformImage? {
-        track.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+        track.artwork
+            ?? AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist)
+            ?? AlbumArtworkCache.shared.thumbnail(forAlbum: track.albumTitle, artist: track.artist)
     }
 
     private func ensureArtworkLoaded(for track: Track) {
-        guard resolveArtwork(for: track) == nil else { return }
-        AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] _ in
-            self?.updateNowPlayingInfo()
+        let key = artworkCacheKey(for: track)
+        if nowPlayingArtworkKey != key {
+            nowPlayingArtworkKey = key
+            nowPlayingArtworkImage = nil
+        }
+        if let resolved = resolveArtwork(for: track) {
+            nowPlayingArtworkImage = resolved
+        }
+        if AlbumArtworkCache.shared.artwork(forAlbum: track.albumTitle, artist: track.artist) == nil {
+            AlbumArtworkCache.shared.loadArtwork(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
+                guard let self else { return }
+                if let image, self.nowPlayingArtworkKey == key {
+                    self.nowPlayingArtworkImage = image
+                }
+                self.updateNowPlayingInfo()
+            }
+        }
+        if nowPlayingArtworkImage == nil {
+            AlbumArtworkCache.shared.loadThumbnail(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
+                guard let self else { return }
+                if let image, self.nowPlayingArtworkKey == key, self.nowPlayingArtworkImage == nil {
+                    self.nowPlayingArtworkImage = image
+                    self.updateNowPlayingInfo()
+                }
+            }
         }
     }
 
-    /// The macOS system playbackState is derived here — the one sink every
-    /// state transition already flows through — so paths that mutate
-    /// `isPlaying` directly (loadTrack, auto-advance, queue exhaustion) can
-    /// never leave the menu-bar Now Playing widget stale.
-    private func updateNowPlayingInfo() {
-        #if os(macOS)
-        MPNowPlayingInfoCenter.default().playbackState = isPlaying ? .playing : .paused
+    private func mediaItemArtwork(from image: PlatformImage) -> MPMediaItemArtwork {
+        let bounds: CGSize
+        #if canImport(UIKit)
+        bounds = image.size.width > 0 && image.size.height > 0
+            ? image.size
+            : CGSize(width: 600, height: 600)
+        #else
+        bounds = image.size.width > 0 && image.size.height > 0
+            ? image.size
+            : NSSize(width: 600, height: 600)
         #endif
+        return MPMediaItemArtwork(boundsSize: bounds) { _ in image }
+    }
+
+    /// The system playbackState is derived here — the one sink every state
+    /// transition already flows through — so paths that mutate `isPlaying`
+    /// directly (loadTrack, auto-advance, queue exhaustion) can never leave
+    /// the lock-screen / menu-bar Now Playing widget stale.
+    private func updateNowPlayingInfo() {
+        let center = MPNowPlayingInfoCenter.default()
+        center.playbackState = isPlaying ? .playing : .paused
+
         guard let track = currentTrack else {
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            nowPlayingArtworkImage = nil
+            nowPlayingArtworkKey = nil
+            center.nowPlayingInfo = nil
+            syncRemoteCommandState()
             return
+        }
+
+        let key = artworkCacheKey(for: track)
+        if nowPlayingArtworkKey != key {
+            nowPlayingArtworkKey = key
+            nowPlayingArtworkImage = nil
+        }
+        if let resolved = resolveArtwork(for: track) {
+            nowPlayingArtworkImage = resolved
         }
 
         let reportedDuration = duration > 0 ? duration : track.duration
@@ -1181,13 +1283,15 @@ final class AudioPlayer: AudioPlaying {
             MPMediaItemPropertyAlbumTrackNumber: track.trackNumber,
         ]
 
-        if let artwork = resolveArtwork(for: track) {
-            info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(
-                boundsSize: artwork.size
-            ) { _ in artwork }
+        if let image = nowPlayingArtworkImage {
+            info[MPMediaItemPropertyArtwork] = mediaItemArtwork(from: image)
+        } else if let existing = center.nowPlayingInfo?[MPMediaItemPropertyArtwork] {
+            // Keep whatever the system already has rather than blanking art on
+            // a progress/pause refresh that lost the cache entry mid-flight.
+            info[MPMediaItemPropertyArtwork] = existing
         }
 
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        center.nowPlayingInfo = info
         syncRemoteCommandState()
     }
 
@@ -1415,6 +1519,23 @@ final class AudioPlayer: AudioPlaying {
         Task.detached { [weak self] in
             let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
             let tracks = StationBuilder.libraryRadio(
+                pool: pool, playCounts: counts, excluding: [], limit: StationBuilder.stationSize
+            )
+            guard let self else { return }
+            await MainActor.run { self.startBuiltStation(tracks, seedArtist: nil) }
+        }
+    }
+
+    /// Crate Dig: underplayed tracks from albums the user already loves —
+    /// the deep cuts streaming can't surface because you own the full albums.
+    func playCrateDig() {
+        guard !isBuildingStation else { return }
+        isBuildingStation = true
+        let pool = Library.shared.allTracks
+        AppLogger.info("Building crate dig from \(pool.count) library tracks", category: .playback)
+        Task.detached { [weak self] in
+            let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
+            let tracks = StationBuilder.crateDig(
                 pool: pool, playCounts: counts, excluding: [], limit: StationBuilder.stationSize
             )
             guard let self else { return }
