@@ -227,6 +227,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         setupCenterContainer(infoStack: infoStack)
         setupScrubBubble()
 
+        let artworkMaxHeight = artworkContainer.heightAnchor.constraint(
+            lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42
+        )
         NSLayoutConstraint.activate([
             centerContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
             centerContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
@@ -235,7 +238,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             bottomStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
             bottomStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
             bottomStack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-            artworkView.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42),
+            artworkMaxHeight,
         ])
     }
 
@@ -351,9 +354,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         artworkContainer.addMotionEffect(group)
     }
 
-    /// Wraps the artwork card in a full-width row that keeps it a centered
-    /// square — album art never letterboxes into a warped ratio, and it shrinks
-    /// as one square when vertical space is tight.
+    /// Wraps the artwork card in a full-width row that is always a centered
+    /// square. Size is driven only by the row width / max-height cap — never by
+    /// the image's intrinsic aspect ratio — so tall covers can't shove transport.
     private func makeArtworkRow() -> UIView {
         let row = UIView()
         row.translatesAutoresizingMaskIntoConstraints = false
@@ -361,7 +364,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         row.addSubview(artworkContainer)
 
         let preferredWidth = artworkContainer.widthAnchor.constraint(equalTo: row.widthAnchor)
-        preferredWidth.priority = .defaultHigh
+        preferredWidth.priority = UILayoutPriority(999)
 
         NSLayoutConstraint.activate([
             artworkContainer.topAnchor.constraint(equalTo: row.topAnchor),
@@ -390,13 +393,16 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         artworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
         artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 48, weight: .ultraLight)
         artworkView.translatesAutoresizingMaskIntoConstraints = false
+        // Image pixel size must not participate in layout — otherwise non-square
+        // covers grow the card and bounce the controls on every track change.
+        for axis: NSLayoutConstraint.Axis in [.horizontal, .vertical] {
+            artworkView.setContentHuggingPriority(.fittingSizeLevel, for: axis)
+            artworkView.setContentCompressionResistancePriority(.fittingSizeLevel, for: axis)
+        }
         artworkContainer.addSubview(artworkView)
         artworkContainer.isAccessibilityElement = true
         artworkContainer.accessibilityLabel = "Album artwork"
         artworkContainer.accessibilityHint = "Swipe left or right with two fingers to change track"
-
-        let artworkSquare = artworkView.heightAnchor.constraint(equalTo: artworkView.widthAnchor)
-        artworkSquare.priority = .defaultHigh
         artworkContainer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
 
         NSLayoutConstraint.activate([
@@ -404,7 +410,6 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             artworkView.leadingAnchor.constraint(equalTo: artworkContainer.leadingAnchor),
             artworkView.trailingAnchor.constraint(equalTo: artworkContainer.trailingAnchor),
             artworkView.bottomAnchor.constraint(equalTo: artworkContainer.bottomAnchor),
-            artworkSquare,
         ])
 
         setupPeekArtwork()
