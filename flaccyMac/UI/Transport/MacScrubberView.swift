@@ -25,10 +25,9 @@ final class MacScrubberView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
 
-        trackLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(0.18).cgColor
-        fillLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(0.85).cgColor
         layer?.addSublayer(trackLayer)
         layer?.addSublayer(fillLayer)
+        applyTrackColors()
 
         hoverTimeLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .medium)
         hoverTimeLabel.textColor = .labelColor
@@ -43,6 +42,22 @@ final class MacScrubberView: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    /// Layer background colors don't re-resolve on an appearance change, so
+    /// resolve them within the current effective appearance and refresh whenever
+    /// it flips — otherwise the track/fill stay stuck at their init-time color
+    /// (invisible in the dark immersive player, wrong in light mode).
+    private func applyTrackColors() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            trackLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(0.28).cgColor
+            fillLayer.backgroundColor = NSColor.labelColor.withAlphaComponent(0.9).cgColor
+        }
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyTrackColors()
+    }
 
     override var intrinsicContentSize: NSSize {
         NSSize(width: NSView.noIntrinsicMetric, height: 18)

@@ -148,6 +148,8 @@ enum DebugDrive {
             NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
             try? await Task.sleep(for: .seconds(2))
             NotificationCenter.default.post(name: .flaccyToggleLyrics, object: nil)
+            NotificationCenter.default.post(name: .flaccyToggleQueue, object: nil)
+            try? await Task.sleep(for: .seconds(2))
             name = "flaccy-shot-nowplaying-lyrics"
         case .queuePanel:
             startHeroPlayback()

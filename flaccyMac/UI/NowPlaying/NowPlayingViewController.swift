@@ -71,24 +71,19 @@ final class NowPlayingViewController: NSViewController {
     private var isBreathing = false
 
     override func loadView() {
-        let root = NSView()
+        let root = AppearanceReactiveView()
         root.wantsLayer = true
-        root.appearance = NSAppearance(named: .darkAqua)
 
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(backdrop)
 
-        scrim.colors = [
-            NSColor.black.withAlphaComponent(0.62).cgColor,
-            NSColor.black.withAlphaComponent(0.34).cgColor,
-            NSColor.black.withAlphaComponent(0.68).cgColor,
-        ]
         scrim.locations = [0, 0.5, 1]
         let scrimView = NSView()
         scrimView.wantsLayer = true
         scrimView.layer?.addSublayer(scrim)
         scrimView.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(scrimView)
+        root.onAppearanceChange = { [weak self] in self?.applyBackdropTone() }
 
         let center = buildCenterColumn()
         buildColumn(lyricsColumn, hosting: lyricsPanel, title: "Lyrics")
@@ -152,6 +147,20 @@ final class NowPlayingViewController: NSViewController {
 
         view = root
         scrimViewRef = scrimView
+        applyBackdropTone()
+    }
+
+    /// The immersive readability scrim over the album-art field: a black veil in
+    /// dark mode, a light veil in light mode so the whole surface follows the
+    /// system appearance (mirrors the Linux Now Playing).
+    private func applyBackdropTone() {
+        let dark = view.effectiveAppearance.isDark
+        let base: NSColor = dark ? .black : .white
+        let alphas: [CGFloat] = dark ? [0.62, 0.34, 0.68] : [0.74, 0.6, 0.78]
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        scrim.colors = alphas.map { base.withAlphaComponent($0).cgColor }
+        CATransaction.commit()
     }
 
     private func buildHeader() -> NSView {
@@ -392,7 +401,7 @@ final class NowPlayingViewController: NSViewController {
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = .systemFont(ofSize: 14, weight: .bold)
-        titleLabel.textColor = MacColors.onArtwork()
+        titleLabel.textColor = MacColors.primaryLabel
 
         let header = NSStackView(views: [titleLabel])
         header.orientation = .horizontal
@@ -439,18 +448,18 @@ final class NowPlayingViewController: NSViewController {
 
     private func configureLabels() {
         titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         titleLabel.alignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.heightAnchor.constraint(equalToConstant: 28).isActive = true
 
         artistButton.font = .systemFont(ofSize: 15, weight: .medium)
-        artistButton.contentTintColor = NSColor.white.withAlphaComponent(0.85)
+        artistButton.contentTintColor = MacColors.primaryLabel
         artistButton.target = self
         artistButton.action = #selector(artistTapped)
 
         albumLabel.font = .systemFont(ofSize: 12)
-        albumLabel.textColor = NSColor.white.withAlphaComponent(0.55)
+        albumLabel.textColor = MacColors.tertiaryLabel
         albumLabel.lineBreakMode = .byTruncatingTail
         albumLabel.alignment = .center
 
@@ -477,7 +486,7 @@ final class NowPlayingViewController: NSViewController {
 
         for label in [elapsedLabel, remainingLabel] {
             label.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
-            label.textColor = NSColor.white.withAlphaComponent(0.6)
+            label.textColor = MacColors.secondaryLabel
         }
     }
 
@@ -864,7 +873,7 @@ final class CapsuleButton: NSControl {
         background.wantsLayer = true
         background.layer?.cornerRadius = 15
         background.layer?.cornerCurve = .continuous
-        background.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.1).cgColor
+        background.layer?.backgroundColor = MacColors.fill(0.1).cgColor
         background.translatesAutoresizingMaskIntoConstraints = false
         addSubview(background)
 
@@ -926,7 +935,23 @@ final class CapsuleButton: NSControl {
 
     private func refreshBackground() {
         let alpha: CGFloat = isActiveToggle ? 0.28 : (isHovered ? 0.18 : 0.1)
-        background.layer?.backgroundColor = NSColor.white.withAlphaComponent(alpha).cgColor
+        background.layer?.backgroundColor = MacColors.fill(alpha).cgColor
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        refreshBackground()
+    }
+}
+
+/// A container that runs a callback whenever the effective appearance flips, so
+/// layer-backed colors (which don't auto-resolve) can be recomputed.
+final class AppearanceReactiveView: NSView {
+    var onAppearanceChange: (() -> Void)?
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        onAppearanceChange?()
     }
 }
 
