@@ -57,7 +57,6 @@ final class SectionIndexView: UIView {
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
         ])
 
-        isHidden = titles.isEmpty
         accessibilityIndex = 0
         accessibilityValue = titles.first
     }

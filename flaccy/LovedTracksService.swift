@@ -49,6 +49,16 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         return lovedPaths.contains(path)
     }
 
+    /// One lock for the whole album instead of one lock per track (cell
+    /// configuration was taking a lock per song on every dequeue).
+    func containsLoved(among tracks: [Track]) -> Bool {
+        guard !tracks.isEmpty else { return false }
+        let paths = tracks.map { relativePath(for: $0.fileURL) }
+        lock.lock()
+        defer { lock.unlock() }
+        return paths.contains { lovedPaths.contains($0) }
+    }
+
     @discardableResult
     func toggleLove(track: Track) async -> Bool {
         let path = relativePath(for: track.fileURL)

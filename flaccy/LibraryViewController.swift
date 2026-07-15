@@ -215,22 +215,53 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     /// snapshot, optionally under a sub-350ms crossfade unless Reduce Motion is on.
     private func applyLayoutAndSnapshot(crossfade: Bool) {
         let segment = viewModel.currentSegment
+        let layout = viewModel.layoutMode
         let snapshot = viewModel.currentSnapshot()
-        let apply = {
-            self.collectionView.setCollectionViewLayout(self.createLayout(for: segment), animated: false)
-            self.dataSource.applySnapshotUsingReloadData(snapshot)
-            self.updateEmptyState()
-            self.updateSectionIndex()
+        let apply = { [weak self] in
+            guard let self else { return }
+            self.applyLibrarySnapshot(
+                snapshot,
+                segment: segment,
+                layout: layout,
+                forceLayout: true,
+                useReload: true
+            )
         }
-        if crossfade, !UIAccessibility.isReduceMotionEnabled {
+        if crossfade, !UIAccessibility.isReduceMotionEnabled, snapshot.numberOfItems < 80 {
             UIView.transition(
-                with: collectionView, duration: 0.28,
+                with: collectionView, duration: 0.2,
                 options: [.transitionCrossDissolve, .allowUserInteraction],
                 animations: apply
             )
         } else {
             apply()
         }
+    }
+
+    /// Applies a library snapshot with the cheapest path available: only rebuild
+    /// the compositional layout when segment/layout mode change, and use
+    /// reload-data (skip O(n) diff) when swapping entire lists.
+    private func applyLibrarySnapshot(
+        _ snapshot: LibraryViewModel.Snapshot,
+        segment: LibraryViewModel.Segment,
+        layout: LibraryLayoutMode,
+        forceLayout: Bool,
+        useReload: Bool
+    ) {
+        let needsLayout = forceLayout
+            || lastRenderedSegment != segment
+            || lastRenderedLayout != layout
+        if needsLayout {
+            collectionView.setCollectionViewLayout(createLayout(for: segment), animated: false)
+            lastRenderedLayout = layout
+        }
+        if useReload {
+            dataSource.applySnapshotUsingReloadData(snapshot)
+        } else {
+            dataSource.apply(snapshot, animatingDifferences: false)
+        }
+        updateEmptyState()
+        updateSectionIndex()
     }
 
     private func albumSortMenu() -> UIMenu {
@@ -326,6 +357,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         filterChipsView.translatesAutoresizingMaskIntoConstraints = false
         filterChipsView.onSelect = { [weak self] filter in
             self?.viewModel.setFilter(filter)
+            self?.updateSectionIndex()
         }
         view.addSubview(filterChipsView)
         chipsHeightConstraint = filterChipsView.heightAnchor.constraint(equalToConstant: 46)
@@ -442,12 +474,15 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     private func updateSectionIndex() {
-        let titles = viewModel.indexTitles()
+        let shouldShow = viewModel.currentSegment != .playlists
+            && viewModel.filter == .all
+            && viewModel.isCurrentSortAlphabetical
+        let titles = shouldShow ? viewModel.indexTitles() : []
         sectionIndexView.update(titles: titles)
-        sectionIndexView.isHidden = titles.count < 5
-            || viewModel.currentSegment == .playlists
-            || viewModel.filter != .all
-            || !viewModel.isCurrentSortAlphabetical
+        sectionIndexView.isHidden = !shouldShow || titles.count < 5
+        if !sectionIndexView.isHidden {
+            view.bringSubviewToFront(sectionIndexView)
+        }
     }
 
     private func setupLoadingOverlay() {
@@ -821,29 +856,26 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 guard let self else { return }
                 let segment = self.viewModel.currentSegment
                 let filter = self.viewModel.filter
+                let layout = self.viewModel.layoutMode
                 let segmentChanged = self.lastRenderedSegment != nil && self.lastRenderedSegment != segment
                 let filterChanged = self.lastRenderedFilter != nil && self.lastRenderedFilter != filter
+                let previousSegment = self.lastRenderedSegment
                 self.lastRenderedSegment = segment
                 self.lastRenderedFilter = filter
-                self.lastRenderedLayout = self.viewModel.layoutMode
-                let apply = {
-                    self.collectionView.setCollectionViewLayout(
-                        self.createLayout(for: segment), animated: false
-                    )
-                    self.dataSource.apply(snapshot, animatingDifferences: false)
-                    self.updateEmptyState()
-                    self.updateSectionIndex()
-                    self.filterChipsView.setSelected(filter, animated: true)
-                }
-                if (segmentChanged || filterChanged), !UIAccessibility.isReduceMotionEnabled {
-                    UIView.transition(
-                        with: self.collectionView, duration: 0.24,
-                        options: [.transitionCrossDissolve, .allowUserInteraction],
-                        animations: apply
-                    )
-                } else {
-                    apply()
-                }
+                self.filterChipsView.setSelected(filter, animated: false)
+                // Full list swaps (segment/sort of large libraries) are cheaper as
+                // reload than as a 6k-item identity diff. In-place filter tweaks
+                // keep the normal apply path.
+                let useReload = segmentChanged
+                    || previousSegment == nil
+                    || snapshot.numberOfItems > 200
+                self.applyLibrarySnapshot(
+                    snapshot,
+                    segment: segment,
+                    layout: layout,
+                    forceLayout: segmentChanged || filterChanged,
+                    useReload: useReload
+                )
             }
             .store(in: &cancellables)
 

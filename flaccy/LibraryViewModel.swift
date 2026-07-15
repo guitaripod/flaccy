@@ -47,6 +47,9 @@ nonisolated struct PlaylistItem: Hashable, Sendable {
 
 final class LibraryViewModel {
 
+    /// Guards sort/meta caches shared by the background snapshot queue and main.
+    private let cacheLock = NSRecursiveLock()
+
     enum Segment: Int, CaseIterable {
         case albums
         case songs
@@ -163,7 +166,12 @@ final class LibraryViewModel {
     private let rediscoverMinPlays = 2
 
     private var trackMeta: [String: TrackMeta] {
-        if let cached = cachedMeta { return cached }
+        cacheLock.lock()
+        if let cached = cachedMeta {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
         var map = [String: TrackMeta]()
         if let records = try? DatabaseManager.shared.fetchAllTracks() {
             map.reserveCapacity(records.count)
@@ -175,7 +183,9 @@ final class LibraryViewModel {
                 )
             }
         }
+        cacheLock.lock()
         cachedMeta = map
+        cacheLock.unlock()
         return map
     }
 
@@ -195,8 +205,17 @@ final class LibraryViewModel {
 
     /// Returns the codec-populated variant of a lightweight library track so its
     /// `qualityBadge`/`isLossless` resolve; falls back to the original if unknown.
+    /// Tracks loaded via the light path already carry codec fields — skip the
+    /// full-table meta lookup in that common case (it was hitching every Songs sort).
     private func hydrate(_ track: Track) -> Track {
-        trackMeta[relativePath(for: track.fileURL)]?.track ?? track
+        if track.codec != nil { return track }
+        return trackMeta[relativePath(for: track.fileURL)]?.track ?? track
+    }
+
+    /// Faster than `localizedCaseInsensitiveCompare` across thousands of rows;
+    /// library lists are not locale-sensitive catalogue sorts.
+    private static func titleOrder(_ a: String, _ b: String) -> Bool {
+        a.caseInsensitiveCompare(b) == .orderedAscending
     }
 
     private func meta(for track: Track) -> TrackMeta? {
@@ -228,7 +247,7 @@ final class LibraryViewModel {
                 self.cachedScrobbleCounts = (range, counts)
                 if self.currentSegment == .songs {
                     if self.songSort == .mostScrobbled { self.cachedSortedSongs = nil }
-                    self.snapshotPublisher.send(self.buildSnapshot())
+                    self.publishSnapshot()
                 }
             }
         }
@@ -242,9 +261,21 @@ final class LibraryViewModel {
     /// request it on every dequeue during a scroll.
     func representativeTrack(for album: Album) -> Track? {
         let key = "\(album.title)|\(album.artist)"
-        if let cached = cachedRepresentativeTracks[key] { return cached }
-        let best = album.tracks.map { hydrate($0) }.max { qualityRank($0) < qualityRank($1) }
-        if let best { cachedRepresentativeTracks[key] = best }
+        cacheLock.lock()
+        if let cached = cachedRepresentativeTracks[key] {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
+        // Prefer already-hydrated codec fields; only fall back to meta for gaps.
+        let best = album.tracks.map { track in
+            track.codec != nil ? track : hydrate(track)
+        }.max { qualityRank($0) < qualityRank($1) }
+        if let best {
+            cacheLock.lock()
+            cachedRepresentativeTracks[key] = best
+            cacheLock.unlock()
+        }
         return best
     }
 
@@ -291,7 +322,7 @@ final class LibraryViewModel {
     }
 
     func isLovedAlbum(_ album: Album) -> Bool {
-        album.tracks.contains { LovedTracksService.shared.isLoved(track: $0) }
+        LovedTracksService.shared.containsLoved(among: album.tracks)
     }
 
     /// Albums highly played but not spun recently, ranked by a Longplay-style
@@ -335,21 +366,26 @@ final class LibraryViewModel {
     private(set) var visibleSongs: [Track] = []
 
     var sortedAlbums: [Album] {
-        if let cached = cachedSortedAlbums { return cached }
+        cacheLock.lock()
+        if let cached = cachedSortedAlbums {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
         let result: [Album]
         switch albumSort {
         case .title:
-            result = library.albums.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            result = library.albums.sorted { Self.titleOrder($0.title, $1.title) }
         case .artist:
             result = library.albums.sorted {
-                let cmp = $0.artist.localizedCaseInsensitiveCompare($1.artist)
-                return cmp == .orderedSame ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : cmp == .orderedAscending
+                let cmp = $0.artist.caseInsensitiveCompare($1.artist)
+                return cmp == .orderedSame ? Self.titleOrder($0.title, $1.title) : cmp == .orderedAscending
             }
         case .year:
             result = library.albums.sorted {
                 let y0 = $0.year ?? "9999"
                 let y1 = $1.year ?? "9999"
-                return y0 == y1 ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : y0 < y1
+                return y0 == y1 ? Self.titleOrder($0.title, $1.title) : y0 < y1
             }
         case .recentlyAdded:
             let added = albumDateAddedMap()
@@ -361,72 +397,104 @@ final class LibraryViewModel {
             let hasPlay = library.albums.filter { played["\($0.title)|\($0.artist)"] != nil }
                 .sorted { (played["\($0.title)|\($0.artist)"] ?? .distantPast) > (played["\($1.title)|\($1.artist)"] ?? .distantPast) }
             let noPlay = library.albums.filter { played["\($0.title)|\($0.artist)"] == nil }
-                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                .sorted { Self.titleOrder($0.title, $1.title) }
             result = hasPlay + noPlay
         }
+        cacheLock.lock()
         cachedSortedAlbums = result
+        cacheLock.unlock()
         return result
     }
 
     var sortedSongs: [Track] {
-        if let cached = cachedSortedSongs { return cached }
+        cacheLock.lock()
+        if let cached = cachedSortedSongs {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
         let tracks = library.allTracks
         guard !tracks.isEmpty else { return tracks }
         let result: [Track]
         switch songSort {
         case .title:
-            result = tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            result = tracks.sorted { Self.titleOrder($0.title, $1.title) }
         case .artist:
             result = tracks.sorted {
-                let cmp = $0.artist.localizedCaseInsensitiveCompare($1.artist)
-                return cmp == .orderedSame ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : cmp == .orderedAscending
+                let cmp = $0.artist.caseInsensitiveCompare($1.artist)
+                return cmp == .orderedSame ? Self.titleOrder($0.title, $1.title) : cmp == .orderedAscending
             }
         case .mostScrobbled:
             guard let counts = cachedScrobbleCounts.flatMap({ $0.period == scrobbleRange ? $0.counts : nil }) else {
                 warmScrobbleCountsIfNeeded()
-                return tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                return tracks.sorted { Self.titleOrder($0.title, $1.title) }
             }
             let scored = tracks.filter { counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0 > 0 }
                 .sorted {
                     let a = counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0
                     let b = counts[LastFMStatsService.trackKey($1.title, $1.artist)] ?? 0
-                    return a == b ? $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending : a > b
+                    return a == b ? Self.titleOrder($0.title, $1.title) : a > b
                 }
             let unscrobbled = tracks.filter { counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0 == 0 }
-                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                .sorted { Self.titleOrder($0.title, $1.title) }
             result = scored + unscrobbled
         case .recentlyPlayed:
             let sortKeys: [(fileURL: String, lastPlayed: Date?)]
             do {
                 sortKeys = try DatabaseManager.shared.fetchTrackSortKeys()
             } catch {
-                result = tracks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                result = tracks.sorted { Self.titleOrder($0.title, $1.title) }
+                cacheLock.lock()
                 cachedSortedSongs = result
+                cacheLock.unlock()
                 return result
             }
-            let docsDir = LibraryPaths.root
-            var lastPlayedByURL = [URL: Date]()
+            var lastPlayedByPath = [String: Date]()
+            lastPlayedByPath.reserveCapacity(sortKeys.count)
             for key in sortKeys {
                 if let date = key.lastPlayed {
-                    lastPlayedByURL[docsDir.appendingPathComponent(key.fileURL)] = date
+                    lastPlayedByPath[key.fileURL] = date
                 }
             }
-            let played = tracks.filter { lastPlayedByURL[$0.fileURL] != nil }
-                .sorted { (lastPlayedByURL[$0.fileURL] ?? .distantPast) > (lastPlayedByURL[$1.fileURL] ?? .distantPast) }
-            let unplayed = tracks.filter { lastPlayedByURL[$0.fileURL] == nil }
-                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            var pathByTrack = [URL: String]()
+            pathByTrack.reserveCapacity(tracks.count)
+            for track in tracks {
+                pathByTrack[track.fileURL] = relativePath(for: track.fileURL)
+            }
+            let played = tracks.filter { lastPlayedByPath[pathByTrack[$0.fileURL] ?? ""] != nil }
+                .sorted {
+                    (lastPlayedByPath[pathByTrack[$0.fileURL] ?? ""] ?? .distantPast)
+                        > (lastPlayedByPath[pathByTrack[$1.fileURL] ?? ""] ?? .distantPast)
+                }
+            let unplayed = tracks.filter { lastPlayedByPath[pathByTrack[$0.fileURL] ?? ""] == nil }
+                .sorted { Self.titleOrder($0.title, $1.title) }
             result = played + unplayed
         case .dateAdded:
+            let metaMap = trackMeta
+            var pathByTrack = [URL: String]()
+            pathByTrack.reserveCapacity(tracks.count)
+            for track in tracks {
+                pathByTrack[track.fileURL] = relativePath(for: track.fileURL)
+            }
             result = tracks.sorted {
-                (meta(for: $0)?.dateAdded ?? .distantPast) > (meta(for: $1)?.dateAdded ?? .distantPast)
+                let a = metaMap[pathByTrack[$0.fileURL] ?? ""]?.dateAdded ?? .distantPast
+                let b = metaMap[pathByTrack[$1.fileURL] ?? ""]?.dateAdded ?? .distantPast
+                return a > b
             }
         }
-        cachedSortedSongs = result.map { hydrate($0) }
-        return cachedSortedSongs ?? result
+        cacheLock.lock()
+        cachedSortedSongs = result
+        cacheLock.unlock()
+        return result
     }
 
     var sortedArtists: [ArtistItem] {
-        if let cached = cachedSortedArtists { return cached }
+        cacheLock.lock()
+        if let cached = cachedSortedArtists {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
         let result: [ArtistItem]
         switch artistSort {
         case .name:
@@ -434,7 +502,7 @@ final class LibraryViewModel {
         case .albumCount:
             result = artists.sorted {
                 $0.albumCount == $1.albumCount
-                    ? $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                    ? Self.titleOrder($0.name, $1.name)
                     : $0.albumCount > $1.albumCount
             }
         case .mostPlayed:
@@ -443,7 +511,7 @@ final class LibraryViewModel {
                 let c0 = plays[artistMatchKey($0.name)] ?? 0
                 let c1 = plays[artistMatchKey($1.name)] ?? 0
                 return c0 == c1
-                    ? $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                    ? Self.titleOrder($0.name, $1.name)
                     : c0 > c1
             }
         case .recentlyPlayed:
@@ -451,10 +519,12 @@ final class LibraryViewModel {
             let hasPlay = artists.filter { played[artistMatchKey($0.name)] != nil }
                 .sorted { (played[artistMatchKey($0.name)] ?? .distantPast) > (played[artistMatchKey($1.name)] ?? .distantPast) }
             let noPlay = artists.filter { played[artistMatchKey($0.name)] == nil }
-                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                .sorted { Self.titleOrder($0.name, $1.name) }
             result = hasPlay + noPlay
         }
+        cacheLock.lock()
         cachedSortedArtists = result
+        cacheLock.unlock()
         return result
     }
 
@@ -593,34 +663,42 @@ final class LibraryViewModel {
 
     func setAlbumSort(_ sort: AlbumSort) {
         albumSort = sort
+        cacheLock.lock()
         cachedSortedAlbums = nil
+        cacheLock.unlock()
         UserDefaults.standard.set(sort.rawValue, forKey: "albumSort")
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
     }
 
     func setSongSort(_ sort: SongSort) {
         songSort = sort
+        cacheLock.lock()
         cachedSortedSongs = nil
+        cacheLock.unlock()
         UserDefaults.standard.set(sort.rawValue, forKey: "songSort")
         warmScrobbleCountsIfNeeded()
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
     }
 
     func setScrobbleRange(_ range: ChartPeriod) {
         guard scrobbleRange != range else { return }
         scrobbleRange = range
+        cacheLock.lock()
         cachedScrobbleCounts = nil
         if songSort == .mostScrobbled { cachedSortedSongs = nil }
+        cacheLock.unlock()
         UserDefaults.standard.set(range.rawValue, forKey: "songScrobbleRange")
         warmScrobbleCountsIfNeeded()
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
     }
 
     func setArtistSort(_ sort: ArtistSort) {
         artistSort = sort
+        cacheLock.lock()
         cachedSortedArtists = nil
+        cacheLock.unlock()
         UserDefaults.standard.set(sort.rawValue, forKey: "artistSort")
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
     }
 
     func cycleLayoutMode() {
@@ -632,17 +710,47 @@ final class LibraryViewModel {
         guard self.filter != filter else { return }
         self.filter = filter
         filter.persist()
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
     }
 
     /// Rebuilds and republishes the current snapshot without changing state,
     /// e.g. after loved state changes while the Favorites pivot is active.
     func refilter() {
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
     }
 
     func currentSnapshot() -> Snapshot {
         buildSnapshot()
+    }
+
+    private var snapshotEpoch = 0
+    private let snapshotQueue = DispatchQueue(label: "flaccy.library.snapshot", qos: .userInitiated)
+
+    /// Builds the next snapshot off the main thread so segment switches and
+    /// sort changes never stall the segmented control / menu animations.
+    private func publishSnapshot() {
+        snapshotEpoch &+= 1
+        let epoch = snapshotEpoch
+        snapshotQueue.async { [weak self] in
+            guard let self else { return }
+            let snapshot = self.buildSnapshot()
+            DispatchQueue.main.async {
+                guard epoch == self.snapshotEpoch else { return }
+                self.snapshotPublisher.send(snapshot)
+            }
+        }
+    }
+
+    /// Warm the inactive list caches in the background after a library load so
+    /// the first switch to Songs/Artists is a cache hit.
+    private func prewarmSortCaches() {
+        snapshotQueue.async { [weak self] in
+            guard let self else { return }
+            _ = self.sortedAlbums
+            _ = self.sortedSongs
+            _ = self.sortedArtists
+            _ = self.songSearchKeys()
+        }
     }
 
     func availableFilters() -> [LibraryFilter] {
@@ -766,7 +874,7 @@ final class LibraryViewModel {
             filter = .all
             filter.persist()
         }
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
         loadSuggestionsIfNeeded()
         warmScrobbleCountsIfNeeded()
     }
@@ -776,9 +884,11 @@ final class LibraryViewModel {
     }
 
     func refreshPlaylists() {
+        cacheLock.lock()
         cachedPlaylists = nil
+        cacheLock.unlock()
         guard currentSegment == .playlists else { return }
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
     }
 
     /// Computes play-history-derived suggestions off-main the first time the
@@ -797,7 +907,7 @@ final class LibraryViewModel {
                 self.cachedSuggestions = suggestions
                 self.suggestionsLoading = false
                 if self.currentSegment == .playlists {
-                    self.snapshotPublisher.send(self.buildSnapshot())
+                    self.publishSnapshot()
                 }
             }
         }
@@ -809,7 +919,7 @@ final class LibraryViewModel {
         searchDebounceTask = Task {
             try? await Task.sleep(for: .milliseconds(200))
             guard !Task.isCancelled else { return }
-            snapshotPublisher.send(buildSnapshot())
+            publishSnapshot()
         }
     }
 
@@ -907,10 +1017,12 @@ final class LibraryViewModel {
 
     @objc private func libraryDidUpdate() {
         invalidateSortCaches()
-        snapshotPublisher.send(buildSnapshot())
+        publishSnapshot()
+        prewarmSortCaches()
     }
 
     private func invalidateSortCaches() {
+        cacheLock.lock()
         cachedSortedAlbums = nil
         cachedSortedSongs = nil
         cachedSortedArtists = nil
@@ -925,6 +1037,7 @@ final class LibraryViewModel {
         cachedRepresentativeTracks = [:]
         cachedFirstAlbumByArtist = nil
         cachedSongSearchKeys = nil
+        cacheLock.unlock()
     }
 
     @objc private func trackDidChange() {
