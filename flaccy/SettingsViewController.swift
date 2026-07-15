@@ -50,6 +50,7 @@ final class SettingsViewController: UITableViewController {
         case gaplessPlayback
         case autoplaySimilar
         case libraryRadio
+        case crateDig
         case listeningGuide
         case watchSync(syncedCount: Int)
         case importFiles
@@ -236,7 +237,7 @@ final class SettingsViewController: UITableViewController {
             ],
             toSection: .recap
         )
-        snapshot.appendItems([.gaplessPlayback, .autoplaySimilar, .libraryRadio], toSection: .playback)
+        snapshot.appendItems([.gaplessPlayback, .autoplaySimilar, .libraryRadio, .crateDig], toSection: .playback)
         snapshot.appendItems([.listeningGuide], toSection: .guide)
         snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedPaths.count)], toSection: .watch)
         snapshot.appendItems(
@@ -354,6 +355,13 @@ final class SettingsViewController: UITableViewController {
             content.textProperties.color = .tintColor
             cell.accessibilityLabel = "Library Radio"
             cell.accessibilityHint = "Plays a station from your most-played tracks"
+
+        case .crateDig:
+            content.image = RowIcon.image(systemName: "opticaldisc.fill", tint: .systemIndigo)
+            content.text = "Crate Dig"
+            content.textProperties.color = .tintColor
+            cell.accessibilityLabel = "Crate Dig"
+            cell.accessibilityHint = "Plays deep cuts from albums you already love"
 
         case .listeningGuide:
             content.image = RowIcon.image(systemName: "waveform", tint: .systemCyan)
@@ -530,6 +538,7 @@ final class SettingsViewController: UITableViewController {
         case .yearInMusic: handleYearInMusicTap()
         case .recapNotifications: handleRecapNotificationsTap()
         case .libraryRadio: handleLibraryRadio()
+        case .crateDig: handleCrateDig()
         case .listeningGuide: handleListeningGuideTap()
         case .watchSync: handleWatchTap()
         case .importFiles: handleImportTap()
@@ -623,6 +632,12 @@ final class SettingsViewController: UITableViewController {
     private func handleLibraryRadio() {
         impactMedium.impactOccurred()
         AudioPlayer.shared.playLibraryRadio()
+        dismiss(animated: true)
+    }
+
+    private func handleCrateDig() {
+        impactMedium.impactOccurred()
+        AudioPlayer.shared.playCrateDig()
         dismiss(animated: true)
     }
 

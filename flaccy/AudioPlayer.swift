@@ -22,6 +22,7 @@ protocol AudioPlaying: AnyObject {
     func startStation(seedArtist: String)
     func startStation(seedTrack: Track)
     func playLibraryRadio()
+    func playCrateDig()
     func play(_ tracks: [Track], startingAt index: Int)
     func togglePlayPause()
     func nextTrack()

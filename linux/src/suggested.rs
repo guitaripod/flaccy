@@ -16,9 +16,9 @@ pub struct SuggestedPlaylist {
     pub tracks: Vec<Track>,
 }
 
-/// Port of the iOS SuggestedPlaylistService: derives Heavy Rotation, On Repeat
-/// and Rediscover playlists by intersecting local scrobble history with the
-/// tracks the user actually owns.
+/// Port of the iOS SuggestedPlaylistService: Heavy Rotation, Crate Dig,
+/// On Repeat, Rediscover, and Tonight's Spin from local scrobble history
+/// intersected with the tracks the user actually owns.
 pub fn build(pool: &[Track], rows: &[ScrobbleRow], now_unix: i64) -> Vec<SuggestedPlaylist> {
     if pool.is_empty() || rows.is_empty() {
         return Vec::new();
@@ -54,11 +54,17 @@ pub fn build(pool: &[Track], rows: &[ScrobbleRow], now_unix: i64) -> Vec<Suggest
     if let Some(heavy) = heavy_rotation(&pool_by_key, &month_counts, &all_counts) {
         suggestions.push(heavy);
     }
+    if let Some(dig) = crate_dig(pool, &all_counts) {
+        suggestions.push(dig);
+    }
     if let Some(repeat_artist) = on_repeat(pool, &artist_counts, &all_counts) {
         suggestions.push(repeat_artist);
     }
     if let Some(rediscover) = rediscover(&pool_by_key, &all_counts, &recent_counts) {
         suggestions.push(rediscover);
+    }
+    if let Some(spin) = tonights_spin(pool, &all_counts, &recent_counts, now_unix) {
+        suggestions.push(spin);
     }
     suggestions
 }
@@ -169,6 +175,125 @@ fn rediscover(
         icon_name: "document-open-recent-symbolic",
         tracks,
     })
+}
+
+fn crate_dig(pool: &[Track], all_counts: &HashMap<String, i64>) -> Option<SuggestedPlaylist> {
+    let mut pairs: Vec<(String, String, i64)> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for track in pool {
+        let k = station::track_key(&track.title, &track.artist);
+        if !seen.insert(k.clone()) {
+            continue;
+        }
+        let count = all_counts
+            .get(&k)
+            .copied()
+            .unwrap_or(track.play_count.max(0));
+        pairs.push((track.title.clone(), track.artist.clone(), count));
+    }
+    let excluding = std::collections::HashSet::new();
+    let tracks = station::crate_dig(pool, &pairs, &excluding, MAX_TRACKS);
+    if tracks.len() < MIN_TRACKS {
+        return None;
+    }
+    Some(SuggestedPlaylist {
+        id: "crate-dig",
+        title: "Crate Dig".to_string(),
+        subtitle: "Deep cuts from albums you already love".to_string(),
+        icon_name: "media-optical-symbolic",
+        tracks,
+    })
+}
+
+fn tonights_spin(
+    pool: &[Track],
+    all_counts: &HashMap<String, i64>,
+    recent_counts: &HashMap<String, i64>,
+    now_unix: i64,
+) -> Option<SuggestedPlaylist> {
+    let mut albums: HashMap<String, Vec<Track>> = HashMap::new();
+    for track in pool {
+        let k = format!(
+            "{}\u{0}{}",
+            track.album.to_lowercase(),
+            track.artist.to_lowercase()
+        );
+        albums.entry(k).or_default().push(track.clone());
+    }
+
+    let day_seed = now_unix / 86_400;
+    let mut candidates: Vec<(Vec<Track>, f64, String, String)> = Vec::new();
+    for group in albums.values() {
+        if group.len() < 5 {
+            continue;
+        }
+        let mut ordered = group.clone();
+        ordered.sort_by(|a, b| {
+            a.track_number
+                .cmp(&b.track_number)
+                .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+        });
+        let album_plays: i64 = ordered
+            .iter()
+            .map(|t| {
+                all_counts
+                    .get(&station::track_key(&t.title, &t.artist))
+                    .copied()
+                    .unwrap_or(0)
+            })
+            .sum();
+        let recent_plays: i64 = ordered
+            .iter()
+            .map(|t| {
+                recent_counts
+                    .get(&station::track_key(&t.title, &t.artist))
+                    .copied()
+                    .unwrap_or(0)
+            })
+            .sum();
+        if recent_plays > 0 {
+            continue;
+        }
+        let history_boost = if album_plays > 0 {
+            (1.0 + album_plays as f64).log2()
+        } else {
+            0.35
+        };
+        let weight = history_boost * ordered.len() as f64;
+        let title = ordered[0].album.clone();
+        let artist = ordered[0].artist.clone();
+        candidates.push((ordered, weight, title, artist));
+    }
+    if candidates.is_empty() {
+        return None;
+    }
+
+    let ranked = station::weighted_shuffle(candidates, |candidate| {
+        let mix = stable_mix(day_seed, &candidate.2, &candidate.3);
+        candidate.1 * (0.5 + mix)
+    });
+    let pick = ranked.into_iter().next()?;
+    let subtitle = if pick.3.is_empty() {
+        "Full album night".to_string()
+    } else {
+        format!("Full album · {}", pick.3)
+    };
+    Some(SuggestedPlaylist {
+        id: "tonights-spin",
+        title: pick.2,
+        subtitle,
+        icon_name: "media-optical-cd-audio-symbolic",
+        tracks: pick.0,
+    })
+}
+
+fn stable_mix(day_seed: i64, title: &str, artist: &str) -> f64 {
+    let mut hash: u64 = 5381u64.wrapping_add(day_seed as u64);
+    let bytes = format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase());
+    for byte in bytes.bytes() {
+        hash = hash.wrapping_shl(5).wrapping_add(hash).wrapping_add(byte as u64);
+    }
+    (hash % 10_000) as f64 / 10_000.0
 }
 
 #[cfg(test)]

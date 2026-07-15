@@ -156,6 +156,76 @@ pub fn library_radio(
     station
 }
 
+/// Crate Dig: underplayed tracks from albums the listener already knows.
+pub fn crate_dig(
+    pool: &[Track],
+    play_counts: &[(String, String, i64)],
+    excluding: &std::collections::HashSet<String>,
+    limit: usize,
+) -> Vec<Track> {
+    let mut count_by_key: HashMap<String, i64> = HashMap::new();
+    for (title, artist, count) in play_counts {
+        count_by_key.insert(track_key(title, artist), *count);
+    }
+
+    let mut albums: HashMap<String, Vec<Track>> = HashMap::new();
+    for track in pool {
+        if excluding.contains(&track.rel_path) {
+            continue;
+        }
+        let key = format!(
+            "{}\u{0}{}",
+            track.album.to_lowercase(),
+            track.artist.to_lowercase()
+        );
+        albums.entry(key).or_default().push(track.clone());
+    }
+
+    let mut scored: Vec<(Track, f64)> = Vec::new();
+    for tracks in albums.values() {
+        if tracks.len() < 4 {
+            continue;
+        }
+        let counts: Vec<i64> = tracks
+            .iter()
+            .map(|t| {
+                *count_by_key
+                    .get(&track_key(&t.title, &t.artist))
+                    .unwrap_or(&t.play_count.max(0))
+            })
+            .collect();
+        let album_plays: i64 = counts.iter().sum();
+        let peak = *counts.iter().max().unwrap_or(&0);
+        if album_plays < 3 || peak < 2 {
+            continue;
+        }
+        let threshold = (peak / 3).max(0);
+        for (track, count) in tracks.iter().zip(counts.iter()) {
+            if *count > threshold {
+                continue;
+            }
+            let weight =
+                (album_plays as f64) / ((*count + 1) as f64) * (1.0 + (peak - *count) as f64);
+            scored.push((track.clone(), weight.max(0.1)));
+        }
+    }
+    if scored.is_empty() {
+        return Vec::new();
+    }
+
+    let weight_map: HashMap<String, f64> = scored
+        .iter()
+        .map(|(t, w)| (t.rel_path.clone(), *w))
+        .collect();
+    let candidates: Vec<Track> = scored.into_iter().map(|(t, _)| t).collect();
+    let weighted = weighted_shuffle(candidates, |track| {
+        *weight_map.get(&track.rel_path).unwrap_or(&0.1)
+    });
+    let mut station = spaced_by_artist(weighted.into_iter().take(limit * 2).collect());
+    station.truncate(limit);
+    station
+}
+
 /// History-aware shuffle weight matching iOS: max(0.05, age/(age+3d)) where
 /// age is seconds since the track's lastPlayed (never played → weight 1.0).
 pub fn history_weight(last_played_unix: Option<i64>, now_unix: i64) -> f64 {
@@ -270,6 +340,38 @@ mod tests {
         let station = track_station(&seed, &[], &pool, &excluding, 60);
         assert_eq!(station[0].rel_path, seed.rel_path);
         assert_eq!(station.len(), 3);
+    }
+
+    #[test]
+    fn crate_dig_prefers_underplayed_tracks_on_known_albums() {
+        let mut pool = Vec::new();
+        for i in 0..6 {
+            let mut t = track(&format!("hit{i}"), "ArtistA");
+            t.album = "Loved".into();
+            t.track_number = i + 1;
+            pool.push(t);
+        }
+        for i in 0..4 {
+            let mut t = track(&format!("deep{i}"), "ArtistA");
+            t.album = "Loved".into();
+            t.track_number = 10 + i;
+            pool.push(t);
+        }
+        let mut other = track("only", "Other");
+        other.album = "Thin".into();
+        pool.push(other);
+
+        let mut play_counts = Vec::new();
+        for i in 0..6 {
+            play_counts.push((format!("hit{i}"), "ArtistA".into(), 12));
+        }
+        for i in 0..4 {
+            play_counts.push((format!("deep{i}"), "ArtistA".into(), 0));
+        }
+        let excluding = std::collections::HashSet::new();
+        let dig = crate_dig(&pool, &play_counts, &excluding, 20);
+        assert!(!dig.is_empty());
+        assert!(dig.iter().all(|t| t.title.starts_with("deep")));
     }
 
     #[test]

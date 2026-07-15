@@ -57,13 +57,83 @@ nonisolated enum SuggestedPlaylistService {
         if let heavy = heavyRotation(poolByKey: poolByKey, monthCounts: monthCounts, allCounts: allCounts) {
             suggestions.append(heavy)
         }
+        if let dig = crateDig(pool: pool, allCounts: allCounts) {
+            suggestions.append(dig)
+        }
         if let repeatArtist = onRepeat(pool: pool, artistCounts: artistCounts, allCounts: allCounts) {
             suggestions.append(repeatArtist)
         }
         if let rediscover = rediscover(poolByKey: poolByKey, allCounts: allCounts, recentCounts: recentCounts) {
             suggestions.append(rediscover)
         }
+        if let spin = tonightsSpin(pool: pool, allCounts: allCounts, recentCounts: recentCounts) {
+            suggestions.append(spin)
+        }
         return suggestions
+    }
+
+    /// Underplayed tracks from albums you already love — the crate-digging
+    /// privilege of owning full albums instead of streaming singles.
+    private static func crateDig(pool: [Track], allCounts: [String: Int]) -> SuggestedPlaylist? {
+        var pairs: [(trackTitle: String, artist: String, count: Int)] = []
+        var seen = Set<String>()
+        for track in pool {
+            let k = key(track.title, track.artist)
+            guard seen.insert(k).inserted else { continue }
+            pairs.append((track.title, track.artist, allCounts[k] ?? track.playCount))
+        }
+        let tracks = StationBuilder.crateDig(
+            pool: pool, playCounts: pairs, excluding: [], limit: maxTracks
+        )
+        guard tracks.count >= minTracks else { return nil }
+        return SuggestedPlaylist(
+            id: "crate-dig", title: "Crate Dig",
+            subtitle: "Deep cuts from albums you already love",
+            systemImage: "opticaldisc.fill", tracks: tracks
+        )
+    }
+
+    /// One full album you own but haven't spun recently — album-night mode.
+    /// Picks with a day-stable seed so the suggestion holds for the evening
+    /// instead of reshuffling on every library refresh.
+    private static func tonightsSpin(
+        pool: [Track], allCounts: [String: Int], recentCounts: [String: Int]
+    ) -> SuggestedPlaylist? {
+        var albums: [String: [Track]] = [:]
+        for track in pool {
+            let k = "\(track.albumTitle.lowercased())\u{0}\(track.artist.lowercased())"
+            albums[k, default: []].append(track)
+        }
+
+        var candidates: [(tracks: [Track], weight: Double, title: String, artist: String)] = []
+        for group in albums.values {
+            guard group.count >= 5 else { continue }
+            let ordered = group.sorted {
+                if $0.trackNumber != $1.trackNumber { return $0.trackNumber < $1.trackNumber }
+                return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
+            let albumPlays = ordered.reduce(0) { $0 + (allCounts[key($1.title, $1.artist)] ?? 0) }
+            let recentPlays = ordered.reduce(0) { $0 + (recentCounts[key($1.title, $1.artist)] ?? 0) }
+            guard recentPlays == 0 else { continue }
+            let historyBoost = albumPlays > 0 ? log2(1.0 + Double(albumPlays)) : 0.35
+            let weight = historyBoost * Double(ordered.count)
+            candidates.append((ordered, weight, ordered[0].albumTitle, ordered[0].artist))
+        }
+        guard !candidates.isEmpty else { return nil }
+
+        let daySeed = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
+        let ranked = StationBuilder.weightedShuffle(candidates) { candidate in
+            let mix = stableMix(daySeed, candidate.title, candidate.artist)
+            return candidate.weight * (0.5 + mix)
+        }
+        guard let pick = ranked.first else { return nil }
+        let subtitle = pick.artist.isEmpty
+            ? "Full album night"
+            : "Full album · \(pick.artist)"
+        return SuggestedPlaylist(
+            id: "tonights-spin", title: pick.title,
+            subtitle: subtitle, systemImage: "record.circle", tracks: pick.tracks
+        )
     }
 
     private static func heavyRotation(
@@ -132,5 +202,15 @@ nonisolated enum SuggestedPlaylistService {
 
     private static func key(_ title: String, _ artist: String) -> String {
         LastFMStatsService.trackKey(title, artist)
+    }
+
+    /// Deterministic 0…1 mix for day-stable Tonight's Spin ranking (Swift's
+    /// Hasher is process-randomized and can't be used for this).
+    private static func stableMix(_ daySeed: Int, _ title: String, _ artist: String) -> Double {
+        var hash: UInt64 = 5381 &+ UInt64(daySeed)
+        for byte in "\(title.lowercased())\u{0}\(artist.lowercased())".utf8 {
+            hash = ((hash &<< 5) &+ hash) &+ UInt64(byte)
+        }
+        return Double(hash % 10_000) / 10_000.0
     }
 }

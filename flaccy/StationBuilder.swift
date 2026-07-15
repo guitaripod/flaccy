@@ -124,7 +124,51 @@ nonisolated enum StationBuilder {
         return Array(spacedByArtist(Array(weighted.prefix(limit * 2))).prefix(limit))
     }
 
+    /// Crate Dig: underplayed tracks from albums the listener already knows.
+    /// An album qualifies when it has enough tracks and enough history that at
+    /// least one song has been played; candidates are tracks that sit well below
+    /// that album's peak play count — the sides you own but never queue.
+    static func crateDig(
+        pool: [Track],
+        playCounts: [(trackTitle: String, artist: String, count: Int)],
+        excluding: Set<URL>,
+        limit: Int
+    ) -> [Track] {
+        var countByKey: [String: Int] = [:]
+        for entry in playCounts { countByKey[trackKey(entry.trackTitle, entry.artist)] = entry.count }
+
+        var albums: [String: [Track]] = [:]
+        for track in pool where !excluding.contains(track.fileURL) {
+            let key = albumKey(track.albumTitle, track.artist)
+            albums[key, default: []].append(track)
+        }
+
+        var scored: [(track: Track, weight: Double)] = []
+        for tracks in albums.values {
+            guard tracks.count >= 4 else { continue }
+            let counts = tracks.map { countByKey[trackKey($0.title, $0.artist)] ?? max(0, $0.playCount) }
+            let albumPlays = counts.reduce(0, +)
+            let peak = counts.max() ?? 0
+            guard albumPlays >= 3, peak >= 2 else { continue }
+            let threshold = max(0, peak / 3)
+            for (track, count) in zip(tracks, counts) where count <= threshold {
+                let weight = Double(albumPlays) / Double(count + 1) * (1.0 + Double(peak - count))
+                scored.append((track, max(weight, 0.1)))
+            }
+        }
+        guard !scored.isEmpty else { return [] }
+
+        let weighted = weightedShuffle(scored.map(\.track)) { track in
+            scored.first(where: { $0.track.fileURL == track.fileURL })?.weight ?? 0.1
+        }
+        return Array(spacedByArtist(Array(weighted.prefix(limit * 2))).prefix(limit))
+    }
+
     private static func trackKey(_ title: String, _ artist: String) -> String {
         "\(title.lowercased())\u{0}\(artist.lowercased())"
+    }
+
+    private static func albumKey(_ album: String, _ artist: String) -> String {
+        "\(album.lowercased())\u{0}\(artist.lowercased())"
     }
 }
