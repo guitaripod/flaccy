@@ -7,6 +7,7 @@ final class TransportButton: NSButton {
 
     private let highlightLayer = CALayer()
     private var isHovered = false
+    private var currentSymbol: (name: String, pointSize: CGFloat)?
 
     var isProminent = false {
         didSet { refreshTint() }
@@ -38,6 +39,10 @@ final class TransportButton: NSButton {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func setSymbol(_ symbolName: String, pointSize: CGFloat) {
+        if let current = currentSymbol, current.name == symbolName, current.pointSize == pointSize {
+            return
+        }
+        currentSymbol = (symbolName, pointSize)
         let config = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .medium)
         image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
             .withSymbolConfiguration(config)

@@ -38,14 +38,14 @@ final class GlassCapsuleButton: NSControl {
         stack.spacing = 6
         stack.edgeInsets = NSEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
 
-        let tint: NSColor? = prominent ? NSColor.white.withAlphaComponent(0.12) : nil
+        let tint: NSColor? = prominent ? MacColors.fill(0.12) : nil
         let surface = MacLiquidGlass.surface(hosting: stack, cornerRadius: 16, tint: tint)
         surface.translatesAutoresizingMaskIntoConstraints = false
         addSubview(surface)
         host = surface
 
         highlightView.wantsLayer = true
-        highlightView.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
+        highlightView.layer?.backgroundColor = MacColors.fill(0.12).cgColor
         highlightView.layer?.cornerRadius = 16
         highlightView.layer?.cornerCurve = .continuous
         highlightView.alphaValue = 0

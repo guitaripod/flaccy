@@ -22,6 +22,8 @@ final class ArtistDetailViewController: NSViewController {
     private let albumsShelf = AlbumShelfView()
     private let similarRow = SimilarArtistsRowView()
     private var albums: [Album] = []
+    private var popularRows: [(row: DetailTrackRowView, track: Track)] = []
+    private var popularPlayingURL: URL?
 
     init(artist: String) {
         self.artistName = artist
@@ -141,9 +143,6 @@ final class ArtistDetailViewController: NSViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(refresh), name: Library.didUpdateNotification, object: nil
         )
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(refresh), name: AudioPlayer.trackDidChange, object: nil
-        )
         refresh()
         loadPhotoAndPalette()
         loadEnrichment()
@@ -151,8 +150,36 @@ final class ArtistDetailViewController: NSViewController {
         AppLogger.info("Artist detail opened: \(artistName)", category: .ui)
     }
 
+    override func viewWillAppear() {
+        super.viewWillAppear()
+        NotificationCenter.default.removeObserver(self, name: AudioPlayer.trackDidChange, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playbackChanged), name: AudioPlayer.trackDidChange, object: nil
+        )
+        updatePlayingState()
+    }
+
+    override func viewDidDisappear() {
+        super.viewDidDisappear()
+        NotificationCenter.default.removeObserver(self, name: AudioPlayer.trackDidChange, object: nil)
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func playbackChanged() {
+        guard view.window != nil else { return }
+        updatePlayingState()
+    }
+
+    private func updatePlayingState() {
+        let newURL = AudioPlayer.shared.currentTrack?.fileURL
+        guard newURL != popularPlayingURL else { return }
+        popularPlayingURL = newURL
+        for (row, track) in popularRows {
+            row.setPlaying(track.fileURL == newURL)
+        }
     }
 
     @objc private func refresh() {
@@ -168,6 +195,7 @@ final class ArtistDetailViewController: NSViewController {
 
     private func rebuildPopular() {
         popularSection.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        popularRows = []
         let libraryTracks = albums.flatMap(\.tracks)
         let matched: [(track: Track, rank: Int)] = popularNames.compactMap { popular in
             guard let track = libraryTracks.first(where: {
@@ -184,6 +212,7 @@ final class ArtistDetailViewController: NSViewController {
         popularSection.setCustomSpacing(8, after: popularTitle)
         let queue = matched.map(\.track)
         let currentPath = AudioPlayer.shared.currentTrack?.fileURL
+        popularPlayingURL = currentPath
         for (index, entry) in matched.prefix(5).enumerated() {
             let row = DetailTrackRowView()
             row.configure(
@@ -208,6 +237,7 @@ final class ArtistDetailViewController: NSViewController {
             }
             popularSection.addArrangedSubview(row)
             row.widthAnchor.constraint(equalTo: popularSection.widthAnchor).isActive = true
+            popularRows.append((row, entry.track))
         }
     }
 

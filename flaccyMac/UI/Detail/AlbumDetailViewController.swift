@@ -21,6 +21,9 @@ final class AlbumDetailViewController: NSViewController {
     private let footerLabel = NSTextField(labelWithString: "")
     private let similarRow = SimilarArtistsRowView()
     private var trackRows: [DetailTrackRowView] = []
+    private var rowTracks: [Track] = []
+    private var rowByURL: [URL: DetailTrackRowView] = [:]
+    private var playingURL: URL?
 
     init(album: Album) {
         self.album = album
@@ -142,12 +145,6 @@ final class AlbumDetailViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         NotificationCenter.default.addObserver(
-            self, selector: #selector(playbackChanged), name: AudioPlayer.trackDidChange, object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(lovedChanged), name: LovedTracksService.didChange, object: nil
-        )
-        NotificationCenter.default.addObserver(
             self, selector: #selector(libraryUpdated), name: Library.didUpdateNotification, object: nil
         )
         populate()
@@ -155,6 +152,26 @@ final class AlbumDetailViewController: NSViewController {
         similarRow.load(artist: album.artist)
         enrichOnAppear()
         AppLogger.info("Album detail opened: \(album.title) — \(album.artist)", category: .ui)
+    }
+
+    override func viewWillAppear() {
+        super.viewWillAppear()
+        NotificationCenter.default.removeObserver(self, name: AudioPlayer.trackDidChange, object: nil)
+        NotificationCenter.default.removeObserver(self, name: LovedTracksService.didChange, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playbackChanged), name: AudioPlayer.trackDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(lovedChanged), name: LovedTracksService.didChange, object: nil
+        )
+        updatePlayingState()
+        refreshLovedHearts()
+    }
+
+    override func viewDidDisappear() {
+        super.viewDidDisappear()
+        NotificationCenter.default.removeObserver(self, name: AudioPlayer.trackDidChange, object: nil)
+        NotificationCenter.default.removeObserver(self, name: LovedTracksService.didChange, object: nil)
     }
 
     deinit {
@@ -198,6 +215,8 @@ final class AlbumDetailViewController: NSViewController {
     private func rebuildTracks() {
         trackRows.forEach { $0.removeFromSuperview() }
         trackRows = []
+        rowTracks = []
+        rowByURL = [:]
         let sorted = TrackOrdering.ordered(
             album.tracks,
             number: { $0.trackNumber },
@@ -205,6 +224,7 @@ final class AlbumDetailViewController: NSViewController {
             title: { $0.title }
         )
         let currentPath = AudioPlayer.shared.currentTrack?.fileURL
+        playingURL = currentPath
         for (index, track) in sorted.enumerated() {
             let row = DetailTrackRowView()
             row.configure(
@@ -228,6 +248,22 @@ final class AlbumDetailViewController: NSViewController {
             tracksStack.addArrangedSubview(row)
             row.widthAnchor.constraint(equalTo: tracksStack.widthAnchor).isActive = true
             trackRows.append(row)
+            rowTracks.append(track)
+            rowByURL[track.fileURL] = row
+        }
+    }
+
+    private func updatePlayingState() {
+        let newURL = AudioPlayer.shared.currentTrack?.fileURL
+        guard newURL != playingURL else { return }
+        if let old = playingURL { rowByURL[old]?.setPlaying(false) }
+        if let new = newURL { rowByURL[new]?.setPlaying(true) }
+        playingURL = newURL
+    }
+
+    private func refreshLovedHearts() {
+        for (row, track) in zip(trackRows, rowTracks) {
+            row.setLoved(LovedTracksService.shared.isLoved(track: track))
         }
     }
 
@@ -315,11 +351,13 @@ final class AlbumDetailViewController: NSViewController {
     }
 
     @objc private func playbackChanged() {
-        rebuildTracks()
+        guard view.window != nil else { return }
+        updatePlayingState()
     }
 
     @objc private func lovedChanged() {
-        rebuildTracks()
+        guard view.window != nil else { return }
+        refreshLovedHearts()
     }
 
     @objc private func libraryUpdated() {

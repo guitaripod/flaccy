@@ -886,6 +886,20 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in self?.applyState(state) }
             .store(in: &cancellables)
+        viewModel.progressPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] progress in self?.applyProgress(progress) }
+            .store(in: &cancellables)
+    }
+
+    private func applyProgress(_ progress: NowPlayingViewModel.Progress) {
+        recoverFromStaleScrubIfNeeded()
+        scrubber.setProgress(currentTime: progress.currentTime, duration: progress.duration)
+        if !scrubber.isScrubbing {
+            scrubber.accessibilityValue = progress.currentTimeFormatted
+            currentTimeLabel.text = progress.currentTimeFormatted
+            remainingTimeLabel.text = progress.remainingTimeFormatted
+        }
     }
 
     private func applyState(_ state: NowPlayingViewModel.State) {

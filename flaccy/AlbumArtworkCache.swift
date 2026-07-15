@@ -106,7 +106,7 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
     /// Decodes at most `maxPixelSize` on the longest edge without ever
     /// materializing the full-resolution bitmap, and returns an image that is
     /// already decoded so first display costs nothing on the main thread.
-    private static func decode(_ data: Data, maxPixelSize: CGFloat) -> PlatformImage? {
+    static func decode(_ data: Data, maxPixelSize: CGFloat) -> PlatformImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
             return PlatformImage(data: data)

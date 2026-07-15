@@ -25,9 +25,9 @@ final class ArtworkTileView: NSView {
         layer?.addSublayer(gradientLayer)
 
         shimmerLayer.colors = [
-            NSColor.white.withAlphaComponent(0).cgColor,
-            NSColor.white.withAlphaComponent(0.16).cgColor,
-            NSColor.white.withAlphaComponent(0).cgColor,
+            MacColors.onArtwork(0).cgColor,
+            MacColors.onArtwork(0.16).cgColor,
+            MacColors.onArtwork(0).cgColor,
         ]
         shimmerLayer.startPoint = CGPoint(x: 0, y: 0.5)
         shimmerLayer.endPoint = CGPoint(x: 1, y: 0.5)
@@ -68,7 +68,8 @@ final class ArtworkTileView: NSView {
         setShimmering(false)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        imageLayer.contents = image
+        imageLayer.contentsScale = window?.backingScaleFactor ?? 2
+        imageLayer.contents = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
         imageLayer.isHidden = false
         CATransaction.commit()
     }

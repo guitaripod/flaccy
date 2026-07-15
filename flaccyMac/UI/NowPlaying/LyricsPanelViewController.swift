@@ -24,6 +24,7 @@ final class LyricsPanelViewController: NSViewController {
     private var loadedTrackKey: String?
     private var lastUserScroll: Date = .distantPast
     private var isProgrammaticScroll = false
+    private var isActive = true
 
     override func loadView() {
         view = NSView()
@@ -113,6 +114,18 @@ final class LyricsPanelViewController: NSViewController {
         NotificationCenter.default.removeObserver(self)
     }
 
+    /// Called when this panel's Now Playing column shows or hides, so a hidden
+    /// lyrics column stops re-highlighting lines 4×/sec. Defaults to active for
+    /// the always-on window inspector.
+    func setActive(_ active: Bool) {
+        guard isActive != active else { return }
+        isActive = active
+        if active {
+            loadForCurrentTrack()
+            progressChanged()
+        }
+    }
+
     @objc private func trackChanged() {
         loadForCurrentTrack()
     }
@@ -123,7 +136,7 @@ final class LyricsPanelViewController: NSViewController {
     }
 
     @objc private func progressChanged() {
-        guard !syncedLines.isEmpty else { return }
+        guard isActive, !syncedLines.isEmpty else { return }
         let time = player.currentTime
         var index = -1
         for (offset, line) in syncedLines.enumerated() {
@@ -136,7 +149,7 @@ final class LyricsPanelViewController: NSViewController {
     }
 
     private func loadForCurrentTrack() {
-        guard isViewLoaded else { return }
+        guard isViewLoaded, isActive else { return }
         guard let track = player.currentTrack else {
             loadedTrackKey = nil
             showState(icon: "quote.bubble", text: "Nothing playing")

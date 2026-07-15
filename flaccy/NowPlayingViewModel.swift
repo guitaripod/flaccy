@@ -22,10 +22,21 @@ final class NowPlayingViewModel {
         let remainingTimeFormatted: String
     }
 
+    /// Lightweight per-tick payload so the 4×/sec progress cadence never rebuilds
+    /// the full `State` (artwork cache lookups + string joins) — only the
+    /// scrubber and time labels move on a tick.
+    struct Progress {
+        let currentTime: TimeInterval
+        let duration: TimeInterval
+        let currentTimeFormatted: String
+        let remainingTimeFormatted: String
+    }
+
     private let audioPlayer: AudioPlaying
     private var loadingArtworkKey: String?
 
     let statePublisher = PassthroughSubject<State, Never>()
+    let progressPublisher = PassthroughSubject<Progress, Never>()
 
     init(audioPlayer: AudioPlaying = AudioPlayer.shared) {
         self.audioPlayer = audioPlayer
@@ -37,7 +48,7 @@ final class NowPlayingViewModel {
             self, selector: #selector(stateChanged), name: AudioPlayer.playbackStateDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(stateChanged), name: AudioPlayer.playbackProgressDidChange, object: nil
+            self, selector: #selector(progressChanged), name: AudioPlayer.playbackProgressDidChange, object: nil
         )
     }
 
@@ -46,6 +57,8 @@ final class NowPlayingViewModel {
     }
 
     var currentState: State { buildState() }
+
+    var currentProgress: Progress { buildProgress() }
 
     func togglePlayPause() {
         audioPlayer.togglePlayPause()
@@ -104,6 +117,18 @@ final class NowPlayingViewModel {
         )
     }
 
+    private func buildProgress() -> Progress {
+        let current = audioPlayer.currentTime
+        let total = audioPlayer.duration
+        let remaining = max(0, total - current)
+        return Progress(
+            currentTime: current,
+            duration: total,
+            currentTimeFormatted: formatTime(current),
+            remainingTimeFormatted: "-\(formatTime(remaining))"
+        )
+    }
+
     private func formatTime(_ time: TimeInterval) -> String {
         let total = Int(time)
         return String(format: "%d:%02d", total / 60, total % 60)
@@ -111,5 +136,9 @@ final class NowPlayingViewModel {
 
     @objc private func stateChanged() {
         statePublisher.send(buildState())
+    }
+
+    @objc private func progressChanged() {
+        progressPublisher.send(buildProgress())
     }
 }

@@ -16,6 +16,7 @@ final class YearInMusicViewController: NSViewController {
         labels: ["Story 9:16", "Post 4:5"], trackingMode: .selectOne, target: nil, action: nil
     )
     private let previewImageView = NSImageView()
+    private let renderSpinner = NSProgressIndicator()
     private let slideTitleLabel = NSTextField(labelWithString: "")
     private let emptyState = NSStackView()
     private let sidebar = NSStackView()
@@ -32,6 +33,7 @@ final class YearInMusicViewController: NSViewController {
     private var artwork: StoryArtwork = .empty
     private var renderCache: [String: NSImage] = [:]
     private var slideButtons: [NSButton] = []
+    private var recomputeToken = 0
 
     private var selectedFormat: StoryFormat {
         formatControl.selectedSegment == 1 ? .post : .story
@@ -54,8 +56,10 @@ final class YearInMusicViewController: NSViewController {
         emptyState.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(sidebar)
         root.addSubview(previewImageView)
+        root.addSubview(renderSpinner)
         root.addSubview(slideTitleLabel)
         root.addSubview(emptyState)
+        renderSpinner.translatesAutoresizingMaskIntoConstraints = false
         slideTitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
@@ -73,6 +77,9 @@ final class YearInMusicViewController: NSViewController {
             previewImageView.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -60),
             previewImageView.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor, constant: 32),
             previewImageView.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -32),
+
+            renderSpinner.centerXAnchor.constraint(equalTo: previewImageView.centerXAnchor),
+            renderSpinner.centerYAnchor.constraint(equalTo: previewImageView.centerYAnchor),
 
             slideTitleLabel.centerXAnchor.constraint(equalTo: previewImageView.centerXAnchor),
             slideTitleLabel.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -24),
@@ -168,6 +175,10 @@ final class YearInMusicViewController: NSViewController {
 
         slideTitleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
         slideTitleLabel.textColor = NSColor.white.withAlphaComponent(0.65)
+
+        renderSpinner.style = .spinning
+        renderSpinner.controlSize = .regular
+        renderSpinner.isDisplayedWhenStopped = false
     }
 
     private func buildEmptyState() {
@@ -211,17 +222,61 @@ final class YearInMusicViewController: NSViewController {
 
     private func recomputeData() {
         let year = selectedYear
-        let computed = YearInMusicService.shared.compute(year: year)
-        data = computed
-        artwork = computed.hasContent ? StoryArtwork.resolve(for: computed) : .empty
-        renderCache = [:]
+        let durations = YearInMusicService.shared.libraryDurations()
+        let slide = selectedSlide
+        let format = selectedFormat
+        let themeIndex = selectedThemeIndex
+        recomputeToken &+= 1
+        let token = recomputeToken
+        beginRendering()
 
-        let seed = computed.topArtists.first.map { "\($0.name)\(year)" } ?? "flaccy\(year)"
-        themes = StoryTheme.all(seedPalette: ArtworkPaletteExtractor.fallbackPalette(seed: seed))
-        selectedThemeIndex = min(selectedThemeIndex, themes.count - 1)
-        rebuildSwatches()
-        refreshSelectionUI()
-        renderPreview()
+        Task.detached {
+            let computed = YearInMusicService.shared.compute(year: year, libraryDurations: durations)
+            let artwork = computed.hasContent ? StoryArtwork.resolve(for: computed) : .empty
+            let seed = computed.topArtists.first.map { "\($0.name)\(year)" } ?? "flaccy\(year)"
+            let themes = StoryTheme.all(seedPalette: ArtworkPaletteExtractor.fallbackPalette(seed: seed))
+            let resolvedIndex = min(themeIndex, themes.count - 1)
+
+            let firstRender: (image: NSImage, key: String)? = {
+                guard computed.hasContent, themes.indices.contains(resolvedIndex) else { return nil }
+                let theme = themes[resolvedIndex]
+                guard let image = StoryCardRenderer.makeImage(
+                    slide: slide, data: computed, artwork: artwork, theme: theme, format: format
+                ) else { return nil }
+                return (image, Self.cacheKey(year: computed.year, slide: slide, theme: theme, format: format))
+            }()
+
+            await MainActor.run { [weak self] in
+                guard let self, token == self.recomputeToken else { return }
+                self.data = computed
+                self.artwork = artwork
+                self.themes = themes
+                self.selectedThemeIndex = resolvedIndex
+                self.renderCache = [:]
+                if let firstRender {
+                    self.renderCache[firstRender.key] = firstRender.image
+                }
+                self.rebuildSwatches()
+                self.refreshSelectionUI()
+                self.renderPreview()
+                self.endRendering()
+            }
+        }
+    }
+
+    private func beginRendering() {
+        previewImageView.image = nil
+        emptyState.isHidden = true
+        [exportButton, copyButton, shareButton].forEach { $0.isEnabled = false }
+        renderSpinner.startAnimation(nil)
+    }
+
+    private func endRendering() {
+        renderSpinner.stopAnimation(nil)
+    }
+
+    nonisolated private static func cacheKey(year: Int, slide: StorySlide, theme: StoryTheme, format: StoryFormat) -> String {
+        "\(year)|\(slide.rawValue)|\(theme.name)|\(format == .story ? "s" : "p")"
     }
 
     private func rebuildSwatches() {
@@ -259,7 +314,7 @@ final class YearInMusicViewController: NSViewController {
     private func renderedImage(slide: StorySlide, format: StoryFormat) -> NSImage? {
         guard let data, themes.indices.contains(selectedThemeIndex) else { return nil }
         let theme = themes[selectedThemeIndex]
-        let key = "\(data.year)|\(slide.rawValue)|\(theme.name)|\(format == .story ? "s" : "p")"
+        let key = Self.cacheKey(year: data.year, slide: slide, theme: theme, format: format)
         if let cached = renderCache[key] { return cached }
         let image = StoryCardRenderer.makeImage(
             slide: slide, data: data, artwork: artwork, theme: theme, format: format

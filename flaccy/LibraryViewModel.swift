@@ -430,7 +430,7 @@ final class LibraryViewModel {
         let result: [ArtistItem]
         switch artistSort {
         case .name:
-            result = artists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            result = artists
         case .albumCount:
             result = artists.sorted {
                 $0.albumCount == $1.albumCount
@@ -565,10 +565,10 @@ final class LibraryViewModel {
             self, selector: #selector(libraryDidUpdate), name: Library.didUpdateNotification, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(playbackDidChange), name: AudioPlayer.trackDidChange, object: nil
+            self, selector: #selector(trackDidChange), name: AudioPlayer.trackDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(playbackDidChange), name: AudioPlayer.playbackStateDidChange, object: nil
+            self, selector: #selector(playbackStateDidChange), name: AudioPlayer.playbackStateDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(loadingStateChanged), name: Library.loadingStateChanged, object: nil
@@ -927,13 +927,17 @@ final class LibraryViewModel {
         cachedSongSearchKeys = nil
     }
 
-    @objc private func playbackDidChange() {
+    @objc private func trackDidChange() {
         cachedRecentAlbums = nil
         cachedRediscover = nil
         cachedAlbumPlayed = nil
         cachedMeta = nil
         if albumSort == .recentlyPlayed { cachedSortedAlbums = nil }
         if songSort == .recentlyPlayed { cachedSortedSongs = nil }
+        publishMiniPlayerState()
+    }
+
+    @objc private func playbackStateDidChange() {
         publishMiniPlayerState()
     }
 

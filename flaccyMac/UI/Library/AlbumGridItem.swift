@@ -36,7 +36,7 @@ final class AlbumGridItem: NSCollectionViewItem {
         shadowWrap.addSubview(artworkTile)
 
         badgeLabel.font = .systemFont(ofSize: 9, weight: .semibold)
-        badgeLabel.textColor = .white
+        badgeLabel.textColor = MacColors.onArtwork()
         badgeContainer.wantsLayer = true
         badgeContainer.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.55).cgColor
         badgeContainer.layer?.cornerRadius = 7

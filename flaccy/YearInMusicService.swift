@@ -5,7 +5,7 @@ import Foundation
 /// track's real length (or a typical song length) instead of undercounting.
 final class YearInMusicService {
 
-    static let shared = YearInMusicService()
+    nonisolated static let shared = YearInMusicService()
 
     private static let fallbackTrackSeconds = 210
 
@@ -107,7 +107,7 @@ final class YearInMusicService {
         )
     }
 
-    private func libraryDurations() -> [String: Int] {
+    func libraryDurations() -> [String: Int] {
         var durations: [String: Int] = [:]
         for track in Library.shared.allTracks where track.duration > 0 {
             durations[LastFMStatsService.trackKey(track.title, track.artist)] = Int(track.duration)

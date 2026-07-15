@@ -289,7 +289,7 @@ final class AudioPlayer: AudioPlaying {
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             guard self.currentTrack != nil else { return }
             self.rebuildPlayerPaused(at: resumePosition)
-            NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+            postOnMain(AudioPlayer.playbackStateDidChange)
         }
     }
     #endif
@@ -308,7 +308,21 @@ final class AudioPlayer: AudioPlaying {
     private func applyPlaybackState(_ playing: Bool) {
         isPlaying = playing
         updateNowPlayingInfo()
-        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+        postOnMain(AudioPlayer.playbackStateDidChange)
+    }
+
+    /// Delivers every state notification on the main thread. AVFoundation
+    /// delivers KVO and seek/end callbacks on internal CoreMedia queues, so a
+    /// synchronous post from there would call AppKit observers (menu bar,
+    /// transport, now playing) off the main thread and crash.
+    private func postOnMain(_ name: Notification.Name) {
+        if Thread.isMainThread {
+            NotificationCenter.default.post(name: name, object: nil)
+        } else {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: name, object: nil)
+            }
+        }
     }
 
     /// Single gating choke point for starting playback: every entry that begins
@@ -348,7 +362,7 @@ final class AudioPlayer: AudioPlaying {
         }
         feedback.medium()
         loadTrack(at: currentIndex)
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.queueDidChange)
     }
 
     func togglePlayPause() {
@@ -399,7 +413,7 @@ final class AudioPlayer: AudioPlaying {
             feedback.selection()
             player?.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
                 self?.updateNowPlayingInfo()
-                NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
+                self?.postOnMain(AudioPlayer.playbackProgressDidChange)
             }
             return
         }
@@ -417,7 +431,7 @@ final class AudioPlayer: AudioPlaying {
         let cmTime = CMTime(seconds: clampedSeekTarget(time), preferredTimescale: 600)
         player.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             self?.updateNowPlayingInfo()
-            NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
+            self?.postOnMain(AudioPlayer.playbackProgressDidChange)
         }
     }
 
@@ -465,9 +479,9 @@ final class AudioPlayer: AudioPlaying {
             preloadedIndex = nil
             isPlaying = false
             updateNowPlayingInfo()
-            NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
-            NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
-            NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+            postOnMain(AudioPlayer.trackDidChange)
+            postOnMain(AudioPlayer.playbackStateDidChange)
+            postOnMain(AudioPlayer.queueDidChange)
             return
         }
 
@@ -485,10 +499,10 @@ final class AudioPlayer: AudioPlaying {
                 player?.pause()
                 isPlaying = false
                 updateNowPlayingInfo()
-                NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+                postOnMain(AudioPlayer.playbackStateDidChange)
             }
         }
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.queueDidChange)
     }
 
     func toggleShuffle() {
@@ -520,8 +534,8 @@ final class AudioPlayer: AudioPlaying {
         }
 
         resyncPreloadedItems()
-        NotificationCenter.default.post(name: AudioPlayer.shuffleRepeatDidChange, object: nil)
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.shuffleRepeatDidChange)
+        postOnMain(AudioPlayer.queueDidChange)
     }
 
     func cycleRepeatMode() {
@@ -532,7 +546,7 @@ final class AudioPlayer: AudioPlaying {
         }
         feedback.light()
         resyncPreloadedItems()
-        NotificationCenter.default.post(name: AudioPlayer.shuffleRepeatDidChange, object: nil)
+        postOnMain(AudioPlayer.shuffleRepeatDidChange)
     }
 
     func clearUpNext() {
@@ -547,7 +561,7 @@ final class AudioPlayer: AudioPlaying {
         }
         resyncPreloadedItems()
         feedback.medium()
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.queueDidChange)
     }
 
     func jumpToIndex(_ index: Int) {
@@ -569,7 +583,7 @@ final class AudioPlayer: AudioPlaying {
         }
         resyncPreloadedItems()
         feedback.light()
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.queueDidChange)
     }
 
     func moveInQueue(from sourceIndex: Int, to destinationIndex: Int) {
@@ -586,7 +600,7 @@ final class AudioPlayer: AudioPlaying {
         }
 
         resyncPreloadedItems()
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.queueDidChange)
     }
 
     func insertNext(_ track: Track) {
@@ -600,9 +614,9 @@ final class AudioPlayer: AudioPlaying {
         }
         resyncPreloadedItems()
         feedback.light()
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.queueDidChange)
         if wasEmpty {
-            NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
+            postOnMain(AudioPlayer.trackDidChange)
         }
     }
 
@@ -612,9 +626,9 @@ final class AudioPlayer: AudioPlaying {
         originalQueue.append(track)
         resyncPreloadedItems()
         feedback.light()
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.queueDidChange)
         if wasEmpty {
-            NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
+            postOnMain(AudioPlayer.trackDidChange)
         }
     }
 
@@ -625,7 +639,7 @@ final class AudioPlayer: AudioPlaying {
             guard let self else { return }
             if let remaining = self.sleepTimerRemaining {
                 self.sleepTimerRemaining = remaining - 1
-                NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
+                postOnMain(AudioPlayer.sleepTimerDidUpdate)
                 if remaining <= 1 {
                     self.cancelSleepTimer()
                     self.userPausedPlayback = true
@@ -634,14 +648,14 @@ final class AudioPlayer: AudioPlaying {
                 }
             }
         }
-        NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
+        postOnMain(AudioPlayer.sleepTimerDidUpdate)
         feedback.light()
     }
 
     func setSleepTimerEndOfTrack() {
         cancelSleepTimer()
         sleepAtEndOfTrack = true
-        NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
+        postOnMain(AudioPlayer.sleepTimerDidUpdate)
         feedback.light()
     }
 
@@ -650,7 +664,7 @@ final class AudioPlayer: AudioPlaying {
         sleepTimer = nil
         sleepTimerRemaining = nil
         sleepAtEndOfTrack = false
-        NotificationCenter.default.post(name: AudioPlayer.sleepTimerDidUpdate, object: nil)
+        postOnMain(AudioPlayer.sleepTimerDidUpdate)
     }
 
     private func makeConfiguredPlayer(with item: AVPlayerItem) -> AVQueuePlayer {
@@ -744,8 +758,8 @@ final class AudioPlayer: AudioPlaying {
         sendNowPlayingToLastFM(track: track)
 
 
-        NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
-        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+        postOnMain(AudioPlayer.trackDidChange)
+        postOnMain(AudioPlayer.playbackStateDidChange)
     }
 
     private func handleQueueExhausted() {
@@ -783,7 +797,7 @@ final class AudioPlayer: AudioPlaying {
         player?.pause()
         isPlaying = false
         updateNowPlayingInfo()
-        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+        postOnMain(AudioPlayer.playbackStateDidChange)
     }
 
     /// Derives isPlaying from the player's timeControlStatus so system-initiated pauses (route loss, resource contention) keep app and lock-screen state in sync.
@@ -819,7 +833,7 @@ final class AudioPlayer: AudioPlaying {
             let clamped = min(1, max(0, newValue))
             UserDefaults.standard.set(clamped, forKey: Self.volumeDefaultsKey)
             player?.volume = clamped
-            NotificationCenter.default.post(name: Self.volumeDidChange, object: nil)
+            postOnMain(Self.volumeDidChange)
         }
     }
     #endif
@@ -873,8 +887,8 @@ final class AudioPlayer: AudioPlaying {
         sendNowPlayingToLastFM(track: track)
 
 
-        NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
-        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
+        postOnMain(AudioPlayer.trackDidChange)
+        postOnMain(AudioPlayer.playbackStateDidChange)
     }
 
     private func preloadNextItem(after index: Int) {
@@ -917,7 +931,7 @@ final class AudioPlayer: AudioPlaying {
             guard let self else { return }
             self.lastKnownPlaybackPosition = self.currentTime
             self.checkScrobbleCriteria()
-            NotificationCenter.default.post(name: AudioPlayer.playbackProgressDidChange, object: nil)
+            postOnMain(AudioPlayer.playbackProgressDidChange)
         }
     }
 
@@ -1320,10 +1334,10 @@ final class AudioPlayer: AudioPlaying {
             ensureArtworkLoaded(for: track)
         }
 
-        NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
-        NotificationCenter.default.post(name: AudioPlayer.playbackStateDidChange, object: nil)
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
-        NotificationCenter.default.post(name: AudioPlayer.shuffleRepeatDidChange, object: nil)
+        postOnMain(AudioPlayer.trackDidChange)
+        postOnMain(AudioPlayer.playbackStateDidChange)
+        postOnMain(AudioPlayer.queueDidChange)
+        postOnMain(AudioPlayer.shuffleRepeatDidChange)
 
         AppLogger.info("Restored queue: \(restoredTracks.count) tracks, index \(currentIndex), elapsed \(resumeElapsed)s", category: .content)
     }
@@ -1467,7 +1481,7 @@ final class AudioPlayer: AudioPlaying {
         originalQueue.append(contentsOf: fresh)
         AppLogger.info("Autoplay appended \(fresh.count) continuation tracks (queue now \(queue.count))", category: .playback)
         resyncPreloadedItems()
-        NotificationCenter.default.post(name: AudioPlayer.queueDidChange, object: nil)
+        postOnMain(AudioPlayer.queueDidChange)
         completion?(true)
         resolvePendingExhaustion(appended: true)
     }

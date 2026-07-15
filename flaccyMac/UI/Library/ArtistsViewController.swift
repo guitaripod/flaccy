@@ -16,6 +16,21 @@ final class ArtistsViewController: NSViewController {
     private let emptyStateView = LibraryEmptyStateView()
     private var dataSource: NSCollectionViewDiffableDataSource<Int, LibraryItem>?
     private var cancellables = Set<AnyCancellable>()
+    private var albumsByArtistKey: [String: [Album]]?
+
+    /// Albums for an artist, resolved through a lazily built key→albums index
+    /// (rebuilt on library changes) instead of a per-cell linear scan over the
+    /// whole library. Preserves the library's album ordering within each artist.
+    private func albums(forArtist name: String) -> [Album] {
+        if albumsByArtistKey == nil {
+            var index = [String: [Album]]()
+            for album in Library.shared.albums {
+                index[LibraryHygiene.artistKey(album.artist), default: []].append(album)
+            }
+            albumsByArtistKey = index
+        }
+        return albumsByArtistKey?[LibraryHygiene.artistKey(name)] ?? []
+    }
 
     override func loadView() {
         view = NSView()
@@ -97,7 +112,7 @@ final class ArtistsViewController: NSViewController {
             )
             guard let gridItem = cell as? ArtistGridItem,
                   case .artist(let artist) = item else { return cell }
-            let albums = Library.shared.albums.filter { LibraryHygiene.artistKey($0.artist) == LibraryHygiene.artistKey(artist.name) }
+            let albums = self?.albums(forArtist: artist.name) ?? []
             gridItem.configure(name: artist.name, albums: albums)
             gridItem.onOpen = { [weak self] in self?.onOpenArtist?(artist.name) }
             gridItem.onMenu = { [weak self, weak gridItem] in
@@ -124,6 +139,10 @@ final class ArtistsViewController: NSViewController {
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(searchQueryChanged(_:)), name: .flaccySearchQueryChanged, object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(libraryDidUpdate), name: Library.didUpdateNotification, object: nil
         )
 
         viewModel.switchSegment(to: .artists)
@@ -159,6 +178,10 @@ final class ArtistsViewController: NSViewController {
         guard let raw = sender.selectedItem?.representedObject as? String,
               let sort = LibraryViewModel.ArtistSort(rawValue: raw) else { return }
         viewModel.setArtistSort(sort)
+    }
+
+    @objc private func libraryDidUpdate() {
+        albumsByArtistKey = nil
     }
 
     @objc private func searchQueryChanged(_ notification: Notification) {
@@ -205,7 +228,7 @@ final class ArtistsViewController: NSViewController {
     }
 
     private func bulkArtistMenu(for names: [String]) -> NSMenu {
-        let tracks = names.flatMap { name in Library.shared.albums.filter { LibraryHygiene.artistKey($0.artist) == LibraryHygiene.artistKey(name) }.flatMap(\.tracks) }
+        let tracks = names.flatMap { name in albums(forArtist: name).flatMap(\.tracks) }
         let menu = NSMenu()
         menu.addItem(ClosureMenuItem(title: "Play \(names.count) Artists", systemImage: "play.fill") {
             guard !tracks.isEmpty else { return }

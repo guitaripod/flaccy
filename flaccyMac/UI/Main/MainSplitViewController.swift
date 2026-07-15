@@ -93,22 +93,24 @@ final class MainSplitViewController: NSSplitViewController {
     }
 
     private func openNowPlaying() {
-        guard nowPlayingController == nil, let contentView = view.window?.contentView else { return }
+        guard nowPlayingController == nil, let host = parent?.view else { return }
         let controller = NowPlayingViewController()
         controller.onClose = { [weak self] in
             self?.closeNowPlaying()
         }
         nowPlayingController = controller
+        view.window?.toolbar?.isVisible = false
+        parent?.addChild(controller)
         let overlay = controller.view
         overlay.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(overlay)
+        host.addSubview(overlay)
         NSLayoutConstraint.activate([
-            overlay.topAnchor.constraint(equalTo: contentView.topAnchor),
-            overlay.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            overlay.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            overlay.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            overlay.topAnchor.constraint(equalTo: host.topAnchor),
+            overlay.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+            overlay.bottomAnchor.constraint(equalTo: host.bottomAnchor),
         ])
-        controller.viewDidAppear()
+        host.layoutSubtreeIfNeeded()
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             overlay.alphaValue = 1
         } else {
@@ -127,8 +129,8 @@ final class MainSplitViewController: NSSplitViewController {
         nowPlayingController = nil
         let overlay = controller.view
         let finish = {
-            controller.viewWillDisappear()
             overlay.removeFromSuperview()
+            controller.removeFromParent()
         }
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             finish()
@@ -138,6 +140,7 @@ final class MainSplitViewController: NSSplitViewController {
                 overlay.animator().alphaValue = 0
             }, completionHandler: finish)
         }
+        view.window?.toolbar?.isVisible = true
         view.window?.makeFirstResponder(nil)
         AppLogger.info("Now Playing immersive closed", category: .ui)
     }

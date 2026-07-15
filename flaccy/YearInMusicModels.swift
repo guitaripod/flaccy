@@ -61,7 +61,7 @@ nonisolated enum StoryFormat: Sendable {
 }
 
 /// A named gradient + accent the user can pick in the share configurator.
-struct StoryTheme: Equatable {
+nonisolated struct StoryTheme: Equatable {
     let name: String
     let gradientColors: [PlatformColor]
     let accent: PlatformColor
@@ -137,7 +137,9 @@ struct StoryTheme: Equatable {
 /// through exact DB matches to the fuzzy `RecapLibraryIndex`, and finally to a
 /// representative album by the same artist — maximizing how many tiles get real
 /// art before the renderer reaches for monogram fallbacks.
-struct StoryArtwork {
+nonisolated struct StoryArtwork {
+    private static let coverMaxPixelSize: CGFloat = 600
+
     let collage: [PlatformImage?]
     let artistRows: [PlatformImage?]
     let trackRows: [PlatformImage?]
@@ -155,7 +157,7 @@ struct StoryArtwork {
                 return cached
             }
             if let data = try? DatabaseManager.shared.fetchAlbumArtwork(title: title, artist: artist) {
-                return PlatformImage(data: data)
+                return AlbumArtworkCache.decode(data, maxPixelSize: coverMaxPixelSize)
             }
             return nil
         }

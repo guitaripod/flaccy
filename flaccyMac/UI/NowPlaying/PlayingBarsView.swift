@@ -8,7 +8,7 @@ final class PlayingBarsView: NSView {
     private let barLayers: [CALayer] = (0..<3).map { _ in CALayer() }
     private var animating = false
 
-    var tint: NSColor = .white {
+    var tint: NSColor = MacColors.primaryLabel {
         didSet { barLayers.forEach { $0.backgroundColor = tint.cgColor } }
     }
 

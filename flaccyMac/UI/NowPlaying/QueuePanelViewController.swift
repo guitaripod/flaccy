@@ -15,6 +15,8 @@ final class QueuePanelViewController: NSViewController {
 
     private let player: AudioPlaying = AudioPlayer.shared
     private var rows: [Row] = []
+    private var isActive = true
+    private var needsReload = false
     private let tableView = QueueTableView()
     private let scrollView = NSScrollView()
     private let emptyLabel = NSTextField(labelWithString: "Nothing queued — play an album to fill Up Next.")
@@ -75,12 +77,23 @@ final class QueuePanelViewController: NSViewController {
         center.addObserver(self, selector: #selector(queueChanged), name: AudioPlayer.queueDidChange, object: nil)
         center.addObserver(self, selector: #selector(queueChanged), name: AudioPlayer.trackDidChange, object: nil)
         center.addObserver(self, selector: #selector(playbackStateChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
-        center.addObserver(self, selector: #selector(lovedChanged), name: LovedTracksService.didChange, object: nil)
         reload()
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Called by the immersive Now Playing view when this panel's column shows or
+    /// hides, so a hidden queue column stops rebuilding its table. Defaults to
+    /// active for the always-on window inspector.
+    func setActive(_ active: Bool) {
+        guard isActive != active else { return }
+        isActive = active
+        if active, needsReload {
+            needsReload = false
+            reload()
+        }
     }
 
     @objc private func queueChanged() {
@@ -96,11 +109,11 @@ final class QueuePanelViewController: NSViewController {
         }
     }
 
-    @objc private func lovedChanged() {
-        tableView.reloadData()
-    }
-
     private func reload() {
+        guard isActive else {
+            needsReload = true
+            return
+        }
         rows = Self.buildRows(queue: player.queue, currentIndex: player.currentIndex)
         emptyLabel.isHidden = !player.queue.isEmpty
         tableView.reloadData()

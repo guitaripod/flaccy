@@ -31,6 +31,8 @@ final class BackdropView: NSView {
 
     private static let crossfadeDuration: CFTimeInterval = 1.0
     private static let drawableScale: CGFloat = 0.5
+    private static let activeFramesPerSecond = 28
+    private static let idleFramesPerSecond = 6
 
     override init(frame frameRect: NSRect) {
         let initial = ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy").simdColors
@@ -71,6 +73,7 @@ final class BackdropView: NSView {
             colorsTo = target
             fadeStartTime = nil
         }
+        updateFrameRate()
     }
 
     func setPaused(_ paused: Bool) {
@@ -114,6 +117,12 @@ final class BackdropView: NSView {
         mtkView?.isPaused = externallyPaused || occluded
     }
 
+    private func updateFrameRate() {
+        mtkView?.preferredFramesPerSecond = fadeStartTime == nil
+            ? Self.idleFramesPerSecond
+            : Self.activeFramesPerSecond
+    }
+
     private func updateDrawableSize() {
         guard let mtkView, let window else { return }
         let scale = window.backingScaleFactor * Self.drawableScale
@@ -149,7 +158,7 @@ final class BackdropView: NSView {
 
         let metalView = MTKView(frame: bounds, device: device)
         metalView.delegate = self
-        metalView.preferredFramesPerSecond = 28
+        metalView.preferredFramesPerSecond = Self.idleFramesPerSecond
         metalView.framebufferOnly = true
         metalView.autoResizeDrawable = false
         metalView.autoresizingMask = [.width, .height]
@@ -215,6 +224,7 @@ extension BackdropView: MTKViewDelegate {
         if fade >= 1, fadeStartTime != nil {
             colorsFrom = colorsTo
             fadeStartTime = nil
+            updateFrameRate()
         }
         var uniforms = Uniforms(
             colors: (

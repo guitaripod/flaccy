@@ -53,6 +53,7 @@ final class DetailTrackRowView: NSView {
     private let durationLabel = NSTextField(labelWithString: "")
     private var isHovered = false
     private var loved = false
+    private var isPlaying = false
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -112,6 +113,21 @@ final class DetailTrackRowView: NSView {
         titleLabel.toolTip = title
         titleLabel.font = .systemFont(ofSize: 13, weight: isPlaying ? .semibold : .regular)
         durationLabel.stringValue = PlaybackFormat.duration(duration)
+        self.isPlaying = isPlaying
+        self.loved = loved
+        refreshHeart()
+    }
+
+    func setPlaying(_ playing: Bool) {
+        guard playing != isPlaying else { return }
+        isPlaying = playing
+        numberLabel.isHidden = playing
+        playingIcon.isHidden = !playing
+        titleLabel.font = .systemFont(ofSize: 13, weight: playing ? .semibold : .regular)
+    }
+
+    func setLoved(_ loved: Bool) {
+        guard loved != self.loved else { return }
         self.loved = loved
         refreshHeart()
     }
