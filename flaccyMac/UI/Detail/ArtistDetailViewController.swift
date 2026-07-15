@@ -4,7 +4,7 @@ import FlaccyCore
 /// Immersive artist page: circular photo header over a palette backdrop,
 /// genre chips, library stats, Play All / Shuffle All / Start Station glass
 /// capsules, Last.fm popular tracks matched against the library, an albums
-/// shelf and a similar-artists row — forced dark like the album detail.
+/// shelf and a similar-artists row, following the system appearance.
 final class ArtistDetailViewController: NSViewController {
 
     var onOpenAlbum: ((Album) -> Void)?
@@ -34,7 +34,6 @@ final class ArtistDetailViewController: NSViewController {
 
     override func loadView() {
         view = NSView()
-        view.appearance = NSAppearance(named: .darkAqua)
         view.wantsLayer = true
 
         backdrop.translatesAutoresizingMaskIntoConstraints = false
@@ -48,11 +47,11 @@ final class ArtistDetailViewController: NSViewController {
 
         nameLabel.stringValue = artistName
         nameLabel.font = .systemFont(ofSize: 30, weight: .bold)
-        nameLabel.textColor = .white
+        nameLabel.textColor = MacColors.primaryLabel
         nameLabel.maximumNumberOfLines = 2
 
         statsLabel.font = .systemFont(ofSize: 12.5)
-        statsLabel.textColor = NSColor.white.withAlphaComponent(0.6)
+        statsLabel.textColor = MacColors.secondaryLabel
 
         chipsRow.orientation = .horizontal
         chipsRow.spacing = 8
@@ -75,7 +74,7 @@ final class ArtistDetailViewController: NSViewController {
         headerText.translatesAutoresizingMaskIntoConstraints = false
 
         popularTitle.font = .systemFont(ofSize: 15, weight: .bold)
-        popularTitle.textColor = .white
+        popularTitle.textColor = MacColors.primaryLabel
         popularSection.orientation = .vertical
         popularSection.alignment = .leading
         popularSection.spacing = 0
@@ -330,7 +329,7 @@ final class AlbumShelfView: NSView {
         super.init(frame: frameRect)
 
         titleLabel.font = .systemFont(ofSize: 15, weight: .bold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(titleLabel)
 
@@ -403,13 +402,13 @@ private final class AlbumShelfCard: NSView {
         titleLabel.stringValue = album.title
         titleLabel.toolTip = album.title
         titleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.maximumNumberOfLines = 1
 
         yearLabel.stringValue = album.year ?? ""
         yearLabel.font = .systemFont(ofSize: 11)
-        yearLabel.textColor = NSColor.white.withAlphaComponent(0.55)
+        yearLabel.textColor = MacColors.secondaryLabel
         yearLabel.isHidden = album.year == nil
 
         let labels = NSStackView(views: [titleLabel, yearLabel])

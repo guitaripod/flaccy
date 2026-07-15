@@ -130,7 +130,16 @@ final class AmbientBackdropView: NSView {
             var r: CGFloat = 0, g: CGFloat = 0, bl: CGFloat = 0, a: CGFloat = 0
             let rgb = color.usingColorSpace(.deviceRGB) ?? color
             rgb.getRed(&r, green: &g, blue: &bl, alpha: &a)
-            return NSColor(red: r * 0.6, green: g * 0.6, blue: bl * 0.6, alpha: 1).cgColor
+            if dark {
+                return NSColor(red: r * 0.6, green: g * 0.6, blue: bl * 0.6, alpha: 1).cgColor
+            }
+            let lift: CGFloat = 0.7
+            return NSColor(
+                red: r * (1 - lift) + lift,
+                green: g * (1 - lift) + lift,
+                blue: bl * (1 - lift) + lift,
+                alpha: 1
+            ).cgColor
         }
     }
 

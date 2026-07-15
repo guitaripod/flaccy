@@ -14,7 +14,6 @@ final class ListeningGuideViewController: NSViewController {
     override func loadView() {
         let root = NSView()
         root.wantsLayer = true
-        root.appearance = NSAppearance(named: .darkAqua)
 
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(backdrop)
@@ -70,15 +69,15 @@ final class ListeningGuideViewController: NSViewController {
     private func buildContent() {
         let caption = NSTextField(labelWithString: ListeningGuideContent.caption.uppercased())
         caption.font = .systemFont(ofSize: 11, weight: .bold)
-        caption.textColor = NSColor.white.withAlphaComponent(0.55)
+        caption.textColor = MacColors.secondaryLabel
 
         let headline = NSTextField(labelWithString: ListeningGuideContent.headline)
         headline.font = .systemFont(ofSize: 28, weight: .heavy)
-        headline.textColor = .white
+        headline.textColor = MacColors.primaryLabel
 
         let intro = NSTextField(wrappingLabelWithString: ListeningGuideContent.intro)
         intro.font = .systemFont(ofSize: 13)
-        intro.textColor = NSColor.white.withAlphaComponent(0.7)
+        intro.textColor = MacColors.secondaryLabel
 
         contentStack.addArrangedSubview(caption)
         contentStack.setCustomSpacing(2, after: caption)
@@ -123,7 +122,7 @@ final class ListeningGuideViewController: NSViewController {
 
         let title = NSTextField(labelWithString: card.title)
         title.font = .systemFont(ofSize: 17, weight: .bold)
-        title.textColor = .white
+        title.textColor = MacColors.primaryLabel
 
         let header = NSStackView(views: [icon, title])
         header.orientation = .horizontal
@@ -133,7 +132,7 @@ final class ListeningGuideViewController: NSViewController {
 
         let body = NSTextField(wrappingLabelWithString: card.body)
         body.font = .systemFont(ofSize: 13)
-        body.textColor = NSColor.white.withAlphaComponent(0.8)
+        body.textColor = MacColors.secondaryLabel
         stack.addArrangedSubview(body)
         body.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -36).isActive = true
 
@@ -144,7 +143,7 @@ final class ListeningGuideViewController: NSViewController {
             for bullet in card.bullets {
                 let bulletLabel = NSTextField(wrappingLabelWithString: "•  \(bullet)")
                 bulletLabel.font = .systemFont(ofSize: 12)
-                bulletLabel.textColor = NSColor.white.withAlphaComponent(0.7)
+                bulletLabel.textColor = MacColors.secondaryLabel
                 stack.addArrangedSubview(bulletLabel)
                 bulletLabel.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -36).isActive = true
             }
@@ -165,7 +164,7 @@ final class ListeningGuideViewController: NSViewController {
             let link = NSButton(title: sourceLabel, target: self, action: #selector(openSource(_:)))
             link.bezelStyle = .inline
             link.font = .systemFont(ofSize: 11, weight: .medium)
-            link.contentTintColor = NSColor.white.withAlphaComponent(0.6)
+            link.contentTintColor = MacColors.secondaryLabel
             objc_setAssociatedObject(link, &Self.sourceURLKey, sourceURL, .OBJC_ASSOCIATION_RETAIN)
             stack.addArrangedSubview(link)
         }
@@ -176,7 +175,7 @@ final class ListeningGuideViewController: NSViewController {
     private func captionLabel(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text.uppercased())
         label.font = .systemFont(ofSize: 10, weight: .bold)
-        label.textColor = NSColor.white.withAlphaComponent(0.5)
+        label.textColor = MacColors.tertiaryLabel
         return label
     }
 

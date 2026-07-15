@@ -44,9 +44,9 @@ final class ChartsViewController: NSViewController {
     private var accent: NSColor = .systemIndigo
 
     override func loadView() {
-        let root = NSView()
+        let root = AppearanceObservingView()
         root.wantsLayer = true
-        root.appearance = NSAppearance(named: .darkAqua)
+        root.onEffectiveAppearanceChange = { [weak self] in self?.applyDynamicLayerColors() }
 
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(backdrop)
@@ -84,6 +84,13 @@ final class ChartsViewController: NSViewController {
         preferredWidth.isActive = true
 
         view = root
+        applyDynamicLayerColors()
+    }
+
+    private func applyDynamicLayerColors() {
+        view.effectiveAppearance.performAsCurrentDrawingAppearance {
+            importBanner.layer?.backgroundColor = MacColors.fill(0.08).cgColor
+        }
     }
 
     override func viewDidLoad() {
@@ -125,10 +132,10 @@ final class ChartsViewController: NSViewController {
 
         let title = NSTextField(labelWithString: "Recap")
         title.font = .systemFont(ofSize: 28, weight: .heavy)
-        title.textColor = .white
+        title.textColor = MacColors.primaryLabel
 
         profileLabel.font = .systemFont(ofSize: 12)
-        profileLabel.textColor = NSColor.white.withAlphaComponent(0.6)
+        profileLabel.textColor = MacColors.secondaryLabel
 
         shareButton.bezelStyle = .rounded
         shareButton.controlSize = .regular
@@ -185,7 +192,7 @@ final class ChartsViewController: NSViewController {
 
     private func buildImportBanner() {
         importBanner.wantsLayer = true
-        importBanner.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.08).cgColor
+        importBanner.layer?.backgroundColor = MacColors.fill(0.08).cgColor
         importBanner.layer?.cornerRadius = 14
         importBanner.layer?.cornerCurve = .continuous
 
@@ -193,10 +200,10 @@ final class ChartsViewController: NSViewController {
             systemSymbolName: "square.and.arrow.down.on.square", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 16, weight: .medium)
-        icon.contentTintColor = .white
+        icon.contentTintColor = MacColors.primaryLabel
 
         importLabel.font = .systemFont(ofSize: 12, weight: .medium)
-        importLabel.textColor = .white
+        importLabel.textColor = MacColors.primaryLabel
         importLabel.maximumNumberOfLines = 2
         importLabel.lineBreakMode = .byWordWrapping
 
@@ -257,13 +264,13 @@ final class ChartsViewController: NSViewController {
             systemSymbolName: "chart.bar.xaxis", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
-        icon.contentTintColor = NSColor.white.withAlphaComponent(0.4)
+        icon.contentTintColor = MacColors.tertiaryLabel
         let title = NSTextField(labelWithString: "No listening history yet")
         title.font = .systemFont(ofSize: 18, weight: .semibold)
-        title.textColor = .white
+        title.textColor = MacColors.primaryLabel
         let subtitle = NSTextField(labelWithString: "Play some music, or connect Last.fm in Settings and import your history.")
         subtitle.font = .systemFont(ofSize: 12)
-        subtitle.textColor = NSColor.white.withAlphaComponent(0.6)
+        subtitle.textColor = MacColors.secondaryLabel
         emptyState.orientation = .vertical
         emptyState.alignment = .centerX
         emptyState.spacing = 8
@@ -277,7 +284,7 @@ final class ChartsViewController: NSViewController {
     private func sectionCard(title: String, content: NSView) -> NSView {
         let header = NSTextField(labelWithString: title)
         header.font = .systemFont(ofSize: 17, weight: .bold)
-        header.textColor = .white
+        header.textColor = MacColors.primaryLabel
         content.translatesAutoresizingMaskIntoConstraints = false
         let stack = NSStackView(views: [header, content])
         stack.orientation = .vertical
@@ -310,7 +317,7 @@ final class ChartsViewController: NSViewController {
 
     private func heatmapCardContent() -> NSView {
         streakLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        streakLabel.textColor = .white
+        streakLabel.textColor = MacColors.primaryLabel
         heatmapView.translatesAutoresizingMaskIntoConstraints = false
         heatmapView.heightAnchor.constraint(equalToConstant: 130).isActive = true
         let stack = NSStackView(views: [streakLabel, heatmapView])
@@ -325,9 +332,9 @@ final class ChartsViewController: NSViewController {
     private func personaCardContent() -> NSView {
         personaIcon.symbolConfiguration = .init(pointSize: 22, weight: .semibold)
         personaTitleLabel.font = .systemFont(ofSize: 19, weight: .bold)
-        personaTitleLabel.textColor = .white
+        personaTitleLabel.textColor = MacColors.primaryLabel
         personaBlurbLabel.font = .systemFont(ofSize: 12)
-        personaBlurbLabel.textColor = NSColor.white.withAlphaComponent(0.65)
+        personaBlurbLabel.textColor = MacColors.secondaryLabel
         let text = NSStackView(views: [personaTitleLabel, personaBlurbLabel])
         text.orientation = .vertical
         text.alignment = .leading
@@ -406,11 +413,11 @@ final class ChartsViewController: NSViewController {
         icon.contentTintColor = accent
         let valueLabel = NSTextField(labelWithString: value)
         valueLabel.font = .systemFont(ofSize: 24, weight: .heavy)
-        valueLabel.textColor = .white
+        valueLabel.textColor = MacColors.primaryLabel
         valueLabel.lineBreakMode = .byTruncatingTail
         let captionLabel = NSTextField(labelWithString: caption)
         captionLabel.font = .systemFont(ofSize: 10, weight: .bold)
-        captionLabel.textColor = NSColor.white.withAlphaComponent(0.55)
+        captionLabel.textColor = MacColors.secondaryLabel
         let stack = NSStackView(views: [icon, valueLabel, captionLabel])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -480,11 +487,11 @@ final class ChartsViewController: NSViewController {
 
         let name = NSTextField(labelWithString: album.name)
         name.font = .systemFont(ofSize: 12, weight: .semibold)
-        name.textColor = .white
+        name.textColor = MacColors.primaryLabel
         name.lineBreakMode = .byTruncatingTail
         let detail = NSTextField(labelWithString: "\(album.artistName) · \(RecapFormat.compact(album.playCount)) plays")
         detail.font = .systemFont(ofSize: 10)
-        detail.textColor = NSColor.white.withAlphaComponent(0.6)
+        detail.textColor = MacColors.secondaryLabel
         detail.lineBreakMode = .byTruncatingTail
 
         let stack = ClickableStackView(views: [artwork, name, detail])
@@ -520,7 +527,7 @@ final class ChartsViewController: NSViewController {
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         titleLabel.lineBreakMode = .byTruncatingTail
         let text = NSStackView(views: [titleLabel])
         text.orientation = .vertical
@@ -529,14 +536,14 @@ final class ChartsViewController: NSViewController {
         if let subtitle {
             let subtitleLabel = NSTextField(labelWithString: subtitle)
             subtitleLabel.font = .systemFont(ofSize: 11)
-            subtitleLabel.textColor = NSColor.white.withAlphaComponent(0.6)
+            subtitleLabel.textColor = MacColors.secondaryLabel
             subtitleLabel.lineBreakMode = .byTruncatingTail
             text.addArrangedSubview(subtitleLabel)
         }
 
         let playsLabel = NSTextField(labelWithString: "\(RecapFormat.compact(plays)) plays")
         playsLabel.font = .systemFont(ofSize: 11, weight: .medium)
-        playsLabel.textColor = NSColor.white.withAlphaComponent(0.55)
+        playsLabel.textColor = MacColors.secondaryLabel
         playsLabel.setContentHuggingPriority(.required, for: .horizontal)
         playsLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
@@ -637,6 +644,18 @@ final class ChartsViewController: NSViewController {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([image])
         MacToast.show("Recap card copied", style: .success, in: view.window)
+    }
+}
+
+/// Root view that forwards effective-appearance changes so layer-backed colors
+/// can be recomputed for the active appearance.
+final class AppearanceObservingView: NSView {
+
+    var onEffectiveAppearanceChange: (() -> Void)?
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        onEffectiveAppearanceChange?()
     }
 }
 

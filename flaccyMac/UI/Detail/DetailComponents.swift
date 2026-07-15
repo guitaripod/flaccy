@@ -1,13 +1,13 @@
 import AppKit
 
-/// Glass metadata pills for the dark detail headers — the AppKit counterpart
+/// Glass metadata pills for the detail headers — the AppKit counterpart
 /// of the iOS DetailChip capsules.
 enum MacDetailChip {
 
     static func pill(text: String, systemImage: String?) -> NSView {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: 11.5, weight: .semibold)
-        label.textColor = .white
+        label.textColor = MacColors.primaryLabel
 
         var views: [NSView] = []
         if let systemImage {
@@ -15,7 +15,7 @@ enum MacDetailChip {
                 systemSymbolName: systemImage, accessibilityDescription: nil
             ) ?? NSImage())
             icon.symbolConfiguration = .init(pointSize: 10, weight: .semibold)
-            icon.contentTintColor = .white
+            icon.contentTintColor = MacColors.primaryLabel
             views.append(icon)
         }
         views.append(label)
@@ -62,16 +62,16 @@ final class DetailTrackRowView: NSView {
         layer?.cornerCurve = .continuous
 
         numberLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
-        numberLabel.textColor = NSColor.white.withAlphaComponent(0.55)
+        numberLabel.textColor = MacColors.secondaryLabel
         numberLabel.alignment = .right
 
         playingIcon.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Now playing")
         playingIcon.symbolConfiguration = .init(pointSize: 10, weight: .semibold)
-        playingIcon.contentTintColor = .white
+        playingIcon.contentTintColor = MacColors.primaryLabel
         playingIcon.isHidden = true
 
         titleLabel.font = .systemFont(ofSize: 13)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         titleLabel.lineBreakMode = .byTruncatingTail
 
         heartButton.isBordered = false
@@ -80,7 +80,7 @@ final class DetailTrackRowView: NSView {
         heartButton.action = #selector(heartClicked)
 
         durationLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
-        durationLabel.textColor = NSColor.white.withAlphaComponent(0.55)
+        durationLabel.textColor = MacColors.secondaryLabel
 
         for view in [numberLabel, playingIcon, titleLabel, heartButton, durationLabel] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -145,8 +145,16 @@ final class DetailTrackRowView: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         isHovered = true
-        layer?.backgroundColor = NSColor.white.withAlphaComponent(0.09).cgColor
+        layer?.backgroundColor = MacColors.fill(0.09).cgColor
         refreshHeart()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        guard isHovered else { return }
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = MacColors.fill(0.09).cgColor
+        }
     }
 
     override func mouseExited(with event: NSEvent) {
@@ -178,7 +186,7 @@ final class DetailTrackRowView: NSView {
         )
         heartButton.contentTintColor = loved
             ? NSColor(red: 1, green: 0.28, blue: 0.42, alpha: 1)
-            : NSColor.white.withAlphaComponent(0.5)
+            : MacColors.tertiaryLabel
     }
 }
 
@@ -196,7 +204,7 @@ final class SimilarArtistsRowView: NSView {
         isHidden = true
 
         titleLabel.font = .systemFont(ofSize: 15, weight: .bold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(titleLabel)
 
@@ -257,7 +265,7 @@ private final class ArtistBubbleView: NSView {
 
         label.stringValue = name
         label.font = .systemFont(ofSize: 11, weight: .medium)
-        label.textColor = NSColor.white.withAlphaComponent(0.85)
+        label.textColor = MacColors.primaryLabel
         label.alignment = .center
         label.lineBreakMode = .byTruncatingTail
         label.translatesAutoresizingMaskIntoConstraints = false

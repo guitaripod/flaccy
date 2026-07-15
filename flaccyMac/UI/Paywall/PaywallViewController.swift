@@ -66,7 +66,6 @@ final class PaywallViewController: NSViewController {
     override func loadView() {
         let root = NSView()
         root.wantsLayer = true
-        root.appearance = NSAppearance(named: .darkAqua)
         root.translatesAutoresizingMaskIntoConstraints = false
         root.widthAnchor.constraint(equalToConstant: 460).isActive = true
         root.heightAnchor.constraint(equalToConstant: 640).isActive = true
@@ -83,7 +82,7 @@ final class PaywallViewController: NSViewController {
             target: self, action: #selector(closeTapped)
         )
         closeButton.isBordered = false
-        closeButton.contentTintColor = NSColor.white.withAlphaComponent(0.5)
+        closeButton.contentTintColor = MacColors.tertiaryLabel
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(closeButton)
 
@@ -151,19 +150,19 @@ final class PaywallViewController: NSViewController {
             string: "FLACCY LIFETIME",
             attributes: [
                 .font: NSFont.systemFont(ofSize: 12, weight: .bold),
-                .foregroundColor: NSColor.white.withAlphaComponent(0.65),
+                .foregroundColor: MacColors.secondaryLabel,
                 .kern: 2.2,
             ]
         )
 
         let title = NSTextField(wrappingLabelWithString: "Own your music.\nForever.")
         title.font = .systemFont(ofSize: 32, weight: .heavy)
-        title.textColor = .white
+        title.textColor = MacColors.primaryLabel
 
         let featureCard = buildFeatureCard()
 
         priceLabel.font = .systemFont(ofSize: 15, weight: .semibold)
-        priceLabel.textColor = .white
+        priceLabel.textColor = MacColors.primaryLabel
         priceLabel.alignment = .center
 
         purchaseButton.bezelStyle = .rounded
@@ -174,13 +173,13 @@ final class PaywallViewController: NSViewController {
         purchaseButton.font = .systemFont(ofSize: 15, weight: .bold)
 
         restoreButton.isBordered = false
-        restoreButton.contentTintColor = NSColor.white.withAlphaComponent(0.7)
+        restoreButton.contentTintColor = MacColors.secondaryLabel
         restoreButton.font = .systemFont(ofSize: 12, weight: .medium)
         restoreButton.target = self
         restoreButton.action = #selector(restoreTapped)
 
         statusLabel.font = .systemFont(ofSize: 11, weight: .medium)
-        statusLabel.textColor = NSColor.white.withAlphaComponent(0.55)
+        statusLabel.textColor = MacColors.secondaryLabel
         statusLabel.alignment = .center
 
         spinner.style = .spinning
@@ -189,11 +188,11 @@ final class PaywallViewController: NSViewController {
 
         let privacy = NSButton(title: "Privacy Policy", target: self, action: #selector(openPrivacy))
         privacy.isBordered = false
-        privacy.contentTintColor = NSColor.white.withAlphaComponent(0.5)
+        privacy.contentTintColor = MacColors.tertiaryLabel
         privacy.font = .systemFont(ofSize: 11)
         let terms = NSButton(title: "Terms of Use", target: self, action: #selector(openTerms))
         terms.isBordered = false
-        terms.contentTintColor = NSColor.white.withAlphaComponent(0.5)
+        terms.contentTintColor = MacColors.tertiaryLabel
         terms.font = .systemFont(ofSize: 11)
         let legalRow = NSStackView(views: [privacy, terms])
         legalRow.orientation = .horizontal
@@ -256,10 +255,10 @@ final class PaywallViewController: NSViewController {
 
         let titleLabel = NSTextField(labelWithString: feature.title)
         titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         let detailLabel = NSTextField(wrappingLabelWithString: feature.detail)
         detailLabel.font = .systemFont(ofSize: 11)
-        detailLabel.textColor = NSColor.white.withAlphaComponent(0.6)
+        detailLabel.textColor = MacColors.secondaryLabel
         let text = NSStackView(views: [titleLabel, detailLabel])
         text.orientation = .vertical
         text.alignment = .leading

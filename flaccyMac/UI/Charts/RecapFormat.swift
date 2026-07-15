@@ -30,20 +30,12 @@ nonisolated extension NSImage {
     }
 }
 
-/// White-on-dark glass card used across the Recap dashboard and guide pages.
+/// Adaptive glass card used across the Recap dashboard and guide pages.
 @MainActor
 enum RecapCard {
 
     static func make(cornerRadius: CGFloat = 18) -> NSView {
-        let card = NSView()
-        card.wantsLayer = true
-        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
-        card.layer?.backgroundColor = NSColor.white.withAlphaComponent(reduceTransparency ? 0.1 : 0.06).cgColor
-        card.layer?.cornerRadius = cornerRadius
-        card.layer?.cornerCurve = .continuous
-        card.layer?.borderWidth = 0.5
-        card.layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
-        return card
+        RecapCardView(cornerRadius: cornerRadius)
     }
 
     static func host(_ content: NSView, cornerRadius: CGFloat = 18) -> NSView {
@@ -60,6 +52,35 @@ enum RecapCard {
     }
 }
 
+/// Layer-backed glass card that recomputes its fill and border for the active
+/// appearance, honoring Reduce Transparency.
+final class RecapCardView: NSView {
+
+    init(cornerRadius: CGFloat) {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.cornerRadius = cornerRadius
+        layer?.cornerCurve = .continuous
+        layer?.borderWidth = 0.5
+        applyColors()
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyColors()
+    }
+
+    private func applyColors() {
+        let reduceTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = MacColors.fill(reduceTransparency ? 0.1 : 0.06).cgColor
+            layer?.borderColor = MacColors.fill(0.08).cgColor
+        }
+    }
+}
+
 /// Skeleton block with a sweeping shimmer highlight; static under Reduce Motion.
 final class ShimmerBlock: NSView {
 
@@ -68,22 +89,33 @@ final class ShimmerBlock: NSView {
     init(cornerRadius: CGFloat = 10) {
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.white.withAlphaComponent(0.07).cgColor
         layer?.cornerRadius = cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
-        gradient.colors = [
-            NSColor.white.withAlphaComponent(0).cgColor,
-            NSColor.white.withAlphaComponent(0.09).cgColor,
-            NSColor.white.withAlphaComponent(0).cgColor,
-        ]
         gradient.startPoint = CGPoint(x: 0, y: 0.5)
         gradient.endPoint = CGPoint(x: 1, y: 0.5)
         gradient.locations = [0, 0.5, 1]
         layer?.addSublayer(gradient)
+        applyColors()
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyColors()
+    }
+
+    private func applyColors() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = MacColors.fill(0.07).cgColor
+            gradient.colors = [
+                MacColors.fill(0).cgColor,
+                MacColors.fill(0.09).cgColor,
+                MacColors.fill(0).cgColor,
+            ]
+        }
+    }
 
     override func layout() {
         super.layout()

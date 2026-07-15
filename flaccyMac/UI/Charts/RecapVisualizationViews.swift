@@ -25,6 +25,11 @@ final class MacListeningClockView: NSView {
         rebuildTooltips()
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let rect = bounds
@@ -33,7 +38,7 @@ final class MacListeningClockView: NSView {
         let inner = outer * 0.42
         let maxCount = max(buckets.max() ?? 0, 1)
 
-        let trackColor = NSColor.white.withAlphaComponent(0.08)
+        let trackColor = MacColors.fill(0.08)
         for hour in 0..<24 {
             let angle = drawAngle(hour: hour)
             let fraction = CGFloat(buckets[hour]) / CGFloat(maxCount)
@@ -73,11 +78,11 @@ final class MacListeningClockView: NSView {
         let text = String(format: "%02d:00", peak)
         let caption = "PEAK"
         let valueAttrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 20, weight: .bold), .foregroundColor: NSColor.white,
+            .font: NSFont.systemFont(ofSize: 20, weight: .bold), .foregroundColor: MacColors.primaryLabel,
         ]
         let captionAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
-            .foregroundColor: NSColor.white.withAlphaComponent(0.6),
+            .foregroundColor: MacColors.secondaryLabel,
         ]
         let valueSize = (text as NSString).size(withAttributes: valueAttrs)
         let captionSize = (caption as NSString).size(withAttributes: captionAttrs)
@@ -153,6 +158,11 @@ final class MacHeatmapView: NSView {
         rebuildTooltips()
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let grid = gridMetrics() else { return }
         let monthFormatter = DateFormatter()
@@ -169,7 +179,7 @@ final class MacHeatmapView: NSView {
                     at: CGPoint(x: x, y: 0),
                     withAttributes: [
                         .font: NSFont.systemFont(ofSize: 9, weight: .semibold),
-                        .foregroundColor: NSColor.white.withAlphaComponent(0.45),
+                        .foregroundColor: MacColors.tertiaryLabel,
                     ]
                 )
             }
@@ -242,7 +252,7 @@ final class MacHeatmapView: NSView {
     }
 
     private func color(for count: Int, max: Int) -> NSColor {
-        guard count > 0 else { return NSColor.white.withAlphaComponent(0.06) }
+        guard count > 0 else { return MacColors.fill(0.06) }
         let fraction = min(1, CGFloat(count) / CGFloat(max))
         return tint.withAlphaComponent(0.25 + 0.65 * fraction)
     }

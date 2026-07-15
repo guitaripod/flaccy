@@ -28,7 +28,6 @@ final class WantlistViewController: NSViewController {
     override func loadView() {
         let root = NSView()
         root.wantsLayer = true
-        root.appearance = NSAppearance(named: .darkAqua)
 
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(backdrop)
@@ -133,7 +132,7 @@ final class WantlistViewController: NSViewController {
 
         let title = NSTextField(labelWithString: "Wantlist")
         title.font = .systemFont(ofSize: 28, weight: .heavy)
-        title.textColor = .white
+        title.textColor = MacColors.primaryLabel
 
         spinner.style = .spinning
         spinner.controlSize = .small
@@ -173,15 +172,15 @@ final class WantlistViewController: NSViewController {
             systemSymbolName: "sparkles.rectangle.stack", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
-        icon.contentTintColor = NSColor.white.withAlphaComponent(0.4)
+        icon.contentTintColor = MacColors.tertiaryLabel
         let title = NSTextField(labelWithString: "Nothing on the wantlist yet")
         title.font = .systemFont(ofSize: 17, weight: .semibold)
-        title.textColor = .white
+        title.textColor = MacColors.primaryLabel
         let subtitle = NSTextField(
             labelWithString: "Connect Last.fm in Settings for suggestions from your history, or add wanted albums manually."
         )
         subtitle.font = .systemFont(ofSize: 12)
-        subtitle.textColor = NSColor.white.withAlphaComponent(0.6)
+        subtitle.textColor = MacColors.secondaryLabel
         subtitle.alignment = .center
         emptyState.orientation = .vertical
         emptyState.alignment = .centerX
@@ -201,7 +200,7 @@ final class WantlistViewController: NSViewController {
         for (section, items) in sections {
             let header = NSTextField(labelWithString: section.headerTitle)
             header.font = .systemFont(ofSize: 17, weight: .bold)
-            header.textColor = .white
+            header.textColor = MacColors.primaryLabel
             sectionsStack.addArrangedSubview(header)
 
             if usesGrid(section) {
@@ -278,15 +277,15 @@ final class WantlistViewController: NSViewController {
 
         let name = NSTextField(labelWithString: album.name)
         name.font = .systemFont(ofSize: 12, weight: .semibold)
-        name.textColor = .white
+        name.textColor = MacColors.primaryLabel
         name.lineBreakMode = .byTruncatingTail
         let artist = NSTextField(labelWithString: album.artist)
         artist.font = .systemFont(ofSize: 10)
-        artist.textColor = NSColor.white.withAlphaComponent(0.65)
+        artist.textColor = MacColors.secondaryLabel
         artist.lineBreakMode = .byTruncatingTail
         let reason = NSTextField(labelWithString: meta.reason)
         reason.font = .systemFont(ofSize: 9)
-        reason.textColor = NSColor.white.withAlphaComponent(0.45)
+        reason.textColor = MacColors.tertiaryLabel
         reason.lineBreakMode = .byTruncatingTail
 
         let stack = ClickableStackView(views: [artwork, name, artist, reason])
@@ -342,11 +341,11 @@ final class WantlistViewController: NSViewController {
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         titleLabel.lineBreakMode = .byTruncatingTail
         let subtitleLabel = NSTextField(labelWithString: subtitle)
         subtitleLabel.font = .systemFont(ofSize: 11)
-        subtitleLabel.textColor = NSColor.white.withAlphaComponent(0.6)
+        subtitleLabel.textColor = MacColors.secondaryLabel
         subtitleLabel.lineBreakMode = .byTruncatingTail
         let text = NSStackView(views: [titleLabel, subtitleLabel])
         text.orientation = .vertical
@@ -538,7 +537,7 @@ final class HoverActionButton: NSControl {
         layer?.cornerRadius = 12
         icon.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: tooltip)
         icon.symbolConfiguration = .init(pointSize: 13, weight: .medium)
-        icon.contentTintColor = NSColor.white.withAlphaComponent(0.7)
+        icon.contentTintColor = MacColors.secondaryLabel
         icon.translatesAutoresizingMaskIntoConstraints = false
         addSubview(icon)
         toolTip = tooltip
@@ -565,14 +564,16 @@ final class HoverActionButton: NSControl {
 
     override func mouseEntered(with event: NSEvent) {
         isHovered = true
-        layer?.backgroundColor = NSColor.white.withAlphaComponent(0.14).cgColor
-        icon.contentTintColor = .white
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = MacColors.fill(0.14).cgColor
+        }
+        icon.contentTintColor = MacColors.primaryLabel
     }
 
     override func mouseExited(with event: NSEvent) {
         isHovered = false
         layer?.backgroundColor = NSColor.clear.cgColor
-        icon.contentTintColor = NSColor.white.withAlphaComponent(0.7)
+        icon.contentTintColor = MacColors.secondaryLabel
     }
 
     override func mouseDown(with event: NSEvent) {

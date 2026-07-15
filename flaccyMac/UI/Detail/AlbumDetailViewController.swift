@@ -4,7 +4,7 @@ import FlaccyCore
 /// Immersive album page: palette-driven ambient backdrop, artwork card,
 /// metadata chips with Last.fm enrichment, glass play/shuffle capsules, a
 /// full track list with loved hearts and playing indicator, and a
-/// similar-artists shelf — forced dark like the iOS detail screens.
+/// similar-artists shelf, following the system appearance.
 final class AlbumDetailViewController: NSViewController {
 
     var onSelectArtist: ((String) -> Void)?
@@ -34,7 +34,6 @@ final class AlbumDetailViewController: NSViewController {
 
     override func loadView() {
         view = NSView()
-        view.appearance = NSAppearance(named: .darkAqua)
         view.wantsLayer = true
 
         backdrop.translatesAutoresizingMaskIntoConstraints = false
@@ -48,18 +47,18 @@ final class AlbumDetailViewController: NSViewController {
         artworkTile.translatesAutoresizingMaskIntoConstraints = false
 
         titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
-        titleLabel.textColor = .white
+        titleLabel.textColor = MacColors.primaryLabel
         titleLabel.maximumNumberOfLines = 2
 
         artistButton.isBordered = false
-        artistButton.contentTintColor = NSColor.white.withAlphaComponent(0.85)
+        artistButton.contentTintColor = MacColors.primaryLabel
         artistButton.font = .systemFont(ofSize: 16, weight: .medium)
         artistButton.target = self
         artistButton.action = #selector(artistClicked)
         artistButton.setButtonType(.momentaryChange)
 
         metaLabel.font = .systemFont(ofSize: 12.5)
-        metaLabel.textColor = NSColor.white.withAlphaComponent(0.6)
+        metaLabel.textColor = MacColors.secondaryLabel
 
         chipsRow.orientation = .horizontal
         chipsRow.spacing = 8
@@ -84,7 +83,7 @@ final class AlbumDetailViewController: NSViewController {
         tracksStack.translatesAutoresizingMaskIntoConstraints = false
 
         footerLabel.font = .systemFont(ofSize: 12)
-        footerLabel.textColor = NSColor.white.withAlphaComponent(0.5)
+        footerLabel.textColor = MacColors.tertiaryLabel
         footerLabel.translatesAutoresizingMaskIntoConstraints = false
 
         similarRow.translatesAutoresizingMaskIntoConstraints = false

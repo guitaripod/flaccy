@@ -42,7 +42,6 @@ final class YearInMusicViewController: NSViewController {
     override func loadView() {
         let root = NSView()
         root.wantsLayer = true
-        root.appearance = NSAppearance(named: .darkAqua)
 
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(backdrop)
@@ -104,7 +103,7 @@ final class YearInMusicViewController: NSViewController {
     private func buildSidebar() {
         let title = NSTextField(labelWithString: "Year in Music")
         title.font = .systemFont(ofSize: 22, weight: .heavy)
-        title.textColor = .white
+        title.textColor = MacColors.primaryLabel
 
         yearPopUp.target = self
         yearPopUp.action = #selector(yearChanged)
@@ -157,7 +156,7 @@ final class YearInMusicViewController: NSViewController {
     private func labeled(_ caption: String, _ content: NSView) -> NSView {
         let label = NSTextField(labelWithString: caption)
         label.font = .systemFont(ofSize: 10, weight: .bold)
-        label.textColor = NSColor.white.withAlphaComponent(0.5)
+        label.textColor = MacColors.tertiaryLabel
         let stack = NSStackView(views: [label, content])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -174,7 +173,7 @@ final class YearInMusicViewController: NSViewController {
         previewImageView.layer?.shadowOpacity = 1
 
         slideTitleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-        slideTitleLabel.textColor = NSColor.white.withAlphaComponent(0.65)
+        slideTitleLabel.textColor = MacColors.secondaryLabel
 
         renderSpinner.style = .spinning
         renderSpinner.controlSize = .regular
@@ -186,13 +185,13 @@ final class YearInMusicViewController: NSViewController {
             systemSymbolName: "calendar.badge.clock", accessibilityDescription: nil
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
-        icon.contentTintColor = NSColor.white.withAlphaComponent(0.4)
+        icon.contentTintColor = MacColors.tertiaryLabel
         let title = NSTextField(labelWithString: "No listening history for this year")
         title.font = .systemFont(ofSize: 17, weight: .semibold)
-        title.textColor = .white
+        title.textColor = MacColors.primaryLabel
         let subtitle = NSTextField(labelWithString: "Play some music or import your Last.fm history in Settings.")
         subtitle.font = .systemFont(ofSize: 12)
-        subtitle.textColor = NSColor.white.withAlphaComponent(0.6)
+        subtitle.textColor = MacColors.secondaryLabel
         emptyState.orientation = .vertical
         emptyState.alignment = .centerX
         emptyState.spacing = 8
@@ -388,6 +387,7 @@ final class ThemeSwatchButton: NSButton {
 
     private let theme: StoryTheme
     private let isSelectedSwatch: Bool
+    private let gradient = CAGradientLayer()
 
     init(theme: StoryTheme, selected: Bool) {
         self.theme = theme
@@ -400,21 +400,29 @@ final class ThemeSwatchButton: NSButton {
         widthAnchor.constraint(equalToConstant: 26).isActive = true
         heightAnchor.constraint(equalToConstant: 26).isActive = true
 
-        let gradient = CAGradientLayer()
         gradient.frame = CGRect(x: 0, y: 0, width: 26, height: 26)
         gradient.cornerRadius = 13
         gradient.colors = theme.gradientColors.map { ($0.usingColorSpace(.deviceRGB) ?? $0).cgColor }
         gradient.startPoint = CGPoint(x: 0, y: 1)
         gradient.endPoint = CGPoint(x: 1, y: 0)
         gradient.borderWidth = selected ? 2 : 0.5
-        gradient.borderColor = selected
-            ? NSColor.white.cgColor
-            : NSColor.white.withAlphaComponent(0.3).cgColor
+        effectiveAppearance.performAsCurrentDrawingAppearance { applyBorderColor() }
         layer?.addSublayer(gradient)
         setAccessibilityLabel("Theme \(theme.name)\(selected ? ", selected" : "")")
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        effectiveAppearance.performAsCurrentDrawingAppearance { applyBorderColor() }
+    }
+
+    private func applyBorderColor() {
+        gradient.borderColor = isSelectedSwatch
+            ? MacColors.primaryLabel.cgColor
+            : MacColors.fill(0.3).cgColor
+    }
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .pointingHand)
