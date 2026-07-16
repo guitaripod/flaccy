@@ -28,9 +28,20 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let cards = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(14)
-        .homogeneous(true)
         .build();
-    shelf.append(&cards);
+    // Horizontal scroller so three Made-for-You cards never force the albums
+    // page wider than the window.
+    let cards_scroll = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Automatic)
+        .vscrollbar_policy(gtk::PolicyType::Never)
+        .hexpand(true)
+        .propagate_natural_width(false)
+        .propagate_natural_height(true)
+        .child(&cards)
+        .build();
+    cards_scroll.add_css_class("suggested-scroll");
+    shelf.append(&cards_scroll);
+    shelf.set_hexpand(true);
 
     let computing = Rc::new(Cell::new(false));
     let rerun_wanted = Rc::new(Cell::new(false));
@@ -118,6 +129,8 @@ fn card(ui: &Rc<Ui>, playlist: &SuggestedPlaylist) -> gtk::Widget {
     let card = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(12)
+        .width_request(240)
+        .hexpand(false)
         .build();
     card.add_css_class("suggested-card");
 

@@ -1,5 +1,32 @@
 use crate::player::RepeatMode;
+use gtk::glib;
 use gtk::prelude::*;
+use std::cell::Cell;
+use std::rc::Rc;
+
+/// Grow/shrink a GridView's column count with its allocated width so natural
+/// size stays modest (high max_columns × tile width is what locked the window
+/// open before). Starts from whatever max_columns the grid was built with.
+pub fn bind_adaptive_grid_columns(grid: &gtk::GridView, tile_width: i32) {
+    let tile_width = tile_width.max(96);
+    let last_width = Rc::new(Cell::new(0i32));
+    grid.connect_realize(move |grid| {
+        let last_width = Rc::clone(&last_width);
+        grid.add_tick_callback(move |grid, _| {
+            let width = grid.width();
+            if width <= 1 || width == last_width.get() {
+                return glib::ControlFlow::Continue;
+            }
+            last_width.set(width);
+            let cols = ((width.max(1) as f64) / (tile_width as f64)).floor() as u32;
+            let cols = cols.clamp(1, 14);
+            if grid.max_columns() != cols {
+                grid.set_max_columns(cols);
+            }
+            glib::ControlFlow::Continue
+        });
+    });
+}
 
 /// Reflects Last.fm love state on a heart button; shared by the mini transport
 /// and the full-window player so both stay identical.

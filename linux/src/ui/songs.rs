@@ -10,6 +10,51 @@ use std::rc::Rc;
 
 type MenuHandler = dyn Fn(&Track, &gtk::Widget, f64, f64);
 
+/// Drop secondary columns as the songs table loses width so Title (and
+/// eventually Artist) stay readable instead of crushing into ellipsis soup.
+fn install_songs_column_adaptation(
+    column_view: &gtk::ColumnView,
+    album: &gtk::ColumnViewColumn,
+    plays: &gtk::ColumnViewColumn,
+    quality: &gtk::ColumnViewColumn,
+    artist: &gtk::ColumnViewColumn,
+    duration: &gtk::ColumnViewColumn,
+) {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let last_width = Rc::new(Cell::new(0i32));
+    let album = album.clone();
+    let plays = plays.clone();
+    let quality = quality.clone();
+    let artist = artist.clone();
+    let duration = duration.clone();
+    column_view.connect_realize(move |view| {
+        let last_width = Rc::clone(&last_width);
+        let album = album.clone();
+        let plays = plays.clone();
+        let quality = quality.clone();
+        let artist = artist.clone();
+        let duration = duration.clone();
+        view.add_tick_callback(move |view, _| {
+            let width = view.width();
+            if width == last_width.get() || width <= 1 {
+                return gtk::glib::ControlFlow::Continue;
+            }
+            last_width.set(width);
+            let wide = width >= 900;
+            let medium = width >= 640;
+            let compact = width >= 420;
+            quality.set_visible(wide);
+            plays.set_visible(wide);
+            album.set_visible(medium);
+            duration.set_visible(compact);
+            artist.set_visible(compact);
+            gtk::glib::ControlFlow::Continue
+        });
+    });
+}
+
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let store = gio::ListStore::new::<BoxedAnyObject>();
     let loved_only = Rc::new(std::cell::Cell::new(false));
@@ -89,28 +134,31 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         Some(Rc::clone(&menu_handler)),
     );
     column_view.append_column(&title_column);
-    column_view.append_column(&string_column(
+    let artist_column = string_column(
         "Artist",
         true,
         |track| track.artist.clone(),
         |a, b| a.artist.to_lowercase().cmp(&b.artist.to_lowercase()),
         None,
-    ));
-    column_view.append_column(&string_column(
+    );
+    column_view.append_column(&artist_column);
+    let album_column = string_column(
         "Album",
         true,
         |track| track.album.clone(),
         |a, b| a.album.to_lowercase().cmp(&b.album.to_lowercase()),
         None,
-    ));
-    column_view.append_column(&string_column(
+    );
+    column_view.append_column(&album_column);
+    let duration_column = string_column(
         "Duration",
         false,
         |track| format_time(track.duration),
         |a, b| a.duration.partial_cmp(&b.duration).unwrap_or(Ordering::Equal),
         None,
-    ));
-    column_view.append_column(&string_column(
+    );
+    column_view.append_column(&duration_column);
+    let plays_column = string_column(
         "Plays",
         false,
         |track| {
@@ -122,8 +170,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         },
         |a, b| a.play_count.cmp(&b.play_count),
         None,
-    ));
-    column_view.append_column(&string_column(
+    );
+    column_view.append_column(&plays_column);
+    let quality_column = string_column(
         "Quality",
         false,
         |track| track.quality_badge().unwrap_or_default(),
@@ -134,9 +183,18 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             score(a).cmp(&score(b))
         },
         None,
-    ));
+    );
+    column_view.append_column(&quality_column);
 
     column_view.sort_by_column(Some(&title_column), gtk::SortType::Ascending);
+    install_songs_column_adaptation(
+        &column_view,
+        &album_column,
+        &plays_column,
+        &quality_column,
+        &artist_column,
+        &duration_column,
+    );
 
     {
         let ui = Rc::clone(ui);
@@ -189,6 +247,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
 
     let stack = gtk::Stack::new();
+    stack.set_hhomogeneous(false);
+    stack.set_vhomogeneous(false);
     stack.add_named(&empty, Some("empty"));
     stack.add_named(&list_box, Some("list"));
 

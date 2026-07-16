@@ -89,18 +89,109 @@
 
 /* ---- transport bar ------------------------------------------------------ */
 .transport {
-  padding: 10px 16px;
+  padding: 8px 16px 10px 16px;
   background-image:
     linear-gradient(180deg, alpha(@flaccy_accent, 0.10), transparent 62%),
     linear-gradient(180deg, alpha(#fff, 0.03), transparent 8%);
   box-shadow:
     0 -1px 0 0 alpha(@window_fg_color, 0.07),
     0 -10px 30px alpha(#000, 0.18);
-  transition: background-image 600ms ease;
+  transition: background-image 600ms ease, padding 160ms ease;
 }
 
 .transport-title {
   font-weight: 600;
+}
+
+/* Three-column strip: left meta | expanding center (play cluster) | right extras.
+   Left/right are size-grouped in code so the play button stays centered. */
+.transport-top {
+  min-width: 0;
+}
+
+.transport-left,
+.transport-right,
+.transport-center,
+.transport-left-clamp {
+  min-width: 0;
+}
+
+.transport-seek {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.transport.transport-compact {
+  padding: 6px 12px 8px 12px;
+}
+
+.transport.transport-slim {
+  padding: 5px 10px 7px 10px;
+}
+
+.transport.transport-slim .play-pill {
+  min-width: 42px;
+  min-height: 42px;
+}
+
+.transport.transport-tiny {
+  padding: 4px 8px 6px 8px;
+}
+
+.transport.transport-tiny .play-pill {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+/* Soften header/search/grid when the shell is phone-narrow. */
+.flaccy-narrow .album-grid {
+  margin: 12px;
+}
+
+.flaccy-narrow .flaccy-search {
+  min-width: 0;
+}
+
+.flaccy-search {
+  min-width: 0;
+}
+
+.library-split {
+  min-width: 0;
+}
+
+.flaccy-sidebar {
+  min-width: 0;
+}
+
+.np-art-frame {
+  min-width: 0;
+}
+
+.suggested-scroll {
+  min-width: 0;
+}
+
+.album-grid {
+  min-width: 0;
+}
+
+.flaccy-narrow .np-title {
+  font-size: 22px;
+}
+
+.flaccy-narrow .np-artist {
+  font-size: 14px;
+}
+
+.flaccy-narrow .np-play {
+  min-width: 56px;
+  min-height: 56px;
+}
+
+.flaccy-narrow .np-side {
+  margin: 8px 4px;
+  border-radius: 12px;
 }
 
 .track-number {
@@ -364,6 +455,7 @@ overlay-split-view > .sidebar-pane:backdrop {
 
 /* ---- made-for-you / suggested cards ------------------------------------- */
 .suggested-card {
+  min-width: 0;
   background-color: alpha(@flaccy_surface, 0.5);
   background-image: linear-gradient(150deg, alpha(@accent_bg_color, 0.12), transparent 55%);
   box-shadow:

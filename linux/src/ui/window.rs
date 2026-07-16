@@ -5,7 +5,7 @@ use crate::ui::{self, Ui};
 use adw::prelude::*;
 use gtk::glib;
 use gtk::{gdk, gio};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
@@ -26,10 +26,17 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .default_width(width)
         .default_height(height)
         .build();
+    // Soft floor only — content reflows so the window can shrink well below
+    // the desktop default without clipping into unusable chrome.
+    window.set_size_request(320, 400);
     window.add_css_class("flaccy-window");
 
     let nav = adw::NavigationView::new();
+    nav.set_hexpand(true);
+    nav.set_vexpand(true);
     let shell = adw::NavigationView::new();
+    shell.set_hexpand(true);
+    shell.set_vexpand(true);
     let ui = Rc::new(Ui {
         core: Rc::clone(core),
         nav: nav.clone(),
@@ -41,6 +48,14 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     let header = adw::HeaderBar::builder()
         .title_widget(&adw::WindowTitle::new("Flaccy", ""))
         .build();
+
+    let sidebar_toggle = gtk::ToggleButton::builder()
+        .icon_name("sidebar-show-symbolic")
+        .tooltip_text("Show Sidebar")
+        .visible(false)
+        .build();
+    sidebar_toggle.add_css_class("flat");
+    header.pack_start(&sidebar_toggle);
 
     let rescan_button = gtk::Button::from_icon_name("view-refresh-symbolic");
     rescan_button.set_tooltip_text(Some("Rescan Library"));
@@ -96,8 +111,17 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     let search = gtk::SearchEntry::builder()
         .placeholder_text("Search")
-        .width_request(220)
+        .hexpand(true)
         .build();
+    search.add_css_class("flaccy-search");
+    // Cap search growth so a wide window still leaves room for the title/menu;
+    // min width is intentionally soft so narrow windows can reclaim the bar.
+    let search_clamp = adw::Clamp::builder()
+        .maximum_size(260)
+        .tightening_threshold(140)
+        .child(&search)
+        .build();
+    search_clamp.set_hexpand(false);
     {
         let ui = Rc::clone(&ui);
         search.connect_search_changed(move |entry| {
@@ -106,7 +130,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
             ui.core.hub.emit(&AppEvent::SearchChanged(text));
         });
     }
-    header.pack_end(&search);
+    header.pack_end(&search_clamp);
 
     let progress = gtk::ProgressBar::builder().hexpand(true).build();
     progress.add_css_class("osd");
@@ -149,6 +173,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .transition_type(gtk::StackTransitionType::Crossfade)
         .hexpand(true)
         .vexpand(true)
+        // Only the visible page sizes the shell — otherwise Songs' wide
+        // ColumnView (and other pages) permanently floor the window width.
+        .hhomogeneous(false)
+        .vhomogeneous(false)
         .build();
     stack.add_named(&ui::albums::build(&ui), Some("albums"));
     stack.add_named(&ui::songs::build(&ui), Some("songs"));
@@ -160,9 +188,9 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     let sidebar = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::Single)
-        .width_request(200)
         .build();
     sidebar.add_css_class("navigation-sidebar");
+    sidebar.add_css_class("flaccy-sidebar");
     for (icon, label) in [
         ("media-optical-symbolic", "Albums"),
         ("audio-x-generic-symbolic", "Songs"),
@@ -175,25 +203,6 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         sidebar.append(&sidebar_row(icon, label));
     }
     attach_wantlist_badge(core, &sidebar);
-    {
-        let stack = stack.clone();
-        let nav = nav.clone();
-        let core_for_rows = Rc::clone(core);
-        sidebar.connect_row_selected(move |_, row| {
-            let Some(row) = row else { return };
-            let names = [
-                "albums", "songs", "artists", "playlists", "stats", "wantlist", "guide",
-            ];
-            let index = row.index().clamp(0, 6) as usize;
-            core_for_rows.config.borrow_mut().sidebar_index = index as i32;
-            core_for_rows.save_config();
-            crate::logger::info("ui", &format!("sidebar selected: {}", names[index]));
-            if nav.visible_page().and_then(|p| p.tag()).as_deref() != Some("root") {
-                nav.pop_to_tag("root");
-            }
-            stack.set_visible_child_name(names[index]);
-        });
-    }
     {
         let sidebar = sidebar.clone();
         let saved_index = core.config.borrow().sidebar_index.clamp(0, 6);
@@ -217,14 +226,89 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .build();
     nav.add(&root_page);
 
-    let content_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     let sidebar_scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
+        .vexpand(true)
         .child(&sidebar)
         .build();
-    content_box.append(&sidebar_scroll);
-    content_box.append(&gtk::Separator::new(gtk::Orientation::Vertical));
-    content_box.append(&nav);
+    // Library nav as an OverlaySplitView so it can collapse into a hamburger
+    // drawer below the desktop breakpoint without reserving permanent width.
+    let library_split = adw::OverlaySplitView::builder()
+        .content(&nav)
+        .sidebar(&sidebar_scroll)
+        .sidebar_position(gtk::PackType::Start)
+        .show_sidebar(true)
+        .collapsed(false)
+        .max_sidebar_width(240.0)
+        .min_sidebar_width(168.0)
+        .enable_hide_gesture(true)
+        // Edge-swipe open fights the hamburger at phone widths and can leave
+        // the drawer stuck open with the toggle out of sync.
+        .enable_show_gesture(false)
+        .build();
+    library_split.add_css_class("library-split");
+
+    // Single source of truth between the hamburger and OverlaySplitView.
+    // Without this, set_active ↔ show-sidebar notifies re-enter and can force
+    // the drawer open (or permanent) at the narrowest widths.
+    let sidebar_sync = Rc::new(Cell::new(false));
+    {
+        let stack = stack.clone();
+        let nav = nav.clone();
+        let core_for_rows = Rc::clone(core);
+        let library_split = library_split.clone();
+        let sidebar_sync = Rc::clone(&sidebar_sync);
+        let sidebar_toggle = sidebar_toggle.clone();
+        sidebar.connect_row_selected(move |_, row| {
+            let Some(row) = row else { return };
+            let names = [
+                "albums", "songs", "artists", "playlists", "stats", "wantlist", "guide",
+            ];
+            let index = row.index().clamp(0, 6) as usize;
+            core_for_rows.config.borrow_mut().sidebar_index = index as i32;
+            core_for_rows.save_config();
+            crate::logger::info("ui", &format!("sidebar selected: {}", names[index]));
+            if nav.visible_page().and_then(|p| p.tag()).as_deref() != Some("root") {
+                nav.pop_to_tag("root");
+            }
+            stack.set_visible_child_name(names[index]);
+            // Drawer mode: pick a destination then get out of the way.
+            if library_split.is_collapsed() && library_split.shows_sidebar() {
+                sidebar_sync.set(true);
+                library_split.set_show_sidebar(false);
+                sidebar_toggle.set_active(false);
+                sidebar_sync.set(false);
+            }
+        });
+    }
+
+    {
+        let library_split = library_split.clone();
+        let sidebar_sync = Rc::clone(&sidebar_sync);
+        sidebar_toggle.connect_toggled(move |button| {
+            if sidebar_sync.get() {
+                return;
+            }
+            sidebar_sync.set(true);
+            library_split.set_show_sidebar(button.is_active());
+            sidebar_sync.set(false);
+        });
+    }
+    {
+        let sidebar_toggle = sidebar_toggle.clone();
+        let sidebar_sync = Rc::clone(&sidebar_sync);
+        library_split.connect_show_sidebar_notify(move |split| {
+            if sidebar_sync.get() {
+                return;
+            }
+            let shown = split.shows_sidebar();
+            if sidebar_toggle.is_active() != shown {
+                sidebar_sync.set(true);
+                sidebar_toggle.set_active(shown);
+                sidebar_sync.set(false);
+            }
+        });
+    }
 
     let side_stack = gtk::Stack::builder()
         .transition_type(gtk::StackTransitionType::Crossfade)
@@ -239,18 +323,18 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         Some("queue"),
     );
 
-    let split = adw::OverlaySplitView::builder()
-        .content(&content_box)
+    let panel_split = adw::OverlaySplitView::builder()
+        .content(&library_split)
         .sidebar(&side_stack)
         .sidebar_position(gtk::PackType::End)
         .show_sidebar(false)
-        .max_sidebar_width(400.0)
-        .min_sidebar_width(320.0)
+        .max_sidebar_width(360.0)
+        .min_sidebar_width(260.0)
         .build();
     {
         let side_stack = side_stack.clone();
         let hub = Rc::clone(&core.hub);
-        core.hub.subscribe_widget(&split, move |split, event| match event {
+        core.hub.subscribe_widget(&panel_split, move |split, event| match event {
             AppEvent::LyricsToggled(show) => {
                 if *show {
                     if side_stack.visible_child_name().as_deref() == Some("queue")
@@ -283,7 +367,17 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     let inner = gtk::Box::new(gtk::Orientation::Vertical, 0);
     inner.append(&progress_revealer);
-    inner.append(&split);
+    inner.append(&panel_split);
+
+    install_shell_breakpoints(
+        &window,
+        &library_split,
+        &panel_split,
+        &sidebar_toggle,
+        &search_clamp,
+        &search,
+        &sidebar_sync,
+    );
 
     let toast_overlay = adw::ToastOverlay::new();
     toast_overlay.set_child(Some(&inner));
@@ -346,6 +440,133 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     }
 
     window
+}
+
+const SHELL_COLLAPSE_WIDTH: f64 = 820.0;
+
+/// Collapse the library nav and shrink secondary chrome once the window leaves
+/// the comfortable desktop width. All toggle ↔ split writes go through
+/// `sidebar_sync` so apply/unapply never fights the hamburger.
+fn install_shell_breakpoints(
+    window: &adw::ApplicationWindow,
+    library_split: &adw::OverlaySplitView,
+    panel_split: &adw::OverlaySplitView,
+    sidebar_toggle: &gtk::ToggleButton,
+    search_clamp: &adw::Clamp,
+    search: &gtk::SearchEntry,
+    sidebar_sync: &Rc<Cell<bool>>,
+) {
+    let enter_compact = {
+        let library_split = library_split.clone();
+        let sidebar_toggle = sidebar_toggle.clone();
+        let search_clamp = search_clamp.clone();
+        let sidebar_sync = Rc::clone(sidebar_sync);
+        Rc::new(move || {
+            sidebar_sync.set(true);
+            library_split.set_collapsed(true);
+            library_split.set_show_sidebar(false);
+            sidebar_toggle.set_visible(true);
+            sidebar_toggle.set_active(false);
+            sidebar_sync.set(false);
+            search_clamp.set_maximum_size(180);
+            crate::logger::info("ui", "shell compact: library sidebar collapsed");
+        })
+    };
+    let enter_comfortable = {
+        let library_split = library_split.clone();
+        let sidebar_toggle = sidebar_toggle.clone();
+        let search_clamp = search_clamp.clone();
+        let sidebar_sync = Rc::clone(sidebar_sync);
+        Rc::new(move || {
+            sidebar_sync.set(true);
+            library_split.set_collapsed(false);
+            library_split.set_show_sidebar(true);
+            sidebar_toggle.set_visible(false);
+            sidebar_toggle.set_active(false);
+            sidebar_sync.set(false);
+            search_clamp.set_maximum_size(260);
+            crate::logger::info("ui", "shell comfortable: library sidebar restored");
+        })
+    };
+
+    let collapse = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+        adw::BreakpointConditionLengthType::MaxWidth,
+        SHELL_COLLAPSE_WIDTH,
+        adw::LengthUnit::Px,
+    ));
+    {
+        let enter_compact = Rc::clone(&enter_compact);
+        collapse.connect_apply(move |_| enter_compact());
+    }
+    {
+        let enter_comfortable = Rc::clone(&enter_comfortable);
+        collapse.connect_unapply(move |_| enter_comfortable());
+    }
+    window.add_breakpoint(collapse);
+
+    // Recovery: if layout thrashing uncollapses us while the window is still
+    // phone-narrow, force drawer mode again so the sidebar never gets stuck
+    // permanent without a close affordance.
+    {
+        let library_split = library_split.clone();
+        let enter_compact = Rc::clone(&enter_compact);
+        let last = Rc::new(Cell::new(0i32));
+        window.connect_realize(move |window| {
+            let library_split = library_split.clone();
+            let enter_compact = Rc::clone(&enter_compact);
+            let last = Rc::clone(&last);
+            window.add_tick_callback(move |window, _| {
+                let width = window.width();
+                if width <= 1 || width == last.get() {
+                    return glib::ControlFlow::Continue;
+                }
+                last.set(width);
+                // Only force when desktop mode leaked into a narrow width.
+                // If already collapsed (drawer open or closed), leave user alone.
+                if (width as f64) <= SHELL_COLLAPSE_WIDTH && !library_split.is_collapsed() {
+                    enter_compact();
+                }
+                glib::ControlFlow::Continue
+            });
+        });
+    }
+
+    let narrow = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+        adw::BreakpointConditionLengthType::MaxWidth,
+        520.0,
+        adw::LengthUnit::Px,
+    ));
+    {
+        let window = window.clone();
+        let panel_split = panel_split.clone();
+        let search_clamp = search_clamp.clone();
+        let search = search.clone();
+        narrow.connect_apply(move |_| {
+            panel_split.set_min_sidebar_width(200.0);
+            panel_split.set_max_sidebar_width(260.0);
+            search_clamp.set_maximum_size(120);
+            search.set_placeholder_text(Some(""));
+            window.add_css_class("flaccy-narrow");
+        });
+    }
+    {
+        let window = window.clone();
+        let panel_split = panel_split.clone();
+        let search_clamp = search_clamp.clone();
+        let search = search.clone();
+        narrow.connect_unapply(move |_| {
+            panel_split.set_min_sidebar_width(260.0);
+            panel_split.set_max_sidebar_width(360.0);
+            search.set_placeholder_text(Some("Search"));
+            if (window.width() as f64) > SHELL_COLLAPSE_WIDTH {
+                search_clamp.set_maximum_size(260);
+            } else {
+                search_clamp.set_maximum_size(180);
+            }
+            window.remove_css_class("flaccy-narrow");
+        });
+    }
+    window.add_breakpoint(narrow);
 }
 
 /// Keeps an unseen-count badge on the Wantlist sidebar row, cleared when the
@@ -672,18 +893,16 @@ fn present_about(window: &adw::ApplicationWindow) {
         .license_type(gtk::License::Gpl30)
         .release_notes_version(env!("CARGO_PKG_VERSION"))
         .release_notes(
-            "<p>A remastered, full-window Now Playing with lyrics and queue \
-             side by side.</p>\
+            "<p>Adaptive shell — reflows from a phone-width drawer up to a full \
+             desktop layout.</p>\
              <ul>\
-             <li>Toggle Lyrics and Up Next to bring them in beside the cover — \
-             show any one, two, or all three at once, each an equal column, \
-             sliding in over the blurred wash.</li>\
-             <li>Tap a synced lyric to seek; reorder, remove, or jump around \
-             the queue — all without leaving the player.</li>\
-             <li>One persistent transport underneath, and Escape or the back \
-             button returns you to the library.</li>\
-             <li>Adaptive theme engine — the whole app retints to the album \
-             that's playing, or pick one of seven curated palettes.</li>\
+             <li>Library sidebar collapses into a hamburger drawer under \
+             ~820px; pick a destination and it gets out of the way.</li>\
+             <li>Transport stays balanced: meta left, play cluster centered, \
+             extras right — volume and chrome return when you grow the window \
+             again.</li>\
+             <li>Album grids, songs columns, and Now Playing art scale with \
+             available space instead of locking a minimum width.</li>\
              </ul>",
         )
         .build();

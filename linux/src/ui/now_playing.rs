@@ -59,6 +59,9 @@ pub fn present(ui: &Rc<Ui>) {
     lyrics.widget.add_css_class("np-view");
     lyrics.widget.add_css_class("np-side");
     lyrics.widget.set_hexpand(true);
+    // Soft floor so a side column can shrink under a phone-width window
+    // instead of locking the whole Now Playing page open.
+    lyrics.widget.set_size_request(160, -1);
     let lyrics_reveal = gtk::Revealer::builder()
         .transition_type(gtk::RevealerTransitionType::SlideRight)
         .transition_duration(260)
@@ -70,6 +73,7 @@ pub fn present(ui: &Rc<Ui>) {
     queue.widget.add_css_class("np-view");
     queue.widget.add_css_class("np-side");
     queue.widget.set_hexpand(true);
+    queue.widget.set_size_request(160, -1);
     let queue_reveal = gtk::Revealer::builder()
         .transition_type(gtk::RevealerTransitionType::SlideLeft)
         .transition_duration(260)
@@ -116,6 +120,9 @@ pub fn present(ui: &Rc<Ui>) {
             set_active(active);
         });
     }
+    // Below this width, keep at most one side panel open so art stays readable.
+    install_now_playing_width_adaptation(&content, &lyrics_toggle, &queue_toggle);
+
     let toggles = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     toggles.set_halign(gtk::Align::Center);
     toggles.add_css_class("np-toggles");
@@ -189,6 +196,8 @@ pub fn present(ui: &Rc<Ui>) {
 
 /// The centered player lens: hero art, big title/artist, album line, and a
 /// hi-res quality chip. Controls live in the persistent transport dock below.
+/// Cover art grows with available width (square) so a tiny window still shows
+/// a usable hero instead of locking the page to a 340px floor.
 fn build_art_lens() -> (
     gtk::Widget,
     gtk::Picture,
@@ -198,25 +207,43 @@ fn build_art_lens() -> (
     gtk::Label,
 ) {
     let art = gtk::Picture::builder()
-        .width_request(340)
-        .height_request(340)
         .content_fit(gtk::ContentFit::Cover)
-        .halign(gtk::Align::Center)
+        .hexpand(true)
+        .vexpand(true)
         .build();
     art.set_overflow(gtk::Overflow::Hidden);
     art.add_css_class("np-art");
+
+    let art_frame = gtk::AspectFrame::builder()
+        .ratio(1.0)
+        .obey_child(false)
+        .halign(gtk::Align::Center)
+        .valign(gtk::Align::Center)
+        .hexpand(true)
+        .width_request(140)
+        .height_request(140)
+        .child(&art)
+        .build();
+    art_frame.add_css_class("np-art-frame");
 
     let title = gtk::Label::builder()
         .xalign(0.5)
         .justify(gtk::Justification::Center)
         .wrap(true)
+        .wrap_mode(pango::WrapMode::WordChar)
         .ellipsize(pango::EllipsizeMode::End)
         .lines(2)
         .build();
     title.add_css_class("np-title");
-    let artist = gtk::Label::builder().xalign(0.5).build();
+    let artist = gtk::Label::builder()
+        .xalign(0.5)
+        .ellipsize(pango::EllipsizeMode::End)
+        .build();
     artist.add_css_class("np-artist");
-    let meta = gtk::Label::builder().xalign(0.5).build();
+    let meta = gtk::Label::builder()
+        .xalign(0.5)
+        .ellipsize(pango::EllipsizeMode::End)
+        .build();
     meta.add_css_class("np-meta");
     meta.add_css_class("dim");
     let quality = gtk::Label::new(None);
@@ -226,6 +253,7 @@ fn build_art_lens() -> (
 
     let text_box = gtk::Box::new(gtk::Orientation::Vertical, 6);
     text_box.set_halign(gtk::Align::Center);
+    text_box.set_hexpand(true);
     text_box.append(&title);
     text_box.append(&artist);
     text_box.append(&meta);
@@ -233,18 +261,23 @@ fn build_art_lens() -> (
 
     let column = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
-        .spacing(22)
-        .halign(gtk::Align::Center)
+        .spacing(18)
+        .halign(gtk::Align::Fill)
         .valign(gtk::Align::Center)
-        .margin_top(36)
-        .margin_bottom(36)
-        .margin_start(28)
-        .margin_end(28)
+        .hexpand(true)
+        .margin_top(24)
+        .margin_bottom(24)
+        .margin_start(16)
+        .margin_end(16)
         .build();
-    column.append(&art);
+    column.append(&art_frame);
     column.append(&text_box);
 
-    let clamp = adw::Clamp::builder().maximum_size(560).child(&column).build();
+    let clamp = adw::Clamp::builder()
+        .maximum_size(480)
+        .tightening_threshold(200)
+        .child(&column)
+        .build();
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
         .hexpand(true)
@@ -252,6 +285,36 @@ fn build_art_lens() -> (
         .child(&clamp)
         .build();
     (scroll.upcast(), art, title, artist, meta, quality)
+}
+
+/// When Now Playing is squeezed, auto-collapse side panels so the hero art is
+/// never crushed between two full columns on a narrow window.
+fn install_now_playing_width_adaptation(
+    content: &gtk::Box,
+    lyrics_toggle: &gtk::ToggleButton,
+    queue_toggle: &gtk::ToggleButton,
+) {
+    let last_width = Rc::new(Cell::new(0i32));
+    let lyrics_toggle = lyrics_toggle.clone();
+    let queue_toggle = queue_toggle.clone();
+    content.connect_realize(move |widget| {
+        let lyrics_toggle = lyrics_toggle.clone();
+        let queue_toggle = queue_toggle.clone();
+        let last_width = Rc::clone(&last_width);
+        widget.add_tick_callback(move |widget, _| {
+            let width = widget.width();
+            if width == last_width.get() || width <= 1 {
+                return glib::ControlFlow::Continue;
+            }
+            last_width.set(width);
+            if width < 640 {
+                if lyrics_toggle.is_active() && queue_toggle.is_active() {
+                    queue_toggle.set_active(false);
+                }
+            }
+            glib::ControlFlow::Continue
+        });
+    });
 }
 
 /// A pill toggle carrying an icon + label, returned with its label so a live

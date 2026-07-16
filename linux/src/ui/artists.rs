@@ -129,8 +129,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let grid = gtk::GridView::builder()
         .model(&selection)
         .factory(&factory)
-        .min_columns(2)
-        .max_columns(10)
+        .min_columns(1)
+        .max_columns(3)
         .single_click_activate(true)
         .margin_top(24)
         .margin_bottom(24)
@@ -138,6 +138,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .margin_end(24)
         .build();
     grid.add_css_class("album-grid");
+    crate::ui::controls::bind_adaptive_grid_columns(&grid, 156);
     {
         let ui = Rc::clone(ui);
         grid.connect_activate(move |grid, position| {
@@ -188,6 +189,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     grid_box.append(&scroll);
 
     let stack = gtk::Stack::new();
+    stack.set_hhomogeneous(false);
+    stack.set_vhomogeneous(false);
     stack.add_named(&empty, Some("empty"));
     stack.add_named(&grid_box, Some("grid"));
 
@@ -340,13 +343,14 @@ fn build_artist_cell() -> gtk::Box {
     let cell = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(8)
-        .width_request(168)
+        .width_request(140)
         .halign(gtk::Align::Center)
         .valign(gtk::Align::Start)
+        .hexpand(true)
         .build();
     cell.add_css_class("album-tile");
 
-    let avatar = adw::Avatar::new(120, None, true);
+    let avatar = adw::Avatar::new(112, None, true);
     avatar.set_halign(gtk::Align::Center);
     cell.append(&avatar);
 
@@ -354,7 +358,8 @@ fn build_artist_cell() -> gtk::Box {
         .halign(gtk::Align::Center)
         .justify(gtk::Justification::Center)
         .ellipsize(pango::EllipsizeMode::End)
-        .max_width_chars(18)
+        .max_width_chars(16)
+        .hexpand(true)
         .build();
     name.add_css_class("album-title");
     cell.append(&name);

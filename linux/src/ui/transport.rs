@@ -10,16 +10,20 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Instant;
 
+/// Bottom transport: classic three-column strip (meta | controls | extras)
+/// with a full-width seek row underneath. Left and right share a size group so
+/// the play cluster stays optically centered; width tiers hide extras without
+/// breaking that balance.
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
-    let bar = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(14)
+    let root = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(4)
         .build();
-    bar.add_css_class("transport");
+    root.add_css_class("transport");
 
     let artwork = gtk::Picture::builder()
-        .width_request(52)
-        .height_request(52)
+        .width_request(44)
+        .height_request(44)
         .content_fit(gtk::ContentFit::Cover)
         .build();
     artwork.set_overflow(gtk::Overflow::Hidden);
@@ -48,18 +52,23 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .label("Not Playing")
         .xalign(0.0)
         .ellipsize(pango::EllipsizeMode::End)
+        .max_width_chars(22)
         .build();
     title.add_css_class("transport-title");
     let artist = gtk::Label::builder()
         .label("")
         .xalign(0.0)
         .ellipsize(pango::EllipsizeMode::End)
+        .max_width_chars(24)
         .build();
     artist.add_css_class("dim");
     artist.add_css_class("caption");
 
-    let labels = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    let labels = gtk::Box::new(gtk::Orientation::Vertical, 1);
     labels.set_valign(gtk::Align::Center);
+    labels.set_hexpand(true);
+    // Allow labels to shrink inside the left column instead of inflating it.
+    labels.set_overflow(gtk::Overflow::Hidden);
     labels.append(&title);
     labels.append(&artist);
 
@@ -80,20 +89,33 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
-    let left = gtk::Box::builder()
+    // Left column: track meta. Clamped so a long title never steals the
+    // center; does not expand — center owns free space so play stays put.
+    let left_inner = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
-        .spacing(12)
-        .width_request(280)
+        .spacing(10)
+        .halign(gtk::Align::Start)
+        .valign(gtk::Align::Center)
         .build();
-    left.append(&art_overlay);
-    left.append(&labels);
-    left.append(&love);
+    left_inner.add_css_class("transport-left");
+    left_inner.append(&art_overlay);
+    left_inner.append(&labels);
+    left_inner.append(&love);
+    let left = adw::Clamp::builder()
+        .maximum_size(260)
+        .tightening_threshold(140)
+        .halign(gtk::Align::Start)
+        .hexpand(false)
+        .child(&left_inner)
+        .build();
+    left.add_css_class("transport-left-clamp");
 
     let shuffle = gtk::ToggleButton::builder()
         .icon_name("media-playlist-shuffle-symbolic")
         .tooltip_text("Shuffle")
         .build();
     shuffle.add_css_class("flat");
+    shuffle.add_css_class("transport-extra");
     {
         let ui = Rc::clone(ui);
         shuffle.connect_clicked(move |button| {
@@ -131,6 +153,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let repeat = gtk::Button::from_icon_name("media-playlist-repeat-symbolic");
     repeat.add_css_class("flat");
+    repeat.add_css_class("transport-extra");
     repeat.set_tooltip_text(Some("Repeat"));
     repeat.set_opacity(0.5);
     {
@@ -140,14 +163,29 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let buttons = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
-        .spacing(6)
+        .spacing(2)
         .halign(gtk::Align::Center)
+        .valign(gtk::Align::Center)
         .build();
+    buttons.add_css_class("transport-buttons");
     buttons.append(&shuffle);
     buttons.append(&previous);
     buttons.append(&play);
     buttons.append(&next);
     buttons.append(&repeat);
+
+    // Center column expands; buttons stay centered inside it.
+    let center = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .hexpand(true)
+        .halign(gtk::Align::Fill)
+        .valign(gtk::Align::Center)
+        .build();
+    center.add_css_class("transport-center");
+    center.append(&buttons);
+    // Center the button cluster within the expanding center column.
+    buttons.set_hexpand(true);
+    buttons.set_halign(gtk::Align::Center);
 
     let position_label = gtk::Label::new(Some("0:00"));
     position_label.add_css_class("time-label");
@@ -173,22 +211,16 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let seek_row = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(8)
+        .hexpand(true)
         .build();
+    seek_row.add_css_class("transport-seek");
     seek_row.append(&position_label);
     seek_row.append(&seek);
     seek_row.append(&duration_label);
 
-    let center = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(2)
-        .hexpand(true)
-        .valign(gtk::Align::Center)
-        .build();
-    center.append(&buttons);
-    center.append(&seek_row);
-
     let quality = gtk::Label::new(None);
     quality.add_css_class("quality-badge");
+    quality.add_css_class("transport-wide-only");
     quality.set_visible(false);
 
     let lyrics_toggle = gtk::ToggleButton::builder()
@@ -196,6 +228,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .tooltip_text("Lyrics")
         .build();
     lyrics_toggle.add_css_class("flat");
+    lyrics_toggle.add_css_class("transport-extra");
     {
         let ui = Rc::clone(ui);
         lyrics_toggle.connect_toggled(move |button| {
@@ -229,16 +262,20 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .menu_model(&sleep_menu)
         .build();
     sleep_button.add_css_class("flat");
+    sleep_button.add_css_class("transport-extra");
     let sleep_label = gtk::Label::new(None);
     sleep_label.add_css_class("time-label");
+    sleep_label.add_css_class("transport-wide-only");
     sleep_label.set_visible(false);
 
     let volume_icon = gtk::Image::from_icon_name("audio-volume-high-symbolic");
     volume_icon.add_css_class("dim");
+    volume_icon.add_css_class("transport-volume-icon");
     let volume = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 0.02);
     volume.set_tooltip_text(Some("Volume (scroll to adjust)"));
-    volume.set_width_request(110);
+    volume.set_width_request(88);
     volume.set_draw_value(false);
+    volume.add_css_class("transport-volume");
     volume.set_value(ui.core.config.borrow().volume);
     let volume_guard = Rc::new(Cell::new(false));
     {
@@ -266,9 +303,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let right = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
-        .spacing(10)
+        .spacing(4)
+        .hexpand(false)
         .valign(gtk::Align::Center)
+        .halign(gtk::Align::End)
         .build();
+    right.add_css_class("transport-right");
     right.append(&quality);
     right.append(&sleep_label);
     right.append(&sleep_button);
@@ -277,15 +317,46 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     right.append(&volume_icon);
     right.append(&volume);
 
-    bar.append(&left);
-    bar.append(&center);
-    bar.append(&right);
+    // Equalize left/right so the play cluster sits in the true visual center.
+    let wings = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
+    wings.add_widget(&left);
+    wings.add_widget(&right);
+
+    let top = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .build();
+    top.add_css_class("transport-top");
+    top.append(&left);
+    top.append(&center);
+    top.append(&right);
+
+    root.append(&top);
+    root.append(&seek_row);
+
+    install_width_adaptation(
+        &root,
+        &left,
+        &right,
+        &artist,
+        &title,
+        &love,
+        &shuffle,
+        &repeat,
+        &lyrics_toggle,
+        &sleep_button,
+        &queue_toggle,
+        &volume,
+        &volume_icon,
+        &quality,
+        &sleep_label,
+    );
 
     {
         let ui_ref = Rc::clone(ui);
         let artwork = artwork.clone();
         let equalizer = equalizer.clone();
-        let bar_ref = bar.clone();
+        let bar_ref = root.clone();
         let title = title.clone();
         let artist = artist.clone();
         let quality = quality.clone();
@@ -303,7 +374,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let lyrics_toggle = lyrics_toggle.clone();
         let current_rel = Rc::clone(&current_rel);
         let last_user_seek = Rc::clone(&last_user_seek);
-        ui.core.hub.subscribe_widget(&bar, move |_, event| match event {
+        ui.core.hub.subscribe_widget(&root, move |_, event| match event {
             AppEvent::TrackChanged(track) => match track {
                 Some(track) => {
                     title.set_label(&track.title);
@@ -313,7 +384,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                     match track.quality_badge() {
                         Some(badge) => {
                             quality.set_label(&badge);
-                            quality.set_visible(true);
+                            if !bar_ref.has_css_class("transport-compact")
+                                && !bar_ref.has_css_class("transport-slim")
+                            {
+                                quality.set_visible(true);
+                            }
                         }
                         None => quality.set_visible(false),
                     }
@@ -346,10 +421,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                             if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
                                 picture.set_paintable(Some(texture));
                             }
-                            // One accent update per track — the cover's real
-                            // dominant color, or the placeholder color when the
-                            // album has no embedded art. The controller
-                            // coalesces + skips no-op reloads.
                             set_adaptive_accent(Some(color.unwrap_or(seed_color)));
                         },
                     );
@@ -420,12 +491,20 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             } => match (remaining_seconds, end_of_track) {
                 (Some(seconds), _) => {
                     sleep_label.set_label(&format_time(*seconds as f64));
-                    sleep_label.set_visible(true);
+                    if !bar_ref.has_css_class("transport-compact")
+                        && !bar_ref.has_css_class("transport-slim")
+                    {
+                        sleep_label.set_visible(true);
+                    }
                     sleep_button.add_css_class("accent-toggle");
                 }
                 (None, true) => {
                     sleep_label.set_label("EOT");
-                    sleep_label.set_visible(true);
+                    if !bar_ref.has_css_class("transport-compact")
+                        && !bar_ref.has_css_class("transport-slim")
+                    {
+                        sleep_label.set_visible(true);
+                    }
                     sleep_button.add_css_class("accent-toggle");
                 }
                 (None, false) => {
@@ -447,7 +526,159 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
-    bar.upcast()
+    root.upcast()
+}
+
+/// Progressive chrome reduction. Keeps the three-column skeleton intact so
+/// the play cluster never drifts off-center as widgets hide.
+fn install_width_adaptation(
+    root: &gtk::Box,
+    left: &adw::Clamp,
+    right: &gtk::Box,
+    artist: &gtk::Label,
+    title: &gtk::Label,
+    love: &gtk::Button,
+    shuffle: &gtk::ToggleButton,
+    repeat: &gtk::Button,
+    lyrics_toggle: &gtk::ToggleButton,
+    sleep_button: &gtk::MenuButton,
+    queue_toggle: &gtk::ToggleButton,
+    volume: &gtk::Scale,
+    volume_icon: &gtk::Image,
+    quality: &gtk::Label,
+    sleep_label: &gtk::Label,
+) {
+    let left = left.clone();
+    let right = right.clone();
+    let artist = artist.clone();
+    let title = title.clone();
+    let love = love.clone();
+    let shuffle = shuffle.clone();
+    let repeat = repeat.clone();
+    let lyrics_toggle = lyrics_toggle.clone();
+    let sleep_button = sleep_button.clone();
+    let queue_toggle = queue_toggle.clone();
+    let volume = volume.clone();
+    let volume_icon = volume_icon.clone();
+    let quality = quality.clone();
+    let sleep_label = sleep_label.clone();
+    let quality_has_text = Rc::new(Cell::new(false));
+    {
+        let quality_has_text = Rc::clone(&quality_has_text);
+        quality.connect_notify_local(Some("label"), move |label, _| {
+            quality_has_text.set(!label.label().is_empty());
+        });
+    }
+
+    let adapt = {
+        let root = root.clone();
+        let left = left.clone();
+        let right = right.clone();
+        let artist = artist.clone();
+        let title = title.clone();
+        let love = love.clone();
+        let shuffle = shuffle.clone();
+        let repeat = repeat.clone();
+        let lyrics_toggle = lyrics_toggle.clone();
+        let sleep_button = sleep_button.clone();
+        let queue_toggle = queue_toggle.clone();
+        let volume = volume.clone();
+        let volume_icon = volume_icon.clone();
+        let quality = quality.clone();
+        let sleep_label = sleep_label.clone();
+        let quality_has_text = Rc::clone(&quality_has_text);
+        Rc::new(move || {
+            let width = root.width();
+            if width <= 1 {
+                return;
+            }
+            // Tiers:
+            //   wide     ≥ 900  — full chrome
+            //   compact  ≥ 620  — drop volume slider + quality/sleep labels
+            //   slim     ≥ 420  — core transport only (prev/play/next + queue)
+            //   tiny     < 420  — meta collapses to title only
+            let tiny = width < 420;
+            let slim = width < 620;
+            let compact = width < 900;
+
+            root.remove_css_class("transport-slim");
+            root.remove_css_class("transport-compact");
+            root.remove_css_class("transport-tiny");
+            if tiny {
+                root.add_css_class("transport-tiny");
+            } else if slim {
+                root.add_css_class("transport-slim");
+            } else if compact {
+                root.add_css_class("transport-compact");
+            }
+
+            // Derive every flag from width tiers first. Never read is_visible()
+            // after a hide — that checks the parent chain, so a hidden right
+            // wing would keep volume "invisible" forever when growing again.
+            let show_artist = !tiny && !slim;
+            let show_love = !tiny;
+            let show_shuffle = !slim;
+            let show_repeat = !slim;
+            let show_lyrics = !slim;
+            let show_sleep = !slim;
+            let show_queue = !tiny;
+            let show_volume = !compact;
+            let show_quality = !compact && quality_has_text.get();
+            // Label text survives compact hide — restore when wide again.
+            let show_sleep_label = !compact && !sleep_label.label().is_empty();
+
+            artist.set_visible(show_artist);
+            love.set_visible(show_love);
+            title.set_max_width_chars(if tiny { 10 } else if slim { 14 } else { 22 });
+            left.set_maximum_size(if tiny {
+                120
+            } else if slim {
+                160
+            } else if compact {
+                200
+            } else {
+                260
+            });
+
+            shuffle.set_visible(show_shuffle);
+            repeat.set_visible(show_repeat);
+            lyrics_toggle.set_visible(show_lyrics);
+            sleep_button.set_visible(show_sleep);
+            queue_toggle.set_visible(show_queue);
+            volume.set_visible(show_volume);
+            volume_icon.set_visible(show_volume);
+            quality.set_visible(show_quality);
+            sleep_label.set_visible(show_sleep_label);
+
+            let right_has_visible = show_queue
+                || show_lyrics
+                || show_sleep
+                || show_volume
+                || show_quality
+                || show_sleep_label;
+            right.set_visible(right_has_visible);
+            left.set_visible(true);
+        })
+    };
+
+    let last_width = Rc::new(Cell::new(0i32));
+    {
+        let adapt = Rc::clone(&adapt);
+        let last_width = Rc::clone(&last_width);
+        root.connect_realize(move |widget| {
+            adapt();
+            let adapt = Rc::clone(&adapt);
+            let last_width = Rc::clone(&last_width);
+            widget.add_tick_callback(move |widget, _| {
+                let width = widget.width();
+                if width != last_width.get() {
+                    last_width.set(width);
+                    adapt();
+                }
+                glib::ControlFlow::Continue
+            });
+        });
+    }
 }
 
 /// Three-bar now-playing indicator overlaid bottom-trailing on the mini
@@ -470,4 +701,3 @@ fn build_equalizer() -> gtk::Box {
     bars.set_visible(false);
     bars
 }
-

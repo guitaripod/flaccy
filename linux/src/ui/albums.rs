@@ -106,8 +106,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let grid = gtk::GridView::builder()
         .model(&selection)
         .factory(&factory)
-        .min_columns(2)
-        .max_columns(10)
+        .min_columns(1)
+        // Low starting max so natural width stays small; grows with allocation.
+        .max_columns(3)
         .single_click_activate(true)
         .margin_top(24)
         .margin_bottom(24)
@@ -115,6 +116,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .margin_end(24)
         .build();
     grid.add_css_class("album-grid");
+    crate::ui::controls::bind_adaptive_grid_columns(&grid, 156);
     {
         let ui = Rc::clone(ui);
         grid.connect_activate(move |grid, position| {
@@ -185,6 +187,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     empty.set_child(Some(&empty_actions));
 
     let stack = gtk::Stack::new();
+    stack.set_hhomogeneous(false);
+    stack.set_vhomogeneous(false);
     stack.add_named(&empty, Some("empty"));
     stack.add_named(&grid_content, Some("grid"));
 
@@ -295,16 +299,18 @@ fn build_album_cell() -> gtk::Box {
     let cell = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(8)
-        .width_request(168)
+        .width_request(140)
         .halign(gtk::Align::Center)
         .valign(gtk::Align::Start)
+        .hexpand(true)
         .build();
     cell.add_css_class("album-tile");
 
     let picture = gtk::Picture::builder()
-        .width_request(168)
-        .height_request(168)
+        .width_request(140)
+        .height_request(140)
         .content_fit(gtk::ContentFit::Cover)
+        .hexpand(true)
         .build();
     picture.set_overflow(gtk::Overflow::Hidden);
     picture.add_css_class("cover");
@@ -313,7 +319,8 @@ fn build_album_cell() -> gtk::Box {
     let title = gtk::Label::builder()
         .xalign(0.0)
         .ellipsize(pango::EllipsizeMode::End)
-        .max_width_chars(18)
+        .max_width_chars(16)
+        .hexpand(true)
         .build();
     title.add_css_class("album-title");
     cell.append(&title);
@@ -321,7 +328,8 @@ fn build_album_cell() -> gtk::Box {
     let subtitle = gtk::Label::builder()
         .xalign(0.0)
         .ellipsize(pango::EllipsizeMode::End)
-        .max_width_chars(20)
+        .max_width_chars(18)
+        .hexpand(true)
         .build();
     subtitle.add_css_class("dim");
     subtitle.add_css_class("caption");
@@ -485,15 +493,18 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         .orientation(gtk::Orientation::Horizontal)
         .spacing(24)
         .build();
+    header.add_css_class("album-detail-header");
 
     let picture = gtk::Picture::builder()
-        .width_request(232)
-        .height_request(232)
+        .width_request(160)
+        .height_request(160)
         .content_fit(gtk::ContentFit::Cover)
         .valign(gtk::Align::Start)
+        .halign(gtk::Align::Start)
         .build();
     picture.set_overflow(gtk::Overflow::Hidden);
     picture.add_css_class("cover-large");
+    picture.add_css_class("album-detail-cover");
     picture.set_paintable(Some(&ui.core.artwork.placeholder(&album.key())));
     {
         let weak = picture.downgrade();
@@ -519,11 +530,13 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         .orientation(gtk::Orientation::Vertical)
         .spacing(6)
         .valign(gtk::Align::Center)
+        .hexpand(true)
         .build();
     let title = gtk::Label::builder()
         .label(&album.title)
         .xalign(0.0)
         .wrap(true)
+        .wrap_mode(pango::WrapMode::WordChar)
         .build();
     title.add_css_class("title-1");
     meta.append(&title);
@@ -650,6 +663,7 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         .margin_start(32)
         .margin_end(32)
         .build();
+    content.add_css_class("album-detail-content");
     content.append(&header);
 
     let all_tracks = Rc::new(album.tracks.clone());
@@ -669,9 +683,13 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         None => content.append(&build_track_list(ui, &all_tracks, 0, &album.tracks)),
     }
 
+    let detail_bin = adw::BreakpointBin::new();
+    detail_bin.set_child(Some(&content));
+    install_album_detail_breakpoints(&detail_bin, &header, &picture, &content);
+
     let clamp = adw::Clamp::builder()
         .maximum_size(920)
-        .child(&content)
+        .child(&detail_bin)
         .build();
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
@@ -687,6 +705,54 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         .child(&overlay)
         .build();
     ui.nav.push(&page);
+}
+
+/// Stack the album hero vertically and shrink the cover once the detail page
+/// no longer has room for the side-by-side desktop layout.
+fn install_album_detail_breakpoints(
+    bin: &adw::BreakpointBin,
+    header: &gtk::Box,
+    picture: &gtk::Picture,
+    content: &gtk::Box,
+) {
+    let compact = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+        adw::BreakpointConditionLengthType::MaxWidth,
+        560.0,
+        adw::LengthUnit::Px,
+    ));
+    {
+        let header = header.clone();
+        let picture = picture.clone();
+        let content = content.clone();
+        compact.connect_apply(move |_| {
+            header.set_orientation(gtk::Orientation::Vertical);
+            header.set_spacing(16);
+            picture.set_size_request(148, 148);
+            picture.set_halign(gtk::Align::Center);
+            content.set_margin_start(16);
+            content.set_margin_end(16);
+            content.set_margin_top(20);
+            content.set_margin_bottom(20);
+            content.set_spacing(16);
+        });
+    }
+    {
+        let header = header.clone();
+        let picture = picture.clone();
+        let content = content.clone();
+        compact.connect_unapply(move |_| {
+            header.set_orientation(gtk::Orientation::Horizontal);
+            header.set_spacing(24);
+            picture.set_size_request(200, 200);
+            picture.set_halign(gtk::Align::Start);
+            content.set_margin_start(32);
+            content.set_margin_end(32);
+            content.set_margin_top(32);
+            content.set_margin_bottom(32);
+            content.set_spacing(24);
+        });
+    }
+    bin.add_breakpoint(compact);
 }
 
 /// Personal Last.fm play count for this album ("You've played this N times"),

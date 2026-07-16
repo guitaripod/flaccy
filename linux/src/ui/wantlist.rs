@@ -86,6 +86,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
 
     let stack = gtk::Stack::new();
+    stack.set_hhomogeneous(false);
+    stack.set_vhomogeneous(false);
     stack.add_named(&empty, Some("empty"));
     stack.add_named(&scroll, Some("list"));
 
