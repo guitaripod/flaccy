@@ -255,6 +255,7 @@ final class AlbumGridViewController: NSViewController {
         guard let raw = sender.selectedItem?.representedObject as? String,
               let sort = LibraryViewModel.AlbumSort(rawValue: raw) else { return }
         viewModel.setAlbumSort(sort)
+        collectionView.scroll(.zero)
         AppLogger.info("Album sort changed to \(sort.displayName)", category: .ui)
     }
 

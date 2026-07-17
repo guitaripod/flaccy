@@ -275,6 +275,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 self?.viewModel.setAlbumSort(sort)
                 self?.updateRightBarButton(for: .albums)
                 self?.updateSectionIndex()
+                self?.scrollToTopForSortChange()
             }
         }
         return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
@@ -292,9 +293,17 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                     self?.viewModel.setSongSort(sort)
                     self?.updateRightBarButton(for: .songs)
                     self?.updateSectionIndex()
+                    self?.scrollToTopForSortChange()
                 }
             }
         return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
+    }
+
+    private func scrollToTopForSortChange() {
+        collectionView.setContentOffset(
+            CGPoint(x: 0, y: -collectionView.adjustedContentInset.top),
+            animated: false
+        )
     }
 
     private func scrobbleRangeMenu() -> UIMenu {
@@ -326,6 +335,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 self?.viewModel.setArtistSort(sort)
                 self?.updateRightBarButton(for: .artists)
                 self?.updateSectionIndex()
+                self?.scrollToTopForSortChange()
             }
         }
         return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)

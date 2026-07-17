@@ -414,6 +414,65 @@ impl Player {
         self.hub.emit(&AppEvent::QueueChanged);
     }
 
+    /// Purges deleted tracks from the queue after a library removal. If the
+    /// playing track was deleted, playback advances to the next survivor (or
+    /// stops when none remain); an already-primed gapless advance into a
+    /// deleted file is cancelled.
+    pub fn handle_deleted(&self, rel_paths: &std::collections::HashSet<String>) {
+        let (removed_any, current_deleted, replacement) = {
+            let Ok(mut guard) = self.shared.lock() else { return };
+            let before = guard.queue.len();
+            if before == 0 {
+                return;
+            }
+            let current_rel = guard
+                .queue
+                .get(guard.current)
+                .map(|track| track.rel_path.clone());
+            let removed_before_current = guard
+                .queue
+                .iter()
+                .take(guard.current)
+                .filter(|track| rel_paths.contains(&track.rel_path))
+                .count();
+            guard.queue.retain(|track| !rel_paths.contains(&track.rel_path));
+            guard.original.retain(|track| !rel_paths.contains(&track.rel_path));
+            let removed_any = guard.queue.len() != before;
+            let current_deleted = current_rel
+                .as_ref()
+                .is_some_and(|rel| rel_paths.contains(rel));
+            guard.current = guard
+                .current
+                .saturating_sub(removed_before_current)
+                .min(guard.queue.len().saturating_sub(1));
+            if guard
+                .pending_advance
+                .as_ref()
+                .is_some_and(|track| rel_paths.contains(&track.rel_path))
+            {
+                guard.pending_advance = None;
+            }
+            let replacement = if current_deleted && !guard.queue.is_empty() {
+                Some(guard.current)
+            } else {
+                None
+            };
+            (removed_any, current_deleted, replacement)
+        };
+        if current_deleted {
+            match replacement {
+                Some(index) => self.jump_to(index),
+                None => {
+                    self.stop();
+                    self.hub.emit(&AppEvent::TrackChanged(None));
+                    self.hub.emit(&AppEvent::QueueChanged);
+                }
+            }
+        } else if removed_any {
+            self.hub.emit(&AppEvent::QueueChanged);
+        }
+    }
+
     pub fn insert_next(&self, track: Track) {
         let Ok(mut guard) = self.shared.lock() else { return };
         if guard.queue.is_empty() {

@@ -11,6 +11,7 @@
 
 ### Recorded parity gaps
 
+- **Vim-style list navigation (`j`/`k` scroll, `gg` top, `Shift+G` bottom) is Linux-only** (`linux/src/ui/window.rs` capture-phase keyboard handler + the `Ui` scroller registry). Deliberate platform idiom: AppKit lists already have native keyboard scrolling on macOS, and iOS navigates by touch with the A-Z section index. Search opens via Ctrl+F on Linux and Cmd+F on macOS only — there is deliberately no type-to-search. The cross-client *behavior* — changing any sort snaps the list back to the top — is implemented on all three clients.
 - **Downloads (paste a YouTube/etc. link → best audio → library) is Linux-only** (`linux/src/downloads.rs`, `linux/src/ui/downloads.rs`, shipped 1.6.0). Deliberate: it shells out to `yt-dlp`/`ffmpeg`, which iOS/watchOS cannot run, and an App Store build that rips YouTube audio would violate App Review Guideline 5.2.3 regardless of implementation. If this ever comes to the Apple side, it needs a different design (e.g. user-provided files via the existing document-picker import, or a Mac-only build outside the App Store) — do not port the yt-dlp approach.
 
 ## Setup

@@ -110,12 +110,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 .is_empty();
                 context::popup_menu_at(anchor, &bulk_menu(selected.len(), has_duplicates), x, y);
             } else {
-                let menu = context::track_menu(&ui.core, &track.rel_path, track.loved);
+                let menu = context::track_menu(&track.rel_path, track.loved);
                 context::popup_menu_at(anchor, &menu, x, y);
             }
         })
     };
-    install_bulk_actions(&column_view, ui, &selection);
+    install_bulk_actions(ui, &selection);
 
     column_view.append_column(&string_column(
         "Track #",
@@ -252,6 +252,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     list_box.append(&chip_bar);
     let scroll = gtk::ScrolledWindow::builder().vexpand(true).child(&column_view).build();
     list_box.append(&scroll);
+    ui.register_scroller(&scroll);
+    install_sort_scroll_reset(&column_view, &scroll);
 
     let empty = adw::StatusPage::builder()
         .icon_name("audio-x-generic-symbolic")
@@ -302,6 +304,18 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.upcast()
 }
 
+/// Clicking a column header re-sorts under a preserved pixel offset, stranding
+/// the view deep in the new order; snap back to the top so a fresh sort reads
+/// from its beginning, matching the Albums sort dropdown.
+fn install_sort_scroll_reset(column_view: &gtk::ColumnView, scroll: &gtk::ScrolledWindow) {
+    let Some(sorter) = column_view.sorter() else { return };
+    let vadj = scroll.vadjustment();
+    sorter.connect_changed(move |_, _| {
+        let vadj = vadj.clone();
+        gtk::glib::idle_add_local_once(move || vadj.set_value(vadj.lower()));
+    });
+}
+
 /// Collects the tracks currently highlighted in the multi-selection, in model
 /// order, for the bulk context-menu actions.
 fn selected_tracks(selection: &gtk::MultiSelection) -> Vec<Track> {
@@ -317,8 +331,10 @@ fn selected_tracks(selection: &gtk::MultiSelection) -> Vec<Track> {
 }
 
 /// Registers the `songs.*` action group backing the multi-select context menu;
-/// each action resolves the live selection at activation time.
-fn install_bulk_actions(column_view: &gtk::ColumnView, ui: &Rc<Ui>, selection: &gtk::MultiSelection) {
+/// each action resolves the live selection at activation time. The group lives
+/// on the window because the popovers that reference it are parented to the
+/// window root, not the column view.
+fn install_bulk_actions(ui: &Rc<Ui>, selection: &gtk::MultiSelection) {
     let actions = gio::SimpleActionGroup::new();
 
     let add = |name: &str, handler: Box<dyn Fn(Vec<Track>)>| {
@@ -394,8 +410,15 @@ fn install_bulk_actions(column_view: &gtk::ColumnView, ui: &Rc<Ui>, selection: &
             Box::new(move |tracks| crate::ui::cleanup::present_selection_dedup(&ui, tracks)),
         );
     }
+    {
+        let ui = Rc::clone(ui);
+        add(
+            "bulk-delete",
+            Box::new(move |tracks| crate::ui::delete::present_delete_tracks(&ui, tracks)),
+        );
+    }
 
-    column_view.insert_action_group("songs", Some(&actions));
+    ui.window.insert_action_group("songs", Some(&actions));
 }
 
 fn bulk_menu(count: usize, has_duplicates: bool) -> gio::Menu {
@@ -422,6 +445,13 @@ fn bulk_menu(count: usize, has_duplicates: bool) -> gio::Menu {
         );
         menu.append_section(None, &dedup_section);
     }
+
+    let delete_section = gio::Menu::new();
+    delete_section.append(
+        Some(&format!("Move {count} Songs to Trash…")),
+        Some("songs.bulk-delete"),
+    );
+    menu.append_section(None, &delete_section);
     menu
 }
 

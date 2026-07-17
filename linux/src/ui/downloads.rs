@@ -199,6 +199,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&adw::Clamp::builder().maximum_size(760).child(&content).build())
         .build();
+    ui.register_scroller(&scroll);
 
     let recheck: Rc<RefCell<Option<Rc<dyn Fn()>>>> = Rc::new(RefCell::new(None));
     let check_tools = {

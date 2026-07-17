@@ -43,6 +43,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         shell: shell.clone(),
         window: window.clone(),
         query: Rc::new(RefCell::new(String::new())),
+        scrollers: RefCell::new(Vec::new()),
     });
 
     let header = adw::HeaderBar::builder()
@@ -437,7 +438,8 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         app.set_accels_for_action("app.downloads", &["<Control>d"]);
     }
     attach_space_handler(&ui);
-    attach_type_to_search(&ui, &search);
+    attach_list_navigation(&ui);
+    attach_search_reset(&ui, &search);
     attach_file_drop(&ui, &toast_overlay);
     attach_paste_to_download(&ui, &sidebar);
     schedule_demo_detail(&ui);
@@ -783,6 +785,18 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_string_action(ui, "track-station", |ui, rel| {
         ui.core.start_track_station(rel);
     });
+    add_string_action(ui, "playlist-choose", |ui, rel| {
+        ui::playlists::present_add_to_playlist(ui, rel);
+    });
+    add_string_action(ui, "track-delete", |ui, rel| {
+        let library = ui.core.library.borrow().clone();
+        if let Some(track) = library.track_by_rel_path(rel) {
+            ui::delete::present_delete_tracks(ui, vec![track.clone()]);
+        }
+    });
+    add_string_action(ui, "album-delete", |ui, key| {
+        ui::delete::present_delete_album(ui, key);
+    });
     add_string_action(ui, "artist-station", |ui, artist| {
         ui.core.start_artist_station(artist);
     });
@@ -979,21 +993,19 @@ fn present_about(window: &adw::ApplicationWindow) {
         .license_type(gtk::License::Gpl30)
         .release_notes_version(env!("CARGO_PKG_VERSION"))
         .release_notes(
-            "<p>Downloads — paste a link, get the music.</p>\
+            "<p>Delete, vim keys, and a saner search.</p>\
              <ul>\
-             <li>New Downloads page in the sidebar (Ctrl+D): paste a YouTube, \
-             YouTube Music, SoundCloud, or Bandcamp link and the best available \
-             audio lands in your library, tagged and with cover art.</li>\
-             <li>Albums and playlists expand into a queue with per-track \
-             progress, cancel, and retry; the queue survives restarts.</li>\
-             <li>Ctrl+V anywhere queues a copied link instantly.</li>\
-             <li>Powered by yt-dlp and FFmpeg — a built-in guide walks through \
-             the one-minute setup if they're missing.</li>\
-             <li>Albums can now sort by Title, Artist, Year, Recently Added, \
-             or Recently Played; Songs gains an Added column.</li>\
-             <li>Transport bar fixes: extras sit flush with the window edge, \
-             the play cluster stays truly centered, and the first track no \
-             longer bounces the bar's height.</li>\
+             <li>Move songs and whole albums to the trash straight from their \
+             context menus — files stay recoverable, and the library, queue, \
+             and playback all update themselves.</li>\
+             <li>Select several songs to move them to the trash in one go.</li>\
+             <li>Vim navigation everywhere: j/k scroll the list, gg jumps to \
+             the top, Shift+G to the bottom.</li>\
+             <li>Changing any sort snaps the list back to the top.</li>\
+             <li>Search now opens only with Ctrl+F — letters no longer steal \
+             the keyboard while you navigate.</li>\
+             <li>Add to Playlist moved into a proper picker dialog, and \
+             context menus no longer clip their last entries on GTK 4.22.</li>\
              </ul>",
         )
         .build();
@@ -1001,7 +1013,7 @@ fn present_about(window: &adw::ApplicationWindow) {
 }
 
 fn present_shortcuts(window: &adw::ApplicationWindow) {
-    let groups: [(&str, &[(&str, &str)]); 2] = [
+    let groups: [(&str, &[(&str, &str)]); 3] = [
         (
             "Playback",
             &[
@@ -1009,6 +1021,14 @@ fn present_shortcuts(window: &adw::ApplicationWindow) {
                 ("Ctrl+→", "Next track"),
                 ("Ctrl+←", "Previous track"),
                 ("Ctrl+L", "Love current track"),
+            ],
+        ),
+        (
+            "Navigation",
+            &[
+                ("J / K", "Scroll the list"),
+                ("G G", "Jump to top"),
+                ("Shift+G", "Jump to bottom"),
             ],
         ),
         (
@@ -1087,17 +1107,16 @@ fn add_int64_action(ui: &Rc<Ui>, name: &str, handler: impl Fn(&Rc<Ui>, i64) + 's
     ui.window.add_action(&action);
 }
 
-/// Type-to-search: pressing a printable key while a list/grid view (not a text
-/// field) has focus jumps into the header search and filters the current view.
-/// Runs in the capture phase so it beats the views' own type-ahead; Space is
-/// left to the play/pause handler, and modifier combos fall through to
-/// accelerators.
-fn attach_type_to_search(ui: &Rc<Ui>, search: &gtk::SearchEntry) {
+/// Vim-style navigation for the visible library page, run in the capture phase
+/// so it beats the views' own type-ahead. Space is left to the play/pause
+/// handler, modifier combos fall through to accelerators (search is Ctrl+F),
+/// and nothing fires while a dialog is open or a text field is being edited.
+fn attach_list_navigation(ui: &Rc<Ui>) {
     let controller = gtk::EventControllerKey::new();
     controller.set_propagation_phase(gtk::PropagationPhase::Capture);
-    let key_window = ui.window.clone();
-    let key_search = search.clone();
+    let key_ui = Rc::clone(ui);
     let key_shell = ui.shell.clone();
+    let pending_g: Rc<Cell<Option<std::time::Instant>>> = Rc::new(Cell::new(None));
     controller.connect_key_pressed(move |_, key, _, modifiers| {
         if key_shell
             .visible_page()
@@ -1107,7 +1126,10 @@ fn attach_type_to_search(ui: &Rc<Ui>, search: &gtk::SearchEntry) {
         {
             return glib::Propagation::Proceed;
         }
-        let editing = gtk::prelude::GtkWindowExt::focus(&key_window)
+        if key_ui.window.visible_dialog().is_some() {
+            return glib::Propagation::Proceed;
+        }
+        let editing = gtk::prelude::GtkWindowExt::focus(&key_ui.window)
             .map(|widget| widget.is::<gtk::Text>() || widget.is::<gtk::Entry>())
             .unwrap_or(false);
         if editing {
@@ -1118,26 +1140,57 @@ fn attach_type_to_search(ui: &Rc<Ui>, search: &gtk::SearchEntry) {
         ) {
             return glib::Propagation::Proceed;
         }
-        let Some(ch) = key.to_unicode() else {
-            return glib::Propagation::Proceed;
-        };
-        if ch.is_control() || ch.is_whitespace() {
-            return glib::Propagation::Proceed;
+        if handle_vim_navigation(&key_ui, key, &pending_g) {
+            return glib::Propagation::Stop;
         }
-        key_search.grab_focus();
-        let mut text = key_search.text().to_string();
-        text.push(ch);
-        key_search.set_text(&text);
-        key_search.set_position(-1);
-        glib::Propagation::Stop
+        glib::Propagation::Proceed
     });
     ui.window.add_controller(controller);
+}
 
+/// Escape in the search field clears the query and hands focus back to the
+/// library so the vim keys work again immediately.
+fn attach_search_reset(ui: &Rc<Ui>, search: &gtk::SearchEntry) {
     let stop_window = ui.window.clone();
     search.connect_stop_search(move |entry| {
         entry.set_text("");
         gtk::prelude::GtkWindowExt::set_focus(&stop_window, gtk::Widget::NONE);
     });
+}
+
+const CHORD_WINDOW: std::time::Duration = std::time::Duration::from_millis(600);
+
+/// Vim-style scrolling for the visible library page: j/k step the list,
+/// gg jumps to the top, Shift+G to the bottom. A lone g is swallowed while the
+/// chord window is open; returns whether the key was consumed.
+fn handle_vim_navigation(
+    ui: &Rc<Ui>,
+    key: gdk::Key,
+    pending_g: &Cell<Option<std::time::Instant>>,
+) -> bool {
+    let chord_open = pending_g
+        .take()
+        .is_some_and(|since| since.elapsed() < CHORD_WINDOW);
+    match key {
+        gdk::Key::j | gdk::Key::k | gdk::Key::G => {}
+        gdk::Key::g if chord_open => {}
+        gdk::Key::g => {
+            pending_g.set(Some(std::time::Instant::now()));
+            return true;
+        }
+        _ => return false,
+    }
+    let Some(scroll) = ui.active_scroller() else { return true };
+    let vadj = scroll.vadjustment();
+    let step = vadj.step_increment().max(48.0);
+    let target = match key {
+        gdk::Key::j => vadj.value() + step,
+        gdk::Key::k => vadj.value() - step,
+        gdk::Key::G => vadj.upper(),
+        _ => vadj.lower(),
+    };
+    vadj.set_value(target);
+    true
 }
 
 fn attach_space_handler(ui: &Rc<Ui>) {

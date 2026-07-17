@@ -210,6 +210,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .vexpand(true)
         .child(&grid)
         .build();
+    ui.register_scroller(&scroll);
 
     let sort_labels: Vec<&str> = AlbumSort::ALL.iter().map(|s| s.label()).collect();
     let sort_dropdown = gtk::DropDown::from_strings(&sort_labels);
@@ -813,6 +814,7 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&clamp)
         .build();
+    ui.register_scroller(&scroll);
 
     let overlay = gtk::Overlay::new();
     overlay.set_child(Some(&backdrop));

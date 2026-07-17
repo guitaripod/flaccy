@@ -179,6 +179,9 @@ extension SongsTableViewController: NSTableViewDataSource {
             tableView.sortDescriptors = seeded
             isReseedingSort = false
         }
+        if tableView.numberOfRows > 0 {
+            tableView.scrollRowToVisible(0)
+        }
         AppLogger.info(
             "Songs sorted by \(viewModel.sortTiers.map { "\($0.column.rawValue)\($0.ascending ? "↑" : "↓")" }.joined(separator: ", "))",
             category: .ui

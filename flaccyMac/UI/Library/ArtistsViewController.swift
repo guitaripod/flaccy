@@ -178,6 +178,7 @@ final class ArtistsViewController: NSViewController {
         guard let raw = sender.selectedItem?.representedObject as? String,
               let sort = LibraryViewModel.ArtistSort(rawValue: raw) else { return }
         viewModel.setArtistSort(sort)
+        collectionView.scroll(.zero)
     }
 
     @objc private func libraryDidUpdate() {

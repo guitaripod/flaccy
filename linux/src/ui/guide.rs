@@ -110,6 +110,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&adw::Clamp::builder().maximum_size(760).child(&content).build())
         .build();
+    ui.register_scroller(&scroll);
     scroll.upcast()
 }
 

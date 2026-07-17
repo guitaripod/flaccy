@@ -5,7 +5,10 @@ use gtk::glib;
 use gtk::prelude::*;
 use std::rc::Rc;
 
-pub fn track_menu(core: &Rc<AppCore>, rel_path: &str, loved: bool) -> gio::Menu {
+/// GtkPopoverMenu on GTK 4.22 under-allocates menus with many sections and
+/// silently clips the trailing rows, so every menu here stays at four sections
+/// or fewer — the shape verified to render fully.
+pub fn track_menu(rel_path: &str, loved: bool) -> gio::Menu {
     let menu = gio::Menu::new();
     let queue_section = gio::Menu::new();
     queue_section.append_item(&item("Play Next", "win.track-play-next", rel_path));
@@ -16,26 +19,16 @@ pub fn track_menu(core: &Rc<AppCore>, rel_path: &str, loved: bool) -> gio::Menu 
     station_section.append_item(&item("Start Station", "win.track-station", rel_path));
     menu.append_section(None, &station_section);
 
-    let love_section = gio::Menu::new();
+    let actions_section = gio::Menu::new();
     let love_label = if loved { "Unlove" } else { "Love on Last.fm" };
-    love_section.append_item(&item(love_label, "win.track-love", rel_path));
-    menu.append_section(None, &love_section);
+    actions_section.append_item(&item(love_label, "win.track-love", rel_path));
+    actions_section.append_item(&item("Add to Playlist…", "win.playlist-choose", rel_path));
+    actions_section.append_item(&item("Copy song.link", "win.track-songlink", rel_path));
+    menu.append_section(None, &actions_section);
 
-    let playlist_menu = gio::Menu::new();
-    for playlist in core.db.fetch_playlists() {
-        let entry = gio::MenuItem::new(Some(&playlist.name), None);
-        entry.set_action_and_target_value(
-            Some("win.playlist-add"),
-            Some(&(playlist.id, rel_path.to_string()).to_variant()),
-        );
-        playlist_menu.append_item(&entry);
-    }
-    playlist_menu.append_item(&item("New Playlist…", "win.playlist-new-with-track", rel_path));
-    menu.append_submenu(Some("Add to Playlist"), &playlist_menu);
-
-    let share_section = gio::Menu::new();
-    share_section.append_item(&item("Copy song.link", "win.track-songlink", rel_path));
-    menu.append_section(None, &share_section);
+    let delete_section = gio::Menu::new();
+    delete_section.append_item(&item("Move to Trash…", "win.track-delete", rel_path));
+    menu.append_section(None, &delete_section);
     menu
 }
 
@@ -54,6 +47,10 @@ pub fn album_menu(key: &str) -> gio::Menu {
     extra_section.append_item(&item("Copy song.link", "win.album-songlink", key));
     extra_section.append_item(&item("Enrich Metadata", "win.album-enrich", key));
     menu.append_section(None, &extra_section);
+
+    let delete_section = gio::Menu::new();
+    delete_section.append_item(&item("Move to Trash…", "win.album-delete", key));
+    menu.append_section(None, &delete_section);
     menu
 }
 
@@ -75,16 +72,88 @@ fn item(label: &str, action: &str, target: &str) -> gio::MenuItem {
     entry
 }
 
+/// Renders the menu model with plain widgets in a gtk::Popover instead of
+/// GtkPopoverMenu: GTK 4.22's PopoverMenu under-allocates multi-section models
+/// and silently clips the trailing rows (reproduced with a minimal PyGObject
+/// app on this GTK, so not a flaccy regression).
 pub fn popup_menu_at(parent: &impl IsA<gtk::Widget>, menu: &gio::Menu, x: f64, y: f64) {
-    let popover = gtk::PopoverMenu::from_model(Some(menu));
+    let popover = gtk::Popover::builder()
+        .has_arrow(false)
+        .autohide(true)
+        .build();
+    popover.add_css_class("menu");
     popover.set_parent(parent);
-    popover.set_has_arrow(false);
     popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let mut first = true;
+    for section in 0..menu.n_items() {
+        let items: gio::MenuModel = match menu.item_link(section, gio::MENU_LINK_SECTION) {
+            Some(model) => model,
+            None => menu.clone().upcast(),
+        };
+        let in_section = menu.item_link(section, gio::MENU_LINK_SECTION).is_some();
+        if in_section {
+            if !first {
+                let separator = gtk::Separator::new(gtk::Orientation::Horizontal);
+                separator.set_margin_top(4);
+                separator.set_margin_bottom(4);
+                content.append(&separator);
+            }
+            for index in 0..items.n_items() {
+                append_menu_row(&content, &items, index, &popover);
+            }
+            first = false;
+        } else {
+            append_menu_row(&content, &items, section, &popover);
+            first = false;
+        }
+    }
+
+    popover.set_child(Some(&content));
     popover.connect_closed(|popover| {
         let popover = popover.clone();
         glib::idle_add_local_once(move || popover.unparent());
     });
     popover.popup();
+}
+
+fn append_menu_row(
+    content: &gtk::Box,
+    items: &gio::MenuModel,
+    index: i32,
+    popover: &gtk::Popover,
+) {
+    let Some(label) = items.item_attribute_value(index, "label", Some(glib::VariantTy::STRING))
+    else {
+        return;
+    };
+    let Some(action) = items.item_attribute_value(index, "action", Some(glib::VariantTy::STRING))
+    else {
+        return;
+    };
+    let target = items.item_attribute_value(index, "target", None);
+    let button = gtk::Button::builder()
+        .child(
+            &gtk::Label::builder()
+                .label(label.str().unwrap_or_default())
+                .xalign(0.0)
+                .build(),
+        )
+        .build();
+    button.add_css_class("flat");
+    button.add_css_class("context-menu-item");
+    let popover = popover.clone();
+    let action_name = action.str().unwrap_or_default().to_string();
+    button.connect_clicked(move |button| {
+        popover.popdown();
+        let _ = gtk::prelude::WidgetExt::activate_action(
+            button,
+            &action_name,
+            target.as_ref(),
+        );
+    });
+    content.append(&button);
 }
 
 pub fn attach_track_context_menu(
@@ -104,7 +173,7 @@ pub fn attach_track_context_menu(
             .track_by_rel_path(&rel_path)
             .map(|t| t.loved)
             .unwrap_or(false);
-        let menu = track_menu(&core, &rel_path, loved);
+        let menu = track_menu(&rel_path, loved);
         popup_menu_at(&target, &menu, x, y);
     });
     widget.add_controller(gesture);

@@ -5,7 +5,7 @@ use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::glib;
 use std::cell::RefCell;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::rc::Rc;
 
 const DETAIL_LINE_LIMIT: usize = 60;
@@ -327,33 +327,11 @@ fn apply_blocking(db_path: &Path, root: &Path, plan: CleanupPlan) -> CleanupResu
 
     let mut removed = 0;
     for rel_path in &loser_rel_paths {
-        if trash_file(&root.join(rel_path)) {
+        if crate::ui::delete::trash_file(&root.join(rel_path)) {
             removed += 1;
         }
     }
     CleanupResult { removed, merged }
-}
-
-/// Sends a file to the desktop trash so a mistaken cleanup stays recoverable,
-/// unlike an unlink.
-fn trash_file(path: &PathBuf) -> bool {
-    match std::process::Command::new("gio").arg("trash").arg(path).status() {
-        Ok(status) if status.success() => true,
-        Ok(status) => {
-            crate::logger::warn(
-                "library",
-                &format!("gio trash exited {status} for {}", path.display()),
-            );
-            false
-        }
-        Err(err) => {
-            crate::logger::error(
-                "library",
-                &format!("gio trash failed for {}: {err}", path.display()),
-            );
-            false
-        }
-    }
 }
 
 fn plural(count: usize) -> &'static str {

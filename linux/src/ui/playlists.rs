@@ -65,6 +65,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&adw::Clamp::builder().maximum_size(760).child(&content).build())
         .build();
+    ui.register_scroller(&scroll);
 
     let stack = gtk::Stack::new();
     stack.set_hhomogeneous(false);
@@ -130,6 +131,88 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     }
 
     stack.upcast()
+}
+
+/// Playlist picker backing the context menus' "Add to Playlist…" item; a flat
+/// dialog instead of a nested submenu because GtkPopoverMenu (4.22) truncates
+/// menus that embed submenu sections.
+pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .build();
+    list.add_css_class("boxed-list");
+
+    let dialog = adw::Dialog::builder().content_width(360).build();
+
+    for playlist in ui.core.db.fetch_playlists() {
+        let row = adw::ActionRow::builder()
+            .title(&playlist.name)
+            .subtitle(format!(
+                "{} song{}",
+                playlist.track_count,
+                if playlist.track_count == 1 { "" } else { "s" }
+            ))
+            .activatable(true)
+            .build();
+        let ui = Rc::clone(ui);
+        let rel = rel_path.to_string();
+        let name = playlist.name.clone();
+        let dialog = dialog.clone();
+        row.connect_activated(move |_| {
+            match ui.core.db.add_track_to_playlist(playlist.id, &rel) {
+                Ok(()) => {
+                    ui.core.hub.emit(&AppEvent::LibraryReloaded);
+                    ui.core.toast(&format!("Added to {name}"));
+                }
+                Err(err) => {
+                    crate::logger::error("database", &format!("playlist add failed: {err}"));
+                }
+            }
+            dialog.close();
+        });
+        list.append(&row);
+    }
+
+    let new_row = adw::ActionRow::builder()
+        .title("New Playlist…")
+        .activatable(true)
+        .build();
+    new_row.add_prefix(&gtk::Image::from_icon_name("list-add-symbolic"));
+    {
+        let ui = Rc::clone(ui);
+        let rel = rel_path.to_string();
+        let dialog = dialog.clone();
+        new_row.connect_activated(move |_| {
+            dialog.close();
+            prompt_new_playlist(&ui, Some(rel.clone()));
+        });
+    }
+    list.append(&new_row);
+
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .margin_top(8)
+        .margin_bottom(18)
+        .margin_start(18)
+        .margin_end(18)
+        .build();
+    content.append(&list);
+    let scroll = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .max_content_height(480)
+        .child(&content)
+        .build();
+
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(
+        &adw::HeaderBar::builder()
+            .title_widget(&adw::WindowTitle::new("Add to Playlist", ""))
+            .build(),
+    );
+    toolbar.set_content(Some(&scroll));
+    dialog.set_child(Some(&toolbar));
+    dialog.present(Some(&ui.window));
 }
 
 pub fn prompt_new_playlist(ui: &Rc<Ui>, add_rel_path: Option<String>) {
@@ -342,6 +425,7 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&adw::Clamp::builder().maximum_size(760).child(&content).build())
         .build();
+    ui.register_scroller(&scroll);
 
     {
         let rebuild = Rc::clone(&rebuild);
@@ -497,7 +581,7 @@ fn attach_playlist_row_menu(
             .track_by_rel_path(&rel_path)
             .map(|t| t.loved)
             .unwrap_or(false);
-        let menu = context::track_menu(&ui.core, &rel_path, loved);
+        let menu = context::track_menu(&rel_path, loved);
         let remove_section = gtk::gio::Menu::new();
         let remove_item = gtk::gio::MenuItem::new(Some("Remove from Playlist"), None);
         remove_item.set_action_and_target_value(

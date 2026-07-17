@@ -165,6 +165,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .vexpand(true)
         .child(&grid)
         .build();
+    ui.register_scroller(&scroll);
 
     let sort_dropdown =
         gtk::DropDown::from_strings(&["Name", "Most Played", "Recently Played", "Track Count"]);
@@ -233,6 +234,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let sort_mode = Rc::clone(&sort_mode);
         let repopulate = Rc::clone(&repopulate);
+        let scroll = scroll.clone();
         sort_dropdown.connect_selected_notify(move |dropdown| {
             let mode = match dropdown.selected() {
                 1 => ArtistSort::MostPlayed,
@@ -241,6 +243,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 _ => ArtistSort::Name,
             };
             if sort_mode.replace(mode) != mode {
+                scroll.vadjustment().set_value(0.0);
                 repopulate();
             }
         });
@@ -470,6 +473,7 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&content)
         .build();
+    ui.register_scroller(&scroll);
 
     let page = adw::NavigationPage::builder()
         .title(artist)

@@ -58,6 +58,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&adw::Clamp::builder().maximum_size(980).child(&content).build())
         .build();
+    ui.register_scroller(&scroll);
 
     let stack = gtk::Stack::new();
     stack.set_hhomogeneous(false);
