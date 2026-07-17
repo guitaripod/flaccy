@@ -10,10 +10,10 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Instant;
 
-/// Bottom transport: classic three-column strip (meta | controls | extras)
-/// with a full-width seek row underneath. Left and right share a size group so
-/// the play cluster stays optically centered; width tiers hide extras without
-/// breaking that balance.
+/// Bottom transport: a `gtk::CenterBox` strip (meta | controls | extras) with a
+/// full-width seek row underneath. The center child sits on the window's true
+/// centerline while each wing uses its own flank, so the play cluster stays put
+/// as width tiers hide extras from the edges.
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let root = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -31,9 +31,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     artwork.set_visible(false);
 
     let equalizer = build_equalizer();
+    let art_frame = gtk::Box::builder().width_request(44).height_request(44).build();
     let art_overlay = gtk::Overlay::new();
-    art_overlay.set_child(Some(&artwork));
+    art_overlay.set_child(Some(&art_frame));
+    art_overlay.add_overlay(&artwork);
     art_overlay.add_overlay(&equalizer);
+    art_overlay.set_visible(false);
+    artwork.set_visible(true);
     art_overlay.add_css_class("mini-art");
     art_overlay.set_cursor_from_name(Some("pointer"));
     art_overlay.set_tooltip_text(Some("Now Playing"));
@@ -89,26 +93,16 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         });
     }
 
-    // Left column: track meta. Clamped so a long title never steals the
-    // center; does not expand — center owns free space so play stays put.
-    let left_inner = gtk::Box::builder()
+    let left = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(10)
         .halign(gtk::Align::Start)
         .valign(gtk::Align::Center)
         .build();
-    left_inner.add_css_class("transport-left");
-    left_inner.append(&art_overlay);
-    left_inner.append(&labels);
-    left_inner.append(&love);
-    let left = adw::Clamp::builder()
-        .maximum_size(260)
-        .tightening_threshold(140)
-        .halign(gtk::Align::Start)
-        .hexpand(false)
-        .child(&left_inner)
-        .build();
-    left.add_css_class("transport-left-clamp");
+    left.add_css_class("transport-left");
+    left.append(&art_overlay);
+    left.append(&labels);
+    left.append(&love);
 
     let shuffle = gtk::ToggleButton::builder()
         .icon_name("media-playlist-shuffle-symbolic")
@@ -173,19 +167,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     buttons.append(&play);
     buttons.append(&next);
     buttons.append(&repeat);
-
-    // Center column expands; buttons stay centered inside it.
-    let center = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .hexpand(true)
-        .halign(gtk::Align::Fill)
-        .valign(gtk::Align::Center)
-        .build();
-    center.add_css_class("transport-center");
-    center.append(&buttons);
-    // Center the button cluster within the expanding center column.
-    buttons.set_hexpand(true);
-    buttons.set_halign(gtk::Align::Center);
 
     let position_label = gtk::Label::new(Some("0:00"));
     position_label.add_css_class("time-label");
@@ -317,26 +298,19 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     right.append(&volume_icon);
     right.append(&volume);
 
-    // Equalize left/right so the play cluster sits in the true visual center.
-    let wings = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
-    wings.add_widget(&left);
-    wings.add_widget(&right);
-
-    let top = gtk::Box::builder()
+    let top = gtk::CenterBox::builder()
         .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
         .build();
     top.add_css_class("transport-top");
-    top.append(&left);
-    top.append(&center);
-    top.append(&right);
+    top.set_start_widget(Some(&left));
+    top.set_center_widget(Some(&buttons));
+    top.set_end_widget(Some(&right));
 
     root.append(&top);
     root.append(&seek_row);
 
     install_width_adaptation(
         &root,
-        &left,
         &right,
         &artist,
         &title,
@@ -355,6 +329,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let ui_ref = Rc::clone(ui);
         let artwork = artwork.clone();
+        let art_overlay = art_overlay.clone();
         let equalizer = equalizer.clone();
         let bar_ref = root.clone();
         let title = title.clone();
@@ -399,7 +374,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                     seek.set_value(0.0);
                     position_label.set_label("0:00");
                     duration_label.set_label(&format_time(track.duration));
-                    artwork.set_visible(true);
+                    art_overlay.set_visible(true);
                     artwork.set_paintable(Some(
                         &ui_ref
                             .core
@@ -430,7 +405,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                     artist.set_label("");
                     quality.set_visible(false);
                     love.set_sensitive(false);
-                    artwork.set_visible(false);
+                    art_overlay.set_visible(false);
                     equalizer.set_visible(false);
                     bar_ref.remove_css_class("playing");
                     set_adaptive_accent(None);
@@ -533,7 +508,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 /// the play cluster never drifts off-center as widgets hide.
 fn install_width_adaptation(
     root: &gtk::Box,
-    left: &adw::Clamp,
     right: &gtk::Box,
     artist: &gtk::Label,
     title: &gtk::Label,
@@ -548,7 +522,6 @@ fn install_width_adaptation(
     quality: &gtk::Label,
     sleep_label: &gtk::Label,
 ) {
-    let left = left.clone();
     let right = right.clone();
     let artist = artist.clone();
     let title = title.clone();
@@ -572,7 +545,6 @@ fn install_width_adaptation(
 
     let adapt = {
         let root = root.clone();
-        let left = left.clone();
         let right = right.clone();
         let artist = artist.clone();
         let title = title.clone();
@@ -629,16 +601,16 @@ fn install_width_adaptation(
 
             artist.set_visible(show_artist);
             love.set_visible(show_love);
-            title.set_max_width_chars(if tiny { 10 } else if slim { 14 } else { 22 });
-            left.set_maximum_size(if tiny {
-                120
+            title.set_max_width_chars(if tiny {
+                10
             } else if slim {
-                160
+                14
             } else if compact {
-                200
+                18
             } else {
-                260
+                22
             });
+            artist.set_max_width_chars(if compact { 16 } else { 24 });
 
             shuffle.set_visible(show_shuffle);
             repeat.set_visible(show_repeat);
@@ -657,7 +629,6 @@ fn install_width_adaptation(
                 || show_quality
                 || show_sleep_label;
             right.set_visible(right_has_visible);
-            left.set_visible(true);
         })
     };
 

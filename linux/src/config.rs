@@ -17,6 +17,7 @@ pub struct Config {
     pub group_album_editions: bool,
     pub import_page_cursor: u32,
     pub sidebar_index: i32,
+    pub album_sort: String,
 }
 
 impl Default for Config {
@@ -32,6 +33,7 @@ impl Default for Config {
             group_album_editions: true,
             import_page_cursor: 1,
             sidebar_index: 0,
+            album_sort: "artist".to_string(),
         }
     }
 }

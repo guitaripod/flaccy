@@ -4,6 +4,7 @@ pub mod artwork;
 pub mod cleanup;
 pub mod context;
 pub mod controls;
+pub mod downloads;
 pub mod guide;
 pub mod lyrics_panel;
 pub mod now_playing;

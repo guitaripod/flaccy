@@ -9,6 +9,10 @@
 - **Parity applies to behavior AND experience.** Ordering, grouping, metadata handling, naming, empty states, and the overall feel should match across clients, adapted to each platform's idioms (UIKit / AppKit / SwiftUI / GTK) — not reinvented.
 - Pure shared logic (e.g. `FlaccyCore` ordering/parsing) can be compiled and unit-tested standalone on this Linux box via swiftly even when the full app can't build here — use that to verify cross-client logic before claiming it works.
 
+### Recorded parity gaps
+
+- **Downloads (paste a YouTube/etc. link → best audio → library) is Linux-only** (`linux/src/downloads.rs`, `linux/src/ui/downloads.rs`, shipped 1.6.0). Deliberate: it shells out to `yt-dlp`/`ffmpeg`, which iOS/watchOS cannot run, and an App Store build that rips YouTube audio would violate App Review Guideline 5.2.3 regardless of implementation. If this ever comes to the Apple side, it needs a different design (e.g. user-provided files via the existing document-picker import, or a Mac-only build outside the App Store) — do not port the yt-dlp approach.
+
 ## Setup
 1. Copy `flaccy/Secrets.swift.example` to `flaccy/Secrets.swift`
 2. Fill in your API keys:

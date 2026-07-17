@@ -49,6 +49,8 @@ pub enum AppEvent {
     },
     WantlistChanged,
     WantlistSeen,
+    DownloadsChanged,
+    DownloadProgress { id: i64, fraction: f64 },
 }
 
 type Subscriber = Rc<dyn Fn(&AppEvent) -> bool>;

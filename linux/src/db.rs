@@ -113,6 +113,19 @@ pub struct AlbumInfoMerge {
     pub variants: Vec<(String, String)>,
 }
 
+#[derive(Clone, Debug)]
+pub struct DownloadRow {
+    pub id: i64,
+    pub url: String,
+    pub kind: String,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub playlist_title: Option<String>,
+    pub playlist_index: Option<i64>,
+    pub status: String,
+    pub error: Option<String>,
+}
+
 pub fn default_db_path() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_default()
@@ -311,7 +324,22 @@ impl Db {
                 storeURL TEXT,
                 fetchedAt DATETIME NOT NULL,
                 UNIQUE(artist, albumTitle)
-            );",
+            );
+            CREATE TABLE IF NOT EXISTS downloads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url TEXT NOT NULL,
+                kind TEXT NOT NULL DEFAULT 'link',
+                title TEXT,
+                artist TEXT,
+                playlistTitle TEXT,
+                playlistIndex INTEGER,
+                status TEXT NOT NULL DEFAULT 'queued',
+                error TEXT,
+                filePath TEXT,
+                createdAt DATETIME NOT NULL,
+                completedAt DATETIME
+            );
+            CREATE INDEX IF NOT EXISTS downloads_on_status ON downloads(status);",
         )
     }
 
@@ -417,7 +445,8 @@ impl Db {
     pub fn fetch_all_tracks(&self) -> Vec<TrackRow> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT id, fileURL, title, artist, albumTitle, trackNumber, duration,
-                    codec, bitDepth, sampleRate, channels, loved, playCount
+                    codec, bitDepth, sampleRate, channels, loved, playCount,
+                    dateAdded, lastPlayed
              FROM tracks ORDER BY albumTitle, trackNumber, title",
         ) else {
             return Vec::new();
@@ -437,6 +466,10 @@ impl Db {
                 channels: row.get(10)?,
                 loved: row.get(11)?,
                 play_count: row.get(12)?,
+                date_added: unix_from_string(&row.get::<_, String>(13)?),
+                last_played: row
+                    .get::<_, Option<String>>(14)?
+                    .map(|text| unix_from_string(&text)),
             })
         });
         match rows {
@@ -1267,6 +1300,206 @@ impl Db {
     }
 }
 
+impl Db {
+    pub fn insert_download(&self, url: &str) -> Result<i64, rusqlite::Error> {
+        self.conn.execute(
+            "INSERT INTO downloads (url, kind, status, createdAt) VALUES (?1, 'link', 'queued', ?2)",
+            params![url, now_string()],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    /// Atomically transitions a queued row into an active status
+    /// (fetching/downloading), returning false when the row is no longer queued
+    /// — the guard that lets a cancel arriving as the worker picks the row up
+    /// win the race instead of being silently overwritten back to active.
+    pub fn claim_download(&self, id: i64, status: &str) -> bool {
+        self.conn
+            .execute(
+                "UPDATE downloads SET status = ?1, error = NULL WHERE id = ?2 AND status = 'queued'",
+                params![status, id],
+            )
+            .map(|affected| affected == 1)
+            .unwrap_or(false)
+    }
+
+    /// Replaces a playlist link row with its expanded track rows in one
+    /// transaction, so a crash mid-expansion rolls back wholesale — the link row
+    /// survives with no orphan entries and the next launch re-probes cleanly
+    /// instead of duplicating the whole playlist.
+    pub fn expand_playlist(
+        &self,
+        link_id: i64,
+        entries: &[(String, String, String, i64)],
+        playlist_title: &str,
+    ) -> Result<(), rusqlite::Error> {
+        let tx = self.conn.unchecked_transaction()?;
+        let now = now_string();
+        for (url, title, artist, index) in entries {
+            tx.execute(
+                "INSERT INTO downloads (url, kind, title, artist, playlistTitle, playlistIndex, status, createdAt)
+                 VALUES (?1, 'track', ?2, ?3, ?4, ?5, 'queued', ?6)",
+                params![url, title, artist, playlist_title, index, now],
+            )?;
+        }
+        tx.execute("DELETE FROM downloads WHERE id = ?1", params![link_id])?;
+        tx.commit()
+    }
+
+    /// Queue rows ordered for display: live work first, then waiting, then the
+    /// finished history (newest first within each group).
+    pub fn download_rows(&self) -> Vec<DownloadRow> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT id, url, kind, title, artist, playlistTitle, playlistIndex, status, error
+             FROM downloads
+             ORDER BY CASE status
+                 WHEN 'downloading' THEN 0
+                 WHEN 'fetching' THEN 0
+                 WHEN 'queued' THEN 1
+                 ELSE 2
+             END,
+             CASE WHEN status IN ('queued', 'fetching', 'downloading') THEN id ELSE -id END",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map([], |row| {
+            Ok(DownloadRow {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                kind: row.get(2)?,
+                title: row.get(3)?,
+                artist: row.get(4)?,
+                playlist_title: row.get(5)?,
+                playlist_index: row.get(6)?,
+                status: row.get(7)?,
+                error: row.get(8)?,
+            })
+        });
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    pub fn next_queued_download(&self) -> Option<DownloadRow> {
+        self.conn
+            .query_row(
+                "SELECT id, url, kind, title, artist, playlistTitle, playlistIndex, status, error
+                 FROM downloads WHERE status = 'queued' ORDER BY id LIMIT 1",
+                [],
+                |row| {
+                    Ok(DownloadRow {
+                        id: row.get(0)?,
+                        url: row.get(1)?,
+                        kind: row.get(2)?,
+                        title: row.get(3)?,
+                        artist: row.get(4)?,
+                        playlist_title: row.get(5)?,
+                        playlist_index: row.get(6)?,
+                        status: row.get(7)?,
+                        error: row.get(8)?,
+                    })
+                },
+            )
+            .optional()
+            .ok()
+            .flatten()
+    }
+
+    pub fn set_download_status(&self, id: i64, status: &str, error: Option<&str>) {
+        let completed = matches!(status, "done" | "failed" | "cancelled").then(now_string);
+        let _ = self.conn.execute(
+            "UPDATE downloads SET status = ?1, error = ?2, completedAt = COALESCE(?3, completedAt)
+             WHERE id = ?4",
+            params![status, error, completed, id],
+        );
+    }
+
+    pub fn set_download_meta(&self, id: i64, kind: &str, title: &str, artist: &str) {
+        let _ = self.conn.execute(
+            "UPDATE downloads SET kind = ?1, title = ?2, artist = ?3 WHERE id = ?4",
+            params![kind, title, artist, id],
+        );
+    }
+
+    pub fn set_download_file(&self, id: i64, path: &str) {
+        let _ = self
+            .conn
+            .execute("UPDATE downloads SET filePath = ?1 WHERE id = ?2", params![path, id]);
+    }
+
+    pub fn download_status(&self, id: i64) -> Option<String> {
+        self.conn
+            .query_row("SELECT status FROM downloads WHERE id = ?1", params![id], |row| row.get(0))
+            .optional()
+            .ok()
+            .flatten()
+    }
+
+    pub fn requeue_download(&self, id: i64) {
+        let _ = self.conn.execute(
+            "UPDATE downloads SET status = 'queued', error = NULL, completedAt = NULL WHERE id = ?1",
+            params![id],
+        );
+    }
+
+    pub fn delete_download(&self, id: i64) {
+        let _ = self
+            .conn
+            .execute("DELETE FROM downloads WHERE id = ?1", params![id]);
+    }
+
+    pub fn clear_finished_downloads(&self) -> usize {
+        self.conn
+            .execute(
+                "DELETE FROM downloads WHERE status IN ('done', 'failed', 'cancelled')",
+                [],
+            )
+            .unwrap_or(0)
+    }
+
+    pub fn active_download_count(&self) -> i64 {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*) FROM downloads WHERE status IN ('queued', 'fetching', 'downloading')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+    }
+
+    pub fn finished_download_count(&self) -> i64 {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*) FROM downloads WHERE status IN ('done', 'failed', 'cancelled')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+    }
+
+    pub fn has_active_download_url(&self, url: &str) -> bool {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*) FROM downloads
+                 WHERE url = ?1 AND status IN ('queued', 'fetching', 'downloading')",
+                params![url],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap_or(0)
+            > 0
+    }
+
+    /// Startup recovery: anything the previous session left mid-flight goes
+    /// back to the queue so the worker resumes it.
+    pub fn reset_interrupted_downloads(&self) {
+        let _ = self.conn.execute(
+            "UPDATE downloads SET status = 'queued' WHERE status IN ('fetching', 'downloading')",
+            [],
+        );
+    }
+}
+
 #[cfg(test)]
 mod cleanup_tests {
     use super::*;
@@ -1280,8 +1513,12 @@ mod cleanup_tests {
 
     impl TempDb {
         fn open() -> Self {
-            let path = std::env::temp_dir()
-                .join(format!("flaccy-cleanup-test-{}.sqlite", std::process::id()));
+            static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let unique = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let path = std::env::temp_dir().join(format!(
+                "flaccy-cleanup-test-{}-{unique}.sqlite",
+                std::process::id()
+            ));
             remove_all(&path);
             let db = Db::open(&path).expect("temp db opens");
             Self { path, db }
@@ -1539,5 +1776,45 @@ mod cleanup_tests {
             )
             .expect("query lastPlayed");
         assert!(last_played.is_some(), "lastPlayed stamped from MAX(scrobble timestamp)");
+    }
+
+    #[test]
+    fn claim_download_wins_only_while_queued() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        let id = db.insert_download("https://example.com/a").expect("insert");
+
+        assert!(db.claim_download(id, "downloading"), "first claim of a queued row succeeds");
+        assert_eq!(db.download_status(id).as_deref(), Some("downloading"));
+        assert!(
+            !db.claim_download(id, "downloading"),
+            "a second claim fails because the row is no longer queued"
+        );
+
+        let cancelled = db.insert_download("https://example.com/b").expect("insert");
+        db.set_download_status(cancelled, "cancelled", None);
+        assert!(
+            !db.claim_download(cancelled, "downloading"),
+            "a cancel that lands before pickup blocks the claim, so the worker skips it"
+        );
+        assert_eq!(db.download_status(cancelled).as_deref(), Some("cancelled"));
+    }
+
+    #[test]
+    fn expand_playlist_is_atomic() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        let link = db.insert_download("https://example.com/list").expect("insert");
+        let entries = vec![
+            ("https://example.com/1".to_string(), "One".to_string(), "Artist".to_string(), 1),
+            ("https://example.com/2".to_string(), "Two".to_string(), "Artist".to_string(), 2),
+        ];
+        db.expand_playlist(link, &entries, "The List").expect("expand");
+
+        assert!(db.download_status(link).is_none(), "the link row is gone after expansion");
+        let rows = db.download_rows();
+        assert_eq!(rows.len(), 2, "one row per playlist entry, no leftover link row");
+        assert!(rows.iter().all(|r| r.kind == "track" && r.status == "queued"));
+        assert!(rows.iter().any(|r| r.playlist_index == Some(1) && r.title.as_deref() == Some("One")));
     }
 }

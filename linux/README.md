@@ -6,13 +6,19 @@ An adaptive theme engine retints the whole app with the dominant color of whatev
 playing — ambient gradient backdrops, glass surfaces, a glowing now-playing pulse — or
 pick one of seven curated palettes in Preferences. Works in light and dark.
 
+Downloads (sidebar → Downloads, or Ctrl+D): paste a YouTube / YouTube Music /
+SoundCloud / Bandcamp link — a song, an album, or a whole playlist — and Flaccy pulls
+the best available audio, tags it (title, artist, album, track number, cover art), and
+drops it straight into your library. Requires `yt-dlp` and `ffmpeg`; the page walks you
+through the one-minute setup if they're missing.
+
 ## Install
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh | sh
 ```
 
-Installs to `~/.local` (no sudo). x86_64, glibc ≥ 2.34 (Ubuntu 22.04+, Debian 12+, Fedora 35+, current Arch). On older or musl-based distros, build from source. Requires system GTK4, libadwaita, and GStreamer:
+Installs to `~/.local` (no sudo). x86_64, glibc ≥ 2.39 (Ubuntu 24.04+, Fedora 40+, Debian 13+, current Arch). On older or musl-based distros, use the AUR package (Arch) or build from source. Requires system GTK4, libadwaita, and GStreamer:
 
 - Arch: `sudo pacman -S gtk4 libadwaita gstreamer gst-plugins-base gst-plugins-good gst-libav`
 - Debian/Ubuntu: `sudo apt install libgtk-4-1 libadwaita-1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav`

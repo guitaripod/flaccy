@@ -33,6 +33,7 @@ pub struct AppCore {
     pub sleep_end_of_track: Cell<bool>,
     pub autoplay_in_flight: Cell<bool>,
     pub wantlist_in_flight: Cell<bool>,
+    pub downloads: crate::downloads::DownloadHandle,
     reload_in_flight: Cell<bool>,
     reload_pending: Cell<bool>,
     enrich_total: Cell<usize>,
@@ -76,6 +77,7 @@ impl AppCore {
             sleep_end_of_track: Cell::new(false),
             autoplay_in_flight: Cell::new(false),
             wantlist_in_flight: Cell::new(false),
+            downloads: crate::downloads::DownloadHandle::new(),
             reload_in_flight: Cell::new(false),
             reload_pending: Cell::new(false),
             enrich_total: Cell::new(0),
@@ -169,6 +171,7 @@ impl AppCore {
         crate::mpris::start(self);
         crate::scrobbler::startup_maintenance(self);
         crate::enrichment::start(self);
+        crate::downloads::start(self);
         self.wire_autoplay();
         self.rescan();
         self.schedule_periodic_drain();

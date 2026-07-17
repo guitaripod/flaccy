@@ -19,6 +19,7 @@ fn install_songs_column_adaptation(
     quality: &gtk::ColumnViewColumn,
     artist: &gtk::ColumnViewColumn,
     duration: &gtk::ColumnViewColumn,
+    added: &gtk::ColumnViewColumn,
 ) {
     use std::cell::Cell;
     use std::rc::Rc;
@@ -29,6 +30,7 @@ fn install_songs_column_adaptation(
     let quality = quality.clone();
     let artist = artist.clone();
     let duration = duration.clone();
+    let added = added.clone();
     column_view.connect_realize(move |view| {
         let last_width = Rc::clone(&last_width);
         let album = album.clone();
@@ -36,6 +38,7 @@ fn install_songs_column_adaptation(
         let quality = quality.clone();
         let artist = artist.clone();
         let duration = duration.clone();
+        let added = added.clone();
         view.add_tick_callback(move |view, _| {
             let width = view.width();
             if width == last_width.get() || width <= 1 {
@@ -47,6 +50,7 @@ fn install_songs_column_adaptation(
             let compact = width >= 420;
             quality.set_visible(wide);
             plays.set_visible(wide);
+            added.set_visible(wide);
             album.set_visible(medium);
             duration.set_visible(compact);
             artist.set_visible(compact);
@@ -172,6 +176,14 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         None,
     );
     column_view.append_column(&plays_column);
+    let added_column = string_column(
+        "Added",
+        false,
+        |track| format_date_added(track.date_added),
+        |a, b| a.date_added.cmp(&b.date_added),
+        None,
+    );
+    column_view.append_column(&added_column);
     let quality_column = string_column(
         "Quality",
         false,
@@ -194,6 +206,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         &quality_column,
         &artist_column,
         &duration_column,
+        &added_column,
     );
 
     {
@@ -419,7 +432,7 @@ fn tracks_fingerprint(tracks: &[Track]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for track in tracks {
         let row = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{:?}|{:?}|{:?}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{:?}|{:?}|{:?}",
             track.rel_path,
             track.title,
             track.artist,
@@ -428,6 +441,7 @@ fn tracks_fingerprint(tracks: &[Track]) -> u64 {
             track.duration,
             track.track_number,
             track.play_count,
+            track.date_added,
             track.codec,
             track.bit_depth,
             track.sample_rate
@@ -435,6 +449,20 @@ fn tracks_fingerprint(tracks: &[Track]) -> u64 {
         hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
     }
     hash
+}
+
+fn format_date_added(unix: i64) -> String {
+    if unix <= 0 {
+        return String::new();
+    }
+    chrono::DateTime::<chrono::Utc>::from_timestamp(unix, 0)
+        .map(|stamp| {
+            stamp
+                .with_timezone(&chrono::Local)
+                .format("%b %-d, %Y")
+                .to_string()
+        })
+        .unwrap_or_default()
 }
 
 fn string_column(

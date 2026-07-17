@@ -99,6 +99,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     }
 
     let menu = gio::Menu::new();
+    menu.append(Some("Download from Link"), Some("app.downloads"));
     menu.append(Some("Rescan Library"), Some("app.rescan"));
     menu.append(Some("Preferences"), Some("app.preferences"));
     menu.append(Some("About Flaccy"), Some("app.about"));
@@ -184,6 +185,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     stack.add_named(&ui::playlists::build(&ui), Some("playlists"));
     stack.add_named(&ui::stats::build(&ui), Some("stats"));
     stack.add_named(&ui::wantlist::build(&ui), Some("wantlist"));
+    stack.add_named(&ui::downloads::build(&ui), Some("downloads"));
     stack.add_named(&ui::guide::build(&ui), Some("guide"));
 
     let sidebar = gtk::ListBox::builder()
@@ -198,14 +200,16 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         ("view-list-symbolic", "Playlists"),
         ("flaccy-stats-symbolic", "Stats"),
         ("starred-symbolic", "Wantlist"),
+        ("folder-download-symbolic", "Downloads"),
         ("dialog-information-symbolic", "Guide"),
     ] {
         sidebar.append(&sidebar_row(icon, label));
     }
     attach_wantlist_badge(core, &sidebar);
+    attach_downloads_badge(core, &sidebar);
     {
         let sidebar = sidebar.clone();
-        let saved_index = core.config.borrow().sidebar_index.clamp(0, 6);
+        let saved_index = core.config.borrow().sidebar_index.clamp(0, 7);
         glib::idle_add_local_once(move || {
             let index = if config::demo_mode() {
                 demo_start_view_index()
@@ -262,9 +266,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         sidebar.connect_row_selected(move |_, row| {
             let Some(row) = row else { return };
             let names = [
-                "albums", "songs", "artists", "playlists", "stats", "wantlist", "guide",
+                "albums", "songs", "artists", "playlists", "stats", "wantlist", "downloads",
+                "guide",
             ];
-            let index = row.index().clamp(0, 6) as usize;
+            let index = row.index().clamp(0, 7) as usize;
             core_for_rows.config.borrow_mut().sidebar_index = index as i32;
             core_for_rows.save_config();
             crate::logger::info("ui", &format!("sidebar selected: {}", names[index]));
@@ -420,9 +425,21 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     window.set_content(Some(&shell));
 
     register_actions(app, &ui, &search);
+    {
+        let downloads_action = gio::SimpleAction::new("downloads", None);
+        let sidebar_for_action = sidebar.clone();
+        downloads_action.connect_activate(move |_, _| {
+            if let Some(row) = sidebar_for_action.row_at_index(6) {
+                sidebar_for_action.select_row(Some(&row));
+            }
+        });
+        app.add_action(&downloads_action);
+        app.set_accels_for_action("app.downloads", &["<Control>d"]);
+    }
     attach_space_handler(&ui);
     attach_type_to_search(&ui, &search);
     attach_file_drop(&ui, &toast_overlay);
+    attach_paste_to_download(&ui, &sidebar);
     schedule_demo_detail(&ui);
 
     {
@@ -597,6 +614,75 @@ fn attach_wantlist_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
         AppEvent::WantlistChanged | AppEvent::WantlistSeen => update(),
         _ => {}
     });
+}
+
+/// Keeps an active-count badge on the Downloads sidebar row so queued work is
+/// visible from anywhere in the app.
+fn attach_downloads_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
+    let Some(row) = sidebar.row_at_index(6) else { return };
+    let Some(row_box) = row.child().and_downcast::<gtk::Box>() else { return };
+    let badge = gtk::Label::new(None);
+    badge.add_css_class("wantlist-badge");
+    badge.set_hexpand(true);
+    badge.set_halign(gtk::Align::End);
+    badge.set_visible(false);
+    row_box.append(&badge);
+
+    let update = {
+        let core = Rc::clone(core);
+        let badge = badge.clone();
+        move || {
+            let count = core.db.active_download_count();
+            badge.set_visible(count > 0);
+            if count > 0 {
+                badge.set_label(&count.to_string());
+            }
+        }
+    };
+    update();
+    core.hub.subscribe_widget(&badge, move |_, event| {
+        if let AppEvent::DownloadsChanged = event {
+            update();
+        }
+    });
+}
+
+/// Ctrl+V anywhere outside a text field: if the clipboard holds a link, jump
+/// to Downloads and queue it in one stroke.
+fn attach_paste_to_download(ui: &Rc<Ui>, sidebar: &gtk::ListBox) {
+    let controller = gtk::EventControllerKey::new();
+    controller.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let window = ui.window.clone();
+    let ui = Rc::clone(ui);
+    let sidebar = sidebar.clone();
+    controller.connect_key_pressed(move |_, key, _, modifiers| {
+        if key != gdk::Key::v || !modifiers.contains(gdk::ModifierType::CONTROL_MASK) {
+            return glib::Propagation::Proceed;
+        }
+        let editing = gtk::prelude::GtkWindowExt::focus(&ui.window)
+            .map(|widget| widget.is::<gtk::Text>() || widget.is::<gtk::Entry>())
+            .unwrap_or(false);
+        if editing {
+            return glib::Propagation::Proceed;
+        }
+        let ui = Rc::clone(&ui);
+        let sidebar = sidebar.clone();
+        ui.window.clipboard().read_text_async(
+            None::<&gtk::gio::Cancellable>,
+            move |result| {
+                let Ok(Some(text)) = result else { return };
+                if !crate::downloads::looks_like_url(text.trim()) {
+                    return;
+                }
+                if let Some(row) = sidebar.row_at_index(6) {
+                    sidebar.select_row(Some(&row));
+                }
+                crate::downloads::enqueue(&ui.core, text.trim());
+            },
+        );
+        glib::Propagation::Stop
+    });
+    window.add_controller(controller);
 }
 
 fn sidebar_row(icon: &str, label: &str) -> gtk::ListBoxRow {
@@ -893,16 +979,21 @@ fn present_about(window: &adw::ApplicationWindow) {
         .license_type(gtk::License::Gpl30)
         .release_notes_version(env!("CARGO_PKG_VERSION"))
         .release_notes(
-            "<p>Adaptive shell — reflows from a phone-width drawer up to a full \
-             desktop layout.</p>\
+            "<p>Downloads — paste a link, get the music.</p>\
              <ul>\
-             <li>Library sidebar collapses into a hamburger drawer under \
-             ~820px; pick a destination and it gets out of the way.</li>\
-             <li>Transport stays balanced: meta left, play cluster centered, \
-             extras right — volume and chrome return when you grow the window \
-             again.</li>\
-             <li>Album grids, songs columns, and Now Playing art scale with \
-             available space instead of locking a minimum width.</li>\
+             <li>New Downloads page in the sidebar (Ctrl+D): paste a YouTube, \
+             YouTube Music, SoundCloud, or Bandcamp link and the best available \
+             audio lands in your library, tagged and with cover art.</li>\
+             <li>Albums and playlists expand into a queue with per-track \
+             progress, cancel, and retry; the queue survives restarts.</li>\
+             <li>Ctrl+V anywhere queues a copied link instantly.</li>\
+             <li>Powered by yt-dlp and FFmpeg — a built-in guide walks through \
+             the one-minute setup if they're missing.</li>\
+             <li>Albums can now sort by Title, Artist, Year, Recently Added, \
+             or Recently Played; Songs gains an Added column.</li>\
+             <li>Transport bar fixes: extras sit flush with the window edge, \
+             the play cluster stays truly centered, and the first track no \
+             longer bounces the bar's height.</li>\
              </ul>",
         )
         .build();
@@ -924,6 +1015,8 @@ fn present_shortcuts(window: &adw::ApplicationWindow) {
             "Library",
             &[
                 ("Ctrl+F", "Search"),
+                ("Ctrl+D", "Downloads"),
+                ("Ctrl+V", "Download link from clipboard"),
                 ("Ctrl+,", "Preferences"),
                 ("Ctrl+?", "Keyboard shortcuts"),
                 ("Ctrl+Q", "Quit"),
@@ -1151,7 +1244,8 @@ fn demo_start_view_index() -> i32 {
         Some("playlists") => 3,
         Some("stats") => 4,
         Some("wantlist") => 5,
-        Some("guide") => 6,
+        Some("downloads") => 6,
+        Some("guide") => 7,
         _ => 0,
     }
 }

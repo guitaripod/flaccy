@@ -262,6 +262,8 @@ mod tests {
             channels: None,
             loved: false,
             play_count: 0,
+            date_added: 0,
+            last_played: None,
         }
     }
 

@@ -8,8 +8,81 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
+/// Mirrors LibraryViewModel.AlbumSort on the Apple clients — same options,
+/// same semantics, same order.
+#[derive(Clone, Copy, PartialEq)]
+enum AlbumSort {
+    Title,
+    Artist,
+    Year,
+    RecentlyAdded,
+    RecentlyPlayed,
+}
+
+impl AlbumSort {
+    const ALL: [AlbumSort; 5] = [
+        AlbumSort::Title,
+        AlbumSort::Artist,
+        AlbumSort::Year,
+        AlbumSort::RecentlyAdded,
+        AlbumSort::RecentlyPlayed,
+    ];
+
+    fn label(self) -> &'static str {
+        match self {
+            AlbumSort::Title => "Title",
+            AlbumSort::Artist => "Artist",
+            AlbumSort::Year => "Year",
+            AlbumSort::RecentlyAdded => "Recently Added",
+            AlbumSort::RecentlyPlayed => "Recently Played",
+        }
+    }
+
+    fn id(self) -> &'static str {
+        match self {
+            AlbumSort::Title => "title",
+            AlbumSort::Artist => "artist",
+            AlbumSort::Year => "year",
+            AlbumSort::RecentlyAdded => "recently_added",
+            AlbumSort::RecentlyPlayed => "recently_played",
+        }
+    }
+
+    fn from_id(id: &str) -> AlbumSort {
+        Self::ALL
+            .into_iter()
+            .find(|sort| sort.id() == id)
+            .unwrap_or(AlbumSort::Artist)
+    }
+}
+
+/// Same comparisons as iOS sortedAlbums: title/artist alphabetical, year
+/// ascending with unknown years last, recently added/played newest first with
+/// never-played albums trailing alphabetically.
+fn sort_albums(albums: &mut [Album], sort: AlbumSort) {
+    let title_key = |album: &Album| album.title.to_lowercase();
+    match sort {
+        AlbumSort::Title => albums.sort_by_key(|a| (title_key(a), a.artist.to_lowercase())),
+        AlbumSort::Artist => albums.sort_by_key(|a| (a.artist.to_lowercase(), title_key(a))),
+        AlbumSort::Year => albums.sort_by_key(|a| {
+            (
+                a.year.clone().filter(|y| !y.is_empty()).unwrap_or_else(|| "9999".to_string()),
+                title_key(a),
+            )
+        }),
+        AlbumSort::RecentlyAdded => albums.sort_by_key(|a| (-a.added_unix(), title_key(a))),
+        AlbumSort::RecentlyPlayed => albums.sort_by_key(|a| match a.last_played_unix() {
+            Some(played) => (0, -played, title_key(a)),
+            None => (1, 0, title_key(a)),
+        }),
+    }
+}
+
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let store = gio::ListStore::new::<BoxedAnyObject>();
+    let sort_mode = Rc::new(Cell::new(AlbumSort::from_id(
+        &ui.core.config.borrow().album_sort,
+    )));
 
     let filter = {
         let query = Rc::clone(&ui.query);
@@ -137,7 +210,33 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .vexpand(true)
         .child(&grid)
         .build();
+
+    let sort_labels: Vec<&str> = AlbumSort::ALL.iter().map(|s| s.label()).collect();
+    let sort_dropdown = gtk::DropDown::from_strings(&sort_labels);
+    sort_dropdown.set_valign(gtk::Align::Center);
+    sort_dropdown.set_tooltip_text(Some("Sort albums"));
+    sort_dropdown.set_selected(
+        AlbumSort::ALL
+            .iter()
+            .position(|s| *s == sort_mode.get())
+            .unwrap_or(1) as u32,
+    );
+    let sort_label = gtk::Label::new(Some("Sort"));
+    sort_label.add_css_class("dim");
+    sort_label.add_css_class("caption");
+    let sort_header = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(8)
+        .margin_top(18)
+        .margin_start(24)
+        .margin_end(24)
+        .halign(gtk::Align::End)
+        .build();
+    sort_header.append(&sort_label);
+    sort_header.append(&sort_dropdown);
+
     let grid_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    grid_content.append(&sort_header);
     grid_content.append(&crate::ui::suggested_shelf::build(ui));
     grid_content.append(&scroll);
 
@@ -192,19 +291,21 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.add_named(&empty, Some("empty"));
     stack.add_named(&grid_content, Some("grid"));
 
-    let rebuild = {
+    let rebuild: Rc<dyn Fn()> = {
         let store = store.clone();
         let stack = stack.clone();
         let scroll = scroll.clone();
         let ui = Rc::clone(ui);
+        let sort_mode = Rc::clone(&sort_mode);
         let applied = Cell::new(0u64);
-        move || {
+        Rc::new(move || {
             let library = ui.core.library.borrow().clone();
-            let fingerprint = albums_fingerprint(&library.albums);
+            let mut albums = library.albums.clone();
+            sort_albums(&mut albums, sort_mode.get());
+            let fingerprint = albums_fingerprint(&albums);
             if applied.replace(fingerprint) != fingerprint {
                 let saved = scroll.vadjustment().value();
-                let items: Vec<BoxedAnyObject> = library
-                    .albums
+                let items: Vec<BoxedAnyObject> = albums
                     .iter()
                     .map(|album| BoxedAnyObject::new(album.clone()))
                     .collect();
@@ -219,12 +320,29 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             } else {
                 "grid"
             });
-        }
+        })
     };
     rebuild();
 
     {
-        let rebuild = rebuild.clone();
+        let ui = Rc::clone(ui);
+        let sort_mode = Rc::clone(&sort_mode);
+        let rebuild = Rc::clone(&rebuild);
+        let scroll = scroll.clone();
+        sort_dropdown.connect_selected_notify(move |dropdown| {
+            let sort = AlbumSort::ALL[(dropdown.selected() as usize).min(AlbumSort::ALL.len() - 1)];
+            if sort_mode.replace(sort) == sort {
+                return;
+            }
+            ui.core.config.borrow_mut().album_sort = sort.id().to_string();
+            ui.core.save_config();
+            scroll.vadjustment().set_value(0.0);
+            rebuild();
+        });
+    }
+
+    {
+        let rebuild = Rc::clone(&rebuild);
         let filter = filter.clone();
         ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
             AppEvent::LibraryReloaded => rebuild(),
@@ -800,5 +918,86 @@ fn album_quality_summary(album: &Album) -> Option<String> {
         Some(first.clone())
     } else {
         Some("Mixed Quality".to_string())
+    }
+}
+
+#[cfg(test)]
+mod sort_tests {
+    use super::*;
+    use crate::library::TrackRow;
+
+    fn album(title: &str, year: Option<&str>, added: i64, played: Option<i64>) -> Album {
+        Album {
+            title: title.to_string(),
+            artist: "Artist".to_string(),
+            year: year.map(String::from),
+            genre: None,
+            tracks: vec![TrackRow {
+                id: 0,
+                rel_path: format!("{title}/01.flac"),
+                title: "Song".to_string(),
+                artist: "Artist".to_string(),
+                album: title.to_string(),
+                track_number: 1,
+                duration: 100.0,
+                codec: None,
+                bit_depth: None,
+                sample_rate: None,
+                channels: None,
+                loved: false,
+                play_count: 0,
+                date_added: added,
+                last_played: played,
+            }],
+        }
+    }
+
+    fn titles(albums: &[Album]) -> Vec<&str> {
+        albums.iter().map(|a| a.title.as_str()).collect()
+    }
+
+    #[test]
+    fn recently_added_orders_newest_first() {
+        let mut albums = vec![
+            album("Old", None, 100, None),
+            album("New", None, 300, None),
+            album("Mid", None, 200, None),
+        ];
+        sort_albums(&mut albums, AlbumSort::RecentlyAdded);
+        assert_eq!(titles(&albums), vec!["New", "Mid", "Old"]);
+    }
+
+    #[test]
+    fn year_sorts_ascending_with_unknown_last() {
+        let mut albums = vec![
+            album("NoYear", None, 0, None),
+            album("Nineties", Some("1994"), 0, None),
+            album("Modern", Some("2020"), 0, None),
+        ];
+        sort_albums(&mut albums, AlbumSort::Year);
+        assert_eq!(titles(&albums), vec!["Nineties", "Modern", "NoYear"]);
+    }
+
+    #[test]
+    fn recently_played_puts_never_played_last_alphabetically() {
+        let mut albums = vec![
+            album("Zebra Unplayed", None, 0, None),
+            album("Alpha Unplayed", None, 0, None),
+            album("Played Older", None, 0, Some(50)),
+            album("Played Newer", None, 0, Some(90)),
+        ];
+        sort_albums(&mut albums, AlbumSort::RecentlyPlayed);
+        assert_eq!(
+            titles(&albums),
+            vec!["Played Newer", "Played Older", "Alpha Unplayed", "Zebra Unplayed"]
+        );
+    }
+
+    #[test]
+    fn sort_ids_round_trip() {
+        for sort in AlbumSort::ALL {
+            assert!(AlbumSort::from_id(sort.id()) == sort);
+        }
+        assert!(AlbumSort::from_id("garbage") == AlbumSort::Artist);
     }
 }

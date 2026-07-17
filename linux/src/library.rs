@@ -18,6 +18,8 @@ pub struct TrackRow {
     pub channels: Option<i32>,
     pub loved: bool,
     pub play_count: i64,
+    pub date_added: i64,
+    pub last_played: Option<i64>,
 }
 
 pub type Track = TrackRow;
@@ -74,6 +76,17 @@ impl Album {
 
     pub fn total_duration(&self) -> f64 {
         self.tracks.iter().map(|t| t.duration).sum()
+    }
+
+    /// When the album entered the library: the newest track's dateAdded, so a
+    /// release that trickles in file-by-file surfaces when it completes
+    /// (mirrors LibraryViewModel.albumDateAddedMap on the Apple clients).
+    pub fn added_unix(&self) -> i64 {
+        self.tracks.iter().map(|t| t.date_added).max().unwrap_or(0)
+    }
+
+    pub fn last_played_unix(&self) -> Option<i64> {
+        self.tracks.iter().filter_map(|t| t.last_played).max()
     }
 }
 
@@ -408,6 +421,8 @@ mod sort_tests {
                 channels: Some(2),
                 loved: false,
                 play_count: 0,
+                date_added: 0,
+                last_played: None,
             },
             TrackRow {
                 id: 2,
@@ -423,6 +438,8 @@ mod sort_tests {
                 channels: Some(2),
                 loved: false,
                 play_count: 0,
+                date_added: 0,
+                last_played: None,
             },
             TrackRow {
                 id: 3,
@@ -438,6 +455,8 @@ mod sort_tests {
                 channels: Some(2),
                 loved: false,
                 play_count: 0,
+                date_added: 0,
+                last_played: None,
             },
         ];
         let mut grouped: HashMap<String, Vec<Track>> = HashMap::new();
@@ -471,6 +490,8 @@ mod sort_tests {
             channels: None,
             loved: false,
             play_count: 0,
+            date_added: 0,
+            last_played: None,
         }
     }
 

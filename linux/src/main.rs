@@ -1,6 +1,7 @@
 mod app;
 mod config;
 mod db;
+mod downloads;
 mod enrichment;
 mod events;
 mod hygiene;
