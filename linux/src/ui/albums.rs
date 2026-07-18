@@ -662,6 +662,13 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
     let artist = gtk::Label::builder().label(&album.artist).xalign(0.0).build();
     artist.add_css_class("title-4");
     artist.add_css_class("dim");
+    artist.set_halign(gtk::Align::Start);
+    {
+        let album_artist = album.artist.clone();
+        crate::ui::controls::attach_label_nav(ui, &artist, "Go to Artist", move |ui| {
+            crate::ui::goto_artist(ui, &album_artist);
+        });
+    }
     meta.append(&artist);
 
     let info_text = |year: Option<&String>, genre: Option<&String>| {

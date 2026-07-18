@@ -1,4 +1,6 @@
+use crate::events::AppEvent;
 use crate::player::RepeatMode;
+use crate::ui::Ui;
 use gtk::glib;
 use gtk::prelude::*;
 use std::cell::Cell;
@@ -59,6 +61,98 @@ pub fn apply_repeat(repeat: &gtk::Button, mode: RepeatMode) {
             repeat.add_css_class("accent-toggle");
         }
     }
+}
+
+/// Turns a metadata label into a click-to-navigate affordance: pointer cursor,
+/// hover underline, and a destination tooltip.
+pub fn attach_label_nav(
+    ui: &Rc<Ui>,
+    label: &gtk::Label,
+    tooltip: &str,
+    go: impl Fn(&Rc<Ui>) + 'static,
+) {
+    label.add_css_class("nav-link");
+    label.set_cursor_from_name(Some("pointer"));
+    label.set_tooltip_text(Some(tooltip));
+    let click = gtk::GestureClick::new();
+    let ui = Rc::clone(ui);
+    click.connect_released(move |_, _, _, _| go(&ui));
+    label.add_controller(click);
+}
+
+pub fn volume_icon_name(volume: f64) -> &'static str {
+    if volume <= 0.001 {
+        "audio-volume-muted-symbolic"
+    } else if volume < 0.34 {
+        "audio-volume-low-symbolic"
+    } else if volume < 0.67 {
+        "audio-volume-medium-symbolic"
+    } else {
+        "audio-volume-high-symbolic"
+    }
+}
+
+pub struct VolumeControl {
+    pub container: gtk::Box,
+}
+
+/// Icon + slider volume cluster shared by the bottom transport and the
+/// full-window player: drags and scroll steps drive the player volume, the
+/// icon tracks the level, and every instance stays in sync through
+/// VolumeChanged (external writes like MPRIS included).
+pub fn build_volume_control(ui: &Rc<Ui>) -> VolumeControl {
+    let initial = ui.core.config.borrow().volume;
+    let icon = gtk::Image::from_icon_name(volume_icon_name(initial));
+    icon.add_css_class("dim");
+    icon.add_css_class("transport-volume-icon");
+    let scale = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 0.02);
+    scale.set_tooltip_text(Some("Volume (scroll to adjust)"));
+    scale.set_width_request(88);
+    scale.set_draw_value(false);
+    scale.add_css_class("transport-volume");
+    scale.set_value(initial);
+
+    let syncing = Rc::new(Cell::new(false));
+    {
+        let ui = Rc::clone(ui);
+        let syncing = Rc::clone(&syncing);
+        let icon = icon.clone();
+        scale.connect_value_changed(move |scale| {
+            icon.set_icon_name(Some(volume_icon_name(scale.value())));
+            if !syncing.get() {
+                ui.core.set_volume(scale.value());
+            }
+        });
+    }
+    {
+        let scroll = gtk::EventControllerScroll::new(
+            gtk::EventControllerScrollFlags::VERTICAL | gtk::EventControllerScrollFlags::DISCRETE,
+        );
+        let scale_ref = scale.clone();
+        scroll.connect_scroll(move |_, _, dy| {
+            let next = (scale_ref.value() - dy * 0.05).clamp(0.0, 1.0);
+            scale_ref.set_value(next);
+            glib::Propagation::Stop
+        });
+        scale.add_controller(scroll);
+    }
+
+    let container = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    container.append(&icon);
+    container.append(&scale);
+    {
+        let scale = scale.clone();
+        ui.core.hub.subscribe_widget(&container, move |_, event| {
+            if let AppEvent::VolumeChanged(value) = event {
+                if (scale.value() - value).abs() > 0.001 {
+                    syncing.set(true);
+                    scale.set_value(*value);
+                    syncing.set(false);
+                }
+            }
+        });
+    }
+    VolumeControl { container }
 }
 
 /// Feeds the now-playing dominant color to the theme engine; a no-op unless the

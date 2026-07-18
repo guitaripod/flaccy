@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
     load_css();
+    register_icon_paths();
     apply_color_scheme(&core.config.borrow().appearance);
     crate::theme::ThemeController::install(crate::theme::Theme::from_id(
         &core.config.borrow().theme,
@@ -806,6 +807,64 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_string_action(ui, "artist-shuffle", |ui, artist| {
         ui.core.play_artist(artist, true);
     });
+    add_string_action(ui, "artist-play-next", |ui, artist| {
+        for track in ui.core.artist_tracks(artist).into_iter().rev() {
+            ui.core.player.insert_next(track);
+        }
+    });
+    add_string_action(ui, "artist-queue", |ui, artist| {
+        for track in ui.core.artist_tracks(artist) {
+            ui.core.player.add_to_queue(track);
+        }
+    });
+    add_string_action(ui, "track-go-album", |ui, rel| {
+        ui::goto_album_of_track(ui, rel);
+    });
+    add_string_action(ui, "track-go-artist", |ui, rel| {
+        let artist = ui
+            .core
+            .library
+            .borrow()
+            .track_by_rel_path(rel)
+            .map(|track| track.artist.clone());
+        if let Some(artist) = artist {
+            ui::goto_artist(ui, &artist);
+        }
+    });
+    add_string_action(ui, "album-go-artist", |ui, key| {
+        let artist = ui
+            .core
+            .library
+            .borrow()
+            .album_by_key(key)
+            .map(|album| album.artist.clone());
+        if let Some(artist) = artist {
+            ui::goto_artist(ui, &artist);
+        }
+    });
+    add_string_action(ui, "track-reveal", |ui, rel| {
+        let path = ui
+            .core
+            .library
+            .borrow()
+            .track_by_rel_path(rel)
+            .map(|track| track.abs_path(&ui.core.music_root()));
+        if let Some(path) = path {
+            reveal_in_files(ui, path);
+        }
+    });
+    add_string_action(ui, "album-reveal", |ui, key| {
+        let path = ui
+            .core
+            .library
+            .borrow()
+            .album_by_key(key)
+            .and_then(|album| album.tracks.first())
+            .map(|track| track.abs_path(&ui.core.music_root()));
+        if let Some(path) = path {
+            reveal_in_files(ui, path);
+        }
+    });
     add_string_action(ui, "track-songlink", |ui, rel| {
         let library = ui.core.library.borrow().clone();
         if let Some(track) = library.track_by_rel_path(rel) {
@@ -958,6 +1017,17 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     });
 }
 
+/// Opens the system file manager with the given file selected (portal
+/// OpenURI.OpenDirectory via gtk::FileLauncher).
+fn reveal_in_files(ui: &Rc<Ui>, path: std::path::PathBuf) {
+    let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(&path)));
+    launcher.open_containing_folder(Some(&ui.window), gio::Cancellable::NONE, |result| {
+        if let Err(err) = result {
+            crate::logger::warn("ui", &format!("reveal in files failed: {err}"));
+        }
+    });
+}
+
 /// Accepts audio files/folders dropped anywhere on the window: copies them
 /// into the library root and rescans.
 fn attach_file_drop(ui: &Rc<Ui>, host: &impl IsA<gtk::Widget>) {
@@ -993,19 +1063,21 @@ fn present_about(window: &adw::ApplicationWindow) {
         .license_type(gtk::License::Gpl30)
         .release_notes_version(env!("CARGO_PKG_VERSION"))
         .release_notes(
-            "<p>Delete, vim keys, and a saner search.</p>\
+            "<p>Volume in the full player, movable panels, and labels that \
+             take you places.</p>\
              <ul>\
-             <li>Move songs and whole albums to the trash straight from their \
-             context menus — files stay recoverable, and the library, queue, \
-             and playback all update themselves.</li>\
-             <li>Select several songs to move them to the trash in one go.</li>\
-             <li>Vim navigation everywhere: j/k scroll the list, gg jumps to \
-             the top, Shift+G to the bottom.</li>\
-             <li>Changing any sort snaps the list back to the top.</li>\
-             <li>Search now opens only with Ctrl+F — letters no longer steal \
-             the keyboard while you navigate.</li>\
-             <li>Add to Playlist moved into a proper picker dialog, and \
-             context menus no longer clip their last entries on GTK 4.22.</li>\
+             <li>The full-window player gains a volume slider, in sync with \
+             the bottom bar, MPRIS, and scroll-wheel steps — and the speaker \
+             icon now tracks the level everywhere.</li>\
+             <li>Swap which sides Lyrics and Up Next sit on, right from the \
+             player header. Your choice is remembered.</li>\
+             <li>Artist and album names are now links: click them in the \
+             full player, the bottom bar, an album page, or Stats' top \
+             artists to jump straight there.</li>\
+             <li>Right-click menus do more: Go to Album and Go to Artist on \
+             songs, Go to Artist on albums, Play Next and Add to Queue on \
+             artists, and Show in Files to reveal the audio on disk.</li>\
+             <li>Queue rows now carry the full song right-click menu.</li>\
              </ul>",
         )
         .build();
@@ -1229,6 +1301,28 @@ fn load_css() {
             &provider,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+    }
+}
+
+/// Makes the bundled hicolor fallback icons (emote-love, view-list, dialogs,
+/// the flaccy-* set, the app icon) resolvable regardless of install layout or
+/// active icon theme: registers `<prefix>/share/icons` next to the binary and
+/// the repo's `data/icons` for uninstalled dev/demo runs. XDG-installed copies
+/// are already on the default search path; extra entries are harmless.
+fn register_icon_paths() {
+    let Some(display) = gdk::Display::default() else { return };
+    let theme = gtk::IconTheme::for_display(&display);
+    let Ok(exe) = std::env::current_exe() else { return };
+    let Some(bin_dir) = exe.parent() else { return };
+    let installed = bin_dir.parent().map(|prefix| prefix.join("share/icons"));
+    let dev = bin_dir
+        .parent()
+        .and_then(|target| target.parent())
+        .map(|repo| repo.join("data/icons"));
+    for path in [installed, dev].into_iter().flatten() {
+        if path.is_dir() {
+            theme.add_search_path(&path);
+        }
     }
 }
 

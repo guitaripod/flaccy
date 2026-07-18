@@ -287,14 +287,20 @@ impl AppCore {
         self.play_tracks(album.tracks.clone(), start);
     }
 
-    pub fn play_artist(self: &Rc<Self>, artist: &str, shuffle: bool) {
-        let library = self.library.borrow().clone();
-        let tracks: Vec<Track> = library
+    /// Every library track credited to `artist` (feat. credits collapse to the
+    /// lead artist), in album order.
+    pub fn artist_tracks(&self, artist: &str) -> Vec<Track> {
+        let library = self.library.borrow();
+        library
             .albums
             .iter()
             .filter(|album| crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist))
             .flat_map(|album| album.tracks.iter().cloned())
-            .collect();
+            .collect()
+    }
+
+    pub fn play_artist(self: &Rc<Self>, artist: &str, shuffle: bool) {
+        let tracks = self.artist_tracks(artist);
         if tracks.is_empty() {
             return;
         }

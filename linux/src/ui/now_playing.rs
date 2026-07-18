@@ -1,6 +1,6 @@
 use crate::events::AppEvent;
 use crate::library::format_time;
-use crate::ui::controls::{apply_repeat, set_love_appearance};
+use crate::ui::controls::{apply_repeat, attach_label_nav, build_volume_control, set_love_appearance};
 use crate::ui::lyrics_panel::{self, LyricsOptions};
 use crate::ui::queue_panel::{self, QueueOptions};
 use crate::ui::Ui;
@@ -14,8 +14,10 @@ use std::time::Instant;
 /// Full-window "focus" player pushed onto the outer nav (ui.shell). A blurred,
 /// accent-washed cover fills the page; the hero artwork sits centered with
 /// Lyrics and Up Next columns that slide in on either side — independently
-/// toggled, so any combination of the three can be shown at once — over a
-/// single persistent transport dock.
+/// toggled, so any combination of the three can be shown at once, and a header
+/// swap button flips which side each column lives on (persisted) — over a
+/// single persistent transport dock with a volume cluster. The artist and
+/// album labels navigate to their library pages.
 pub fn present(ui: &Rc<Ui>) {
     if ui
         .shell
@@ -40,9 +42,22 @@ pub fn present(ui: &Rc<Ui>) {
     scrim.set_vexpand(true);
 
     let (art_page, art, title, artist, meta, quality) = build_art_lens();
+    artist.set_halign(gtk::Align::Center);
+    meta.set_halign(gtk::Align::Center);
+    attach_label_nav(ui, &artist, "Go to Artist", |ui| {
+        if let Some(track) = ui.core.player.current_track() {
+            crate::ui::goto_artist(ui, &track.artist);
+        }
+    });
+    attach_label_nav(ui, &meta, "Go to Album", |ui| {
+        if let Some(track) = ui.core.player.current_track() {
+            crate::ui::goto_album_of_track(ui, &track.rel_path);
+        }
+    });
 
     let seek_row = SeekRow::new(ui);
     let transport = TransportControls::new(ui);
+    let volume = build_volume_control(ui);
 
     let current_rel: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     {
@@ -121,18 +136,60 @@ pub fn present(ui: &Rc<Ui>) {
         });
     }
     // Below this width, keep at most one side panel open so art stays readable.
-    install_now_playing_width_adaptation(&content, &lyrics_toggle, &queue_toggle);
+    install_now_playing_width_adaptation(&content, &lyrics_toggle, &queue_toggle, &volume.container);
+
+    let apply_sides: Rc<dyn Fn(bool)> = {
+        let content = content.clone();
+        let art_page = art_page.clone();
+        let lyrics_reveal = lyrics_reveal.clone();
+        let queue_reveal = queue_reveal.clone();
+        Rc::new(move |swapped| {
+            let (left, right) = if swapped {
+                (&queue_reveal, &lyrics_reveal)
+            } else {
+                (&lyrics_reveal, &queue_reveal)
+            };
+            left.set_transition_type(gtk::RevealerTransitionType::SlideRight);
+            right.set_transition_type(gtk::RevealerTransitionType::SlideLeft);
+            content.reorder_child_after(left, gtk::Widget::NONE);
+            content.reorder_child_after(right, Some(&art_page));
+        })
+    };
+    apply_sides(ui.core.config.borrow().np_swap_sides);
+
+    let swap = gtk::Button::from_icon_name("object-flip-horizontal-symbolic");
+    swap.add_css_class("flat");
+    swap.add_css_class("np-swap");
+    swap.set_tooltip_text(Some("Swap Lyrics and Up Next sides"));
+    {
+        let ui = Rc::clone(ui);
+        let apply_sides = Rc::clone(&apply_sides);
+        swap.connect_clicked(move |_| {
+            let swapped = {
+                let mut config = ui.core.config.borrow_mut();
+                config.np_swap_sides = !config.np_swap_sides;
+                config.np_swap_sides
+            };
+            ui.core.save_config();
+            apply_sides(swapped);
+        });
+    }
 
     let toggles = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     toggles.set_halign(gtk::Align::Center);
     toggles.add_css_class("np-toggles");
     toggles.append(&lyrics_toggle);
     toggles.append(&queue_toggle);
+    toggles.append(&swap);
+
+    let controls_row = gtk::CenterBox::new();
+    controls_row.set_center_widget(Some(&transport.container));
+    controls_row.set_end_widget(Some(&volume.container));
 
     let np_transport = gtk::Box::new(gtk::Orientation::Vertical, 10);
     np_transport.add_css_class("np-transport");
     np_transport.append(&seek_row.container);
-    np_transport.append(&transport.container);
+    np_transport.append(&controls_row);
 
     let header = adw::HeaderBar::builder()
         .title_widget(&toggles)
@@ -288,18 +345,22 @@ fn build_art_lens() -> (
 }
 
 /// When Now Playing is squeezed, auto-collapse side panels so the hero art is
-/// never crushed between two full columns on a narrow window.
+/// never crushed between two full columns on a narrow window, and drop the
+/// volume cluster so the transport buttons keep their centerline.
 fn install_now_playing_width_adaptation(
     content: &gtk::Box,
     lyrics_toggle: &gtk::ToggleButton,
     queue_toggle: &gtk::ToggleButton,
+    volume: &gtk::Box,
 ) {
     let last_width = Rc::new(Cell::new(0i32));
     let lyrics_toggle = lyrics_toggle.clone();
     let queue_toggle = queue_toggle.clone();
+    let volume = volume.clone();
     content.connect_realize(move |widget| {
         let lyrics_toggle = lyrics_toggle.clone();
         let queue_toggle = queue_toggle.clone();
+        let volume = volume.clone();
         let last_width = Rc::clone(&last_width);
         widget.add_tick_callback(move |widget, _| {
             let width = widget.width();
@@ -312,6 +373,7 @@ fn install_now_playing_width_adaptation(
                     queue_toggle.set_active(false);
                 }
             }
+            volume.set_visible(width >= 560);
             glib::ControlFlow::Continue
         });
     });

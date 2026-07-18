@@ -241,9 +241,9 @@ fn build_renderer(
             .homogeneous(true)
             .valign(gtk::Align::Start)
             .build();
-        lists.append(&top_list("TOP ARTISTS", &data.top_artists));
-        lists.append(&top_list("TOP ALBUMS", &data.top_albums));
-        lists.append(&top_list("TOP TRACKS", &data.top_tracks));
+        lists.append(&top_list(&ui, "TOP ARTISTS", &data.top_artists, true));
+        lists.append(&top_list(&ui, "TOP ALBUMS", &data.top_albums, false));
+        lists.append(&top_list(&ui, "TOP TRACKS", &data.top_tracks, false));
         content.append(&lists);
     });
     render
@@ -652,7 +652,10 @@ fn section_title(text: &str) -> gtk::Widget {
     label.upcast()
 }
 
-fn top_list(title: &str, rows: &[(String, i64)]) -> gtk::Widget {
+/// Renders a ranked name/count list. With `artist_nav` the names become
+/// clickable links into the library's artist pages (Last.fm-sourced names that
+/// aren't in the library toast instead).
+fn top_list(ui: &Rc<Ui>, title: &str, rows: &[(String, i64)], artist_nav: bool) -> gtk::Widget {
     let column = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(10)
@@ -682,6 +685,13 @@ fn top_list(title: &str, rows: &[(String, i64)]) -> gtk::Widget {
             .ellipsize(pango::EllipsizeMode::End)
             .tooltip_text(name)
             .build();
+        if artist_nav {
+            let artist = name.clone();
+            crate::ui::controls::attach_label_nav(ui, &name_label, "Go to Artist", move |ui| {
+                crate::ui::goto_artist(ui, &artist);
+            });
+            name_label.set_tooltip_text(Some(name));
+        }
         row.append(&name_label);
         let count_label = gtk::Label::new(Some(&count.to_string()));
         count_label.add_css_class("duration-label");

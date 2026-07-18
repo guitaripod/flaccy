@@ -18,6 +18,7 @@ pub struct Config {
     pub import_page_cursor: u32,
     pub sidebar_index: i32,
     pub album_sort: String,
+    pub np_swap_sides: bool,
 }
 
 impl Default for Config {
@@ -34,6 +35,7 @@ impl Default for Config {
             import_page_cursor: 1,
             sidebar_index: 0,
             album_sort: "artist".to_string(),
+            np_swap_sides: false,
         }
     }
 }

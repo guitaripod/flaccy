@@ -674,6 +674,12 @@ button.pill.suggested-action:active {
   box-shadow: 0 2px 10px alpha(@accent_bg_color, 0.4);
 }
 
+/* Clickable metadata labels (artist/album/stats names) that navigate to a
+   library page: quiet at rest, underline on hover. */
+.nav-link:hover {
+  text-decoration: underline;
+}
+
 /* Persistent transport dock — a frosted bar; the ToolbarView reserves its
    height so the queue's last row is never occluded. */
 .np-transport {

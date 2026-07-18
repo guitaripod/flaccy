@@ -402,6 +402,7 @@ fn queue_row(ui: &Rc<Ui>, track: &Track, index: usize, current: usize) -> gtk::L
     } else if index == current {
         row.add_css_class("queue-current-row");
     }
+    crate::ui::context::attach_track_context_menu(&row, &ui.core, track.rel_path.clone());
     row
 }
 

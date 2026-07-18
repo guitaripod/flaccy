@@ -1,6 +1,8 @@
 use crate::events::AppEvent;
 use crate::library::format_time;
-use crate::ui::controls::{apply_repeat, set_adaptive_accent, set_love_appearance};
+use crate::ui::controls::{
+    apply_repeat, attach_label_nav, build_volume_control, set_adaptive_accent, set_love_appearance,
+};
 use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::glib;
@@ -67,6 +69,18 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
     artist.add_css_class("dim");
     artist.add_css_class("caption");
+    title.set_halign(gtk::Align::Start);
+    artist.set_halign(gtk::Align::Start);
+    attach_label_nav(ui, &title, "Go to Album", |ui| {
+        if let Some(track) = ui.core.player.current_track() {
+            crate::ui::goto_album_of_track(ui, &track.rel_path);
+        }
+    });
+    attach_label_nav(ui, &artist, "Go to Artist", |ui| {
+        if let Some(track) = ui.core.player.current_track() {
+            crate::ui::goto_artist(ui, &track.artist);
+        }
+    });
 
     let labels = gtk::Box::new(gtk::Orientation::Vertical, 1);
     labels.set_valign(gtk::Align::Center);
@@ -249,38 +263,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     sleep_label.add_css_class("transport-wide-only");
     sleep_label.set_visible(false);
 
-    let volume_icon = gtk::Image::from_icon_name("audio-volume-high-symbolic");
-    volume_icon.add_css_class("dim");
-    volume_icon.add_css_class("transport-volume-icon");
-    let volume = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 0.02);
-    volume.set_tooltip_text(Some("Volume (scroll to adjust)"));
-    volume.set_width_request(88);
-    volume.set_draw_value(false);
-    volume.add_css_class("transport-volume");
-    volume.set_value(ui.core.config.borrow().volume);
-    let volume_guard = Rc::new(Cell::new(false));
-    {
-        let ui = Rc::clone(ui);
-        let volume_guard = Rc::clone(&volume_guard);
-        volume.connect_value_changed(move |scale| {
-            if volume_guard.get() {
-                return;
-            }
-            ui.core.set_volume(scale.value());
-        });
-    }
-    {
-        let scroll = gtk::EventControllerScroll::new(
-            gtk::EventControllerScrollFlags::VERTICAL | gtk::EventControllerScrollFlags::DISCRETE,
-        );
-        let volume_ref = volume.clone();
-        scroll.connect_scroll(move |_, _, dy| {
-            let next = (volume_ref.value() - dy * 0.05).clamp(0.0, 1.0);
-            volume_ref.set_value(next);
-            glib::Propagation::Stop
-        });
-        volume.add_controller(scroll);
-    }
+    let volume = build_volume_control(ui);
 
     let right = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -295,8 +278,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     right.append(&sleep_button);
     right.append(&queue_toggle);
     right.append(&lyrics_toggle);
-    right.append(&volume_icon);
-    right.append(&volume);
+    right.append(&volume.container);
 
     let top = gtk::CenterBox::builder()
         .orientation(gtk::Orientation::Horizontal)
@@ -320,8 +302,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         &lyrics_toggle,
         &sleep_button,
         &queue_toggle,
-        &volume,
-        &volume_icon,
+        &volume.container,
         &quality,
         &sleep_label,
     );
@@ -342,7 +323,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let duration_label = duration_label.clone();
         let shuffle = shuffle.clone();
         let repeat = repeat.clone();
-        let volume = volume.clone();
         let sleep_label = sleep_label.clone();
         let sleep_button = sleep_button.clone();
         let queue_toggle = queue_toggle.clone();
@@ -448,13 +428,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 shuffle.set_active(*enabled);
             }
             AppEvent::RepeatChanged(mode) => apply_repeat(&repeat, *mode),
-            AppEvent::VolumeChanged(value) => {
-                if (volume.value() - value).abs() > 0.001 {
-                    volume_guard.set(true);
-                    volume.set_value(*value);
-                    volume_guard.set(false);
-                }
-            }
             AppEvent::LovedChanged { rel_path, loved } => {
                 if current_rel.borrow().as_deref() == Some(rel_path.as_str()) {
                     set_love_appearance(&love, *loved);
@@ -517,8 +490,7 @@ fn install_width_adaptation(
     lyrics_toggle: &gtk::ToggleButton,
     sleep_button: &gtk::MenuButton,
     queue_toggle: &gtk::ToggleButton,
-    volume: &gtk::Scale,
-    volume_icon: &gtk::Image,
+    volume: &gtk::Box,
     quality: &gtk::Label,
     sleep_label: &gtk::Label,
 ) {
@@ -532,7 +504,6 @@ fn install_width_adaptation(
     let sleep_button = sleep_button.clone();
     let queue_toggle = queue_toggle.clone();
     let volume = volume.clone();
-    let volume_icon = volume_icon.clone();
     let quality = quality.clone();
     let sleep_label = sleep_label.clone();
     let quality_has_text = Rc::new(Cell::new(false));
@@ -555,7 +526,6 @@ fn install_width_adaptation(
         let sleep_button = sleep_button.clone();
         let queue_toggle = queue_toggle.clone();
         let volume = volume.clone();
-        let volume_icon = volume_icon.clone();
         let quality = quality.clone();
         let sleep_label = sleep_label.clone();
         let quality_has_text = Rc::clone(&quality_has_text);
@@ -618,7 +588,6 @@ fn install_width_adaptation(
             sleep_button.set_visible(show_sleep);
             queue_toggle.set_visible(show_queue);
             volume.set_visible(show_volume);
-            volume_icon.set_visible(show_volume);
             quality.set_visible(show_quality);
             sleep_label.set_visible(show_sleep_label);
 

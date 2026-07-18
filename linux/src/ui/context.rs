@@ -5,15 +5,20 @@ use gtk::glib;
 use gtk::prelude::*;
 use std::rc::Rc;
 
-/// GtkPopoverMenu on GTK 4.22 under-allocates menus with many sections and
-/// silently clips the trailing rows, so every menu here stays at four sections
-/// or fewer — the shape verified to render fully.
+/// Menus render through `popup_menu_at`'s plain-widget popover (GtkPopoverMenu
+/// on GTK 4.22 under-allocates multi-section models and clips trailing rows),
+/// so section count is not constrained.
 pub fn track_menu(rel_path: &str, loved: bool) -> gio::Menu {
     let menu = gio::Menu::new();
     let queue_section = gio::Menu::new();
     queue_section.append_item(&item("Play Next", "win.track-play-next", rel_path));
     queue_section.append_item(&item("Add to Queue", "win.track-queue", rel_path));
     menu.append_section(None, &queue_section);
+
+    let nav_section = gio::Menu::new();
+    nav_section.append_item(&item("Go to Album", "win.track-go-album", rel_path));
+    nav_section.append_item(&item("Go to Artist", "win.track-go-artist", rel_path));
+    menu.append_section(None, &nav_section);
 
     let station_section = gio::Menu::new();
     station_section.append_item(&item("Start Station", "win.track-station", rel_path));
@@ -24,6 +29,7 @@ pub fn track_menu(rel_path: &str, loved: bool) -> gio::Menu {
     actions_section.append_item(&item(love_label, "win.track-love", rel_path));
     actions_section.append_item(&item("Add to Playlist…", "win.playlist-choose", rel_path));
     actions_section.append_item(&item("Copy song.link", "win.track-songlink", rel_path));
+    actions_section.append_item(&item("Show in Files", "win.track-reveal", rel_path));
     menu.append_section(None, &actions_section);
 
     let delete_section = gio::Menu::new();
@@ -42,10 +48,14 @@ pub fn album_menu(key: &str) -> gio::Menu {
     queue_section.append_item(&item("Play Next", "win.album-play-next", key));
     queue_section.append_item(&item("Add to Queue", "win.album-queue", key));
     menu.append_section(None, &queue_section);
+    let nav_section = gio::Menu::new();
+    nav_section.append_item(&item("Go to Artist", "win.album-go-artist", key));
+    menu.append_section(None, &nav_section);
     let extra_section = gio::Menu::new();
     extra_section.append_item(&item("Start Station", "win.album-station", key));
     extra_section.append_item(&item("Copy song.link", "win.album-songlink", key));
     extra_section.append_item(&item("Enrich Metadata", "win.album-enrich", key));
+    extra_section.append_item(&item("Show in Files", "win.album-reveal", key));
     menu.append_section(None, &extra_section);
 
     let delete_section = gio::Menu::new();
@@ -60,6 +70,10 @@ pub fn artist_menu(artist: &str) -> gio::Menu {
     play_section.append_item(&item("Play", "win.artist-play", artist));
     play_section.append_item(&item("Shuffle", "win.artist-shuffle", artist));
     menu.append_section(None, &play_section);
+    let queue_section = gio::Menu::new();
+    queue_section.append_item(&item("Play Next", "win.artist-play-next", artist));
+    queue_section.append_item(&item("Add to Queue", "win.artist-queue", artist));
+    menu.append_section(None, &queue_section);
     let station_section = gio::Menu::new();
     station_section.append_item(&item("Start Station", "win.artist-station", artist));
     menu.append_section(None, &station_section);
