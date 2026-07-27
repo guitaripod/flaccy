@@ -658,7 +658,8 @@ final class LibraryViewModel {
     }
 
     func importFiles(from urls: [URL]) async {
-        await library.importFiles(from: urls)
+        let outcome = await library.importFiles(from: urls)
+        ReviewPrompt.recordImportedTracks(outcome.imported)
     }
 
     func setAlbumSort(_ sort: AlbumSort) {
