@@ -353,6 +353,7 @@
 			packageProductDependencies = (
 				2C2777012F7D0301007FF196 /* GRDB */,
 				D2E21F4867B0D1251124B5D3 /* FlaccyCore */,
+				2CAA00022F000002007FF196 /* MidgarKit */,
 			);
 			productName = flaccy;
 			productReference = 2C2776CA2F7D0282007FF196 /* flaccy.app */;
@@ -471,6 +472,7 @@
 			packageReferences = (
 				2C2777002F7D0300007FF196 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				87B8F983431A9C5256D98CCC /* XCLocalSwiftPackageReference "FlaccyCore" */,
+				2CAA00012F000001007FF196 /* XCRemoteSwiftPackageReference "MidgarKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2C2776CB2F7D0282007FF196 /* Products */;
@@ -1073,6 +1075,14 @@
 				minimumVersion = 7.0.0;
 			};
 		};
+		2CAA00012F000001007FF196 /* XCRemoteSwiftPackageReference "MidgarKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/guitaripod/MidgarKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1097,6 +1107,11 @@
 		D2E21F4867B0D1251124B5D3 /* FlaccyCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FlaccyCore;
+		};
+		2CAA00022F000002007FF196 /* MidgarKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2CAA00012F000001007FF196 /* XCRemoteSwiftPackageReference "MidgarKit" */;
+			productName = MidgarKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

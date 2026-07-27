@@ -1,5 +1,6 @@
 import AuthenticationServices
 import StoreKit
+import MidgarKit
 import UIKit
 
 final class SettingsViewController: UITableViewController {
@@ -14,6 +15,7 @@ final class SettingsViewController: UITableViewController {
         case guide
         case watch
         case library
+        case moreApps
 
         var header: String? {
             switch self {
@@ -24,6 +26,7 @@ final class SettingsViewController: UITableViewController {
             case .guide: return nil
             case .watch: return "Apple Watch"
             case .library: return "Library"
+            case .moreApps: return nil
             }
         }
 
@@ -36,6 +39,7 @@ final class SettingsViewController: UITableViewController {
             case .guide: return "How Bluetooth, AAC, and lossless files really affect what you hear."
             case .watch: return nil
             case .library: return "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song."
+            case .moreApps: return nil
             }
         }
     }
@@ -58,6 +62,7 @@ final class SettingsViewController: UITableViewController {
         case groupAlbumEditions
         case libraryStats(albums: Int, tracks: Int)
         case storage(used: String)
+        case moreApps
     }
 
     /// Renders an Apple-Settings-style icon: a white SF Symbol glyph centered
@@ -240,6 +245,7 @@ final class SettingsViewController: UITableViewController {
         )
         snapshot.appendItems([.gaplessPlayback, .autoplaySimilar, .libraryRadio, .crateDig], toSection: .playback)
         snapshot.appendItems([.listeningGuide], toSection: .guide)
+        snapshot.appendItems([.moreApps], toSection: .moreApps)
         snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedPaths.count)], toSection: .watch)
         snapshot.appendItems(
             [
@@ -364,6 +370,13 @@ final class SettingsViewController: UITableViewController {
             content.textProperties.color = .tintColor
             cell.accessibilityLabel = "Crate Dig"
             cell.accessibilityHint = "Plays deep cuts from albums you already love"
+
+        case .moreApps:
+            content.image = RowIcon.image(systemName: "square.grid.2x2.fill", tint: .systemIndigo)
+            content.text = "More Apps"
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = "More Apps"
+            cell.accessibilityHint = "Browse other apps by this developer"
 
         case .listeningGuide:
             content.image = RowIcon.image(systemName: "waveform", tint: .systemCyan)
@@ -563,6 +576,7 @@ final class SettingsViewController: UITableViewController {
         case .libraryRadio: handleLibraryRadio()
         case .crateDig: handleCrateDig()
         case .listeningGuide: handleListeningGuideTap()
+        case .moreApps: Midgar.present(from: self)
         case .watchSync: handleWatchTap()
         case .importFiles: handleImportTap()
         case .rescanLibrary: handleRescanTap()
