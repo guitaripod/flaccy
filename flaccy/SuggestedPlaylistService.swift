@@ -87,8 +87,8 @@ nonisolated enum SuggestedPlaylistService {
         )
         guard tracks.count >= minTracks else { return nil }
         return SuggestedPlaylist(
-            id: "crate-dig", title: "Crate Dig",
-            subtitle: "Deep cuts from albums you already love",
+            id: "crate-dig", title: String(localized: "Crate Dig"),
+            subtitle: String(localized: "Deep cuts from albums you already love"),
             systemImage: "opticaldisc.fill", tracks: tracks
         )
     }
@@ -128,8 +128,8 @@ nonisolated enum SuggestedPlaylistService {
         }
         guard let pick = ranked.first else { return nil }
         let subtitle = pick.artist.isEmpty
-            ? "Full album night"
-            : "Full album · \(pick.artist)"
+            ? String(localized: "Full album night")
+            : String(localized: "Full album · \(pick.artist)")
         return SuggestedPlaylist(
             id: "tonights-spin", title: pick.title,
             subtitle: subtitle, systemImage: "record.circle", tracks: pick.tracks
@@ -142,8 +142,8 @@ nonisolated enum SuggestedPlaylistService {
         let useMonth = monthCounts.values.reduce(0, +) >= minTracks
         let counts = useMonth ? monthCounts : allCounts
         let subtitle = useMonth
-            ? "Your most-played this month"
-            : "The songs you keep coming back to"
+            ? String(localized: "Your most-played this month")
+            : String(localized: "The songs you keep coming back to")
         let ordered = counts
             .compactMap { entry -> (track: Track, count: Int)? in
                 guard let track = poolByKey[entry.key] else { return nil }
@@ -154,7 +154,7 @@ nonisolated enum SuggestedPlaylistService {
         let tracks = Array(StationBuilder.spacedByArtist(Array(ordered.prefix(maxTracks * 2))).prefix(maxTracks))
         guard tracks.count >= minTracks else { return nil }
         return SuggestedPlaylist(
-            id: "heavy-rotation", title: "Heavy Rotation",
+            id: "heavy-rotation", title: String(localized: "Heavy Rotation"),
             subtitle: subtitle, systemImage: "flame.fill", tracks: tracks
         )
     }
@@ -172,8 +172,8 @@ nonisolated enum SuggestedPlaylistService {
             let tracks = Array(ordered.prefix(maxTracks))
             let displayArtist = tracks.first?.artist ?? artistLower
             return SuggestedPlaylist(
-                id: "on-repeat", title: "On Repeat",
-                subtitle: "The best of \(displayArtist)", systemImage: "repeat",
+                id: "on-repeat", title: String(localized: "On Repeat"),
+                subtitle: String(localized: "The best of \(displayArtist)"), systemImage: "repeat",
                 tracks: tracks
             )
         }
@@ -194,8 +194,8 @@ nonisolated enum SuggestedPlaylistService {
         let tracks = Array(StationBuilder.spacedByArtist(Array(ordered.prefix(maxTracks * 2))).prefix(maxTracks))
         guard tracks.count >= minTracks else { return nil }
         return SuggestedPlaylist(
-            id: "rediscover", title: "Rediscover",
-            subtitle: "Favourites you haven't heard in months",
+            id: "rediscover", title: String(localized: "Rediscover"),
+            subtitle: String(localized: "Favourites you haven't heard in months"),
             systemImage: "clock.arrow.circlepath", tracks: tracks
         )
     }

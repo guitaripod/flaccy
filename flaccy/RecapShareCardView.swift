@@ -43,12 +43,12 @@ final class RecapShareCardView: UIView {
         subtitle.font = .systemFont(ofSize: 14, weight: .medium)
         subtitle.textColor = UIColor.white.withAlphaComponent(0.7)
 
-        configureStat(value: playsValue, caption: playsCaption, captionText: "PLAYS")
-        configureStat(value: minutesValue, caption: minutesCaption, captionText: "MINUTES")
+        configureStat(value: playsValue, caption: playsCaption, captionText: String(localized: "PLAYS"))
+        configureStat(value: minutesValue, caption: minutesCaption, captionText: String(localized: "MINUTES"))
 
         artistsTitle.font = .systemFont(ofSize: 13, weight: .bold)
         artistsTitle.textColor = UIColor.white.withAlphaComponent(0.6)
-        artistsTitle.text = "TOP ARTISTS"
+        artistsTitle.text = String(localized: "TOP ARTISTS")
 
         artistsList.font = .systemFont(ofSize: 19, weight: .semibold)
         artistsList.textColor = .white
@@ -63,7 +63,7 @@ final class RecapShareCardView: UIView {
 
         footer.font = .systemFont(ofSize: 12, weight: .semibold)
         footer.textColor = UIColor.white.withAlphaComponent(0.6)
-        footer.text = "flaccy \u{00B7} Recap"
+        footer.text = String(localized: "flaccy \u{00B7} Recap")
 
         let playsCol = column(playsValue, playsCaption)
         let minutesCol = column(minutesValue, minutesCaption)
@@ -128,8 +128,8 @@ final class RecapShareCardView: UIView {
     }
 
     func configure(data: RecapData, palette: ArtworkPalette) {
-        title.text = data.userInfo?.name ?? "Your Recap"
-        subtitle.text = "\(data.period.displayName) \u{00B7} flaccy Recap"
+        title.text = data.userInfo?.name ?? String(localized: "Your Recap")
+        subtitle.text = String(localized: "\(data.period.displayName) \u{00B7} flaccy Recap")
         playsValue.text = RecapFormat.count(data.totalPlays)
         minutesValue.text = RecapFormat.count(data.totalMinutes)
         artistsList.text = data.topArtists.prefix(5).enumerated()

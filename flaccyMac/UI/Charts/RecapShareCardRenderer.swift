@@ -53,12 +53,12 @@ enum RecapShareCardRenderer {
         var cursorY = size.height - 32
 
         cursorY = drawText(
-            data.userInfo?.name ?? "Your Recap",
+            data.userInfo?.name ?? String(localized: "Your Recap"),
             font: .systemFont(ofSize: 30, weight: .heavy), color: .white,
             x: margin, topY: cursorY
         )
         cursorY = drawText(
-            "\(data.period.displayName) \u{00B7} flaccy Recap",
+            String(localized: "\(data.period.displayName) \u{00B7} flaccy Recap"),
             font: .systemFont(ofSize: 14, weight: .medium),
             color: NSColor.white.withAlphaComponent(0.7),
             x: margin, topY: cursorY - 4
@@ -68,17 +68,17 @@ enum RecapShareCardRenderer {
         let columnWidth = (size.width - margin * 2 - 16) / 2
         let statsTop = cursorY
         _ = drawStat(
-            value: RecapFormat.count(data.totalPlays), caption: "PLAYS",
+            value: RecapFormat.count(data.totalPlays), caption: String(localized: "PLAYS"),
             x: margin, topY: statsTop
         )
         cursorY = drawStat(
-            value: RecapFormat.count(data.totalMinutes), caption: "MINUTES",
+            value: RecapFormat.count(data.totalMinutes), caption: String(localized: "MINUTES"),
             x: margin + columnWidth + 16, topY: statsTop
         )
         cursorY -= 18
 
         cursorY = drawText(
-            "TOP ARTISTS", font: .systemFont(ofSize: 13, weight: .bold),
+            String(localized: "TOP ARTISTS"), font: .systemFont(ofSize: 13, weight: .bold),
             color: NSColor.white.withAlphaComponent(0.6),
             x: margin, topY: cursorY
         )
@@ -92,7 +92,7 @@ enum RecapShareCardRenderer {
         }
 
         drawText(
-            "flaccy \u{00B7} Recap", font: .systemFont(ofSize: 12, weight: .semibold),
+            String(localized: "flaccy \u{00B7} Recap"), font: .systemFont(ofSize: 12, weight: .semibold),
             color: NSColor.white.withAlphaComponent(0.6),
             x: margin, topY: 28 + 16
         )

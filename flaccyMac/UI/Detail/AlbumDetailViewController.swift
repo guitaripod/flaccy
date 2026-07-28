@@ -63,9 +63,9 @@ final class AlbumDetailViewController: NSViewController {
         chipsRow.orientation = .horizontal
         chipsRow.spacing = 8
 
-        let playButton = GlassCapsuleButton(title: "Play", symbolName: "play.fill", prominent: true)
+        let playButton = GlassCapsuleButton(title: String(localized: "Play"), symbolName: "play.fill", prominent: true)
         playButton.onClick = { [weak self] in self?.play(shuffled: false) }
-        let shuffleButton = GlassCapsuleButton(title: "Shuffle", symbolName: "shuffle")
+        let shuffleButton = GlassCapsuleButton(title: String(localized: "Shuffle"), symbolName: "shuffle")
         shuffleButton.onClick = { [weak self] in self?.play(shuffled: true) }
         let actions = NSStackView(views: [playButton, shuffleButton])
         actions.orientation = .horizontal
@@ -205,7 +205,7 @@ final class AlbumDetailViewController: NSViewController {
         }
         if let playCount, playCount > 0 {
             chipsRow.addArrangedSubview(MacDetailChip.pill(
-                text: "\(playCount) plays", systemImage: "chart.bar.fill"
+                text: String(localized: "\(playCount) plays"), systemImage: "chart.bar.fill"
             ))
         }
         chipsRow.isHidden = chipsRow.arrangedSubviews.isEmpty

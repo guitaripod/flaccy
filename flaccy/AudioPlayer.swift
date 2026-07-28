@@ -1141,8 +1141,8 @@ final class AudioPlayer: AudioPlaying {
         }
 
         center.likeCommand.isEnabled = true
-        center.likeCommand.localizedTitle = "Love on Last.fm"
-        center.likeCommand.localizedShortTitle = "Love"
+        center.likeCommand.localizedTitle = String(localized: "Love on Last.fm")
+        center.likeCommand.localizedShortTitle = String(localized: "Love")
         center.likeCommand.addTarget { [weak self] _ in
             guard let self, let track = self.currentTrack else { return .commandFailed }
             // Flip the system heart immediately so Dynamic Island / lock screen

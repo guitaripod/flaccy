@@ -156,8 +156,8 @@ final class InspectorHostViewController: NSViewController {
 
         var title: String {
             switch self {
-            case .queue: "Up Next"
-            case .lyrics: "Lyrics"
+            case .queue: String(localized: "Up Next")
+            case .lyrics: String(localized: "Lyrics")
             }
         }
     }

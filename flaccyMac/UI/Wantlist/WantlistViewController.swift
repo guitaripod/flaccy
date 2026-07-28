@@ -130,7 +130,7 @@ final class WantlistViewController: NSViewController {
         contentStack.alignment = .leading
         contentStack.spacing = 16
 
-        let title = NSTextField(labelWithString: "Wantlist")
+        let title = NSTextField(labelWithString: String(localized: "Wantlist"))
         title.font = .systemFont(ofSize: 28, weight: .heavy)
         title.textColor = MacColors.primaryLabel
 
@@ -138,10 +138,10 @@ final class WantlistViewController: NSViewController {
         spinner.controlSize = .small
         spinner.isDisplayedWhenStopped = false
 
-        let addButton = NSButton(title: "Add Manually…", target: self, action: #selector(addManually))
+        let addButton = NSButton(title: String(localized: "Add Manually…"), target: self, action: #selector(addManually))
         addButton.bezelStyle = .rounded
         let refreshButton = NSButton(
-            image: NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Refresh") ?? NSImage(),
+            image: NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: String(localized: "Refresh")) ?? NSImage(),
             target: self, action: #selector(refreshTapped)
         )
         refreshButton.bezelStyle = .rounded
@@ -173,11 +173,11 @@ final class WantlistViewController: NSViewController {
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
         icon.contentTintColor = MacColors.tertiaryLabel
-        let title = NSTextField(labelWithString: "Nothing on the wantlist yet")
+        let title = NSTextField(labelWithString: String(localized: "Nothing on the wantlist yet"))
         title.font = .systemFont(ofSize: 17, weight: .semibold)
         title.textColor = MacColors.primaryLabel
         let subtitle = NSTextField(
-            labelWithString: "Connect Last.fm in Settings for suggestions from your history, or add wanted albums manually."
+            labelWithString: String(localized: "Connect Last.fm in Settings for suggestions from your history, or add wanted albums manually.")
         )
         subtitle.font = .systemFont(ofSize: 12)
         subtitle.textColor = MacColors.secondaryLabel
@@ -354,24 +354,24 @@ final class WantlistViewController: NSViewController {
 
         var trailing: [NSView] = []
         if isTrack {
-            let previewButton = HoverActionButton(symbolName: "play.circle", tooltip: "Preview 30 seconds")
+            let previewButton = HoverActionButton(symbolName: "play.circle", tooltip: String(localized: "Preview 30 seconds"))
             previewButton.onTap = { [weak self, weak previewButton] in
                 guard let self else { return }
                 self.previewController.togglePreview(title: itemTitle, artist: itemArtist, button: previewButton)
             }
             trailing.append(previewButton)
         }
-        let openButton = HoverActionButton(symbolName: "arrow.up.right.square", tooltip: "Open in Apple Music")
+        let openButton = HoverActionButton(symbolName: "arrow.up.right.square", tooltip: String(localized: "Open in Apple Music"))
         openButton.onTap = { [weak self] in
             self?.openInStore(title: itemTitle, artist: itemArtist, storeURL: meta.storeURL)
         }
         trailing.append(openButton)
-        let gotItButton = HoverActionButton(symbolName: "checkmark.circle", tooltip: "Got It")
+        let gotItButton = HoverActionButton(symbolName: "checkmark.circle", tooltip: String(localized: "Got It"))
         gotItButton.onTap = { [weak self] in
             self?.setState(.acquired, normKey: meta.normKey, name: itemTitle)
         }
         trailing.append(gotItButton)
-        let dismissButton = HoverActionButton(symbolName: "xmark.circle", tooltip: "Dismiss")
+        let dismissButton = HoverActionButton(symbolName: "xmark.circle", tooltip: String(localized: "Dismiss"))
         dismissButton.onTap = { [weak self] in
             self?.setState(.dismissed, normKey: meta.normKey, name: itemTitle)
         }
@@ -398,18 +398,18 @@ final class WantlistViewController: NSViewController {
         let menu = NSMenu()
         let context = WantlistMenuContext(title: title, artist: artist, meta: meta)
         if isTrack {
-            let preview = menu.addItem(withTitle: "Preview 30 Seconds", action: #selector(menuPreview(_:)), keyEquivalent: "")
+            let preview = menu.addItem(withTitle: String(localized: "Preview 30 Seconds"), action: #selector(menuPreview(_:)), keyEquivalent: "")
             preview.target = self
             preview.representedObject = context
         }
-        let open = menu.addItem(withTitle: "Open in Apple Music", action: #selector(menuOpen(_:)), keyEquivalent: "")
+        let open = menu.addItem(withTitle: String(localized: "Open in Apple Music"), action: #selector(menuOpen(_:)), keyEquivalent: "")
         open.target = self
         open.representedObject = context
         menu.addItem(.separator())
-        let gotIt = menu.addItem(withTitle: "Got It", action: #selector(menuGotIt(_:)), keyEquivalent: "")
+        let gotIt = menu.addItem(withTitle: String(localized: "Got It"), action: #selector(menuGotIt(_:)), keyEquivalent: "")
         gotIt.target = self
         gotIt.representedObject = context
-        let dismiss = menu.addItem(withTitle: "Dismiss", action: #selector(menuDismiss(_:)), keyEquivalent: "")
+        let dismiss = menu.addItem(withTitle: String(localized: "Dismiss"), action: #selector(menuDismiss(_:)), keyEquivalent: "")
         dismiss.target = self
         dismiss.representedObject = context
         return menu
@@ -437,7 +437,7 @@ final class WantlistViewController: NSViewController {
 
     private func setState(_ state: WantlistState, normKey: String, name: String) {
         WantlistService.shared.setState(state, normKey: normKey)
-        let verb = state == .acquired ? "Marked as acquired" : "Dismissed"
+        let verb = state == .acquired ? String(localized: "Marked as acquired") : String(localized: "Dismissed")
         MacToast.show("\(verb): \(name)", style: .success, in: view.window)
     }
 
@@ -468,21 +468,21 @@ final class WantlistViewController: NSViewController {
     @objc private func addManually() {
         guard let window = view.window else { return }
         let alert = NSAlert()
-        alert.messageText = "Add to Wantlist"
-        alert.informativeText = "Track a wanted album, song, or artist."
-        alert.addButton(withTitle: "Add")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = String(localized: "Add to Wantlist")
+        alert.informativeText = String(localized: "Track a wanted album, song, or artist.")
+        alert.addButton(withTitle: String(localized: "Add"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
 
         let form = NSStackView(frame: NSRect(x: 0, y: 0, width: 260, height: 96))
         form.orientation = .vertical
         form.spacing = 8
         form.alignment = .leading
         let kindPopUp = NSPopUpButton()
-        kindPopUp.addItems(withTitles: ["Album", "Song", "Artist"])
+        kindPopUp.addItems(withTitles: [String(localized: "Album"), String(localized: "Song"), String(localized: "Artist")])
         let titleField = NSTextField(frame: .zero)
-        titleField.placeholderString = "Title"
+        titleField.placeholderString = String(localized: "Title")
         let artistField = NSTextField(frame: .zero)
-        artistField.placeholderString = "Artist"
+        artistField.placeholderString = String(localized: "Artist")
         form.addArrangedSubview(kindPopUp)
         form.addArrangedSubview(titleField)
         form.addArrangedSubview(artistField)
@@ -616,7 +616,7 @@ final class WantlistPreviewController {
                     guard let self, self.currentKey == key else { return }
                     self.activeButton?.setSymbol("play.circle")
                     self.currentKey = nil
-                    MacToast.show("No preview available", style: .info, in: nil)
+                    MacToast.show(String(localized: "No preview available"), style: .info, in: nil)
                 }
                 return
             }

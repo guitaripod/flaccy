@@ -8,9 +8,9 @@ enum RecapNotificationFrequency: String, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .off: "Off"
-        case .weekly: "Weekly"
-        case .monthly: "Monthly"
+        case .off: String(localized: "Off")
+        case .weekly: String(localized: "Weekly")
+        case .monthly: String(localized: "Monthly")
         }
     }
 }
@@ -146,11 +146,11 @@ final class MacRecapNotificationScheduler {
         let content = UNMutableNotificationContent()
         switch frequency {
         case .monthly:
-            content.title = "Your Monthly Recap 🎧"
-            content.body = await teaserBody(period: .month, fallback: "A whole month of listening, wrapped up and ready.")
+            content.title = String(localized: "Your Monthly Recap 🎧")
+            content.body = await teaserBody(period: .month, fallback: String(localized: "A whole month of listening, wrapped up and ready."))
         case .weekly, .off:
-            content.title = "Your Weekly Recap 🎧"
-            content.body = await teaserBody(period: .week, fallback: "Seven days of listening, wrapped up and ready.")
+            content.title = String(localized: "Your Weekly Recap 🎧")
+            content.body = await teaserBody(period: .week, fallback: String(localized: "Seven days of listening, wrapped up and ready."))
         }
         content.sound = .default
         content.userInfo = [Self.destinationUserInfoKey: Self.yearInMusicDestination]
@@ -164,8 +164,8 @@ final class MacRecapNotificationScheduler {
         guard let fireDate = nextYearlyDeliveryDate() else { return }
         let year = Calendar.current.component(.year, from: fireDate)
         let content = UNMutableNotificationContent()
-        content.title = "Your \(year) Year in Music is here ✨"
-        content.body = "Minutes, top artists, obsessions — your whole year, ready to share."
+        content.title = String(localized: "Your \(year) Year in Music is here ✨")
+        content.body = String(localized: "Minutes, top artists, obsessions — your whole year, ready to share.")
         content.sound = .default
         content.userInfo = [Self.destinationUserInfoKey: Self.yearInMusicDestination]
         if let attachment = makeStoryAttachment(pngData: storyPNG) {
@@ -196,7 +196,7 @@ final class MacRecapNotificationScheduler {
         var counts: [String: Int] = [:]
         for row in rows { counts[row.artist, default: 0] += 1 }
         guard let topArtist = counts.max(by: { $0.value < $1.value })?.key else { return fallback }
-        return "\(topArtist) has been on repeat — \(RecapFormat.count(rows.count)) plays and counting. See your recap."
+        return String(localized: "\(topArtist) has been on repeat — \(RecapFormat.count(rows.count)) plays and counting. See your recap.")
     }
 
     /// Renders the shared story card once per refresh; the periodic and

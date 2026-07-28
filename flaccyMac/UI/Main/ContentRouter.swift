@@ -83,7 +83,7 @@ final class ContentRouter: NSViewController {
         guard let album = Library.shared.albums.first(where: {
             $0.title == title && $0.artist == artist
         }) else {
-            MacToast.show("\u{201C}\(title)\u{201D} is no longer in your library.", style: .info, in: view.window)
+            MacToast.show(String(localized: "\u{201C}\(title)\u{201D} is no longer in your library."), style: .info, in: view.window)
             return
         }
         switchTo(.albums)

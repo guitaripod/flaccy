@@ -79,17 +79,17 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
         let menu = NSMenu()
         let playPause = menu.addItem(
-            withTitle: AudioPlayer.shared.isPlaying ? "Pause" : "Play",
+            withTitle: AudioPlayer.shared.isPlaying ? String(localized: "Pause") : String(localized: "Play"),
             action: #selector(togglePlayPause(_:)), keyEquivalent: ""
         )
         playPause.target = self
-        let next = menu.addItem(withTitle: "Next Track", action: #selector(nextTrack(_:)), keyEquivalent: "")
+        let next = menu.addItem(withTitle: String(localized: "Next Track"), action: #selector(nextTrack(_:)), keyEquivalent: "")
         next.target = self
-        let previous = menu.addItem(withTitle: "Previous Track", action: #selector(previousTrack(_:)), keyEquivalent: "")
+        let previous = menu.addItem(withTitle: String(localized: "Previous Track"), action: #selector(previousTrack(_:)), keyEquivalent: "")
         previous.target = self
         if let track = AudioPlayer.shared.currentTrack {
             menu.addItem(.separator())
-            let love = menu.addItem(withTitle: "Love \u{201C}\(track.title)\u{201D}", action: #selector(toggleLove(_:)), keyEquivalent: "")
+            let love = menu.addItem(withTitle: String(localized: "Love \u{201C}\(track.title)\u{201D}"), action: #selector(toggleLove(_:)), keyEquivalent: "")
             love.target = self
         }
         return menu
@@ -137,10 +137,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         AppLogger.warning("Library root offline at launch; prompting user", category: .content)
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Music Folder Unavailable"
-        alert.informativeText = "Your music folder couldn't be reached — reconnect the drive to pick up where you left off, or choose a new folder. Your library, playlists and stats stay intact until it's back."
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Choose New Folder…")
+        alert.messageText = String(localized: "Music Folder Unavailable")
+        alert.informativeText = String(localized: "Your music folder couldn't be reached — reconnect the drive to pick up where you left off, or choose a new folder. Your library, playlists and stats stay intact until it's back.")
+        alert.addButton(withTitle: String(localized: "OK"))
+        alert.addButton(withTitle: String(localized: "Choose New Folder…"))
         alert.beginSheetModal(for: window) { [weak self] response in
             if response == .alertSecondButtonReturn {
                 self?.chooseMusicFolder(nil)
@@ -150,7 +150,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     private func libraryRootIsWritableForImport(in window: NSWindow?) -> Bool {
         guard !LibraryRoot.shared.isFallbackActive else {
-            MacToast.show("Music folder unavailable — reconnect the drive or choose a new folder.", style: .error, in: window)
+            MacToast.show(String(localized: "Music folder unavailable — reconnect the drive or choose a new folder."), style: .error, in: window)
             return false
         }
         return true
@@ -176,15 +176,15 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Use This Folder"
-        panel.message = "Flaccy indexes the folder in place — nothing is copied or moved."
+        panel.prompt = String(localized: "Use This Folder")
+        panel.message = String(localized: "Flaccy indexes the folder in place — nothing is copied or moved.")
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
             do {
                 try LibraryRoot.shared.chooseFolder(url)
             } catch {
                 AppLogger.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
-                MacToast.show("Couldn't access that folder.", style: .error, in: window)
+                MacToast.show(String(localized: "Couldn't access that folder."), style: .error, in: window)
             }
         }
     }
@@ -197,8 +197,8 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = true
         panel.allowedContentTypes = [.audio, .folder]
-        panel.prompt = "Import"
-        panel.message = "Copies files into Flaccy's library folder, preserving folder structure."
+        panel.prompt = String(localized: "Import")
+        panel.message = String(localized: "Copies files into Flaccy's library folder, preserving folder structure.")
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, !panel.urls.isEmpty else { return }
             let urls = panel.urls

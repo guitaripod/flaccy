@@ -18,7 +18,7 @@ final class ArtistDetailViewController: NSViewController {
     private let statsLabel = NSTextField(labelWithString: "")
     private let chipsRow = NSStackView()
     private let popularSection = NSStackView()
-    private let popularTitle = NSTextField(labelWithString: "Popular")
+    private let popularTitle = NSTextField(labelWithString: String(localized: "Popular"))
     private let albumsShelf = AlbumShelfView()
     private let similarRow = SimilarArtistsRowView()
     private var albums: [Album] = []
@@ -56,11 +56,11 @@ final class ArtistDetailViewController: NSViewController {
         chipsRow.orientation = .horizontal
         chipsRow.spacing = 8
 
-        let playButton = GlassCapsuleButton(title: "Play All", symbolName: "play.fill", prominent: true)
+        let playButton = GlassCapsuleButton(title: String(localized: "Play All"), symbolName: "play.fill", prominent: true)
         playButton.onClick = { [weak self] in self?.playAll(shuffled: false) }
-        let shuffleButton = GlassCapsuleButton(title: "Shuffle All", symbolName: "shuffle")
+        let shuffleButton = GlassCapsuleButton(title: String(localized: "Shuffle All"), symbolName: "shuffle")
         shuffleButton.onClick = { [weak self] in self?.playAll(shuffled: true) }
-        let stationButton = GlassCapsuleButton(title: "Start Station", symbolName: "dot.radiowaves.left.and.right")
+        let stationButton = GlassCapsuleButton(title: String(localized: "Start Station"), symbolName: "dot.radiowaves.left.and.right")
         stationButton.onClick = { [weak self] in self?.startStation() }
         let actions = NSStackView(views: [playButton, shuffleButton, stationButton])
         actions.orientation = .horizontal
@@ -185,8 +185,8 @@ final class ArtistDetailViewController: NSViewController {
         albums = Library.shared.albums.filter { LibraryHygiene.artistKey($0.artist) == LibraryHygiene.artistKey(artistName) }
         let trackCount = albums.reduce(0) { $0 + $1.tracks.count }
         statsLabel.stringValue =
-            "\(albums.count) album\(albums.count == 1 ? "" : "s") · \(trackCount) song\(trackCount == 1 ? "" : "s") in your library"
-        albumsShelf.configure(title: "Albums", albums: albums)
+            String(localized: "\(albums.count) albums · \(trackCount) songs in your library")
+        albumsShelf.configure(title: String(localized: "Albums"), albums: albums)
         rebuildPopular()
     }
 
@@ -311,7 +311,7 @@ final class ArtistDetailViewController: NSViewController {
 
     private func startStation() {
         AudioPlayer.shared.startStation(seedArtist: artistName)
-        MacToast.show("Station started from \(artistName)", style: .success, in: view.window)
+        MacToast.show(String(localized: "Station started from \(artistName)"), style: .success, in: view.window)
     }
 }
 

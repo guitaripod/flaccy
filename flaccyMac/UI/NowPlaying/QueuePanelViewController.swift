@@ -19,7 +19,7 @@ final class QueuePanelViewController: NSViewController {
     private var needsReload = false
     private let tableView = QueueTableView()
     private let scrollView = NSScrollView()
-    private let emptyLabel = NSTextField(labelWithString: "Nothing queued — play an album to fill Up Next.")
+    private let emptyLabel = NSTextField(labelWithString: String(localized: "Nothing queued — play an album to fill Up Next."))
     private static let dragType = NSPasteboard.PasteboardType("com.midgarcorp.flaccy.mac.queue-row")
 
     override func loadView() {
@@ -125,13 +125,13 @@ final class QueuePanelViewController: NSViewController {
         guard !queue.isEmpty else { return [] }
         var rows: [Row] = []
         if currentIndex > 0 {
-            rows.append(.header("History"))
+            rows.append(.header(String(localized: "History")))
             for index in 0..<currentIndex {
                 rows.append(.track(index: index, group: .history))
             }
         }
         if currentIndex < queue.count {
-            rows.append(.header("Now Playing"))
+            rows.append(.header(String(localized: "Now Playing")))
             rows.append(.track(index: currentIndex, group: .current))
         }
         if currentIndex + 1 < queue.count {
@@ -156,9 +156,9 @@ final class QueuePanelViewController: NSViewController {
         let seconds = upcoming.reduce(0.0) { $0 + $1.duration }
         let minutes = Int(seconds / 60)
         let time = minutes >= 60
-            ? String(format: "%dh %02dm", minutes / 60, minutes % 60)
-            : "\(minutes) min"
-        return "\(upcoming.count) track\(upcoming.count == 1 ? "" : "s") · \(time)"
+            ? String(format: String(localized: "%dh %02dm"), minutes / 60, minutes % 60)
+            : String(localized: "\(minutes) min")
+        return String(localized: "\(upcoming.count) tracks · \(time)")
     }
 
     @objc private func rowClicked() {
@@ -209,7 +209,7 @@ extension QueuePanelViewController: NSTableViewDataSource, NSTableViewDelegate {
         case .upNextHeader:
             let cell = tableView.reusableView(id: "header") { QueueHeaderCellView() }
             cell.configure(
-                title: "Up Next", summary: upNextSummary(), showsClear: true,
+                title: String(localized: "Up Next"), summary: upNextSummary(), showsClear: true,
                 target: self, action: #selector(clearUpNext)
             )
             return cell
@@ -283,17 +283,17 @@ extension QueuePanelViewController: NSMenuDelegate {
             menu.addItem(.separator())
         }
         if index != player.currentIndex {
-            let remove = menu.addItem(withTitle: "Remove from Queue", action: #selector(menuRemove(_:)), keyEquivalent: "")
+            let remove = menu.addItem(withTitle: String(localized: "Remove from Queue"), action: #selector(menuRemove(_:)), keyEquivalent: "")
             remove.target = self
             remove.tag = index
         }
         let loved = LovedTracksService.shared.isLoved(track: track)
         let love = menu.addItem(
-            withTitle: loved ? "Unlove" : "Love", action: #selector(menuLove(_:)), keyEquivalent: ""
+            withTitle: loved ? String(localized: "Unlove") : String(localized: "Love"), action: #selector(menuLove(_:)), keyEquivalent: ""
         )
         love.target = self
         love.tag = index
-        let goToAlbum = menu.addItem(withTitle: "Go to Album", action: #selector(menuGoToAlbum(_:)), keyEquivalent: "")
+        let goToAlbum = menu.addItem(withTitle: String(localized: "Go to Album"), action: #selector(menuGoToAlbum(_:)), keyEquivalent: "")
         goToAlbum.target = self
         goToAlbum.tag = index
     }
@@ -358,7 +358,7 @@ final class QueueHeaderCellView: NSView {
 
     private let titleLabel = NSTextField(labelWithString: "")
     private let summaryLabel = NSTextField(labelWithString: "")
-    private let clearButton = NSButton(title: "Clear", target: nil, action: nil)
+    private let clearButton = NSButton(title: String(localized: "Clear"), target: nil, action: nil)
 
     init() {
         super.init(frame: .zero)

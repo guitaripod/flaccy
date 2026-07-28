@@ -24,7 +24,7 @@ enum MacSonglinkSharing {
 
     static func share(_ subject: Subject, from view: NSView?) {
         let window = view?.window ?? NSApp.keyWindow
-        MacToast.show("Finding links…", style: .info, in: window)
+        MacToast.show(String(localized: "Finding links…"), style: .info, in: window)
         Task {
             guard let result = await lookup(subject) else {
                 MacToast.show(failureMessage(for: subject), style: .error, in: window)
@@ -32,7 +32,7 @@ enum MacSonglinkSharing {
             }
             let anchor = view ?? window?.contentView
             guard let anchor else { return }
-            let text = "\(result.title) by \(result.artist)"
+            let text = String(localized: "\(result.title) by \(result.artist)")
             let picker = NSSharingServicePicker(items: [text, result.pageURL])
             picker.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
         }
@@ -40,7 +40,7 @@ enum MacSonglinkSharing {
 
     static func copyLink(_ subject: Subject, from view: NSView?) {
         let window = view?.window ?? NSApp.keyWindow
-        MacToast.show("Finding links…", style: .info, in: window)
+        MacToast.show(String(localized: "Finding links…"), style: .info, in: window)
         Task {
             guard let result = await lookup(subject) else {
                 MacToast.show(failureMessage(for: subject), style: .error, in: window)
@@ -48,7 +48,7 @@ enum MacSonglinkSharing {
             }
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(result.pageURL.absoluteString, forType: .string)
-            MacToast.show("Link copied", style: .success, in: window)
+            MacToast.show(String(localized: "Link copied"), style: .success, in: window)
         }
     }
 
@@ -63,8 +63,8 @@ enum MacSonglinkSharing {
 
     private static func failureMessage(for subject: Subject) -> String {
         switch subject {
-        case .track: "Couldn't find links for this track."
-        case .album: "Couldn't find links for this album."
+        case .track: String(localized: "Couldn't find links for this track.")
+        case .album: String(localized: "Couldn't find links for this album.")
         }
     }
 }

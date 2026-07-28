@@ -31,11 +31,11 @@ enum MacToast {
 
     static func showImportOutcome(_ outcome: LibraryImportOutcome, in window: NSWindow?) {
         if outcome.failed == 0 {
-            show("Imported \(outcome.imported) item\(outcome.imported == 1 ? "" : "s")", style: .success, in: window)
+            show(String(localized: "Imported \(outcome.imported) items"), style: .success, in: window)
         } else if outcome.imported == 0 {
-            show("Import failed — couldn't copy into the library folder.", style: .error, in: window)
+            show(String(localized: "Import failed — couldn't copy into the library folder."), style: .error, in: window)
         } else {
-            show("Imported \(outcome.imported), \(outcome.failed) failed — check the library folder's permissions.", style: .error, in: window)
+            show(String(localized: "Imported \(outcome.imported), \(outcome.failed) failed — check the library folder's permissions."), style: .error, in: window)
         }
     }
 

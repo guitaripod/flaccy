@@ -62,7 +62,7 @@ final class YearInMusicViewController: UIViewController {
         let closeButton = UIButton(configuration: closeConfig)
         closeButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         closeButton.layer.cornerRadius = 17
-        closeButton.accessibilityLabel = "Close"
+        closeButton.accessibilityLabel = String(localized: "Close")
         closeButton.addAction(UIAction { [weak self] _ in
             self?.impactLight.impactOccurred()
             self?.dismiss(animated: true)
@@ -75,7 +75,7 @@ final class YearInMusicViewController: UIViewController {
         yearConfig.image = UIImage(systemName: "chevron.down", withConfiguration: UIImage.SymbolConfiguration(pointSize: 11, weight: .bold))
         yearButton.configuration = yearConfig
         yearButton.showsMenuAsPrimaryAction = true
-        yearButton.accessibilityLabel = "Change year"
+        yearButton.accessibilityLabel = String(localized: "Change year")
 
         let topBar = UIStackView(arrangedSubviews: [yearButton, UIView(), closeButton])
         topBar.axis = .horizontal
@@ -134,14 +134,14 @@ final class YearInMusicViewController: UIViewController {
         icon.contentMode = .scaleAspectFit
 
         let title = UILabel()
-        title.text = "Nothing here yet"
+        title.text = String(localized: "Nothing here yet")
         title.font = .scaled(.title3, size: 20, weight: .bold)
         title.adjustsFontForContentSizeCategory = true
         title.textColor = .white
         title.textAlignment = .center
 
         let subtitle = UILabel()
-        subtitle.text = "Play some music and your Year in Music will build itself. Or pick another year above."
+        subtitle.text = String(localized: "Play some music and your Year in Music will build itself. Or pick another year above.")
         subtitle.numberOfLines = 0
         subtitle.textAlignment = .center
         subtitle.textColor = UIColor.white.withAlphaComponent(0.55)
@@ -176,7 +176,7 @@ final class YearInMusicViewController: UIViewController {
         actionsRow.axis = .horizontal
         actionsRow.spacing = 12
         actionsRow.distribution = .fillEqually
-        actionsRow.addArrangedSubview(makeActionButton(title: "Stories", systemImage: "camera.circle.fill", prominent: true) { [weak self] in
+        actionsRow.addArrangedSubview(makeActionButton(title: String(localized: "Stories"), systemImage: "camera.circle.fill", prominent: true) { [weak self] in
             self?.shareToInstagramStories()
         })
         actionsRow.addArrangedSubview(makeShareMenuButton())
@@ -220,7 +220,7 @@ final class YearInMusicViewController: UIViewController {
 
     private func makeShareMenuButton() -> UIButton {
         var config = UIButton.Configuration.gray()
-        config.title = "Share"
+        config.title = String(localized: "Share")
         config.image = UIImage(systemName: "square.and.arrow.up", withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold))
         config.imagePadding = 8
         config.cornerStyle = .capsule
@@ -233,19 +233,19 @@ final class YearInMusicViewController: UIViewController {
                 completion(self?.shareMenuActions() ?? [])
             }
         ])
-        button.accessibilityLabel = "Share"
+        button.accessibilityLabel = String(localized: "Share")
         return button
     }
 
     private func shareMenuActions() -> [UIMenuElement] {
         [
-            UIAction(title: "This Card", subtitle: "Story size · 9:16", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
+            UIAction(title: String(localized: "This Card"), subtitle: String(localized: "Story size · 9:16"), image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
                 self?.shareCurrentSlide()
             },
-            UIAction(title: "All Four Cards", subtitle: "Instagram carousel · X photo grid", image: UIImage(systemName: "rectangle.stack")) { [weak self] _ in
+            UIAction(title: String(localized: "All Four Cards"), subtitle: String(localized: "Instagram carousel · X photo grid"), image: UIImage(systemName: "rectangle.stack")) { [weak self] _ in
                 self?.shareAllCards()
             },
-            UIAction(title: "Poster for Feeds", subtitle: "Everything on one card · 4:5", image: UIImage(systemName: "rectangle.portrait")) { [weak self] _ in
+            UIAction(title: String(localized: "Poster for Feeds"), subtitle: String(localized: "Everything on one card · 4:5"), image: UIImage(systemName: "rectangle.portrait")) { [weak self] _ in
                 self?.sharePoster()
             },
         ]
@@ -299,7 +299,7 @@ final class YearInMusicViewController: UIViewController {
         for (index, theme) in themes.enumerated() {
             let swatch = UIButton(type: .custom)
             swatch.layer.cornerRadius = 16
-            swatch.accessibilityLabel = "\(theme.name) theme"
+            swatch.accessibilityLabel = String(localized: "\(theme.name) theme")
 
             let gradient = CAGradientLayer()
             gradient.colors = [theme.gradientColors.first ?? .black, theme.accent].map(\.cgColor)

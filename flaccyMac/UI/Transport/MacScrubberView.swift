@@ -38,7 +38,7 @@ final class MacScrubberView: NSView {
         hoverTimeLabel.isHidden = true
         addSubview(hoverTimeLabel)
         setAccessibilityRole(.slider)
-        setAccessibilityLabel("Playback position")
+        setAccessibilityLabel(String(localized: "Playback position"))
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

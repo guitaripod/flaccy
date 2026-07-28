@@ -37,7 +37,7 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
 
         let click = NSClickGestureRecognizer(target: self, action: #selector(openPaywall))
         pill.addGestureRecognizer(click)
-        pill.toolTip = "Unlock Flaccy Lifetime"
+        pill.toolTip = String(localized: "Unlock Flaccy Lifetime")
     }
 
     override func viewDidLoad() {
@@ -58,10 +58,10 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
             isHidden = true
         case .trial(let daysRemaining):
             isHidden = false
-            label.stringValue = daysRemaining == 1 ? "Trial · 1 day left" : "Trial · \(daysRemaining) days left"
+            label.stringValue = String(localized: "Trial · \(daysRemaining) days left")
         case .expired:
             isHidden = false
-            label.stringValue = "Trial ended"
+            label.stringValue = String(localized: "Trial ended")
         }
     }
 

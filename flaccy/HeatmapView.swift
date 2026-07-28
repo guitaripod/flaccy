@@ -29,7 +29,7 @@ final class HeatmapView: UIView {
         self.tint = tint
         dataVersion += 1
         let active = counts.values.filter { $0 > 0 }.count
-        accessibilityLabel = "Listening heatmap, \(active) active days"
+        accessibilityLabel = String(localized: "Listening heatmap, \(active) active days")
         setNeedsLayout()
     }
 

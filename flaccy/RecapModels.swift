@@ -63,12 +63,12 @@ nonisolated enum RecapSection: Int, Hashable, CaseIterable {
 
     var headerTitle: String? {
         switch self {
-        case .artists: "Top Artists"
-        case .albums: "Top Albums"
-        case .tracks: "Top Tracks"
-        case .clock: "Listening Clock"
-        case .streak: "Your Streak"
-        case .persona: "Your Persona"
+        case .artists: String(localized: "Top Artists")
+        case .albums: String(localized: "Top Albums")
+        case .tracks: String(localized: "Top Tracks")
+        case .clock: String(localized: "Listening Clock")
+        case .streak: String(localized: "Your Streak")
+        case .persona: String(localized: "Your Persona")
         default: nil
         }
     }
@@ -156,11 +156,11 @@ nonisolated enum RecapItem: Hashable {
 enum RecapPersona {
     static func blurb(for persona: String) -> String {
         switch persona {
-        case "Night Owl": "You do your best listening after dark."
-        case "Explorer": "Always chasing the next new sound."
-        case "Loyalist": "A handful of artists own your heart."
-        case "Devotee": "Deep, steady devotion to your favorites."
-        default: "Your story is just getting started."
+        case "Night Owl": String(localized: "You do your best listening after dark.")
+        case "Explorer": String(localized: "Always chasing the next new sound.")
+        case "Loyalist": String(localized: "A handful of artists own your heart.")
+        case "Devotee": String(localized: "Deep, steady devotion to your favorites.")
+        default: String(localized: "Your story is just getting started.")
         }
     }
 

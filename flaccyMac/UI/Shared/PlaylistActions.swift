@@ -11,7 +11,7 @@ enum PlaylistActions {
 
     static func addToPlaylistSubmenu(for tracks: [Track], in window: NSWindow?) -> NSMenu {
         let menu = NSMenu()
-        let newItem = ClosureMenuItem(title: "New Playlist…") {
+        let newItem = ClosureMenuItem(title: String(localized: "New Playlist…")) {
             promptForNewPlaylist(adding: tracks, in: window)
         }
         newItem.image = NSImage(systemSymbolName: "plus", accessibilityDescription: nil)
@@ -34,15 +34,17 @@ enum PlaylistActions {
 
     static func promptForNewPlaylist(adding tracks: [Track], in window: NSWindow?) {
         let alert = NSAlert()
-        alert.messageText = "New Playlist"
+        alert.messageText = String(localized: "New Playlist")
         alert.informativeText = tracks.isEmpty
-            ? "Name your new playlist."
-            : "Name the playlist for \(tracks.count == 1 ? "this track" : "these \(tracks.count) tracks")."
-        alert.addButton(withTitle: "Create")
-        alert.addButton(withTitle: "Cancel")
+            ? String(localized: "Name your new playlist.")
+            : (tracks.count == 1
+                ? String(localized: "Name the playlist for this track.")
+                : String(localized: "Name the playlist for these \(tracks.count) tracks."))
+        alert.addButton(withTitle: String(localized: "Create"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
 
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
-        field.placeholderString = "Playlist name"
+        field.placeholderString = String(localized: "Playlist name")
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
 
@@ -60,7 +62,7 @@ enum PlaylistActions {
                 }
             } catch {
                 AppLogger.error("Playlist creation failed: \(error.localizedDescription)", category: .database)
-                MacToast.show("Couldn't create playlist.", style: .error, in: window)
+                MacToast.show(String(localized: "Couldn't create playlist."), style: .error, in: window)
             }
         }
 
@@ -81,13 +83,15 @@ enum PlaylistActions {
             }
             AppLogger.info("Added \(tracks.count) track(s) to playlist \(name)", category: .database)
             MacToast.show(
-                tracks.count == 1 ? "Added to \(name)" : "Added \(tracks.count) songs to \(name)",
+                tracks.count == 1
+                ? String(localized: "Added to \(name)")
+                : String(localized: "Added \(tracks.count) songs to \(name)"),
                 style: .success, in: window
             )
             NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
         } catch {
             AppLogger.error("Add to playlist failed: \(error.localizedDescription)", category: .database)
-            MacToast.show("Couldn't add to playlist.", style: .error, in: window)
+            MacToast.show(String(localized: "Couldn't add to playlist."), style: .error, in: window)
         }
     }
 

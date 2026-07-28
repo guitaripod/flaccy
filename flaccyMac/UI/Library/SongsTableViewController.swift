@@ -334,7 +334,7 @@ final class PlayingTitleCellView: NSTableCellView {
         super.init(frame: .zero)
         self.identifier = identifier
 
-        speaker.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Now playing")
+        speaker.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: String(localized: "Now playing"))
         speaker.symbolConfiguration = .init(pointSize: 9, weight: .semibold)
         speaker.contentTintColor = .controlAccentColor
         speaker.translatesAutoresizingMaskIntoConstraints = false
@@ -396,7 +396,7 @@ final class LovedCellView: NSTableCellView {
     func setLoved(_ loved: Bool) {
         button.image = NSImage(
             systemSymbolName: loved ? "heart.fill" : "heart",
-            accessibilityDescription: loved ? "Loved" : "Not loved"
+            accessibilityDescription: loved ? String(localized: "Loved") : String(localized: "Not loved")
         )
         button.contentTintColor = loved
             ? NSColor(red: 1, green: 0.28, blue: 0.42, alpha: 1)

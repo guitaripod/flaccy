@@ -16,9 +16,9 @@ final class RecapNotificationsViewController: UITableViewController {
         var header: String? {
             switch self {
             case .permission: return nil
-            case .frequency: return "Frequency"
-            case .schedule: return "Delivery"
-            case .preview: return "Preview"
+            case .frequency: return String(localized: "Frequency")
+            case .schedule: return String(localized: "Delivery")
+            case .preview: return String(localized: "Preview")
             case .test: return nil
             }
         }
@@ -43,9 +43,9 @@ final class RecapNotificationsViewController: UITableViewController {
         override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
             switch sectionIdentifier(for: section) {
             case .frequency:
-                return "Reminders are generated on this device from your local play history."
+                return String(localized: "Reminders are generated on this device from your local play history.")
             case .test:
-                return "Your Year in Music special edition always arrives on December 1. The test notification lands in a few seconds — lock the screen or swipe to Home to see the full card."
+                return String(localized: "Your Year in Music special edition always arrives on December 1. The test notification lands in a few seconds — lock the screen or swipe to Home to see the full card.")
             default:
                 return nil
             }
@@ -64,7 +64,7 @@ final class RecapNotificationsViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Recap Notifications"
+        title = String(localized: "Recap Notifications")
         tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellReuseIdentifier)
@@ -162,12 +162,12 @@ final class RecapNotificationsViewController: UITableViewController {
 
         switch row {
         case .permissionDenied:
-            content.text = "Notifications Are Off"
-            content.secondaryText = "Open Settings"
+            content.text = String(localized: "Notifications Are Off")
+            content.secondaryText = String(localized: "Open Settings")
             content.textProperties.color = .systemRed
             content.image = UIImage(systemName: "bell.slash.fill")?.withTintColor(.systemRed, renderingMode: .alwaysOriginal)
-            cell.accessibilityLabel = "Notifications are off"
-            cell.accessibilityHint = "Opens system Settings to allow notifications"
+            cell.accessibilityLabel = String(localized: "Notifications are off")
+            cell.accessibilityHint = String(localized: "Opens system Settings to allow notifications")
 
         case .frequency(let frequency, let selected):
             content.text = frequency.displayName
@@ -176,29 +176,29 @@ final class RecapNotificationsViewController: UITableViewController {
             cell.accessibilityTraits = selected ? [.button, .selected] : .button
 
         case .deliveryTime:
-            content.text = "Time"
+            content.text = String(localized: "Time")
             cell.selectionStyle = .none
             cell.accessoryView = makeTimePicker()
             cell.accessibilityTraits = []
 
         case .weekday(let name):
-            content.text = "Day of Week"
+            content.text = String(localized: "Day of Week")
             cell.selectionStyle = .none
             cell.accessoryView = makeWeekdayButton(currentName: name)
             cell.accessibilityTraits = []
 
         case .monthDay(let day):
-            content.text = "Day of Month"
+            content.text = String(localized: "Day of Month")
             cell.selectionStyle = .none
             cell.accessoryView = makeMonthDayButton(currentDay: day)
             cell.accessibilityTraits = []
 
         case .nextDelivery(let text):
-            content.text = "Next Delivery"
+            content.text = String(localized: "Next Delivery")
             content.secondaryText = text
             cell.selectionStyle = .none
             cell.accessibilityTraits = .staticText
-            cell.accessibilityLabel = "Next delivery"
+            cell.accessibilityLabel = String(localized: "Next delivery")
             cell.accessibilityValue = text
 
         case .preview(let title, let body):
@@ -209,11 +209,11 @@ final class RecapNotificationsViewController: UITableViewController {
 
         case .sendTest:
             content = .cell()
-            content.text = "Send Test Notification"
+            content.text = String(localized: "Send Test Notification")
             content.textProperties.color = .tintColor
             content.textProperties.alignment = .center
-            cell.accessibilityLabel = "Send Test Notification"
-            cell.accessibilityHint = "Delivers a sample recap notification in a few seconds"
+            cell.accessibilityLabel = String(localized: "Send Test Notification")
+            cell.accessibilityHint = String(localized: "Delivers a sample recap notification in a few seconds")
         }
 
         cell.contentConfiguration = content
@@ -245,7 +245,7 @@ final class RecapNotificationsViewController: UITableViewController {
         components.hour = scheduler.deliveryHour
         components.minute = scheduler.deliveryMinute
         picker.date = Calendar.current.date(from: components) ?? Date(timeIntervalSince1970: 0)
-        picker.accessibilityLabel = "Delivery time"
+        picker.accessibilityLabel = String(localized: "Delivery time")
         picker.addAction(UIAction { [weak self] action in
             guard let self, let picker = action.sender as? UIDatePicker else { return }
             let parts = Calendar.current.dateComponents([.hour, .minute], from: picker.date)
@@ -267,7 +267,7 @@ final class RecapNotificationsViewController: UITableViewController {
                 self.rescheduleAndRefresh()
             }
         }
-        return makeMenuButton(title: currentName, actions: actions, accessibilityLabel: "Day of week")
+        return makeMenuButton(title: currentName, actions: actions, accessibilityLabel: String(localized: "Day of week"))
     }
 
     private func makeMonthDayButton(currentDay: Int) -> UIButton {
@@ -279,7 +279,7 @@ final class RecapNotificationsViewController: UITableViewController {
                 self.rescheduleAndRefresh()
             }
         }
-        return makeMenuButton(title: "\(currentDay)", actions: actions, accessibilityLabel: "Day of month")
+        return makeMenuButton(title: "\(currentDay)", actions: actions, accessibilityLabel: String(localized: "Day of month"))
     }
 
     private func makeMenuButton(title: String, actions: [UIAction], accessibilityLabel: String) -> UIButton {
@@ -349,10 +349,10 @@ final class RecapNotificationsViewController: UITableViewController {
             let sent = await scheduler.sendTestNotification()
             if sent {
                 notificationFeedback.notificationOccurred(.success)
-                ToastView.show("Test notification on its way", in: view, style: .success)
+                ToastView.show(String(localized: "Test notification on its way"), in: view, style: .success)
             } else {
                 notificationFeedback.notificationOccurred(.error)
-                ToastView.show("Allow notifications in Settings first", in: view, style: .error)
+                ToastView.show(String(localized: "Allow notifications in Settings first"), in: view, style: .error)
             }
             refreshAuthorization()
         }

@@ -20,7 +20,7 @@ final class LoveButton: UIButton {
         translatesAutoresizingMaskIntoConstraints = false
         setContentHuggingPriority(.required, for: .horizontal)
         setContentCompressionResistancePriority(.required, for: .horizontal)
-        accessibilityLabel = "Love"
+        accessibilityLabel = String(localized: "Love")
         NSLayoutConstraint.activate([
             widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
             heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
@@ -43,7 +43,7 @@ final class LoveButton: UIButton {
         let image = UIImage(systemName: loved ? "heart.fill" : "heart", withConfiguration: config)
         tintColor = loved ? Self.lovedTint : Self.restTint
         setImage(image, for: .normal)
-        accessibilityValue = loved ? "Loved" : "Not loved"
+        accessibilityValue = loved ? String(localized: "Loved") : String(localized: "Not loved")
         guard animated else { return }
         pop(loved: loved)
     }

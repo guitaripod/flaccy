@@ -96,18 +96,18 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
 
         mosaicView.translatesAutoresizingMaskIntoConstraints = false
         mosaicView.isAccessibilityElement = true
-        mosaicView.accessibilityLabel = "Playlist artwork"
+        mosaicView.accessibilityLabel = String(localized: "Playlist artwork")
 
         let playButton = makeHeaderButton(
-            title: "Play",
+            title: String(localized: "Play"),
             systemImage: "play.fill",
-            accessibilityLabel: "Play playlist"
+            accessibilityLabel: String(localized: "Play playlist")
         ) { [weak self] in self?.playTapped() }
 
         let shuffleButton = makeHeaderButton(
-            title: "Shuffle",
+            title: String(localized: "Shuffle"),
             systemImage: "shuffle",
-            accessibilityLabel: "Shuffle playlist"
+            accessibilityLabel: String(localized: "Shuffle playlist")
         ) { [weak self] in self?.shuffleTapped() }
 
         let buttonStack = UIStackView(arrangedSubviews: [
@@ -236,8 +236,8 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
             apply()
         }
         mosaicView.accessibilityLabel = covers.isEmpty
-            ? "Playlist artwork placeholder"
-            : "Playlist artwork, \(covers.count) album cover\(covers.count == 1 ? "" : "s")"
+            ? String(localized: "Playlist artwork placeholder")
+            : String(localized: "Playlist artwork, \(covers.count) album covers")
     }
 
     private func distinctAlbumKeys(limit: Int) -> [(albumTitle: String, artist: String)] {
@@ -408,7 +408,7 @@ extension PlaylistDetailViewController: UITableViewDelegate {
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             guard let self else { return nil }
             let remove = UIAction(
-                title: "Remove from Playlist",
+                title: String(localized: "Remove from Playlist"),
                 image: UIImage(systemName: "trash"),
                 attributes: .destructive
             ) { [weak self] _ in

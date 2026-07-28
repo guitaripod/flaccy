@@ -24,12 +24,12 @@ nonisolated enum LibraryFilter: String, CaseIterable, Sendable {
 
     var displayName: String {
         switch self {
-        case .all: "All"
-        case .lossless: "Lossless"
-        case .recentlyAdded: "Recently Added"
-        case .recentlyPlayed: "Recently Played"
-        case .favorites: "Favorites"
-        case .rediscover: "Rediscover"
+        case .all: String(localized: "All")
+        case .lossless: String(localized: "Lossless")
+        case .recentlyAdded: String(localized: "Recently Added")
+        case .recentlyPlayed: String(localized: "Recently Played")
+        case .favorites: String(localized: "Favorites")
+        case .rediscover: String(localized: "Rediscover")
         }
     }
 

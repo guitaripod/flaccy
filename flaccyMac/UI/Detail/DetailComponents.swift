@@ -65,7 +65,7 @@ final class DetailTrackRowView: NSView {
         numberLabel.textColor = MacColors.secondaryLabel
         numberLabel.alignment = .right
 
-        playingIcon.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Now playing")
+        playingIcon.image = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: String(localized: "Now playing"))
         playingIcon.symbolConfiguration = .init(pointSize: 10, weight: .semibold)
         playingIcon.contentTintColor = MacColors.primaryLabel
         playingIcon.isHidden = true
@@ -182,7 +182,7 @@ final class DetailTrackRowView: NSView {
         heartButton.isHidden = !loved && !isHovered
         heartButton.image = NSImage(
             systemSymbolName: loved ? "heart.fill" : "heart",
-            accessibilityDescription: loved ? "Unlove" : "Love"
+            accessibilityDescription: loved ? String(localized: "Unlove") : String(localized: "Love")
         )
         heartButton.contentTintColor = loved
             ? NSColor(red: 1, green: 0.28, blue: 0.42, alpha: 1)
@@ -196,7 +196,7 @@ final class SimilarArtistsRowView: NSView {
 
     var onSelectArtist: ((String) -> Void)?
 
-    private let titleLabel = NSTextField(labelWithString: "Similar Artists in Your Library")
+    private let titleLabel = NSTextField(labelWithString: String(localized: "Similar Artists in Your Library"))
     private let stack = NSStackView()
 
     override init(frame frameRect: NSRect) {

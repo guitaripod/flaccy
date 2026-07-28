@@ -76,7 +76,7 @@ final class MacListeningClockView: NSView {
         let total = buckets.reduce(0, +)
         guard total > 0, let peak = buckets.enumerated().max(by: { $0.element < $1.element })?.offset else { return }
         let text = String(format: "%02d:00", peak)
-        let caption = "PEAK"
+        let caption = String(localized: "PEAK")
         let valueAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 20, weight: .bold), .foregroundColor: MacColors.primaryLabel,
         ]
@@ -110,7 +110,7 @@ final class MacListeningClockView: NSView {
             let point = CGPoint(x: center.x + cos(angle) * mid, y: center.y + sin(angle) * mid)
             let rect = NSRect(x: point.x - 9, y: point.y - 9, width: 18, height: 18)
             let plays = buckets[hour]
-            let owner = String(format: "%02d:00 — %d play%@", hour, plays, plays == 1 ? "" : "s") as NSString
+            let owner = String(localized: "\(String(format: "%02d:00", hour)) — \(plays) plays") as NSString
             tooltipOwners.append(owner)
             addToolTip(rect, owner: owner, userData: nil)
         }
@@ -119,9 +119,9 @@ final class MacListeningClockView: NSView {
     private func accessibilitySummary() -> String {
         let total = buckets.reduce(0, +)
         guard total > 0, let peak = buckets.enumerated().max(by: { $0.element < $1.element })?.offset else {
-            return "Listening clock, no plays yet"
+            return String(localized: "Listening clock, no plays yet")
         }
-        return "Listening clock. Peak hour \(peak):00 with \(buckets[peak]) plays."
+        return String(localized: "Listening clock. Peak hour \(peak):00 with \(buckets[peak]) plays.")
     }
 }
 
@@ -149,7 +149,7 @@ final class MacHeatmapView: NSView {
         rebuildTooltips()
         let active = counts.values.filter { $0 > 0 }.count
         setAccessibilityRole(.image)
-        setAccessibilityLabel("Listening heatmap, \(active) active days")
+        setAccessibilityLabel(String(localized: "Listening heatmap, \(active) active days"))
     }
 
     override func layout() {
@@ -244,7 +244,7 @@ final class MacHeatmapView: NSView {
                     y: labelHeight + CGFloat(row) * (grid.cell + cellSpacing),
                     width: grid.cell, height: grid.cell
                 )
-                let owner = "\(formatter.string(from: day)) — \(count) play\(count == 1 ? "" : "s")" as NSString
+                let owner = String(localized: "\(formatter.string(from: day)) — \(count) plays") as NSString
                 tooltipOwners.append(owner)
                 addToolTip(rect, owner: owner, userData: nil)
             }

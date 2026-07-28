@@ -399,9 +399,9 @@ enum RecapFormat {
     }
 
     static func compact(_ value: Int) -> String {
-        if value >= 1_000_000 { return String(format: "%.1fM", Double(value) / 1_000_000) }
-        if value >= 10_000 { return String(format: "%.0fK", Double(value) / 1_000) }
-        if value >= 1_000 { return String(format: "%.1fK", Double(value) / 1_000) }
+        if value >= 1_000_000 { return String(format: String(localized: "%.1fM"), Double(value) / 1_000_000) }
+        if value >= 10_000 { return String(format: String(localized: "%.0fK"), Double(value) / 1_000) }
+        if value >= 1_000 { return String(format: String(localized: "%.1fK"), Double(value) / 1_000) }
         return "\(value)"
     }
 }
@@ -550,7 +550,7 @@ final class ProfileCell: UICollectionViewCell {
         avatar.setRemote(item.avatarURL, placeholder: UIImage(systemName: "person.crop.circle.fill"))
 
         isAccessibilityElement = true
-        accessibilityLabel = "\(item.username). \(item.sinceText ?? ""). \(RecapFormat.count(item.totalPlays)) plays, \(RecapFormat.count(item.totalMinutes)) minutes listened."
+        accessibilityLabel = String(localized: "\(item.username). \(item.sinceText ?? ""). \(RecapFormat.count(item.totalPlays)) plays, \(RecapFormat.count(item.totalMinutes)) minutes listened.")
     }
 }
 
@@ -626,33 +626,33 @@ final class ImportBannerCell: UICollectionViewCell {
     func configure(state: RecapImportState) {
         switch state {
         case .available:
-            titleLabel.text = "Import Last.fm history"
-            subtitleLabel.text = "Backfill your stats with everything you scrobbled before installing."
+            titleLabel.text = String(localized: "Import Last.fm history")
+            subtitleLabel.text = String(localized: "Backfill your stats with everything you scrobbled before installing.")
             spinner.stopAnimating()
             chevron.isHidden = false
             card.isUserInteractionEnabled = true
-            accessibilityHint = "Double tap to import"
+            accessibilityHint = String(localized: "Double tap to import")
         case .importing(let imported):
-            titleLabel.text = "Importing history\u{2026}"
+            titleLabel.text = String(localized: "Importing history\u{2026}")
             subtitleLabel.text = imported > 0
-                ? "\(RecapFormat.count(imported)) scrobbles imported so far\u{2026}"
-                : "This can take a moment. You can keep browsing."
+                ? String(localized: "\(RecapFormat.count(imported)) scrobbles imported so far\u{2026}")
+                : String(localized: "This can take a moment. You can keep browsing.")
             spinner.startAnimating()
             chevron.isHidden = true
             card.isUserInteractionEnabled = false
             accessibilityHint = nil
         case .done(let imported):
-            titleLabel.text = "History imported"
+            titleLabel.text = String(localized: "History imported")
             subtitleLabel.text = imported > 0
-                ? "Imported \(RecapFormat.count(imported)) scrobbles."
-                : "Your stats now include your full listening history."
+                ? String(localized: "Imported \(RecapFormat.count(imported)) scrobbles.")
+                : String(localized: "Your stats now include your full listening history.")
             spinner.stopAnimating()
             chevron.isHidden = true
             card.isUserInteractionEnabled = false
             accessibilityHint = nil
         case .unavailable:
-            titleLabel.text = "Connect Last.fm to import"
-            subtitleLabel.text = "Sign in from Settings to backfill your history."
+            titleLabel.text = String(localized: "Connect Last.fm to import")
+            subtitleLabel.text = String(localized: "Sign in from Settings to backfill your history.")
             spinner.stopAnimating()
             chevron.isHidden = true
             card.isUserInteractionEnabled = false
@@ -750,7 +750,7 @@ final class ArtistCardCell: UICollectionViewCell {
     func configure(_ item: RecapArtistItem, tint: UIColor) {
         initialLabel.text = String(item.name.prefix(1)).uppercased()
         nameLabel.text = item.name
-        playsLabel.text = item.playCount > 0 ? "\(RecapFormat.compact(item.playCount)) plays" : "New to you"
+        playsLabel.text = item.playCount > 0 ? String(localized: "\(RecapFormat.compact(item.playCount)) plays") : String(localized: "New to you")
         rankLabel.text = "\(item.rank)"
         disc.backgroundColor = tint.withAlphaComponent(0.28)
 
@@ -764,8 +764,8 @@ final class ArtistCardCell: UICollectionViewCell {
         }
 
         isAccessibilityElement = true
-        let ownership = item.isLocal ? ", in your library, double tap to start a station" : ""
-        accessibilityLabel = "Number \(item.rank), \(item.name), \(item.playCount) plays\(ownership)"
+        let ownership = item.isLocal ? String(localized: ", in your library, double tap to start a station") : ""
+        accessibilityLabel = String(localized: "Number \(item.rank), \(item.name), \(item.playCount) plays\(ownership)")
     }
 
     override func prepareForReuse() {
@@ -847,8 +847,8 @@ final class AlbumCoverCell: UICollectionViewCell {
         let fallback: RecapArtworkQuery? = item.isLocal ? nil : .album(artist: item.artist, album: item.name)
         cover.setAlbum(title: artTitle, artist: artArtist, remoteURL: item.imageURL, placeholder: UIImage(systemName: "square.stack"), remoteFallback: fallback)
         isAccessibilityElement = true
-        let ownership = item.isLocal ? ", in your library, double tap to play" : ""
-        accessibilityLabel = "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays\(ownership)"
+        let ownership = item.isLocal ? String(localized: ", in your library, double tap to play") : ""
+        accessibilityLabel = String(localized: "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays\(ownership)")
     }
 }
 
@@ -949,8 +949,8 @@ final class TrackRowCell: UICollectionViewCell {
         artwork.setAlbum(title: artTitle, artist: artArtist, remoteURL: nil, placeholder: UIImage(systemName: "music.note"), remoteFallback: fallback)
 
         isAccessibilityElement = true
-        let ownership = item.isLocal ? ", in your library, double tap to play" : ", not in your library"
-        accessibilityLabel = "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays\(ownership)"
+        let ownership = item.isLocal ? String(localized: ", in your library, double tap to play") : String(localized: ", not in your library")
+        accessibilityLabel = String(localized: "Number \(item.rank), \(item.name) by \(item.artist), \(item.playCount) plays\(ownership)")
     }
 }
 
@@ -1042,7 +1042,7 @@ final class StreakCell: UICollectionViewCell {
     func configure(_ item: StreakItem, tint: UIColor) {
         let days = item.streakDays
         streakValue.text = "\(days)"
-        streakCaption.text = days == 1 ? "DAY STREAK" : "DAY STREAK"
+        streakCaption.text = days == 1 ? String(localized: "DAY STREAK") : String(localized: "DAY STREAK")
         heatmap.configure(counts: item.heatmap, tint: tint)
         isAccessibilityElement = false
     }
@@ -1117,7 +1117,7 @@ final class PersonaCell: UICollectionViewCell {
         gradient.startPoint = CGPoint(x: 0, y: 0)
         gradient.endPoint = CGPoint(x: 1, y: 1)
         isAccessibilityElement = true
-        accessibilityLabel = "Your persona: \(item.persona). \(RecapPersona.blurb(for: item.persona))"
+        accessibilityLabel = String(localized: "Your persona: \(item.persona). \(RecapPersona.blurb(for: item.persona))")
     }
 }
 

@@ -39,17 +39,17 @@ enum TrackContextMenu {
     }
 
     private static func deleteAction(for track: Track, in host: UIViewController) -> UIMenuElement {
-        UIAction(title: "Delete from Library", image: UIImage(systemName: "trash"), attributes: .destructive) { [weak host] _ in
+        UIAction(title: String(localized: "Delete from Library"), image: UIImage(systemName: "trash"), attributes: .destructive) { [weak host] _ in
             guard let host else { return }
             confirmDelete(
-                title: "Delete \"\(track.title)\"?",
-                message: "The audio file will be removed from this device.",
+                title: String(localized: "Delete \"\(track.title)\"?"),
+                message: String(localized: "The audio file will be removed from this device."),
                 in: host
             ) { [weak host] in
                 Task { @MainActor in
                     await Library.shared.deleteTracks([track])
                     if let host {
-                        ToastView.show("Deleted \(track.title)", in: host.view, style: .info)
+                        ToastView.show(String(localized: "Deleted \(track.title)"), in: host.view, style: .info)
                     }
                 }
             }
@@ -58,8 +58,8 @@ enum TrackContextMenu {
 
     static func confirmDelete(title: String, message: String, in host: UIViewController, onConfirm: @escaping () -> Void) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Delete"), style: .destructive) { _ in
             UINotificationFeedbackGenerator().notificationOccurred(.warning)
             onConfirm()
         })
@@ -68,31 +68,31 @@ enum TrackContextMenu {
 
     private static func queueActions(for track: Track, in host: UIViewController) -> [UIMenuElement] {
         [
-            UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { [weak host] _ in
+            UIAction(title: String(localized: "Play Next"), image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { [weak host] _ in
                 AudioPlayer.shared.insertNext(track)
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
-                if let host { ToastView.show("Playing next", in: host.view, style: .info) }
+                if let host { ToastView.show(String(localized: "Playing next"), in: host.view, style: .info) }
             },
-            UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { [weak host] _ in
+            UIAction(title: String(localized: "Add to Queue"), image: UIImage(systemName: "text.append")) { [weak host] _ in
                 AudioPlayer.shared.addToQueue(track)
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
-                if let host { ToastView.show("Added to queue", in: host.view, style: .info) }
+                if let host { ToastView.show(String(localized: "Added to queue"), in: host.view, style: .info) }
             },
         ]
     }
 
     private static func stationAction(for track: Track, in host: UIViewController) -> UIMenuElement {
-        UIAction(title: "Start Station", image: UIImage(systemName: "dot.radiowaves.left.and.right")) { [weak host] _ in
+        UIAction(title: String(localized: "Start Station"), image: UIImage(systemName: "dot.radiowaves.left.and.right")) { [weak host] _ in
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             AudioPlayer.shared.startStation(seedTrack: track)
-            if let host { ToastView.show("Station started", in: host.view, style: .success) }
+            if let host { ToastView.show(String(localized: "Station started"), in: host.view, style: .success) }
         }
     }
 
     private static func collectionActions(for track: Track, in host: UIViewController) -> [UIMenuElement] {
         let loved = LovedTracksService.shared.isLoved(track: track)
         let love = UIAction(
-            title: loved ? "Unlove" : "Love",
+            title: loved ? String(localized: "Unlove") : String(localized: "Love"),
             image: UIImage(systemName: loved ? "heart.slash" : "heart")
         ) { _ in
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -100,7 +100,7 @@ enum TrackContextMenu {
         }
 
         let playlistMenu = UIMenu(
-            title: "Add to Playlist",
+            title: String(localized: "Add to Playlist"),
             image: UIImage(systemName: "text.badge.plus"),
             children: [UIDeferredMenuElement.uncached { [weak host] completion in
                 completion(playlistActions(for: track, in: host))
@@ -119,14 +119,14 @@ enum TrackContextMenu {
                 do {
                     try DatabaseManager.shared.addTrackToPlaylist(playlistId: playlistId, trackFileURL: relativeURL)
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    if let host { ToastView.show("Added to \(playlist.name)", in: host.view, style: .success) }
+                    if let host { ToastView.show(String(localized: "Added to \(playlist.name)"), in: host.view, style: .success) }
                 } catch {
                     AppLogger.error("Failed to add track to playlist: \(error.localizedDescription)", category: .database)
-                    if let host { ToastView.show("Failed to add to playlist", in: host.view, style: .error) }
+                    if let host { ToastView.show(String(localized: "Failed to add to playlist"), in: host.view, style: .error) }
                 }
             })
         }
-        actions.append(UIAction(title: "New Playlist\u{2026}", image: UIImage(systemName: "plus")) { [weak host] _ in
+        actions.append(UIAction(title: String(localized: "New Playlist\u{2026}"), image: UIImage(systemName: "plus")) { [weak host] _ in
             guard let host else { return }
             promptNewPlaylist(for: relativeURL, in: host)
         })
@@ -143,7 +143,7 @@ enum TrackContextMenu {
 
         if !context.hideGoToAlbum,
            let album = Library.shared.albums.first(where: { $0.title == track.albumTitle && $0.artist == track.artist }) {
-            actions.append(UIAction(title: "Go to Album", image: UIImage(systemName: "square.stack")) { _ in
+            actions.append(UIAction(title: String(localized: "Go to Album"), image: UIImage(systemName: "square.stack")) { _ in
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 push(AlbumDetailViewController(album: album))
             })
@@ -152,7 +152,7 @@ enum TrackContextMenu {
         if !context.hideGoToArtist {
             let artistAlbums = Library.shared.albums.filter { $0.artist == track.artist }
             if !artistAlbums.isEmpty {
-                actions.append(UIAction(title: "Go to Artist", image: UIImage(systemName: "music.microphone")) { _ in
+                actions.append(UIAction(title: String(localized: "Go to Artist"), image: UIImage(systemName: "music.microphone")) { _ in
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     push(ArtistDetailViewController(artistName: track.artist, albums: artistAlbums))
                 })
@@ -160,7 +160,7 @@ enum TrackContextMenu {
         }
 
         if !context.hideLyrics {
-            actions.append(UIAction(title: "View Lyrics", image: UIImage(systemName: "text.quote")) { [weak host] _ in
+            actions.append(UIAction(title: String(localized: "View Lyrics"), image: UIImage(systemName: "text.quote")) { [weak host] _ in
                 guard let host else { return }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 presentLyrics(for: track, in: host)
@@ -171,15 +171,15 @@ enum TrackContextMenu {
 
     private static func shareActions(for track: Track, in host: UIViewController & SonglinkShareable) -> [UIMenuElement] {
         [
-            UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { [weak host] _ in
+            UIAction(title: String(localized: "Share"), image: UIImage(systemName: "square.and.arrow.up")) { [weak host] _ in
                 guard let host else { return }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 host.shareTrackViaSonglink(title: track.title, artist: track.artist, from: host.view)
             },
-            UIAction(title: "Copy Song Info", image: UIImage(systemName: "doc.on.doc")) { [weak host] _ in
+            UIAction(title: String(localized: "Copy Song Info"), image: UIImage(systemName: "doc.on.doc")) { [weak host] _ in
                 UIPasteboard.general.string = "\(track.title) — \(track.artist)"
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                if let host { ToastView.show("Copied", in: host.view, style: .info) }
+                if let host { ToastView.show(String(localized: "Copied"), in: host.view, style: .info) }
             },
         ]
     }
@@ -203,13 +203,13 @@ enum TrackContextMenu {
     }
 
     private static func promptNewPlaylist(for relativeURL: String, in host: UIViewController) {
-        let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
+        let alert = UIAlertController(title: String(localized: "New Playlist"), message: nil, preferredStyle: .alert)
         alert.addTextField { textField in
-            textField.placeholder = "Playlist name"
+            textField.placeholder = String(localized: "Playlist name")
             textField.autocapitalizationType = .words
         }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak host] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Create"), style: .default) { [weak host] _ in
             guard let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces),
                   !name.isEmpty else { return }
             do {
@@ -218,7 +218,7 @@ enum TrackContextMenu {
                     try DatabaseManager.shared.addTrackToPlaylist(playlistId: playlistId, trackFileURL: relativeURL)
                 }
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
-                if let host { ToastView.show("Added to \(name)", in: host.view, style: .success) }
+                if let host { ToastView.show(String(localized: "Added to \(name)"), in: host.view, style: .success) }
             } catch {
                 AppLogger.error("Failed to create playlist: \(error.localizedDescription)", category: .database)
             }

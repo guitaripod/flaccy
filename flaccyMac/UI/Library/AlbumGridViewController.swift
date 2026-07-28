@@ -144,19 +144,19 @@ final class AlbumGridViewController: NSViewController {
         }
         sortPopUp.target = self
         sortPopUp.action = #selector(sortChanged(_:))
-        sortPopUp.toolTip = "Sort albums"
+        sortPopUp.toolTip = String(localized: "Sort albums")
 
-        let sortLabel = NSTextField(labelWithString: "Sort")
+        let sortLabel = NSTextField(labelWithString: String(localized: "Sort"))
         sortLabel.font = .systemFont(ofSize: 11)
         sortLabel.textColor = .secondaryLabelColor
 
         let zoomOut = NSImageView(image: NSImage(
-            systemSymbolName: "square.grid.3x3", accessibilityDescription: "Smaller covers"
+            systemSymbolName: "square.grid.3x3", accessibilityDescription: String(localized: "Smaller covers")
         ) ?? NSImage())
         zoomOut.symbolConfiguration = .init(pointSize: 10, weight: .medium)
         zoomOut.contentTintColor = .secondaryLabelColor
         let zoomIn = NSImageView(image: NSImage(
-            systemSymbolName: "square.grid.2x2", accessibilityDescription: "Larger covers"
+            systemSymbolName: "square.grid.2x2", accessibilityDescription: String(localized: "Larger covers")
         ) ?? NSImage())
         zoomIn.symbolConfiguration = .init(pointSize: 13, weight: .medium)
         zoomIn.contentTintColor = .secondaryLabelColor
@@ -167,7 +167,7 @@ final class AlbumGridViewController: NSViewController {
         zoomSlider.controlSize = .small
         zoomSlider.target = self
         zoomSlider.action = #selector(zoomChanged(_:))
-        zoomSlider.toolTip = "Cover size"
+        zoomSlider.toolTip = String(localized: "Cover size")
         zoomSlider.widthAnchor.constraint(equalToConstant: 110).isActive = true
 
         let bar = NSStackView(views: [chipsBar, sortLabel, sortPopUp, zoomOut, zoomSlider, zoomIn])
@@ -214,7 +214,7 @@ final class AlbumGridViewController: NSViewController {
                 return GridSectionHeaderView()
             }
             headerView.title = self?.hasMultipleSections == true
-                ? (indexPath.section == 0 ? "Recently Played" : "All Albums")
+                ? (indexPath.section == 0 ? String(localized: "Recently Played") : String(localized: "All Albums"))
                 : ""
             return headerView
         }
@@ -346,15 +346,15 @@ final class AlbumGridViewController: NSViewController {
     private func bulkMenu(for albums: [Album]) -> NSMenu {
         let tracks = albums.flatMap(\.tracks)
         let menu = NSMenu()
-        menu.addItem(ClosureMenuItem(title: "Play \(albums.count) Albums", systemImage: "play.fill") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Play \(albums.count) Albums"), systemImage: "play.fill") {
             guard !tracks.isEmpty else { return }
             AudioPlayer.shared.play(tracks, startingAt: 0)
         })
-        menu.addItem(ClosureMenuItem(title: "Add \(tracks.count) Songs to Queue", systemImage: "text.append") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Add \(tracks.count) Songs to Queue"), systemImage: "text.append") {
             tracks.forEach { AudioPlayer.shared.addToQueue($0) }
         })
         menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(title: "Love All", systemImage: "heart.fill") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Love All"), systemImage: "heart.fill") {
             Task {
                 for track in tracks where !LovedTracksService.shared.isLoved(track: track) {
                     _ = await LovedTracksService.shared.toggleLove(track: track)
@@ -463,7 +463,7 @@ final class LibraryEmptyStateView: NSView {
         subtitle.preferredMaxLayoutWidth = 340
 
         let chooseButton = NSButton(
-            title: "Choose Music Folder…",
+            title: String(localized: "Choose Music Folder…"),
             target: nil,
             action: #selector(MacAppDelegate.chooseMusicFolder(_:))
         )
@@ -471,7 +471,7 @@ final class LibraryEmptyStateView: NSView {
         chooseButton.controlSize = .large
 
         let importButton = NSButton(
-            title: "Import Files…",
+            title: String(localized: "Import Files…"),
             target: nil,
             action: #selector(MacAppDelegate.importFiles(_:))
         )
@@ -505,15 +505,15 @@ final class LibraryEmptyStateView: NSView {
 
     func showNoLibrary() {
         icon.image = NSImage(systemSymbolName: "music.note.house", accessibilityDescription: nil)
-        title.stringValue = "Your library is empty"
-        subtitle.stringValue = "Choose a music folder to index in place, or import files into Flaccy's own library."
+        title.stringValue = String(localized: "Your library is empty")
+        subtitle.stringValue = String(localized: "Choose a music folder to index in place, or import files into Flaccy's own library.")
         buttons.isHidden = false
     }
 
     func showNoResults(query: String) {
         icon.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)
-        title.stringValue = "No Results"
-        subtitle.stringValue = "Nothing in your library matches \u{201C}\(query)\u{201D}."
+        title.stringValue = String(localized: "No Results")
+        subtitle.stringValue = String(localized: "Nothing in your library matches \u{201C}\(query)\u{201D}.")
         buttons.isHidden = true
     }
 

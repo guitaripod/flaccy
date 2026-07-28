@@ -93,29 +93,29 @@ final class MenuBarExtraController: NSObject, NSMenuDelegate {
             artistItem.isEnabled = false
             menu.addItem(.separator())
         } else {
-            let idle = menu.addItem(withTitle: "Nothing Playing", action: nil, keyEquivalent: "")
+            let idle = menu.addItem(withTitle: String(localized: "Nothing Playing"), action: nil, keyEquivalent: "")
             idle.isEnabled = false
             menu.addItem(.separator())
         }
 
         let hasQueue = !player.queue.isEmpty
         let playPause = menu.addItem(
-            withTitle: player.isPlaying ? "Pause" : "Play",
+            withTitle: player.isPlaying ? String(localized: "Pause") : String(localized: "Play"),
             action: #selector(togglePlayPause), keyEquivalent: ""
         )
         playPause.target = self
         playPause.isEnabled = hasQueue
-        let next = menu.addItem(withTitle: "Next Track", action: #selector(nextTrack), keyEquivalent: "")
+        let next = menu.addItem(withTitle: String(localized: "Next Track"), action: #selector(nextTrack), keyEquivalent: "")
         next.target = self
         next.isEnabled = hasQueue
-        let previous = menu.addItem(withTitle: "Previous Track", action: #selector(previousTrack), keyEquivalent: "")
+        let previous = menu.addItem(withTitle: String(localized: "Previous Track"), action: #selector(previousTrack), keyEquivalent: "")
         previous.target = self
         previous.isEnabled = hasQueue
 
         if let track = player.currentTrack {
             let loved = LovedTracksService.shared.isLoved(track: track)
             let love = menu.addItem(
-                withTitle: loved ? "Unlove" : "Love", action: #selector(toggleLove), keyEquivalent: ""
+                withTitle: loved ? String(localized: "Unlove") : String(localized: "Love"), action: #selector(toggleLove), keyEquivalent: ""
             )
             love.target = self
         }
@@ -125,19 +125,19 @@ final class MenuBarExtraController: NSObject, NSMenuDelegate {
         sleepItem.submenu = SleepTimerMenuBuilder.build()
 
         menu.addItem(.separator())
-        let open = menu.addItem(withTitle: "Open Flaccy", action: #selector(openApp), keyEquivalent: "")
+        let open = menu.addItem(withTitle: String(localized: "Open Flaccy"), action: #selector(openApp), keyEquivalent: "")
         open.target = self
     }
 
     private func sleepTimerTitle() -> String {
         if let remaining = AudioPlayer.shared.sleepTimerRemaining {
             let total = Int(remaining)
-            return String(format: "Sleep Timer (%d:%02d)", total / 60, total % 60)
+            return String(format: String(localized: "Sleep Timer (%d:%02d)"), total / 60, total % 60)
         }
         if AudioPlayer.shared.sleepAtEndOfTrack {
-            return "Sleep Timer (end of track)"
+            return String(localized: "Sleep Timer (end of track)")
         }
-        return "Sleep Timer"
+        return String(localized: "Sleep Timer")
     }
 
     @objc private func togglePlayPause() {

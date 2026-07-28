@@ -65,9 +65,9 @@ final class ArtistsViewController: NSViewController {
         }
         sortPopUp.target = self
         sortPopUp.action = #selector(sortChanged(_:))
-        sortPopUp.toolTip = "Sort artists"
+        sortPopUp.toolTip = String(localized: "Sort artists")
 
-        let sortLabel = NSTextField(labelWithString: "Sort")
+        let sortLabel = NSTextField(labelWithString: String(localized: "Sort"))
         sortLabel.font = .systemFont(ofSize: 11)
         sortLabel.textColor = .secondaryLabelColor
 
@@ -231,15 +231,15 @@ final class ArtistsViewController: NSViewController {
     private func bulkArtistMenu(for names: [String]) -> NSMenu {
         let tracks = names.flatMap { name in albums(forArtist: name).flatMap(\.tracks) }
         let menu = NSMenu()
-        menu.addItem(ClosureMenuItem(title: "Play \(names.count) Artists", systemImage: "play.fill") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Play \(names.count) Artists"), systemImage: "play.fill") {
             guard !tracks.isEmpty else { return }
             AudioPlayer.shared.play(tracks, startingAt: 0)
         })
-        menu.addItem(ClosureMenuItem(title: "Shuffle All", systemImage: "shuffle") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Shuffle All"), systemImage: "shuffle") {
             guard !tracks.isEmpty else { return }
             AudioPlayer.shared.play(tracks.shuffled(), startingAt: 0)
         })
-        menu.addItem(ClosureMenuItem(title: "Add \(tracks.count) Songs to Queue", systemImage: "text.append") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Add \(tracks.count) Songs to Queue"), systemImage: "text.append") {
             tracks.forEach { AudioPlayer.shared.addToQueue($0) }
         })
         return menu
@@ -248,19 +248,19 @@ final class ArtistsViewController: NSViewController {
     private static func artistMenu(name: String, albums: [Album], anchor: NSView?) -> NSMenu {
         let menu = NSMenu()
         let tracks = albums.flatMap(\.tracks)
-        menu.addItem(ClosureMenuItem(title: "View Artist", systemImage: "music.microphone") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "View Artist"), systemImage: "music.microphone") {
             LibraryNavigator.revealArtist(name)
         })
         menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(title: "Play All", systemImage: "play.fill") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Play All"), systemImage: "play.fill") {
             AudioPlayer.shared.play(tracks, startingAt: 0)
         })
-        menu.addItem(ClosureMenuItem(title: "Shuffle All", systemImage: "shuffle") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Shuffle All"), systemImage: "shuffle") {
             AudioPlayer.shared.play(tracks.shuffled(), startingAt: 0)
         })
-        menu.addItem(ClosureMenuItem(title: "Start Station", systemImage: "dot.radiowaves.left.and.right") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Start Station"), systemImage: "dot.radiowaves.left.and.right") {
             AudioPlayer.shared.startStation(seedArtist: name)
-            MacToast.show("Station started from \(name)", style: .success, in: anchor?.window)
+            MacToast.show(String(localized: "Station started from \(name)"), style: .success, in: anchor?.window)
         })
         return menu
     }
@@ -324,7 +324,7 @@ final class ArtistGridItem: NSCollectionViewItem {
         nameLabel.stringValue = name
         nameLabel.toolTip = name
         let trackCount = albums.reduce(0) { $0 + $1.tracks.count }
-        countLabel.stringValue = "\(albums.count) album\(albums.count == 1 ? "" : "s") · \(trackCount) songs"
+        countLabel.stringValue = String(localized: "\(albums.count) albums · \(trackCount) songs")
 
         artworkTile.showPlaceholder(seed: name, shimmering: true)
         if let first = albums.first,

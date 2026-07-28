@@ -19,7 +19,7 @@ final class StreamingLinksViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemGroupedBackground
-        title = "Share"
+        title = String(localized: "Share")
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             systemItem: .done,
@@ -70,46 +70,46 @@ final class StreamingLinksViewController: UIViewController {
         contentStack.addArrangedSubview(trackHeader())
         contentStack.setCustomSpacing(28, after: contentStack.arrangedSubviews.last!)
 
-        addSectionCaption("Universal Link")
+        addSectionCaption(String(localized: "Universal Link"))
 
         let shareRow = GlassRow(
             icon: UIImage(systemName: "square.and.arrow.up"),
             iconTint: view.tintColor ?? .systemBlue,
-            title: "Share",
+            title: String(localized: "Share"),
             subtitle: result.pageURL.absoluteString,
-            accessibilityLabel: "Share universal link"
+            accessibilityLabel: String(localized: "Share universal link")
         )
         shareRow.onTap = { [weak self] in
             guard let self else { return }
-            shareURL(result.pageURL, label: "Universal")
+            shareURL(result.pageURL, label: String(localized: "Universal"))
         }
         shareRow.menuProvider = { [weak self] in
             guard let self else { return nil }
-            return linkMenu(for: result.pageURL, label: "Universal")
+            return linkMenu(for: result.pageURL, label: String(localized: "Universal"))
         }
         addRow(shareRow)
 
         let copyRow = GlassRow(
             icon: UIImage(systemName: "doc.on.doc"),
             iconTint: view.tintColor ?? .systemBlue,
-            title: "Copy Link",
-            accessibilityLabel: "Copy universal link"
+            title: String(localized: "Copy Link"),
+            accessibilityLabel: String(localized: "Copy universal link")
         )
         copyRow.onTap = { [weak self] in
             guard let self else { return }
-            copyURL(result.pageURL, label: "Universal")
+            copyURL(result.pageURL, label: String(localized: "Universal"))
         }
         copyRow.menuProvider = { [weak self] in
             guard let self else { return nil }
-            return linkMenu(for: result.pageURL, label: "Universal")
+            return linkMenu(for: result.pageURL, label: String(localized: "Universal"))
         }
         addRow(copyRow)
 
-        addSectionFooter("Recipients choose their preferred platform")
+        addSectionFooter(String(localized: "Recipients choose their preferred platform"))
 
         guard !result.platformLinks.isEmpty else { return }
         contentStack.setCustomSpacing(24, after: contentStack.arrangedSubviews.last!)
-        addSectionCaption("Available On")
+        addSectionCaption(String(localized: "Available On"))
 
         for link in result.platformLinks {
             let row = GlassRow(
@@ -117,7 +117,7 @@ final class StreamingLinksViewController: UIViewController {
                 iconTint: brandColor(fromHex: link.tintColorHex),
                 title: link.displayName,
                 accessory: UIImage(systemName: "arrow.up.forward"),
-                accessibilityLabel: "Open in \(link.displayName)"
+                accessibilityLabel: String(localized: "Open in \(link.displayName)")
             )
             row.onTap = { [weak self] in self?.openPlatform(link) }
             row.menuProvider = { [weak self] in self?.linkMenu(for: link.url, label: link.displayName) }
@@ -145,7 +145,7 @@ final class StreamingLinksViewController: UIViewController {
         stack.axis = .vertical
         stack.spacing = 4
         stack.isAccessibilityElement = true
-        stack.accessibilityLabel = "\(result.title) by \(result.artist)"
+        stack.accessibilityLabel = String(localized: "\(result.title) by \(result.artist)")
         stack.accessibilityTraits = .header
         appearanceRows.append(stack)
         return stack
@@ -195,7 +195,7 @@ final class StreamingLinksViewController: UIViewController {
     private func shareURL(_ url: URL, label: String) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         AppLogger.info("Sharing \(label) link", category: .ui)
-        let text = "\(result.title) by \(result.artist)"
+        let text = String(localized: "\(result.title) by \(result.artist)")
         let activity = UIActivityViewController(activityItems: [text, url], applicationActivities: nil)
         activity.completionWithItemsHandler = { [weak self] _, completed, _, _ in
             if completed {
@@ -209,17 +209,17 @@ final class StreamingLinksViewController: UIViewController {
         UIPasteboard.general.url = url
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         AppLogger.info("Copied \(label) link", category: .ui)
-        ToastView.show("\(label) link copied", in: view, style: .success)
+        ToastView.show(String(localized: "\(label) link copied"), in: view, style: .success)
     }
 
     private func linkMenu(for url: URL, label: String) -> UIMenu {
-        let share = UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
+        let share = UIAction(title: String(localized: "Share"), image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
             self?.shareURL(url, label: label)
         }
-        let copy = UIAction(title: "Copy Link", image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
+        let copy = UIAction(title: String(localized: "Copy Link"), image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
             self?.copyURL(url, label: label)
         }
-        let open = UIAction(title: "Open", image: UIImage(systemName: "safari")) { _ in
+        let open = UIAction(title: String(localized: "Open"), image: UIImage(systemName: "safari")) { _ in
             AppLogger.info("Opening \(label) link from menu", category: .ui)
             UIApplication.shared.open(url)
         }

@@ -113,7 +113,7 @@ private final class ChipButton: NSControl {
         ])
 
         setAccessibilityRole(.button)
-        setAccessibilityLabel("Filter: \(filter.displayName)")
+        setAccessibilityLabel(String(localized: "Filter: \(filter.displayName)"))
         applyColors()
     }
 

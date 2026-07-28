@@ -152,7 +152,7 @@ final class LyricsPanelViewController: NSViewController {
         guard isViewLoaded, isActive else { return }
         guard let track = player.currentTrack else {
             loadedTrackKey = nil
-            showState(icon: "quote.bubble", text: "Nothing playing")
+            showState(icon: "quote.bubble", text: String(localized: "Nothing playing"))
             return
         }
         let key = "\(track.title)\u{0}\(track.artist)"
@@ -180,11 +180,11 @@ final class LyricsPanelViewController: NSViewController {
 
     private func render(_ result: LyricsResult?) {
         guard let result else {
-            showState(icon: "quote.bubble", text: "No lyrics found")
+            showState(icon: "quote.bubble", text: String(localized: "No lyrics found"))
             return
         }
         if result.isInstrumental {
-            showState(icon: "music.note", text: "Instrumental")
+            showState(icon: "music.note", text: String(localized: "Instrumental"))
             return
         }
         if let lines = result.syncedLines, !lines.isEmpty {
@@ -201,7 +201,7 @@ final class LyricsPanelViewController: NSViewController {
             scrollToTop()
             return
         }
-        showState(icon: "quote.bubble", text: "No lyrics found")
+        showState(icon: "quote.bubble", text: String(localized: "No lyrics found"))
     }
 
     private func buildLineViews() {

@@ -8,7 +8,7 @@ final class SettingsWindowController: NSWindowController {
         let tabController = SettingsTabViewController()
         let window = NSWindow(contentViewController: tabController)
         window.styleMask = [.titled, .closable]
-        window.title = "General"
+        window.title = String(localized: "General")
         window.isReleasedWhenClosed = false
         self.init(window: window)
         window.center()
@@ -28,11 +28,11 @@ final class SettingsTabViewController: NSTabViewController {
         super.viewDidLoad()
         tabStyle = .toolbar
 
-        addPane(GeneralSettingsPane(), title: "General", symbol: "gearshape")
+        addPane(GeneralSettingsPane(), title: String(localized: "General"), symbol: "gearshape")
         addPane(LastFMSettingsPane(), title: "Last.fm", symbol: "dot.radiowaves.left.and.right")
-        addPane(NotificationsSettingsPane(), title: "Recap", symbol: "bell.badge")
-        addPane(LibrarySettingsPane(), title: "Library", symbol: "folder")
-        addPane(AboutSettingsPane(), title: "About", symbol: "info.circle")
+        addPane(NotificationsSettingsPane(), title: String(localized: "Recap"), symbol: "bell.badge")
+        addPane(LibrarySettingsPane(), title: String(localized: "Library"), symbol: "folder")
+        addPane(AboutSettingsPane(), title: String(localized: "About"), symbol: "info.circle")
     }
 
     private func addPane(_ controller: NSViewController, title: String, symbol: String) {
@@ -49,7 +49,7 @@ final class SettingsTabViewController: NSTabViewController {
 
     override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
         super.tabView(tabView, didSelect: tabViewItem)
-        view.window?.title = tabViewItem?.label ?? "Settings"
+        view.window?.title = tabViewItem?.label ?? String(localized: "Settings")
     }
 }
 

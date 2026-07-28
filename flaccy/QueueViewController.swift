@@ -153,16 +153,16 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         let player = AudioPlayer.shared
         let currentRemaining = max(0, player.duration - player.currentTime)
         let remaining = currentRemaining + upNext.reduce(0) { $0 + $1.duration }
-        let tracksPart = upNext.count == 1 ? "1 track" : "\(upNext.count) tracks"
-        return "\(tracksPart) · \(Self.formatRemaining(remaining)) left"
+        let tracksPart = String(localized: "\(upNext.count) tracks")
+        return String(localized: "\(tracksPart) · \(Self.formatRemaining(remaining)) left")
     }
 
     private static func formatRemaining(_ interval: TimeInterval) -> String {
         let totalMinutes = Int(interval / 60)
         if totalMinutes >= 60 {
-            return "\(totalMinutes / 60) hr \(totalMinutes % 60) min"
+            return String(localized: "\(totalMinutes / 60) hr \(totalMinutes % 60) min")
         }
-        return totalMinutes >= 1 ? "\(totalMinutes) min" : "\(Int(interval)) sec"
+        return totalMinutes >= 1 ? String(localized: "\(totalMinutes) min") : String(localized: "\(Int(interval)) sec")
     }
 
     private func updateEmptyState() {
@@ -179,7 +179,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         iconView.contentMode = .scaleAspectFit
 
         let label = UILabel()
-        label.text = "Queue is empty"
+        label.text = String(localized: "Queue is empty")
         label.font = .preferredFont(forTextStyle: .body)
         label.adjustsFontForContentSizeCategory = true
         label.textColor = .white.withAlphaComponent(0.55)
@@ -210,7 +210,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     }
 
     private func makeUpNextHeader() -> UIView {
-        let titleLabel = makeSectionHeaderLabel("Up Next")
+        let titleLabel = makeSectionHeaderLabel(String(localized: "Up Next"))
         titleLabel.setContentHuggingPriority(.required, for: .horizontal)
         titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
@@ -223,18 +223,18 @@ final class QueueViewController: UIViewController, SonglinkShareable {
 
         var clearConfig = UIButton.Configuration.plain()
         clearConfig.attributedTitle = AttributedString(
-            "Clear",
+            String(localized: "Clear"),
             attributes: AttributeContainer([.font: UIFont.scaled(.caption1, size: 12, weight: .semibold)])
         )
         clearConfig.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 0)
         let clearButton = UIButton(configuration: clearConfig)
         clearButton.tintColor = .white.withAlphaComponent(0.55)
-        clearButton.accessibilityLabel = "Clear up next"
+        clearButton.accessibilityLabel = String(localized: "Clear up next")
         clearButton.showsMenuAsPrimaryAction = true
         clearButton.menu = UIMenu(children: [
             UIDeferredMenuElement.uncached { completion in
                 let count = AudioPlayer.shared.queue.count - AudioPlayer.shared.currentIndex - 1
-                let title = count == 1 ? "Remove 1 Track" : "Remove \(count) Tracks"
+                let title = String(localized: "Remove \(count) Tracks")
                 completion([
                     UIAction(title: title, image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
                         AudioPlayer.shared.clearUpNext()
@@ -305,9 +305,9 @@ extension QueueViewController: UITableViewDataSource {
 
     private func headerTitle(for section: Section) -> String? {
         switch section {
-        case .history: return historyTracks.isEmpty ? nil : "History"
-        case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? "Now Playing" : nil
-        case .upNext: return upNextTracks.isEmpty ? nil : "Up Next"
+        case .history: return historyTracks.isEmpty ? nil : String(localized: "History")
+        case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? String(localized: "Now Playing") : nil
+        case .upNext: return upNextTracks.isEmpty ? nil : String(localized: "Up Next")
         }
     }
 
@@ -395,7 +395,7 @@ extension QueueViewController: UITableViewDelegate {
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             guard let self else { return nil }
             let remove = UIAction(
-                title: "Remove from Queue",
+                title: String(localized: "Remove from Queue"),
                 image: UIImage(systemName: "trash"),
                 attributes: .destructive
             ) { _ in
@@ -421,7 +421,7 @@ extension QueueViewController: UITableViewDelegate {
         guard let track = track(at: indexPath) else { return nil }
         let loved = LovedTracksService.shared.isLoved(track: track)
 
-        let love = UIContextualAction(style: .normal, title: loved ? "Unlove" : "Love") { _, _, completion in
+        let love = UIContextualAction(style: .normal, title: loved ? String(localized: "Unlove") : String(localized: "Love")) { _, _, completion in
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             Task { await LovedTracksService.shared.toggleLove(track: track) }
             completion(true)
@@ -437,7 +437,7 @@ extension QueueViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         guard Section(rawValue: indexPath.section) == .upNext else { return nil }
 
-        let remove = UIContextualAction(style: .destructive, title: "Remove") { _, _, completion in
+        let remove = UIContextualAction(style: .destructive, title: String(localized: "Remove")) { _, _, completion in
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
             let queueIndex = AudioPlayer.shared.currentIndex + 1 + indexPath.row
             AudioPlayer.shared.removeFromQueue(at: queueIndex)
@@ -699,14 +699,14 @@ final class QueueTrackCell: UITableViewCell {
             playingBars.isHidden = true
             playingBars.setPlaying(false)
             contentView.alpha = 0.45
-            stateValue = "Played earlier"
-            accessibilityHint = "Plays this track again"
+            stateValue = String(localized: "Played earlier")
+            accessibilityHint = String(localized: "Plays this track again")
         case .nowPlaying(let isPlaying):
             highlightView.isHidden = false
             playingBars.isHidden = false
             playingBars.setPlaying(isPlaying)
             contentView.alpha = 1
-            stateValue = isPlaying ? "Now playing" : "Paused"
+            stateValue = isPlaying ? String(localized: "Now playing") : String(localized: "Paused")
             accessibilityHint = nil
         case .upcoming:
             highlightView.isHidden = true
@@ -714,10 +714,10 @@ final class QueueTrackCell: UITableViewCell {
             playingBars.setPlaying(false)
             contentView.alpha = 1
             stateValue = nil
-            accessibilityHint = "Plays this track"
+            accessibilityHint = String(localized: "Plays this track")
         }
         accessibilityLabel = "\(track.title), \(track.artist)"
-        accessibilityValue = [stateValue, loved ? "Loved" : nil]
+        accessibilityValue = [stateValue, loved ? String(localized: "Loved") : nil]
             .compactMap { $0 }
             .joined(separator: ", ")
         isAccessibilityElement = true
@@ -725,7 +725,7 @@ final class QueueTrackCell: UITableViewCell {
 
     func setPlaying(_ playing: Bool) {
         playingBars.setPlaying(playing)
-        accessibilityValue = playing ? "Now playing" : "Paused"
+        accessibilityValue = playing ? String(localized: "Now playing") : String(localized: "Paused")
     }
 
     private func loadArtwork(for track: Track) {

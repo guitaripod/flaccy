@@ -61,7 +61,7 @@ final class MiniPlayerView: UIView {
 
         playPauseButton.setImage(UIImage(systemName: "play.fill", withConfiguration: buttonConfig), for: .normal)
         playPauseButton.tintColor = .label
-        playPauseButton.accessibilityLabel = "Play"
+        playPauseButton.accessibilityLabel = String(localized: "Play")
         playPauseButton.addAction(UIAction { _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             AudioPlayer.shared.togglePlayPause()
@@ -69,7 +69,7 @@ final class MiniPlayerView: UIView {
 
         nextButton.setImage(UIImage(systemName: "forward.fill", withConfiguration: buttonConfig), for: .normal)
         nextButton.tintColor = .label
-        nextButton.accessibilityLabel = "Next track"
+        nextButton.accessibilityLabel = String(localized: "Next track")
         nextButton.addAction(UIAction { _ in
             UISelectionFeedbackGenerator().selectionChanged()
             AudioPlayer.shared.nextTrack()
@@ -78,7 +78,7 @@ final class MiniPlayerView: UIView {
         let queueConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         queueButton.setImage(UIImage(systemName: "list.bullet", withConfiguration: queueConfig), for: .normal)
         queueButton.tintColor = .secondaryLabel
-        queueButton.accessibilityLabel = "Queue"
+        queueButton.accessibilityLabel = String(localized: "Queue")
         queueButton.addAction(UIAction { _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             NotificationCenter.default.post(name: MiniPlayerView.queueTapped, object: nil)
@@ -172,7 +172,7 @@ final class MiniPlayerView: UIView {
         isAccessibilityElement = false
         expandElement.accessibilityContainer = self
         expandElement.accessibilityTraits = .button
-        expandElement.accessibilityHint = "Opens Now Playing"
+        expandElement.accessibilityHint = String(localized: "Opens Now Playing")
         expandElement.onActivate = { [weak self] in self?.onTap?() }
         accessibilityElements = [expandElement, playPauseButton, nextButton, queueButton]
     }
@@ -224,7 +224,7 @@ final class MiniPlayerView: UIView {
         let icon = isPlaying ? "pause.fill" : "play.fill"
         let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
         playPauseButton.setImage(UIImage(systemName: icon, withConfiguration: config), for: .normal)
-        playPauseButton.accessibilityLabel = isPlaying ? "Pause" : "Play"
+        playPauseButton.accessibilityLabel = isPlaying ? String(localized: "Pause") : String(localized: "Play")
     }
 
     private func updateProgressBar() {
@@ -314,8 +314,8 @@ final class MiniPlayerView: UIView {
 
     @objc private func sleepTimerDidUpdate() {
         if AudioPlayer.shared.sleepAtEndOfTrack {
-            timerLabel.text = " End of track "
-            timerLabel.accessibilityLabel = "Sleep timer, at end of track"
+            timerLabel.text = String(localized: " End of track ")
+            timerLabel.accessibilityLabel = String(localized: "Sleep timer, at end of track")
             timerLabel.isHidden = false
             return
         }
@@ -326,7 +326,7 @@ final class MiniPlayerView: UIView {
         let mins = Int(remaining) / 60
         let secs = Int(remaining) % 60
         timerLabel.text = " \(String(format: "%d:%02d", mins, secs)) "
-        timerLabel.accessibilityLabel = "Sleep timer, \(mins) minutes \(secs) seconds remaining"
+        timerLabel.accessibilityLabel = String(localized: "Sleep timer, \(mins) minutes \(secs) seconds remaining")
         timerLabel.isHidden = false
     }
 }

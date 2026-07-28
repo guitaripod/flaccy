@@ -12,14 +12,14 @@ enum SidebarSection: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .albums: "Albums"
-        case .songs: "Songs"
-        case .artists: "Artists"
-        case .playlists: "Playlists"
-        case .wantlist: "Wantlist"
-        case .charts: "Charts"
-        case .yearInMusic: "Year in Music"
-        case .listeningGuide: "Listening Guide"
+        case .albums: String(localized: "Albums")
+        case .songs: String(localized: "Songs")
+        case .artists: String(localized: "Artists")
+        case .playlists: String(localized: "Playlists")
+        case .wantlist: String(localized: "Wantlist")
+        case .charts: String(localized: "Charts")
+        case .yearInMusic: String(localized: "Year in Music")
+        case .listeningGuide: String(localized: "Listening Guide")
         }
     }
 
@@ -38,8 +38,8 @@ enum SidebarSection: Int, CaseIterable {
 
     var groupTitle: String {
         switch self {
-        case .albums, .songs, .artists, .playlists: "Library"
-        case .wantlist, .charts, .yearInMusic, .listeningGuide: "Discover"
+        case .albums, .songs, .artists, .playlists: String(localized: "Library")
+        case .wantlist, .charts, .yearInMusic, .listeningGuide: String(localized: "Discover")
         }
     }
 }

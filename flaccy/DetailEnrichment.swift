@@ -12,7 +12,7 @@ enum DetailChip {
 
     /// A rounded glass capsule label used for genre tags.
     static func genre(_ text: String) -> UIView {
-        pill(text: text, systemImage: nil, accessibilityPrefix: "Genre")
+        pill(text: text, systemImage: nil, accessibilityPrefix: String(localized: "Genre"))
     }
 
     /// A glass pill carrying an optional leading SF Symbol, sized for header

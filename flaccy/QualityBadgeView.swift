@@ -76,7 +76,7 @@ final class QualityBadgeView: UIView {
         applyTint()
 
         let spoken = badge.replacingOccurrences(of: "·", with: "")
-        accessibilityLabel = (showsLossless ? "Lossless, " : "Quality, ") + spoken
+        accessibilityLabel = (showsLossless ? String(localized: "Lossless, ") : String(localized: "Quality, ")) + spoken
     }
 
     private func applyTint() {

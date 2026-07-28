@@ -59,7 +59,7 @@ final class WantlistService {
             normKey: Self.normKey(kind: kind, title: title, artist: artist),
             kind: kind.rawValue, title: title, artist: artist, imageURL: imageURL,
             state: WantlistState.wanted.rawValue, source: WantlistSource.manual.rawValue,
-            score: 1000, reason: "Added by you", playCount: 0, addedAt: Date(),
+            score: 1000, reason: String(localized: "Added by you"), playCount: 0, addedAt: Date(),
             resolvedAt: nil, acknowledged: true
         )
         merge(suggestions: [record])
@@ -159,7 +159,7 @@ final class WantlistService {
                     kind: WantlistKind.album.rawValue, title: album.title, artist: album.artist,
                     imageURL: nil, state: WantlistState.wanted.rawValue, source: WantlistSource.gap.rawValue,
                     score: 800 + Double(owned) / Double(total) * 100,
-                    reason: "You own \(owned) of \(total) tracks",
+                    reason: String(localized: "You own \(owned) of \(total) tracks"),
                     playCount: 0, addedAt: now, resolvedAt: nil, acknowledged: false
                 ))
             }
@@ -172,7 +172,7 @@ final class WantlistService {
                     kind: WantlistKind.album.rawValue, title: album.title, artist: album.artist,
                     imageURL: nil, state: WantlistState.wanted.rawValue, source: WantlistSource.upgrade.rawValue,
                     score: 300,
-                    reason: "In library as \(codec) — get it lossless",
+                    reason: String(localized: "In library as \(codec) — get it lossless"),
                     playCount: 0, addedAt: now, resolvedAt: nil, acknowledged: false
                 ))
             }

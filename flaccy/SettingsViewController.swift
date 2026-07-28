@@ -19,26 +19,26 @@ final class SettingsViewController: UITableViewController {
 
         var header: String? {
             switch self {
-            case .appearance: return "Appearance"
+            case .appearance: return String(localized: "Appearance")
             case .lastFM: return "Last.fm"
-            case .recap: return "Year in Music"
-            case .playback: return "Playback"
+            case .recap: return String(localized: "Year in Music")
+            case .playback: return String(localized: "Playback")
             case .guide: return nil
-            case .watch: return "Apple Watch"
-            case .library: return "Library"
+            case .watch: return String(localized: "Apple Watch")
+            case .library: return String(localized: "Library")
             case .moreApps: return nil
             }
         }
 
         var footer: String? {
             switch self {
-            case .appearance: return "System follows your device's light and dark setting."
+            case .appearance: return String(localized: "System follows your device's light and dark setting.")
             case .lastFM: return nil
-            case .recap: return "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story."
-            case .playback: return "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends."
-            case .guide: return "How Bluetooth, AAC, and lossless files really affect what you hear."
+            case .recap: return String(localized: "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story.")
+            case .playback: return String(localized: "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends.")
+            case .guide: return String(localized: "How Bluetooth, AAC, and lossless files really affect what you hear.")
             case .watch: return nil
-            case .library: return "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song."
+            case .library: return String(localized: "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song.")
             case .moreApps: return nil
             }
         }
@@ -120,7 +120,7 @@ final class SettingsViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Settings"
+        title = String(localized: "Settings")
         tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellReuseIdentifier)
@@ -289,159 +289,159 @@ final class SettingsViewController: UITableViewController {
         case .lastFMAccount(let username):
             content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemRed)
             if let username {
-                content.text = "Last.fm Account"
+                content.text = String(localized: "Last.fm Account")
                 content.secondaryText = username
                 cell.accessoryType = .disclosureIndicator
-                cell.accessibilityHint = "Shows account options"
+                cell.accessibilityHint = String(localized: "Shows account options")
             } else {
-                content.text = "Connect to Last.fm"
+                content.text = String(localized: "Connect to Last.fm")
                 cell.accessoryType = .disclosureIndicator
-                cell.accessibilityHint = "Signs in to Last.fm to scrobble your listens"
+                cell.accessibilityHint = String(localized: "Signs in to Last.fm to scrobble your listens")
             }
             cell.accessibilityLabel = content.text
             cell.accessibilityValue = content.secondaryText
 
         case .pendingScrobbles(let count):
             content.image = RowIcon.image(systemName: "clock.arrow.circlepath", tint: .systemOrange)
-            content.text = "Retry Pending Scrobbles"
+            content.text = String(localized: "Retry Pending Scrobbles")
             content.secondaryText = "\(count)"
             content.textProperties.color = .tintColor
-            cell.accessibilityLabel = "Retry pending scrobbles"
-            cell.accessibilityValue = "\(count) pending scrobble\(count == 1 ? "" : "s")"
+            cell.accessibilityLabel = String(localized: "Retry pending scrobbles")
+            cell.accessibilityValue = String(localized: "\(count) pending scrobbles")
 
         case .importLastFM:
             content.image = RowIcon.image(systemName: "square.and.arrow.down.on.square", tint: .systemPink)
             if let imported = lastFMImportProgress {
-                content.text = "Importing Last.fm History"
+                content.text = String(localized: "Importing Last.fm History")
                 if imported > 0 { content.secondaryText = "\(imported)" }
                 cell.accessoryView = makeSpinnerAccessory()
                 cell.selectionStyle = .none
-                cell.accessibilityLabel = "Importing Last.fm History"
+                cell.accessibilityLabel = String(localized: "Importing Last.fm History")
                 if imported > 0 {
-                    cell.accessibilityValue = "\(imported) scrobble\(imported == 1 ? "" : "s") imported"
+                    cell.accessibilityValue = String(localized: "\(imported) scrobbles imported")
                 }
             } else {
-                content.text = "Import Last.fm History"
+                content.text = String(localized: "Import Last.fm History")
                 content.textProperties.color = .tintColor
-                cell.accessibilityLabel = "Import Last.fm History"
-                cell.accessibilityHint = "Backfills your listening stats from Last.fm"
+                cell.accessibilityLabel = String(localized: "Import Last.fm History")
+                cell.accessibilityHint = String(localized: "Backfills your listening stats from Last.fm")
             }
 
         case .yearInMusic:
             content.image = RowIcon.image(systemName: "sparkles", tint: .systemIndigo)
-            content.text = "Your Year in Music"
+            content.text = String(localized: "Your Year in Music")
             cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = "Your Year in Music"
-            cell.accessibilityHint = "Shows your yearly listening recap with shareable story cards"
+            cell.accessibilityLabel = String(localized: "Your Year in Music")
+            cell.accessibilityHint = String(localized: "Shows your yearly listening recap with shareable story cards")
 
         case .recapNotifications(let frequency):
             content.image = RowIcon.image(systemName: "bell.badge.fill", tint: .systemRed)
-            content.text = "Recap Notifications"
+            content.text = String(localized: "Recap Notifications")
             content.secondaryText = frequency
             cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = "Recap Notifications"
+            cell.accessibilityLabel = String(localized: "Recap Notifications")
             cell.accessibilityValue = frequency
-            cell.accessibilityHint = "Chooses how often flaccy reminds you about your recap"
+            cell.accessibilityHint = String(localized: "Chooses how often flaccy reminds you about your recap")
 
         case .gaplessPlayback:
             content.image = RowIcon.image(systemName: "infinity", tint: .systemPurple)
-            content.text = "Gapless Playback"
+            content.text = String(localized: "Gapless Playback")
             cell.selectionStyle = .none
             cell.accessoryView = makeGaplessSwitch()
             cell.accessibilityTraits = []
 
         case .autoplaySimilar:
             content.image = RowIcon.image(systemName: "infinity.circle", tint: .systemPink)
-            content.text = "Autoplay Similar"
+            content.text = String(localized: "Autoplay Similar")
             cell.selectionStyle = .none
             cell.accessoryView = makeAutoplaySwitch()
             cell.accessibilityTraits = []
 
         case .libraryRadio:
             content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemOrange)
-            content.text = "Library Radio"
+            content.text = String(localized: "Library Radio")
             content.textProperties.color = .tintColor
-            cell.accessibilityLabel = "Library Radio"
-            cell.accessibilityHint = "Plays a station from your most-played tracks"
+            cell.accessibilityLabel = String(localized: "Library Radio")
+            cell.accessibilityHint = String(localized: "Plays a station from your most-played tracks")
 
         case .crateDig:
             content.image = RowIcon.image(systemName: "opticaldisc.fill", tint: .systemIndigo)
-            content.text = "Crate Dig"
+            content.text = String(localized: "Crate Dig")
             content.textProperties.color = .tintColor
-            cell.accessibilityLabel = "Crate Dig"
-            cell.accessibilityHint = "Plays deep cuts from albums you already love"
+            cell.accessibilityLabel = String(localized: "Crate Dig")
+            cell.accessibilityHint = String(localized: "Plays deep cuts from albums you already love")
 
         case .moreApps:
             content.image = RowIcon.image(systemName: "square.grid.2x2.fill", tint: .systemIndigo)
-            content.text = "More Apps"
+            content.text = String(localized: "More Apps")
             cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = "More Apps"
-            cell.accessibilityHint = "Browse other apps by this developer"
+            cell.accessibilityLabel = String(localized: "More Apps")
+            cell.accessibilityHint = String(localized: "Browse other apps by this developer")
 
         case .listeningGuide:
             content.image = RowIcon.image(systemName: "waveform", tint: .systemCyan)
-            content.text = "Listening Guide"
+            content.text = String(localized: "Listening Guide")
             cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = "Listening Guide"
-            cell.accessibilityHint = "Explains how Bluetooth, AAC, and lossless audio affect what you hear"
+            cell.accessibilityLabel = String(localized: "Listening Guide")
+            cell.accessibilityHint = String(localized: "Explains how Bluetooth, AAC, and lossless audio affect what you hear")
 
         case .watchSync(let syncedCount):
             content.image = RowIcon.image(systemName: "applewatch", tint: .systemBlue)
-            content.text = "Sync Music to Watch"
+            content.text = String(localized: "Sync Music to Watch")
             if syncedCount > 0 { content.secondaryText = "\(syncedCount)" }
             cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = "Sync Music to Watch"
+            cell.accessibilityLabel = String(localized: "Sync Music to Watch")
             if syncedCount > 0 {
-                cell.accessibilityValue = "\(syncedCount) track\(syncedCount == 1 ? "" : "s") synced"
+                cell.accessibilityValue = String(localized: "\(syncedCount) tracks synced")
             }
 
         case .importFiles:
             content.image = RowIcon.image(systemName: "square.and.arrow.down", tint: .systemGreen)
-            content.text = "Import Files"
+            content.text = String(localized: "Import Files")
             content.textProperties.color = .tintColor
-            cell.accessibilityLabel = "Import Files"
-            cell.accessibilityHint = "Opens the file browser to add music"
+            cell.accessibilityLabel = String(localized: "Import Files")
+            cell.accessibilityHint = String(localized: "Opens the file browser to add music")
 
         case .rescanLibrary:
             content.image = RowIcon.image(systemName: "arrow.clockwise", tint: .systemIndigo)
             if isRescanning {
-                content.text = "Rescanning Library"
+                content.text = String(localized: "Rescanning Library")
                 content.textProperties.color = .secondaryLabel
                 cell.accessoryView = makeSpinnerAccessory()
                 cell.selectionStyle = .none
-                cell.accessibilityLabel = "Rescanning Library"
+                cell.accessibilityLabel = String(localized: "Rescanning Library")
             } else {
-                content.text = "Rescan Library"
+                content.text = String(localized: "Rescan Library")
                 content.textProperties.color = .tintColor
-                cell.accessibilityLabel = "Rescan Library"
-                cell.accessibilityHint = "Re-analyzes all tracks"
+                cell.accessibilityLabel = String(localized: "Rescan Library")
+                cell.accessibilityHint = String(localized: "Re-analyzes all tracks")
             }
 
         case .groupAlbumEditions:
             content.image = RowIcon.image(systemName: "square.stack.3d.up", tint: .systemPurple)
-            content.text = "Group Album Editions"
+            content.text = String(localized: "Group Album Editions")
             cell.selectionStyle = .none
             cell.accessibilityTraits = .none
             cell.accessoryView = makeGroupEditionsSwitch()
-            cell.accessibilityLabel = "Group Album Editions"
-            cell.accessibilityHint = "Folds deluxe, remaster, and explicit variants into one album"
+            cell.accessibilityLabel = String(localized: "Group Album Editions")
+            cell.accessibilityHint = String(localized: "Folds deluxe, remaster, and explicit variants into one album")
 
         case .libraryStats(let albums, let tracks):
             content.image = RowIcon.image(systemName: "chart.bar.fill", tint: .systemTeal)
-            content.text = "Library"
-            content.secondaryText = "\(albums) album\(albums == 1 ? "" : "s"), \(tracks) track\(tracks == 1 ? "" : "s")"
+            content.text = String(localized: "Library")
+            content.secondaryText = String(localized: "\(albums) albums, \(tracks) tracks")
             cell.selectionStyle = .none
             cell.accessibilityTraits = .staticText
-            cell.accessibilityLabel = "Library"
+            cell.accessibilityLabel = String(localized: "Library")
             cell.accessibilityValue = content.secondaryText
 
         case .storage(let used):
             content.image = RowIcon.image(systemName: "internaldrive.fill", tint: .systemGray)
-            content.text = "Storage Used"
+            content.text = String(localized: "Storage Used")
             content.secondaryText = used
             cell.selectionStyle = .none
             cell.accessibilityTraits = .staticText
-            cell.accessibilityLabel = "Storage Used"
+            cell.accessibilityLabel = String(localized: "Storage Used")
             cell.accessibilityValue = used
         }
 
@@ -471,7 +471,7 @@ final class SettingsViewController: UITableViewController {
     private func makeGaplessSwitch() -> UISwitch {
         let toggle = UISwitch()
         toggle.isOn = UserDefaults.standard.object(forKey: "gaplessPlayback") as? Bool ?? true
-        toggle.accessibilityLabel = "Gapless Playback"
+        toggle.accessibilityLabel = String(localized: "Gapless Playback")
         toggle.addAction(UIAction { [weak self] action in
             guard let toggle = action.sender as? UISwitch else { return }
             self?.selectionFeedback.selectionChanged()
@@ -483,7 +483,7 @@ final class SettingsViewController: UITableViewController {
     private func makeGroupEditionsSwitch() -> UISwitch {
         let toggle = UISwitch()
         toggle.isOn = GroupAlbumEditionsSetting.isEnabled
-        toggle.accessibilityLabel = "Group Album Editions"
+        toggle.accessibilityLabel = String(localized: "Group Album Editions")
         toggle.addAction(UIAction { [weak self] action in
             guard let toggle = action.sender as? UISwitch else { return }
             self?.selectionFeedback.selectionChanged()
@@ -495,8 +495,8 @@ final class SettingsViewController: UITableViewController {
     private func makeAutoplaySwitch() -> UISwitch {
         let toggle = UISwitch()
         toggle.isOn = AudioPlayer.shared.autoplaySimilarWhenQueueEnds
-        toggle.accessibilityLabel = "Autoplay Similar"
-        toggle.accessibilityHint = "Keeps a similar-music station going when the queue ends"
+        toggle.accessibilityLabel = String(localized: "Autoplay Similar")
+        toggle.accessibilityHint = String(localized: "Keeps a similar-music station going when the queue ends")
         toggle.addAction(UIAction { [weak self] action in
             guard let toggle = action.sender as? UISwitch else { return }
             self?.selectionFeedback.selectionChanged()
@@ -522,7 +522,7 @@ final class SettingsViewController: UITableViewController {
         nameLabel.textAlignment = .center
 
         let versionLabel = UILabel()
-        versionLabel.text = "Version \(version) (\(build))"
+        versionLabel.text = String(localized: "Version \(version) (\(build))")
         versionLabel.font = .preferredFont(forTextStyle: .footnote)
         versionLabel.adjustsFontForContentSizeCategory = true
         versionLabel.textColor = .tertiaryLabel
@@ -535,7 +535,7 @@ final class SettingsViewController: UITableViewController {
         stack.isLayoutMarginsRelativeArrangement = true
         stack.layoutMargins = UIEdgeInsets(top: 20, left: 16, bottom: 24, right: 16)
         stack.isAccessibilityElement = true
-        stack.accessibilityLabel = "\(name), version \(version), build \(build)"
+        stack.accessibilityLabel = String(localized: "\(name), version \(version), build \(build)")
 
         let width = view.bounds.width
         let size = stack.systemLayoutSizeFitting(
@@ -549,9 +549,9 @@ final class SettingsViewController: UITableViewController {
 
     private func lastFMFooter() -> String {
         if LastFMService.shared.isAuthenticated {
-            return "Your listens are scrobbled to Last.fm and your loved tracks stay in sync."
+            return String(localized: "Your listens are scrobbled to Last.fm and your loved tracks stay in sync.")
         }
-        return "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and import your listening history. Everything else works without it."
+        return String(localized: "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and import your listening history. Everything else works without it.")
     }
 
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
@@ -597,30 +597,30 @@ final class SettingsViewController: UITableViewController {
         let username = LastFMService.shared.username
         let sheet = UIAlertController(
             title: "Last.fm",
-            message: username.map { "Connected as \($0)" } ?? "Connected",
+            message: username.map { String(localized: "Connected as \($0)") } ?? String(localized: "Connected"),
             preferredStyle: .actionSheet
         )
         if let username, let profileURL = URL(string: "https://www.last.fm/user/\(username)") {
-            sheet.addAction(UIAlertAction(title: "View Profile", style: .default) { _ in
+            sheet.addAction(UIAlertAction(title: String(localized: "View Profile"), style: .default) { _ in
                 UIApplication.shared.open(profileURL)
             })
         }
-        sheet.addAction(UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
+        sheet.addAction(UIAlertAction(title: String(localized: "Disconnect"), style: .destructive) { [weak self] _ in
             self?.confirmDisconnectLastFM()
         })
-        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        sheet.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
         present(sheet, animated: true)
     }
 
     private func confirmDisconnectLastFM() {
         impactMedium.impactOccurred()
         let alert = UIAlertController(
-            title: "Disconnect Last.fm",
-            message: "Your listens will no longer be scrobbled. Your library, play history, and loved tracks stay on this device.",
+            title: String(localized: "Disconnect Last.fm"),
+            message: String(localized: "Your listens will no longer be scrobbled. Your library, play history, and loved tracks stay on this device."),
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Disconnect", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Disconnect"), style: .destructive) { [weak self] _ in
             LastFMService.shared.logout()
             self?.notificationFeedback.notificationOccurred(.success)
             self?.applySnapshot(animated: true)
@@ -641,11 +641,11 @@ final class SettingsViewController: UITableViewController {
                 guard !isAuthCancellation(error) else { return }
                 notificationFeedback.notificationOccurred(.error)
                 let alert = UIAlertController(
-                    title: "Couldn't Connect",
-                    message: "Last.fm sign-in didn't complete. Check your connection and try again.",
+                    title: String(localized: "Couldn't Connect"),
+                    message: String(localized: "Last.fm sign-in didn't complete. Check your connection and try again."),
                     preferredStyle: .alert
                 )
-                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
                 present(alert, animated: true)
             }
         }
@@ -755,12 +755,12 @@ final class SettingsViewController: UITableViewController {
         guard !isRescanning, !Library.shared.isLoading else { return }
         impactMedium.impactOccurred()
         let alert = UIAlertController(
-            title: "Rescan Library",
-            message: "This will re-analyze all tracks with AI. May take a few minutes for large libraries.",
+            title: String(localized: "Rescan Library"),
+            message: String(localized: "This will re-analyze all tracks with AI. May take a few minutes for large libraries."),
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Rescan", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Rescan"), style: .default) { [weak self] _ in
             self?.performRescan()
         })
         present(alert, animated: true)
@@ -827,7 +827,7 @@ final class SettingsViewController: UITableViewController {
 
         guard let enumerator = fm.enumerator(
             at: docsURL, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]
-        ) else { return "0 MB" }
+        ) else { return String(localized: "0 MB") }
 
         for case let fileURL as URL in enumerator {
             if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
@@ -838,10 +838,10 @@ final class SettingsViewController: UITableViewController {
 
         let gigabytes = Double(totalSize) / 1_073_741_824
         if gigabytes >= 1.0 {
-            return String(format: "%.1f GB", gigabytes)
+            return String(format: String(localized: "%.1f GB"), gigabytes)
         }
         let megabytes = Double(totalSize) / 1_048_576
-        return String(format: "%.0f MB", megabytes)
+        return String(format: String(localized: "%.0f MB"), megabytes)
     }
 }
 

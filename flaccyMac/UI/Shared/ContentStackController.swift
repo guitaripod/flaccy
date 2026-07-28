@@ -6,7 +6,7 @@ import AppKit
 final class ContentStackController: NSViewController {
 
     private(set) var stack: [NSViewController] = []
-    private let backButton = GlassCapsuleButton(title: "Back", symbolName: "chevron.left")
+    private let backButton = GlassCapsuleButton(title: String(localized: "Back"), symbolName: "chevron.left")
 
     init(root: NSViewController) {
         super.init(nibName: nil, bundle: nil)

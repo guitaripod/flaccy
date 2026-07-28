@@ -109,7 +109,7 @@ extension MainWindowController: NSToolbarDelegate {
     ) -> NSToolbarItem? {
         guard itemIdentifier == Self.searchIdentifier else { return nil }
         let item = NSSearchToolbarItem(itemIdentifier: itemIdentifier)
-        item.searchField.placeholderString = "Search library"
+        item.searchField.placeholderString = String(localized: "Search library")
         item.searchField.sendsSearchStringImmediately = true
         item.searchField.target = self
         item.searchField.action = #selector(searchFieldChanged(_:))
@@ -216,13 +216,13 @@ final class AudioDropView: NSView {
         let urls = droppableURLs(from: sender)
         guard !urls.isEmpty, !isImporting else { return false }
         guard !LibraryRoot.shared.isFallbackActive else {
-            MacToast.show("Music folder unavailable — reconnect the drive or choose a new folder.", style: .error, in: window)
+            MacToast.show(String(localized: "Music folder unavailable — reconnect the drive or choose a new folder."), style: .error, in: window)
             return false
         }
         isImporting = true
         AppLogger.info("Importing \(urls.count) dropped item(s)", category: .content)
         MacToast.show(
-            "Importing \(urls.count) item\(urls.count == 1 ? "" : "s")…", style: .info, in: window
+            String(localized: "Importing \(urls.count) items…"), style: .info, in: window
         )
         Task { [weak self] in
             let outcome = await Library.shared.importFiles(from: urls)

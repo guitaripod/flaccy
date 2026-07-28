@@ -12,16 +12,16 @@ enum SyncFormat {
     static func size(_ value: Int64) -> String { bytes.string(fromByteCount: max(0, value)) }
 
     static func speed(_ bytesPerSecond: Double) -> String {
-        guard bytesPerSecond > 0 else { return "measuring…" }
-        return "\(bytes.string(fromByteCount: Int64(bytesPerSecond)))/s"
+        guard bytesPerSecond > 0 else { return String(localized: "measuring…") }
+        return String(localized: "\(bytes.string(fromByteCount: Int64(bytesPerSecond)))/s")
     }
 
     static func eta(_ seconds: TimeInterval?) -> String {
-        guard let seconds, seconds.isFinite, seconds > 0 else { return "estimating time…" }
-        if seconds < 60 { return "less than a minute left" }
+        guard let seconds, seconds.isFinite, seconds > 0 else { return String(localized: "estimating time…") }
+        if seconds < 60 { return String(localized: "less than a minute left") }
         let minutes = Int((seconds / 60).rounded())
-        if minutes < 60 { return "about \(minutes) min left" }
-        return "about \(minutes / 60)h \(minutes % 60)m left"
+        if minutes < 60 { return String(localized: "about \(minutes) min left") }
+        return String(localized: "about \(minutes / 60)h \(minutes % 60)m left")
     }
 
     static func percent(_ fraction: Double) -> String {
@@ -53,24 +53,24 @@ private enum AlbumSyncStatus {
 
     var pill: (text: String, color: UIColor)? {
         switch self {
-        case .synced: return ("Synced", .systemGreen)
-        case .sending: return ("Sending", .systemBlue)
-        case .waiting: return ("Waiting", .systemGray)
-        case .failed: return ("Failed", .systemRed)
-        case .storageFull: return ("Storage Full", .systemOrange)
+        case .synced: return (String(localized: "Synced"), .systemGreen)
+        case .sending: return (String(localized: "Sending"), .systemBlue)
+        case .waiting: return (String(localized: "Waiting"), .systemGray)
+        case .failed: return (String(localized: "Failed"), .systemRed)
+        case .storageFull: return (String(localized: "Storage Full"), .systemOrange)
         case .partial, .notSynced: return nil
         }
     }
 
     var voiceOverValue: String {
         switch self {
-        case .synced: return "Synced"
-        case let .sending(fraction): return "Sending, \(SyncFormat.percent(fraction))"
-        case .waiting: return "Waiting"
-        case .failed: return "Failed"
-        case .storageFull: return "Storage full"
-        case let .partial(synced, total): return "\(synced) of \(total) synced"
-        case .notSynced: return "Not synced"
+        case .synced: return String(localized: "Synced")
+        case let .sending(fraction): return String(localized: "Sending, \(SyncFormat.percent(fraction))")
+        case .waiting: return String(localized: "Waiting")
+        case .failed: return String(localized: "Failed")
+        case .storageFull: return String(localized: "Storage full")
+        case let .partial(synced, total): return String(localized: "\(synced) of \(total) synced")
+        case .notSynced: return String(localized: "Not synced")
         }
     }
 
@@ -246,7 +246,7 @@ final class WatchSyncViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Apple Watch"
+        title = String(localized: "Apple Watch")
         view.backgroundColor = .systemGroupedBackground
         tableView.register(WatchAlbumSyncCell.self, forCellReuseIdentifier: WatchAlbumSyncCell.reuseID)
         tableView.register(WatchStatusCell.self, forCellReuseIdentifier: WatchStatusCell.reuseID)
@@ -297,7 +297,7 @@ final class WatchSyncViewController: UITableViewController {
         dataSource.defaultRowAnimation = .fade
         dataSource.headerTitle = { [weak self] section in
             guard let self else { return nil }
-            return section == .albums && !self.albums.isEmpty ? "Albums" : nil
+            return section == .albums && !self.albums.isEmpty ? String(localized: "Albums") : nil
         }
         dataSource.footerTitle = { [weak self] section in
             guard let self else { return nil }
@@ -404,12 +404,12 @@ final class WatchSyncViewController: UITableViewController {
     private func showWontFit(album: Album, needed: Int64, free: Int64) {
         notify.notificationOccurred(.warning)
         let alert = UIAlertController(
-            title: "Not Enough Space",
-            message: "“\(album.title)” needs \(SyncFormat.size(needed)), but your Apple Watch has \(SyncFormat.size(free)) free. Remove some music first.",
+            title: String(localized: "Not Enough Space"),
+            message: String(localized: "“\(album.title)” needs \(SyncFormat.size(needed)), but your Apple Watch has \(SyncFormat.size(free)) free. Remove some music first."),
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "OK", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Sync Anyway", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Sync Anyway"), style: .default) { [weak self] _ in
             self?.impact.impactOccurred()
             self?.service.sync(tracks: album.tracks)
         })
@@ -422,12 +422,12 @@ final class WatchSyncViewController: UITableViewController {
             return
         }
         let alert = UIAlertController(
-            title: "Remove All from Watch",
-            message: "Delete all synced music from your Apple Watch and start fresh?",
+            title: String(localized: "Remove All from Watch"),
+            message: String(localized: "Delete all synced music from your Apple Watch and start fresh?"),
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Remove All", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Remove All"), style: .destructive) { [weak self] _ in
             self?.impact.impactOccurred()
             self?.service.removeAll()
         })
@@ -437,12 +437,12 @@ final class WatchSyncViewController: UITableViewController {
     private func confirmRemove(album: Album) {
         let size = SyncFormat.size(service.totalBytes(in: album))
         let alert = UIAlertController(
-            title: "Remove from Watch",
-            message: "Delete “\(album.title)” (\(size)) from your Apple Watch?",
+            title: String(localized: "Remove from Watch"),
+            message: String(localized: "Delete “\(album.title)” (\(size)) from your Apple Watch?"),
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Remove", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Remove"), style: .destructive) { [weak self] _ in
             self?.impact.impactOccurred()
             self?.service.remove(tracks: album.tracks)
         })
@@ -474,14 +474,14 @@ final class WatchSyncViewController: UITableViewController {
 
         var title: String {
             switch self {
-            case .notSupported: return "Not Available"
-            case .notPaired: return "No Apple Watch"
-            case .notInstalled: return "Install Flaccy on Apple Watch"
-            case .full: return "Apple Watch is Full"
-            case .syncing: return "Syncing…"
-            case .pending: return "Finishing Up"
-            case .synced: return "Up to Date"
-            case .ready: return "Connected"
+            case .notSupported: return String(localized: "Not Available")
+            case .notPaired: return String(localized: "No Apple Watch")
+            case .notInstalled: return String(localized: "Install Flaccy on Apple Watch")
+            case .full: return String(localized: "Apple Watch is Full")
+            case .syncing: return String(localized: "Syncing…")
+            case .pending: return String(localized: "Finishing Up")
+            case .synced: return String(localized: "Up to Date")
+            case .ready: return String(localized: "Connected")
             }
         }
     }
@@ -498,28 +498,28 @@ final class WatchSyncViewController: UITableViewController {
     }
 
     private var freeSpaceText: String {
-        service.watchFreeBytes > 0 ? " · \(SyncFormat.size(service.watchFreeBytes)) free" : ""
+        service.watchFreeBytes > 0 ? String(localized: " · \(SyncFormat.size(service.watchFreeBytes)) free") : ""
     }
 
     private func stateSubtitle(_ state: ConnectionState) -> String {
         switch state {
-        case .notSupported: return "Watch sync isn’t available on this device."
-        case .notPaired: return "Pair an Apple Watch to sync music."
-        case .notInstalled: return "Open the Watch app on your iPhone and install Flaccy."
+        case .notSupported: return String(localized: "Watch sync isn’t available on this device.")
+        case .notPaired: return String(localized: "Pair an Apple Watch to sync music.")
+        case .notInstalled: return String(localized: "Open the Watch app on your iPhone and install Flaccy.")
         case .full:
             let n = service.diskFullCount
-            return "\(n) track\(n == 1 ? "" : "s") didn’t fit\(freeSpaceText). Remove music to make room."
+            return String(localized: "\(n) tracks didn’t fit\(freeSpaceText). Remove music to make room.")
         case .syncing:
             let n = service.activeTransferCount
-            return "\(n) track\(n == 1 ? "" : "s") transferring in the background\(freeSpaceText)."
+            return String(localized: "\(n) tracks transferring in the background\(freeSpaceText).")
         case .pending:
             let n = service.unconfirmedCount
-            return "\(n) track\(n == 1 ? "" : "s") left — retrying automatically\(freeSpaceText)."
+            return String(localized: "\(n) tracks left — retrying automatically\(freeSpaceText).")
         case .synced:
             let n = service.syncedPaths.count
-            return "\(n) track\(n == 1 ? "" : "s") on your Apple Watch\(freeSpaceText)."
+            return String(localized: "\(n) tracks on your Apple Watch\(freeSpaceText).")
         case .ready:
-            return "Ready to sync — choose an album below.\(freeSpaceText.isEmpty ? "" : " Watch has\(freeSpaceText).")"
+            return String(localized: "Ready to sync — choose an album below.\(freeSpaceText.isEmpty ? "" : " Watch has\(freeSpaceText).")")
         }
     }
 
@@ -529,15 +529,12 @@ final class WatchSyncViewController: UITableViewController {
         case .notSupported, .notPaired, .notInstalled:
             return stateSubtitle(state)
         default:
-            return "Music transfers in the background — you can leave this screen or lock your phone. "
-                + "Each track is re-sent until your Apple Watch confirms it arrived."
+            return String(localized: "Music transfers in the background — you can leave this screen or lock your phone. Each track is re-sent until your Apple Watch confirms it arrived.")
         }
     }
 
     private func albumsFooter() -> String {
-        "Tip: keep both devices nearby and charging, and on the same Wi‑Fi, to transfer faster. "
-            + "Hi‑res albums are large and take several minutes; compressed (AAC) files sync in seconds — "
-            + "same quality through AirPods."
+        String(localized: "Tip: keep both devices nearby and charging, and on the same Wi‑Fi, to transfer faster. Hi‑res albums are large and take several minutes; compressed (AAC) files sync in seconds — same quality through AirPods.")
     }
 }
 
@@ -664,7 +661,7 @@ final class ActiveSyncCell: UITableViewCell {
     func configure(service: WatchSyncService) {
         let count = service.activeTransferCount
         let fraction = service.sessionFraction
-        header.text = "Syncing \(count) track\(count == 1 ? "" : "s")…"
+        header.text = String(localized: "Syncing \(count) tracks…")
         ring.setProgress(fraction, animated: true)
         percentLabel.text = SyncFormat.percent(fraction)
         if UIAccessibility.isReduceMotionEnabled {
@@ -676,10 +673,10 @@ final class ActiveSyncCell: UITableViewCell {
         let total = SyncFormat.size(service.sessionTotalBytesPending)
         let speed = SyncFormat.speed(service.speedBytesPerSec)
         let eta = SyncFormat.eta(service.etaSeconds)
-        detail.text = "\(transferred) of \(total)  ·  \(speed)  ·  \(eta)"
+        detail.text = String(localized: "\(transferred) of \(total)  ·  \(speed)  ·  \(eta)")
         isAccessibilityElement = true
         accessibilityLabel = header.text
-        accessibilityValue = "\(SyncFormat.percent(fraction)), \(transferred) of \(total), \(speed), \(eta)"
+        accessibilityValue = String(localized: "\(SyncFormat.percent(fraction)), \(transferred) of \(total), \(speed), \(eta)")
     }
 }
 
@@ -794,25 +791,25 @@ final class WatchAlbumSyncCell: UITableViewCell {
             statusIcon.image = nil
             ring.isHidden = false
             ring.setProgress(fraction, animated: true)
-            subtitleLabel.text = "Syncing \(synced) of \(total)  ·  \(size)"
+            subtitleLabel.text = String(localized: "Syncing \(synced) of \(total)  ·  \(size)")
         case .synced:
             showIcon("checkmark.circle.fill", tint: .systemGreen)
-            subtitleLabel.text = "On Apple Watch  ·  \(size)"
+            subtitleLabel.text = String(localized: "On Apple Watch  ·  \(size)")
         case .failed:
             showIcon("exclamationmark.circle.fill", tint: .systemRed)
-            subtitleLabel.text = "Tap to retry  ·  \(size)"
+            subtitleLabel.text = String(localized: "Tap to retry  ·  \(size)")
         case .storageFull:
             showIcon("externaldrive.fill.trianglebadge.exclamationmark", tint: .systemOrange)
-            subtitleLabel.text = "Not enough space on Watch  ·  \(size)"
+            subtitleLabel.text = String(localized: "Not enough space on Watch  ·  \(size)")
         case .waiting:
             showIcon("clock", tint: .systemGray)
-            subtitleLabel.text = "Waiting to send  ·  \(size)"
+            subtitleLabel.text = String(localized: "Waiting to send  ·  \(size)")
         case .partial:
             showIcon("circle.lefthalf.filled", tint: .tintColor)
-            subtitleLabel.text = "\(synced) of \(total) on Watch  ·  \(size)"
+            subtitleLabel.text = String(localized: "\(synced) of \(total) on Watch  ·  \(size)")
         case .notSynced:
             showIcon("arrow.down.circle", tint: .tintColor)
-            subtitleLabel.text = "\(total) track\(total == 1 ? "" : "s")  ·  \(size)"
+            subtitleLabel.text = String(localized: "\(total) tracks  ·  \(size)")
         }
 
         isAccessibilityElement = true

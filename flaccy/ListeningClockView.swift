@@ -64,9 +64,9 @@ final class ListeningClockView: UIView {
     private func accessibilitySummary() -> String {
         let total = buckets.reduce(0, +)
         guard total > 0, let peak = buckets.enumerated().max(by: { $0.element < $1.element })?.offset else {
-            return "Listening clock, no plays yet"
+            return String(localized: "Listening clock, no plays yet")
         }
-        return "Listening clock. Peak hour \(peak) hundred hours, with \(buckets[peak]) plays."
+        return String(localized: "Listening clock. Peak hour \(peak) hundred hours, with \(buckets[peak]) plays.")
     }
 
     private func drawContent(in ctx: CGContext, rect: CGRect) {

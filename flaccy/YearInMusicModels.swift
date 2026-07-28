@@ -37,11 +37,11 @@ nonisolated enum StorySlide: Int, CaseIterable, Sendable {
 
     var displayName: String {
         switch self {
-        case .overview: "Overview"
-        case .artists: "Top Artists"
-        case .tracks: "Top Tracks"
-        case .numbers: "The Numbers"
-        case .poster: "Poster"
+        case .overview: String(localized: "Overview")
+        case .artists: String(localized: "Top Artists")
+        case .tracks: String(localized: "Top Tracks")
+        case .numbers: String(localized: "The Numbers")
+        case .poster: String(localized: "Poster")
         }
     }
 }
@@ -79,7 +79,7 @@ nonisolated struct StoryTheme: Equatable {
         #endif
         let neighborHue = (hue + 0.09).truncatingRemainder(dividingBy: 1)
         let aurora = StoryTheme(
-            name: "Aurora",
+            name: String(localized: "Aurora"),
             gradientColors: [
                 PlatformColor(hue: hue, saturation: max(0.45, saturation * 0.9), brightness: 0.32, alpha: 1),
                 PlatformColor(hue: neighborHue, saturation: max(0.4, saturation * 0.8), brightness: 0.18, alpha: 1),
@@ -90,7 +90,7 @@ nonisolated struct StoryTheme: Equatable {
         return [
             aurora,
             StoryTheme(
-                name: "Sunset",
+                name: String(localized: "Sunset"),
                 gradientColors: [
                     PlatformColor(red: 0.55, green: 0.12, blue: 0.25, alpha: 1),
                     PlatformColor(red: 0.35, green: 0.08, blue: 0.35, alpha: 1),
@@ -99,7 +99,7 @@ nonisolated struct StoryTheme: Equatable {
                 accent: PlatformColor(red: 1, green: 0.55, blue: 0.4, alpha: 1)
             ),
             StoryTheme(
-                name: "Ocean",
+                name: String(localized: "Ocean"),
                 gradientColors: [
                     PlatformColor(red: 0.02, green: 0.25, blue: 0.38, alpha: 1),
                     PlatformColor(red: 0.03, green: 0.12, blue: 0.3, alpha: 1),
@@ -108,7 +108,7 @@ nonisolated struct StoryTheme: Equatable {
                 accent: PlatformColor(red: 0.35, green: 0.85, blue: 0.9, alpha: 1)
             ),
             StoryTheme(
-                name: "Orchid",
+                name: String(localized: "Orchid"),
                 gradientColors: [
                     PlatformColor(red: 0.35, green: 0.1, blue: 0.5, alpha: 1),
                     PlatformColor(red: 0.15, green: 0.05, blue: 0.3, alpha: 1),
@@ -117,7 +117,7 @@ nonisolated struct StoryTheme: Equatable {
                 accent: PlatformColor(red: 0.85, green: 0.55, blue: 1, alpha: 1)
             ),
             StoryTheme(
-                name: "Noir",
+                name: String(localized: "Noir"),
                 gradientColors: [
                     PlatformColor(white: 0.16, alpha: 1),
                     PlatformColor(white: 0.06, alpha: 1),

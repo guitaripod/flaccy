@@ -19,11 +19,11 @@ final class ChartsViewController: NSViewController {
 
     private let periodPicker = NSSegmentedControl()
     private let profileLabel = NSTextField(labelWithString: "")
-    private let shareButton = NSButton(title: "Share", target: nil, action: nil)
+    private let shareButton = NSButton(title: String(localized: "Share"), target: nil, action: nil)
 
     private let importBanner = NSView()
     private let importLabel = NSTextField(labelWithString: "")
-    private let importButton = NSButton(title: "Import", target: nil, action: nil)
+    private let importButton = NSButton(title: String(localized: "Import"), target: nil, action: nil)
     private let importSpinner = NSProgressIndicator()
 
     private let statsRow = NSStackView()
@@ -130,7 +130,7 @@ final class ChartsViewController: NSViewController {
         contentStack.alignment = .leading
         contentStack.spacing = 18
 
-        let title = NSTextField(labelWithString: "Recap")
+        let title = NSTextField(labelWithString: String(localized: "Recap"))
         title.font = .systemFont(ofSize: 28, weight: .heavy)
         title.textColor = MacColors.primaryLabel
 
@@ -139,7 +139,7 @@ final class ChartsViewController: NSViewController {
 
         shareButton.bezelStyle = .rounded
         shareButton.controlSize = .regular
-        shareButton.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: "Share recap")
+        shareButton.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: String(localized: "Share recap"))
         shareButton.imagePosition = .imageLeading
         shareButton.target = self
         shareButton.action = #selector(shareTapped)
@@ -173,12 +173,12 @@ final class ChartsViewController: NSViewController {
 
         sectionViews = [
             statsRow,
-            sectionCard(title: "Top Artists", content: hostedList(artistsList)),
-            sectionCard(title: "Top Albums", content: hostedList(albumsGrid)),
-            sectionCard(title: "Top Tracks", content: hostedList(tracksList)),
-            sectionCard(title: "Listening Clock", content: clockCardContent()),
-            sectionCard(title: "Your Streak", content: heatmapCardContent()),
-            sectionCard(title: "Your Persona", content: personaCardContent()),
+            sectionCard(title: String(localized: "Top Artists"), content: hostedList(artistsList)),
+            sectionCard(title: String(localized: "Top Albums"), content: hostedList(albumsGrid)),
+            sectionCard(title: String(localized: "Top Tracks"), content: hostedList(tracksList)),
+            sectionCard(title: String(localized: "Listening Clock"), content: clockCardContent()),
+            sectionCard(title: String(localized: "Your Streak"), content: heatmapCardContent()),
+            sectionCard(title: String(localized: "Your Persona"), content: personaCardContent()),
         ]
         for section in sectionViews {
             contentStack.addArrangedSubview(section)
@@ -265,10 +265,10 @@ final class ChartsViewController: NSViewController {
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
         icon.contentTintColor = MacColors.tertiaryLabel
-        let title = NSTextField(labelWithString: "No listening history yet")
+        let title = NSTextField(labelWithString: String(localized: "No listening history yet"))
         title.font = .systemFont(ofSize: 18, weight: .semibold)
         title.textColor = MacColors.primaryLabel
-        let subtitle = NSTextField(labelWithString: "Play some music, or connect Last.fm in Settings and import your history.")
+        let subtitle = NSTextField(labelWithString: String(localized: "Play some music, or connect Last.fm in Settings and import your history."))
         subtitle.font = .systemFont(ofSize: 12)
         subtitle.textColor = MacColors.secondaryLabel
         emptyState.orientation = .vertical
@@ -370,11 +370,11 @@ final class ChartsViewController: NSViewController {
             if info.registeredUts > 0 {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyy"
-                pieces.append("scrobbling since \(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(info.registeredUts))))")
+                pieces.append(String(localized: "scrobbling since \(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(info.registeredUts))))"))
             }
             profileLabel.stringValue = pieces.joined(separator: " · ")
         } else {
-            profileLabel.stringValue = "Local listening history"
+            profileLabel.stringValue = String(localized: "Local listening history")
         }
 
         renderStats(data)
@@ -385,8 +385,8 @@ final class ChartsViewController: NSViewController {
         clockView.configure(buckets: data.listeningClock, tint: accent)
         heatmapView.configure(counts: data.heatmap, tint: accent)
         streakLabel.stringValue = data.streak > 0
-            ? "\(data.streak) day\(data.streak == 1 ? "" : "s") in a row and counting"
-            : "No active streak — press play to start one"
+            ? String(localized: "\(data.streak) days in a row and counting")
+            : String(localized: "No active streak — press play to start one")
 
         personaTitleLabel.stringValue = data.persona
         personaBlurbLabel.stringValue = RecapPersona.blurb(for: data.persona)
@@ -397,10 +397,10 @@ final class ChartsViewController: NSViewController {
     private func renderStats(_ data: RecapData) {
         statsRow.arrangedSubviews.forEach { $0.removeFromSuperview() }
         let tiles: [(String, String, String)] = [
-            (RecapFormat.count(data.totalPlays), "PLAYS", "play.circle.fill"),
-            (RecapFormat.count(data.totalMinutes), "MINUTES", "clock.fill"),
-            ("\(data.streak)", "DAY STREAK", "flame.fill"),
-            (data.persona, "PERSONA", RecapPersona.symbol(for: data.persona)),
+            (RecapFormat.count(data.totalPlays), String(localized: "PLAYS"), "play.circle.fill"),
+            (RecapFormat.count(data.totalMinutes), String(localized: "MINUTES"), "clock.fill"),
+            ("\(data.streak)", String(localized: "DAY STREAK"), "flame.fill"),
+            (data.persona, String(localized: "PERSONA"), RecapPersona.symbol(for: data.persona)),
         ]
         for (value, caption, symbol) in tiles {
             statsRow.addArrangedSubview(statTile(value: value, caption: caption, symbol: symbol))
@@ -489,7 +489,7 @@ final class ChartsViewController: NSViewController {
         name.font = .systemFont(ofSize: 12, weight: .semibold)
         name.textColor = MacColors.primaryLabel
         name.lineBreakMode = .byTruncatingTail
-        let detail = NSTextField(labelWithString: "\(album.artistName) · \(RecapFormat.compact(album.playCount)) plays")
+        let detail = NSTextField(labelWithString: String(localized: "\(album.artistName) · \(RecapFormat.compact(album.playCount)) plays"))
         detail.font = .systemFont(ofSize: 10)
         detail.textColor = MacColors.secondaryLabel
         detail.lineBreakMode = .byTruncatingTail
@@ -541,7 +541,7 @@ final class ChartsViewController: NSViewController {
             text.addArrangedSubview(subtitleLabel)
         }
 
-        let playsLabel = NSTextField(labelWithString: "\(RecapFormat.compact(plays)) plays")
+        let playsLabel = NSTextField(labelWithString: String(localized: "\(RecapFormat.compact(plays)) plays"))
         playsLabel.font = .systemFont(ofSize: 11, weight: .medium)
         playsLabel.textColor = MacColors.secondaryLabel
         playsLabel.setContentHuggingPriority(.required, for: .horizontal)
@@ -567,18 +567,18 @@ final class ChartsViewController: NSViewController {
         importBanner.isHidden = !state.showsBanner
         switch state {
         case .available:
-            importLabel.stringValue = "Import your full Last.fm history to power the Recap and Year in Music."
+            importLabel.stringValue = String(localized: "Import your full Last.fm history to power the Recap and Year in Music.")
             importButton.isHidden = false
             importButton.isEnabled = true
             importSpinner.stopAnimation(nil)
         case .importing(let imported):
             importLabel.stringValue = imported > 0
-                ? "Importing history… \(RecapFormat.count(imported)) scrobbles so far"
-                : "Importing history…"
+                ? String(localized: "Importing history… \(RecapFormat.count(imported)) scrobbles so far")
+                : String(localized: "Importing history…")
             importButton.isHidden = true
             importSpinner.startAnimation(nil)
         case .done(let imported):
-            importLabel.stringValue = "Imported \(RecapFormat.count(imported)) scrobbles from Last.fm."
+            importLabel.stringValue = String(localized: "Imported \(RecapFormat.count(imported)) scrobbles from Last.fm.")
             importButton.isHidden = true
             importSpinner.stopAnimation(nil)
         case .unavailable:
@@ -600,17 +600,17 @@ final class ChartsViewController: NSViewController {
         guard let data = viewModel.data else { return }
         let palette = ArtworkPaletteExtractor.fallbackPalette(seed: data.persona + data.period.rawValue)
         guard let image = RecapShareCardRenderer.makeImage(data: data, palette: palette) else {
-            MacToast.show("Couldn't render the share card.", style: .error, in: view.window)
+            MacToast.show(String(localized: "Couldn't render the share card."), style: .error, in: view.window)
             return
         }
         let menu = NSMenu()
-        let share = menu.addItem(withTitle: "Share…", action: #selector(shareImage(_:)), keyEquivalent: "")
+        let share = menu.addItem(withTitle: String(localized: "Share…"), action: #selector(shareImage(_:)), keyEquivalent: "")
         share.target = self
         share.representedObject = image
-        let save = menu.addItem(withTitle: "Save PNG…", action: #selector(saveImage(_:)), keyEquivalent: "")
+        let save = menu.addItem(withTitle: String(localized: "Save PNG…"), action: #selector(saveImage(_:)), keyEquivalent: "")
         save.target = self
         save.representedObject = image
-        let copy = menu.addItem(withTitle: "Copy Image", action: #selector(copyImage(_:)), keyEquivalent: "")
+        let copy = menu.addItem(withTitle: String(localized: "Copy Image"), action: #selector(copyImage(_:)), keyEquivalent: "")
         copy.target = self
         copy.representedObject = image
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: shareButton.bounds.height + 4), in: shareButton)
@@ -643,7 +643,7 @@ final class ChartsViewController: NSViewController {
         guard let image = sender.representedObject as? NSImage else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([image])
-        MacToast.show("Recap card copied", style: .success, in: view.window)
+        MacToast.show(String(localized: "Recap card copied"), style: .success, in: view.window)
     }
 }
 

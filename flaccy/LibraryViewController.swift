@@ -7,7 +7,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private let viewModel = LibraryViewModel()
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Int, LibraryItem>!
-    private let segmentedControl = UISegmentedControl(items: ["Albums", "Songs", "Artists", "Playlists"])
+    private let segmentedControl = UISegmentedControl(items: [String(localized: "Albums"), String(localized: "Songs"), String(localized: "Artists"), String(localized: "Playlists")])
     private var cancellables = Set<AnyCancellable>()
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let sectionIndexView = SectionIndexView()
@@ -24,8 +24,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private var lastRenderedSegment: LibraryViewModel.Segment?
     private lazy var sampleMusicButton: UIButton = {
         var config = UIButton.Configuration.borderedProminent()
-        config.title = "Add Sample Music"
-        config.subtitle = "Bach, lossless, free"
+        config.title = String(localized: "Add Sample Music")
+        config.subtitle = String(localized: "Bach, lossless, free")
         config.image = UIImage(systemName: "arrow.down.circle")
         config.imagePadding = 8
         config.cornerStyle = .large
@@ -43,7 +43,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         imageView.contentMode = .scaleAspectFit
 
         let label = emptyStateLabel
-        label.text = "Import files from Settings"
+        label.text = String(localized: "Import files from Settings")
         label.textColor = .secondaryLabel
         label.font = .preferredFont(forTextStyle: .body)
         label.adjustsFontForContentSizeCategory = true
@@ -121,8 +121,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     @objc private func wantlistDidResolve(_ notification: Notification) {
         guard let names = notification.userInfo?["names"] as? [String], !names.isEmpty else { return }
         let summary = names.count == 1
-            ? "Crossed off your Wantlist: \(names[0])"
-            : "Crossed off your Wantlist: \(names[0]) and \(names.count - 1) more"
+            ? String(localized: "Crossed off your Wantlist: \(names[0])")
+            : String(localized: "Crossed off your Wantlist: \(names[0]) and \(names.count - 1) more")
         ToastView.show(summary, in: view, style: .success)
         wantlistDidChange()
     }
@@ -131,7 +131,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let searchController = UISearchController(searchResultsController: nil)
         searchController.searchResultsUpdater = self
         searchController.obscuresBackgroundDuringPresentation = false
-        searchController.searchBar.placeholder = "Albums, Artists, Songs"
+        searchController.searchBar.placeholder = String(localized: "Albums, Artists, Songs")
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
         navigationItem.preferredSearchBarPlacement = .stacked
@@ -177,7 +177,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             ]
         case .songs:
             let range = UIBarButtonItem(image: UIImage(systemName: "calendar"), menu: scrobbleRangeMenu())
-            range.accessibilityLabel = "Play history range"
+            range.accessibilityLabel = String(localized: "Play history range")
             navigationItem.rightBarButtonItems = [
                 UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), menu: songSortMenu()),
                 range,
@@ -278,7 +278,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 self?.scrollToTopForSortChange()
             }
         }
-        return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
+        return UIMenu(title: String(localized: "Sort By"), image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
     }
 
     private func songSortMenu() -> UIMenu {
@@ -296,7 +296,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                     self?.scrollToTopForSortChange()
                 }
             }
-        return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
+        return UIMenu(title: String(localized: "Sort By"), image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
     }
 
     private func scrollToTopForSortChange() {
@@ -318,7 +318,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             }
         }
         return UIMenu(
-            title: "Plays From",
+            title: String(localized: "Plays From"),
             image: UIImage(systemName: "calendar"),
             children: actions
         )
@@ -338,18 +338,18 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 self?.scrollToTopForSortChange()
             }
         }
-        return UIMenu(title: "Sort By", image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
+        return UIMenu(title: String(localized: "Sort By"), image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
     }
 
     private func createPlaylistTapped() {
         impactLight.impactOccurred()
-        let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
+        let alert = UIAlertController(title: String(localized: "New Playlist"), message: nil, preferredStyle: .alert)
         alert.addTextField { textField in
-            textField.placeholder = "Playlist name"
+            textField.placeholder = String(localized: "Playlist name")
             textField.autocapitalizationType = .words
         }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Create"), style: .default) { [weak self] _ in
             guard let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces),
                   !name.isEmpty else { return }
             do {
@@ -433,12 +433,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             collectionView.backgroundView = nil
         case .noLibrary:
             emptyStateIconView.image = UIImage(systemName: "music.note.list")
-            emptyStateLabel.text = "Import files from Settings,\nor start with a free lossless album"
+            emptyStateLabel.text = String(localized: "Import files from Settings,\nor start with a free lossless album")
             sampleMusicButton.isHidden = false
             collectionView.backgroundView = emptyStateView
         case .noSearchResults(let query):
             emptyStateIconView.image = UIImage(systemName: "magnifyingglass")
-            emptyStateLabel.text = "No results for \u{201C}\(query)\u{201D}"
+            emptyStateLabel.text = String(localized: "No results for \u{201C}\(query)\u{201D}")
             sampleMusicButton.isHidden = true
             collectionView.backgroundView = emptyStateView
         }
@@ -449,8 +449,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         var config = sampleMusicButton.configuration
         config?.showsActivityIndicator = true
-        config?.title = "Downloading…"
-        config?.subtitle = "About 130 MB of 24-bit FLAC"
+        config?.title = String(localized: "Downloading…")
+        config?.subtitle = String(localized: "About 130 MB of 24-bit FLAC")
         sampleMusicButton.configuration = config
         sampleMusicButton.isEnabled = false
 
@@ -471,14 +471,14 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self.sampleMusicButton.isEnabled = true
             var config = self.sampleMusicButton.configuration
             config?.showsActivityIndicator = false
-            config?.title = "Add Sample Music"
-            config?.subtitle = "Bach, lossless, free"
+            config?.title = String(localized: "Add Sample Music")
+            config?.subtitle = String(localized: "Bach, lossless, free")
             self.sampleMusicButton.configuration = config
             if success {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
-                ToastView.show("Sample album added — Open Goldberg Variations (CC0)", in: self.view, style: .success)
+                ToastView.show(String(localized: "Sample album added — Open Goldberg Variations (CC0)"), in: self.view, style: .success)
             } else {
-                ToastView.show("Sample download failed — check your connection", in: self.view, style: .error)
+                ToastView.show(String(localized: "Sample download failed — check your connection"), in: self.view, style: .error)
             }
         }
     }
@@ -560,7 +560,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
             ))
             heart.tintColor = .systemPink
-            heart.accessibilityLabel = "Loved"
+            heart.accessibilityLabel = String(localized: "Loved")
             heart.isAccessibilityElement = true
             container.addArrangedSubview(heart)
         }
@@ -595,14 +595,14 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         glyph.tintColor = .tertiaryLabel
 
         let label = UILabel()
-        label.text = count > 999 ? "\(count / 1000)k" : "\(count)"
+        label.text = count > 999 ? String(localized: "\(count / 1000)k") : "\(count)"
         label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         label.textColor = .secondaryLabel
 
         stack.addArrangedSubview(glyph)
         stack.addArrangedSubview(label)
         stack.isAccessibilityElement = true
-        stack.accessibilityLabel = "\(count) scrobble\(count == 1 ? "" : "s")"
+        stack.accessibilityLabel = String(localized: "\(count) scrobbles")
         return stack
     }
 
@@ -691,7 +691,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let artistRegistration = UICollectionView.CellRegistration<ListArtworkCell, ArtistItem> { [weak self] cell, _, artist in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = artist.name
-            content.secondaryText = "\(artist.albumCount) album\(artist.albumCount == 1 ? "" : "s")"
+            content.secondaryText = String(localized: "\(artist.albumCount) albums")
             content.secondaryTextProperties.color = .secondaryLabel
             content.imageProperties.cornerRadius = 22
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
@@ -727,7 +727,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let playlistRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, PlaylistItem> { cell, _, playlist in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = playlist.name
-            content.secondaryText = "\(playlist.trackCount) track\(playlist.trackCount == 1 ? "" : "s")"
+            content.secondaryText = String(localized: "\(playlist.trackCount) tracks")
             content.secondaryTextProperties.color = .secondaryLabel
             content.image = UIImage(systemName: "music.note.list")
             content.imageProperties.tintColor = .tintColor
@@ -740,7 +740,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let suggestedRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, SuggestedPlaylist> { cell, _, suggestion in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = suggestion.title
-            content.secondaryText = "\(suggestion.subtitle) · \(suggestion.tracks.count) songs"
+            content.secondaryText = String(localized: "\(suggestion.subtitle) · \(suggestion.tracks.count) songs")
             content.secondaryTextProperties.color = .secondaryLabel
             content.image = UIImage(systemName: suggestion.systemImage)
             content.imageProperties.tintColor = .tintColor
@@ -757,8 +757,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         let chartsRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Int> { cell, _, _ in
             var content = UIListContentConfiguration.subtitleCell()
-            content.text = "Recap"
-            content.secondaryText = "Your listening stats"
+            content.text = String(localized: "Recap")
+            content.secondaryText = String(localized: "Your listening stats")
             content.secondaryTextProperties.color = .secondaryLabel
             content.image = UIImage(systemName: "chart.bar.fill")
             content.imageProperties.tintColor = .systemPink
@@ -770,11 +770,11 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         let wantlistRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Int> { cell, _, _ in
             var content = UIListContentConfiguration.subtitleCell()
-            content.text = "Wantlist"
+            content.text = String(localized: "Wantlist")
             let unseen = WantlistService.shared.unseenCount()
             content.secondaryText = unseen > 0
-                ? "\(unseen) new suggestion\(unseen == 1 ? "" : "s")"
-                : "Music to get & discoveries"
+                ? String(localized: "\(unseen) new suggestions")
+                : String(localized: "Music to get & discoveries")
             content.secondaryTextProperties.color = unseen > 0 ? .systemTeal : .secondaryLabel
             content.image = UIImage(systemName: "sparkle.magnifyingglass")
             content.imageProperties.tintColor = .systemTeal
@@ -788,7 +788,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             elementKind: UICollectionView.elementKindSectionHeader
         ) { supplementaryView, _, _ in
             var config = UIListContentConfiguration.plainHeader()
-            config.text = "Recently Played"
+            config.text = String(localized: "Recently Played")
             config.textProperties.font = .scaled(.footnote, size: 13, weight: .semibold)
             config.textProperties.color = .secondaryLabel
             supplementaryView.contentConfiguration = config
@@ -945,7 +945,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let loved = LovedTracksService.shared.isLoved(track: track)
         let action = UIContextualAction(
             style: .normal,
-            title: loved ? "Unlove" : "Love"
+            title: loved ? String(localized: "Unlove") : String(localized: "Love")
         ) { _, _, completion in
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             Task {
@@ -1045,7 +1045,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                       let item = self.dataSource.itemIdentifier(for: indexPath),
                       case .playlist(let playlist) = item
                 else { return nil }
-                let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { _, _, completion in
+                let deleteAction = UIContextualAction(style: .destructive, title: String(localized: "Delete")) { _, _, completion in
                     do {
                         try DatabaseManager.shared.deletePlaylist(id: playlist.id)
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -1101,23 +1101,23 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
     private func buildSuggestedPlaylistMenu(for suggestion: SuggestedPlaylist) -> UIMenu {
         let tracks = suggestion.tracks
-        let play = UIAction(title: "Play", image: UIImage(systemName: "play.fill")) { _ in
+        let play = UIAction(title: String(localized: "Play"), image: UIImage(systemName: "play.fill")) { _ in
             AudioPlayer.shared.play(tracks, startingAt: 0)
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
-        let shuffle = UIAction(title: "Shuffle", image: UIImage(systemName: "shuffle")) { _ in
+        let shuffle = UIAction(title: String(localized: "Shuffle"), image: UIImage(systemName: "shuffle")) { _ in
             AudioPlayer.shared.play(tracks.shuffled(), startingAt: 0)
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
-        let playNext = UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
+        let playNext = UIAction(title: String(localized: "Play Next"), image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
             for track in tracks.reversed() { AudioPlayer.shared.insertNext(track) }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
-        let addToQueue = UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { _ in
+        let addToQueue = UIAction(title: String(localized: "Add to Queue"), image: UIImage(systemName: "text.append")) { _ in
             for track in tracks { AudioPlayer.shared.addToQueue(track) }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
-        let save = UIAction(title: "Save as Playlist", image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
+        let save = UIAction(title: String(localized: "Save as Playlist"), image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
             self?.saveSuggestion(suggestion)
         }
         let saveMenu = UIMenu(options: .displayInline, children: [save])
@@ -1134,7 +1134,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             viewModel.refreshPlaylists()
-            ToastView.show("Saved \u{201C}\(suggestion.title)\u{201D}", in: view, style: .success)
+            ToastView.show(String(localized: "Saved \u{201C}\(suggestion.title)\u{201D}"), in: view, style: .success)
         } catch {
             AppLogger.error("Failed to save suggested playlist: \(error.localizedDescription)", category: .database)
         }
@@ -1166,7 +1166,7 @@ extension LibraryViewController: UICollectionViewDelegate {
             guard !suggestion.tracks.isEmpty else { return }
             AudioPlayer.shared.play(suggestion.tracks, startingAt: 0)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show("Playing \(suggestion.title)", in: view, style: .success)
+            ToastView.show(String(localized: "Playing \(suggestion.title)"), in: view, style: .success)
         case .charts:
             let vc = ChartsViewController()
             navigationController?.pushViewController(vc, animated: true)
@@ -1183,45 +1183,45 @@ extension LibraryViewController: UICollectionViewDelegate {
         switch item {
         case .album(let album), .recentAlbum(let album):
             return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-                let playAction = UIAction(title: "Play", image: UIImage(systemName: "play.fill")) { _ in
+                let playAction = UIAction(title: String(localized: "Play"), image: UIImage(systemName: "play.fill")) { _ in
                     AudioPlayer.shared.play(album.tracks, startingAt: 0)
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 }
-                let shuffleAction = UIAction(title: "Shuffle", image: UIImage(systemName: "shuffle")) { _ in
+                let shuffleAction = UIAction(title: String(localized: "Shuffle"), image: UIImage(systemName: "shuffle")) { _ in
                     var shuffled = album.tracks
                     shuffled.shuffle()
                     AudioPlayer.shared.play(shuffled, startingAt: 0)
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 }
-                let playNextAction = UIAction(title: "Play Next", image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
+                let playNextAction = UIAction(title: String(localized: "Play Next"), image: UIImage(systemName: "text.line.first.and.arrowtriangle.forward")) { _ in
                     for track in album.tracks.reversed() {
                         AudioPlayer.shared.insertNext(track)
                     }
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
-                let addToQueueAction = UIAction(title: "Add to Queue", image: UIImage(systemName: "text.append")) { _ in
+                let addToQueueAction = UIAction(title: String(localized: "Add to Queue"), image: UIImage(systemName: "text.append")) { _ in
                     for track in album.tracks {
                         AudioPlayer.shared.addToQueue(track)
                     }
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
-                let shareAlbum = UIAction(title: "Share", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
+                let shareAlbum = UIAction(title: String(localized: "Share"), image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
                     guard let self else { return }
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     self.shareAlbumViaSonglink(title: album.title, artist: album.artist, from: self.view)
                 }
                 let shareMenu = UIMenu(options: .displayInline, children: [shareAlbum])
-                let deleteAlbum = UIAction(title: "Delete from Library", image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
+                let deleteAlbum = UIAction(title: String(localized: "Delete from Library"), image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
                     guard let self else { return }
                     TrackContextMenu.confirmDelete(
-                        title: "Delete \"\(album.title)\"?",
-                        message: "All \(album.tracks.count) tracks will be removed from this device.",
+                        title: String(localized: "Delete \"\(album.title)\"?"),
+                        message: String(localized: "All \(album.tracks.count) tracks will be removed from this device."),
                         in: self
                     ) { [weak self] in
                         Task { @MainActor in
                             await Library.shared.deleteTracks(album.tracks)
                             if let self {
-                                ToastView.show("Deleted \(album.title)", in: self.view, style: .info)
+                                ToastView.show(String(localized: "Deleted \(album.title)"), in: self.view, style: .info)
                             }
                         }
                     }

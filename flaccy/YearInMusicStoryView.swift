@@ -64,7 +64,7 @@ final class YearInMusicStoryView: UIView {
         let sparkle = UIImageView(image: UIImage(systemName: "sparkles", withConfiguration: UIImage.SymbolConfiguration(pointSize: 10, weight: .bold)))
         sparkle.tintColor = theme.accent
         sparkle.contentMode = .scaleAspectFit
-        let footerRow = UIStackView(arrangedSubviews: [chromeLabel("YEAR IN MUSIC"), UIView(), sparkle])
+        let footerRow = UIStackView(arrangedSubviews: [chromeLabel(String(localized: "YEAR IN MUSIC")), UIView(), sparkle])
         footerRow.axis = .horizontal
         footerRow.alignment = .center
         let footer = UIStackView(arrangedSubviews: [hairline(), footerRow])
@@ -77,8 +77,8 @@ final class YearInMusicStoryView: UIView {
 
         switch slide {
         case .overview: buildOverview(into: content, data: data, artwork: artwork)
-        case .artists: buildRanked(into: content, caption: "MY TOP ARTISTS", entries: data.topArtists.map { ($0.name, nil, $0.playCount) }, rowArt: artwork.artistRows, footnote: "\(RecapFormat.count(data.distinctArtists)) artists this year")
-        case .tracks: buildRanked(into: content, caption: "MY TOP TRACKS", entries: data.topTracks.map { ($0.name, $0.artistName, $0.playCount) }, rowArt: artwork.trackRows, footnote: "\(RecapFormat.count(data.distinctTracks)) tracks this year")
+        case .artists: buildRanked(into: content, caption: String(localized: "MY TOP ARTISTS"), entries: data.topArtists.map { ($0.name, nil, $0.playCount) }, rowArt: artwork.artistRows, footnote: String(localized: "\(RecapFormat.count(data.distinctArtists)) artists this year"))
+        case .tracks: buildRanked(into: content, caption: String(localized: "MY TOP TRACKS"), entries: data.topTracks.map { ($0.name, $0.artistName, $0.playCount) }, rowArt: artwork.trackRows, footnote: String(localized: "\(RecapFormat.count(data.distinctTracks)) tracks this year"))
         case .numbers: buildNumbers(into: content, data: data)
         case .poster: buildPoster(into: content, data: data, artwork: artwork, compact: compact)
         }
@@ -102,7 +102,7 @@ final class YearInMusicStoryView: UIView {
     }
 
     private func buildOverview(into content: UIStackView, data: YearInMusicData, artwork: StoryArtwork) {
-        content.addArrangedSubview(captionLabel("MY YEAR IN MUSIC"))
+        content.addArrangedSubview(captionLabel(String(localized: "MY YEAR IN MUSIC")))
         content.setCustomSpacing(4, after: content.arrangedSubviews.last!)
 
         let year = UILabel()
@@ -123,9 +123,9 @@ final class YearInMusicStoryView: UIView {
         content.setCustomSpacing(22, after: heroBand)
 
         content.addArrangedSubview(statTable([
-            ("MINUTES LISTENED", RecapFormat.count(data.totalMinutes)),
-            ("TRACKS PLAYED", RecapFormat.count(data.totalPlays)),
-            ("ARTISTS", RecapFormat.count(data.distinctArtists)),
+            (String(localized: "MINUTES LISTENED"), RecapFormat.count(data.totalMinutes)),
+            (String(localized: "TRACKS PLAYED"), RecapFormat.count(data.totalPlays)),
+            (String(localized: "ARTISTS"), RecapFormat.count(data.distinctArtists)),
         ]))
         content.setCustomSpacing(20, after: content.arrangedSubviews.last!)
         content.addArrangedSubview(wrapLeading(personaPill(data.persona)))
@@ -137,10 +137,10 @@ final class YearInMusicStoryView: UIView {
         column.spacing = 14
         column.alignment = .leading
         if let topArtist = data.topArtists.first {
-            column.addArrangedSubview(highlightBlock(caption: "TOP ARTIST", title: topArtist.name, size: 21))
+            column.addArrangedSubview(highlightBlock(caption: String(localized: "TOP ARTIST"), title: topArtist.name, size: 21))
         }
         if let topTrack = data.topTracks.first {
-            column.addArrangedSubview(highlightBlock(caption: "TOP TRACK", title: topTrack.name, subtitle: topTrack.artistName, size: 16))
+            column.addArrangedSubview(highlightBlock(caption: String(localized: "TOP TRACK"), title: topTrack.name, subtitle: topTrack.artistName, size: 16))
         }
         return column
     }
@@ -171,7 +171,7 @@ final class YearInMusicStoryView: UIView {
             firstBlock.addArrangedSubview(subtitleLabel(subtitle, size: 14))
         }
         firstBlock.addArrangedSubview(spacerView(2))
-        firstBlock.addArrangedSubview(subtitleLabel("\(RecapFormat.count(first.plays)) plays", size: 13, color: theme.accent))
+        firstBlock.addArrangedSubview(subtitleLabel(String(localized: "\(RecapFormat.count(first.plays)) plays"), size: 13, color: theme.accent))
 
         let heroBand = UIStackView(arrangedSubviews: [heroImage, firstBlock])
         heroBand.axis = .horizontal
@@ -244,7 +244,7 @@ final class YearInMusicStoryView: UIView {
     }
 
     private func buildNumbers(into content: UIStackView, data: YearInMusicData) {
-        content.addArrangedSubview(captionLabel("THE NUMBERS"))
+        content.addArrangedSubview(captionLabel(String(localized: "THE NUMBERS")))
         content.setCustomSpacing(14, after: content.arrangedSubviews.last!)
 
         let minutes = UILabel()
@@ -255,14 +255,14 @@ final class YearInMusicStoryView: UIView {
         minutes.minimumScaleFactor = 0.5
         content.addArrangedSubview(minutes)
         content.setCustomSpacing(2, after: minutes)
-        content.addArrangedSubview(captionLabel("MINUTES LISTENED"))
+        content.addArrangedSubview(captionLabel(String(localized: "MINUTES LISTENED")))
         content.setCustomSpacing(22, after: content.arrangedSubviews.last!)
 
         content.addArrangedSubview(statTable([
-            ("TRACKS PLAYED", RecapFormat.count(data.totalPlays)),
-            ("ARTISTS", RecapFormat.count(data.distinctArtists)),
-            ("ALBUMS", RecapFormat.count(data.distinctAlbums)),
-            ("DIFFERENT TRACKS", RecapFormat.count(data.distinctTracks)),
+            (String(localized: "TRACKS PLAYED"), RecapFormat.count(data.totalPlays)),
+            (String(localized: "ARTISTS"), RecapFormat.count(data.distinctArtists)),
+            (String(localized: "ALBUMS"), RecapFormat.count(data.distinctAlbums)),
+            (String(localized: "DIFFERENT TRACKS"), RecapFormat.count(data.distinctTracks)),
         ]))
         content.setCustomSpacing(22, after: content.arrangedSubviews.last!)
 
@@ -273,13 +273,13 @@ final class YearInMusicStoryView: UIView {
         if let peakDay = data.peakDay {
             let formatter = DateFormatter()
             formatter.dateFormat = "MMMM d"
-            facts.addArrangedSubview(factRow(symbol: "calendar", text: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays"))
+            facts.addArrangedSubview(factRow(symbol: "calendar", text: String(localized: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays")))
         }
         if let peakHour = data.peakHour {
-            facts.addArrangedSubview(factRow(symbol: "clock.fill", text: "Power hour: \(Self.hourLabel(peakHour))"))
+            facts.addArrangedSubview(factRow(symbol: "clock.fill", text: String(localized: "Power hour: \(Self.hourLabel(peakHour))")))
         }
         if data.longestStreak > 1 {
-            facts.addArrangedSubview(factRow(symbol: "flame.fill", text: "Longest streak: \(data.longestStreak) days"))
+            facts.addArrangedSubview(factRow(symbol: "flame.fill", text: String(localized: "Longest streak: \(data.longestStreak) days")))
         }
         content.addArrangedSubview(facts)
         content.setCustomSpacing(20, after: facts)
@@ -288,7 +288,7 @@ final class YearInMusicStoryView: UIView {
 
     private func buildPoster(into content: UIStackView, data: YearInMusicData, artwork: StoryArtwork, compact: Bool) {
         if !compact {
-            content.addArrangedSubview(captionLabel("MY YEAR IN MUSIC"))
+            content.addArrangedSubview(captionLabel(String(localized: "MY YEAR IN MUSIC")))
             content.setCustomSpacing(2, after: content.arrangedSubviews.last!)
         }
 
@@ -313,8 +313,8 @@ final class YearInMusicStoryView: UIView {
         content.setCustomSpacing(compact ? 10 : 14, after: content.arrangedSubviews.last!)
 
         let columns = UIStackView(arrangedSubviews: [
-            miniList(caption: "TOP ARTISTS", entries: data.topArtists.map { ($0.name, $0.playCount) }, compact: compact),
-            miniList(caption: "TOP TRACKS", entries: data.topTracks.map { ($0.name, $0.playCount) }, compact: compact),
+            miniList(caption: String(localized: "TOP ARTISTS"), entries: data.topArtists.map { ($0.name, $0.playCount) }, compact: compact),
+            miniList(caption: String(localized: "TOP TRACKS"), entries: data.topTracks.map { ($0.name, $0.playCount) }, compact: compact),
         ])
         columns.axis = .horizontal
         columns.spacing = 18
@@ -334,10 +334,10 @@ final class YearInMusicStoryView: UIView {
             if let peakDay = data.peakDay {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "MMMM d"
-                facts.addArrangedSubview(factRow(symbol: "calendar", text: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays"))
+                facts.addArrangedSubview(factRow(symbol: "calendar", text: String(localized: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays")))
             }
             if data.longestStreak > 1 {
-                facts.addArrangedSubview(factRow(symbol: "flame.fill", text: "Longest streak: \(data.longestStreak) days"))
+                facts.addArrangedSubview(factRow(symbol: "flame.fill", text: String(localized: "Longest streak: \(data.longestStreak) days")))
             }
             content.addArrangedSubview(facts)
             content.setCustomSpacing(14, after: facts)
@@ -355,9 +355,9 @@ final class YearInMusicStoryView: UIView {
 
         let column = UIStackView(arrangedSubviews: [
             minutes,
-            captionLabel("MINUTES LISTENED"),
+            captionLabel(String(localized: "MINUTES LISTENED")),
             spacerView(6),
-            subtitleLabel("\(RecapFormat.count(data.totalPlays)) plays · \(RecapFormat.count(data.distinctArtists)) artists", size: 13),
+            subtitleLabel(String(localized: "\(RecapFormat.count(data.totalPlays)) plays · \(RecapFormat.count(data.distinctArtists)) artists"), size: 13),
         ])
         column.axis = .vertical
         column.spacing = 2

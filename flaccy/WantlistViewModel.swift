@@ -12,13 +12,13 @@ nonisolated enum WantlistSection: Int, Hashable, CaseIterable {
 
     var headerTitle: String {
         switch self {
-        case .newReleases: "New Releases"
-        case .albums: "Albums to Get"
-        case .gaps: "Complete These Albums"
-        case .upgrades: "Upgrade to Lossless"
-        case .tracks: "Songs to Get"
-        case .discoverArtists: "Artists to Explore"
-        case .discoverAlbums: "Albums to Explore"
+        case .newReleases: String(localized: "New Releases")
+        case .albums: String(localized: "Albums to Get")
+        case .gaps: String(localized: "Complete These Albums")
+        case .upgrades: String(localized: "Upgrade to Lossless")
+        case .tracks: String(localized: "Songs to Get")
+        case .discoverArtists: String(localized: "Artists to Explore")
+        case .discoverAlbums: String(localized: "Albums to Explore")
         }
     }
 }
@@ -28,12 +28,12 @@ nonisolated enum WantlistFilter: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .all: "All"
-        case .albums: "Albums"
-        case .songs: "Songs"
-        case .discover: "Discover"
-        case .releases: "New"
-        case .upgrades: "Upgrades"
+        case .all: String(localized: "All")
+        case .albums: String(localized: "Albums")
+        case .songs: String(localized: "Songs")
+        case .discover: String(localized: "Discover")
+        case .releases: String(localized: "New")
+        case .upgrades: String(localized: "Upgrades")
         }
     }
 
@@ -196,7 +196,7 @@ final class WantlistViewModel {
         grouped[.newReleases] = releases.enumerated().map { offset, release in
             let meta = WantlistRowMeta(
                 normKey: WantlistService.normKey(kind: .album, title: release.albumTitle, artist: release.artist),
-                reason: "Released \(Self.relativeDate(release.releaseDate))",
+                reason: String(localized: "Released \(Self.relativeDate(release.releaseDate))"),
                 source: "release",
                 storeURL: release.storeURL
             )
@@ -276,8 +276,8 @@ final class WantlistViewModel {
 
         for album in albums.filter({ !ownership.ownsAlbum(name: $0.name, artist: $0.artistName) }).prefix(Self.missingAlbumLimit) {
             let ownedTracks = ownership.ownedTrackCount(albumName: album.name, artist: album.artistName)
-            var reason = "\(album.playCount) plays on Last.fm"
-            if ownedTracks > 0 { reason += " · you own \(ownedTracks) of its tracks" }
+            var reason = String(localized: "\(album.playCount) plays on Last.fm")
+            if ownedTracks > 0 { reason += String(localized: " · you own \(ownedTracks) of its tracks") }
             records.append(WantlistRecord(
                 normKey: WantlistService.normKey(kind: .album, title: album.name, artist: album.artistName),
                 kind: WantlistKind.album.rawValue, title: album.name, artist: album.artistName,
@@ -295,7 +295,7 @@ final class WantlistViewModel {
                 normKey: WantlistService.normKey(kind: .track, title: track.name, artist: track.artistName),
                 kind: WantlistKind.track.rawValue, title: track.name, artist: track.artistName,
                 imageURL: nil, state: WantlistState.wanted.rawValue, source: WantlistSource.history.rawValue,
-                score: Double(track.playCount), reason: "\(track.playCount) plays on Last.fm",
+                score: Double(track.playCount), reason: String(localized: "\(track.playCount) plays on Last.fm"),
                 playCount: track.playCount, addedAt: now, resolvedAt: nil, acknowledged: false
             ))
             if seenTracks.count >= Self.missingTrackLimit { break }
@@ -307,7 +307,7 @@ final class WantlistViewModel {
                 normKey: WantlistService.normKey(kind: .track, title: track.name, artist: track.artist),
                 kind: WantlistKind.track.rawValue, title: track.name, artist: track.artist,
                 imageURL: nil, state: WantlistState.wanted.rawValue, source: WantlistSource.loved.rawValue,
-                score: 500, reason: "Loved on Last.fm",
+                score: 500, reason: String(localized: "Loved on Last.fm"),
                 playCount: 0, addedAt: now, resolvedAt: nil, acknowledged: false
             ))
             if seenTracks.count >= Self.missingTrackLimit + 10 { break }
@@ -364,7 +364,7 @@ final class WantlistViewModel {
                 normKey: WantlistService.normKey(kind: .artist, title: "", artist: entry.name),
                 kind: WantlistKind.artist.rawValue, title: entry.name, artist: entry.name,
                 imageURL: nil, state: WantlistState.wanted.rawValue, source: WantlistSource.discovery.rawValue,
-                score: entry.score, reason: "Because you play \(entry.topSeed)",
+                score: entry.score, reason: String(localized: "Because you play \(entry.topSeed)"),
                 playCount: 0, addedAt: now, resolvedAt: nil, acknowledged: false
             )
         }
@@ -378,7 +378,7 @@ final class WantlistViewModel {
                 normKey: WantlistService.normKey(kind: .album, title: album.name, artist: album.artistName),
                 kind: WantlistKind.album.rawValue, title: album.name, artist: album.artistName,
                 imageURL: album.imageURL, state: WantlistState.wanted.rawValue, source: WantlistSource.discovery.rawValue,
-                score: entry.score, reason: "Because you play \(entry.topSeed)",
+                score: entry.score, reason: String(localized: "Because you play \(entry.topSeed)"),
                 playCount: 0, addedAt: now, resolvedAt: nil, acknowledged: false
             ))
             albumCount += 1

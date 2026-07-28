@@ -70,7 +70,7 @@ final class SystemVolumeSlider: UIView {
         slider.minimumTrackTintColor = .white
         slider.maximumTrackTintColor = .white.withAlphaComponent(0.25)
         slider.setThumbImage(thumbImage, for: .normal)
-        slider.accessibilityLabel = "Volume"
+        slider.accessibilityLabel = String(localized: "Volume")
         addSubview(slider)
         simulatorSlider = slider
     }
@@ -104,7 +104,7 @@ final class SystemVolumeSlider: UIView {
         hasStyledSlider = true
         slider.minimumTrackTintColor = .white
         slider.maximumTrackTintColor = .white.withAlphaComponent(0.25)
-        slider.accessibilityLabel = "Volume"
+        slider.accessibilityLabel = String(localized: "Volume")
         volumeView.setVolumeThumbImage(thumbImage, for: .normal)
     }
 }

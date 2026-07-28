@@ -17,36 +17,36 @@ final class PaywallViewController: NSViewController {
     private static let features: [Feature] = [
         Feature(
             symbolName: "infinity",
-            title: "Gapless lossless playback",
-            detail: "FLAC albums flow track to track with zero silence."
+            title: String(localized: "Gapless lossless playback"),
+            detail: String(localized: "FLAC albums flow track to track with zero silence.")
         ),
         Feature(
             symbolName: "dot.radiowaves.left.and.right",
-            title: "Last.fm scrobbling",
-            detail: "Every listen counted, with an offline queue that never drops a play."
+            title: String(localized: "Last.fm scrobbling"),
+            detail: String(localized: "Every listen counted, with an offline queue that never drops a play.")
         ),
         Feature(
             symbolName: "text.quote",
-            title: "Synced lyrics",
-            detail: "Time-synced lyrics that follow along as you listen."
+            title: String(localized: "Synced lyrics"),
+            detail: String(localized: "Time-synced lyrics that follow along as you listen.")
         ),
         Feature(
             symbolName: "sparkles",
-            title: "Year in Music",
-            detail: "A shareable recap built from your local play history."
+            title: String(localized: "Year in Music"),
+            detail: String(localized: "A shareable recap built from your local play history.")
         ),
         Feature(
             symbolName: "menubar.dock.rectangle",
-            title: "Menu bar player & folder watching",
-            detail: "Control playback from the menu bar; new files appear in your library instantly."
+            title: String(localized: "Menu bar player & folder watching"),
+            detail: String(localized: "Control playback from the menu bar; new files appear in your library instantly.")
         ),
     ]
 
     private let backdrop = AmbientBackdropView()
     private let priceLabel = NSTextField(labelWithString: "")
     private let statusLabel = NSTextField(labelWithString: "")
-    private let purchaseButton = NSButton(title: "Unlock Lifetime", target: nil, action: nil)
-    private let restoreButton = NSButton(title: "Restore Purchases", target: nil, action: nil)
+    private let purchaseButton = NSButton(title: String(localized: "Unlock Lifetime"), target: nil, action: nil)
+    private let restoreButton = NSButton(title: String(localized: "Restore Purchases"), target: nil, action: nil)
     private let spinner = NSProgressIndicator()
 
     private var isTransacting = false {
@@ -78,7 +78,7 @@ final class PaywallViewController: NSViewController {
         root.addSubview(content)
 
         let closeButton = NSButton(
-            image: NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Close") ?? NSImage(),
+            image: NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: String(localized: "Close")) ?? NSImage(),
             target: self, action: #selector(closeTapped)
         )
         closeButton.isBordered = false
@@ -147,7 +147,7 @@ final class PaywallViewController: NSViewController {
 
         let kicker = NSTextField(labelWithString: "")
         kicker.attributedStringValue = NSAttributedString(
-            string: "FLACCY LIFETIME",
+            string: String(localized: "FLACCY LIFETIME"),
             attributes: [
                 .font: NSFont.systemFont(ofSize: 12, weight: .bold),
                 .foregroundColor: MacColors.secondaryLabel,
@@ -155,7 +155,7 @@ final class PaywallViewController: NSViewController {
             ]
         )
 
-        let title = NSTextField(wrappingLabelWithString: "Own your music.\nForever.")
+        let title = NSTextField(wrappingLabelWithString: String(localized: "Own your music.\nForever."))
         title.font = .systemFont(ofSize: 32, weight: .heavy)
         title.textColor = MacColors.primaryLabel
 
@@ -186,11 +186,11 @@ final class PaywallViewController: NSViewController {
         spinner.controlSize = .small
         spinner.isDisplayedWhenStopped = false
 
-        let privacy = NSButton(title: "Privacy Policy", target: self, action: #selector(openPrivacy))
+        let privacy = NSButton(title: String(localized: "Privacy Policy"), target: self, action: #selector(openPrivacy))
         privacy.isBordered = false
         privacy.contentTintColor = MacColors.tertiaryLabel
         privacy.font = .systemFont(ofSize: 11)
-        let terms = NSButton(title: "Terms of Use", target: self, action: #selector(openTerms))
+        let terms = NSButton(title: String(localized: "Terms of Use"), target: self, action: #selector(openTerms))
         terms.isBordered = false
         terms.contentTintColor = MacColors.tertiaryLabel
         terms.font = .systemFont(ofSize: 11)
@@ -273,10 +273,10 @@ final class PaywallViewController: NSViewController {
 
     private func updatePriceLine() {
         if let product = PurchaseManager.shared.product {
-            priceLabel.stringValue = "\(product.displayPrice) · once, forever"
+            priceLabel.stringValue = String(localized: "\(product.displayPrice) · once, forever")
             purchaseAvailable = true
         } else {
-            priceLabel.stringValue = "$9.99 · once, forever (store unavailable)"
+            priceLabel.stringValue = String(localized: "$9.99 · once, forever (store unavailable)")
             purchaseAvailable = false
         }
         purchaseButton.isEnabled = purchaseAvailable && !isTransacting
@@ -285,13 +285,11 @@ final class PaywallViewController: NSViewController {
     private func updateStatusLine() {
         switch PurchaseManager.shared.state {
         case .trial(let daysRemaining):
-            statusLabel.stringValue = daysRemaining == 1
-                ? "1 day left in your trial"
-                : "\(daysRemaining) days left in your trial"
+            statusLabel.stringValue = String(localized: "\(daysRemaining) days left in your trial")
         case .expired:
-            statusLabel.stringValue = "Your trial has ended"
+            statusLabel.stringValue = String(localized: "Your trial has ended")
         case .purchased:
-            statusLabel.stringValue = "Lifetime unlocked. Thank you."
+            statusLabel.stringValue = String(localized: "Lifetime unlocked. Thank you.")
         }
     }
 
@@ -314,8 +312,8 @@ final class PaywallViewController: NSViewController {
                     self.closeTapped()
                 case .pending:
                     self.presentInfoAlert(
-                        title: "Purchase Pending",
-                        message: "Your purchase is awaiting approval. Playback unlocks automatically once it completes."
+                        title: String(localized: "Purchase Pending"),
+                        message: String(localized: "Your purchase is awaiting approval. Playback unlocks automatically once it completes.")
                     )
                 case .cancelled:
                     break
@@ -323,8 +321,8 @@ final class PaywallViewController: NSViewController {
             } catch {
                 AppLogger.error("Purchase failed: \(error.localizedDescription)", category: .purchases)
                 self.presentInfoAlert(
-                    title: "Purchase Failed",
-                    message: "The purchase couldn't be completed. Check your connection and try again."
+                    title: String(localized: "Purchase Failed"),
+                    message: String(localized: "The purchase couldn't be completed. Check your connection and try again.")
                 )
             }
         }
@@ -341,8 +339,8 @@ final class PaywallViewController: NSViewController {
                 self.closeTapped()
             } else {
                 self.presentInfoAlert(
-                    title: "Nothing to Restore",
-                    message: "No previous purchase was found for this Apple Account."
+                    title: String(localized: "Nothing to Restore"),
+                    message: String(localized: "No previous purchase was found for this Apple Account.")
                 )
             }
         }
@@ -353,7 +351,7 @@ final class PaywallViewController: NSViewController {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "OK"))
         alert.beginSheetModal(for: window)
     }
 

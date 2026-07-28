@@ -86,8 +86,8 @@ final class NowPlayingViewController: NSViewController {
         root.onAppearanceChange = { [weak self] in self?.applyBackdropTone() }
 
         let center = buildCenterColumn()
-        buildColumn(lyricsColumn, hosting: lyricsPanel, title: "Lyrics")
-        buildColumn(queueColumn, hosting: queuePanel, title: "Up Next")
+        buildColumn(lyricsColumn, hosting: lyricsPanel, title: String(localized: "Lyrics"))
+        buildColumn(queueColumn, hosting: queuePanel, title: String(localized: "Up Next"))
         lyricsColumn.isHidden = true
         queueColumn.isHidden = true
 
@@ -167,16 +167,16 @@ final class NowPlayingViewController: NSViewController {
         let container = NSView()
 
         let closeButton = TransportButton(
-            symbolName: "chevron.down", pointSize: 14, accessibilityLabel: "Close Now Playing",
+            symbolName: "chevron.down", pointSize: 14, accessibilityLabel: String(localized: "Close Now Playing"),
             target: self, action: #selector(closeTapped)
         )
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(closeButton)
 
-        lyricsCapsule = CapsuleButton(symbolName: "quote.bubble", title: "Lyrics") { [weak self] _ in
+        lyricsCapsule = CapsuleButton(symbolName: "quote.bubble", title: String(localized: "Lyrics")) { [weak self] _ in
             self?.togglePanel(.lyrics)
         }
-        queueCapsule = CapsuleButton(symbolName: "list.bullet", title: "Up Next") { [weak self] _ in
+        queueCapsule = CapsuleButton(symbolName: "list.bullet", title: String(localized: "Up Next")) { [weak self] _ in
             self?.togglePanel(.queue)
         }
         let toggles = NSStackView(views: [lyricsCapsule, queueCapsule])
@@ -351,7 +351,7 @@ final class NowPlayingViewController: NSViewController {
 
     @objc private func queueChanged() {
         let upNext = max(0, player.queue.count - player.currentIndex - 1)
-        queueCapsule.title = upNext > 0 ? "Up Next · \(upNext)" : "Up Next"
+        queueCapsule.title = upNext > 0 ? String(localized: "Up Next · \(upNext)") : String(localized: "Up Next")
     }
 
     private func buildCenterColumn() -> NSView {
@@ -480,7 +480,7 @@ final class NowPlayingViewController: NSViewController {
         ])
 
         loveButton = TransportButton(
-            symbolName: "heart", pointSize: 16, accessibilityLabel: "Love on Last.fm",
+            symbolName: "heart", pointSize: 16, accessibilityLabel: String(localized: "Love on Last.fm"),
             target: self, action: #selector(toggleLove)
         )
 
@@ -492,34 +492,34 @@ final class NowPlayingViewController: NSViewController {
 
     private func buildTransportButtons() {
         shuffleButton = TransportButton(
-            symbolName: "shuffle", pointSize: 15, accessibilityLabel: "Shuffle",
+            symbolName: "shuffle", pointSize: 15, accessibilityLabel: String(localized: "Shuffle"),
             target: self, action: #selector(toggleShuffle)
         )
         backFifteenButton = TransportButton(
-            symbolName: "gobackward.15", pointSize: 16, accessibilityLabel: "Back 15 seconds",
+            symbolName: "gobackward.15", pointSize: 16, accessibilityLabel: String(localized: "Back 15 seconds"),
             target: self, action: #selector(skipBackFifteen)
         )
         previousButton = TransportButton(
-            symbolName: "backward.fill", pointSize: 20, accessibilityLabel: "Previous",
+            symbolName: "backward.fill", pointSize: 20, accessibilityLabel: String(localized: "Previous"),
             target: self, action: #selector(previousTrack)
         )
         playPauseButton = TransportButton(
-            symbolName: "play.fill", pointSize: 34, accessibilityLabel: "Play or pause",
+            symbolName: "play.fill", pointSize: 34, accessibilityLabel: String(localized: "Play or pause"),
             target: self, action: #selector(togglePlayPause)
         )
         playPauseButton.isProminent = true
         playPauseButton.widthAnchor.constraint(equalToConstant: 72).isActive = true
         playPauseButton.heightAnchor.constraint(equalToConstant: 72).isActive = true
         nextButton = TransportButton(
-            symbolName: "forward.fill", pointSize: 20, accessibilityLabel: "Next",
+            symbolName: "forward.fill", pointSize: 20, accessibilityLabel: String(localized: "Next"),
             target: self, action: #selector(nextTrack)
         )
         forwardFifteenButton = TransportButton(
-            symbolName: "goforward.15", pointSize: 16, accessibilityLabel: "Forward 15 seconds",
+            symbolName: "goforward.15", pointSize: 16, accessibilityLabel: String(localized: "Forward 15 seconds"),
             target: self, action: #selector(skipForwardFifteen)
         )
         repeatButton = TransportButton(
-            symbolName: "repeat", pointSize: 15, accessibilityLabel: "Repeat",
+            symbolName: "repeat", pointSize: 15, accessibilityLabel: String(localized: "Repeat"),
             target: self, action: #selector(cycleRepeat)
         )
     }
@@ -534,10 +534,10 @@ final class NowPlayingViewController: NSViewController {
     }
 
     private func buildActionCapsules() -> NSView {
-        sleepCapsule = CapsuleButton(symbolName: "moon.zzz", title: "Sleep") { [weak self] button in
+        sleepCapsule = CapsuleButton(symbolName: "moon.zzz", title: String(localized: "Sleep")) { [weak self] button in
             self?.showSleepMenu(from: button)
         }
-        shareCapsule = CapsuleButton(symbolName: "square.and.arrow.up", title: "Share") { [weak self] button in
+        shareCapsule = CapsuleButton(symbolName: "square.and.arrow.up", title: String(localized: "Share")) { [weak self] button in
             self?.shareCurrentTrack(from: button)
         }
 
@@ -563,7 +563,7 @@ final class NowPlayingViewController: NSViewController {
             prefetchLyrics()
         }
 
-        titleLabel.text = state.title.isEmpty ? "Nothing Playing" : state.title
+        titleLabel.text = state.title.isEmpty ? String(localized: "Nothing Playing") : state.title
         artistButton.title = state.artist
         artistButton.isHidden = state.artist.isEmpty
         albumLabel.stringValue = state.albumTitle
@@ -691,10 +691,10 @@ final class NowPlayingViewController: NSViewController {
     private func shareCurrentTrack(from button: NSView) {
         guard let track = player.currentTrack else { return }
         let menu = NSMenu()
-        let share = menu.addItem(withTitle: "Share via Songlink…", action: #selector(shareSonglink(_:)), keyEquivalent: "")
+        let share = menu.addItem(withTitle: String(localized: "Share via Songlink…"), action: #selector(shareSonglink(_:)), keyEquivalent: "")
         share.target = self
         share.representedObject = button
-        let copy = menu.addItem(withTitle: "Copy Songlink URL", action: #selector(copySonglink(_:)), keyEquivalent: "")
+        let copy = menu.addItem(withTitle: String(localized: "Copy Songlink URL"), action: #selector(copySonglink(_:)), keyEquivalent: "")
         copy.target = self
         menu.addItem(.separator())
         let info = menu.addItem(withTitle: "\(track.title) — \(track.artist)", action: nil, keyEquivalent: "")
@@ -707,12 +707,12 @@ final class NowPlayingViewController: NSViewController {
         let anchor = (sender.representedObject as? NSView) ?? shareCapsule
         Task { [weak self] in
             guard let result = await SonglinkService.shared.lookup(title: track.title, artist: track.artist) else {
-                MacToast.show("Couldn't find this track on streaming services.", style: .error, in: self?.view.window)
+                MacToast.show(String(localized: "Couldn't find this track on streaming services."), style: .error, in: self?.view.window)
                 return
             }
             guard let self, let anchor else { return }
             let picker = NSSharingServicePicker(items: [
-                "\(result.title) by \(result.artist)", result.pageURL,
+                String(localized: "\(result.title) by \(result.artist)"), result.pageURL,
             ])
             picker.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
         }
@@ -722,12 +722,12 @@ final class NowPlayingViewController: NSViewController {
         guard let track = player.currentTrack else { return }
         Task { [weak self] in
             guard let result = await SonglinkService.shared.lookup(title: track.title, artist: track.artist) else {
-                MacToast.show("Couldn't find this track on streaming services.", style: .error, in: self?.view.window)
+                MacToast.show(String(localized: "Couldn't find this track on streaming services."), style: .error, in: self?.view.window)
                 return
             }
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(result.pageURL.absoluteString, forType: .string)
-            MacToast.show("Songlink copied", style: .success, in: self?.view.window)
+            MacToast.show(String(localized: "Songlink copied"), style: .success, in: self?.view.window)
         }
     }
 
@@ -784,10 +784,10 @@ final class NowPlayingViewController: NSViewController {
             sleepCapsule.title = String(format: "%d:%02d", total / 60, total % 60)
             sleepCapsule.isActiveToggle = true
         } else if player.sleepAtEndOfTrack {
-            sleepCapsule.title = "End of track"
+            sleepCapsule.title = String(localized: "End of track")
             sleepCapsule.isActiveToggle = true
         } else {
-            sleepCapsule.title = "Sleep"
+            sleepCapsule.title = String(localized: "Sleep")
             sleepCapsule.isActiveToggle = false
         }
     }
@@ -802,14 +802,14 @@ enum SleepTimerMenuBuilder {
         let menu = NSMenu()
         for minutes in [15, 30, 45, 60, 90] {
             let item = menu.addItem(
-                withTitle: "\(minutes) minutes", action: #selector(SleepTimerMenuTarget.setMinutes(_:)), keyEquivalent: ""
+                withTitle: String(localized: "\(minutes) minutes"), action: #selector(SleepTimerMenuTarget.setMinutes(_:)), keyEquivalent: ""
             )
             item.tag = minutes
             item.target = SleepTimerMenuTarget.shared
         }
         menu.addItem(.separator())
         let endOfTrack = menu.addItem(
-            withTitle: "End of Track", action: #selector(SleepTimerMenuTarget.endOfTrack(_:)), keyEquivalent: ""
+            withTitle: String(localized: "End of Track"), action: #selector(SleepTimerMenuTarget.endOfTrack(_:)), keyEquivalent: ""
         )
         endOfTrack.target = SleepTimerMenuTarget.shared
         endOfTrack.state = AudioPlayer.shared.sleepAtEndOfTrack ? .on : .off
@@ -817,7 +817,7 @@ enum SleepTimerMenuBuilder {
         if active {
             menu.addItem(.separator())
             let cancel = menu.addItem(
-                withTitle: "Cancel Timer", action: #selector(SleepTimerMenuTarget.cancel(_:)), keyEquivalent: ""
+                withTitle: String(localized: "Cancel Timer"), action: #selector(SleepTimerMenuTarget.cancel(_:)), keyEquivalent: ""
             )
             cancel.target = SleepTimerMenuTarget.shared
         }

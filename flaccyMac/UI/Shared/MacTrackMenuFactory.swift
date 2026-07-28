@@ -25,49 +25,49 @@ enum MacTrackMenuFactory {
         }
 
         if options.includePlay {
-            menu.addItem(ClosureMenuItem(title: "Play", systemImage: "play.fill") {
+            menu.addItem(ClosureMenuItem(title: String(localized: "Play"), systemImage: "play.fill") {
                 AudioPlayer.shared.play([track], startingAt: 0)
             })
         }
-        menu.addItem(ClosureMenuItem(title: "Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") {
             AudioPlayer.shared.insertNext(track)
-            MacToast.show("Playing next", style: .success, in: window)
+            MacToast.show(String(localized: "Playing next"), style: .success, in: window)
         })
-        menu.addItem(ClosureMenuItem(title: "Add to Queue", systemImage: "text.append") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Add to Queue"), systemImage: "text.append") {
             AudioPlayer.shared.addToQueue(track)
-            MacToast.show("Added to queue", style: .success, in: window)
+            MacToast.show(String(localized: "Added to queue"), style: .success, in: window)
         })
         menu.addItem(.separator())
 
-        menu.addItem(ClosureMenuItem(title: "Start Station", systemImage: "dot.radiowaves.left.and.right") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Start Station"), systemImage: "dot.radiowaves.left.and.right") {
             AudioPlayer.shared.startStation(seedTrack: track)
-            MacToast.show("Station started from \u{201C}\(track.title)\u{201D}", style: .success, in: window)
+            MacToast.show(String(localized: "Station started from \u{201C}\(track.title)\u{201D}"), style: .success, in: window)
         })
         let loved = LovedTracksService.shared.isLoved(track: track)
         menu.addItem(ClosureMenuItem(
-            title: loved ? "Unlove" : "Love",
+            title: loved ? String(localized: "Unlove") : String(localized: "Love"),
             systemImage: loved ? "heart.slash" : "heart"
         ) {
             Task { _ = await LovedTracksService.shared.toggleLove(track: track) }
         })
 
-        let playlistItem = NSMenuItem(title: "Add to Playlist", action: nil, keyEquivalent: "")
+        let playlistItem = NSMenuItem(title: String(localized: "Add to Playlist"), action: nil, keyEquivalent: "")
         playlistItem.image = NSImage(systemSymbolName: "music.note.list", accessibilityDescription: nil)
         playlistItem.submenu = PlaylistActions.addToPlaylistSubmenu(for: [track], in: window)
         menu.addItem(playlistItem)
         menu.addItem(.separator())
 
         if options.includeGoToAlbum {
-            menu.addItem(ClosureMenuItem(title: "Go to Album", systemImage: "square.stack") {
+            menu.addItem(ClosureMenuItem(title: String(localized: "Go to Album"), systemImage: "square.stack") {
                 LibraryNavigator.revealAlbum(title: track.albumTitle, artist: track.artist)
             })
         }
         if options.includeGoToArtist {
-            menu.addItem(ClosureMenuItem(title: "Go to Artist", systemImage: "music.microphone") {
+            menu.addItem(ClosureMenuItem(title: String(localized: "Go to Artist"), systemImage: "music.microphone") {
                 LibraryNavigator.revealArtist(LibraryHygiene.primaryArtist(track.artist))
             })
         }
-        menu.addItem(ClosureMenuItem(title: "View Lyrics", systemImage: "quote.bubble") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "View Lyrics"), systemImage: "quote.bubble") {
             NotificationCenter.default.post(name: .flaccyToggleLyrics, object: nil)
         })
         menu.addItem(.separator())
@@ -75,20 +75,20 @@ enum MacTrackMenuFactory {
         menu.addItem(shareSubmenuItem(
             subject: .track(title: track.title, artist: track.artist), anchor: anchor
         ))
-        menu.addItem(ClosureMenuItem(title: "Show in Finder", systemImage: "folder") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Show in Finder"), systemImage: "folder") {
             NSWorkspace.shared.activateFileViewerSelecting([track.fileURL])
         })
 
         if let removeFromPlaylist = options.removeFromPlaylist {
             menu.addItem(.separator())
-            menu.addItem(ClosureMenuItem(title: "Remove from Playlist", systemImage: "minus.circle") {
+            menu.addItem(ClosureMenuItem(title: String(localized: "Remove from Playlist"), systemImage: "minus.circle") {
                 removeFromPlaylist()
             })
         }
         if options.includeDelete {
             menu.addItem(.separator())
             menu.addItem(ClosureMenuItem(
-                title: LibraryRoot.shared.isUsingDefaultRoot ? "Move to Trash…" : "Remove from Library…",
+                title: LibraryRoot.shared.isUsingDefaultRoot ? String(localized: "Move to Trash…") : String(localized: "Remove from Library…"),
                 systemImage: "trash"
             ) {
                 TrackDeletion.confirmAndDelete([track], in: window)
@@ -107,33 +107,33 @@ enum MacTrackMenuFactory {
         }
 
         if includeViewAlbum {
-            menu.addItem(ClosureMenuItem(title: "View Album", systemImage: "square.stack") {
+            menu.addItem(ClosureMenuItem(title: String(localized: "View Album"), systemImage: "square.stack") {
                 LibraryNavigator.revealAlbum(title: album.title, artist: album.artist)
             })
             menu.addItem(.separator())
         }
 
-        menu.addItem(ClosureMenuItem(title: "Play", systemImage: "play.fill") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Play"), systemImage: "play.fill") {
             AudioPlayer.shared.play(album.tracks, startingAt: 0)
         })
-        menu.addItem(ClosureMenuItem(title: "Shuffle", systemImage: "shuffle") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Shuffle"), systemImage: "shuffle") {
             AudioPlayer.shared.play(album.tracks.shuffled(), startingAt: 0)
         })
-        menu.addItem(ClosureMenuItem(title: "Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") {
             for track in album.tracks.reversed() {
                 AudioPlayer.shared.insertNext(track)
             }
-            MacToast.show("Playing \u{201C}\(album.title)\u{201D} next", style: .success, in: window)
+            MacToast.show(String(localized: "Playing \u{201C}\(album.title)\u{201D} next"), style: .success, in: window)
         })
-        menu.addItem(ClosureMenuItem(title: "Add to Queue", systemImage: "text.append") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Add to Queue"), systemImage: "text.append") {
             for track in album.tracks {
                 AudioPlayer.shared.addToQueue(track)
             }
-            MacToast.show("Added \u{201C}\(album.title)\u{201D} to queue", style: .success, in: window)
+            MacToast.show(String(localized: "Added \u{201C}\(album.title)\u{201D} to queue"), style: .success, in: window)
         })
         menu.addItem(.separator())
 
-        let playlistItem = NSMenuItem(title: "Add to Playlist", action: nil, keyEquivalent: "")
+        let playlistItem = NSMenuItem(title: String(localized: "Add to Playlist"), action: nil, keyEquivalent: "")
         playlistItem.image = NSImage(systemSymbolName: "music.note.list", accessibilityDescription: nil)
         playlistItem.submenu = PlaylistActions.addToPlaylistSubmenu(for: album.tracks, in: window)
         menu.addItem(playlistItem)
@@ -142,7 +142,7 @@ enum MacTrackMenuFactory {
         menu.addItem(shareSubmenuItem(
             subject: .album(title: album.title, artist: album.artist), anchor: anchor
         ))
-        menu.addItem(ClosureMenuItem(title: "Enrich Metadata", systemImage: "sparkles") {
+        menu.addItem(ClosureMenuItem(title: String(localized: "Enrich Metadata"), systemImage: "sparkles") {
             enrichAlbum(album, in: window)
         })
         menu.addItem(.separator())
@@ -157,20 +157,20 @@ enum MacTrackMenuFactory {
 
     private static func shareSubmenuItem(subject: MacSonglinkSharing.Subject, anchor: NSView?) -> NSMenuItem {
         let share = NSMenu()
-        share.addItem(ClosureMenuItem(title: "Share Songlink…", systemImage: "square.and.arrow.up") { [weak anchor] in
+        share.addItem(ClosureMenuItem(title: String(localized: "Share Songlink…"), systemImage: "square.and.arrow.up") { [weak anchor] in
             MacSonglinkSharing.share(subject, from: anchor)
         })
-        share.addItem(ClosureMenuItem(title: "Copy Songlink", systemImage: "link") { [weak anchor] in
+        share.addItem(ClosureMenuItem(title: String(localized: "Copy Songlink"), systemImage: "link") { [weak anchor] in
             MacSonglinkSharing.copyLink(subject, from: anchor)
         })
-        let item = NSMenuItem(title: "Share", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: String(localized: "Share"), action: nil, keyEquivalent: "")
         item.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: nil)
         item.submenu = share
         return item
     }
 
     private static func enrichAlbum(_ album: Album, in window: NSWindow?) {
-        MacToast.show("Enriching \u{201C}\(album.title)\u{201D}…", style: .info, in: window)
+        MacToast.show(String(localized: "Enriching \u{201C}\(album.title)\u{201D}…"), style: .info, in: window)
         Task {
             let result = await MetadataEnrichmentService.shared.enrichAlbum(
                 title: album.title, artist: album.artist
@@ -198,12 +198,12 @@ enum MacTrackMenuFactory {
                 await Library.shared.reload()
                 let foundAnything = result.coverArtData != nil || result.year != nil || result.genre != nil
                 MacToast.show(
-                    foundAnything ? "Metadata updated" : "No new metadata found",
+                    foundAnything ? String(localized: "Metadata updated") : String(localized: "No new metadata found"),
                     style: foundAnything ? .success : .info, in: window
                 )
             } catch {
                 AppLogger.error("Manual enrichment failed: \(error.localizedDescription)", category: .database)
-                MacToast.show("Couldn't update metadata.", style: .error, in: window)
+                MacToast.show(String(localized: "Couldn't update metadata."), style: .error, in: window)
             }
         }
     }
@@ -225,16 +225,21 @@ enum TrackDeletion {
         let usingDefaultRoot = LibraryRoot.shared.isUsingDefaultRoot
         let subject = tracks.count == 1
             ? "\u{201C}\(tracks[0].title)\u{201D}"
-            : "\(tracks.count) songs"
+            : String(localized: "\(tracks.count) songs")
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Move \(subject) to the Trash?"
+        alert.messageText = String(localized: "Move \(subject) to the Trash?")
+        let single = tracks.count == 1
         alert.informativeText = usingDefaultRoot
-            ? "The audio file\(tracks.count == 1 ? "" : "s") will be moved to the Trash and removed from your library."
-            : "Flaccy indexes your music folder in place, so removing from the library moves the original file\(tracks.count == 1 ? "" : "s") to the Trash."
-        alert.addButton(withTitle: "Move to Trash")
-        alert.addButton(withTitle: "Cancel")
+            ? (single
+                ? String(localized: "The audio file will be moved to the Trash and removed from your library.")
+                : String(localized: "The audio files will be moved to the Trash and removed from your library."))
+            : (single
+                ? String(localized: "Flaccy indexes your music folder in place, so removing from the library moves the original file to the Trash.")
+                : String(localized: "Flaccy indexes your music folder in place, so removing from the library moves the original files to the Trash."))
+        alert.addButton(withTitle: String(localized: "Move to Trash"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
 
         let respond: (NSApplication.ModalResponse) -> Void = { response in
             guard response == .alertFirstButtonReturn else { return }
@@ -264,8 +269,8 @@ enum TrackDeletion {
         AppLogger.info("Moved \(trashed) track(s) to Trash", category: .content)
         MacToast.show(
             trashed == tracks.count
-                ? "Moved to Trash"
-                : "Removed \(trashed) of \(tracks.count) — see log",
+                ? String(localized: "Moved to Trash")
+                : String(localized: "Removed \(trashed) of \(tracks.count) — see log"),
             style: trashed == tracks.count ? .success : .error,
             in: window
         )

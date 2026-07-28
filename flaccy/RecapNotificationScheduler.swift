@@ -8,9 +8,9 @@ enum RecapNotificationFrequency: String, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .off: "Off"
-        case .weekly: "Weekly"
-        case .monthly: "Monthly"
+        case .off: String(localized: "Off")
+        case .weekly: String(localized: "Weekly")
+        case .monthly: String(localized: "Monthly")
         }
     }
 }
@@ -186,9 +186,9 @@ final class RecapNotificationScheduler {
     private func periodicPieces(frequency: RecapNotificationFrequency) -> (title: String, body: String) {
         switch frequency {
         case .monthly:
-            return ("Your Monthly Recap 🎧", teaserBody(period: .month, fallback: "A whole month of listening, wrapped up and ready."))
+            return (String(localized: "Your Monthly Recap 🎧"), teaserBody(period: .month, fallback: String(localized: "A whole month of listening, wrapped up and ready.")))
         case .weekly, .off:
-            return ("Your Weekly Recap 🎧", teaserBody(period: .week, fallback: "Seven days of listening, wrapped up and ready."))
+            return (String(localized: "Your Weekly Recap 🎧"), teaserBody(period: .week, fallback: String(localized: "Seven days of listening, wrapped up and ready.")))
         }
     }
 
@@ -212,8 +212,8 @@ final class RecapNotificationScheduler {
         let year = Calendar.current.component(.year, from: fireDate)
 
         let content = UNMutableNotificationContent()
-        content.title = "Your \(year) Year in Music is here ✨"
-        content.body = "Minutes, top artists, obsessions — your whole year, ready to share."
+        content.title = String(localized: "Your \(year) Year in Music is here ✨")
+        content.body = String(localized: "Minutes, top artists, obsessions — your whole year, ready to share.")
         content.sound = .default
         content.userInfo = [Self.destinationUserInfoKey: Self.yearInMusicDestination]
         if let attachment = await makeStoryAttachment() {
@@ -227,7 +227,7 @@ final class RecapNotificationScheduler {
         var counts: [String: Int] = [:]
         for row in rows { counts[row.artist, default: 0] += 1 }
         guard let topArtist = counts.max(by: { $0.value < $1.value })?.key else { return fallback }
-        return "\(topArtist) has been on repeat — \(RecapFormat.count(rows.count)) plays and counting. See your recap."
+        return String(localized: "\(topArtist) has been on repeat — \(RecapFormat.count(rows.count)) plays and counting. See your recap.")
     }
 
     private func makeStoryAttachment() async -> UNNotificationAttachment? {

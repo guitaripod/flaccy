@@ -26,13 +26,13 @@ enum MenuBarExtraSetting {
 final class GeneralSettingsPane: SettingsPane {
 
     private let entitlementLabel = NSTextField(labelWithString: "")
-    private let unlockButton = NSButton(title: "Unlock Lifetime…", target: nil, action: nil)
-    private let autoplayCheckbox = NSButton(checkboxWithTitle: "Keep the music going when the queue ends", target: nil, action: nil)
-    private let loginCheckbox = NSButton(checkboxWithTitle: "Open Flaccy at login", target: nil, action: nil)
-    private let menuBarCheckbox = NSButton(checkboxWithTitle: "Show Flaccy in the menu bar", target: nil, action: nil)
+    private let unlockButton = NSButton(title: String(localized: "Unlock Lifetime…"), target: nil, action: nil)
+    private let autoplayCheckbox = NSButton(checkboxWithTitle: String(localized: "Keep the music going when the queue ends"), target: nil, action: nil)
+    private let loginCheckbox = NSButton(checkboxWithTitle: String(localized: "Open Flaccy at login"), target: nil, action: nil)
+    private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Flaccy in the menu bar"), target: nil, action: nil)
 
     override func buildForm() {
-        formStack.addArrangedSubview(sectionLabel("Flaccy Lifetime"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Flaccy Lifetime")))
         entitlementLabel.font = .systemFont(ofSize: 13)
         unlockButton.bezelStyle = .rounded
         unlockButton.target = self
@@ -40,22 +40,22 @@ final class GeneralSettingsPane: SettingsPane {
         addRow([entitlementLabel, unlockButton], spacing: 12)
         formStack.addArrangedSubview(separator())
 
-        formStack.addArrangedSubview(sectionLabel("Playback"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Playback")))
         autoplayCheckbox.target = self
         autoplayCheckbox.action = #selector(autoplayToggled)
         formStack.addArrangedSubview(autoplayCheckbox)
-        addFullWidth(explanation("When your queue runs out, Flaccy builds a station of similar music from your library instead of stopping."))
-        addFullWidth(explanation("Gapless playback is always on — FLAC albums flow track to track with zero silence."))
+        addFullWidth(explanation(String(localized: "When your queue runs out, Flaccy builds a station of similar music from your library instead of stopping.")))
+        addFullWidth(explanation(String(localized: "Gapless playback is always on — FLAC albums flow track to track with zero silence.")))
         formStack.addArrangedSubview(separator())
 
-        formStack.addArrangedSubview(sectionLabel("System"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "System")))
         loginCheckbox.target = self
         loginCheckbox.action = #selector(loginToggled)
         formStack.addArrangedSubview(loginCheckbox)
         menuBarCheckbox.target = self
         menuBarCheckbox.action = #selector(menuBarToggled)
         formStack.addArrangedSubview(menuBarCheckbox)
-        addFullWidth(explanation("The menu bar player shows the current track with transport and love controls."))
+        addFullWidth(explanation(String(localized: "The menu bar player shows the current track with transport and love controls.")))
     }
 
     override func viewWillAppear() {
@@ -81,15 +81,13 @@ final class GeneralSettingsPane: SettingsPane {
     private func refreshEntitlement() {
         switch PurchaseManager.shared.state {
         case .purchased:
-            entitlementLabel.stringValue = "Lifetime unlocked. Thank you."
+            entitlementLabel.stringValue = String(localized: "Lifetime unlocked. Thank you.")
             unlockButton.isHidden = true
         case .trial(let daysRemaining):
-            entitlementLabel.stringValue = daysRemaining == 1
-                ? "Trial — 1 day left"
-                : "Trial — \(daysRemaining) days left"
+            entitlementLabel.stringValue = String(localized: "Trial — \(daysRemaining) days left")
             unlockButton.isHidden = false
         case .expired:
-            entitlementLabel.stringValue = "Trial ended — playback is locked"
+            entitlementLabel.stringValue = String(localized: "Trial ended — playback is locked")
             unlockButton.isHidden = false
         }
     }
@@ -124,19 +122,19 @@ final class GeneralSettingsPane: SettingsPane {
 final class LastFMSettingsPane: SettingsPane {
 
     private let statusLabel = NSTextField(labelWithString: "")
-    private let connectButton = NSButton(title: "Connect Last.fm…", target: nil, action: nil)
-    private let profileButton = NSButton(title: "View Profile", target: nil, action: nil)
-    private let disconnectButton = NSButton(title: "Disconnect", target: nil, action: nil)
+    private let connectButton = NSButton(title: String(localized: "Connect Last.fm…"), target: nil, action: nil)
+    private let profileButton = NSButton(title: String(localized: "View Profile"), target: nil, action: nil)
+    private let disconnectButton = NSButton(title: String(localized: "Disconnect"), target: nil, action: nil)
     private let pendingLabel = NSTextField(labelWithString: "")
-    private let retryButton = NSButton(title: "Retry Now", target: nil, action: nil)
-    private let importButton = NSButton(title: "Import History", target: nil, action: nil)
+    private let retryButton = NSButton(title: String(localized: "Retry Now"), target: nil, action: nil)
+    private let importButton = NSButton(title: String(localized: "Import History"), target: nil, action: nil)
     private let importStatusLabel = NSTextField(labelWithString: "")
     private let importSpinner = NSProgressIndicator()
     private let viewModel = ChartsViewModel()
     private var importObserver: AnyCancellable?
 
     override func buildForm() {
-        formStack.addArrangedSubview(sectionLabel("Account"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Account")))
         statusLabel.font = .systemFont(ofSize: 13)
         connectButton.bezelStyle = .rounded
         connectButton.target = self
@@ -148,10 +146,10 @@ final class LastFMSettingsPane: SettingsPane {
         disconnectButton.target = self
         disconnectButton.action = #selector(disconnectTapped)
         addRow([statusLabel, connectButton, profileButton, disconnectButton], spacing: 10)
-        addFullWidth(explanation("Scrobbles every play, keeps an offline queue, and powers the Recap, Wantlist, and loved tracks."))
+        addFullWidth(explanation(String(localized: "Scrobbles every play, keeps an offline queue, and powers the Recap, Wantlist, and loved tracks.")))
         formStack.addArrangedSubview(separator())
 
-        formStack.addArrangedSubview(sectionLabel("Scrobbles"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Scrobbles")))
         pendingLabel.font = .systemFont(ofSize: 13)
         retryButton.bezelStyle = .rounded
         retryButton.controlSize = .small
@@ -160,7 +158,7 @@ final class LastFMSettingsPane: SettingsPane {
         addRow([pendingLabel, retryButton], spacing: 10)
         formStack.addArrangedSubview(separator())
 
-        formStack.addArrangedSubview(sectionLabel("History"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "History")))
         importButton.bezelStyle = .rounded
         importButton.target = self
         importButton.action = #selector(importTapped)
@@ -170,7 +168,7 @@ final class LastFMSettingsPane: SettingsPane {
         importStatusLabel.font = .systemFont(ofSize: 12)
         importStatusLabel.textColor = .secondaryLabelColor
         addRow([importButton, importSpinner, importStatusLabel], spacing: 10)
-        addFullWidth(explanation("Imports your full Last.fm scrobble history into the local database so the Recap and Year in Music cover everything you've ever played."))
+        addFullWidth(explanation(String(localized: "Imports your full Last.fm scrobble history into the local database so the Recap and Year in Music cover everything you've ever played.")))
     }
 
     override func viewWillAppear() {
@@ -200,8 +198,8 @@ final class LastFMSettingsPane: SettingsPane {
         let service = LastFMService.shared
         let authenticated = service.isAuthenticated
         statusLabel.stringValue = authenticated
-            ? "Connected as \(service.username ?? "unknown")"
-            : "Not connected"
+            ? String(localized: "Connected as \(service.username ?? String(localized: "unknown"))")
+            : String(localized: "Not connected")
         connectButton.isHidden = authenticated
         profileButton.isHidden = !authenticated
         disconnectButton.isHidden = !authenticated
@@ -209,8 +207,8 @@ final class LastFMSettingsPane: SettingsPane {
 
         let pending = (try? DatabaseManager.shared.fetchPendingScrobbles().count) ?? 0
         pendingLabel.stringValue = pending == 0
-            ? "No pending scrobbles"
-            : "\(pending) scrobble\(pending == 1 ? "" : "s") waiting to submit"
+            ? String(localized: "No pending scrobbles")
+            : String(localized: "\(pending) scrobbles waiting to submit")
         retryButton.isHidden = pending == 0
     }
 
@@ -220,13 +218,13 @@ final class LastFMSettingsPane: SettingsPane {
             importSpinner.startAnimation(nil)
             importButton.isEnabled = false
             importStatusLabel.stringValue = imported > 0
-                ? "Importing… \(RecapFormat.count(imported)) scrobbles"
+                ? String(localized: "Importing… \(RecapFormat.count(imported)) scrobbles")
                 : "Importing…"
         case .done(let imported):
             importSpinner.stopAnimation(nil)
             importButton.isEnabled = LastFMService.shared.isAuthenticated
             importStatusLabel.stringValue = imported > 0
-                ? "Imported \(RecapFormat.count(imported)) scrobbles"
+                ? String(localized: "Imported \(RecapFormat.count(imported)) scrobbles")
                 : "History already imported"
         case .available:
             importSpinner.stopAnimation(nil)
@@ -235,7 +233,7 @@ final class LastFMSettingsPane: SettingsPane {
         case .unavailable:
             importSpinner.stopAnimation(nil)
             importButton.isEnabled = false
-            importStatusLabel.stringValue = "Connect Last.fm first"
+            importStatusLabel.stringValue = String(localized: "Connect Last.fm first")
         }
     }
 
@@ -246,14 +244,14 @@ final class LastFMSettingsPane: SettingsPane {
             defer { self?.connectButton.isEnabled = true }
             do {
                 try await LastFMService.shared.authenticate(from: window)
-                MacToast.show("Connected to Last.fm", style: .success, in: self?.view.window)
+                MacToast.show(String(localized: "Connected to Last.fm"), style: .success, in: self?.view.window)
             } catch {
                 if let authError = error as? ASWebAuthenticationSessionError,
                    authError.code == .canceledLogin {
                     return
                 }
                 AppLogger.error("Last.fm authentication failed: \(error.localizedDescription)", category: .auth)
-                MacToast.show("Couldn't connect to Last.fm.", style: .error, in: self?.view.window)
+                MacToast.show(String(localized: "Couldn't connect to Last.fm."), style: .error, in: self?.view.window)
             }
         }
     }
@@ -298,19 +296,19 @@ final class NotificationsSettingsPane: SettingsPane {
         formStack.addArrangedSubview(deniedBanner)
         deniedBanner.isHidden = true
 
-        formStack.addArrangedSubview(sectionLabel("Recap Notifications"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Recap Notifications")))
         for frequency in RecapNotificationFrequency.allCases {
             frequencyPopUp.addItem(withTitle: frequency.displayName)
         }
         frequencyPopUp.target = self
         frequencyPopUp.action = #selector(frequencyChanged)
-        addRow([label("Frequency"), frequencyPopUp])
+        addRow([label(String(localized: "Frequency")), frequencyPopUp])
 
         timePicker.datePickerStyle = .textFieldAndStepper
         timePicker.datePickerElements = .hourMinute
         timePicker.target = self
         timePicker.action = #selector(timeChanged)
-        addRow([label("Deliver at"), timePicker])
+        addRow([label(String(localized: "Deliver at")), timePicker])
 
         let weekdays = Calendar.current.standaloneWeekdaySymbols
         for name in weekdays {
@@ -320,18 +318,18 @@ final class NotificationsSettingsPane: SettingsPane {
         weekdayPopUp.action = #selector(weekdayChanged)
         weekdayRow.orientation = .horizontal
         weekdayRow.spacing = 8
-        weekdayRow.addArrangedSubview(label("On"))
+        weekdayRow.addArrangedSubview(label(String(localized: "On")))
         weekdayRow.addArrangedSubview(weekdayPopUp)
         formStack.addArrangedSubview(weekdayRow)
 
         for day in 1...28 {
-            monthDayPopUp.addItem(withTitle: "Day \(day)")
+            monthDayPopUp.addItem(withTitle: String(localized: "Day \(day)"))
         }
         monthDayPopUp.target = self
         monthDayPopUp.action = #selector(monthDayChanged)
         monthDayRow.orientation = .horizontal
         monthDayRow.spacing = 8
-        monthDayRow.addArrangedSubview(label("On"))
+        monthDayRow.addArrangedSubview(label(String(localized: "On")))
         monthDayRow.addArrangedSubview(monthDayPopUp)
         formStack.addArrangedSubview(monthDayRow)
 
@@ -339,7 +337,7 @@ final class NotificationsSettingsPane: SettingsPane {
         nextDeliveryLabel.textColor = .secondaryLabelColor
         formStack.addArrangedSubview(nextDeliveryLabel)
         formStack.addArrangedSubview(separator())
-        addFullWidth(explanation("A yearly Year in Music drop is always scheduled for December 1st while notifications are on."))
+        addFullWidth(explanation(String(localized: "A yearly Year in Music drop is always scheduled for December 1st while notifications are on.")))
     }
 
     private func buildDeniedBanner() {
@@ -354,9 +352,9 @@ final class NotificationsSettingsPane: SettingsPane {
             systemSymbolName: "bell.slash.fill", accessibilityDescription: nil
         ) ?? NSImage())
         icon.contentTintColor = .systemRed
-        let text = NSTextField(wrappingLabelWithString: "Notifications are turned off for Flaccy in System Settings.")
+        let text = NSTextField(wrappingLabelWithString: String(localized: "Notifications are turned off for Flaccy in System Settings."))
         text.font = .systemFont(ofSize: 12)
-        let openButton = NSButton(title: "Open System Settings", target: self, action: #selector(openSystemSettings))
+        let openButton = NSButton(title: String(localized: "Open System Settings"), target: self, action: #selector(openSystemSettings))
         openButton.bezelStyle = .rounded
         openButton.controlSize = .small
         deniedBanner.addArrangedSubview(icon)
@@ -400,7 +398,7 @@ final class NotificationsSettingsPane: SettingsPane {
             let formatter = DateFormatter()
             formatter.dateStyle = .medium
             formatter.timeStyle = .short
-            nextDeliveryLabel.stringValue = "Next recap: \(formatter.string(from: next))"
+            nextDeliveryLabel.stringValue = String(localized: "Next recap: \(formatter.string(from: next))")
         } else {
             nextDeliveryLabel.stringValue = ""
         }
@@ -454,31 +452,31 @@ final class LibrarySettingsPane: SettingsPane {
 
     private let rootLabel = NSTextField(labelWithString: "")
     private let statsLabel = NSTextField(labelWithString: "")
-    private let storageLabel = NSTextField(labelWithString: "Storage: …")
-    private let rescanButton = NSButton(title: "Rescan Library", target: nil, action: nil)
-    private let analyzeButton = NSButton(title: "Re-analyze with AI…", target: nil, action: nil)
-    private let groupEditionsCheckbox = NSButton(checkboxWithTitle: "Group album editions (Deluxe, Remaster…) as one album", target: nil, action: nil)
-    private let cleanUpButton = NSButton(title: "Clean Up Library…", target: nil, action: nil)
+    private let storageLabel = NSTextField(labelWithString: String(localized: "Storage: …"))
+    private let rescanButton = NSButton(title: String(localized: "Rescan Library"), target: nil, action: nil)
+    private let analyzeButton = NSButton(title: String(localized: "Re-analyze with AI…"), target: nil, action: nil)
+    private let groupEditionsCheckbox = NSButton(checkboxWithTitle: String(localized: "Group album editions (Deluxe, Remaster…) as one album"), target: nil, action: nil)
+    private let cleanUpButton = NSButton(title: String(localized: "Clean Up Library…"), target: nil, action: nil)
     private let workSpinner = NSProgressIndicator()
     private let workLabel = NSTextField(labelWithString: "")
     private var isWorking = false
 
     override func buildForm() {
-        formStack.addArrangedSubview(sectionLabel("Music Folder"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Music Folder")))
         rootLabel.font = .systemFont(ofSize: 12)
         rootLabel.lineBreakMode = .byTruncatingMiddle
-        let changeButton = NSButton(title: "Change…", target: self, action: #selector(changeFolder))
+        let changeButton = NSButton(title: String(localized: "Change…"), target: self, action: #selector(changeFolder))
         changeButton.bezelStyle = .rounded
         changeButton.controlSize = .small
-        let resetButton = NSButton(title: "Use Default", target: self, action: #selector(resetFolder))
+        let resetButton = NSButton(title: String(localized: "Use Default"), target: self, action: #selector(resetFolder))
         resetButton.bezelStyle = .rounded
         resetButton.controlSize = .small
         addRow([rootLabel, changeButton, resetButton], spacing: 10)
         rootLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 300).isActive = true
-        addFullWidth(explanation("Flaccy indexes the folder in place — nothing is copied or moved. Files added to the folder appear automatically."))
+        addFullWidth(explanation(String(localized: "Flaccy indexes the folder in place — nothing is copied or moved. Files added to the folder appear automatically.")))
         formStack.addArrangedSubview(separator())
 
-        formStack.addArrangedSubview(sectionLabel("Library"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Library")))
         statsLabel.font = .systemFont(ofSize: 13)
         storageLabel.font = .systemFont(ofSize: 13)
         formStack.addArrangedSubview(statsLabel)
@@ -496,27 +494,27 @@ final class LibrarySettingsPane: SettingsPane {
         workLabel.font = .systemFont(ofSize: 12)
         workLabel.textColor = .secondaryLabelColor
         addRow([rescanButton, analyzeButton, workSpinner, workLabel], spacing: 10)
-        addFullWidth(explanation("Re-analyze sends track filenames through Flaccy's AI to clean up titles, artists, and album grouping. It can take a few minutes for large libraries."))
+        addFullWidth(explanation(String(localized: "Re-analyze sends track filenames through Flaccy's AI to clean up titles, artists, and album grouping. It can take a few minutes for large libraries.")))
         formStack.addArrangedSubview(separator())
 
-        formStack.addArrangedSubview(sectionLabel("Tidy Up"))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Tidy Up")))
         groupEditionsCheckbox.target = self
         groupEditionsCheckbox.action = #selector(groupEditionsToggled)
         formStack.addArrangedSubview(groupEditionsCheckbox)
-        addFullWidth(explanation("Collapses \u{201C}Album\u{201D}, \u{201C}Album (Deluxe)\u{201D} and \u{201C}Album (Remastered)\u{201D} into one card and keeps a single best-quality copy of each shared song so Albums and Songs stay free of near-duplicates."))
+        addFullWidth(explanation(String(localized: "Collapses \u{201C}Album\u{201D}, \u{201C}Album (Deluxe)\u{201D} and \u{201C}Album (Remastered)\u{201D} into one card and keeps a single best-quality copy of each shared song so Albums and Songs stay free of near-duplicates.")))
         cleanUpButton.bezelStyle = .rounded
         cleanUpButton.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         cleanUpButton.imagePosition = .imageLeading
         cleanUpButton.target = self
         cleanUpButton.action = #selector(cleanUpTapped)
         addRow([cleanUpButton], spacing: 12)
-        addFullWidth(explanation("Finds duplicate tracks and merges album editions. You\u{2019}ll see exactly what changes before anything happens; removed duplicates go to the Trash."))
+        addFullWidth(explanation(String(localized: "Finds duplicate tracks and merges album editions. You\u{2019}ll see exactly what changes before anything happens; removed duplicates go to the Trash.")))
         formStack.addArrangedSubview(separator())
 
-        formStack.addArrangedSubview(sectionLabel("Reveal"))
-        let revealLibrary = NSButton(title: "Show Library in Finder", target: self, action: #selector(revealLibrary))
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Reveal")))
+        let revealLibrary = NSButton(title: String(localized: "Show Library in Finder"), target: self, action: #selector(revealLibrary))
         revealLibrary.bezelStyle = .rounded
-        let revealLogs = NSButton(title: "Show Logs in Finder", target: self, action: #selector(revealLogs))
+        let revealLogs = NSButton(title: String(localized: "Show Logs in Finder"), target: self, action: #selector(revealLogs))
         revealLogs.bezelStyle = .rounded
         addRow([revealLibrary, revealLogs], spacing: 10)
     }
@@ -555,7 +553,7 @@ final class LibrarySettingsPane: SettingsPane {
         rootLabel.toolTip = LibraryRoot.current.path
         let albums = Library.shared.albums.count
         let tracks = Library.shared.allTracks.count
-        statsLabel.stringValue = "\(albums) album\(albums == 1 ? "" : "s") · \(tracks) track\(tracks == 1 ? "" : "s")"
+        statsLabel.stringValue = String(localized: "\(albums) albums · \(tracks) tracks")
         refreshStorage()
     }
 
@@ -564,7 +562,7 @@ final class LibrarySettingsPane: SettingsPane {
         Task.detached(priority: .utility) { [weak self] in
             let size = Self.folderSize(root)
             await MainActor.run { [weak self] in
-                self?.storageLabel.stringValue = "Storage: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))"
+                self?.storageLabel.stringValue = String(localized: "Storage: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
             }
         }
     }
@@ -588,7 +586,7 @@ final class LibrarySettingsPane: SettingsPane {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Use This Folder"
+        panel.prompt = String(localized: "Use This Folder")
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let url = panel.url else { return }
             do {
@@ -596,7 +594,7 @@ final class LibrarySettingsPane: SettingsPane {
                 self?.refresh()
             } catch {
                 AppLogger.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
-                MacToast.show("Couldn't access that folder.", style: .error, in: self?.view.window)
+                MacToast.show(String(localized: "Couldn't access that folder."), style: .error, in: self?.view.window)
             }
         }
     }
@@ -608,7 +606,7 @@ final class LibrarySettingsPane: SettingsPane {
 
     @objc private func rescanTapped() {
         guard !isWorking else { return }
-        runWork(label: "Rescanning…") {
+        runWork(label: String(localized: "Rescanning…")) {
             await Library.shared.reload()
         }
     }
@@ -616,13 +614,13 @@ final class LibrarySettingsPane: SettingsPane {
     @objc private func analyzeTapped() {
         guard !isWorking, let window = view.window else { return }
         let alert = NSAlert()
-        alert.messageText = "Re-analyze Library with AI"
-        alert.informativeText = "This re-analyzes every track's metadata with AI and rewrites titles, artists, and album grouping in the database. It may take a few minutes for large libraries."
-        alert.addButton(withTitle: "Re-analyze")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = String(localized: "Re-analyze Library with AI")
+        alert.informativeText = String(localized: "This re-analyzes every track's metadata with AI and rewrites titles, artists, and album grouping in the database. It may take a few minutes for large libraries.")
+        alert.addButton(withTitle: String(localized: "Re-analyze"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn else { return }
-            self?.runWork(label: "Re-analyzing with AI…") {
+            self?.runWork(label: String(localized: "Re-analyzing with AI…")) {
                 await Library.shared.resetAndReload()
             }
         }
@@ -641,7 +639,7 @@ final class LibrarySettingsPane: SettingsPane {
             self.rescanButton.isEnabled = true
             self.analyzeButton.isEnabled = true
             self.workSpinner.stopAnimation(nil)
-            self.workLabel.stringValue = "Done"
+            self.workLabel.stringValue = String(localized: "Done")
             self.refresh()
         }
     }
@@ -671,11 +669,11 @@ final class AboutSettingsPane: SettingsPane {
 
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        let versionLabel = NSTextField(labelWithString: "Version \(version) (\(build))")
+        let versionLabel = NSTextField(labelWithString: String(localized: "Version \(version) (\(build))"))
         versionLabel.font = .systemFont(ofSize: 12)
         versionLabel.textColor = .secondaryLabelColor
 
-        let tagline = NSTextField(labelWithString: "Own your music. Forever.")
+        let tagline = NSTextField(labelWithString: String(localized: "Own your music. Forever."))
         tagline.font = .systemFont(ofSize: 13)
 
         let header = NSStackView(views: [icon, name, versionLabel, tagline])
@@ -686,11 +684,11 @@ final class AboutSettingsPane: SettingsPane {
         header.widthAnchor.constraint(equalTo: formStack.widthAnchor, constant: -56).isActive = true
 
         formStack.addArrangedSubview(separator())
-        addFullWidth(explanation("Built with GRDB (SQLite), lyrics from lrclib.net, universal links by Songlink/Odesli, and scrobbling via the Last.fm API."))
+        addFullWidth(explanation(String(localized: "Built with GRDB (SQLite), lyrics from lrclib.net, universal links by Songlink/Odesli, and scrobbling via the Last.fm API.")))
 
-        let privacy = NSButton(title: "Privacy Policy", target: self, action: #selector(openPrivacy))
+        let privacy = NSButton(title: String(localized: "Privacy Policy"), target: self, action: #selector(openPrivacy))
         privacy.bezelStyle = .rounded
-        let terms = NSButton(title: "Terms of Use", target: self, action: #selector(openTerms))
+        let terms = NSButton(title: String(localized: "Terms of Use"), target: self, action: #selector(openTerms))
         terms.bezelStyle = .rounded
         addRow([privacy, terms], spacing: 10)
 

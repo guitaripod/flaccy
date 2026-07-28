@@ -31,7 +31,7 @@ final class ScrubberView: UISlider {
         setThumbImage(UIImage(), for: .normal)
         setThumbImage(UIImage(), for: .highlighted)
         addTarget(self, action: #selector(valueDidChange), for: .valueChanged)
-        accessibilityLabel = "Playback position"
+        accessibilityLabel = String(localized: "Playback position")
     }
 
     @available(*, unavailable)

@@ -1,0 +1,2257 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "\n\nDuplicate files are moved to the Trash, so nothing is permanently deleted.": {},
+    "\nInstrumental": {},
+    " End of track ": {},
+    " · %@ free": {},
+    " · you own %lld of its tracks": {},
+    "$9.99 · once, forever (store unavailable)": {},
+    "%.0f MB": {},
+    "%.0fK": {},
+    "%.0fK plays": {},
+    "%.1f GB": {},
+    "%.1fK": {},
+    "%.1fM": {},
+    "%.1fM plays": {},
+    "%@ artists this year": {},
+    "%@ by %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ by %2$@"
+          }
+        }
+      }
+    },
+    "%@ filter": {},
+    "%@ has been on repeat — %@ plays and counting. See your recap.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ has been on repeat — %2$@ plays and counting. See your recap."
+          }
+        }
+      }
+    },
+    "%@ in your free trial": {},
+    "%@ link copied": {},
+    "%@ of %@  ·  %@  ·  %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ of %2$@  ·  %3$@  ·  %4$@"
+          }
+        }
+      }
+    },
+    "%@ plays": {},
+    "%@ plays · %@ artists": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ plays · %2$@ artists"
+          }
+        }
+      }
+    },
+    "%@ scrobbles imported so far…": {},
+    "%@ theme": {},
+    "%@ tracks this year": {},
+    "%@ · %@ left": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@ left"
+          }
+        }
+      }
+    },
+    "%@ · %@ once, forever": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@ once, forever"
+          }
+        }
+      }
+    },
+    "%@ · %@ plays": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@ plays"
+          }
+        }
+      }
+    },
+    "%@ · %lld songs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$lld songs"
+          }
+        }
+      }
+    },
+    "%@ · flaccy Recap": {},
+    "%@ · once, forever": {},
+    "%@ — %lld plays": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg2": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg play"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg plays"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — %2$#@arg2@"
+          }
+        }
+      }
+    },
+    "%@, %@ of %@, %@, %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@, %2$@ of %3$@, %4$@, %5$@"
+          }
+        }
+      }
+    },
+    "%@, version %@, build %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@, version %2$@, build %3$@"
+          }
+        }
+      }
+    },
+    "%@. %@. %@ plays, %@ minutes listened.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@. %2$@. %3$@ plays, %4$@ minutes listened."
+          }
+        }
+      }
+    },
+    "%@/s": {},
+    "%dh %02dm": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$dh %2$02dm"
+          }
+        }
+      }
+    },
+    "%lld albums": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg albums"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld albums · %lld songs": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg albums"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@ · %2$lld songs"
+          }
+        }
+      }
+    },
+    "%lld albums · %lld songs in your library": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg albums"
+                    }
+                  }
+                }
+              }
+            },
+            "arg2": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg song"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg songs"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@ · %2$#@arg2@ in your library"
+          }
+        }
+      }
+    },
+    "%lld albums · %lld tracks": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg albums"
+                    }
+                  }
+                }
+              }
+            },
+            "arg2": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@ · %2$#@arg2@"
+          }
+        }
+      }
+    },
+    "%lld albums, %lld tracks": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg albums"
+                    }
+                  }
+                }
+              }
+            },
+            "arg2": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@, %2$#@arg2@"
+          }
+        }
+      }
+    },
+    "%lld days in a row and counting": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg day in a row and counting"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg days in a row and counting"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld days left": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg day left"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg days left"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld days left in your trial": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg day left in your trial"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg days left in your trial"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld hr %lld min": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld hr %2$lld min"
+          }
+        }
+      }
+    },
+    "%lld min": {},
+    "%lld minutes": {},
+    "%lld new suggestions": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg new suggestion"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg new suggestions"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld of %lld on Watch  ·  %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld on Watch  ·  %3$@"
+          }
+        }
+      }
+    },
+    "%lld of %lld synced": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld synced"
+          }
+        }
+      }
+    },
+    "%lld pending scrobbles": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg pending scrobble"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg pending scrobbles"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld plays": {},
+    "%lld plays on Last.fm": {},
+    "%lld scrobbles": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg scrobble"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg scrobbles"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld scrobbles imported": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg scrobble imported"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg scrobbles imported"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld scrobbles waiting to submit": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg scrobble waiting to submit"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg scrobbles waiting to submit"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld sec": {},
+    "%lld songs": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg song"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg songs"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld tracks": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld tracks  ·  %@": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@  ·  %2$@"
+          }
+        }
+      }
+    },
+    "%lld tracks didn’t fit%@. Remove music to make room.": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@ didn’t fit%2$@. Remove music to make room."
+          }
+        }
+      }
+    },
+    "%lld tracks left — retrying automatically%@.": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@ left — retrying automatically%2$@."
+          }
+        }
+      }
+    },
+    "%lld tracks on your Apple Watch%@.": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@ on your Apple Watch%2$@."
+          }
+        }
+      }
+    },
+    "%lld tracks synced": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track synced"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks synced"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          }
+        }
+      }
+    },
+    "%lld tracks transferring in the background%@.": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@ transferring in the background%2$@."
+          }
+        }
+      }
+    },
+    "%lld tracks · %@": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@ · %2$@"
+          }
+        }
+      }
+    },
+    "%lldk": {},
+    ", in your library, double tap to play": {},
+    ", in your library, double tap to start a station": {},
+    ", not in your library": {},
+    "0 MB": {},
+    "1 Month": {},
+    "1 Year": {},
+    "1M": {},
+    "1Y": {},
+    "3 Months": {},
+    "3M": {},
+    "6 Months": {},
+    "6M": {},
+    "7 Days": {},
+    "7D": {},
+    "A handful of artists own your heart.": {},
+    "A shareable recap built from your local play history.": {},
+    "A whole month of listening, wrapped up and ready.": {},
+    "A yearly Year in Music drop is always scheduled for December 1st while notifications are on.": {},
+    "ALBUMS": {},
+    "ARTISTS": {},
+    "About": {},
+    "About 130 MB of 24-bit FLAC": {},
+    "About Flaccy": {},
+    "Account": {},
+    "Active": {},
+    "Add": {},
+    "Add %lld Songs to Queue": {},
+    "Add Manually…": {},
+    "Add Sample Music": {},
+    "Add album to queue": {},
+    "Add to Playlist": {},
+    "Add to Queue": {},
+    "Add to Wantlist": {},
+    "Added": {},
+    "Added %lld songs to %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Added %1$lld songs to %2$@"
+          }
+        }
+      }
+    },
+    "Added %lld tracks to queue": {},
+    "Added by you": {},
+    "Added to %@": {},
+    "Added to Wantlist": {},
+    "Added to queue": {},
+    "Added “%@” to queue": {},
+    "Adding to library…": {},
+    "AirPods Max (USB-C) support 24-bit/48 kHz lossless over a USB-C cable, added by a firmware update in March 2025.": {},
+    "AirPods receive audio over Bluetooth using Apple's AAC codec at up to roughly 256 kbps. The rate is adaptive — it can drop when the wireless link degrades.": {},
+    "Album": {},
+    "Album Count": {},
+    "Album artwork": {},
+    "Album artwork for %@": {},
+    "Albums": {},
+    "Albums to Explore": {},
+    "Albums to Get": {},
+    "Albums, Artists, Songs": {},
+    "All": {},
+    "All %lld tracks will be removed from this device.": {},
+    "All Albums": {},
+    "All Four Cards": {},
+    "All Time": {},
+    "Allow notifications in Settings first": {},
+    "Always chasing the next new sound.": {},
+    "Appearance": {},
+    "Apple Support article, %@": {},
+    "Apple Watch": {},
+    "Apple Watch is Full": {},
+    "Apple confirms Bluetooth connections aren't lossless. Playing a FLAC or ALAC file to AirPods delivers, at best, ~256 kbps AAC at your ear. AirPods Pro 3's spec sheet lists “No Lossless Audio”.": {},
+    "Artist": {},
+    "Artist photo": {},
+    "Artists": {},
+    "Artists to Explore": {},
+    "Audio Quality": {},
+    "Audio quality": {},
+    "Aurora": {},
+    "Autoplay Similar": {},
+    "Available On": {},
+    "Bach, lossless, free": {},
+    "Back": {},
+    "Back 15 seconds": {},
+    "Backfill your stats with everything you scrobbled before installing.": {},
+    "Backfills your listening stats from Last.fm": {},
+    "Because you play %@": {},
+    "Biggest day: %@ — %@ plays": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Biggest day: %1$@ — %2$@ plays"
+          }
+        }
+      }
+    },
+    "Bluetooth & AAC": {},
+    "Bring All to Front": {},
+    "Browse other apps by this developer": {},
+    "Built with GRDB (SQLite), lyrics from lrclib.net, universal links by Songlink/Odesli, and scrobbling via the Last.fm API.": {},
+    "Buys lifetime access with a one-time purchase": {},
+    "Can you hear the difference?": {},
+    "Cancel": {},
+    "Cancel Timer": {},
+    "Change year": {},
+    "Change…": {},
+    "Charts": {},
+    "Choose Music Folder…": {},
+    "Choose New Folder…": {},
+    "Choose a music folder to index in place, or import files into Flaccy's own library.": {},
+    "Chooses how often flaccy reminds you about your recap": {},
+    "Clean Up": {},
+    "Clean Up Library": {},
+    "Clean Up Library…": {},
+    "Cleaned up %lld duplicates and %lld editions.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Cleaned up %1$lld duplicates and %2$lld editions."
+          }
+        }
+      }
+    },
+    "Clear": {},
+    "Clear up next": {},
+    "Close": {},
+    "Close Now Playing": {},
+    "Close Window": {},
+    "Codec": {},
+    "Collapse player": {},
+    "Collapses “Album”, “Album (Deluxe)” and “Album (Remastered)” into one card and keeps a single best-quality copy of each shared song so Albums and Songs stay free of near-duplicates.": {},
+    "Compact": {},
+    "Complete These Albums": {},
+    "Connect Last.fm first": {},
+    "Connect Last.fm in Settings for suggestions from your history, or add wanted albums manually.": {},
+    "Connect Last.fm in Settings to see\nwhich music you love but don't own.": {},
+    "Connect Last.fm in Settings, or play\nsomething to build your Recap.": {},
+    "Connect Last.fm to import": {},
+    "Connect Last.fm…": {},
+    "Connect to Last.fm": {},
+    "Connected": {},
+    "Connected as %@": {},
+    "Connected to Last.fm": {},
+    "Contacting server…": {},
+    "Control playback from the menu bar; new files appear in your library instantly.": {},
+    "Copied": {},
+    "Copies files into Flaccy's library folder, preserving folder structure.": {},
+    "Copy": {},
+    "Copy Artist": {},
+    "Copy Image": {},
+    "Copy Link": {},
+    "Copy Song Info": {},
+    "Copy Songlink": {},
+    "Copy Songlink URL": {},
+    "Copy Title": {},
+    "Copy Track Info": {},
+    "Copy universal link": {},
+    "Couldn't Connect": {},
+    "Couldn't access that folder.": {},
+    "Couldn't add to playlist.": {},
+    "Couldn't connect to Last.fm.": {},
+    "Couldn't create playlist.": {},
+    "Couldn't delete playlist.": {},
+    "Couldn't download the sample album.": {},
+    "Couldn't find a Songlink for this track": {},
+    "Couldn't find links for this album.": {},
+    "Couldn't find links for this track.": {},
+    "Couldn't find this album on streaming platforms": {},
+    "Couldn't find this track on streaming platforms": {},
+    "Couldn't find this track on streaming services.": {},
+    "Couldn't rename playlist.": {},
+    "Couldn't render the share card.": {},
+    "Couldn't update metadata.": {},
+    "Cover size": {},
+    "Crate Dig": {},
+    "Create": {},
+    "Create one here, or right-click any song and choose Add to Playlist.": {},
+    "Crossed off your Wantlist: %@": {},
+    "Crossed off your Wantlist: %@ and %lld more": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Crossed off your Wantlist: %1$@ and %2$lld more"
+          }
+        }
+      }
+    },
+    "Current line": {},
+    "Cut": {},
+    "Cycle Repeat Mode": {},
+    "DAY STREAK": {},
+    "DIFFERENT TRACKS": {},
+    "Dark": {},
+    "Date Added": {},
+    "Day %lld": {},
+    "Day of Month": {},
+    "Day of Week": {},
+    "Day of month": {},
+    "Day of week": {},
+    "Decrease Volume": {},
+    "Deep cuts from albums you already love": {},
+    "Deep, steady devotion to your favorites.": {},
+    "Delete": {},
+    "Delete \"%@\"?": {},
+    "Delete %lld playlists?": {},
+    "Delete all synced music from your Apple Watch and start fresh?": {},
+    "Delete from Library": {},
+    "Delete “%@” (%@) from your Apple Watch?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Delete “%1$@” (%2$@) from your Apple Watch?"
+          }
+        }
+      }
+    },
+    "Delete “%@”?": {},
+    "Deleted %@": {},
+    "Delete…": {},
+    "Deliver at": {},
+    "Delivers a sample recap notification in a few seconds": {},
+    "Delivery": {},
+    "Delivery time": {},
+    "Disconnect": {},
+    "Disconnect Last.fm": {},
+    "Discover": {},
+    "Dismiss": {},
+    "Dismissed": {},
+    "Done": {},
+    "Double tap to import": {},
+    "Double tap to love this track": {},
+    "Double tap to unlove this track": {},
+    "Download Sample Album": {},
+    "Downloading %lld of %lld…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Downloading %1$lld of %2$lld…"
+          }
+        }
+      }
+    },
+    "Downloading…": {},
+    "Edit": {},
+    "End of Track": {},
+    "End of track": {},
+    "Enrich Metadata": {},
+    "Enriching “%@”…": {},
+    "Every listen counted, with an offline queue that never drops a play.": {},
+    "Everything on one card · 4:5": {},
+    "Exceptions": {},
+    "Expands the artist biography": {},
+    "Explains how Bluetooth, AAC, and lossless audio affect what you hear": {},
+    "Export PNG…": {},
+    "Export failed": {},
+    "Exported %@": {},
+    "FLAC albums flow track to track with zero silence.": {},
+    "FLACCY LIFETIME": {},
+    "FORMAT": {},
+    "Failed": {},
+    "Failed to add to playlist": {},
+    "Favorites": {},
+    "Favourites you haven't heard in months": {},
+    "File": {},
+    "Filter: %@": {},
+    "Find": {},
+    "Finding artists in your library…": {},
+    "Finding links…": {},
+    "Finds duplicate tracks and merges album editions. You’ll see exactly what changes before anything happens; removed duplicates go to the Trash.": {},
+    "Finishing Up": {},
+    "Five facts about Bluetooth, AAC, and what your files actually deliver to your ears.": {},
+    "Flaccy Help": {},
+    "Flaccy Lifetime": {},
+    "Flaccy indexes the folder in place — nothing is copied or moved.": {},
+    "Flaccy indexes the folder in place — nothing is copied or moved. Files added to the folder appear automatically.": {},
+    "Flaccy indexes your music folder in place, so removing from the library moves the original file to the Trash.": {},
+    "Flaccy indexes your music folder in place, so removing from the library moves the original files to the Trash.": {},
+    "Folds deluxe, remaster, and explicit variants into one album": {},
+    "For true lossless on iPhone, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.": {},
+    "Forward 15 seconds": {},
+    "Frequency": {},
+    "Full album night": {},
+    "Full album · %@": {},
+    "Gapless Playback": {},
+    "Gapless lossless playback": {},
+    "Gapless playback is always on — FLAC albums flow track to track with zero silence.": {},
+    "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends.": {},
+    "General": {},
+    "Genre": {},
+    "Go to Album": {},
+    "Go to Artist": {},
+    "Got It": {},
+    "Grid": {},
+    "Group Album Editions": {},
+    "Group album editions (Deluxe, Remaster…) as one album": {},
+    "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song.": {},
+    "H2-chip AirPods get lossless wirelessly only with Apple Vision Pro, over a proprietary 5 GHz link — not standard Bluetooth.": {},
+    "Heavy Rotation": {},
+    "Help": {},
+    "Hide Flaccy": {},
+    "Hide Others": {},
+    "History": {},
+    "History imported": {},
+    "How Bluetooth, AAC, and lossless files really affect what you hear.": {},
+    "Import": {},
+    "Import Files": {},
+    "Import Files…": {},
+    "Import History": {},
+    "Import Last.fm History": {},
+    "Import Last.fm history": {},
+    "Import failed — couldn't copy into the library folder.": {},
+    "Import files from Settings": {},
+    "Import files from Settings,\nor start with a free lossless album": {},
+    "Import your full Last.fm history to power the Recap and Year in Music.": {},
+    "Imported %@ scrobbles": {},
+    "Imported %@ scrobbles from Last.fm.": {},
+    "Imported %@ scrobbles.": {},
+    "Imported %lld items": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg item"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg items"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported %1$#@arg1@"
+          }
+        }
+      }
+    },
+    "Imported %lld, %lld failed — check the library folder's permissions.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Imported %1$lld, %2$lld failed — check the library folder's permissions."
+          }
+        }
+      }
+    },
+    "Importing %lld items…": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg item…"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg items…"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing %1$#@arg1@"
+          }
+        }
+      }
+    },
+    "Importing Last.fm History": {},
+    "Importing history…": {},
+    "Importing history… %@ scrobbles so far": {},
+    "Importing… %@ scrobbles": {},
+    "Imports your full Last.fm scrobble history into the local database so the Recap and Year in Music cover everything you've ever played.": {},
+    "In library as %@ — get it lossless": {},
+    "In published blind tests — the largest public one put 580 participants on CD versus 256 kbps AAC — most listeners cannot reliably tell 256 kbps AAC from lossless. Only a small minority succeed, on specific tracks, under ideal conditions, on revealing gear. Apple itself calls the difference “virtually indistinguishable”.": {},
+    "In your library. Double tap to play from here through the rest of popular tracks.": {},
+    "Increase Volume": {},
+    "Instagram carousel · X photo grid": {},
+    "Install Flaccy on Apple Watch": {},
+    "Instrumental": {},
+    "Invalid Last.fm API URL": {},
+    "Invalid Last.fm callback URL": {},
+    "Invalid response from Last.fm": {},
+    "Keep the music going when the queue ends": {},
+    "Keeps a similar-music station going when the queue ends": {},
+    "Larger covers": {},
+    "Last Played": {},
+    "Last.fm API error: %@": {},
+    "Last.fm API key not configured": {},
+    "Last.fm Account": {},
+    "Last.fm authentication failed": {},
+    "Last.fm scrobbling": {},
+    "Last.fm sign-in didn't complete. Check your connection and try again.": {},
+    "Layout: %@. Double tap to change.": {},
+    "Library": {},
+    "Library Radio": {},
+    "Lifetime member": {},
+    "Lifetime unlocked. Thank you.": {},
+    "Light": {},
+    "Link copied": {},
+    "List": {},
+    "Listening Clock": {},
+    "Listening Guide": {},
+    "Listening clock, no plays yet": {},
+    "Listening clock. Peak hour %lld hundred hours, with %lld plays.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Listening clock. Peak hour %1$lld hundred hours, with %2$lld plays."
+          }
+        }
+      }
+    },
+    "Listening clock. Peak hour %lld:00 with %lld plays.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Listening clock. Peak hour %1$lld:00 with %2$lld plays."
+          }
+        }
+      }
+    },
+    "Listening heatmap, %lld active days": {},
+    "Loading popular tracks…": {},
+    "Local listening history": {},
+    "Longest streak: %lld days": {},
+    "Lossless": {},
+    "Lossless, ": {},
+    "Love": {},
+    "Love All": {},
+    "Love Track": {},
+    "Love on Last.fm": {},
+    "Love “%@”": {},
+    "Loved": {},
+    "Loved on Last.fm": {},
+    "Lyrics": {},
+    "MINUTES": {},
+    "MINUTES LISTENED": {},
+    "MY TOP ARTISTS": {},
+    "MY TOP TRACKS": {},
+    "MY YEAR IN MUSIC": {},
+    "Marked as acquired": {},
+    "Menu bar player & folder watching": {},
+    "Merge %lld album editions into their main album.": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album edition"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album editions"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge %1$#@arg1@ into their main album."
+          }
+        }
+      }
+    },
+    "Merge → %@\n    from: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Merge → %1$@\n    from: %2$@"
+          }
+        }
+      }
+    },
+    "Metadata updated": {},
+    "Minimize": {},
+    "Minutes, top artists, obsessions — your whole year, ready to share.": {},
+    "Monthly": {},
+    "More Apps": {},
+    "Most Played": {},
+    "Move %@ to the Trash?": {},
+    "Move to Trash": {},
+    "Move to Trash…": {},
+    "Moved to Trash": {},
+    "Music Folder": {},
+    "Music Folder Unavailable": {},
+    "Music folder unavailable — reconnect the drive or choose a new folder.": {},
+    "Music to get & discoveries": {},
+    "Music transfers in the background — you can leave this screen or lock your phone. Each track is re-sent until your Apple Watch confirms it arrived.": {},
+    "My flaccy wantlist:": {},
+    "Name": {},
+    "Name the playlist for these %lld tracks.": {},
+    "Name the playlist for this track.": {},
+    "Name your new playlist.": {},
+    "New": {},
+    "New Playlist": {},
+    "New Playlist…": {},
+    "New Releases": {},
+    "New to you": {},
+    "Next": {},
+    "Next Delivery": {},
+    "Next Track": {},
+    "Next delivery": {},
+    "Next recap: %@": {},
+    "Next track": {},
+    "No Apple Watch": {},
+    "No Playlists Yet": {},
+    "No Results": {},
+    "No active streak — press play to start one": {},
+    "No duplicate tracks or album editions to merge were found.": {},
+    "No listening history for this year": {},
+    "No listening history yet": {},
+    "No listening history yet.\nPlay something, or import your\nLast.fm history above.": {},
+    "No lyrics available": {},
+    "No lyrics found": {},
+    "No new metadata found": {},
+    "No pending scrobbles": {},
+    "No popular tracks available.": {},
+    "No preview available": {},
+    "No previous purchase was found for this Apple Account.": {},
+    "No results for “%@”": {},
+    "No similar artists in your library yet.": {},
+    "Noir": {},
+    "Not Available": {},
+    "Not Enough Space": {},
+    "Not Interested": {},
+    "Not connected": {},
+    "Not enough space on Watch  ·  %@": {},
+    "Not found on Apple Music": {},
+    "Not in your library": {},
+    "Not loved": {},
+    "Not synced": {},
+    "Nothing Playing": {},
+    "Nothing here right now.\nYour library already covers it.": {},
+    "Nothing here yet": {},
+    "Nothing in your library matches “%@”.": {},
+    "Nothing on the wantlist yet": {},
+    "Nothing playing": {},
+    "Nothing queued — play an album to fill Up Next.": {},
+    "Nothing to Restore": {},
+    "Notifications Are Off": {},
+    "Notifications are off": {},
+    "Notifications are turned off for Flaccy in System Settings.": {},
+    "Now Playing": {},
+    "Now playing": {},
+    "Now playing: %@, %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Now playing: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Number %lld, %@ by %@, %lld plays%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Number %1$lld, %2$@ by %3$@, %4$lld plays%5$@"
+          }
+        }
+      }
+    },
+    "Number %lld, %@, %lld plays%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Number %1$lld, %2$@, %3$lld plays%4$@"
+          }
+        }
+      }
+    },
+    "OK": {},
+    "Ocean": {},
+    "Off": {},
+    "On": {},
+    "On Apple Watch  ·  %@": {},
+    "On Repeat": {},
+    "Once, forever": {},
+    "One": {},
+    "Open": {},
+    "Open Flaccy": {},
+    "Open Flaccy at login": {},
+    "Open Settings": {},
+    "Open System Settings": {},
+    "Open in %@": {},
+    "Open in Apple Music": {},
+    "Open the Watch app on your iPhone and install Flaccy.": {},
+    "Opens Now Playing": {},
+    "Opens in your browser": {},
+    "Opens system Settings to allow notifications": {},
+    "Opens the file browser to add music": {},
+    "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and import your listening history. Everything else works without it.": {},
+    "Or drop audio files and folders anywhere in this window.": {},
+    "Orchid": {},
+    "Overview": {},
+    "Own your music.\nForever.": {},
+    "Own your music. Forever.": {},
+    "PEAK": {},
+    "PERSONA": {},
+    "PLAYS": {},
+    "Pair an Apple Watch to sync music.": {},
+    "Paste": {},
+    "Pause": {},
+    "Paused": {},
+    "Photo of %@": {},
+    "Pick an album to start listening": {},
+    "Play": {},
+    "Play %lld Albums": {},
+    "Play %lld Artists": {},
+    "Play All": {},
+    "Play Next": {},
+    "Play Preview": {},
+    "Play history range": {},
+    "Play or pause": {},
+    "Play playlist": {},
+    "Play some music and your Year in Music will build itself. Or pick another year above.": {},
+    "Play some music or import your Last.fm history in Settings.": {},
+    "Play some music, or connect Last.fm in Settings and import your history.": {},
+    "Play/Pause": {},
+    "Playback": {},
+    "Playback position": {},
+    "Played earlier": {},
+    "Playing %@": {},
+    "Playing from %@": {},
+    "Playing next": {},
+    "Playing “%@” next": {},
+    "Playlist": {},
+    "Playlist artwork": {},
+    "Playlist artwork placeholder": {},
+    "Playlist artwork, %lld album covers": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album cover"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg album covers"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlist artwork, %1$#@arg1@"
+          }
+        }
+      }
+    },
+    "Playlist name": {},
+    "Playlists": {},
+    "Plays": {},
+    "Plays From": {},
+    "Plays a station from your most-played tracks": {},
+    "Plays a station of similar music from your library": {},
+    "Plays deep cuts from albums you already love": {},
+    "Plays from this line": {},
+    "Plays this track": {},
+    "Plays this track again": {},
+    "Point Flaccy at your music folder and it indexes everything in place — FLAC, ALAC, MP3 and more, nothing copied or moved.": {},
+    "Popular": {},
+    "Popular Tracks": {},
+    "Post 4:5": {},
+    "Poster": {},
+    "Poster for Feeds": {},
+    "Power hour: %@": {},
+    "Practical takeaway": {},
+    "Preview": {},
+    "Preview 30 Seconds": {},
+    "Preview 30 seconds": {},
+    "Previewing %@": {},
+    "Previous": {},
+    "Previous Track": {},
+    "Previous track": {},
+    "Privacy Policy": {},
+    "Purchase Failed": {},
+    "Purchase Pending": {},
+    "Quality": {},
+    "Quality, ": {},
+    "Queue": {},
+    "Queue is empty": {},
+    "Quit Flaccy": {},
+    "Re-analyze": {},
+    "Re-analyze Library with AI": {},
+    "Re-analyze sends track filenames through Flaccy's AI to clean up titles, artists, and album grouping. It can take a few minutes for large libraries.": {},
+    "Re-analyze with AI…": {},
+    "Re-analyzes all tracks": {},
+    "Re-analyzing with AI…": {},
+    "Read less": {},
+    "Read more": {},
+    "Ready to sync — choose an album below.%@": {},
+    "Recap": {},
+    "Recap Notifications": {},
+    "Recap card copied": {},
+    "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story.": {},
+    "Recently Added": {},
+    "Recently Played": {},
+    "Recipients choose their preferred platform": {},
+    "Rediscover": {},
+    "Redo": {},
+    "Refresh": {},
+    "Released %@": {},
+    "Reminders are generated on this device from your local play history.": {},
+    "Remove": {},
+    "Remove %lld Tracks": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Track"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Tracks"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %1$#@arg1@"
+          }
+        }
+      }
+    },
+    "Remove %lld duplicate files, keeping the highest-quality copy and reclaiming %@.": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg duplicate file"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg duplicate files"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %1$#@arg1@, keeping the highest-quality copy and reclaiming %2$@."
+          }
+        }
+      }
+    },
+    "Remove All": {},
+    "Remove All from Watch": {},
+    "Remove from Library…": {},
+    "Remove from Playlist": {},
+    "Remove from Queue": {},
+    "Remove from Watch": {},
+    "Removed %lld of %lld — see log": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Removed %1$lld of %2$lld — see log"
+          }
+        }
+      }
+    },
+    "Rename": {},
+    "Rename Playlist": {},
+    "Rename…": {},
+    "Repeat": {},
+    "Rescan": {},
+    "Rescan Library": {},
+    "Rescanning Library": {},
+    "Rescanning…": {},
+    "Restore Purchases": {},
+    "Retry Now": {},
+    "Retry Pending Scrobbles": {},
+    "Retry pending scrobbles": {},
+    "Returns to the artwork": {},
+    "Reveal": {},
+    "SLIDES": {},
+    "Sample album added — Open Goldberg Variations (CC0)": {},
+    "Sample download failed — check your connection": {},
+    "Save PNG…": {},
+    "Save as Playlist": {},
+    "Saved “%@”": {},
+    "Scrobbles": {},
+    "Scrobbles every play, keeps an offline queue, and powers the Recap, Wantlist, and loved tracks.": {},
+    "Search library": {},
+    "Section index": {},
+    "Select All": {},
+    "Send Test Notification": {},
+    "Sending": {},
+    "Sending, %@": {},
+    "Services": {},
+    "Settings": {},
+    "Settings…": {},
+    "Seven days of listening, wrapped up and ready.": {},
+    "Share": {},
+    "Share Artwork": {},
+    "Share Recap": {},
+    "Share Songlink…": {},
+    "Share Track": {},
+    "Share Wantlist": {},
+    "Share album": {},
+    "Share recap": {},
+    "Share universal link": {},
+    "Share via Songlink…": {},
+    "Share…": {},
+    "Show All": {},
+    "Show Flaccy in the menu bar": {},
+    "Show Library in Finder": {},
+    "Show Logs in Finder": {},
+    "Show in Finder": {},
+    "Shown": {},
+    "Shows account options": {},
+    "Shows lyrics in place of the artwork": {},
+    "Shows the album": {},
+    "Shows the artist's albums": {},
+    "Shows the one-time purchase that unlocks flaccy forever": {},
+    "Shows the queue in place of the artwork": {},
+    "Shows your yearly listening recap with shareable story cards": {},
+    "Shuffle": {},
+    "Shuffle All": {},
+    "Shuffle playlist": {},
+    "Sign in from Settings to backfill your history.": {},
+    "Signs in to Last.fm to scrobble your listens": {},
+    "Similar Artists in Your Library": {},
+    "Skip back 15 seconds": {},
+    "Skip forward 15 seconds": {},
+    "Sleep": {},
+    "Sleep Timer": {},
+    "Sleep Timer (%d:%02d)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Sleep Timer (%1$d:%2$02d)"
+          }
+        }
+      }
+    },
+    "Sleep Timer (end of track)": {},
+    "Sleep timer": {},
+    "Sleep timer, %lld minutes %lld seconds remaining": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Sleep timer, %1$lld minutes %2$lld seconds remaining"
+          }
+        }
+      }
+    },
+    "Sleep timer, at end of track": {},
+    "Slide copied": {},
+    "Smaller covers": {},
+    "Song": {},
+    "Songlink copied": {},
+    "Songs": {},
+    "Songs to Get": {},
+    "Sort": {},
+    "Sort By": {},
+    "Sort albums": {},
+    "Sort artists": {},
+    "Standalone Apple Watch app": {},
+    "Start Station": {},
+    "Station started": {},
+    "Station started from %@": {},
+    "Station started from “%@”": {},
+    "Stop Preview": {},
+    "Storage Full": {},
+    "Storage Used": {},
+    "Storage full": {},
+    "Storage: %@": {},
+    "Storage: …": {},
+    "Stories": {},
+    "Storing AAC 256 instead of FLAC loses nothing audible over AirPods and saves roughly 60% storage.": {},
+    "Story 9:16": {},
+    "Story size · 9:16": {},
+    "Sunset": {},
+    "Swipe left or right with two fingers to change track": {},
+    "Sync Anyway": {},
+    "Sync Music to Watch": {},
+    "Sync tracks and play from your wrist, no phone needed.": {},
+    "Synced": {},
+    "Synced lyrics": {},
+    "Syncing %lld of %lld  ·  %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Syncing %1$lld of %2$lld  ·  %3$@"
+          }
+        }
+      }
+    },
+    "Syncing %lld tracks…": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg track…"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg tracks…"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Syncing %1$#@arg1@"
+          }
+        }
+      }
+    },
+    "Syncing…": {},
+    "System": {},
+    "System follows your device's light and dark setting.": {},
+    "THE NUMBERS": {},
+    "THEME": {},
+    "TOP ARTIST": {},
+    "TOP ARTISTS": {},
+    "TOP TRACK": {},
+    "TOP TRACKS": {},
+    "TRACKS PLAYED": {},
+    "Tap to cancel": {},
+    "Tap to retry  ·  %@": {},
+    "Terms of Use": {},
+    "Test notification on its way": {},
+    "Thanks for supporting flaccy": {},
+    "The Numbers": {},
+    "The audio file will be moved to the Trash and removed from your library.": {},
+    "The audio file will be removed from this device.": {},
+    "The audio files will be moved to the Trash and removed from your library.": {},
+    "The best of %@": {},
+    "The menu bar player shows the current track with transport and love controls.": {},
+    "The playlist is removed; your music files are not touched.": {},
+    "The playlists are removed; your music files are not touched.": {},
+    "The purchase couldn't be completed. Check your connection and try again.": {},
+    "The songs you keep coming back to": {},
+    "Theme %@": {},
+    "Theme %@, selected": {},
+    "This Card": {},
+    "This can take a moment. You can keep browsing.": {},
+    "This re-analyzes every track's metadata with AI and rewrites titles, artists, and album grouping in the database. It may take a few minutes for large libraries.": {},
+    "This will re-analyze all tracks with AI. May take a few minutes for large libraries.": {},
+    "Tidy Up": {},
+    "Time": {},
+    "Time-synced lyrics that follow along as you listen.": {},
+    "Tip: keep both devices nearby and charging, and on the same Wi‑Fi, to transfer faster. Hi‑res albums are large and take several minutes; compressed (AAC) files sync in seconds — same quality through AirPods.": {},
+    "Title": {},
+    "Toggle Lyrics": {},
+    "Toggle Queue": {},
+    "Toggle Shuffle": {},
+    "Toggle Sidebar": {},
+    "Toggle lyrics": {},
+    "Toggle queue": {},
+    "Top Albums": {},
+    "Top Artists": {},
+    "Top Tracks": {},
+    "Track Count": {},
+    "Track a wanted album, song, or artist.": {},
+    "Tracks": {},
+    "Trial ended": {},
+    "Trial ended — playback is locked": {},
+    "Trial · %lld days left": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg day left"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg days left"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trial · %1$#@arg1@"
+          }
+        }
+      }
+    },
+    "Trial — %lld days left": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg day left"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg days left"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trial — %1$#@arg1@"
+          }
+        }
+      }
+    },
+    "Undo": {},
+    "Universal": {},
+    "Universal Link": {},
+    "Unlock Flaccy Lifetime": {},
+    "Unlock Lifetime": {},
+    "Unlock Lifetime…": {},
+    "Unlove": {},
+    "Up Next": {},
+    "Up Next · %lld": {},
+    "Up to Date": {},
+    "Upgrade to Lossless": {},
+    "Upgrades": {},
+    "Use Default": {},
+    "Use This Folder": {},
+    "Version %@ (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Version %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "View": {},
+    "View Album": {},
+    "View Artist": {},
+    "View Lyrics": {},
+    "View Profile": {},
+    "View on Last.fm": {},
+    "Volume": {},
+    "Waiting": {},
+    "Waiting to send  ·  %@": {},
+    "Wantlist": {},
+    "Watch sync isn’t available on this device.": {},
+    "Weekly": {},
+    "Welcome to Flaccy": {},
+    "What happens to your files": {},
+    "When FLAC is worth it": {},
+    "When your queue runs out, Flaccy builds a station of similar music from your library instead of stopping.": {},
+    "Why lossless can't reach AirPods": {},
+    "Window": {},
+    "YEAR": {},
+    "YEAR IN MUSIC": {},
+    "Year": {},
+    "Year in Music": {},
+    "You": {},
+    "You do your best listening after dark.": {},
+    "You own %lld of %lld tracks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "You own %1$lld of %2$lld tracks"
+          }
+        }
+      }
+    },
+    "You've played this album %lld times": {
+      "localizations": {
+        "en": {
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg time"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg times"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stringUnit": {
+            "state": "translated",
+            "value": "You've played this album %1$#@arg1@"
+          }
+        }
+      }
+    },
+    "Your %lld Year in Music is here ✨": {},
+    "Your Library Is Already Tidy": {},
+    "Your Monthly Recap 🎧": {},
+    "Your Persona": {},
+    "Your Recap": {},
+    "Your Streak": {},
+    "Your Weekly Recap 🎧": {},
+    "Your Year in Music": {},
+    "Your Year in Music special edition always arrives on December 1. The test notification lands in a few seconds — lock the screen or swipe to Home to see the full card.": {},
+    "Your free trial has ended": {},
+    "Your library is empty": {},
+    "Your listening stats": {},
+    "Your listens are scrobbled to Last.fm and your loved tracks stay in sync.": {},
+    "Your listens will no longer be scrobbled. Your library, play history, and loved tracks stay on this device.": {},
+    "Your lossless library": {},
+    "Your most-played this month": {},
+    "Your music folder couldn't be reached — reconnect the drive to pick up where you left off, or choose a new folder. Your library, playlists and stats stay intact until it's back.": {},
+    "Your persona: %@. %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Your persona: %1$@. %2$@"
+          }
+        }
+      }
+    },
+    "Your purchase is awaiting approval. Playback unlocks automatically once it completes.": {},
+    "Your stats now include your full listening history.": {},
+    "Your story is just getting started.": {},
+    "Your trial ended · %@ once, forever": {},
+    "Your trial has ended": {},
+    "Zoom": {},
+    "about %lld min left": {},
+    "about %lldh %lldm left": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "about %1$lldh %2$lldm left"
+          }
+        }
+      }
+    },
+    "estimating time…": {},
+    "flaccy · Recap": {},
+    "flaccy, your lossless library": {},
+    "iOS mixes all audio — your music plus system sounds — into one stream and re-encodes it to AAC for Bluetooth, so even a 256 kbps AAC file is decoded and encoded again on its way to your AirPods. This is how the audio pipeline works: engineering consensus, as Apple doesn't document passthrough. One extra generation of high-bitrate AAC is essentially inaudible — the loss is real on paper, tiny in practice.": {},
+    "less than a minute left": {},
+    "measuring…": {},
+    "scrobbling since %@": {},
+    "scrobbling since %lld": {},
+    "unknown": {},
+    "“%@” is no longer in your library.": {},
+    "“%@” needs %@, but your Apple Watch has %@ free. Remove some music first.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "“%1$@” needs %2$@, but your Apple Watch has %3$@ free. Remove some music first."
+          }
+        }
+      }
+    },
+    "…and %lld more album merges": {},
+    "…and %lld more duplicate sets": {}
+  },
+  "version": "1.0"
+}

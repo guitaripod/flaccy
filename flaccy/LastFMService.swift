@@ -13,23 +13,23 @@ nonisolated enum ChartPeriod: String, CaseIterable, Sendable {
 
     var displayName: String {
         switch self {
-        case .week: "7 Days"
-        case .month: "1 Month"
-        case .threeMonths: "3 Months"
-        case .sixMonths: "6 Months"
-        case .year: "1 Year"
-        case .allTime: "All Time"
+        case .week: String(localized: "7 Days")
+        case .month: String(localized: "1 Month")
+        case .threeMonths: String(localized: "3 Months")
+        case .sixMonths: String(localized: "6 Months")
+        case .year: String(localized: "1 Year")
+        case .allTime: String(localized: "All Time")
         }
     }
 
     var shortName: String {
         switch self {
-        case .week: "7D"
-        case .month: "1M"
-        case .threeMonths: "3M"
-        case .sixMonths: "6M"
-        case .year: "1Y"
-        case .allTime: "All"
+        case .week: String(localized: "7D")
+        case .month: String(localized: "1M")
+        case .threeMonths: String(localized: "3M")
+        case .sixMonths: String(localized: "6M")
+        case .year: String(localized: "1Y")
+        case .allTime: String(localized: "All")
         }
     }
 }
@@ -1189,12 +1189,12 @@ enum LastFMError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidCallbackURL: "Invalid Last.fm callback URL"
-        case .authenticationFailed: "Last.fm authentication failed"
-        case .invalidURL: "Invalid Last.fm API URL"
-        case .invalidResponse: "Invalid response from Last.fm"
-        case .apiKeyNotConfigured: "Last.fm API key not configured"
-        case .apiError(let message): "Last.fm API error: \(message)"
+        case .invalidCallbackURL: String(localized: "Invalid Last.fm callback URL")
+        case .authenticationFailed: String(localized: "Last.fm authentication failed")
+        case .invalidURL: String(localized: "Invalid Last.fm API URL")
+        case .invalidResponse: String(localized: "Invalid response from Last.fm")
+        case .apiKeyNotConfigured: String(localized: "Last.fm API key not configured")
+        case .apiError(let message): String(localized: "Last.fm API error: \(message)")
         }
     }
 }

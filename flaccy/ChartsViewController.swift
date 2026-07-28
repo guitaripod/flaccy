@@ -43,7 +43,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Recap"
+        title = String(localized: "Recap")
         view.backgroundColor = .black
         navigationItem.largeTitleDisplayMode = .never
 
@@ -111,7 +111,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
     }
 
     private func setupOverlays() {
-        emptyLabel.text = "No listening history yet.\nPlay something, or import your\nLast.fm history above."
+        emptyLabel.text = String(localized: "No listening history yet.\nPlay something, or import your\nLast.fm history above.")
         emptyLabel.font = .scaled(.body, size: 16, weight: .medium)
         emptyLabel.adjustsFontForContentSizeCategory = true
         emptyLabel.textColor = UIColor.white.withAlphaComponent(0.6)
@@ -143,13 +143,13 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             primaryAction: UIAction { [weak self] _ in self?.shareRecap() }
         )
         share.isEnabled = false
-        share.accessibilityLabel = "Share Recap"
+        share.accessibilityLabel = String(localized: "Share Recap")
 
         let yearInMusic = UIBarButtonItem(
             image: UIImage(systemName: "sparkles"),
             primaryAction: UIAction { [weak self] _ in self?.presentYearInMusic() }
         )
-        yearInMusic.accessibilityLabel = "Year in Music"
+        yearInMusic.accessibilityLabel = String(localized: "Year in Music")
 
         navigationItem.rightBarButtonItems = [share, yearInMusic]
     }
@@ -382,7 +382,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
 
         let displayPlays = data.totalPlays > 0 ? data.totalPlays : (data.userInfo?.playcount ?? 0)
         let profile = ProfileItem(
-            username: data.userInfo?.name ?? "You",
+            username: data.userInfo?.name ?? String(localized: "You"),
             sinceText: sinceText(for: data.userInfo),
             avatarURL: data.userInfo?.imageURL,
             totalPlays: displayPlays,
@@ -434,8 +434,8 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         emptyLabel.isHidden = data.hasContent
         if !data.hasContent {
             emptyLabel.text = importState == .unavailable
-                ? "Connect Last.fm in Settings, or play\nsomething to build your Recap."
-                : "No listening history yet.\nPlay something, or import your\nLast.fm history above."
+                ? String(localized: "Connect Last.fm in Settings, or play\nsomething to build your Recap.")
+                : String(localized: "No listening history yet.\nPlay something, or import your\nLast.fm history above.")
         }
     }
 
@@ -620,7 +620,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
     private func sinceText(for info: LastFMUserInfo?) -> String? {
         guard let info, info.registeredUts > 0 else { return nil }
         let year = Calendar.current.component(.year, from: Date(timeIntervalSince1970: TimeInterval(info.registeredUts)))
-        return "scrobbling since \(year)"
+        return String(localized: "scrobbling since \(year)")
     }
 }
 
@@ -669,11 +669,11 @@ extension ChartsViewController: UICollectionViewDelegate {
     private func wantlistAddMenu(kind: WantlistKind, title: String, artist: String, imageURL: String?) -> UIContextMenuConfiguration {
         UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             UIMenu(children: [
-                UIAction(title: "Add to Wantlist", image: UIImage(systemName: "sparkle.magnifyingglass")) { _ in
+                UIAction(title: String(localized: "Add to Wantlist"), image: UIImage(systemName: "sparkle.magnifyingglass")) { _ in
                     WantlistService.shared.addManual(kind: kind, title: title, artist: artist, imageURL: imageURL)
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                     if let view = self?.view {
-                        ToastView.show("Added to Wantlist", in: view, style: .success)
+                        ToastView.show(String(localized: "Added to Wantlist"), in: view, style: .success)
                     }
                 },
             ])

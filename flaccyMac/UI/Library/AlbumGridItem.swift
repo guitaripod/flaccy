@@ -46,7 +46,7 @@ final class AlbumGridItem: NSCollectionViewItem {
         badgeContainer.addSubview(badgeLabel)
         artworkTile.addSubview(badgeContainer)
 
-        lovedHeart.image = NSImage(systemSymbolName: "heart.fill", accessibilityDescription: "Loved")
+        lovedHeart.image = NSImage(systemSymbolName: "heart.fill", accessibilityDescription: String(localized: "Loved"))
         lovedHeart.symbolConfiguration = .init(pointSize: 11, weight: .bold)
         lovedHeart.contentTintColor = NSColor(red: 1, green: 0.28, blue: 0.42, alpha: 1)
         lovedHeart.wantsLayer = true

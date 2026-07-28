@@ -40,18 +40,18 @@ enum StoryCardRenderer {
             drawOverview(canvas, data: data, artwork: artwork, cursor: &cursor)
         case .artists:
             drawRanked(
-                canvas, caption: "MY TOP ARTISTS",
+                canvas, caption: String(localized: "MY TOP ARTISTS"),
                 entries: data.topArtists.map { ($0.name, nil, $0.playCount) },
                 rowArt: artwork.artistRows,
-                footnote: "\(RecapFormat.count(data.distinctArtists)) artists this year",
+                footnote: String(localized: "\(RecapFormat.count(data.distinctArtists)) artists this year"),
                 cursor: &cursor
             )
         case .tracks:
             drawRanked(
-                canvas, caption: "MY TOP TRACKS",
+                canvas, caption: String(localized: "MY TOP TRACKS"),
                 entries: data.topTracks.map { ($0.name, $0.artistName, $0.playCount) },
                 rowArt: artwork.trackRows,
-                footnote: "\(RecapFormat.count(data.distinctTracks)) tracks this year",
+                footnote: String(localized: "\(RecapFormat.count(data.distinctTracks)) tracks this year"),
                 cursor: &cursor
             )
         case .numbers:
@@ -66,7 +66,7 @@ enum StoryCardRenderer {
     }
 
     private static func drawOverview(_ canvas: Canvas, data: YearInMusicData, artwork: StoryArtwork, cursor: inout CGFloat) {
-        cursor = canvas.text("MY YEAR IN MUSIC", style: .caption, at: cursor) + 4
+        cursor = canvas.text(String(localized: "MY YEAR IN MUSIC"), style: .caption, at: cursor) + 4
         cursor = canvas.text(String(data.year), font: .systemFont(ofSize: 84, weight: .heavy), color: .white, at: cursor) + 18
 
         let collageSide: CGFloat = 148
@@ -74,14 +74,14 @@ enum StoryCardRenderer {
         var highlightY = cursor + 10
         let highlightX = margin + collageSide + 18
         if let topArtist = data.topArtists.first {
-            highlightY = canvas.text("TOP ARTIST", style: .caption, at: highlightY, x: highlightX) + 3
+            highlightY = canvas.text(String(localized: "TOP ARTIST"), style: .caption, at: highlightY, x: highlightX) + 3
             highlightY = canvas.text(
                 topArtist.name, font: .systemFont(ofSize: 21, weight: .heavy), color: .white,
                 at: highlightY, x: highlightX, maxWidth: canvas.size.width - highlightX - margin
             ) + 14
         }
         if let topTrack = data.topTracks.first {
-            highlightY = canvas.text("TOP TRACK", style: .caption, at: highlightY, x: highlightX) + 3
+            highlightY = canvas.text(String(localized: "TOP TRACK"), style: .caption, at: highlightY, x: highlightX) + 3
             highlightY = canvas.text(
                 topTrack.name, font: .systemFont(ofSize: 16, weight: .heavy), color: .white,
                 at: highlightY, x: highlightX, maxWidth: canvas.size.width - highlightX - margin
@@ -91,9 +91,9 @@ enum StoryCardRenderer {
         cursor += collageSide + 22
 
         cursor = canvas.statTable([
-            ("MINUTES LISTENED", RecapFormat.count(data.totalMinutes)),
-            ("TRACKS PLAYED", RecapFormat.count(data.totalPlays)),
-            ("ARTISTS", RecapFormat.count(data.distinctArtists)),
+            (String(localized: "MINUTES LISTENED"), RecapFormat.count(data.totalMinutes)),
+            (String(localized: "TRACKS PLAYED"), RecapFormat.count(data.totalPlays)),
+            (String(localized: "ARTISTS"), RecapFormat.count(data.distinctArtists)),
         ], at: cursor) + 20
         canvas.drawPersonaPill(data.persona, x: margin, topY: cursor)
     }
@@ -124,7 +124,7 @@ enum StoryCardRenderer {
             blockY = canvas.text(subtitle, style: .subtitle(14), at: blockY, x: blockX, maxWidth: blockWidth) + 2
         }
         blockY = canvas.text(
-            "\(RecapFormat.count(first.plays)) plays", font: .systemFont(ofSize: 13, weight: .semibold),
+            String(localized: "\(RecapFormat.count(first.plays)) plays"), font: .systemFont(ofSize: 13, weight: .semibold),
             color: canvas.theme.accent, at: blockY + 2, x: blockX
         )
         cursor += heroSide + 24
@@ -141,18 +141,18 @@ enum StoryCardRenderer {
     }
 
     private static func drawNumbers(_ canvas: Canvas, data: YearInMusicData, cursor: inout CGFloat) {
-        cursor = canvas.text("THE NUMBERS", style: .caption, at: cursor) + 14
+        cursor = canvas.text(String(localized: "THE NUMBERS"), style: .caption, at: cursor) + 14
         cursor = canvas.text(
             RecapFormat.count(data.totalMinutes), font: .systemFont(ofSize: 62, weight: .heavy),
             color: canvas.theme.accent, at: cursor
         ) + 2
-        cursor = canvas.text("MINUTES LISTENED", style: .caption, at: cursor) + 22
+        cursor = canvas.text(String(localized: "MINUTES LISTENED"), style: .caption, at: cursor) + 22
 
         cursor = canvas.statTable([
-            ("TRACKS PLAYED", RecapFormat.count(data.totalPlays)),
-            ("ARTISTS", RecapFormat.count(data.distinctArtists)),
-            ("ALBUMS", RecapFormat.count(data.distinctAlbums)),
-            ("DIFFERENT TRACKS", RecapFormat.count(data.distinctTracks)),
+            (String(localized: "TRACKS PLAYED"), RecapFormat.count(data.totalPlays)),
+            (String(localized: "ARTISTS"), RecapFormat.count(data.distinctArtists)),
+            (String(localized: "ALBUMS"), RecapFormat.count(data.distinctAlbums)),
+            (String(localized: "DIFFERENT TRACKS"), RecapFormat.count(data.distinctTracks)),
         ], at: cursor) + 22
 
         if let peakDay = data.peakDay {
@@ -160,15 +160,15 @@ enum StoryCardRenderer {
             formatter.dateFormat = "MMMM d"
             cursor = canvas.factRow(
                 symbol: "calendar",
-                text: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays",
+                text: String(localized: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays"),
                 topY: cursor
             ) + 10
         }
         if let peakHour = data.peakHour {
-            cursor = canvas.factRow(symbol: "clock.fill", text: "Power hour: \(hourLabel(peakHour))", topY: cursor) + 10
+            cursor = canvas.factRow(symbol: "clock.fill", text: String(localized: "Power hour: \(hourLabel(peakHour))"), topY: cursor) + 10
         }
         if data.longestStreak > 1 {
-            cursor = canvas.factRow(symbol: "flame.fill", text: "Longest streak: \(data.longestStreak) days", topY: cursor) + 10
+            cursor = canvas.factRow(symbol: "flame.fill", text: String(localized: "Longest streak: \(data.longestStreak) days"), topY: cursor) + 10
         }
         cursor += 10
         canvas.drawPersonaPill(data.persona, x: margin, topY: cursor)
@@ -178,7 +178,7 @@ enum StoryCardRenderer {
         _ canvas: Canvas, data: YearInMusicData, artwork: StoryArtwork, compact: Bool, cursor: inout CGFloat
     ) {
         if !compact {
-            cursor = canvas.text("MY YEAR IN MUSIC", style: .caption, at: cursor) + 2
+            cursor = canvas.text(String(localized: "MY YEAR IN MUSIC"), style: .caption, at: cursor) + 2
         }
         cursor = canvas.text(
             String(data.year), font: .systemFont(ofSize: compact ? 38 : 46, weight: .heavy),
@@ -193,9 +193,9 @@ enum StoryCardRenderer {
             RecapFormat.count(data.totalMinutes), font: .systemFont(ofSize: 30, weight: .heavy),
             color: canvas.theme.accent, at: statY, x: statX
         ) + 2
-        statY = canvas.text("MINUTES LISTENED", style: .caption, at: statY, x: statX) + 8
+        statY = canvas.text(String(localized: "MINUTES LISTENED"), style: .caption, at: statY, x: statX) + 8
         canvas.text(
-            "\(RecapFormat.count(data.totalPlays)) plays · \(RecapFormat.count(data.distinctArtists)) artists",
+            String(localized: "\(RecapFormat.count(data.totalPlays)) plays · \(RecapFormat.count(data.distinctArtists)) artists"),
             style: .subtitle(13), at: statY, x: statX
         )
         cursor += side + (compact ? 12 : 16)
@@ -206,11 +206,11 @@ enum StoryCardRenderer {
         let columnWidth = (canvas.size.width - margin * 2 - 18) / 2
         let listTop = cursor
         let leftBottom = canvas.miniList(
-            caption: "TOP ARTISTS", entries: data.topArtists.map { ($0.name, $0.playCount) },
+            caption: String(localized: "TOP ARTISTS"), entries: data.topArtists.map { ($0.name, $0.playCount) },
             x: margin, topY: listTop, width: columnWidth, compact: compact
         )
         let rightBottom = canvas.miniList(
-            caption: "TOP TRACKS", entries: data.topTracks.map { ($0.name, $0.playCount) },
+            caption: String(localized: "TOP TRACKS"), entries: data.topTracks.map { ($0.name, $0.playCount) },
             x: margin + columnWidth + 18, topY: listTop, width: columnWidth, compact: compact
         )
         cursor = max(leftBottom, rightBottom) + (compact ? 10 : 14)
@@ -224,12 +224,12 @@ enum StoryCardRenderer {
                 formatter.dateFormat = "MMMM d"
                 cursor = canvas.factRow(
                     symbol: "calendar",
-                    text: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays",
+                    text: String(localized: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays"),
                     topY: cursor
                 ) + 7
             }
             if data.longestStreak > 1 {
-                cursor = canvas.factRow(symbol: "flame.fill", text: "Longest streak: \(data.longestStreak) days", topY: cursor) + 7
+                cursor = canvas.factRow(symbol: "flame.fill", text: String(localized: "Longest streak: \(data.longestStreak) days"), topY: cursor) + 7
             }
             cursor += 7
         }
@@ -314,7 +314,7 @@ enum StoryCardRenderer {
 
             let footerRuleY = size.height - 24 - 16 - 12
             hairline(at: footerRuleY)
-            chromeText("YEAR IN MUSIC", x: StoryCardRenderer.margin, topY: footerRuleY + 12)
+            chromeText(String(localized: "YEAR IN MUSIC"), x: StoryCardRenderer.margin, topY: footerRuleY + 12)
             drawSymbol(
                 "sparkles", pointSize: 10, weight: .bold, tint: theme.accent,
                 rect: CGRect(x: size.width - StoryCardRenderer.margin - 12, y: footerRuleY + 12, width: 12, height: 12)

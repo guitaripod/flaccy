@@ -42,34 +42,34 @@ enum LibraryCleanup {
     private static func presentPreview(_ plan: HygienePlan, in window: NSWindow?) {
         let alert = NSAlert()
         guard !plan.isEmpty else {
-            alert.messageText = "Your Library Is Already Tidy"
-            alert.informativeText = "No duplicate tracks or album editions to merge were found."
+            alert.messageText = String(localized: "Your Library Is Already Tidy")
+            alert.informativeText = String(localized: "No duplicate tracks or album editions to merge were found.")
             alert.icon = NSImage(systemSymbolName: "checkmark.seal", accessibilityDescription: nil)
-            alert.addButton(withTitle: "OK")
+            alert.addButton(withTitle: String(localized: "OK"))
             present(alert, in: window, onConfirm: nil)
             return
         }
 
-        alert.messageText = "Clean Up Library"
+        alert.messageText = String(localized: "Clean Up Library")
         alert.icon = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         var summary: [String] = []
         if plan.duplicateFileCount > 0 {
             let size = ByteCountFormatter.string(fromByteCount: plan.reclaimedBytes, countStyle: .file)
-            summary.append("Remove \(plan.duplicateFileCount) duplicate \(plan.duplicateFileCount == 1 ? "file" : "files"), keeping the highest-quality copy and reclaiming \(size).")
+            summary.append(String(localized: "Remove \(plan.duplicateFileCount) duplicate files, keeping the highest-quality copy and reclaiming \(size)."))
         }
         if plan.albumMergeCount > 0 {
-            summary.append("Merge \(plan.albumMergeCount) album \(plan.albumMergeCount == 1 ? "edition" : "editions") into their main album.")
+            summary.append(String(localized: "Merge \(plan.albumMergeCount) album editions into their main album."))
         }
-        alert.informativeText = summary.joined(separator: "\n") + "\n\nDuplicate files are moved to the Trash, so nothing is permanently deleted."
+        alert.informativeText = summary.joined(separator: "\n") + String(localized: "\n\nDuplicate files are moved to the Trash, so nothing is permanently deleted.")
         alert.accessoryView = detailView(plan)
-        alert.addButton(withTitle: "Clean Up")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Clean Up"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
 
         present(alert, in: window) {
             Task {
                 await LibraryHygieneService.apply(plan)
                 MacToast.show(
-                    "Cleaned up \(plan.duplicateFileCount) duplicates and \(plan.albumMergeCount) editions.",
+                    String(localized: "Cleaned up \(plan.duplicateFileCount) duplicates and \(plan.albumMergeCount) editions."),
                     style: .success,
                     in: window
                 )
@@ -89,10 +89,10 @@ enum LibraryCleanup {
         let mergeLimit = 20
         for group in plan.consolidationGroups.prefix(mergeLimit) {
             let variants = group.variants.map(\.title).joined(separator: ", ")
-            lines.append("Merge → \(group.canonicalTitle)\n    from: \(variants)")
+            lines.append(String(localized: "Merge → \(group.canonicalTitle)\n    from: \(variants)"))
         }
         if plan.consolidationGroups.count > mergeLimit {
-            lines.append("…and \(plan.consolidationGroups.count - mergeLimit) more album merges")
+            lines.append(String(localized: "…and \(plan.consolidationGroups.count - mergeLimit) more album merges"))
         }
         let dupLimit = 20
         let dupGroups = plan.duplicateGroups.prefix(dupLimit)
@@ -100,7 +100,7 @@ enum LibraryCleanup {
             lines.append("Keep → \(group.keeper.title) — \(group.keeper.albumTitle) (\(qualityLabel(group.keeper)))")
         }
         if plan.duplicateGroups.count > dupLimit {
-            lines.append("…and \(plan.duplicateGroups.count - dupLimit) more duplicate sets")
+            lines.append(String(localized: "…and \(plan.duplicateGroups.count - dupLimit) more duplicate sets"))
         }
         text.string = lines.joined(separator: "\n")
 

@@ -75,7 +75,7 @@ final class TransportBarViewController: NSViewController {
 
         configureVolume()
         let volumeIcon = NSImageView(image: NSImage(
-            systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Volume"
+            systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: String(localized: "Volume")
         ) ?? NSImage())
         volumeIcon.symbolConfiguration = .init(pointSize: 11, weight: .medium)
         volumeIcon.contentTintColor = .secondaryLabelColor
@@ -132,45 +132,45 @@ final class TransportBarViewController: NSViewController {
 
     private func buildControls() {
         shuffleButton = TransportButton(
-            symbolName: "shuffle", pointSize: 13, accessibilityLabel: "Shuffle",
+            symbolName: "shuffle", pointSize: 13, accessibilityLabel: String(localized: "Shuffle"),
             target: self, action: #selector(toggleShuffle)
         )
         previousButton = TransportButton(
-            symbolName: "backward.fill", pointSize: 15, accessibilityLabel: "Previous",
+            symbolName: "backward.fill", pointSize: 15, accessibilityLabel: String(localized: "Previous"),
             target: self, action: #selector(previousTrack)
         )
         playPauseButton = TransportButton(
-            symbolName: "play.fill", pointSize: 22, accessibilityLabel: "Play or pause",
+            symbolName: "play.fill", pointSize: 22, accessibilityLabel: String(localized: "Play or pause"),
             target: self, action: #selector(togglePlayPause)
         )
         playPauseButton.isProminent = true
         nextButton = TransportButton(
-            symbolName: "forward.fill", pointSize: 15, accessibilityLabel: "Next",
+            symbolName: "forward.fill", pointSize: 15, accessibilityLabel: String(localized: "Next"),
             target: self, action: #selector(nextTrack)
         )
         repeatButton = TransportButton(
-            symbolName: "repeat", pointSize: 13, accessibilityLabel: "Repeat",
+            symbolName: "repeat", pointSize: 13, accessibilityLabel: String(localized: "Repeat"),
             target: self, action: #selector(cycleRepeat)
         )
         loveButton = TransportButton(
-            symbolName: "heart", pointSize: 13, accessibilityLabel: "Love on Last.fm",
+            symbolName: "heart", pointSize: 13, accessibilityLabel: String(localized: "Love on Last.fm"),
             target: self, action: #selector(toggleLove)
         )
         queueButton = TransportButton(
-            symbolName: "list.bullet", pointSize: 13, accessibilityLabel: "Toggle queue",
+            symbolName: "list.bullet", pointSize: 13, accessibilityLabel: String(localized: "Toggle queue"),
             target: self, action: #selector(toggleQueue)
         )
         lyricsButton = TransportButton(
-            symbolName: "quote.bubble", pointSize: 13, accessibilityLabel: "Toggle lyrics",
+            symbolName: "quote.bubble", pointSize: 13, accessibilityLabel: String(localized: "Toggle lyrics"),
             target: self, action: #selector(toggleLyrics)
         )
         nowPlayingButton = TransportButton(
             symbolName: "arrow.up.left.and.arrow.down.right", pointSize: 12,
-            accessibilityLabel: "Now Playing",
+            accessibilityLabel: String(localized: "Now Playing"),
             target: self, action: #selector(toggleNowPlaying)
         )
         sleepTimerButton = TransportButton(
-            symbolName: "moon.zzz", pointSize: 13, accessibilityLabel: "Sleep timer",
+            symbolName: "moon.zzz", pointSize: 13, accessibilityLabel: String(localized: "Sleep timer"),
             target: self, action: #selector(showSleepTimerMenu)
         )
     }
@@ -249,7 +249,7 @@ final class TransportBarViewController: NSViewController {
         volumeSlider.doubleValue = Double(player.volume)
         volumeSlider.target = self
         volumeSlider.action = #selector(volumeChanged)
-        volumeSlider.toolTip = "Volume"
+        volumeSlider.toolTip = String(localized: "Volume")
         volumeSlider.translatesAutoresizingMaskIntoConstraints = false
         routePicker.translatesAutoresizingMaskIntoConstraints = false
     }
@@ -308,8 +308,8 @@ final class TransportBarViewController: NSViewController {
         scrubber.abortScrub()
 
         guard let track = player.currentTrack else {
-            titleLabel.text = "Nothing Playing"
-            artistLabel.stringValue = "Pick an album to start listening"
+            titleLabel.text = String(localized: "Nothing Playing")
+            artistLabel.stringValue = String(localized: "Pick an album to start listening")
             badgeContainer.isHidden = true
             loveButton.isEnabled = false
             applyArtworkPlaceholder(seed: "flaccy")

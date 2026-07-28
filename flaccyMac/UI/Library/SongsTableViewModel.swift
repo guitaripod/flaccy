@@ -23,17 +23,17 @@ final class SongsTableViewModel {
 
         var headerTitle: String {
             switch self {
-            case .title: "Title"
-            case .artist: "Artist"
-            case .album: "Album"
+            case .title: String(localized: "Title")
+            case .artist: String(localized: "Artist")
+            case .album: String(localized: "Album")
             case .trackNumber: "#"
-            case .duration: "Time"
-            case .codec: "Codec"
-            case .quality: "Quality"
-            case .plays: "Plays"
-            case .lastPlayed: "Last Played"
-            case .loved: "Loved"
-            case .dateAdded: "Date Added"
+            case .duration: String(localized: "Time")
+            case .codec: String(localized: "Codec")
+            case .quality: String(localized: "Quality")
+            case .plays: String(localized: "Plays")
+            case .lastPlayed: String(localized: "Last Played")
+            case .loved: String(localized: "Loved")
+            case .dateAdded: String(localized: "Date Added")
             }
         }
 

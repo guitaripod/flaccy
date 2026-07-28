@@ -92,7 +92,7 @@ final class FilterChipsView: UIView {
             self.setSelected(filter)
             self.onSelect?(filter)
         }, for: .touchUpInside)
-        button.accessibilityLabel = "\(filter.displayName) filter"
+        button.accessibilityLabel = String(localized: "\(filter.displayName) filter")
 
         let capsule = GlassCapsule(hosting: button, height: 34)
         return capsule

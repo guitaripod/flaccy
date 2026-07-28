@@ -15,9 +15,9 @@ enum RecapFormat {
     }
 
     static func compact(_ value: Int) -> String {
-        if value >= 1_000_000 { return String(format: "%.1fM", Double(value) / 1_000_000) }
-        if value >= 10_000 { return String(format: "%.0fK", Double(value) / 1_000) }
-        if value >= 1_000 { return String(format: "%.1fK", Double(value) / 1_000) }
+        if value >= 1_000_000 { return String(format: String(localized: "%.1fM"), Double(value) / 1_000_000) }
+        if value >= 10_000 { return String(format: String(localized: "%.0fK"), Double(value) / 1_000) }
+        if value >= 1_000 { return String(format: String(localized: "%.1fK"), Double(value) / 1_000) }
         return "\(value)"
     }
 }

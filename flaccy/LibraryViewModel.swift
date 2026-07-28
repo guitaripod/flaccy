@@ -62,11 +62,11 @@ final class LibraryViewModel {
 
         var displayName: String {
             switch self {
-            case .title: "Title"
-            case .artist: "Artist"
-            case .year: "Year"
-            case .recentlyAdded: "Recently Added"
-            case .recentlyPlayed: "Recently Played"
+            case .title: String(localized: "Title")
+            case .artist: String(localized: "Artist")
+            case .year: String(localized: "Year")
+            case .recentlyAdded: String(localized: "Recently Added")
+            case .recentlyPlayed: String(localized: "Recently Played")
             }
         }
 
@@ -86,11 +86,11 @@ final class LibraryViewModel {
 
         var displayName: String {
             switch self {
-            case .title: "Title"
-            case .artist: "Artist"
-            case .mostScrobbled: "Most Played"
-            case .recentlyPlayed: "Recently Played"
-            case .dateAdded: "Date Added"
+            case .title: String(localized: "Title")
+            case .artist: String(localized: "Artist")
+            case .mostScrobbled: String(localized: "Most Played")
+            case .recentlyPlayed: String(localized: "Recently Played")
+            case .dateAdded: String(localized: "Date Added")
             }
         }
 
@@ -110,10 +110,10 @@ final class LibraryViewModel {
 
         var displayName: String {
             switch self {
-            case .name: "Name"
-            case .albumCount: "Album Count"
-            case .mostPlayed: "Most Played"
-            case .recentlyPlayed: "Recently Played"
+            case .name: String(localized: "Name")
+            case .albumCount: String(localized: "Album Count")
+            case .mostPlayed: String(localized: "Most Played")
+            case .recentlyPlayed: String(localized: "Recently Played")
             }
         }
 

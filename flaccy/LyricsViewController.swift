@@ -158,7 +158,7 @@ final class LyricsViewController: UIViewController {
             spinner.stopAnimating()
 
             guard let result else {
-                showStatus("No lyrics available")
+                showStatus(String(localized: "No lyrics available"))
                 return
             }
 
@@ -172,7 +172,7 @@ final class LyricsViewController: UIViewController {
             } else if let plain = result.plainText, !plain.isEmpty {
                 showPlainLyrics(plain)
             } else {
-                showStatus("No lyrics available")
+                showStatus(String(localized: "No lyrics available"))
             }
         }
     }
@@ -191,7 +191,7 @@ final class LyricsViewController: UIViewController {
 
         let attributed = NSMutableAttributedString(attachment: attachment)
         attributed.append(NSAttributedString(
-            string: "\nInstrumental",
+            string: String(localized: "\nInstrumental"),
             attributes: [
                 .font: UIFont.scaled(.title3, size: 20, weight: .medium),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.5),
@@ -391,8 +391,8 @@ private final class LyricCell: UITableViewCell {
         lyricLabel.text = text
         isAccessibilityElement = true
         accessibilityLabel = text
-        accessibilityValue = isCurrent ? "Current line" : nil
-        accessibilityHint = "Plays from this line"
+        accessibilityValue = isCurrent ? String(localized: "Current line") : nil
+        accessibilityHint = String(localized: "Plays from this line")
         accessibilityTraits = .button
         setCurrent(isCurrent, animated: false)
     }
@@ -400,7 +400,7 @@ private final class LyricCell: UITableViewCell {
     func setCurrent(_ isCurrent: Bool, animated: Bool) {
         guard isCurrent != isCurrentLine || !animated else { return }
         isCurrentLine = isCurrent
-        accessibilityValue = isCurrent ? "Current line" : nil
+        accessibilityValue = isCurrent ? String(localized: "Current line") : nil
         let apply = { [self] in
             lyricLabel.alpha = isCurrent ? 1 : Self.dimmedAlpha
             lyricLabel.transform = isCurrent ? .identity : Self.dimmedTransform(width: lyricLabel.bounds.width)

@@ -344,8 +344,8 @@ final class ListeningGuideViewController: UIViewController {
         let button = UIButton(configuration: config)
         button.contentHorizontalAlignment = .leading
         button.heightAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
-        button.accessibilityLabel = "Apple Support article, \(label)"
-        button.accessibilityHint = "Opens in your browser"
+        button.accessibilityLabel = String(localized: "Apple Support article, \(label)")
+        button.accessibilityHint = String(localized: "Opens in your browser")
         button.addAction(UIAction { [weak self] _ in
             self?.impactLight.impactOccurred()
             AppLogger.info("Listening guide source opened: \(url.absoluteString)", category: .ui)

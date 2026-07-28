@@ -20,28 +20,28 @@ final class PaywallViewController: UIViewController {
     private static let features: [Feature] = [
         Feature(
             symbolName: "infinity",
-            title: "Gapless lossless playback",
-            detail: "FLAC albums flow track to track with zero silence."
+            title: String(localized: "Gapless lossless playback"),
+            detail: String(localized: "FLAC albums flow track to track with zero silence.")
         ),
         Feature(
             symbolName: "dot.radiowaves.left.and.right",
-            title: "Last.fm scrobbling",
-            detail: "Every listen counted, with an offline queue that never drops a play."
+            title: String(localized: "Last.fm scrobbling"),
+            detail: String(localized: "Every listen counted, with an offline queue that never drops a play.")
         ),
         Feature(
             symbolName: "text.quote",
-            title: "Synced lyrics",
-            detail: "Time-synced lyrics that follow along as you listen."
+            title: String(localized: "Synced lyrics"),
+            detail: String(localized: "Time-synced lyrics that follow along as you listen.")
         ),
         Feature(
             symbolName: "sparkles",
-            title: "Year in Music",
-            detail: "A shareable recap built from your local play history."
+            title: String(localized: "Year in Music"),
+            detail: String(localized: "A shareable recap built from your local play history.")
         ),
         Feature(
             symbolName: "applewatch",
-            title: "Standalone Apple Watch app",
-            detail: "Sync tracks and play from your wrist, no phone needed."
+            title: String(localized: "Standalone Apple Watch app"),
+            detail: String(localized: "Sync tracks and play from your wrist, no phone needed.")
         ),
     ]
 
@@ -166,8 +166,8 @@ final class PaywallViewController: UIViewController {
 
     private func makeLegalLinksRow() -> UIView {
         let row = UIStackView(arrangedSubviews: [
-            makeLegalLinkButton(title: "Privacy Policy", url: LegalLinks.privacyURL),
-            makeLegalLinkButton(title: "Terms of Use", url: LegalLinks.termsURL),
+            makeLegalLinkButton(title: String(localized: "Privacy Policy"), url: LegalLinks.privacyURL),
+            makeLegalLinkButton(title: String(localized: "Terms of Use"), url: LegalLinks.termsURL),
         ])
         row.axis = .horizontal
         row.spacing = 12
@@ -225,7 +225,7 @@ final class PaywallViewController: UIViewController {
 
         let captionLabel = UILabel()
         captionLabel.attributedText = NSAttributedString(
-            string: "FLACCY LIFETIME",
+            string: String(localized: "FLACCY LIFETIME"),
             attributes: [
                 .font: UIFont.scaled(.caption1, size: 12, weight: .bold),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.65),
@@ -235,7 +235,7 @@ final class PaywallViewController: UIViewController {
         captionLabel.adjustsFontForContentSizeCategory = true
 
         let titleLabel = UILabel()
-        titleLabel.text = "Own your music.\nForever."
+        titleLabel.text = String(localized: "Own your music.\nForever.")
         titleLabel.font = .scaled(.largeTitle, size: 34, weight: .heavy)
         titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.textColor = .white
@@ -339,12 +339,12 @@ final class PaywallViewController: UIViewController {
         config.baseForegroundColor = .black
         config.cornerStyle = .capsule
         config.attributedTitle = AttributedString(
-            "Unlock Lifetime",
+            String(localized: "Unlock Lifetime"),
             attributes: AttributeContainer([.font: UIFont.scaled(.headline, size: 17, weight: .bold)])
         )
         purchaseButton.configuration = config
         purchaseButton.heightAnchor.constraint(equalToConstant: 54).isActive = true
-        purchaseButton.accessibilityHint = "Buys lifetime access with a one-time purchase"
+        purchaseButton.accessibilityHint = String(localized: "Buys lifetime access with a one-time purchase")
         purchaseButton.addAction(UIAction { [weak self] _ in
             self?.handlePurchaseTap()
         }, for: .touchUpInside)
@@ -353,7 +353,7 @@ final class PaywallViewController: UIViewController {
     private func configureRestoreButton() {
         var config = UIButton.Configuration.plain()
         config.attributedTitle = AttributedString(
-            "Restore Purchases",
+            String(localized: "Restore Purchases"),
             attributes: AttributeContainer([.font: UIFont.scaled(.subheadline, size: 15, weight: .medium)])
         )
         config.baseForegroundColor = UIColor.white.withAlphaComponent(0.7)
@@ -374,22 +374,20 @@ final class PaywallViewController: UIViewController {
 
     private func updatePriceLine() {
         if let product = PurchaseManager.shared.product {
-            priceLabel.text = "\(product.displayPrice) · once, forever"
+            priceLabel.text = String(localized: "\(product.displayPrice) · once, forever")
         } else {
-            priceLabel.text = "Once, forever"
+            priceLabel.text = String(localized: "Once, forever")
         }
     }
 
     private func updateStatusLine() {
         switch PurchaseManager.shared.state {
         case .trial(let daysRemaining):
-            statusLabel.text = daysRemaining == 1
-                ? "1 day left in your trial"
-                : "\(daysRemaining) days left in your trial"
+            statusLabel.text = String(localized: "\(daysRemaining) days left in your trial")
         case .expired:
-            statusLabel.text = "Your trial has ended"
+            statusLabel.text = String(localized: "Your trial has ended")
         case .purchased:
-            statusLabel.text = "Lifetime unlocked. Thank you."
+            statusLabel.text = String(localized: "Lifetime unlocked. Thank you.")
         }
     }
 
@@ -412,8 +410,8 @@ final class PaywallViewController: UIViewController {
                     dismiss(animated: true)
                 case .pending:
                     presentInfoAlert(
-                        title: "Purchase Pending",
-                        message: "Your purchase is awaiting approval. Playback unlocks automatically once it completes."
+                        title: String(localized: "Purchase Pending"),
+                        message: String(localized: "Your purchase is awaiting approval. Playback unlocks automatically once it completes.")
                     )
                 case .cancelled:
                     break
@@ -422,8 +420,8 @@ final class PaywallViewController: UIViewController {
                 AppLogger.error("Purchase failed: \(error.localizedDescription)", category: .purchases)
                 notificationFeedback.notificationOccurred(.error)
                 presentInfoAlert(
-                    title: "Purchase Failed",
-                    message: "The purchase couldn't be completed. Check your connection and try again."
+                    title: String(localized: "Purchase Failed"),
+                    message: String(localized: "The purchase couldn't be completed. Check your connection and try again.")
                 )
             }
         }
@@ -440,8 +438,8 @@ final class PaywallViewController: UIViewController {
                 dismiss(animated: true)
             } else {
                 presentInfoAlert(
-                    title: "Nothing to Restore",
-                    message: "No previous purchase was found for this Apple Account."
+                    title: String(localized: "Nothing to Restore"),
+                    message: String(localized: "No previous purchase was found for this Apple Account.")
                 )
             }
         }
@@ -449,7 +447,7 @@ final class PaywallViewController: UIViewController {
 
     private func presentInfoAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
         present(alert, animated: true)
     }
 }

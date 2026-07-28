@@ -85,7 +85,7 @@ final class SettingsHeaderView: UIView {
         wordmark.adjustsFontForContentSizeCategory = true
 
         let tagline = UILabel()
-        tagline.text = "Your lossless library"
+        tagline.text = String(localized: "Your lossless library")
         tagline.font = .scaled(.subheadline, size: 14, weight: .medium, maxSize: 20)
         tagline.textColor = UIColor.white.withAlphaComponent(0.62)
         tagline.adjustsFontForContentSizeCategory = true
@@ -100,15 +100,15 @@ final class SettingsHeaderView: UIView {
         row.alignment = .center
 
         row.isAccessibilityElement = true
-        row.accessibilityLabel = "flaccy, your lossless library"
+        row.accessibilityLabel = String(localized: "flaccy, your lossless library")
         row.accessibilityTraits = .header
         return row
     }
 
     private func makeStatsStrip() -> UIView {
-        albumsColumn.configure(caption: "Albums")
-        tracksColumn.configure(caption: "Tracks")
-        playsColumn.configure(caption: "Plays")
+        albumsColumn.configure(caption: String(localized: "Albums"))
+        tracksColumn.configure(caption: String(localized: "Tracks"))
+        playsColumn.configure(caption: String(localized: "Plays"))
 
         let strip = UIStackView(arrangedSubviews: [
             albumsColumn, makeDivider(), tracksColumn, makeDivider(), playsColumn,
@@ -156,26 +156,27 @@ final class SettingsHeaderView: UIView {
         case .purchased:
             statusControl.configure(
                 symbolName: "crown.fill",
-                title: "Lifetime member",
-                subtitle: "Thanks for supporting flaccy",
+                title: String(localized: "Lifetime member"),
+                subtitle: String(localized: "Thanks for supporting flaccy"),
                 tint: .systemYellow,
                 interactive: false
             )
         case .trial(let daysRemaining):
-            let days = "\(daysRemaining) day\(daysRemaining == 1 ? "" : "s") left"
-            let subtitle = priceText.map { "\(days) · \($0) once, forever" } ?? "\(days) in your free trial"
+            let days = String(localized: "\(daysRemaining) days left")
+            let subtitle = priceText.map { String(localized: "\(days) · \($0) once, forever") }
+                ?? String(localized: "\(days) in your free trial")
             statusControl.configure(
                 symbolName: "sparkles",
-                title: "Unlock Lifetime",
+                title: String(localized: "Unlock Lifetime"),
                 subtitle: subtitle,
                 tint: daysRemaining <= 2 ? .systemOrange : QualityBadgeView.losslessTint,
                 interactive: true
             )
         case .expired:
-            let subtitle = priceText.map { "Your trial ended · \($0) once, forever" } ?? "Your free trial has ended"
+            let subtitle = priceText.map { String(localized: "Your trial ended · \($0) once, forever") } ?? String(localized: "Your free trial has ended")
             statusControl.configure(
                 symbolName: "lock.fill",
-                title: "Unlock Lifetime",
+                title: String(localized: "Unlock Lifetime"),
                 subtitle: subtitle,
                 tint: .systemRed,
                 interactive: true
@@ -368,7 +369,7 @@ private final class StatusPillControl: UIControl {
 
         let spokenSubtitle = subtitle.map { ", \($0)" } ?? ""
         accessibilityLabel = title + spokenSubtitle
-        accessibilityHint = interactive ? "Shows the one-time purchase that unlocks flaccy forever" : nil
+        accessibilityHint = interactive ? String(localized: "Shows the one-time purchase that unlocks flaccy forever") : nil
     }
 
     override var isHighlighted: Bool {

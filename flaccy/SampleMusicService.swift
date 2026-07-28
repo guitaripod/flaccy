@@ -44,7 +44,7 @@ final class SampleMusicService {
             for (index, track) in manifest.tracks.enumerated() {
                 let destination = documents.appendingPathComponent(track.file)
                 guard !FileManager.default.fileExists(atPath: destination.path) else { continue }
-                postProgress("Downloading \(index + 1) of \(manifest.tracks.count)…")
+                postProgress(String(localized: "Downloading \(index + 1) of \(manifest.tracks.count)…"))
                 let url = Self.baseURL.appendingPathComponent(track.file)
                 let (temp, response) = try await URLSession.shared.download(from: url)
                 guard (response as? HTTPURLResponse)?.statusCode == 200 else {
@@ -53,7 +53,7 @@ final class SampleMusicService {
                 try FileManager.default.moveItem(at: temp, to: destination)
                 AppLogger.info("Sample downloaded: \(track.file)", category: .content)
             }
-            postProgress("Adding to library…")
+            postProgress(String(localized: "Adding to library…"))
             await Library.shared.reload()
             AppLogger.info("Sample music installed (\(manifest.tracks.count) tracks)", category: .content)
             return true

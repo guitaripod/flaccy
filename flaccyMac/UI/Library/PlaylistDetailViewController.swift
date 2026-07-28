@@ -39,9 +39,9 @@ final class PlaylistDetailViewController: NSViewController {
         summaryLabel.font = .systemFont(ofSize: 12)
         summaryLabel.textColor = .secondaryLabelColor
 
-        let playButton = GlassCapsuleButton(title: "Play", symbolName: "play.fill", prominent: true)
+        let playButton = GlassCapsuleButton(title: String(localized: "Play"), symbolName: "play.fill", prominent: true)
         playButton.onClick = { [weak self] in self?.play(shuffled: false) }
-        let shuffleButton = GlassCapsuleButton(title: "Shuffle", symbolName: "shuffle")
+        let shuffleButton = GlassCapsuleButton(title: String(localized: "Shuffle"), symbolName: "shuffle")
         shuffleButton.onClick = { [weak self] in self?.play(shuffled: true) }
         let actions = NSStackView(views: [playButton, shuffleButton])
         actions.orientation = .horizontal
@@ -70,9 +70,9 @@ final class PlaylistDetailViewController: NSViewController {
 
         let columns: [(String, String, CGFloat)] = [
             ("number", "#", 36),
-            ("title", "Title", 280),
-            ("artist", "Artist", 180),
-            ("duration", "Time", 60),
+            ("title", String(localized: "Title"), 280),
+            ("artist", String(localized: "Artist"), 180),
+            ("duration", String(localized: "Time"), 60),
         ]
         for (id, title, width) in columns {
             let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))

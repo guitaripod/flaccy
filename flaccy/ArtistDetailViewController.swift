@@ -9,9 +9,9 @@ nonisolated enum ArtistDetailSection: Int, CaseIterable, Sendable {
     var title: String? {
         switch self {
         case .header: nil
-        case .similarArtists: "Similar Artists in Your Library"
-        case .popularTracks: "Popular Tracks"
-        case .albums: "Albums"
+        case .similarArtists: String(localized: "Similar Artists in Your Library")
+        case .popularTracks: String(localized: "Popular Tracks")
+        case .albums: String(localized: "Albums")
         }
     }
 }
@@ -76,9 +76,9 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
         var displayName: String {
             switch self {
-            case .title: "Title"
-            case .year: "Year"
-            case .trackCount: "Track Count"
+            case .title: String(localized: "Title")
+            case .year: String(localized: "Year")
+            case .trackCount: String(localized: "Track Count")
             }
         }
 
@@ -285,7 +285,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
                 self.applySnapshot()
             }
         }
-        return UIMenu(title: "Sort By", children: actions)
+        return UIMenu(title: String(localized: "Sort By"), children: actions)
     }
 
     private func sortAlbums() {
@@ -508,20 +508,20 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
     private func similarSectionItems() -> [ArtistDetailItem] {
         guard similarLoaded else {
-            return [.message(DetailMessageItem(id: "similar.loading", text: "Finding artists in your library\u{2026}", isLoading: true))]
+            return [.message(DetailMessageItem(id: "similar.loading", text: String(localized: "Finding artists in your library\u{2026}"), isLoading: true))]
         }
         guard !similarAlbums.isEmpty else {
-            return [.message(DetailMessageItem(id: "similar.empty", text: "No similar artists in your library yet.", isLoading: false))]
+            return [.message(DetailMessageItem(id: "similar.empty", text: String(localized: "No similar artists in your library yet."), isLoading: false))]
         }
         return similarAlbums.map { .similarAlbum(SimilarAlbumItem(album: $0)) }
     }
 
     private func popularSectionItems() -> [ArtistDetailItem] {
         guard popularLoaded else {
-            return [.message(DetailMessageItem(id: "popular.loading", text: "Loading popular tracks\u{2026}", isLoading: true))]
+            return [.message(DetailMessageItem(id: "popular.loading", text: String(localized: "Loading popular tracks\u{2026}"), isLoading: true))]
         }
         guard !popularTracks.isEmpty else {
-            return [.message(DetailMessageItem(id: "popular.empty", text: "No popular tracks available.", isLoading: false))]
+            return [.message(DetailMessageItem(id: "popular.empty", text: String(localized: "No popular tracks available."), isLoading: false))]
         }
         return popularTracks.map { .popularTrack($0) }
     }
@@ -626,12 +626,12 @@ final class ArtistHeaderCell: UICollectionViewCell {
         bioLabel.textColor = .white.withAlphaComponent(0.7)
         bioLabel.numberOfLines = 4
 
-        readMoreButton.setTitle("Read more", for: .normal)
+        readMoreButton.setTitle(String(localized: "Read more"), for: .normal)
         readMoreButton.titleLabel?.font = .scaled(.footnote, size: 13, weight: .semibold)
         readMoreButton.titleLabel?.adjustsFontForContentSizeCategory = true
         readMoreButton.setTitleColor(.white, for: .normal)
         readMoreButton.contentHorizontalAlignment = .leading
-        readMoreButton.accessibilityHint = "Expands the artist biography"
+        readMoreButton.accessibilityHint = String(localized: "Expands the artist biography")
         readMoreButton.addAction(UIAction { [weak self] _ in self?.toggleBio() }, for: .touchUpInside)
 
         let bioStack = UIStackView(arrangedSubviews: [bioLabel, readMoreButton])
@@ -710,10 +710,10 @@ final class ArtistHeaderCell: UICollectionViewCell {
     }
 
     private func buildActionRow() -> UIView {
-        let play = LiquidGlass.actionCapsule(title: "Play All", systemImage: "play.fill") { [weak self] in
+        let play = LiquidGlass.actionCapsule(title: String(localized: "Play All"), systemImage: "play.fill") { [weak self] in
             self?.onPlayAll?()
         }
-        let shuffle = LiquidGlass.actionCapsule(title: "Shuffle All", systemImage: "shuffle") { [weak self] in
+        let shuffle = LiquidGlass.actionCapsule(title: String(localized: "Shuffle All"), systemImage: "shuffle") { [weak self] in
             self?.onShuffleAll?()
         }
         let row = UIStackView(arrangedSubviews: [play, shuffle])
@@ -725,10 +725,10 @@ final class ArtistHeaderCell: UICollectionViewCell {
     /// A full-width glass capsule seeding a library radio station from this
     /// artist, the signature local-discovery entry point.
     private func buildStationRow() -> UIView {
-        let station = LiquidGlass.actionCapsule(title: "Start Station", systemImage: "dot.radiowaves.left.and.right") { [weak self] in
+        let station = LiquidGlass.actionCapsule(title: String(localized: "Start Station"), systemImage: "dot.radiowaves.left.and.right") { [weak self] in
             self?.onStartStation?()
         }
-        station.accessibilityHint = "Plays a station of similar music from your library"
+        station.accessibilityHint = String(localized: "Plays a station of similar music from your library")
         let row = UIStackView(arrangedSubviews: [station])
         row.axis = .horizontal
         row.distribution = .fill
@@ -766,7 +766,7 @@ final class ArtistHeaderCell: UICollectionViewCell {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         bioExpanded.toggle()
         bioLabel.numberOfLines = bioExpanded ? 0 : 4
-        readMoreButton.setTitle(bioExpanded ? "Read less" : "Read more", for: .normal)
+        readMoreButton.setTitle(bioExpanded ? String(localized: "Read less") : String(localized: "Read more"), for: .normal)
         UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.86, initialSpringVelocity: 0.6) {
             self.onBioToggle?()
         }
@@ -775,7 +775,7 @@ final class ArtistHeaderCell: UICollectionViewCell {
     func configure(with info: ArtistHeaderInfo, artistPhoto: UIImage?) {
         nameLabel.text = info.name
         photoContainer.isAccessibilityElement = true
-        photoContainer.accessibilityLabel = "Photo of \(info.name)"
+        photoContainer.accessibilityLabel = String(localized: "Photo of \(info.name)")
         setHeroImage(artistPhoto ?? info.artwork, isArtistPhoto: artistPhoto != nil, info: info)
 
         if let genre = info.genre, !genre.isEmpty {
@@ -785,9 +785,7 @@ final class ArtistHeaderCell: UICollectionViewCell {
             genreLabel.isHidden = true
         }
 
-        let albumWord = info.albumCount == 1 ? "album" : "albums"
-        let trackWord = info.trackCount == 1 ? "track" : "tracks"
-        statsLabel.text = "\(info.albumCount) \(albumWord) \u{00B7} \(info.trackCount) \(trackWord)"
+        statsLabel.text = String(localized: "\(info.albumCount) albums \u{00B7} \(info.trackCount) tracks")
 
         applyGenreChips(info.genres)
 
@@ -906,19 +904,19 @@ final class PopularTrackCell: UICollectionViewCell {
         isAccessibilityElement = true
         accessibilityLabel = item.name
         accessibilityValue = owned
-            ? "In your library. Double tap to play from here through the rest of popular tracks."
-            : "Not in your library"
+            ? String(localized: "In your library. Double tap to play from here through the rest of popular tracks.")
+            : String(localized: "Not in your library")
         accessibilityTraits = owned ? .button : .staticText
     }
 
     private static func abbreviated(_ count: Int) -> String {
         if count >= 1_000_000 {
-            return String(format: "%.1fM plays", Double(count) / 1_000_000)
+            return String(format: String(localized: "%.1fM plays"), Double(count) / 1_000_000)
         }
         if count >= 1_000 {
-            return String(format: "%.0fK plays", Double(count) / 1_000)
+            return String(format: String(localized: "%.0fK plays"), Double(count) / 1_000)
         }
-        return "\(count) plays"
+        return String(localized: "\(count) plays")
     }
 }
 

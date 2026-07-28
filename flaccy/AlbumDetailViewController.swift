@@ -62,11 +62,11 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
     private func setupOverflowMenu() {
         let album = self.album
-        let delete = UIAction(title: "Delete from Library", image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
+        let delete = UIAction(title: String(localized: "Delete from Library"), image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
             guard let self else { return }
             TrackContextMenu.confirmDelete(
-                title: "Delete \"\(album.title)\"?",
-                message: "All \(album.tracks.count) tracks will be removed from this device.",
+                title: String(localized: "Delete \"\(album.title)\"?"),
+                message: String(localized: "All \(album.tracks.count) tracks will be removed from this device."),
                 in: self
             ) { [weak self] in
                 Task { @MainActor in
@@ -74,7 +74,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
                     navigationController?.popViewController(animated: true)
                     await Library.shared.deleteTracks(album.tracks)
                     if let navView = navigationController?.view {
-                        ToastView.show("Deleted \(album.title)", in: navView, style: .info)
+                        ToastView.show(String(localized: "Deleted \(album.title)"), in: navView, style: .info)
                     }
                 }
             }
@@ -150,8 +150,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     }
 
     private func applyPlayCount(_ count: Int, animated: Bool) {
-        let word = count == 1 ? "time" : "times"
-        playCountLabel.text = "You've played this album \(count) \(word)"
+        playCountLabel.text = String(localized: "You've played this album \(count) times")
         playCountLabel.textColor = accentColor
         playCountLabel.isHidden = false
         reveal(playCountLabel, animated: animated)
@@ -302,7 +301,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         artistButton.titleLabel?.adjustsFontForContentSizeCategory = true
         artistButton.setTitleColor(.white.withAlphaComponent(0.85), for: .normal)
         artistButton.contentHorizontalAlignment = .leading
-        artistButton.accessibilityHint = "Shows the artist's albums"
+        artistButton.accessibilityHint = String(localized: "Shows the artist's albums")
         artistButton.addAction(UIAction { [weak self] _ in self?.artistTapped() }, for: .touchUpInside)
 
         let metaLabel = UILabel()
@@ -380,7 +379,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         artworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
         artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 56, weight: .ultraLight)
         artworkView.isAccessibilityElement = true
-        artworkView.accessibilityLabel = "Album artwork for \(album.title)"
+        artworkView.accessibilityLabel = String(localized: "Album artwork for \(album.title)")
 
         if let artwork = resolvedArtwork() {
             artworkView.image = artwork
@@ -429,7 +428,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     /// or nil when no track carries codec/quality metadata.
     private func buildQualityBadgeRow() -> UIView? {
         guard let summary = DetailChip.albumQualitySummary(tracks: album.tracks) else { return nil }
-        let pill = DetailChip.pill(text: summary, systemImage: "waveform", accessibilityPrefix: "Audio quality")
+        let pill = DetailChip.pill(text: summary, systemImage: "waveform", accessibilityPrefix: String(localized: "Audio quality"))
         let row = UIStackView(arrangedSubviews: [pill, UIView()])
         row.axis = .horizontal
         row.alignment = .center
@@ -437,16 +436,16 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     }
 
     private func buildActionRow() -> UIView {
-        let play = LiquidGlass.actionCapsule(title: "Play", systemImage: "play.fill") { [weak self] in
+        let play = LiquidGlass.actionCapsule(title: String(localized: "Play"), systemImage: "play.fill") { [weak self] in
             self?.playTapped()
         }
-        let shuffle = LiquidGlass.actionCapsule(title: "Shuffle", systemImage: "shuffle") { [weak self] in
+        let shuffle = LiquidGlass.actionCapsule(title: String(localized: "Shuffle"), systemImage: "shuffle") { [weak self] in
             self?.shuffleTapped()
         }
-        let queue = LiquidGlass.iconCapsule(systemImage: "text.append", accessibilityLabel: "Add album to queue") { [weak self] in
+        let queue = LiquidGlass.iconCapsule(systemImage: "text.append", accessibilityLabel: String(localized: "Add album to queue")) { [weak self] in
             self?.addAlbumToQueue()
         }
-        let share = LiquidGlass.iconCapsule(systemImage: "square.and.arrow.up", accessibilityLabel: "Share album") { [weak self] in
+        let share = LiquidGlass.iconCapsule(systemImage: "square.and.arrow.up", accessibilityLabel: String(localized: "Share album")) { [weak self] in
             guard let self else { return }
             self.shareAlbumViaSonglink(title: self.album.title, artist: self.album.artist, from: self.view)
         }
@@ -480,12 +479,13 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
     private func footerText() -> String {
         let count = album.tracks.count
-        let trackWord = count == 1 ? "track" : "tracks"
         let totalSeconds = album.tracks.reduce(0) { $0 + Int($1.duration) }
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
-        let duration = hours > 0 ? "\(hours) hr \(minutes) min" : "\(minutes) min"
-        return "\(count) \(trackWord) \u{00B7} \(duration)"
+        let duration = hours > 0
+            ? String(localized: "\(hours) hr \(minutes) min")
+            : String(localized: "\(minutes) min")
+        return String(localized: "\(count) tracks \u{00B7} \(duration)")
     }
 
     private func prepareAppearanceAnimationIfNeeded() {
@@ -533,7 +533,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
             AudioPlayer.shared.addToQueue(track)
         }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
-        ToastView.show("Added \(album.tracks.count) tracks to queue", in: view, style: .info)
+        ToastView.show(String(localized: "Added \(album.tracks.count) tracks to queue"), in: view, style: .info)
     }
 
     private func toggleLove(_ track: Track) {
@@ -576,18 +576,18 @@ extension AlbumDetailViewController: UITableViewDelegate {
     ) -> UISwipeActionsConfiguration? {
         guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
         let isLoved = LovedTracksService.shared.isLoved(track: track)
-        let love = UIContextualAction(style: .normal, title: isLoved ? "Unlove" : "Love") { [weak self] _, _, completion in
+        let love = UIContextualAction(style: .normal, title: isLoved ? String(localized: "Unlove") : String(localized: "Love")) { [weak self] _, _, completion in
             guard let self else { return completion(false) }
             self.toggleLove(track)
             completion(true)
         }
         love.image = UIImage(systemName: isLoved ? "heart.slash.fill" : "heart.fill")
         love.backgroundColor = .systemPink
-        let playNext = UIContextualAction(style: .normal, title: "Play Next") { [weak self] _, _, completion in
+        let playNext = UIContextualAction(style: .normal, title: String(localized: "Play Next")) { [weak self] _, _, completion in
             guard let self else { return completion(false) }
             AudioPlayer.shared.insertNext(track)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show("Playing next", in: self.view, style: .info)
+            ToastView.show(String(localized: "Playing next"), in: self.view, style: .info)
             completion(true)
         }
         playNext.image = UIImage(systemName: "text.line.first.and.arrowtriangle.forward")
@@ -600,11 +600,11 @@ extension AlbumDetailViewController: UITableViewDelegate {
         trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
     ) -> UISwipeActionsConfiguration? {
         guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
-        let addToQueue = UIContextualAction(style: .normal, title: "Queue") { [weak self] _, _, completion in
+        let addToQueue = UIContextualAction(style: .normal, title: String(localized: "Queue")) { [weak self] _, _, completion in
             guard let self else { return completion(false) }
             AudioPlayer.shared.addToQueue(track)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show("Added to queue", in: self.view, style: .info)
+            ToastView.show(String(localized: "Added to queue"), in: self.view, style: .info)
             completion(true)
         }
         addToQueue.image = UIImage(systemName: "text.append")
@@ -746,8 +746,10 @@ private final class AlbumTrackCell: UITableViewCell {
         )
         lovedButton.setImage(heart, for: .normal)
         lovedButton.tintColor = loved ? .systemPink : .white.withAlphaComponent(0.5)
-        lovedButton.accessibilityLabel = loved ? "Loved" : "Not loved"
-        lovedButton.accessibilityHint = "Double tap to \(loved ? "unlove" : "love") this track"
+        lovedButton.accessibilityLabel = loved ? String(localized: "Loved") : String(localized: "Not loved")
+        lovedButton.accessibilityHint = loved
+            ? String(localized: "Double tap to unlove this track")
+            : String(localized: "Double tap to love this track")
 
         numberLabel.isHidden = isCurrent
         barsView.isHidden = !isCurrent
@@ -755,7 +757,7 @@ private final class AlbumTrackCell: UITableViewCell {
         barsView.setAnimating(isPlaying)
         trackTitleLabel.textColor = isCurrent ? accent : .white
         trackTitleLabel.font = .scaled(.body, size: 16, weight: isCurrent ? .semibold : .regular)
-        accessibilityValue = isCurrent ? (isPlaying ? "Now playing" : "Paused") : nil
+        accessibilityValue = isCurrent ? (isPlaying ? String(localized: "Now playing") : String(localized: "Paused")) : nil
     }
 
     override func prepareForReuse() {

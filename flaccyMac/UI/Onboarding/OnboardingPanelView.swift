@@ -7,7 +7,7 @@ final class OnboardingPanelView: NSView {
 
     private let progressLabel = NSTextField(labelWithString: "")
     private let spinner = NSProgressIndicator()
-    private let sampleButton = GlassCapsuleButton(title: "Download Sample Album", symbolName: "arrow.down.circle")
+    private let sampleButton = GlassCapsuleButton(title: String(localized: "Download Sample Album"), symbolName: "arrow.down.circle")
     private var isDownloading = false
 
     enum Visibility {
@@ -43,11 +43,11 @@ final class OnboardingPanelView: NSView {
         icon.widthAnchor.constraint(equalToConstant: 96).isActive = true
         icon.heightAnchor.constraint(equalToConstant: 96).isActive = true
 
-        let title = NSTextField(labelWithString: "Welcome to Flaccy")
+        let title = NSTextField(labelWithString: String(localized: "Welcome to Flaccy"))
         title.font = .systemFont(ofSize: 26, weight: .bold)
 
         let subtitle = NSTextField(wrappingLabelWithString:
-            "Point Flaccy at your music folder and it indexes everything in place — FLAC, ALAC, MP3 and more, nothing copied or moved."
+            String(localized: "Point Flaccy at your music folder and it indexes everything in place — FLAC, ALAC, MP3 and more, nothing copied or moved.")
         )
         subtitle.font = .systemFont(ofSize: 13)
         subtitle.textColor = .secondaryLabelColor
@@ -55,7 +55,7 @@ final class OnboardingPanelView: NSView {
         subtitle.preferredMaxLayoutWidth = 380
 
         let chooseButton = GlassCapsuleButton(
-            title: "Choose Music Folder…", symbolName: "folder", prominent: true
+            title: String(localized: "Choose Music Folder…"), symbolName: "folder", prominent: true
         )
         chooseButton.onClick = {
             NSApp.sendAction(#selector(MacAppDelegate.chooseMusicFolder(_:)), to: nil, from: nil)
@@ -83,7 +83,7 @@ final class OnboardingPanelView: NSView {
         ) ?? NSImage())
         hintIcon.symbolConfiguration = .init(pointSize: 12, weight: .medium)
         hintIcon.contentTintColor = .tertiaryLabelColor
-        let hintLabel = NSTextField(labelWithString: "Or drop audio files and folders anywhere in this window.")
+        let hintLabel = NSTextField(labelWithString: String(localized: "Or drop audio files and folders anywhere in this window."))
         hintLabel.font = .systemFont(ofSize: 12)
         hintLabel.textColor = .tertiaryLabelColor
         let hint = NSStackView(views: [hintIcon, hintLabel])
@@ -123,7 +123,7 @@ final class OnboardingPanelView: NSView {
         guard !isDownloading else { return }
         isDownloading = true
         spinner.startAnimation(nil)
-        progressLabel.stringValue = "Contacting server…"
+        progressLabel.stringValue = String(localized: "Contacting server…")
         AppLogger.info("Onboarding: sample album download started", category: .content)
         Task { [weak self] in
             let success = await SampleMusicService.shared.downloadSamples()
@@ -132,7 +132,7 @@ final class OnboardingPanelView: NSView {
             self.spinner.stopAnimation(nil)
             self.progressLabel.stringValue = ""
             if !success {
-                MacToast.show("Couldn't download the sample album.", style: .error, in: self.window)
+                MacToast.show(String(localized: "Couldn't download the sample album."), style: .error, in: self.window)
             }
         }
     }

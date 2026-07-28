@@ -13,16 +13,16 @@ final class YearInMusicViewController: NSViewController {
     private let slideList = NSStackView()
     private let swatchRow = NSStackView()
     private let formatControl = NSSegmentedControl(
-        labels: ["Story 9:16", "Post 4:5"], trackingMode: .selectOne, target: nil, action: nil
+        labels: [String(localized: "Story 9:16"), String(localized: "Post 4:5")], trackingMode: .selectOne, target: nil, action: nil
     )
     private let previewImageView = NSImageView()
     private let renderSpinner = NSProgressIndicator()
     private let slideTitleLabel = NSTextField(labelWithString: "")
     private let emptyState = NSStackView()
     private let sidebar = NSStackView()
-    private let exportButton = NSButton(title: "Export PNG…", target: nil, action: nil)
-    private let copyButton = NSButton(title: "Copy", target: nil, action: nil)
-    private let shareButton = NSButton(title: "Share", target: nil, action: nil)
+    private let exportButton = NSButton(title: String(localized: "Export PNG…"), target: nil, action: nil)
+    private let copyButton = NSButton(title: String(localized: "Copy"), target: nil, action: nil)
+    private let shareButton = NSButton(title: String(localized: "Share"), target: nil, action: nil)
 
     private var years: [Int] = []
     private var selectedYear = Calendar.current.component(.year, from: Date())
@@ -101,7 +101,7 @@ final class YearInMusicViewController: NSViewController {
     }
 
     private func buildSidebar() {
-        let title = NSTextField(labelWithString: "Year in Music")
+        let title = NSTextField(labelWithString: String(localized: "Year in Music"))
         title.font = .systemFont(ofSize: 22, weight: .heavy)
         title.textColor = MacColors.primaryLabel
 
@@ -146,10 +146,10 @@ final class YearInMusicViewController: NSViewController {
         sidebar.alignment = .leading
         sidebar.spacing = 16
         sidebar.addArrangedSubview(title)
-        sidebar.addArrangedSubview(labeled("YEAR", yearPopUp))
-        sidebar.addArrangedSubview(labeled("SLIDES", slideList))
-        sidebar.addArrangedSubview(labeled("THEME", swatchRow))
-        sidebar.addArrangedSubview(labeled("FORMAT", formatControl))
+        sidebar.addArrangedSubview(labeled(String(localized: "YEAR"), yearPopUp))
+        sidebar.addArrangedSubview(labeled(String(localized: "SLIDES"), slideList))
+        sidebar.addArrangedSubview(labeled(String(localized: "THEME"), swatchRow))
+        sidebar.addArrangedSubview(labeled(String(localized: "FORMAT"), formatControl))
         sidebar.addArrangedSubview(actions)
     }
 
@@ -186,10 +186,10 @@ final class YearInMusicViewController: NSViewController {
         ) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 40, weight: .light)
         icon.contentTintColor = MacColors.tertiaryLabel
-        let title = NSTextField(labelWithString: "No listening history for this year")
+        let title = NSTextField(labelWithString: String(localized: "No listening history for this year"))
         title.font = .systemFont(ofSize: 17, weight: .semibold)
         title.textColor = MacColors.primaryLabel
-        let subtitle = NSTextField(labelWithString: "Play some music or import your Last.fm history in Settings.")
+        let subtitle = NSTextField(labelWithString: String(localized: "Play some music or import your Last.fm history in Settings."))
         subtitle.font = .systemFont(ofSize: 12)
         subtitle.textColor = MacColors.secondaryLabel
         emptyState.orientation = .vertical
@@ -360,10 +360,10 @@ final class YearInMusicViewController: NSViewController {
             do {
                 try data.write(to: url)
                 AppLogger.info("Year in Music export saved to \(url.path)", category: .ui)
-                MacToast.show("Exported \(url.lastPathComponent)", style: .success, in: self?.view.window)
+                MacToast.show(String(localized: "Exported \(url.lastPathComponent)"), style: .success, in: self?.view.window)
             } catch {
                 AppLogger.error("Year in Music export failed: \(error.localizedDescription)", category: .ui)
-                MacToast.show("Export failed", style: .error, in: self?.view.window)
+                MacToast.show(String(localized: "Export failed"), style: .error, in: self?.view.window)
             }
         }
     }
@@ -372,7 +372,7 @@ final class YearInMusicViewController: NSViewController {
         guard let image = renderedImage(slide: selectedSlide, format: selectedFormat) else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([image])
-        MacToast.show("Slide copied", style: .success, in: view.window)
+        MacToast.show(String(localized: "Slide copied"), style: .success, in: view.window)
     }
 
     @objc private func shareTapped() {
@@ -408,7 +408,9 @@ final class ThemeSwatchButton: NSButton {
         gradient.borderWidth = selected ? 2 : 0.5
         effectiveAppearance.performAsCurrentDrawingAppearance { applyBorderColor() }
         layer?.addSublayer(gradient)
-        setAccessibilityLabel("Theme \(theme.name)\(selected ? ", selected" : "")")
+        setAccessibilityLabel(selected
+            ? String(localized: "Theme \(theme.name), selected")
+            : String(localized: "Theme \(theme.name)"))
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

@@ -43,7 +43,7 @@ extension SonglinkShareable {
 
     func shareTrackViaSonglink(title: String, artist: String, from sourceView: UIView) {
         startSonglinkLookup(
-            failureMessage: "Couldn't find this track on streaming platforms",
+            failureMessage: String(localized: "Couldn't find this track on streaming platforms"),
             sourceView: sourceView
         ) {
             await SonglinkService.shared.lookup(title: title, artist: artist)
@@ -52,7 +52,7 @@ extension SonglinkShareable {
 
     func shareAlbumViaSonglink(title: String, artist: String, from sourceView: UIView) {
         startSonglinkLookup(
-            failureMessage: "Couldn't find this album on streaming platforms",
+            failureMessage: String(localized: "Couldn't find this album on streaming platforms"),
             sourceView: sourceView
         ) {
             await SonglinkService.shared.lookupAlbum(title: title, artist: artist)
@@ -106,12 +106,12 @@ extension SonglinkShareable {
         spinner.startAnimating()
 
         let label = UILabel()
-        label.text = "Finding links\u{2026}"
+        label.text = String(localized: "Finding links\u{2026}")
         label.font = .systemFont(ofSize: 13, weight: .medium)
         label.textColor = .secondaryLabel
 
         let hint = UILabel()
-        hint.text = "Tap to cancel"
+        hint.text = String(localized: "Tap to cancel")
         hint.font = .systemFont(ofSize: 11, weight: .regular)
         hint.textColor = .tertiaryLabel
 

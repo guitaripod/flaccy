@@ -88,7 +88,7 @@ final class WantlistViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Wantlist"
+        title = String(localized: "Wantlist")
         view.backgroundColor = .black
         navigationItem.largeTitleDisplayMode = .never
 
@@ -244,7 +244,7 @@ final class WantlistViewController: UIViewController {
             image: UIImage(systemName: "square.and.arrow.up"),
             primaryAction: UIAction { [weak self] _ in self?.shareWantlist() }
         )
-        share.accessibilityLabel = "Share Wantlist"
+        share.accessibilityLabel = String(localized: "Share Wantlist")
         navigationItem.rightBarButtonItem = share
     }
 
@@ -386,8 +386,8 @@ final class WantlistViewController: UIViewController {
         emptyLabel.isHidden = !empty || spinner.isAnimating
         if empty {
             emptyLabel.text = viewModel.isAvailable
-                ? "Nothing here right now.\nYour library already covers it."
-                : "Connect Last.fm in Settings to see\nwhich music you love but don't own."
+                ? String(localized: "Nothing here right now.\nYour library already covers it.")
+                : String(localized: "Connect Last.fm in Settings to see\nwhich music you love but don't own.")
         }
     }
 
@@ -421,7 +421,7 @@ final class WantlistViewController: UIViewController {
     private func shareWantlist() {
         guard let data = currentData, !data.isEmpty else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        var lines: [String] = ["My flaccy wantlist:"]
+        var lines: [String] = [String(localized: "My flaccy wantlist:")]
         for (section, items) in data.sections {
             lines.append("")
             lines.append(section.headerTitle)
@@ -465,26 +465,26 @@ extension WantlistViewController: UICollectionViewDelegate {
         var actions: [UIMenuElement] = []
 
         if !isAlbum || meta.source != "release" {
-            actions.append(UIAction(title: "Got It", image: UIImage(systemName: "checkmark.circle")) { _ in
+            actions.append(UIAction(title: String(localized: "Got It"), image: UIImage(systemName: "checkmark.circle")) { _ in
                 WantlistService.shared.setState(.acquired, normKey: meta.normKey)
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
             })
-            actions.append(UIAction(title: "Not Interested", image: UIImage(systemName: "hand.thumbsdown"), attributes: .destructive) { _ in
+            actions.append(UIAction(title: String(localized: "Not Interested"), image: UIImage(systemName: "hand.thumbsdown"), attributes: .destructive) { _ in
                 WantlistService.shared.setState(.dismissed, normKey: meta.normKey)
             })
         }
         if !isAlbum {
-            actions.append(UIAction(title: "Play Preview", image: UIImage(systemName: "play.circle")) { [weak self] _ in
+            actions.append(UIAction(title: String(localized: "Play Preview"), image: UIImage(systemName: "play.circle")) { [weak self] _ in
                 self?.playPreview(title: title, artist: artist, key: meta.normKey)
             })
         }
-        actions.append(UIAction(title: "Open in Apple Music", image: UIImage(systemName: "arrow.up.forward.app")) { [weak self] _ in
+        actions.append(UIAction(title: String(localized: "Open in Apple Music"), image: UIImage(systemName: "arrow.up.forward.app")) { [weak self] _ in
             self?.openInAppleMusic(title: title, artist: artist, isAlbum: isAlbum, storeURL: meta.storeURL)
         })
-        actions.append(UIAction(title: "View on Last.fm", image: UIImage(systemName: "safari")) { [weak self] _ in
+        actions.append(UIAction(title: String(localized: "View on Last.fm"), image: UIImage(systemName: "safari")) { [weak self] _ in
             self?.openLastFM(path: isAlbum ? [artist, title] : (title.isEmpty ? [artist] : [artist, "_", title]))
         })
-        actions.append(UIAction(title: "Copy", image: UIImage(systemName: "doc.on.doc")) { _ in
+        actions.append(UIAction(title: String(localized: "Copy"), image: UIImage(systemName: "doc.on.doc")) { _ in
             UIPasteboard.general.string = title.isEmpty ? artist : "\(artist) — \(title)"
         })
         return UIMenu(children: actions)
@@ -506,30 +506,30 @@ extension WantlistViewController: UICollectionViewDelegate {
             preferredStyle: .actionSheet
         )
         if meta.source != "release" {
-            sheet.addAction(UIAlertAction(title: "Got It", style: .default) { _ in
+            sheet.addAction(UIAlertAction(title: String(localized: "Got It"), style: .default) { _ in
                 WantlistService.shared.setState(.acquired, normKey: meta.normKey)
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
             })
-            sheet.addAction(UIAlertAction(title: "Not Interested", style: .destructive) { _ in
+            sheet.addAction(UIAlertAction(title: String(localized: "Not Interested"), style: .destructive) { _ in
                 WantlistService.shared.setState(.dismissed, normKey: meta.normKey)
             })
         }
         if !isAlbum, !title.isEmpty {
             let previewing = PreviewPlayer.shared.currentKey == meta.normKey
-            sheet.addAction(UIAlertAction(title: previewing ? "Stop Preview" : "Play Preview", style: .default) { [weak self] _ in
+            sheet.addAction(UIAlertAction(title: previewing ? String(localized: "Stop Preview") : String(localized: "Play Preview"), style: .default) { [weak self] _ in
                 self?.playPreview(title: title, artist: artist, key: meta.normKey)
             })
         }
-        sheet.addAction(UIAlertAction(title: "Open in Apple Music", style: .default) { [weak self] _ in
+        sheet.addAction(UIAlertAction(title: String(localized: "Open in Apple Music"), style: .default) { [weak self] _ in
             self?.openInAppleMusic(title: title, artist: artist, isAlbum: isAlbum, storeURL: meta.storeURL)
         })
-        sheet.addAction(UIAlertAction(title: "View on Last.fm", style: .default) { [weak self] _ in
+        sheet.addAction(UIAlertAction(title: String(localized: "View on Last.fm"), style: .default) { [weak self] _ in
             self?.openLastFM(path: isAlbum ? [artist, title] : (title.isEmpty ? [artist] : [artist, "_", title]))
         })
-        sheet.addAction(UIAlertAction(title: "Copy", style: .default) { _ in
+        sheet.addAction(UIAlertAction(title: String(localized: "Copy"), style: .default) { _ in
             UIPasteboard.general.string = title.isEmpty ? artist : "\(artist) — \(title)"
         })
-        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        sheet.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
         present(sheet, animated: true)
     }
 
@@ -541,13 +541,13 @@ extension WantlistViewController: UICollectionViewDelegate {
         Task { [weak self] in
             guard let url = await WantlistService.fetchPreviewURL(title: title, artist: artist) else {
                 if let self {
-                    ToastView.show("No preview available", in: self.view, style: .error)
+                    ToastView.show(String(localized: "No preview available"), in: self.view, style: .error)
                 }
                 return
             }
             PreviewPlayer.shared.toggle(key: key, url: url)
             if let self {
-                ToastView.show("Previewing \(title)", in: self.view, style: .success)
+                ToastView.show(String(localized: "Previewing \(title)"), in: self.view, style: .success)
             }
         }
     }
@@ -570,7 +570,7 @@ extension WantlistViewController: UICollectionViewDelegate {
             if let url {
                 await UIApplication.shared.open(url)
             } else {
-                ToastView.show("Not found on Apple Music", in: self.view, style: .error)
+                ToastView.show(String(localized: "Not found on Apple Music"), in: self.view, style: .error)
             }
         }
     }

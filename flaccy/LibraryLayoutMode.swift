@@ -38,13 +38,13 @@ nonisolated enum LibraryLayoutMode: String, CaseIterable, Sendable {
 
     var displayName: String {
         switch self {
-        case .grid: "Grid"
-        case .list: "List"
-        case .compact: "Compact"
+        case .grid: String(localized: "Grid")
+        case .list: String(localized: "List")
+        case .compact: String(localized: "Compact")
         }
     }
 
     var accessibilityLabel: String {
-        "Layout: \(displayName). Double tap to change."
+        String(localized: "Layout: \(displayName). Double tap to change.")
     }
 }

@@ -19,7 +19,7 @@ final class SectionIndexView: UIView {
         isUserInteractionEnabled = true
         isAccessibilityElement = true
         accessibilityTraits = .adjustable
-        accessibilityLabel = "Section index"
+        accessibilityLabel = String(localized: "Section index")
         setupPill()
         setupBubble()
     }

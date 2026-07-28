@@ -9,8 +9,8 @@ final class SidebarViewController: NSViewController {
     private let outlineView = NSOutlineView()
     private let scrollView = NSScrollView()
     private let groups: [(title: String, sections: [SidebarSection])] = [
-        ("Library", [.albums, .songs, .artists, .playlists]),
-        ("Discover", [.wantlist, .charts, .yearInMusic, .listeningGuide]),
+        (String(localized: "Library"), [.albums, .songs, .artists, .playlists]),
+        (String(localized: "Discover"), [.wantlist, .charts, .yearInMusic, .listeningGuide]),
     ]
 
     override func loadView() {
