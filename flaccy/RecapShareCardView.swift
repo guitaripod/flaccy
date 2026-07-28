@@ -135,7 +135,7 @@ final class RecapShareCardView: UIView {
         artistsList.text = data.topArtists.prefix(5).enumerated()
             .map { "\($0.offset + 1)  \($0.element.name)" }
             .joined(separator: "\n")
-        personaBadge.text = "  \(data.persona)  "
+        personaBadge.text = "  \(RecapPersona.title(for: data.persona))  "
 
         let colors = palette.colors
         let first = (colors.first ?? .systemIndigo)

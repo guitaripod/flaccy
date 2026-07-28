@@ -1,5 +1,7 @@
 import StoreKit
+#if canImport(UIKit)
 import UIKit
+#endif
 
 /// Asks for an App Store rating once the user has a real library in Flaccy, and at most once per
 /// app version.
@@ -22,18 +24,29 @@ enum ReviewPrompt {
         defaults.set(total, forKey: countKey)
 
         guard total >= tracksBeforeAsking else { return }
-        guard defaults.string(forKey: versionKey) != currentVersion, let scene = activeScene else {
-            return
-        }
+        guard defaults.string(forKey: versionKey) != currentVersion, requestReview() else { return }
         defaults.set(currentVersion, forKey: versionKey)
-        AppStore.requestReview(in: scene)
     }
 
+    /// Presents the system rating sheet, reporting whether it could actually be shown. The macOS
+    /// client has no equivalent entry point yet, so it never marks the version as prompted.
+    private static func requestReview() -> Bool {
+        #if canImport(UIKit)
+        guard let scene = activeScene else { return false }
+        AppStore.requestReview(in: scene)
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    #if canImport(UIKit)
     private static var activeScene: UIWindowScene? {
         UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive }
     }
+    #endif
 
     private static var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"

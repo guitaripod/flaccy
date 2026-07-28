@@ -272,7 +272,7 @@ final class YearInMusicStoryView: UIView {
         facts.alignment = .leading
         if let peakDay = data.peakDay {
             let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM d"
+            formatter.setLocalizedDateFormatFromTemplate("MMMMd")
             facts.addArrangedSubview(factRow(symbol: "calendar", text: String(localized: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays")))
         }
         if let peakHour = data.peakHour {
@@ -333,7 +333,7 @@ final class YearInMusicStoryView: UIView {
             facts.alignment = .leading
             if let peakDay = data.peakDay {
                 let formatter = DateFormatter()
-                formatter.dateFormat = "MMMM d"
+                formatter.setLocalizedDateFormatFromTemplate("MMMMd")
                 facts.addArrangedSubview(factRow(symbol: "calendar", text: String(localized: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays")))
             }
             if data.longestStreak > 1 {
@@ -540,7 +540,7 @@ final class YearInMusicStoryView: UIView {
         icon.widthAnchor.constraint(equalToConstant: 15).isActive = true
 
         let label = UILabel()
-        label.text = persona
+        label.text = RecapPersona.title(for: persona)
         label.font = .systemFont(ofSize: 14, weight: .bold)
         label.textColor = .white
 

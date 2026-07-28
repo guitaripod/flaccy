@@ -97,7 +97,9 @@ enum LibraryCleanup {
         let dupLimit = 20
         let dupGroups = plan.duplicateGroups.prefix(dupLimit)
         for group in dupGroups {
-            lines.append("Keep → \(group.keeper.title) — \(group.keeper.albumTitle) (\(qualityLabel(group.keeper)))")
+            lines.append(
+                String(localized: "Keep → \(group.keeper.title) — \(group.keeper.albumTitle) (\(qualityLabel(group.keeper)))")
+            )
         }
         if plan.duplicateGroups.count > dupLimit {
             lines.append(String(localized: "…and \(plan.duplicateGroups.count - dupLimit) more duplicate sets"))
@@ -116,7 +118,7 @@ enum LibraryCleanup {
     }
 
     private static func qualityLabel(_ track: Track) -> String {
-        track.qualityBadge ?? "unknown"
+        track.qualityBadge ?? String(localized: "unknown")
     }
 
     @MainActor

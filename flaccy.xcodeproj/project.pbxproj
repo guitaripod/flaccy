@@ -15,6 +15,7 @@
 		2EF7E3522074A6D4757D100A /* WatchAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBEFB8DA11EA80BE3A1C0BE /* WatchAudioPlayer.swift */; };
 		331A551AA661711BBCCE5E4C /* ArtworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AC28FB864167FA1CD5F9AC4 /* ArtworkView.swift */; };
 		4114B9F2DAEFCEF2104A7CF6 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5939164CA91FCC865B69DB94 /* FlaccyCore */; };
+		4610773C6821C2ACE08FE99C /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 2753F9557898F224C5D54343 /* Localizable.xcstrings */; };
 		478CB61873AE062D0199DA6D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 64EF0C9A9CD815CA8E65E069 /* Assets.xcassets */; };
 		4A7C11ED2F7D000000000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4A7C11ED2F7D000000000001 /* PrivacyInfo.xcprivacy */; };
 		77121E0B8B0D3F4357C64CA6 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E46B13F9441353C5009A48 /* NowPlayingView.swift */; };
@@ -80,6 +81,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2753F9557898F224C5D54343 /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		2C2776CA2F7D0282007FF196 /* flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F54FEC40BC514CE9408F611 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3AC28FB864167FA1CD5F9AC4 /* ArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ArtworkView.swift; path = Support/ArtworkView.swift; sourceTree = "<group>"; };
@@ -273,6 +275,7 @@
 				64EF0C9A9CD815CA8E65E069 /* Assets.xcassets */,
 				D21E18037CD4569DE9E41F19 /* Info.plist */,
 				4A7C11ED2F7D000000000001 /* PrivacyInfo.xcprivacy */,
+				2753F9557898F224C5D54343 /* Localizable.xcstrings */,
 			);
 			name = "flaccyWatch Watch App";
 			path = "flaccyWatch Watch App";
@@ -466,6 +469,14 @@
 			knownRegions = (
 				en,
 				Base,
+				de,
+				es,
+				fr,
+				it,
+				ja,
+				ko,
+				"pt-BR",
+				"zh-Hans",
 			);
 			mainGroup = 2C2776C12F7D0282007FF196;
 			minimizedProjectReferenceProxies = 1;
@@ -502,6 +513,7 @@
 			files = (
 				478CB61873AE062D0199DA6D /* Assets.xcassets in Resources */,
 				4A7C11ED2F7D000000000002 /* PrivacyInfo.xcprivacy in Resources */,
+				4610773C6821C2ACE08FE99C /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1091,6 +1103,11 @@
 			package = 2C2777002F7D0300007FF196 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
 		};
+		2CAA00022F000002007FF196 /* MidgarKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2CAA00012F000001007FF196 /* XCRemoteSwiftPackageReference "MidgarKit" */;
+			productName = MidgarKit;
+		};
 		5939164CA91FCC865B69DB94 /* FlaccyCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FlaccyCore;
@@ -1107,11 +1124,6 @@
 		D2E21F4867B0D1251124B5D3 /* FlaccyCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FlaccyCore;
-		};
-		2CAA00022F000002007FF196 /* MidgarKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 2CAA00012F000001007FF196 /* XCRemoteSwiftPackageReference "MidgarKit" */;
-			productName = MidgarKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -166,7 +166,7 @@ final class MacHeatmapView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let grid = gridMetrics() else { return }
         let monthFormatter = DateFormatter()
-        monthFormatter.dateFormat = "MMM"
+        monthFormatter.setLocalizedDateFormatFromTemplate("MMM")
         var lastLabeledMonth = -1
 
         for column in 0..<grid.columns {
@@ -232,7 +232,7 @@ final class MacHeatmapView: NSView {
         tooltipOwners = []
         guard let grid = gridMetrics() else { return }
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy"
+        formatter.setLocalizedDateFormatFromTemplate("MMMdyyyy")
         for column in 0..<grid.columns {
             guard let columnStart = calendar.date(byAdding: .day, value: 7 * column, to: grid.firstColumnStart) else { continue }
             for row in 0..<7 {

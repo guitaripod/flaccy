@@ -157,7 +157,7 @@ enum StoryCardRenderer {
 
         if let peakDay = data.peakDay {
             let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM d"
+            formatter.setLocalizedDateFormatFromTemplate("MMMMd")
             cursor = canvas.factRow(
                 symbol: "calendar",
                 text: String(localized: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays"),
@@ -221,7 +221,7 @@ enum StoryCardRenderer {
         if !compact {
             if let peakDay = data.peakDay {
                 let formatter = DateFormatter()
-                formatter.dateFormat = "MMMM d"
+                formatter.setLocalizedDateFormatFromTemplate("MMMMd")
                 cursor = canvas.factRow(
                     symbol: "calendar",
                     text: String(localized: "Biggest day: \(formatter.string(from: peakDay)) — \(RecapFormat.count(data.peakDayPlays)) plays"),
@@ -467,7 +467,7 @@ enum StoryCardRenderer {
         func drawPersonaPill(_ persona: String, x: CGFloat, topY: CGFloat) {
             let font = NSFont.systemFont(ofSize: 14, weight: .bold)
             let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.white]
-            let text = persona as NSString
+            let text = RecapPersona.title(for: persona) as NSString
             let textSize = text.size(withAttributes: attributes)
             let pillRect = CGRect(x: x, y: topY, width: 16 + 15 + 6 + textSize.width + 16, height: 34)
             let path = CGPath(roundedRect: pillRect, cornerWidth: 17, cornerHeight: 17, transform: nil)

@@ -219,13 +219,13 @@ final class LastFMSettingsPane: SettingsPane {
             importButton.isEnabled = false
             importStatusLabel.stringValue = imported > 0
                 ? String(localized: "Importing… \(RecapFormat.count(imported)) scrobbles")
-                : "Importing…"
+                : String(localized: "Importing…")
         case .done(let imported):
             importSpinner.stopAnimation(nil)
             importButton.isEnabled = LastFMService.shared.isAuthenticated
             importStatusLabel.stringValue = imported > 0
                 ? String(localized: "Imported \(RecapFormat.count(imported)) scrobbles")
-                : "History already imported"
+                : String(localized: "History already imported")
         case .available:
             importSpinner.stopAnimation(nil)
             importButton.isEnabled = LastFMService.shared.isAuthenticated

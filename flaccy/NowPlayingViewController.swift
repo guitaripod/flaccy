@@ -1117,7 +1117,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             repeatButton.tintColor = .white
             repeatButton.accessibilityValue = String(localized: "All")
             repeatCapsule?.setActive(true, animated: animated)
-            repeatCapsule?.setBadge("ALL")
+            repeatCapsule?.setBadge(String(localized: "ALL"))
         case .one:
             repeatButton.setImage(UIImage(systemName: "repeat.1", withConfiguration: config), for: .normal)
             repeatButton.tintColor = .white

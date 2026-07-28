@@ -369,7 +369,7 @@ final class ChartsViewController: NSViewController {
             var pieces = [info.name]
             if info.registeredUts > 0 {
                 let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy"
+                formatter.setLocalizedDateFormatFromTemplate("yyyy")
                 pieces.append(String(localized: "scrobbling since \(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(info.registeredUts))))"))
             }
             profileLabel.stringValue = pieces.joined(separator: " · ")
@@ -388,7 +388,7 @@ final class ChartsViewController: NSViewController {
             ? String(localized: "\(data.streak) days in a row and counting")
             : String(localized: "No active streak — press play to start one")
 
-        personaTitleLabel.stringValue = data.persona
+        personaTitleLabel.stringValue = RecapPersona.title(for: data.persona)
         personaBlurbLabel.stringValue = RecapPersona.blurb(for: data.persona)
         personaIcon.image = NSImage(systemSymbolName: RecapPersona.symbol(for: data.persona), accessibilityDescription: nil)
         personaIcon.contentTintColor = accent
@@ -400,7 +400,7 @@ final class ChartsViewController: NSViewController {
             (RecapFormat.count(data.totalPlays), String(localized: "PLAYS"), "play.circle.fill"),
             (RecapFormat.count(data.totalMinutes), String(localized: "MINUTES"), "clock.fill"),
             ("\(data.streak)", String(localized: "DAY STREAK"), "flame.fill"),
-            (data.persona, String(localized: "PERSONA"), RecapPersona.symbol(for: data.persona)),
+            (RecapPersona.title(for: data.persona), String(localized: "PERSONA"), RecapPersona.symbol(for: data.persona)),
         ]
         for (value, caption, symbol) in tiles {
             statsRow.addArrangedSubview(statTile(value: value, caption: caption, symbol: symbol))

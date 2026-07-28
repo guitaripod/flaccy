@@ -153,7 +153,20 @@ nonisolated enum RecapItem: Hashable {
 }
 
 /// A short, warm blurb shown under each persona label.
+///
+/// The persona itself is a stable English identifier produced by the stats services and used as a
+/// lookup key here, so every screen must render `title(for:)` rather than the raw value.
 enum RecapPersona {
+    static func title(for persona: String) -> String {
+        switch persona {
+        case "Night Owl": String(localized: "Night Owl")
+        case "Explorer": String(localized: "Explorer")
+        case "Loyalist": String(localized: "Loyalist")
+        case "Devotee": String(localized: "Devotee")
+        default: String(localized: "Newcomer")
+        }
+    }
+
     static func blurb(for persona: String) -> String {
         switch persona {
         case "Night Owl": String(localized: "You do your best listening after dark.")

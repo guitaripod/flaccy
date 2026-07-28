@@ -1107,7 +1107,7 @@ final class PersonaCell: UICollectionViewCell {
     }
 
     func configure(_ item: PersonaItem, palette: ArtworkPalette) {
-        personaLabel.text = item.persona
+        personaLabel.text = RecapPersona.title(for: item.persona)
         blurbLabel.text = RecapPersona.blurb(for: item.persona)
         iconView.image = UIImage(systemName: RecapPersona.symbol(for: item.persona))
         let colors = palette.colors
@@ -1117,7 +1117,9 @@ final class PersonaCell: UICollectionViewCell {
         gradient.startPoint = CGPoint(x: 0, y: 0)
         gradient.endPoint = CGPoint(x: 1, y: 1)
         isAccessibilityElement = true
-        accessibilityLabel = String(localized: "Your persona: \(item.persona). \(RecapPersona.blurb(for: item.persona))")
+        accessibilityLabel = String(
+            localized: "Your persona: \(RecapPersona.title(for: item.persona)). \(RecapPersona.blurb(for: item.persona))"
+        )
     }
 }
 
