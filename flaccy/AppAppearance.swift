@@ -24,6 +24,14 @@ nonisolated enum AppAppearance: Int, CaseIterable {
         }
     }
 
+    var accessibilityIdentifier: String {
+        switch self {
+        case .system: return "settings.appearance.system"
+        case .light: return "settings.appearance.light"
+        case .dark: return "settings.appearance.dark"
+        }
+    }
+
     var symbolName: String {
         switch self {
         case .system: return "circle.lefthalf.filled"

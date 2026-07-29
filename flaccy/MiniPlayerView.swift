@@ -172,6 +172,7 @@ final class MiniPlayerView: UIView {
         isAccessibilityElement = false
         expandElement.accessibilityContainer = self
         expandElement.accessibilityTraits = .button
+        expandElement.accessibilityIdentifier = "player.expand"
         expandElement.accessibilityHint = String(localized: "Opens Now Playing")
         expandElement.onActivate = { [weak self] in self?.onTap?() }
         accessibilityElements = [expandElement, playPauseButton, nextButton, queueButton]

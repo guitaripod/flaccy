@@ -122,6 +122,7 @@ final class SettingsViewController: UITableViewController {
         super.viewDidLoad()
         title = String(localized: "Settings")
         tableView = UITableView(frame: .zero, style: .insetGrouped)
+        tableView.accessibilityIdentifier = "settings.table"
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellReuseIdentifier)
         tableView.register(AppearanceCell.self, forCellReuseIdentifier: AppearanceCell.reuseID)
@@ -273,6 +274,7 @@ final class SettingsViewController: UITableViewController {
         cell.accessibilityTraits = .button
         cell.accessibilityValue = nil
         cell.accessibilityHint = nil
+        cell.accessibilityIdentifier = nil
 
         var content = UIListContentConfiguration.valueCell()
         content.textProperties.font = .preferredFont(forTextStyle: .body)
@@ -333,6 +335,7 @@ final class SettingsViewController: UITableViewController {
             cell.accessoryType = .disclosureIndicator
             cell.accessibilityLabel = String(localized: "Your Year in Music")
             cell.accessibilityHint = String(localized: "Shows your yearly listening recap with shareable story cards")
+            cell.accessibilityIdentifier = "settings.row.yearInMusic"
 
         case .recapNotifications(let frequency):
             content.image = RowIcon.image(systemName: "bell.badge.fill", tint: .systemRed)
@@ -384,6 +387,7 @@ final class SettingsViewController: UITableViewController {
             cell.accessoryType = .disclosureIndicator
             cell.accessibilityLabel = String(localized: "Listening Guide")
             cell.accessibilityHint = String(localized: "Explains how Bluetooth, AAC, and lossless audio affect what you hear")
+            cell.accessibilityIdentifier = "settings.row.listeningGuide"
 
         case .watchSync(let syncedCount):
             content.image = RowIcon.image(systemName: "applewatch", tint: .systemBlue)
@@ -853,7 +857,10 @@ private final class AppearanceCell: UITableViewCell {
 
     var onChange: ((AppAppearance) -> Void)?
 
-    private let segmented = UISegmentedControl(items: AppAppearance.allCases.map(\.displayName))
+    private let segmented = IdentifiedSegmentedControl(
+        items: AppAppearance.allCases.map(\.displayName),
+        identifiers: AppAppearance.allCases.map(\.accessibilityIdentifier)
+    )
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)

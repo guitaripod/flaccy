@@ -63,6 +63,7 @@ final class YearInMusicViewController: UIViewController {
         closeButton.backgroundColor = UIColor.white.withAlphaComponent(0.12)
         closeButton.layer.cornerRadius = 17
         closeButton.accessibilityLabel = String(localized: "Close")
+        closeButton.accessibilityIdentifier = "yearInMusic.close"
         closeButton.addAction(UIAction { [weak self] _ in
             self?.impactLight.impactOccurred()
             self?.dismiss(animated: true)

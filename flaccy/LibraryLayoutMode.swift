@@ -47,4 +47,10 @@ nonisolated enum LibraryLayoutMode: String, CaseIterable, Sendable {
     var accessibilityLabel: String {
         String(localized: "Layout: \(displayName). Double tap to change.")
     }
+
+    /// Non-localized counterpart of `accessibilityLabel`, so UI tests can both
+    /// find the toggle and tell which mode it is currently showing.
+    var accessibilityIdentifier: String {
+        "library.layoutToggle.\(rawValue)"
+    }
 }

@@ -747,6 +747,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
         lyricsButton.setImage(UIImage(systemName: "text.quote", withConfiguration: iconConfig), for: .normal)
         lyricsButton.accessibilityLabel = String(localized: "Lyrics")
+        lyricsButton.accessibilityIdentifier = "player.lyrics"
         lyricsButton.accessibilityHint = String(localized: "Shows lyrics in place of the artwork")
         lyricsButton.addAction(UIAction { [weak self] _ in
             guard let self else { return }
@@ -755,6 +756,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
         queueButton.setImage(UIImage(systemName: "list.bullet", withConfiguration: iconConfig), for: .normal)
         queueButton.accessibilityLabel = String(localized: "Queue")
+        queueButton.accessibilityIdentifier = "player.queue"
         queueButton.accessibilityHint = String(localized: "Shows the queue in place of the artwork")
         queueButton.addAction(UIAction { [weak self] _ in
             guard let self else { return }
@@ -839,6 +841,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         pill.translatesAutoresizingMaskIntoConstraints = false
 
         grabberControl.accessibilityLabel = String(localized: "Collapse player")
+        grabberControl.accessibilityIdentifier = "player.collapse"
         grabberControl.accessibilityTraits = .button
         grabberControl.addAction(UIAction { [weak self] _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()

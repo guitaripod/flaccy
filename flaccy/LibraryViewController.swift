@@ -7,7 +7,10 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private let viewModel = LibraryViewModel()
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Int, LibraryItem>!
-    private let segmentedControl = UISegmentedControl(items: [String(localized: "Albums"), String(localized: "Songs"), String(localized: "Artists"), String(localized: "Playlists")])
+    private let segmentedControl = IdentifiedSegmentedControl(
+        items: [String(localized: "Albums"), String(localized: "Songs"), String(localized: "Artists"), String(localized: "Playlists")],
+        identifiers: ["library.tab.albums", "library.tab.songs", "library.tab.artists", "library.tab.playlists"]
+    )
     private var cancellables = Set<AnyCancellable>()
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let sectionIndexView = SectionIndexView()
@@ -89,10 +92,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         updateRightBarButton(for: .albums)
         updateChips(for: .albums)
 
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
+        let settingsItem = UIBarButtonItem(
             image: UIImage(systemName: "gearshape"),
             primaryAction: UIAction { [weak self] _ in self?.presentSettings() }
         )
+        settingsItem.accessibilityIdentifier = "library.settings"
+        navigationItem.leftBarButtonItem = settingsItem
 
         Task {
             await viewModel.loadLibrary()
@@ -172,27 +177,30 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         switch segment {
         case .albums:
             navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), menu: albumSortMenu()),
+                sortButton(menu: albumSortMenu()),
                 layoutToggleButton(),
             ]
         case .songs:
             let range = UIBarButtonItem(image: UIImage(systemName: "calendar"), menu: scrobbleRangeMenu())
             range.accessibilityLabel = String(localized: "Play history range")
             navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), menu: songSortMenu()),
+                sortButton(menu: songSortMenu()),
                 range,
                 layoutToggleButton(),
             ]
         case .artists:
-            navigationItem.rightBarButtonItem = UIBarButtonItem(
-                image: UIImage(systemName: "arrow.up.arrow.down"),
-                menu: artistSortMenu()
-            )
+            navigationItem.rightBarButtonItem = sortButton(menu: artistSortMenu())
         case .playlists:
             navigationItem.rightBarButtonItem = UIBarButtonItem(
                 systemItem: .add, primaryAction: UIAction { [weak self] _ in self?.createPlaylistTapped() }
             )
         }
+    }
+
+    private func sortButton(menu: UIMenu) -> UIBarButtonItem {
+        let item = UIBarButtonItem(image: UIImage(systemName: "arrow.up.arrow.down"), menu: menu)
+        item.accessibilityIdentifier = "library.sort"
+        return item
     }
 
     private func layoutToggleButton() -> UIBarButtonItem {
@@ -201,6 +209,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             primaryAction: UIAction { [weak self] _ in self?.toggleLayoutMode() }
         )
         item.accessibilityLabel = viewModel.layoutMode.accessibilityLabel
+        item.accessibilityIdentifier = viewModel.layoutMode.accessibilityIdentifier
         return item
     }
 
@@ -265,8 +274,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     private func albumSortMenu() -> UIMenu {
-        let actions = LibraryViewModel.AlbumSort.allCases.map { sort in
-            UIAction(
+        let actions = LibraryViewModel.AlbumSort.allCases.map { sort -> UIAction in
+            let action = UIAction(
                 title: sort.displayName,
                 image: UIImage(systemName: sort.icon),
                 state: viewModel.albumSort == sort ? .on : .off
@@ -277,14 +286,16 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 self?.updateSectionIndex()
                 self?.scrollToTopForSortChange()
             }
+            action.accessibilityIdentifier = "sort.option.\(sort.rawValue)"
+            return action
         }
         return UIMenu(title: String(localized: "Sort By"), image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
     }
 
     private func songSortMenu() -> UIMenu {
         let actions = LibraryViewModel.SongSort.allCases
-            .map { sort in
-                UIAction(
+            .map { sort -> UIAction in
+                let action = UIAction(
                     title: sort.displayName,
                     image: UIImage(systemName: sort.icon),
                     state: viewModel.songSort == sort ? .on : .off
@@ -295,6 +306,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                     self?.updateSectionIndex()
                     self?.scrollToTopForSortChange()
                 }
+                action.accessibilityIdentifier = "sort.option.\(sort.rawValue)"
+                return action
             }
         return UIMenu(title: String(localized: "Sort By"), image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
     }
@@ -325,8 +338,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     private func artistSortMenu() -> UIMenu {
-        let actions = LibraryViewModel.ArtistSort.allCases.map { sort in
-            UIAction(
+        let actions = LibraryViewModel.ArtistSort.allCases.map { sort -> UIAction in
+            let action = UIAction(
                 title: sort.displayName,
                 image: UIImage(systemName: sort.icon),
                 state: viewModel.artistSort == sort ? .on : .off
@@ -337,6 +350,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 self?.updateSectionIndex()
                 self?.scrollToTopForSortChange()
             }
+            action.accessibilityIdentifier = "sort.option.\(sort.rawValue)"
+            return action
         }
         return UIMenu(title: String(localized: "Sort By"), image: UIImage(systemName: "arrow.up.arrow.down"), children: actions)
     }
@@ -766,6 +781,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             content.imageProperties.reservedLayoutSize = CGSize(width: 44, height: 44)
             cell.contentConfiguration = content
             cell.accessories = [.disclosureIndicator()]
+            cell.accessibilityIdentifier = "library.playlists.recap"
         }
 
         let wantlistRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Int> { cell, _, _ in

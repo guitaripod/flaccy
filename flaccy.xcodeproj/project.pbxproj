@@ -127,6 +127,7 @@
 				ChartsViewController.swift,
 				FilterChipsView.swift,
 				HeatmapView.swift,
+				IdentifiedSegmentedControl.swift,
 				Info.plist,
 				LibraryViewController.swift,
 				LiquidGlass.swift,
