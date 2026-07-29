@@ -31,7 +31,8 @@ final class ScreenshotTests: XCTestCase {
         static func appearance(_ appearance: String) -> String { "settings.appearance.\(appearance)" }
     }
 
-    private let outputDirectory = "/tmp/flaccy-shots/raw"
+    private let outputDirectory =
+        ProcessInfo.processInfo.environment["SHOT_DIR"] ?? "/tmp/flaccy-shots/raw"
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -67,7 +68,7 @@ final class ScreenshotTests: XCTestCase {
 
         tap(app.buttons[ID.tabPlaylists], "Playlists tab")
         sleep(2)
-        tap(app.cells[ID.recap], "Recap row")
+        tapScrolling(app.cells[ID.recap], "Recap row", in: app)
         capture(app, wait: 8, name: "dark-07-recap-charts")
         app.swipeUp(); app.swipeUp()
         capture(app, wait: 2, name: "dark-07b-recap-clock")
@@ -76,13 +77,12 @@ final class ScreenshotTests: XCTestCase {
         openSettings(app)
         capture(app, wait: 3, name: "dark-10-settings")
 
-        tap(app.cells[ID.yearInMusic], "Your Year in Music row")
+        tapScrolling(app.cells[ID.yearInMusic], "Your Year in Music row", in: app)
         capture(app, wait: 6, name: "dark-08-year-in-music")
         tap(app.buttons[ID.yearInMusicClose], "Year in Music close button")
         sleep(1)
 
-        scrollTo(app.cells[ID.listeningGuide], "Listening Guide row", in: app)
-        tap(app.cells[ID.listeningGuide], "Listening Guide row")
+        tapScrolling(app.cells[ID.listeningGuide], "Listening Guide row", in: app)
         capture(app, wait: 4, name: "dark-09-listening-guide")
     }
 
@@ -150,8 +150,7 @@ final class ScreenshotTests: XCTestCase {
         tap(app.buttons[ID.tabAlbums], "Albums tab")
         sleep(1)
         openSettings(app)
-        scrollTo(app.cells[ID.listeningGuide], "Listening Guide row", in: app)
-        tap(app.cells[ID.listeningGuide], "Listening Guide row")
+        tapScrolling(app.cells[ID.listeningGuide], "Listening Guide row", in: app)
         capture(app, wait: 4, name: "light-09-listening-guide")
     }
 
@@ -176,31 +175,53 @@ final class ScreenshotTests: XCTestCase {
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments.append("--seed-screenshots")
+        app.launchArguments.append(contentsOf: Self.languageArguments)
         app.launch()
         return app
     }
 
-    private func capture(_ app: XCUIApplication, wait seconds: UInt32, name: String) {
+    /// Puts the app under test — not the test runner — into the locale being
+    /// shot, through the `NSUserDefaults` argument domain.
+    ///
+    /// Set by the runner's environment (`TEST_RUNNER_SHOT_LANGUAGE=de` on the
+    /// `xcodebuild test` invocation); an unset language shoots the development
+    /// language.
+    private static var languageArguments: [String] {
+        let environment = ProcessInfo.processInfo.environment
+        guard let language = environment["SHOT_LANGUAGE"], !language.isEmpty else { return [] }
+        let locale = environment["SHOT_LOCALE"] ?? language
+        return ["-AppleLanguages", "(\(language))", "-AppleLocale", locale]
+    }
+
+    private func capture(
+        _ app: XCUIApplication, wait seconds: UInt32, name: String,
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
         sleep(seconds)
         let screenshot = XCUIScreen.main.screenshot()
         let attachment = XCTAttachment(screenshot: screenshot)
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
-        let url = URL(fileURLWithPath: "\(outputDirectory)/\(name).png")
-        try? screenshot.pngRepresentation.write(to: url)
+        let directory = URL(fileURLWithPath: outputDirectory, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try screenshot.pngRepresentation.write(to: directory.appendingPathComponent("\(name).png"))
+        } catch {
+            XCTFail("Could not write screenshot \(name): \(error)", file: file, line: line)
+        }
     }
 
     private func openAlbum(
         _ app: XCUIApplication, named title: String, file: StaticString = #filePath, line: UInt = #line
     ) {
-        tap(app.staticTexts[title].firstMatch, "album \(title)", file: file, line: line)
+        tapScrolling(app.staticTexts[title].firstMatch, "album \(title)", in: app, file: file, line: line)
     }
 
     private func startPlayback(
         _ app: XCUIApplication, trackNamed title: String, file: StaticString = #filePath, line: UInt = #line
     ) {
-        tap(app.staticTexts[title].firstMatch, "track \(title)", file: file, line: line)
+        tapScrolling(app.staticTexts[title].firstMatch, "track \(title)", in: app, file: file, line: line)
         sleep(3)
     }
 
@@ -248,16 +269,36 @@ final class ScreenshotTests: XCTestCase {
         sleep(1)
     }
 
+    /// Scrolls in half-screen steps until the target is on screen.
+    ///
+    /// Collection and table views only materialize visible rows, so a target
+    /// further down the library does not merely start un-hittable — it does not
+    /// exist yet, and half-screen steps keep it from being scrolled straight
+    /// past between two checks.
     private func scrollTo(
         _ element: XCUIElement, _ description: String, in app: XCUIApplication,
         file: StaticString = #filePath, line: UInt = #line
     ) {
         var attempts = 0
-        while !element.isHittable && attempts < 6 {
-            app.swipeUp()
+        while !(element.exists && element.isHittable) && attempts < 12 {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
             attempts += 1
+            usleep(400_000)
         }
-        XCTAssertTrue(element.isHittable, "Could not scroll \(description) into view", file: file, line: line)
+        XCTAssertTrue(
+            element.exists && element.isHittable,
+            "Could not scroll \(description) into view",
+            file: file, line: line
+        )
+    }
+
+    private func tapScrolling(
+        _ element: XCUIElement, _ description: String, in app: XCUIApplication,
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
+        scrollTo(element, description, in: app, file: file, line: line)
+        tap(element, description, file: file, line: line)
     }
 
     /// Every tap in the tour goes through here: a step that cannot reach its
