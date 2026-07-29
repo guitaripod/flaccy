@@ -50,6 +50,12 @@
             "state": "translated",
             "value": "专辑"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "專輯"
+          }
         }
       }
     },
@@ -101,6 +107,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有音乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有音樂"
           }
         }
       }
@@ -154,6 +166,12 @@
             "state": "translated",
             "value": "没有正在播放的内容"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有正在播放的內容"
+          }
         }
       }
     },
@@ -202,6 +220,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在播放"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "正在播放"
@@ -258,6 +282,12 @@
             "state": "translated",
             "value": "挑一张专辑开始吧。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挑一張專輯開始吧。"
+          }
         }
       }
     },
@@ -306,6 +336,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "播放"
@@ -362,6 +398,12 @@
             "state": "translated",
             "value": "正在从 iPhone 接收…"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在從 iPhone 接收…"
+          }
         }
       }
     },
@@ -414,6 +456,12 @@
             "state": "translated",
             "value": "随机播放全部"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隨機播放全部"
+          }
         }
       }
     },
@@ -462,6 +510,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iPhone 上用 Flaccy 同步歌曲。"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "在 iPhone 上用 Flaccy 同步歌曲。"
@@ -517,6 +571,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的音乐正在后台传输。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的音樂正在背景傳輸。"
           }
         }
       }
