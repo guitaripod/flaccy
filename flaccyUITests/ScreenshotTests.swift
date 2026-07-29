@@ -142,6 +142,11 @@ final class ScreenshotTests: XCTestCase {
 
     func testLightTour() throws {
         let app = launchApp()
+        openSettings(app)
+        tap(app.buttons[ID.appearance("light")], "Light appearance segment")
+        sleep(1)
+        app.terminate()
+        app.launch()
         capture(app, wait: 8, name: "light-01-library-grid")
 
         tap(app.buttons[ID.tabSongs], "Songs tab")
@@ -176,8 +181,19 @@ final class ScreenshotTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments.append("--seed-screenshots")
         app.launchArguments.append(contentsOf: Self.languageArguments)
+        app.launchArguments.append(contentsOf: Self.deterministicSortArguments)
         app.launch()
         return app
+    }
+
+    /// Pins the library sort so the first shot of a tour is the same every run.
+    ///
+    /// The sort is persisted in `UserDefaults`, so without this the opening screenshot shows
+    /// whatever order the *previous* run happened to leave behind — which differed per language
+    /// purely by the order the languages were shot in. The argument domain outranks the stored
+    /// value without writing to it.
+    private static var deterministicSortArguments: [String] {
+        ["-albumSort", "title", "-artistDetailAlbumSort", "title"]
     }
 
     /// Puts the app under test — not the test runner — into the locale being
