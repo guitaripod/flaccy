@@ -9,17 +9,28 @@ public enum LibraryScanner {
         ["flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf"]
 
     /// Recursively scans `directory`, reading metadata for every supported file.
-    /// `relativePath`s are computed against `directory`.
-    public static func scan(directory: URL) async -> [MediaItem] {
+    /// `relativePath`s are computed against `directory`. `onProgress` reports the
+    /// same phases the phone and desktop clients report, so a wait looks the
+    /// same on every screen.
+    public static func scan(
+        directory: URL,
+        onProgress: (@Sendable (LibraryLoadProgress) -> Void)? = nil
+    ) async -> [MediaItem] {
+        onProgress?(LibraryLoadProgress(phase: .findingFiles))
         let urls = collectAudioFiles(in: directory)
         let basePath = directory.standardizedFileURL.path
         let maxConcurrent = max(2, ProcessInfo.processInfo.activeProcessorCount)
+        onProgress?(LibraryLoadProgress(phase: .findingFiles, filesFound: urls.count))
 
         var items: [MediaItem] = []
         items.reserveCapacity(urls.count)
 
+        onProgress?(
+            LibraryLoadProgress(phase: .readingTags, completed: 0, total: urls.count, filesFound: urls.count)
+        )
         await withTaskGroup(of: MediaItem?.self) { group in
             var next = 0
+            var read = 0
             while next < urls.count, next < maxConcurrent {
                 let url = urls[next]
                 group.addTask { await makeItem(url: url, basePath: basePath) }
@@ -27,6 +38,16 @@ public enum LibraryScanner {
             }
             for await item in group {
                 if let item { items.append(item) }
+                read += 1
+                onProgress?(
+                    LibraryLoadProgress(
+                        phase: .readingTags,
+                        completed: read,
+                        total: urls.count,
+                        filesFound: urls.count,
+                        tracksIndexed: items.count
+                    )
+                )
                 if next < urls.count {
                     let url = urls[next]
                     group.addTask { await makeItem(url: url, basePath: basePath) }
@@ -34,6 +55,13 @@ public enum LibraryScanner {
                 }
             }
         }
+        onProgress?(
+            LibraryLoadProgress(
+                phase: .buildingAlbums,
+                filesFound: urls.count,
+                tracksIndexed: items.count
+            )
+        )
         return items
     }
 

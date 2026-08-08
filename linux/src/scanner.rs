@@ -1,4 +1,5 @@
 use crate::db::{Db, NewTrack};
+use crate::load_progress::{LoadPhase, LoadProgress};
 use lofty::file::{AudioFile, FileType, TaggedFile, TaggedFileExt};
 use lofty::prelude::*;
 use std::collections::HashSet;
@@ -7,7 +8,7 @@ use std::path::{Path, PathBuf};
 const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
 
 pub enum ScanEvent {
-    Progress(usize, usize),
+    Progress(LoadProgress),
     Done { added: usize, removed: usize },
     Failed(String),
 }
@@ -32,7 +33,12 @@ fn run_scan(
     tx: &async_channel::Sender<ScanEvent>,
 ) -> Result<(usize, usize), String> {
     let db = Db::open(db_path).map_err(|e| format!("db open failed: {e}"))?;
+    let mut progress = LoadProgress::new(LoadPhase::FindingFiles);
+    let _ = tx.send_blocking(ScanEvent::Progress(progress));
+
     let files = collect_audio_files(root);
+    progress.files_found = files.len();
+    let _ = tx.send_blocking(ScanEvent::Progress(progress));
     let disk_paths: HashSet<String> = files
         .iter()
         .map(|path| relative_path(root, path))
@@ -53,10 +59,22 @@ fn run_scan(
         .collect();
     let total = to_add.len();
     let mut added = 0;
+    let already_indexed = existing
+        .iter()
+        .filter(|path| disk_paths.contains(*path))
+        .count();
+
+    progress.phase = LoadPhase::ReadingTags;
+    progress.total = total;
+    progress.completed = 0;
+    progress.tracks_indexed = already_indexed;
+    let _ = tx.send_blocking(ScanEvent::Progress(progress));
 
     for (index, path) in to_add.iter().enumerate() {
         if index % 25 == 0 || index + 1 == total {
-            let _ = tx.send_blocking(ScanEvent::Progress(index + 1, total));
+            progress.completed = index + 1;
+            progress.tracks_indexed = already_indexed + added;
+            let _ = tx.send_blocking(ScanEvent::Progress(progress));
         }
         let rel = relative_path(root, path);
         match read_track(path, &rel) {

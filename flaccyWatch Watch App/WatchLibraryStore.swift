@@ -9,6 +9,8 @@ final class WatchLibraryStore {
     private(set) var albums: [MediaAlbum] = []
     private(set) var allTracks: [MediaItem] = []
     private(set) var isLoading: Bool = false
+    private(set) var loadProgress: LibraryLoadProgress = .idle
+    private(set) var loadFraction: Double = 0
 
     @ObservationIgnored let documentsDirectory: URL
     @ObservationIgnored private var loadTask: Task<Void, Never>?
@@ -50,13 +52,23 @@ final class WatchLibraryStore {
         await SampleContent.seedIfNeeded(in: documentsDirectory)
         #endif
 
-        let items = await LibraryScanner.scan(directory: documentsDirectory)
+        let tracker = LibraryLoadProgressTracker()
+        let items = await LibraryScanner.scan(directory: documentsDirectory) { [weak self] progress in
+            guard tracker.update({ $0 = progress }) != nil else { return }
+            let fraction = tracker.displayFraction
+            Task { @MainActor [weak self] in
+                self?.loadProgress = progress
+                self?.loadFraction = fraction
+            }
+        }
         guard gen == generation, !Task.isCancelled else { return }
         allTracks = items.sorted { lhs, rhs in
             lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
         }
         albums = LibraryScanner.albums(from: items)
         isLoading = false
+        loadProgress = .idle
+        loadFraction = 0
         AppLogger.info("Watch library: \(albums.count) albums, \(items.count) tracks", category: .watch)
     }
 }

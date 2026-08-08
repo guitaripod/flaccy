@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0BB345FBD38D4072779FC1A1 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = D2E21F4867B0D1251124B5D3 /* FlaccyCore */; };
 		1CD0A584B2671D1567CEB203 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7084824E5A82BA46E8C7F7 /* LibraryView.swift */; };
+		4A7C11ED2F7D000000000011 /* ScanProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A7C11ED2F7D000000000010 /* ScanProgressView.swift */; };
 		20364068D2334231B84E65AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F54FEC40BC514CE9408F611 /* Foundation.framework */; };
 		2C21267046BDFDCB76F13F69 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = A734BCDDBC66217E19FC32B7 /* FlaccyCore */; };
 		2C2777462F7D0B80007FF196 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 2C2777012F7D0301007FF196 /* GRDB */; };
@@ -96,6 +97,7 @@
 		A9DDE13019C6B5BC73D42B17 /* WatchTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTheme.swift; path = Support/WatchTheme.swift; sourceTree = "<group>"; };
 		AA00UITESTPRODUCT0000001 /* flaccyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF7084824E5A82BA46E8C7F7 /* LibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = Views/LibraryView.swift; sourceTree = "<group>"; };
+		4A7C11ED2F7D000000000010 /* ScanProgressView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScanProgressView.swift; path = Views/ScanProgressView.swift; sourceTree = "<group>"; };
 		B6E46B13F9441353C5009A48 /* NowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NowPlayingView.swift; path = Views/NowPlayingView.swift; sourceTree = "<group>"; };
 		BC3821FD60497EF57CD4BDC8 /* RootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RootView.swift; path = Views/RootView.swift; sourceTree = "<group>"; };
 		BDBEFB8DA11EA80BE3A1C0BE /* WatchAudioPlayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAudioPlayer.swift; sourceTree = "<group>"; };
@@ -129,6 +131,8 @@
 				HeatmapView.swift,
 				IdentifiedSegmentedControl.swift,
 				Info.plist,
+				LibraryLoadingView.swift,
+				LibraryScanBanner.swift,
 				LibraryViewController.swift,
 				LiquidGlass.swift,
 				ListeningClockView.swift,
@@ -267,6 +271,7 @@
 				A9DDE13019C6B5BC73D42B17 /* WatchTheme.swift */,
 				61186AD73843676DB85FD70F /* AlbumDetailView.swift */,
 				AF7084824E5A82BA46E8C7F7 /* LibraryView.swift */,
+				4A7C11ED2F7D000000000010 /* ScanProgressView.swift */,
 				B6E46B13F9441353C5009A48 /* NowPlayingView.swift */,
 				BC3821FD60497EF57CD4BDC8 /* RootView.swift */,
 				BDBEFB8DA11EA80BE3A1C0BE /* WatchAudioPlayer.swift */,
@@ -566,6 +571,7 @@
 				94EEA69301AB52580318B7E7 /* WatchTheme.swift in Sources */,
 				D628E7E5CB4C3AA1CAA431F3 /* AlbumDetailView.swift in Sources */,
 				1CD0A584B2671D1567CEB203 /* LibraryView.swift in Sources */,
+				4A7C11ED2F7D000000000011 /* ScanProgressView.swift in Sources */,
 				77121E0B8B0D3F4357C64CA6 /* NowPlayingView.swift in Sources */,
 				D3446621CB91CB204AD64EAF /* RootView.swift in Sources */,
 				2EF7E3522074A6D4757D100A /* WatchAudioPlayer.swift in Sources */,

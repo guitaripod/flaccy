@@ -2,6 +2,7 @@ use crate::config::{self, Config, Session};
 use crate::db::Db;
 use crate::events::{AppEvent, EventHub};
 use crate::library::{self, Library, Track};
+use crate::load_progress::{LoadPhase, LoadProgress};
 use crate::player::Player;
 use crate::scanner::{self, ScanEvent};
 use crate::ui;
@@ -240,15 +241,20 @@ impl AppCore {
         glib::spawn_future_local(async move {
             while let Ok(event) = rx.recv().await {
                 match event {
-                    ScanEvent::Progress(done, total) => {
-                        core.hub.emit(&AppEvent::ScanProgress(done, total));
+                    ScanEvent::Progress(progress) => {
+                        core.hub.emit(&AppEvent::ScanProgress(progress));
                     }
                     ScanEvent::Done { added, removed } => {
                         core.scanning.set(false);
-                        core.hub.emit(&AppEvent::ScanFinished { added, removed });
                         if added > 0 || removed > 0 {
+                            core.hub.emit(&AppEvent::ScanProgress(LoadProgress {
+                                phase: LoadPhase::BuildingAlbums,
+                                tracks_indexed: core.library.borrow().tracks.len(),
+                                ..LoadProgress::default()
+                            }));
                             core.reload_library();
                         }
+                        core.hub.emit(&AppEvent::ScanFinished { added, removed });
                         break;
                     }
                     ScanEvent::Failed(message) => {

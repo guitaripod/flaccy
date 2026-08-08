@@ -135,7 +135,11 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     }
     header.pack_end(&search_clamp);
 
-    let progress = gtk::ProgressBar::builder().hexpand(true).build();
+    let progress = gtk::ProgressBar::builder()
+        .hexpand(true)
+        .show_text(true)
+        .text("Looking for music")
+        .build();
     progress.add_css_class("osd");
     let progress_revealer = gtk::Revealer::builder()
         .child(&progress)
@@ -148,6 +152,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
             .subscribe_widget(&progress_revealer, move |revealer, event| match event {
                 AppEvent::ScanStarted => {
                     progress.set_fraction(0.0);
+                    progress.set_text(Some("Opening your library"));
                     revealer.set_reveal_child(true);
                     rescan_button.set_sensitive(false);
                     let spinner = gtk::Spinner::new();
@@ -155,9 +160,16 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                     rescan_button.set_child(Some(&spinner));
                     rescan_button.set_tooltip_text(Some("Scanning…"));
                 }
-                AppEvent::ScanProgress(done, total) => {
-                    if *total > 0 {
-                        progress.set_fraction(*done as f64 / *total as f64);
+                AppEvent::ScanProgress(state) => {
+                    let detail = state.detail();
+                    let headline = state.phase.headline();
+                    progress.set_text(Some(&if detail.is_empty() {
+                        headline.to_string()
+                    } else {
+                        format!("{headline} — {detail}")
+                    }));
+                    if state.is_determinate() {
+                        progress.set_fraction(state.fraction_completed());
                     } else {
                         progress.pulse();
                     }

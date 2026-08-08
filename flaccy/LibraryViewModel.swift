@@ -1,4 +1,5 @@
 import Combine
+import FlaccyCore
 
 #if canImport(UIKit)
 import UIKit
@@ -135,11 +136,34 @@ final class LibraryViewModel {
     let snapshotPublisher = PassthroughSubject<Snapshot, Never>()
     let miniPlayerStatePublisher = PassthroughSubject<MiniPlayerState?, Never>()
     let loadingPublisher = PassthroughSubject<Bool, Never>()
+    let loadStatePublisher = PassthroughSubject<LibraryLoadState, Never>()
 
     struct MiniPlayerState {
         let track: Track
         let isPlaying: Bool
     }
+
+    /// What a scan looks like to the UI: the raw progress, the smoothed
+    /// fraction to draw, and whether there is already a library behind it —
+    /// which decides between the full-screen setup view and the inline banner.
+    struct LibraryLoadState {
+        let progress: LibraryLoadProgress
+        let fraction: Double
+        let hasLibrary: Bool
+
+        var showsFullScreen: Bool { progress.phase.blocksLibrary && !hasLibrary }
+        var showsBanner: Bool { progress.isActive && hasLibrary }
+    }
+
+    var currentLoadState: LibraryLoadState {
+        LibraryLoadState(
+            progress: library.loadProgress,
+            fraction: library.loadFraction,
+            hasLibrary: !library.albums.isEmpty
+        )
+    }
+
+    private var progressCancellable: AnyCancellable?
 
     private(set) var currentSegment: Segment = .albums
     private var searchQuery: String = ""
@@ -643,6 +667,25 @@ final class LibraryViewModel {
         NotificationCenter.default.addObserver(
             self, selector: #selector(loadingStateChanged), name: Library.loadingStateChanged, object: nil
         )
+
+        progressCancellable = NotificationCenter.default.publisher(for: Library.progressDidChange)
+            .compactMap { notification -> (LibraryLoadProgress, Double)? in
+                guard let progress = notification.userInfo?[Library.ProgressKey.progress] as? LibraryLoadProgress,
+                      let fraction = notification.userInfo?[Library.ProgressKey.fraction] as? Double
+                else { return nil }
+                return (progress, fraction)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] progress, fraction in
+                guard let self else { return }
+                self.loadStatePublisher.send(
+                    LibraryLoadState(
+                        progress: progress,
+                        fraction: fraction,
+                        hasLibrary: !self.library.albums.isEmpty
+                    )
+                )
+            }
     }
 
     deinit {

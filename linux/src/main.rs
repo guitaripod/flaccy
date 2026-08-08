@@ -8,6 +8,7 @@ mod hygiene;
 mod importer;
 mod lastfm;
 mod library;
+mod load_progress;
 mod logger;
 mod lyrics;
 mod mpris;

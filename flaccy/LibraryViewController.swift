@@ -19,9 +19,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private var lastRenderedFilter: LibraryFilter?
     private var lastRenderedLayout: LibraryLayoutMode?
     private let selectionFeedback = UISelectionFeedbackGenerator()
-    private let loadingOverlay = UIView()
-    private let loadingIconView = UIImageView()
-    private let loadingLabel = UILabel()
+    private let loadingView = LibraryLoadingView()
+    private let scanBanner = LibraryScanBanner()
+    private var scanBannerHeight: NSLayoutConstraint!
+    private var loadingShownAt: Date?
+    private var bannerStallTimer: Timer?
+    private var lastBannerFraction: Double = -1
     private let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
     private let emptyStateLabel = UILabel()
     private var lastRenderedSegment: LibraryViewModel.Segment?
@@ -75,19 +78,17 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        setupLoadingOverlay()
-        loadingOverlay.isHidden = false
-        loadingOverlay.alpha = 1
-        startLoadingPulse()
+        setupLoadingView()
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         setupSearchController()
         setupSegmentedControl()
         setupFilterChips()
+        setupScanBanner()
         setupCollectionView()
         setupSectionIndex()
         configureDataSource()
-        view.bringSubviewToFront(loadingOverlay)
+        view.bringSubviewToFront(loadingView)
         bindViewModel()
         updateRightBarButton(for: .albums)
         updateChips(for: .albums)
@@ -412,7 +413,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
+            collectionView.topAnchor.constraint(equalTo: scanBanner.bottomAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -425,7 +426,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         NSLayoutConstraint.activate([
             sectionIndexView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
-            sectionIndexView.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor, constant: 8),
+            sectionIndexView.topAnchor.constraint(equalTo: scanBanner.bottomAnchor, constant: 8),
             sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
         ])
@@ -510,54 +511,110 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func setupLoadingOverlay() {
-        loadingOverlay.backgroundColor = .systemBackground
-        loadingOverlay.isHidden = true
-        loadingOverlay.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(loadingOverlay)
-
-        loadingIconView.image = UIImage(systemName: "waveform.circle.fill")
-        loadingIconView.tintColor = .tintColor
-        loadingIconView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 64, weight: .thin)
-        loadingIconView.contentMode = .scaleAspectFit
-
-        let titleLabel = UILabel()
-        titleLabel.text = "flaccy"
-        titleLabel.font = .scaled(.title1, size: 28, weight: .bold)
-        titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.textAlignment = .center
-
-        let stack = UIStackView(arrangedSubviews: [loadingIconView, titleLabel])
-        stack.axis = .vertical
-        stack.spacing = 8
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        loadingOverlay.addSubview(stack)
+    private func setupLoadingView() {
+        loadingView.translatesAutoresizingMaskIntoConstraints = false
+        loadingView.accessibilityIdentifier = "library.loading"
+        loadingView.alpha = 1
+        loadingShownAt = Date()
+        view.addSubview(loadingView)
 
         NSLayoutConstraint.activate([
-            loadingOverlay.topAnchor.constraint(equalTo: view.topAnchor),
-            loadingOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            loadingOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            loadingOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            stack.centerXAnchor.constraint(equalTo: loadingOverlay.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: loadingOverlay.centerYAnchor, constant: -60),
+            loadingView.topAnchor.constraint(equalTo: view.topAnchor),
+            loadingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            loadingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            loadingView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
 
-    private func startLoadingPulse() {
-        loadingIconView.layer.removeAnimation(forKey: "pulse")
-        let pulse = CABasicAnimation(keyPath: "opacity")
-        pulse.fromValue = 1.0
-        pulse.toValue = 0.3
-        pulse.duration = 1.2
-        pulse.autoreverses = true
-        pulse.repeatCount = .infinity
-        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        loadingIconView.layer.add(pulse, forKey: "pulse")
+    private func setupScanBanner() {
+        scanBanner.accessibilityIdentifier = "library.scanBanner"
+        view.addSubview(scanBanner)
+        scanBannerHeight = scanBanner.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            scanBanner.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
+            scanBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scanBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scanBannerHeight,
+        ])
     }
 
-    private func stopLoadingPulse() {
-        loadingIconView.layer.removeAnimation(forKey: "pulse")
+    /// Routes one scan update to whichever surface fits: the full-screen setup
+    /// view while there is nothing to browse, the inline banner once there is.
+    private func render(loadState state: LibraryViewModel.LibraryLoadState, animated: Bool = true) {
+        if state.showsFullScreen {
+            loadingView.update(progress: state.progress, fraction: state.fraction)
+            showLoadingView()
+        } else {
+            hideLoadingView(animated: animated)
+        }
+
+        guard state.showsBanner else {
+            bannerStallTimer?.invalidate()
+            bannerStallTimer = nil
+            lastBannerFraction = -1
+            setScanBanner(visible: false, animated: animated)
+            return
+        }
+        if scanBannerHeight.constant == 0 { scanBanner.prepareForShow() }
+        scanBanner.update(progress: state.progress, fraction: state.fraction)
+        guard state.fraction > lastBannerFraction + 0.0001 else { return }
+        lastBannerFraction = state.fraction
+        setScanBanner(visible: true, animated: animated)
+        armBannerStallTimer()
+    }
+
+    /// Artwork lookups can stall on a slow network for minutes; a bar that has
+    /// not moved reads as a hung app, so the banner steps aside and comes back
+    /// the moment progress resumes.
+    private func armBannerStallTimer() {
+        bannerStallTimer?.invalidate()
+        bannerStallTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.setScanBanner(visible: false, animated: true)
+            }
+        }
+    }
+
+    private func showLoadingView() {
+        guard loadingView.isHidden || loadingView.alpha < 1 else { return }
+        loadingShownAt = Date()
+        loadingView.isHidden = false
+        loadingView.alpha = 1
+        view.bringSubviewToFront(loadingView)
+        navigationController?.setNavigationBarHidden(true, animated: false)
+    }
+
+    /// Dismisses the setup view, holding it on screen long enough to read when
+    /// the scan turns out to be instant, then crossfading into the library.
+    private func hideLoadingView(animated: Bool) {
+        guard !loadingView.isHidden else { return }
+        let shownFor = loadingShownAt.map { Date().timeIntervalSince($0) } ?? .greatestFiniteMagnitude
+        let remaining = max(0, 0.4 - shownFor)
+        guard animated else {
+            loadingView.isHidden = true
+            loadingView.alpha = 0
+            navigationController?.setNavigationBarHidden(false, animated: false)
+            return
+        }
+        navigationController?.setNavigationBarHidden(false, animated: false)
+        UIView.animate(withDuration: 0.45, delay: remaining, options: .curveEaseOut) {
+            self.loadingView.alpha = 0
+        } completion: { _ in
+            self.loadingView.isHidden = true
+        }
+    }
+
+    private func setScanBanner(visible: Bool, animated: Bool) {
+        let target = visible ? LibraryScanBanner.expandedHeight : 0
+        guard scanBannerHeight.constant != target else { return }
+        scanBannerHeight.constant = target
+        guard animated, !UIAccessibility.isReduceMotionEnabled else {
+            view.layoutIfNeeded()
+            return
+        }
+        UIView.animate(withDuration: 0.25, delay: 0, options: .curveEaseInOut) {
+            self.view.layoutIfNeeded()
+        }
     }
 
     private func badgeAccessories(qualityTrack: Track?, loved: Bool, scrobbleCount: Int? = nil) -> [UICellAccessory] {
@@ -910,24 +967,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             .sink { [weak self] _ in self?.handleLovedChange() }
             .store(in: &cancellables)
 
-        viewModel.loadingPublisher
+        viewModel.loadStatePublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] isLoading in
-                guard let self else { return }
-                if isLoading {
-                    self.loadingOverlay.isHidden = false
-                    self.loadingOverlay.alpha = 1
-                    self.startLoadingPulse()
-                } else {
-                    self.stopLoadingPulse()
-                    self.navigationController?.setNavigationBarHidden(false, animated: false)
-                    UIView.animate(withDuration: 0.5, delay: 0.05, options: .curveEaseOut) {
-                        self.loadingOverlay.alpha = 0
-                    } completion: { _ in
-                        self.loadingOverlay.isHidden = true
-                    }
-                }
-            }
+            .sink { [weak self] state in self?.render(loadState: state) }
             .store(in: &cancellables)
     }
 

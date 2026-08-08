@@ -285,6 +285,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             });
     }
     empty.set_child(Some(&empty_actions));
+    attach_scan_status(ui, &empty, &empty_actions);
 
     let stack = gtk::Stack::new();
     stack.set_hhomogeneous(false);
@@ -386,6 +387,40 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 /// Digest of the album set plus the metadata the grid renders; any add,
 /// removal, reorder, or enriched year/genre changes it, triggering a model
 /// splice (the virtualized GridView only rebinds the handful of visible cells).
+/// Turns the "No Music Found" page into a live scan report while a first scan
+/// is running, matching the iPhone setup screen: the stage, what it means, and
+/// the running counts — instead of telling someone their library is empty
+/// while it is still being read.
+fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) {
+    let idle_title = empty.title().to_string();
+    let idle_description = empty.description().map(|text| text.to_string());
+    let idle_icon = empty.icon_name().map(|name| name.to_string());
+    let actions = actions.clone();
+    ui.core
+        .hub
+        .subscribe_widget(empty, move |empty, event| match event {
+            AppEvent::ScanProgress(state) if state.phase.blocks_library() => {
+                empty.set_icon_name(Some("content-loading-symbolic"));
+                empty.set_title(state.phase.headline());
+                let detail = state.detail();
+                let description = if detail.is_empty() {
+                    state.phase.explanation().to_string()
+                } else {
+                    format!("{}\n{detail}", state.phase.explanation())
+                };
+                empty.set_description(Some(&description));
+                actions.set_visible(false);
+            }
+            AppEvent::ScanFinished { .. } => {
+                empty.set_icon_name(idle_icon.as_deref());
+                empty.set_title(&idle_title);
+                empty.set_description(idle_description.as_deref());
+                actions.set_visible(true);
+            }
+            _ => {}
+        });
+}
+
 fn albums_fingerprint(albums: &[Album]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for album in albums {

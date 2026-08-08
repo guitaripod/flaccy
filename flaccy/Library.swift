@@ -1,3 +1,4 @@
+import FlaccyCore
 import Foundation
 
 #if canImport(UIKit)
@@ -15,6 +16,8 @@ protocol LibraryProviding: AnyObject {
     var albums: [Album] { get }
     var allTracks: [Track] { get }
     var isLoading: Bool { get }
+    var loadProgress: LibraryLoadProgress { get }
+    var loadFraction: Double { get }
     func reload() async
     func resetAndReload() async
     func reloadFromDatabase() async
@@ -28,11 +31,47 @@ final class Library: LibraryProviding {
     static let shared: LibraryProviding = Library()
     static let didUpdateNotification = Notification.Name("LibraryDidUpdate")
     static let loadingStateChanged = Notification.Name("LibraryLoadingStateChanged")
+    static let progressDidChange = Notification.Name("LibraryLoadProgressChanged")
+
+    enum ProgressKey {
+        static let progress = "progress"
+        static let fraction = "fraction"
+    }
 
     private(set) var albums: [Album] = []
     private(set) var allTracks: [Track] = []
     private(set) var isLoading: Bool = false {
         didSet { NotificationCenter.default.post(name: Library.loadingStateChanged, object: nil) }
+    }
+
+    nonisolated private let progressTracker = LibraryLoadProgressTracker()
+
+    nonisolated var loadProgress: LibraryLoadProgress { progressTracker.progress }
+    nonisolated var loadFraction: Double { progressTracker.displayFraction }
+
+    /// Publishes a coalesced progress snapshot; updates too small to see are
+    /// dropped by the tracker rather than waking the main thread per file.
+    nonisolated private func emitProgress(
+        force: Bool = false, _ mutate: (inout LibraryLoadProgress) -> Void
+    ) {
+        guard let updated = progressTracker.update(force: force, mutate) else { return }
+        NotificationCenter.default.post(
+            name: Library.progressDidChange,
+            object: nil,
+            userInfo: [
+                ProgressKey.progress: updated,
+                ProgressKey.fraction: progressTracker.displayFraction,
+            ]
+        )
+    }
+
+    nonisolated private func finishProgress() {
+        let idle = progressTracker.finish()
+        NotificationCenter.default.post(
+            name: Library.progressDidChange,
+            object: nil,
+            userInfo: [ProgressKey.progress: idle, ProgressKey.fraction: 1.0]
+        )
     }
 
     private let db = DatabaseManager.shared
@@ -50,7 +89,10 @@ final class Library: LibraryProviding {
             return
         }
         isReloading = true
-        defer { isReloading = false }
+        defer {
+            isReloading = false
+            finishProgress()
+        }
         repeat {
             reloadPending = false
             await doReload()
@@ -59,8 +101,13 @@ final class Library: LibraryProviding {
 
     private func doReload() async {
         let firstLoad = albums.isEmpty
-        if firstLoad { isLoading = true }
+        if firstLoad {
+            isLoading = true
+            emitProgress(force: true) { $0 = LibraryLoadProgress(phase: .openingLibrary) }
+            await restoreLastIndexedLibrary()
+        }
 
+        emitProgress(force: true) { $0.phase = .findingFiles }
         let syncChanged = await syncFilesWithDatabase()
         let needsAnalysis = hasUnanalyzedTracks()
 
@@ -70,7 +117,9 @@ final class Library: LibraryProviding {
         }
 
         if firstLoad || syncChanged || needsAnalysis {
+            emitProgress(force: true) { $0.phase = .buildingAlbums; $0.completed = 0; $0.total = 0 }
             await loadFromDatabase()
+            publishLibraryTallies()
             AppLogger.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
         }
 
@@ -78,6 +127,25 @@ final class Library: LibraryProviding {
         isLoading = false
 
         await enrichAndPublish()
+    }
+
+    /// Shows whatever was indexed on a previous run before any disk work
+    /// starts, so a relaunch lands on a usable library in milliseconds and the
+    /// scan that follows is progress a person can watch rather than a wall.
+    private func restoreLastIndexedLibrary() async {
+        await loadFromDatabase()
+        guard !albums.isEmpty else { return }
+        publishLibraryTallies()
+        NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
+    }
+
+    private func publishLibraryTallies() {
+        let albumCount = albums.count
+        let trackCount = allTracks.count
+        emitProgress(force: true) {
+            $0.albumsBuilt = albumCount
+            $0.tracksIndexed = max($0.tracksIndexed, trackCount)
+        }
     }
 
     /// Re-reads the album/track model from the database and republishes,
@@ -97,6 +165,8 @@ final class Library: LibraryProviding {
 
     func resetAndReload() async {
         isLoading = true
+        defer { finishProgress() }
+        emitProgress(force: true) { $0 = LibraryLoadProgress(phase: .openingLibrary) }
         AppLogger.info("=== RESETTING AI ANALYSIS FLAGS ===", category: .database)
         do {
             try db.resetAllAIAnalyzed()
@@ -104,9 +174,12 @@ final class Library: LibraryProviding {
             AppLogger.error("Failed to reset AI flags: \(error.localizedDescription)", category: .database)
         }
 
+        emitProgress(force: true) { $0.phase = .findingFiles }
         await syncFilesWithDatabase()
         await analyzeLibrary(dirtyOnly: false)
+        emitProgress(force: true) { $0.phase = .buildingAlbums; $0.completed = 0; $0.total = 0 }
         await loadFromDatabase()
+        publishLibraryTallies()
         logLibraryState()
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         isLoading = false
@@ -177,7 +250,11 @@ final class Library: LibraryProviding {
             let relPath = relativePath(for: fileURL)
             diskPaths.insert(relPath)
             diskFilesByPath[relPath] = fileURL
+            let found = diskPaths.count
+            emitProgress { $0.filesFound = found }
         }
+        let filesOnDisk = diskPaths.count
+        emitProgress(force: true) { $0.filesFound = filesOnDisk }
 
         let knownPaths: Set<String>
         do {
@@ -196,6 +273,12 @@ final class Library: LibraryProviding {
 
         if newPaths.isEmpty && removedPaths.isEmpty {
             AppLogger.info("Sync: \(diskPaths.count) files, no changes", category: .content)
+            emitProgress(force: true) {
+                $0.phase = .readingTags
+                $0.completed = knownPaths.count
+                $0.total = knownPaths.count
+                $0.tracksIndexed = knownPaths.count
+            }
             return false
         }
 
@@ -220,6 +303,15 @@ final class Library: LibraryProviding {
             } catch {
                 AppLogger.error("DB cleanup error: \(error.localizedDescription)", category: .database)
             }
+        }
+
+        let newCount = newPaths.count
+        let alreadyIndexed = knownPaths.count - removedPaths.count
+        emitProgress(force: true) {
+            $0.phase = .readingTags
+            $0.completed = 0
+            $0.total = newCount
+            $0.tracksIndexed = alreadyIndexed
         }
 
         await withTaskGroup(of: TrackRecord?.self) { group in
@@ -252,7 +344,13 @@ final class Library: LibraryProviding {
             }
 
             var buffer: [TrackRecord] = []
+            var read = 0
             for await record in group {
+                read += 1
+                emitProgress {
+                    $0.completed = read
+                    $0.tracksIndexed = alreadyIndexed + read
+                }
                 guard let record else { continue }
                 buffer.append(record)
                 if buffer.count >= Self.insertBatchSize {
@@ -316,9 +414,21 @@ final class Library: LibraryProviding {
             }
 
             AppLogger.info("Analyzing \(tracksToAnalyze.count) tracks in \(grouped.count) batches", category: .content)
+            let batchCount = grouped.count
+            emitProgress(force: true) {
+                $0.phase = .identifyingMusic
+                $0.completed = 0
+                $0.total = batchCount
+            }
 
             var totalUpdated = 0
+            var batchesDone = 0
             for (dir, tracks) in grouped {
+                defer {
+                    batchesDone += 1
+                    let done = batchesDone
+                    emitProgress(force: true) { $0.completed = done }
+                }
                 let contexts = tracks.map { track in
                     TrackContext(
                         relativePath: track.fileURL,
@@ -442,8 +552,16 @@ final class Library: LibraryProviding {
     @concurrent
     nonisolated private func enrichMissingMetadata(for albums: [Album]) async -> Bool {
         var enrichedAny = false
+        let albumCount = albums.count
+        emitProgress(force: true) {
+            $0.phase = .enrichingArtwork
+            $0.completed = 0
+            $0.total = albumCount
+            $0.albumsBuilt = albumCount
+        }
 
-        for album in albums {
+        for (index, album) in albums.enumerated() {
+            emitProgress { $0.completed = index }
             let albumInfo = try? db.fetchAlbumInfo(title: album.title, artist: album.artist)
             if albumInfo?.coverArtData != nil { continue }
             if let lastFetched = albumInfo?.lastFetched,

@@ -1,4 +1,5 @@
 use crate::library::Track;
+use crate::load_progress::LoadProgress;
 use crate::player::RepeatMode;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -7,7 +8,7 @@ use std::rc::Rc;
 pub enum AppEvent {
     LibraryReloaded,
     ScanStarted,
-    ScanProgress(usize, usize),
+    ScanProgress(LoadProgress),
     ScanFinished { added: usize, removed: usize },
     TrackChanged(Option<Track>),
     NaturalEnd(Track),

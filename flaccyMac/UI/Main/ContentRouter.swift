@@ -1,4 +1,6 @@
 import AppKit
+import Combine
+import FlaccyCore
 
 /// Hosts the selected section's view controller in the split view's content
 /// column. Library sections are drill-down stacks that keep their state while
@@ -12,6 +14,10 @@ final class ContentRouter: NSViewController {
     private var sectionControllers: [SidebarSection: NSViewController] = [:]
     private var onboardingView: OnboardingPanelView?
     private let backdrop = AmbientBackdropView(vivid: true)
+    private let scanStatus = MacScanStatusView()
+    private var scanCancellable: AnyCancellable?
+    private var scanStallTimer: Timer?
+    private var lastScanFraction: Double = -1
 
     override func loadView() {
         view = NSView()
@@ -26,6 +32,14 @@ final class ContentRouter: NSViewController {
             backdrop.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         backdrop.apply(NowPlayingPaletteService.shared.current, animated: false)
+
+        view.addSubview(scanStatus)
+        NSLayoutConstraint.activate([
+            scanStatus.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
+            scanStatus.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            scanStatus.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+            scanStatus.widthAnchor.constraint(equalToConstant: 320),
+        ])
     }
 
     override func viewDidLoad() {
@@ -46,7 +60,49 @@ final class ContentRouter: NSViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(refreshOnboarding), name: LibraryRoot.didChange, object: nil
         )
+        observeScanProgress()
         refreshOnboarding()
+    }
+
+    private func observeScanProgress() {
+        scanCancellable = NotificationCenter.default.publisher(for: Library.progressDidChange)
+            .compactMap { notification -> (LibraryLoadProgress, Double)? in
+                guard let progress = notification.userInfo?[Library.ProgressKey.progress] as? LibraryLoadProgress,
+                      let fraction = notification.userInfo?[Library.ProgressKey.fraction] as? Double
+                else { return nil }
+                return (progress, fraction)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] progress, fraction in
+                self?.applyScanProgress(progress, fraction: fraction)
+            }
+    }
+
+    private func applyScanProgress(_ progress: LibraryLoadProgress, fraction: Double) {
+        guard progress.isActive else {
+            scanStallTimer?.invalidate()
+            scanStallTimer = nil
+            lastScanFraction = -1
+            scanStatus.setVisible(false)
+            return
+        }
+        scanStatus.update(progress: progress, fraction: fraction)
+        guard fraction > lastScanFraction + 0.0001 else { return }
+        lastScanFraction = fraction
+        scanStatus.setVisible(true)
+        armScanStallTimer()
+    }
+
+    /// Artwork lookups can stall on a slow network for minutes; a strip that has
+    /// not moved reads as a hung app, so it steps aside and comes back the
+    /// moment progress resumes.
+    private func armScanStallTimer() {
+        scanStallTimer?.invalidate()
+        scanStallTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.scanStatus.setVisible(false)
+            }
+        }
     }
 
     deinit {
@@ -76,6 +132,7 @@ final class ContentRouter: NSViewController {
             next.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         currentChild = next
+        view.addSubview(scanStatus, positioned: .above, relativeTo: nil)
         AppLogger.info("Content router showing \(section.title)", category: .ui)
     }
 

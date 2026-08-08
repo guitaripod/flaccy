@@ -13,7 +13,7 @@ struct LibraryView: View {
     var body: some View {
         Group {
             if store.isLoading && store.albums.isEmpty {
-                ProgressView().controlSize(.large)
+                ScanProgressView(progress: store.loadProgress, fraction: store.loadFraction)
             } else if store.isEmpty {
                 if syncStatus.isReceiving {
                     ReceivingLibraryView()
