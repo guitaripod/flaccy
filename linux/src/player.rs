@@ -22,6 +22,22 @@ impl RepeatMode {
             RepeatMode::One => RepeatMode::Off,
         }
     }
+
+    pub fn id(self) -> &'static str {
+        match self {
+            RepeatMode::Off => "off",
+            RepeatMode::All => "all",
+            RepeatMode::One => "one",
+        }
+    }
+
+    pub fn from_id(id: &str) -> Self {
+        match id {
+            "all" => RepeatMode::All,
+            "one" => RepeatMode::One,
+            _ => RepeatMode::Off,
+        }
+    }
 }
 
 struct Shared {
@@ -557,6 +573,23 @@ impl Player {
             guard.repeat
         };
         self.hub.emit(&AppEvent::RepeatChanged(mode));
+    }
+
+    pub fn set_repeat(&self, mode: RepeatMode) {
+        if let Ok(mut guard) = self.shared.lock() {
+            guard.repeat = mode;
+        }
+        self.hub.emit(&AppEvent::RepeatChanged(mode));
+    }
+
+    /// Restores the shuffle flag without reordering anything — used at launch,
+    /// before there is a queue to shuffle. `toggle_shuffle` remains the only
+    /// path that reshuffles.
+    pub fn set_shuffle(&self, enabled: bool) {
+        if let Ok(mut guard) = self.shared.lock() {
+            guard.shuffle = enabled;
+        }
+        self.hub.emit(&AppEvent::ShuffleChanged(enabled));
     }
 
     #[allow(dead_code)]

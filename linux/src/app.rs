@@ -51,6 +51,8 @@ impl AppCore {
         crate::logger::info("lifecycle", &format!("library root: {}", root.display()));
         let player = Player::new(Rc::clone(&hub), root);
         player.set_volume(config.volume);
+        player.set_shuffle(config.shuffle);
+        player.set_repeat(crate::player::RepeatMode::from_id(&config.repeat_mode));
         let session = config::load_session();
         if let Some(session) = &session {
             crate::logger::info("auth", &format!("last.fm session loaded for {}", session.username));
@@ -341,7 +343,24 @@ impl AppCore {
     pub fn set_volume(&self, volume: f64) {
         self.player.set_volume(volume);
         self.config.borrow_mut().volume = volume;
+        self.save_config();
         self.hub.emit(&AppEvent::VolumeChanged(volume));
+    }
+
+    /// Mirrors the transport modes the player owns back into the config file so
+    /// shuffle and repeat survive a restart the way volume does.
+    pub fn persist_transport_modes(&self) {
+        let shuffle = self.player.shuffle_enabled();
+        let repeat = self.player.repeat_mode().id().to_string();
+        {
+            let mut config = self.config.borrow_mut();
+            if config.shuffle == shuffle && config.repeat_mode == repeat {
+                return;
+            }
+            config.shuffle = shuffle;
+            config.repeat_mode = repeat;
+        }
+        self.save_config();
     }
 
     pub fn toggle_love(self: &Rc<Self>, rel_path: &str) {

@@ -113,30 +113,62 @@ pub fn present(ui: &Rc<Ui>) {
     content.append(&art_page);
     content.append(&queue_reveal);
 
+    // Suppresses the config write while the view restores saved panels or the
+    // width adaptation folds one away, so a narrow window never overwrites the
+    // panel layout the user actually chose.
+    let syncing = Rc::new(Cell::new(true));
+
     let (lyrics_toggle, _lyrics_label) = toggle_button("format-justify-center-symbolic", "Lyrics");
     {
         let lyrics_reveal = lyrics_reveal.clone();
         let set_active = Rc::clone(&lyrics.set_active);
+        let ui = Rc::clone(ui);
+        let syncing = Rc::clone(&syncing);
         lyrics_toggle.connect_toggled(move |button| {
             let active = button.is_active();
             lyrics_reveal.set_reveal_child(active);
             lyrics_reveal.set_hexpand(active);
             set_active(active);
+            if !syncing.get() {
+                ui.core.config.borrow_mut().np_show_lyrics = active;
+                ui.core.save_config();
+            }
         });
     }
     let (queue_toggle, queue_label) = toggle_button("view-list-symbolic", "Up Next");
     {
         let queue_reveal = queue_reveal.clone();
         let set_active = Rc::clone(&queue.set_active);
+        let ui = Rc::clone(ui);
+        let syncing = Rc::clone(&syncing);
         queue_toggle.connect_toggled(move |button| {
             let active = button.is_active();
             queue_reveal.set_reveal_child(active);
             queue_reveal.set_hexpand(active);
             set_active(active);
+            if !syncing.get() {
+                ui.core.config.borrow_mut().np_show_queue = active;
+                ui.core.save_config();
+            }
         });
     }
+    {
+        let (show_lyrics, show_queue) = {
+            let config = ui.core.config.borrow();
+            (config.np_show_lyrics, config.np_show_queue)
+        };
+        lyrics_toggle.set_active(show_lyrics);
+        queue_toggle.set_active(show_queue);
+    }
     // Below this width, keep at most one side panel open so art stays readable.
-    install_now_playing_width_adaptation(&content, &lyrics_toggle, &queue_toggle, &volume.container);
+    install_now_playing_width_adaptation(
+        ui,
+        &content,
+        &lyrics_toggle,
+        &queue_toggle,
+        &volume.container,
+        &syncing,
+    );
 
     let apply_sides: Rc<dyn Fn(bool)> = {
         let content = content.clone();
@@ -243,6 +275,8 @@ pub fn present(ui: &Rc<Ui>) {
         }
     }
 
+    syncing.set(false);
+
     let page = adw::NavigationPage::builder()
         .title("Now Playing")
         .tag("now-playing")
@@ -348,29 +382,44 @@ fn build_art_lens() -> (
 /// never crushed between two full columns on a narrow window, and drop the
 /// volume cluster so the transport buttons keep their centerline.
 fn install_now_playing_width_adaptation(
+    ui: &Rc<Ui>,
     content: &gtk::Box,
     lyrics_toggle: &gtk::ToggleButton,
     queue_toggle: &gtk::ToggleButton,
     volume: &gtk::Box,
+    syncing: &Rc<Cell<bool>>,
 ) {
     let last_width = Rc::new(Cell::new(0i32));
+    let ui = Rc::clone(ui);
     let lyrics_toggle = lyrics_toggle.clone();
     let queue_toggle = queue_toggle.clone();
     let volume = volume.clone();
+    let syncing = Rc::clone(syncing);
     content.connect_realize(move |widget| {
+        let ui = Rc::clone(&ui);
         let lyrics_toggle = lyrics_toggle.clone();
         let queue_toggle = queue_toggle.clone();
         let volume = volume.clone();
         let last_width = Rc::clone(&last_width);
+        let syncing = Rc::clone(&syncing);
         widget.add_tick_callback(move |widget, _| {
             let width = widget.width();
             if width == last_width.get() || width <= 1 {
                 return glib::ControlFlow::Continue;
             }
-            last_width.set(width);
-            if width < 640 {
-                if lyrics_toggle.is_active() && queue_toggle.is_active() {
-                    queue_toggle.set_active(false);
+            let previous = last_width.replace(width);
+            if width < 640 && lyrics_toggle.is_active() && queue_toggle.is_active() {
+                syncing.set(true);
+                queue_toggle.set_active(false);
+                syncing.set(false);
+            } else if width >= 640 && previous > 0 && previous < 640 {
+                // Widening again restores whatever the user actually chose,
+                // otherwise a panel folded away at phone width never returns.
+                let wanted = ui.core.config.borrow().np_show_queue;
+                if wanted && !queue_toggle.is_active() {
+                    syncing.set(true);
+                    queue_toggle.set_active(true);
+                    syncing.set(false);
                 }
             }
             volume.set_visible(width >= 560);

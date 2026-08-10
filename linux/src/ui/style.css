@@ -369,22 +369,55 @@ overlay-split-view > .sidebar-pane:backdrop {
 }
 
 /* ---- lyrics ------------------------------------------------------------- */
+/* Font sizes come from the runtime provider in ui/lyrics_style.rs so the user
+   can scale them; everything below is the depth ramp around the active line.
+   Only opacity and transform animate — transitioning font-size would relayout
+   the whole list every frame. */
 .lyric-line {
-  font-size: 16px;
   font-weight: 600;
-  opacity: 0.35;
+  opacity: 0.55;
   padding: 6px 4px;
-  transition: opacity 240ms ease, color 240ms ease;
+  transition: opacity 300ms ease, color 300ms ease, transform 300ms ease;
+}
+
+.lyric-line:hover {
+  opacity: 0.9;
+}
+
+.lyric-line-near {
+  opacity: 0.75;
 }
 
 .lyric-line-current {
-  font-size: 16px;
   font-weight: 700;
   opacity: 1.0;
-  padding: 6px 4px;
   color: @accent_color;
   text-shadow: 0 0 16px alpha(@accent_bg_color, 0.4);
-  transition: opacity 240ms ease, color 240ms ease;
+  transform: scale(1.04);
+  transform-origin: 0% 50%;
+}
+
+.lyric-line-interlude {
+  letter-spacing: 0.35em;
+  animation: lyric-interlude 2200ms ease-in-out infinite;
+}
+
+@keyframes lyric-interlude {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.8; }
+}
+
+.lyrics-list > row {
+  background: none;
+  border-radius: 10px;
+}
+
+.lyrics-list > row:hover {
+  background-color: alpha(@window_fg_color, 0.05);
+}
+
+.lyrics-spacer {
+  min-height: 96px;
 }
 
 /* ---- stats -------------------------------------------------------------- */
@@ -484,6 +517,26 @@ overlay-split-view > .sidebar-pane:backdrop {
   background-image: linear-gradient(120deg, alpha(@accent_bg_color, 0.20), alpha(@accent_bg_color, 0.08));
   box-shadow: inset 0 0 0 1px alpha(@accent_bg_color, 0.24);
   border-radius: 12px;
+}
+
+/* ---- now-playing track rows --------------------------------------------- */
+/* The row the player is on, wherever it appears: album detail, playlists and
+   the songs table. Same accent language as the queue's current row. */
+.now-playing-row {
+  background-image: linear-gradient(120deg, alpha(@accent_bg_color, 0.18), alpha(@accent_bg_color, 0.06));
+  box-shadow: inset 2px 0 0 0 @accent_bg_color;
+}
+
+.now-playing-title,
+.now-playing-cell {
+  color: @accent_color;
+  font-weight: 700;
+}
+
+/* The bars themselves are Cairo-drawn; this only supplies the ink color the
+   draw function reads back off the widget. */
+.eq-indicator {
+  color: @accent_color;
 }
 
 /* ---- guide -------------------------------------------------------------- */

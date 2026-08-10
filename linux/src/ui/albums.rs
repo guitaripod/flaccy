@@ -549,17 +549,12 @@ fn build_track_list(
             .margin_start(12)
             .margin_end(12)
             .build();
-        let number = gtk::Label::builder()
-            .label(if track.track_number > 0 {
-                track.track_number.to_string()
-            } else {
-                "·".to_string()
-            })
-            .width_chars(3)
-            .xalign(1.0)
-            .build();
-        number.add_css_class("track-number");
-        row_box.append(&number);
+        let index_cell = crate::ui::controls::track_index_cell(&if track.track_number > 0 {
+            track.track_number.to_string()
+        } else {
+            "·".to_string()
+        });
+        row_box.append(&index_cell.widget);
         let track_title = gtk::Label::builder()
             .label(&track.title)
             .xalign(0.0)
@@ -583,6 +578,13 @@ fn build_track_list(
 
         let row = gtk::ListBoxRow::builder().child(&row_box).build();
         context::attach_track_context_menu(&row, &ui.core, track.rel_path.clone());
+        crate::ui::controls::attach_now_playing_row(
+            ui,
+            &row,
+            &index_cell,
+            &track_title,
+            track.rel_path.clone(),
+        );
         {
             let rel = track.rel_path.clone();
             ui.core.hub.subscribe_widget(&heart, move |heart, event| {
@@ -844,23 +846,25 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         None => content.append(&build_track_list(ui, &all_tracks, 0, &album.tracks)),
     }
 
-    let detail_bin = adw::BreakpointBin::new();
-    detail_bin.set_child(Some(&content));
-    install_album_detail_breakpoints(&detail_bin, &header, &picture, &content);
-
     let clamp = adw::Clamp::builder()
         .maximum_size(920)
-        .child(&detail_bin)
+        .child(&content)
         .build();
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
+        .vexpand(true)
         .child(&clamp)
         .build();
     ui.register_scroller(&scroll);
 
+    let detail_bin = adw::BreakpointBin::new();
+    detail_bin.set_size_request(320, 200);
+    detail_bin.set_child(Some(&scroll));
+    install_album_detail_breakpoints(&detail_bin, &header, &picture, &content);
+
     let overlay = gtk::Overlay::new();
     overlay.set_child(Some(&backdrop));
-    overlay.add_overlay(&scroll);
+    overlay.add_overlay(&detail_bin);
 
     let page = adw::NavigationPage::builder()
         .title(album.title.clone())
@@ -870,7 +874,11 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
 }
 
 /// Stack the album hero vertically and shrink the cover once the detail page
-/// no longer has room for the side-by-side desktop layout.
+/// no longer has room for the side-by-side desktop layout. The bin must wrap
+/// the scroller rather than the scrolled content: a breakpoint bin reports no
+/// minimum size of its own, and a viewport sizes its adjustment from the
+/// child's minimum, so a bin inside the scroller leaves `upper == page_size`
+/// and the page silently clips instead of scrolling.
 fn install_album_detail_breakpoints(
     bin: &adw::BreakpointBin,
     header: &gtk::Box,
@@ -1045,3 +1053,4 @@ mod sort_tests {
         assert!(AlbumSort::from_id("garbage") == AlbumSort::Artist);
     }
 }
+

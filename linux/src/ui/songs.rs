@@ -1,6 +1,6 @@
 use crate::events::AppEvent;
 use crate::library::{format_time, Track};
-use crate::ui::{context, Ui};
+use crate::ui::{context, controls, Ui};
 use adw::prelude::*;
 use gtk::glib::BoxedAnyObject;
 use gtk::pango;
@@ -117,20 +117,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     };
     install_bulk_actions(ui, &selection);
 
-    column_view.append_column(&string_column(
-        "Track #",
-        false,
-        |track| {
-            if track.track_number > 0 {
-                track.track_number.to_string()
-            } else {
-                String::new()
-            }
-        },
-        |a, b| a.track_number.cmp(&b.track_number),
-        None,
-    ));
+    column_view.append_column(&track_number_column(ui));
     let title_column = string_column(
+        ui,
         "Title",
         true,
         |track| track.title.clone(),
@@ -139,6 +128,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     );
     column_view.append_column(&title_column);
     let artist_column = string_column(
+        ui,
         "Artist",
         true,
         |track| track.artist.clone(),
@@ -147,6 +137,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     );
     column_view.append_column(&artist_column);
     let album_column = string_column(
+        ui,
         "Album",
         true,
         |track| track.album.clone(),
@@ -155,6 +146,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     );
     column_view.append_column(&album_column);
     let duration_column = string_column(
+        ui,
         "Duration",
         false,
         |track| format_time(track.duration),
@@ -163,6 +155,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     );
     column_view.append_column(&duration_column);
     let plays_column = string_column(
+        ui,
         "Plays",
         false,
         |track| {
@@ -177,6 +170,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     );
     column_view.append_column(&plays_column);
     let added_column = string_column(
+        ui,
         "Added",
         false,
         |track| format_date_added(track.date_added),
@@ -185,6 +179,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     );
     column_view.append_column(&added_column);
     let quality_column = string_column(
+        ui,
         "Quality",
         false,
         |track| track.quality_badge().unwrap_or_default(),
@@ -495,7 +490,103 @@ fn format_date_added(unix: i64) -> String {
         .unwrap_or_default()
 }
 
+/// The songs table's leading column: the track number, replaced by the live
+/// equalizer on whichever row the player is on — the same marker the album and
+/// playlist lists use.
+fn track_number_column(ui: &Rc<Ui>) -> gtk::ColumnViewColumn {
+    let factory = gtk::SignalListItemFactory::new();
+    {
+        let ui = Rc::clone(ui);
+        factory.connect_setup(move |_, item| {
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
+            let cell = controls::track_index_cell("");
+            item.set_child(Some(&cell.widget));
+            watch_now_playing_cell(&ui, &cell.widget, item);
+        });
+    }
+    {
+        let ui = Rc::clone(ui);
+        factory.connect_bind(move |_, item| {
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
+            let Some(widget) = item.child() else { return };
+            let Some(cell) = controls::TrackIndexCell::from_widget(&widget) else { return };
+            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else { return };
+            let track = boxed.borrow::<Track>();
+            cell.set_text(&if track.track_number > 0 {
+                track.track_number.to_string()
+            } else {
+                String::new()
+            });
+            apply_now_playing_cell(&ui, &widget, item);
+        });
+    }
+    let sorter = track_sorter(|a, b| a.track_number.cmp(&b.track_number));
+    gtk::ColumnViewColumn::builder()
+        .title("Track #")
+        .factory(&factory)
+        .sorter(&sorter)
+        .resizable(true)
+        .build()
+}
+
+/// Paints one songs-table cell for the now-playing row. Cells recycle, so the
+/// check always resolves the list item's *current* track rather than whatever
+/// was bound when the widget was created.
+fn apply_now_playing_cell(ui: &Rc<Ui>, widget: &gtk::Widget, item: &gtk::ListItem) {
+    let current = ui.core.player.current_track();
+    let is_current = item
+        .item()
+        .and_downcast::<BoxedAnyObject>()
+        .zip(current)
+        .is_some_and(|(boxed, track)| boxed.borrow::<Track>().rel_path == track.rel_path);
+    if let Some(cell) = controls::TrackIndexCell::from_widget(widget) {
+        cell.set_state(is_current, ui.core.player.is_playing());
+        return;
+    }
+    if is_current {
+        widget.add_css_class("now-playing-cell");
+    } else {
+        widget.remove_css_class("now-playing-cell");
+    }
+}
+
+/// Keeps a recycled cell following the player for as long as the widget lives.
+fn watch_now_playing_cell(ui: &Rc<Ui>, widget: &gtk::Widget, item: &gtk::ListItem) {
+    let ui_ref = Rc::clone(ui);
+    let item_weak = item.downgrade();
+    ui.core.hub.subscribe_widget(widget, move |widget, event| {
+        if !matches!(
+            event,
+            AppEvent::TrackChanged(_) | AppEvent::PlayingChanged(_)
+        ) {
+            return;
+        }
+        if let Some(item) = item_weak.upgrade() {
+            apply_now_playing_cell(&ui_ref, widget, &item);
+        }
+    });
+}
+
+fn track_sorter(
+    compare: impl Fn(&Track, &Track) -> Ordering + 'static,
+) -> gtk::CustomSorter {
+    gtk::CustomSorter::new(move |a, b| {
+        let (Some(a), Some(b)) = (
+            a.downcast_ref::<BoxedAnyObject>(),
+            b.downcast_ref::<BoxedAnyObject>(),
+        ) else {
+            return gtk::Ordering::Equal;
+        };
+        let track_a = a.borrow::<Track>();
+        let track_b = b.borrow::<Track>();
+        compare(&track_a, &track_b)
+            .then_with(|| track_a.rel_path.cmp(&track_b.rel_path))
+            .into()
+    })
+}
+
 fn string_column(
+    ui: &Rc<Ui>,
     title: &str,
     expand: bool,
     text_for: impl Fn(&Track) -> String + 'static,
@@ -503,6 +594,7 @@ fn string_column(
     menu: Option<Rc<MenuHandler>>,
 ) -> gtk::ColumnViewColumn {
     let factory = gtk::SignalListItemFactory::new();
+    let setup_ui = Rc::clone(ui);
     factory.connect_setup(move |_, item| {
         let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
         let label = gtk::Label::builder()
@@ -510,6 +602,7 @@ fn string_column(
             .ellipsize(pango::EllipsizeMode::End)
             .build();
         item.set_child(Some(&label));
+        watch_now_playing_cell(&setup_ui, label.upcast_ref::<gtk::Widget>(), item);
         if let Some(menu) = menu.clone() {
             let gesture = gtk::GestureClick::builder()
                 .button(gdk::BUTTON_SECONDARY)
@@ -530,28 +623,19 @@ fn string_column(
     let text_for = Rc::new(text_for);
     {
         let text_for = Rc::clone(&text_for);
+        let bind_ui = Rc::clone(ui);
         factory.connect_bind(move |_, item| {
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
             let Some(label) = item.child().and_downcast::<gtk::Label>() else { return };
             let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else { return };
             let track = boxed.borrow::<Track>();
             label.set_label(&text_for(&track));
+            drop(track);
+            apply_now_playing_cell(&bind_ui, label.upcast_ref::<gtk::Widget>(), item);
         });
     }
 
-    let sorter = gtk::CustomSorter::new(move |a, b| {
-        let (Some(a), Some(b)) = (
-            a.downcast_ref::<BoxedAnyObject>(),
-            b.downcast_ref::<BoxedAnyObject>(),
-        ) else {
-            return gtk::Ordering::Equal;
-        };
-        let track_a = a.borrow::<Track>();
-        let track_b = b.borrow::<Track>();
-        compare(&track_a, &track_b)
-            .then_with(|| track_a.rel_path.cmp(&track_b.rel_path))
-            .into()
-    });
+    let sorter = track_sorter(compare);
 
     gtk::ColumnViewColumn::builder()
         .title(title)

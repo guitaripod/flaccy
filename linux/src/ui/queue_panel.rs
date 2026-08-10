@@ -391,9 +391,15 @@ fn queue_row(ui: &Rc<Ui>, track: &Track, index: usize, current: usize) -> gtk::L
         });
         row_box.append(&remove);
     } else {
-        let playing = gtk::Image::from_icon_name("audio-volume-high-symbolic");
-        playing.add_css_class("accent-toggle");
-        row_box.append(&playing);
+        let indicator = crate::ui::controls::build_equalizer_indicator();
+        indicator.set_valign(gtk::Align::Center);
+        crate::ui::controls::drive_equalizer(&indicator, ui.core.player.is_playing());
+        ui.core.hub.subscribe_widget(&indicator, |indicator, event| {
+            if let AppEvent::PlayingChanged(playing) = event {
+                crate::ui::controls::drive_equalizer(indicator, *playing);
+            }
+        });
+        row_box.append(&indicator);
     }
 
     let row = gtk::ListBoxRow::builder().child(&row_box).build();

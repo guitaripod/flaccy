@@ -15,6 +15,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     crate::theme::ThemeController::install(crate::theme::Theme::from_id(
         &core.config.borrow().theme,
     ));
+    ui::lyrics_style::apply(core.config.borrow().lyrics_font_size);
     gtk::Window::set_default_icon_name("cc.midgarcorp.Flaccy");
 
     let (width, height) = {
@@ -353,34 +354,55 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     {
         let side_stack = side_stack.clone();
         let hub = Rc::clone(&core.hub);
-        core.hub.subscribe_widget(&panel_split, move |split, event| match event {
-            AppEvent::LyricsToggled(show) => {
-                if *show {
-                    if side_stack.visible_child_name().as_deref() == Some("queue")
-                        && split.shows_sidebar()
-                    {
-                        hub.emit(&AppEvent::QueueToggled(false));
+        let core = Rc::clone(core);
+        core.hub.clone().subscribe_widget(&panel_split, move |split, event| {
+            match event {
+                AppEvent::LyricsToggled(show) => {
+                    if *show {
+                        if side_stack.visible_child_name().as_deref() == Some("queue")
+                            && split.shows_sidebar()
+                        {
+                            hub.emit(&AppEvent::QueueToggled(false));
+                        }
+                        side_stack.set_visible_child_name("lyrics");
+                        split.set_show_sidebar(true);
+                    } else if side_stack.visible_child_name().as_deref() == Some("lyrics") {
+                        split.set_show_sidebar(false);
                     }
-                    side_stack.set_visible_child_name("lyrics");
-                    split.set_show_sidebar(true);
-                } else if side_stack.visible_child_name().as_deref() == Some("lyrics") {
-                    split.set_show_sidebar(false);
                 }
-            }
-            AppEvent::QueueToggled(show) => {
-                if *show {
-                    if side_stack.visible_child_name().as_deref() == Some("lyrics")
-                        && split.shows_sidebar()
-                    {
-                        hub.emit(&AppEvent::LyricsToggled(false));
+                AppEvent::QueueToggled(show) => {
+                    if *show {
+                        if side_stack.visible_child_name().as_deref() == Some("lyrics")
+                            && split.shows_sidebar()
+                        {
+                            hub.emit(&AppEvent::LyricsToggled(false));
+                        }
+                        side_stack.set_visible_child_name("queue");
+                        split.set_show_sidebar(true);
+                    } else if side_stack.visible_child_name().as_deref() == Some("queue") {
+                        split.set_show_sidebar(false);
                     }
-                    side_stack.set_visible_child_name("queue");
-                    split.set_show_sidebar(true);
-                } else if side_stack.visible_child_name().as_deref() == Some("queue") {
-                    split.set_show_sidebar(false);
                 }
+                _ => return,
             }
-            _ => {}
+            remember_side_panel(&core, split, &side_stack);
+        });
+    }
+    restore_side_panel(core);
+    {
+        let core = Rc::clone(core);
+        core.hub.clone().subscribe_widget(&panel_split, move |_, event| {
+            match event {
+                AppEvent::ShuffleChanged(_) | AppEvent::RepeatChanged(_) => {
+                    core.persist_transport_modes()
+                }
+                // Warm the lyrics cache while the song plays, so opening the
+                // panel on the current track never spins.
+                AppEvent::TrackChanged(Some(track)) => {
+                    crate::lyrics::prefetch(&core.db_path, &core.music_root(), track)
+                }
+                _ => {}
+            }
         });
     }
 
@@ -1336,6 +1358,42 @@ fn register_icon_paths() {
             theme.add_search_path(&path);
         }
     }
+}
+
+/// Records which side panel the shell is showing so the next launch reopens it.
+fn remember_side_panel(
+    core: &Rc<AppCore>,
+    split: &adw::OverlaySplitView,
+    side_stack: &gtk::Stack,
+) {
+    let panel = if split.shows_sidebar() {
+        side_stack.visible_child_name().map(|name| name.to_string())
+    } else {
+        None
+    };
+    let panel = panel.unwrap_or_default();
+    if core.config.borrow().side_panel == panel {
+        return;
+    }
+    core.config.borrow_mut().side_panel = panel;
+    core.save_config();
+}
+
+/// Reopens the side panel the shell was left on. Deferred so the panels are
+/// realized (and the shell breakpoints have run) before one slides in.
+fn restore_side_panel(core: &Rc<AppCore>) {
+    let panel = core.config.borrow().side_panel.clone();
+    if panel.is_empty() {
+        return;
+    }
+    let hub = Rc::clone(&core.hub);
+    glib::timeout_add_local_once(std::time::Duration::from_millis(150), move || {
+        match panel.as_str() {
+            "lyrics" => hub.emit(&AppEvent::LyricsToggled(true)),
+            "queue" => hub.emit(&AppEvent::QueueToggled(true)),
+            _ => {}
+        }
+    });
 }
 
 /// Demo mode helper: FLACCY_DEMO_DETAIL pushes the named album's detail page

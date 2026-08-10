@@ -303,13 +303,8 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
                     .margin_start(12)
                     .margin_end(12)
                     .build();
-                let number = gtk::Label::builder()
-                    .label(index.to_string())
-                    .width_chars(3)
-                    .xalign(1.0)
-                    .build();
-                number.add_css_class("track-number");
-                row_box.append(&number);
+                let index_cell = crate::ui::controls::track_index_cell(&index.to_string());
+                row_box.append(&index_cell.widget);
                 let text_box = gtk::Box::new(gtk::Orientation::Vertical, 2);
                 let title = gtk::Label::builder()
                     .label(&track.title)
@@ -334,6 +329,13 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
                 let list_row = gtk::ListBoxRow::builder().child(&row_box).build();
                 attach_playlist_row_menu(&ui, &list_row, playlist_id, row.row_id, &track);
                 attach_reorder_dnd(&ui, &list_row, &list, playlist_id, &entries);
+                crate::ui::controls::attach_now_playing_row(
+                    &ui,
+                    &list_row,
+                    &index_cell,
+                    &title,
+                    track.rel_path.clone(),
+                );
                 list.append(&list_row);
             }
             *entries.borrow_mut() = collected;

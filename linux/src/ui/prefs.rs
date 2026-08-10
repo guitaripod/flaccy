@@ -17,6 +17,7 @@ pub fn present(ui: &Rc<Ui>) {
 
     page.add(&hero_group(ui));
     page.add(&appearance_group(ui));
+    page.add(&lyrics_group(ui));
     page.add(&library_group(ui));
     if lastfm::keys_available() {
         page.add(&lastfm_group(ui));
@@ -228,6 +229,38 @@ fn apply_swatch(swatch: &gtk::Box, theme: crate::theme::Theme) {
         swatch.remove_css_class(&format!("swatch-{}", other.id()));
     }
     swatch.add_css_class(&format!("swatch-{}", theme.id()));
+}
+
+/// Lyrics typography. Applying is live — every open lyrics view (sidebar and
+/// the Now Playing column) restyles through the shared CSS provider.
+fn lyrics_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title("Lyrics")
+        .description("Synced lyrics from your own .lrc files and tags, falling back to lrclib.net")
+        .build();
+    let row = adw::SpinRow::with_range(
+        config::LYRICS_FONT_MIN as f64,
+        config::LYRICS_FONT_MAX as f64,
+        1.0,
+    );
+    row.set_title("Text Size");
+    row.set_subtitle("How large lyric lines are drawn");
+    row.set_value(ui.core.config.borrow().lyrics_font_size as f64);
+    {
+        let ui = Rc::clone(ui);
+        row.connect_value_notify(move |row| {
+            let size = row.value().round() as i32;
+            if ui.core.config.borrow().lyrics_font_size == size {
+                return;
+            }
+            ui.core.config.borrow_mut().lyrics_font_size = size;
+            ui.core.save_config();
+            crate::ui::lyrics_style::apply(size);
+            crate::logger::info("ui", &format!("lyrics text size set to {size}"));
+        });
+    }
+    group.add(&row);
+    group
 }
 
 fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
@@ -520,10 +553,5 @@ fn about_group() -> adw::PreferencesGroup {
         ))
         .build();
     group.add(&version_row);
-    let lyrics_row = adw::ActionRow::builder()
-        .title("Lyrics")
-        .subtitle("Provided by lrclib.net")
-        .build();
-    group.add(&lyrics_row);
     group
 }

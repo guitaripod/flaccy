@@ -91,6 +91,9 @@ pub struct LyricsRow {
     pub synced: Option<String>,
     pub plain: Option<String>,
     pub instrumental: bool,
+    /// Age of the cache entry in days, so a remembered miss can expire and be
+    /// looked up again once lrclib's corpus has grown.
+    pub age_days: f64,
 }
 
 pub struct AlbumRetitle {
@@ -340,7 +343,13 @@ impl Db {
                 completedAt DATETIME
             );
             CREATE INDEX IF NOT EXISTS downloads_on_status ON downloads(status);",
-        )
+        )?;
+        // Added after 1.8.0 so a remembered "no lyrics" answer can expire;
+        // duplicate-column on an already-migrated database is the success case.
+        let _ = self
+            .conn
+            .execute("ALTER TABLE lyrics ADD COLUMN fetchedAt DATETIME", []);
+        Ok(())
     }
 
     pub fn fetch_relative_paths(&self) -> HashSet<String> {
@@ -906,14 +915,16 @@ impl Db {
     pub fn fetch_lyrics(&self, title: &str, artist: &str) -> Option<LyricsRow> {
         self.conn
             .query_row(
-                "SELECT syncedLyrics, plainLyrics, instrumental FROM lyrics
-                 WHERE trackTitle = ?1 AND artist = ?2",
+                "SELECT syncedLyrics, plainLyrics, instrumental,
+                        COALESCE(julianday('now') - julianday(fetchedAt), 0.0)
+                 FROM lyrics WHERE trackTitle = ?1 AND artist = ?2",
                 params![title, artist],
                 |row| {
                     Ok(LyricsRow {
                         synced: row.get(0)?,
                         plain: row.get(1)?,
                         instrumental: row.get(2)?,
+                        age_days: row.get(3)?,
                     })
                 },
             )
@@ -931,13 +942,15 @@ impl Db {
         instrumental: bool,
     ) -> Result<(), rusqlite::Error> {
         self.conn.execute(
-            "INSERT INTO lyrics (trackTitle, artist, syncedLyrics, plainLyrics, instrumental)
-             VALUES (?1, ?2, ?3, ?4, ?5)
+            "INSERT INTO lyrics
+             (trackTitle, artist, syncedLyrics, plainLyrics, instrumental, fetchedAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
              ON CONFLICT(trackTitle, artist) DO UPDATE SET
                 syncedLyrics = excluded.syncedLyrics,
                 plainLyrics = excluded.plainLyrics,
-                instrumental = excluded.instrumental",
-            params![title, artist, synced, plain, instrumental],
+                instrumental = excluded.instrumental,
+                fetchedAt = excluded.fetchedAt",
+            params![title, artist, synced, plain, instrumental, now_string()],
         )?;
         Ok(())
     }

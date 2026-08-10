@@ -19,7 +19,21 @@ pub struct Config {
     pub sidebar_index: i32,
     pub album_sort: String,
     pub np_swap_sides: bool,
+    pub np_show_lyrics: bool,
+    pub np_show_queue: bool,
+    /// Which side panel the library shell had open: "lyrics", "queue", or empty
+    /// for none.
+    pub side_panel: String,
+    pub shuffle: bool,
+    pub repeat_mode: String,
+    pub lyrics_font_size: i32,
 }
+
+/// Bounds for the lyrics type scale, shared by Preferences and the panel's own
+/// quick controls.
+pub const LYRICS_FONT_MIN: i32 = 12;
+pub const LYRICS_FONT_MAX: i32 = 34;
+pub const LYRICS_FONT_DEFAULT: i32 = 16;
 
 impl Default for Config {
     fn default() -> Self {
@@ -36,6 +50,12 @@ impl Default for Config {
             sidebar_index: 0,
             album_sort: "artist".to_string(),
             np_swap_sides: false,
+            np_show_lyrics: false,
+            np_show_queue: false,
+            side_panel: String::new(),
+            shuffle: false,
+            repeat_mode: "off".to_string(),
+            lyrics_font_size: LYRICS_FONT_DEFAULT,
         }
     }
 }

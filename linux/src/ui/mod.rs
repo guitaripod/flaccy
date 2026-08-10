@@ -8,6 +8,7 @@ pub mod delete;
 pub mod downloads;
 pub mod guide;
 pub mod lyrics_panel;
+pub mod lyrics_style;
 pub mod now_playing;
 pub mod playlists;
 pub mod queue_panel;
