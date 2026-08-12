@@ -457,6 +457,14 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         bio_label.add_css_class("dim");
         content.append(&bio_label);
     }
+    let popular_box = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(2)
+        .margin_start(24)
+        .margin_end(24)
+        .margin_top(8)
+        .build();
+    content.append(&popular_box);
     content.append(&flow);
     let similar_box = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -467,7 +475,7 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         .build();
     content.append(&similar_box);
 
-    load_artist_extras(ui, artist, &avatar, &chips, &similar_box);
+    load_artist_extras(ui, artist, &avatar, &chips, &similar_box, &popular_box);
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
@@ -490,6 +498,8 @@ struct ArtistExtras {
     image: Option<(u32, u32, Vec<u8>)>,
     tags: Vec<String>,
     similar: Vec<String>,
+    /// Last.fm's most-played titles for the artist, in their order.
+    popular: Vec<String>,
 }
 
 /// Fetches the artist photo (disk-cached), Last.fm genre chips (first 6 top
@@ -501,6 +511,7 @@ fn load_artist_extras(
     avatar: &adw::Avatar,
     chips: &gtk::Box,
     similar_box: &gtk::Box,
+    popular_box: &gtk::Box,
 ) {
     let artist = artist.to_string();
     let db_path = ui.core.db_path.clone();
@@ -528,6 +539,10 @@ fn load_artist_extras(
                 .as_ref()
                 .and_then(|c| c.fetch_top_tags(&artist_for_thread, 6).ok())
                 .unwrap_or_default();
+            let popular = client
+                .as_ref()
+                .and_then(|c| c.fetch_artist_top_tracks(&artist_for_thread, 12).ok())
+                .unwrap_or_default();
             let similar = crate::enrichment::similar_in_library_blocking(
                 &db,
                 client.as_ref(),
@@ -539,7 +554,7 @@ fn load_artist_extras(
             .map(|(name, _)| name)
             .take(8)
             .collect();
-            let _ = tx.send_blocking(ArtistExtras { image, tags, similar });
+            let _ = tx.send_blocking(ArtistExtras { image, tags, similar, popular });
         })
         .ok();
 
@@ -547,6 +562,7 @@ fn load_artist_extras(
     let avatar = avatar.downgrade();
     let chips = chips.downgrade();
     let similar_box = similar_box.downgrade();
+    let popular_box = popular_box.downgrade();
     gtk::glib::spawn_future_local(async move {
         let Ok(extras) = rx.recv().await else { return };
         if let (Some(avatar), Some((width, height, rgba))) = (avatar.upgrade(), extras.image) {
@@ -570,6 +586,9 @@ fn load_artist_extras(
                 chip.add_css_class("genre-chip");
                 chips.append(&chip);
             }
+        }
+        if let Some(popular_box) = popular_box.upgrade() {
+            fill_popular(&ui, &artist, &popular_box, &extras.popular);
         }
         if let Some(similar_box) = similar_box.upgrade() {
             if !extras.similar.is_empty() {
@@ -602,6 +621,97 @@ fn load_artist_extras(
             }
         }
     });
+}
+
+/// The artist's most-played songs per Last.fm, narrowed to the ones actually in
+/// the library and in Last.fm's order — the list macOS and iOS lead their artist
+/// pages with. Nothing renders when the artist's popular songs aren't owned.
+fn fill_popular(ui: &Rc<Ui>, artist: &str, container: &gtk::Box, names: &[String]) {
+    let library = ui.core.library.borrow().clone();
+    let owned: Vec<crate::library::Track> = library
+        .albums
+        .iter()
+        .filter(|album| album.artist.eq_ignore_ascii_case(artist))
+        .flat_map(|album| album.tracks.iter().cloned())
+        .collect();
+    let matched: Vec<crate::library::Track> = names
+        .iter()
+        .filter_map(|name| {
+            owned
+                .iter()
+                .find(|track| normalized_title(&track.title) == normalized_title(name))
+                .cloned()
+        })
+        .take(5)
+        .collect();
+    if matched.is_empty() {
+        return;
+    }
+
+    let heading = gtk::Label::builder().label("POPULAR").xalign(0.0).build();
+    heading.add_css_class("stat-caption");
+    container.append(&heading);
+
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .margin_top(6)
+        .build();
+    list.add_css_class("boxed-list-separate");
+    for (index, track) in matched.iter().enumerate() {
+        list.append(&popular_row(ui, track, index + 1));
+    }
+    {
+        let ui = Rc::clone(ui);
+        let matched = matched.clone();
+        list.connect_row_activated(move |_, row| {
+            let index = row.index().max(0) as usize;
+            if index < matched.len() {
+                ui.core.play_tracks(matched.clone(), index);
+            }
+        });
+    }
+    container.append(&list);
+}
+
+fn popular_row(ui: &Rc<Ui>, track: &crate::library::Track, rank: usize) -> gtk::ListBoxRow {
+    let row_box = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(12)
+        .margin_top(8)
+        .margin_bottom(8)
+        .margin_start(10)
+        .margin_end(10)
+        .build();
+    let cell = crate::ui::controls::track_index_cell(&rank.to_string());
+    row_box.append(&cell.widget);
+
+    let title = gtk::Label::builder()
+        .label(&track.title)
+        .xalign(0.0)
+        .hexpand(true)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .build();
+    row_box.append(&title);
+
+    let duration = gtk::Label::new(Some(&crate::library::format_time(track.duration)));
+    duration.add_css_class("duration-label");
+    row_box.append(&duration);
+
+    let row = gtk::ListBoxRow::builder().child(&row_box).build();
+    crate::ui::controls::attach_now_playing_row(ui, &row, &cell, &title, track.rel_path.clone());
+    crate::ui::context::attach_track_context_menu(&row, &ui.core, track.rel_path.clone());
+    row
+}
+
+/// Titles differ across pressings by parentheticals and punctuation, so match
+/// on the alphanumeric core.
+fn normalized_title(title: &str) -> String {
+    title
+        .to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// Offline fallback for the genre chips: the distinct genres of the artist's

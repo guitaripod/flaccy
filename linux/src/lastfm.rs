@@ -528,6 +528,24 @@ impl LastFmClient {
             .collect())
     }
 
+    /// artist.getTopTracks — what the world plays most by this artist, which is
+    /// what the artist page leads with once it is matched against the library.
+    pub fn fetch_artist_top_tracks(
+        &self,
+        artist: &str,
+        limit: u32,
+    ) -> Result<Vec<String>, String> {
+        let mut params = self.base_params("artist.getTopTracks");
+        params.insert("artist".to_string(), artist.to_string());
+        params.insert("autocorrect".to_string(), "1".to_string());
+        params.insert("limit".to_string(), limit.to_string());
+        let json = self.unsigned_get(params)?;
+        Ok(as_object_list(&json["toptracks"]["track"])
+            .iter()
+            .filter_map(|entry| Some(entry["name"].as_str()?.to_string()))
+            .collect())
+    }
+
     /// album.getInfo with username → the user's personal play count.
     pub fn fetch_album_user_playcount(
         &self,
