@@ -8,10 +8,23 @@ OUT_DIR="/tmp/flaccy-release"
 PKG="flaccy-linux-x86_64"
 TARBALL="$PKG.tar.gz"
 
-if [[ -z "${FLACCY_LASTFM_KEY:-}" || -z "${FLACCY_LASTFM_SECRET:-}" ]]; then
-  echo "error: FLACCY_LASTFM_KEY and FLACCY_LASTFM_SECRET must be set in the environment" >&2
-  exit 1
+KEYS_FILE="${FLACCY_KEYS_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/flaccy/build-keys.env}"
+if [[ -z "${FLACCY_LASTFM_KEY:-}" || -z "${FLACCY_LASTFM_SECRET:-}" ]] && [[ -f "$KEYS_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$KEYS_FILE"
+  set +a
 fi
+
+for name in FLACCY_LASTFM_KEY FLACCY_LASTFM_SECRET; do
+  value="${!name:-}"
+  # A placeholder builds a release that shows the scrobbling UI and then fails
+  # every signed call with "Invalid method signature" — refuse to ship one.
+  if [[ ! "$value" =~ ^[0-9a-fA-F]{32}$ ]] || [[ -z "${value//${value:0:1}/}" ]]; then
+    echo "error: $name must be a real 32-character hex credential (set it, or put it in $KEYS_FILE)" >&2
+    exit 1
+  fi
+done
 
 echo "Syncing sources to $REMOTE:$REMOTE_DIR..."
 rsync -a --delete --exclude target \

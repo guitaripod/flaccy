@@ -482,7 +482,8 @@ fn begin_auth(
     glib::spawn_future_local(async move {
         match rx.recv().await {
             Ok(Ok(token)) => {
-                let url = lastfm::auth_url(lastfm::API_KEY.unwrap_or(""), &token);
+                let key = lastfm::credentials().map(|(key, _)| key).unwrap_or("");
+                let url = lastfm::auth_url(key, &token);
                 *pending_token.borrow_mut() = Some(token);
                 refresh();
                 gtk::UriLauncher::new(&url).launch(

@@ -6,8 +6,25 @@ pub const API_KEY: Option<&str> = option_env!("FLACCY_LASTFM_KEY");
 pub const API_SECRET: Option<&str> = option_env!("FLACCY_LASTFM_SECRET");
 const BASE_URL: &str = "https://ws.audioscrobbler.com/2.0/";
 
+/// A credential the build actually stamped in, as opposed to a blank or a
+/// placeholder. `build.rs` filters these too, but the check lives here as well
+/// so a binary built by any other route can't offer a scrobbling UI that signs
+/// every request with a dud and fails at Last.fm instead of at the door.
+fn usable(value: Option<&str>) -> Option<&str> {
+    let value = value?.trim();
+    let first = *value.as_bytes().first()?;
+    if value.starts_with("YOUR_") || value.bytes().all(|byte| byte == first) {
+        return None;
+    }
+    Some(value)
+}
+
+pub fn credentials() -> Option<(&'static str, &'static str)> {
+    Some((usable(API_KEY)?, usable(API_SECRET)?))
+}
+
 pub fn keys_available() -> bool {
-    matches!((API_KEY, API_SECRET), (Some(k), Some(s)) if !k.is_empty() && !s.is_empty())
+    credentials().is_some()
 }
 
 #[derive(Clone)]
@@ -33,14 +50,12 @@ pub enum BatchOutcome {
 
 impl LastFmClient {
     pub fn new(session_key: Option<String>) -> Option<Self> {
-        match (API_KEY, API_SECRET) {
-            (Some(key), Some(secret)) if !key.is_empty() && !secret.is_empty() => Some(Self {
-                api_key: key.to_string(),
-                api_secret: secret.to_string(),
-                session_key,
-            }),
-            _ => None,
-        }
+        let (key, secret) = credentials()?;
+        Some(Self {
+            api_key: key.to_string(),
+            api_secret: secret.to_string(),
+            session_key,
+        })
     }
 
     fn agent() -> ureq::Agent {
@@ -636,5 +651,16 @@ mod tests {
         assert_eq!(percent_encode("a+b&c=d"), "a%2Bb%26c%3Dd");
         assert_eq!(percent_encode("hello world"), "hello%20world");
         assert_eq!(percent_encode("a.b-c_d~e"), "a.b-c_d~e");
+    }
+
+    #[test]
+    fn placeholder_credentials_count_as_no_credentials() {
+        assert_eq!(usable(None), None);
+        assert_eq!(usable(Some("")), None);
+        assert_eq!(usable(Some("   ")), None);
+        assert_eq!(usable(Some(&"0".repeat(32))), None);
+        assert_eq!(usable(Some("YOUR_LASTFM_API_KEY")), None);
+        let real = "9da251ce70d797e81824def66504aca2";
+        assert_eq!(usable(Some(real)), Some(real));
     }
 }
