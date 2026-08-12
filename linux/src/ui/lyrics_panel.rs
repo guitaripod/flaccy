@@ -14,6 +14,20 @@ const USER_SCROLL_GRACE: f64 = 6.0;
 /// Where the active line sits in the viewport — slightly above center, the way
 /// every good lyrics view frames the line you are about to sing.
 const ACTIVE_LINE_ANCHOR: f64 = 0.42;
+/// A leading spacer row pads the top of the list, so ListBox row N holds
+/// synced line N - 1.
+const LINE_ROW_OFFSET: i32 = 1;
+/// How far ahead of the clock a line lights up. The audio sink reports the
+/// position it has rendered, not the one you are hearing, and CSS still has to
+/// fade the highlight in — without a lead the line always arrives late.
+const LYRIC_LEAD: f64 = 0.22;
+/// Angular frequency of the critically damped auto-scroll spring, in rad/s.
+/// ~0.35 s to settle: fast enough to keep up with a busy verse, slow enough to
+/// read as a glide rather than a jump.
+const SCROLL_RESPONSE: f64 = 15.0;
+/// Frame deltas are clamped before integrating so a stalled frame can't blow
+/// the spring up.
+const MAX_FRAME_DELTA: f64 = 1.0 / 30.0;
 
 /// Placement options so the sidebar and the in-view (Now Playing lens) share
 /// one implementation instead of forking. The in-view instance hides its own
@@ -101,6 +115,18 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         .vexpand(true)
         .build();
 
+    let head_spacer = spacer_row();
+    let tail_spacer = spacer_row();
+    {
+        let head_spacer = head_spacer.clone();
+        let tail_spacer = tail_spacer.clone();
+        synced_scroll.vadjustment().connect_page_size_notify(move |adjustment| {
+            let page = adjustment.page_size();
+            head_spacer.set_height_request(spacer_height(page * ACTIVE_LINE_ANCHOR));
+            tail_spacer.set_height_request(spacer_height(page * (1.0 - ACTIVE_LINE_ANCHOR)));
+        });
+    }
+
     // "Jump to current line" — the only way back once the user has scrolled
     // away, which is otherwise an invisible and unrecoverable state.
     let resume = gtk::Button::builder()
@@ -151,7 +177,88 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
     let state: Rc<RefCell<PanelState>> = Rc::new(RefCell::new(PanelState::default()));
     let visible = Rc::new(Cell::new(false));
     let last_user_scroll: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
-    let scroller = Rc::new(SpringScroller::new(&synced_scroll));
+    let scroller = Rc::new(SmoothScroller::new(&synced_scroll));
+    let driver = Rc::new(FrameDriver::default());
+    // A seek or a fresh set of lyrics has to re-find the line even when nothing
+    // is playing, so the driver runs one more pass instead of staying asleep.
+    let refresh = Rc::new(Cell::new(false));
+
+    let sync_driver: Rc<dyn Fn()> = {
+        let driver = Rc::clone(&driver);
+        let scroller = Rc::clone(&scroller);
+        let state = Rc::clone(&state);
+        let visible = Rc::clone(&visible);
+        let last_user_scroll = Rc::clone(&last_user_scroll);
+        let resume_reveal = resume_reveal.clone();
+        let refresh = Rc::clone(&refresh);
+        let list = list.clone();
+        let panel = panel.downgrade();
+        let ui = Rc::clone(ui);
+        Rc::new(move || {
+            let idle =
+                !ui.core.player.is_playing() && !scroller.is_busy() && !refresh.get();
+            let wanted = visible.get()
+                && panel.upgrade().is_some_and(|panel| panel.is_mapped())
+                && !state.borrow().lyrics.synced.is_empty()
+                && !idle;
+            if !wanted {
+                driver.stop();
+                return;
+            }
+            let step = {
+                let driver = Rc::clone(&driver);
+                let scroller = Rc::clone(&scroller);
+                let state = Rc::clone(&state);
+                let visible = Rc::clone(&visible);
+                let last_user_scroll = Rc::clone(&last_user_scroll);
+                let resume_reveal = resume_reveal.clone();
+                let refresh = Rc::clone(&refresh);
+                let list = list.clone();
+                let ui = Rc::clone(&ui);
+                move |delta: f64| {
+                    if !visible.get() {
+                        driver.stop();
+                        return;
+                    }
+                    let playing = ui.core.player.is_playing();
+                    let stale = refresh.replace(false);
+                    if playing || stale {
+                        let position = ui.core.player.position().unwrap_or(0.0) + LYRIC_LEAD;
+                        let changed = {
+                            let state = state.borrow();
+                            let line = active_line(&state.lyrics.synced, position);
+                            (state.current_line != line).then_some(line)
+                        };
+                        if let Some(line) = changed {
+                            let previous = state.borrow().current_line;
+                            let total = {
+                                let mut state = state.borrow_mut();
+                                state.current_line = line;
+                                state.lyrics.synced.len()
+                            };
+                            repaint_depth(&list, previous, line, total);
+                            if let Some(current) = line {
+                                let user_recent = last_user_scroll
+                                    .get()
+                                    .map(|t| t.elapsed().as_secs_f64() < USER_SCROLL_GRACE)
+                                    .unwrap_or(false);
+                                if user_recent {
+                                    resume_reveal.set_reveal_child(true);
+                                } else if let Some(row) = line_row(&list, current) {
+                                    scroller.aim_at(&list, &row);
+                                }
+                            }
+                        }
+                    }
+                    scroller.advance(delta);
+                    if !playing && !scroller.is_busy() {
+                        driver.stop();
+                    }
+                }
+            };
+            driver.start(&list, step);
+        })
+    };
 
     {
         let last_user_scroll = Rc::clone(&last_user_scroll);
@@ -174,14 +281,16 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let state = Rc::clone(&state);
         let list = list.clone();
         let scroller = Rc::clone(&scroller);
+        let sync_driver = Rc::clone(&sync_driver);
         Rc::new(move || {
             last_user_scroll.set(None);
             resume_reveal.set_reveal_child(false);
             if let Some(index) = state.borrow().current_line {
-                if let Some(row) = list.row_at_index(index as i32) {
-                    scroller.scroll_to(&list, &row);
+                if let Some(row) = line_row(&list, index) {
+                    scroller.aim_at(&list, &row);
                 }
             }
+            sync_driver();
         })
     };
     {
@@ -194,7 +303,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let state = Rc::clone(&state);
         let follow_now = Rc::clone(&follow_now);
         list.connect_row_activated(move |_, row| {
-            let index = row.index().max(0) as usize;
+            let index = (row.index() - LINE_ROW_OFFSET).max(0) as usize;
             let time = state.borrow().lyrics.synced.get(index).map(|(t, _)| *t);
             if let Some(time) = time {
                 // Nudge back a beat so the first syllable isn't clipped.
@@ -212,12 +321,17 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let retry = retry.clone();
         let state = Rc::clone(&state);
         let resume_reveal = resume_reveal.clone();
+        let scroller = Rc::clone(&scroller);
+        let refresh = Rc::clone(&refresh);
+        let sync_driver = Rc::clone(&sync_driver);
         Rc::new(move |result: &LyricsResult| {
+            refresh.set(true);
             while let Some(child) = list.first_child() {
                 list.remove(&child);
             }
             state.borrow_mut().current_line = None;
             resume_reveal.set_reveal_child(false);
+            scroller.reset();
             retry.set_visible(false);
             let lyrics = match result {
                 LyricsResult::Found(lyrics) => lyrics,
@@ -225,6 +339,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                     status.set_title("No Lyrics Found");
                     status.set_description(Some("lrclib.net has no lyrics for this track."));
                     stack.set_visible_child_name("status");
+                    sync_driver();
                     return;
                 }
                 LyricsResult::Failed => {
@@ -232,6 +347,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                     status.set_description(Some("Check your connection and try again."));
                     retry.set_visible(true);
                     stack.set_visible_child_name("status");
+                    sync_driver();
                     return;
                 }
             };
@@ -240,11 +356,11 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                 status.set_description(Some("This track has no lyrics."));
                 stack.set_visible_child_name("status");
             } else if !lyrics.synced.is_empty() {
-                list.append(&spacer_row());
+                list.append(&head_spacer);
                 for (_, text) in &lyrics.synced {
                     list.append(&lyric_row(text));
                 }
-                list.append(&spacer_row());
+                list.append(&tail_spacer);
                 stack.set_visible_child_name("synced");
             } else if let Some(plain) = lyrics.plain.as_deref().filter(|p| !p.trim().is_empty()) {
                 plain_view.set_label(plain);
@@ -254,6 +370,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                 status.set_description(Some("lrclib.net has no lyrics for this track."));
                 stack.set_visible_child_name("status");
             }
+            sync_driver();
         })
     };
 
@@ -318,6 +435,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let visible = Rc::clone(&visible);
         let state = Rc::clone(&state);
         let fetch_for = Rc::clone(&fetch_for);
+        let sync_driver = Rc::clone(&sync_driver);
         let ui = Rc::clone(ui);
         Rc::new(move |active: bool| {
             visible.set(active);
@@ -332,17 +450,25 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                     fetch_for(&track);
                 }
             }
+            sync_driver();
         })
     };
+
+    {
+        let sync_driver = Rc::clone(&sync_driver);
+        panel.connect_map(move |_| sync_driver());
+    }
+    {
+        let driver = Rc::clone(&driver);
+        panel.connect_unmap(move |_| driver.stop());
+    }
 
     {
         let state = Rc::clone(&state);
         let visible = Rc::clone(&visible);
         let fetch_for = Rc::clone(&fetch_for);
-        let list = list.clone();
-        let scroller = Rc::clone(&scroller);
-        let last_user_scroll = Rc::clone(&last_user_scroll);
-        let resume_reveal = resume_reveal.clone();
+        let sync_driver = Rc::clone(&sync_driver);
+        let refresh = Rc::clone(&refresh);
         let react_to_global_toggle = opts.react_to_global_toggle;
         let toggle_set_active = Rc::clone(&set_active);
         let panel_map = panel.clone();
@@ -360,36 +486,10 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                     toggle_set_active(*shown);
                 }
             }
-            AppEvent::Tick { position, .. } => {
-                if !visible.get() {
-                    return;
-                }
-                let target = {
-                    let state = state.borrow();
-                    if state.lyrics.synced.is_empty() {
-                        return;
-                    }
-                    let index = active_line(&state.lyrics.synced, *position);
-                    if state.current_line == index {
-                        return;
-                    }
-                    index
-                };
-                let previous = state.borrow().current_line;
-                state.borrow_mut().current_line = target;
-                let total = state.borrow().lyrics.synced.len();
-                repaint_depth(&list, previous, target, total);
-                if let Some(current) = target {
-                    let user_recent = last_user_scroll
-                        .get()
-                        .map(|t| t.elapsed().as_secs_f64() < USER_SCROLL_GRACE)
-                        .unwrap_or(false);
-                    if user_recent {
-                        resume_reveal.set_reveal_child(true);
-                    } else if let Some(row) = list.row_at_index(current as i32) {
-                        scroller.scroll_to(&list, &row);
-                    }
-                }
+            AppEvent::PlayingChanged(_) => sync_driver(),
+            AppEvent::Seeked(_) => {
+                refresh.set(true);
+                sync_driver();
             }
             _ => {}
         });
@@ -447,16 +547,28 @@ fn lyric_row(text: &str) -> gtk::ListBoxRow {
     row
 }
 
-/// Half-viewport padding at both ends so the first and last lines can actually
-/// reach the anchor point instead of being pinned to an edge.
+/// The ListBox row holding synced line `index`, past the leading spacer.
+fn line_row(list: &gtk::ListBox, index: usize) -> Option<gtk::ListBoxRow> {
+    list.row_at_index(index as i32 + LINE_ROW_OFFSET)
+}
+
+/// Padding at both ends so the first and last lines can actually reach the
+/// anchor point instead of being pinned to an edge. Sized from the viewport at
+/// runtime; the constant is only what shows before the first allocation.
 fn spacer_row() -> gtk::ListBoxRow {
     let filler = gtk::Box::new(gtk::Orientation::Vertical, 0);
     filler.add_css_class("lyrics-spacer");
-    gtk::ListBoxRow::builder()
+    let row = gtk::ListBoxRow::builder()
         .child(&filler)
         .activatable(false)
         .selectable(false)
-        .build()
+        .build();
+    row.set_height_request(96);
+    row
+}
+
+fn spacer_height(request: f64) -> i32 {
+    (request.max(24.0)) as i32
 }
 
 fn active_line(synced: &[(f64, String)], position: f64) -> Option<usize> {
@@ -491,7 +603,7 @@ fn repaint_depth(
     touched.sort_unstable();
     touched.dedup();
     for index in touched {
-        let Some(row) = list.row_at_index(index as i32) else { continue };
+        let Some(row) = line_row(list, index) else { continue };
         let Some(label) = row.child() else { continue };
         label.remove_css_class("lyric-line-current");
         label.remove_css_class("lyric-line-near");
@@ -511,48 +623,102 @@ struct PanelState {
     current_line: Option<usize>,
 }
 
-/// Animated auto-scroll. Targets come from real row geometry rather than an
-/// index fraction — wrapped lines make every line a different height, so a
-/// fractional estimate drifts further out of step the longer a song runs.
-/// A single reused spring keeps retargets continuous instead of jumping.
-struct SpringScroller {
-    animation: adw::SpringAnimation,
-    adjustment: gtk::Adjustment,
+/// Runs a closure on the widget's frame clock — every frame the compositor
+/// draws, so 60 Hz or whatever the display actually is, rather than the 250 ms
+/// player tick. Started and stopped on demand so an idle panel forces no
+/// wakeups; the closure hands back the seconds elapsed since the last frame.
+#[derive(Default)]
+struct FrameDriver {
+    handle: RefCell<Option<gtk::TickCallbackId>>,
 }
 
-impl SpringScroller {
+impl FrameDriver {
+    fn start(&self, widget: &impl IsA<gtk::Widget>, step: impl Fn(f64) + 'static) {
+        if self.handle.borrow().is_some() {
+            return;
+        }
+        let previous: Cell<i64> = Cell::new(0);
+        let handle = widget.as_ref().add_tick_callback(move |_, clock| {
+            let now = clock.frame_time();
+            let last = previous.replace(now);
+            let delta = if last == 0 {
+                MAX_FRAME_DELTA
+            } else {
+                ((now - last) as f64 / 1_000_000.0).clamp(0.0, MAX_FRAME_DELTA)
+            };
+            step(delta);
+            glib::ControlFlow::Continue
+        });
+        *self.handle.borrow_mut() = Some(handle);
+    }
+
+    fn stop(&self) {
+        if let Some(handle) = self.handle.borrow_mut().take() {
+            handle.remove();
+        }
+    }
+}
+
+/// Frame-clock auto-scroll: a critically damped spring integrated once per
+/// frame toward the anchor. Targets come from real row geometry rather than an
+/// index fraction — wrapped lines make every line a different height, so a
+/// fractional estimate drifts further out of step the longer a song runs.
+/// Retargeting mid-flight keeps the existing velocity, so consecutive lines
+/// read as one continuous glide instead of a restart per line.
+struct SmoothScroller {
+    adjustment: gtk::Adjustment,
+    target: Cell<Option<f64>>,
+    velocity: Cell<f64>,
+}
+
+impl SmoothScroller {
     fn new(scroll: &gtk::ScrolledWindow) -> Self {
-        let adjustment = scroll.vadjustment();
-        let target = adw::PropertyAnimationTarget::new(&adjustment, "value");
-        let animation = adw::SpringAnimation::new(
-            scroll,
-            0.0,
-            0.0,
-            adw::SpringParams::new(1.0, 1.0, 240.0),
-            target,
-        );
-        animation.set_clamp(true);
-        animation.set_epsilon(0.2);
-        Self { animation, adjustment }
+        Self {
+            adjustment: scroll.vadjustment(),
+            target: Cell::new(None),
+            velocity: Cell::new(0.0),
+        }
+    }
+
+    fn is_busy(&self) -> bool {
+        self.target.get().is_some()
     }
 
     fn cancel(&self) {
-        self.animation.pause();
+        self.target.set(None);
+        self.velocity.set(0.0);
     }
 
-    fn scroll_to(&self, list: &gtk::ListBox, row: &gtk::ListBoxRow) {
+    fn reset(&self) {
+        self.cancel();
+        self.adjustment.set_value(0.0);
+    }
+
+    fn aim_at(&self, list: &gtk::ListBox, row: &gtk::ListBoxRow) {
         let Some(bounds) = row.compute_bounds(list) else { return };
         let page = self.adjustment.page_size();
-        let target = bounds.y() as f64 + bounds.height() as f64 / 2.0 - page * ACTIVE_LINE_ANCHOR;
-        let max = (self.adjustment.upper() - page).max(0.0);
-        let target = target.clamp(0.0, max);
-        if (self.adjustment.value() - target).abs() < 1.0 {
+        if page <= 1.0 {
             return;
         }
-        self.animation.pause();
-        self.animation.set_value_from(self.adjustment.value());
-        self.animation.set_value_to(target);
-        self.animation.play();
+        let target = bounds.y() as f64 + bounds.height() as f64 / 2.0 - page * ACTIVE_LINE_ANCHOR;
+        let max = (self.adjustment.upper() - page).max(0.0);
+        self.target.set(Some(target.clamp(0.0, max)));
+    }
+
+    fn advance(&self, delta: f64) {
+        let Some(target) = self.target.get() else { return };
+        let value = self.adjustment.value();
+        let distance = target - value;
+        let velocity = self.velocity.get();
+        if distance.abs() < 0.5 && velocity.abs() < 4.0 {
+            self.adjustment.set_value(target);
+            self.cancel();
+            return;
+        }
+        let response = SCROLL_RESPONSE;
+        let velocity = velocity + (response * response * distance - 2.0 * response * velocity) * delta;
+        self.velocity.set(velocity);
+        self.adjustment.set_value(value + velocity * delta);
     }
 }
 

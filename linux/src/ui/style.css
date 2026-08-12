@@ -377,7 +377,7 @@ overlay-split-view > .sidebar-pane:backdrop {
   font-weight: 600;
   opacity: 0.55;
   padding: 6px 4px;
-  transition: opacity 300ms ease, color 300ms ease, transform 300ms ease;
+  transition: opacity 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
 .lyric-line:hover {
@@ -416,8 +416,10 @@ overlay-split-view > .sidebar-pane:backdrop {
   background-color: alpha(@window_fg_color, 0.05);
 }
 
+/* Sized from the viewport in ui/lyrics_panel.rs so the first and last lines can
+   reach the anchor; the row carries the height request, not this rule. */
 .lyrics-spacer {
-  min-height: 96px;
+  min-height: 0;
 }
 
 /* ---- stats -------------------------------------------------------------- */
@@ -509,6 +511,17 @@ overlay-split-view > .sidebar-pane:backdrop {
 }
 
 /* ---- queue -------------------------------------------------------------- */
+/* Room below the last row so NOW PLAYING can sit at the top of the viewport
+   even at the end of a queue. It is a list row, so it has to shed the card
+   styling `boxed-list-separate` gives every other one. */
+.queue-tail-spacer {
+  background: none;
+  background-image: none;
+  box-shadow: none;
+  border: none;
+  min-height: 0;
+}
+
 .queue-history-row {
   opacity: 0.45;
 }

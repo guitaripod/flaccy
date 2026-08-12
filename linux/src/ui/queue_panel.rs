@@ -115,6 +115,17 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
     root.append(&stack);
 
     let indices: Rc<RefCell<Vec<usize>>> = Rc::new(RefCell::new(Vec::new()));
+    let pinner = Pinner::new(&scroll, &list);
+    {
+        let pinner = Rc::clone(&pinner);
+        let scroll_controller =
+            gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
+        scroll_controller.connect_scroll(move |_, _, _| {
+            pinner.abandon();
+            glib::Propagation::Proceed
+        });
+        scroll.add_controller(scroll_controller);
+    }
 
     let rebuild = {
         let list = list.clone();
@@ -123,8 +134,14 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
         let summary = summary.clone();
         let clear = clear.clone();
         let indices = Rc::clone(&indices);
+        let pinner = Rc::clone(&pinner);
         let ui = Rc::clone(ui);
         Rc::new(move |pin_now_playing: bool| {
+            let keep_offset = (!pin_now_playing && !pinner.is_pending())
+                .then(|| scroll.vadjustment().value());
+            if pin_now_playing {
+                pinner.request();
+            }
             while let Some(child) = list.first_child() {
                 list.remove(&child);
             }
@@ -134,6 +151,7 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
                 summary.set_label("");
                 clear.set_sensitive(false);
                 indices.borrow_mut().clear();
+                pinner.set_anchor(None);
                 return;
             }
             stack.set_visible_child_name("list");
@@ -155,7 +173,7 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
             let up_next_end = (current + 1 + UP_NEXT_LIMIT).min(snapshot.queue.len());
 
             let mut collected = Vec::new();
-            let mut now_playing_row: Option<gtk::ListBoxRow> = None;
+            let mut now_playing_anchor: Option<gtk::ListBoxRow> = None;
             if current > 0 {
                 if history_start > 0 {
                     list.append(&info_row(&format!("{} earlier", history_start)));
@@ -167,7 +185,9 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
             for index in history_start..up_next_end {
                 let track = &snapshot.queue[index];
                 if index == current {
-                    list.append(&section_row("NOW PLAYING"));
+                    let heading = section_row("NOW PLAYING");
+                    now_playing_anchor = Some(heading.clone());
+                    list.append(&heading);
                     collected.push(usize::MAX);
                 } else if index == current + 1 {
                     list.append(&section_row("UP NEXT"));
@@ -176,9 +196,6 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
                 let row = queue_row(&ui, track, index, current);
                 if index > current {
                     attach_reorder(&ui, &row, index);
-                }
-                if index == current {
-                    now_playing_row = Some(row.clone());
                 }
                 list.append(&row);
                 collected.push(index);
@@ -190,12 +207,13 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
                 )));
                 collected.push(usize::MAX);
             }
+            list.append(pinner.spacer());
             *indices.borrow_mut() = collected;
 
-            if pin_now_playing {
-                if let Some(row) = now_playing_row {
-                    scroll_row_to_top(&scroll, &list, &row);
-                }
+            pinner.set_anchor(now_playing_anchor);
+            match keep_offset {
+                Some(offset) => restore_offset(&scroll, &list, offset),
+                None => pinner.drive(),
             }
         })
     };
@@ -271,26 +289,141 @@ fn section_row(text: &str) -> gtk::ListBoxRow {
         .build()
 }
 
-/// Pins the now-playing row to the top of the queue viewport (history scrolls
-/// above it). Runs on the row's frame-clock tick so the scroll happens after
-/// GTK has allocated the freshly rebuilt rows; self-terminates once positioned
-/// or after a few frames, and forces no persistent wakeups.
-fn scroll_row_to_top(scroll: &gtk::ScrolledWindow, list: &gtk::ListBox, row: &gtk::ListBoxRow) {
-    let scroll = scroll.clone();
-    let list = list.clone();
-    let frames = std::cell::Cell::new(0u8);
-    row.add_tick_callback(move |row, _| {
-        if row.parent().is_none() {
-            return glib::ControlFlow::Break;
+/// Frames a pin or a restore is allowed to converge over before giving up.
+const SETTLE_FRAMES: u8 = 90;
+
+/// Keeps the NOW PLAYING heading at the top of the queue viewport, so what is
+/// playing reads first and the history sits just above it, one scroll away.
+///
+/// The pin is state rather than a one-shot: a freshly rebuilt list has no
+/// geometry yet, and the queue can be rebuilt again (a track loved, a row
+/// removed) before the first frame ever lands, which would strand a callback
+/// attached to a row that no longer exists. So the request outlives any single
+/// rebuild — each rebuild hands over the new heading, and the driver keeps
+/// working on the list's frame clock until it lands. A hand scroll abandons it
+/// rather than fighting the user.
+struct Pinner {
+    scroll: gtk::ScrolledWindow,
+    list: gtk::ListBox,
+    /// Grows to whatever is missing below the heading, so it can reach the top
+    /// even when the current track is the last one in the queue.
+    spacer: gtk::ListBoxRow,
+    anchor: RefCell<Option<gtk::ListBoxRow>>,
+    pending: Cell<bool>,
+    running: Cell<bool>,
+    frames: Cell<u8>,
+}
+
+impl Pinner {
+    fn new(scroll: &gtk::ScrolledWindow, list: &gtk::ListBox) -> Rc<Self> {
+        let spacer = gtk::ListBoxRow::builder()
+            .child(&gtk::Box::new(gtk::Orientation::Vertical, 0))
+            .activatable(false)
+            .selectable(false)
+            .build();
+        spacer.add_css_class("queue-tail-spacer");
+        Rc::new(Self {
+            scroll: scroll.clone(),
+            list: list.clone(),
+            spacer,
+            anchor: RefCell::new(None),
+            pending: Cell::new(false),
+            running: Cell::new(false),
+            frames: Cell::new(0),
+        })
+    }
+
+    fn spacer(&self) -> &gtk::ListBoxRow {
+        &self.spacer
+    }
+
+    fn is_pending(&self) -> bool {
+        self.pending.get()
+    }
+
+    fn request(&self) {
+        self.pending.set(true);
+        self.frames.set(0);
+    }
+
+    fn abandon(&self) {
+        self.pending.set(false);
+    }
+
+    fn set_anchor(&self, anchor: Option<gtk::ListBoxRow>) {
+        *self.anchor.borrow_mut() = anchor;
+    }
+
+    fn drive(self: &Rc<Self>) {
+        if !self.pending.get() || self.running.get() {
+            return;
         }
-        frames.set(frames.get() + 1);
+        self.running.set(true);
+        let pinner = Rc::clone(self);
+        self.list.add_tick_callback(move |_, _| {
+            if pinner.step() {
+                pinner.running.set(false);
+                glib::ControlFlow::Break
+            } else {
+                glib::ControlFlow::Continue
+            }
+        });
+    }
+
+    /// One frame of work; true once the pin is done with (landed, abandoned, or
+    /// out of patience).
+    fn step(&self) -> bool {
+        if !self.pending.get() {
+            return true;
+        }
+        self.frames.set(self.frames.get().saturating_add(1));
+        if self.frames.get() > SETTLE_FRAMES {
+            self.pending.set(false);
+            return true;
+        }
+        let anchor = self.anchor.borrow().clone();
+        let Some(anchor) = anchor.filter(|row| row.parent().is_some()) else {
+            return false;
+        };
+        let adjustment = self.scroll.vadjustment();
+        let page = adjustment.page_size();
+        let content = self.list.height() as f64;
+        if page <= 1.0 || content <= 1.0 {
+            return false;
+        }
         let origin = gtk::graphene::Point::new(0.0, 0.0);
-        if let Some(point) = row.compute_point(&list, &origin) {
-            let adj = scroll.vadjustment();
-            let max = (adj.upper() - adj.page_size()).max(0.0);
-            adj.set_value((point.y() as f64).min(max));
+        let Some(point) = anchor.compute_point(&self.list, &origin) else {
+            return false;
+        };
+        let top = point.y() as f64;
+        let below = content - top - self.spacer.height() as f64;
+        let needed = (page - below).max(0.0).ceil() as i32;
+        if (needed - self.spacer.height_request()).abs() > 1 {
+            self.spacer.set_height_request(needed);
+            return false;
         }
-        if frames.get() >= 10 {
+        adjustment.set_value(top.min((adjustment.upper() - page).max(0.0)));
+        self.pending.set(false);
+        true
+    }
+}
+
+/// Puts the viewport back where it was after a rebuild that isn't a track
+/// change — removing a row or loving a track shouldn't throw the reader back
+/// to the top of the history.
+fn restore_offset(scroll: &gtk::ScrolledWindow, list: &gtk::ListBox, offset: f64) {
+    if offset <= 0.0 {
+        return;
+    }
+    let scroll = scroll.clone();
+    let frames = Cell::new(0u8);
+    list.add_tick_callback(move |_, _| {
+        frames.set(frames.get() + 1);
+        let adjustment = scroll.vadjustment();
+        let max = (adjustment.upper() - adjustment.page_size()).max(0.0);
+        let wanted = offset.min(max);
+        adjustment.set_value(wanted);
+        if (adjustment.value() - wanted).abs() < 0.5 || frames.get() >= SETTLE_FRAMES {
             glib::ControlFlow::Break
         } else {
             glib::ControlFlow::Continue
