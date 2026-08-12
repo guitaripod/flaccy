@@ -17,6 +17,9 @@ final class QueuePanelViewController: NSViewController {
     private var rows: [Row] = []
     private var isActive = true
     private var needsReload = false
+    /// A pin asked for before the panel had a viewport to pin against; retried
+    /// once it is laid out, so opening the queue never lands on the history.
+    private var pinPending = false
     private let tableView = QueueTableView()
     private let scrollView = NSScrollView()
     private let emptyLabel = NSTextField(labelWithString: String(localized: "Nothing queued — play an album to fill Up Next."))
@@ -75,8 +78,9 @@ final class QueuePanelViewController: NSViewController {
         super.viewDidLoad()
         let center = NotificationCenter.default
         center.addObserver(self, selector: #selector(queueChanged), name: AudioPlayer.queueDidChange, object: nil)
-        center.addObserver(self, selector: #selector(queueChanged), name: AudioPlayer.trackDidChange, object: nil)
+        center.addObserver(self, selector: #selector(trackChanged), name: AudioPlayer.trackDidChange, object: nil)
         center.addObserver(self, selector: #selector(playbackStateChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
+        scrollView.automaticallyAdjustsContentInsets = false
         reload()
     }
 
@@ -90,13 +94,25 @@ final class QueuePanelViewController: NSViewController {
     func setActive(_ active: Bool) {
         guard isActive != active else { return }
         isActive = active
-        if active, needsReload {
+        if active {
+            // Revealing the panel is itself a reason to show what's playing.
             needsReload = false
             reload()
         }
     }
 
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        if pinPending {
+            pinNowPlayingToTop()
+        }
+    }
+
     @objc private func queueChanged() {
+        reload(pinNowPlaying: false)
+    }
+
+    @objc private func trackChanged() {
         reload()
     }
 
@@ -109,15 +125,20 @@ final class QueuePanelViewController: NSViewController {
         }
     }
 
-    private func reload() {
+    private func reload(pinNowPlaying: Bool = true) {
         guard isActive else {
             needsReload = true
             return
         }
+        let offset = scrollView.contentView.bounds.origin.y
         rows = Self.buildRows(queue: player.queue, currentIndex: player.currentIndex)
         emptyLabel.isHidden = !player.queue.isEmpty
         tableView.reloadData()
-        scrollToCurrent()
+        if pinNowPlaying {
+            pinNowPlayingToTop()
+        } else {
+            restore(offset: offset)
+        }
         AppLogger.debug("Queue panel reload: \(rows.count) rows, table frame \(tableView.frame)", category: .ui)
     }
 
@@ -143,11 +164,53 @@ final class QueuePanelViewController: NSViewController {
         return rows
     }
 
-    private func scrollToCurrent() {
+    /// Puts the Now Playing heading at the top of the queue viewport, so what is
+    /// playing reads first and the history sits just above it, one scroll away.
+    /// Merely making the row visible leaves it wherever it happens to land, and
+    /// deep into a queue that is off the bottom of the panel entirely.
+    private func pinNowPlayingToTop() {
+        guard let anchor = nowPlayingHeadingRow() else {
+            pinPending = false
+            return
+        }
+        tableView.layoutSubtreeIfNeeded()
+        let clip = scrollView.contentView
+        let viewport = clip.bounds.height
+        guard viewport > 1, tableView.numberOfRows == rows.count else {
+            pinPending = true
+            return
+        }
+        let top = tableView.rect(ofRow: anchor).minY
+        // Room below the last row so the heading can reach the top even when the
+        // current track is the last one in the queue.
+        let below = tableView.bounds.height - top
+        scrollView.contentInsets.bottom = max(0, viewport - below)
+        tableView.layoutSubtreeIfNeeded()
+        let ceiling = max(0, tableView.bounds.height + scrollView.contentInsets.bottom - viewport)
+        clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: min(top, ceiling)))
+        scrollView.reflectScrolledClipView(clip)
+        pinPending = false
+    }
+
+    /// The "Now Playing" heading, falling back to the track row itself.
+    private func nowPlayingHeadingRow() -> Int? {
         guard let currentRow = rows.firstIndex(where: {
             if case .track(_, .current) = $0 { return true } else { return false }
-        }) else { return }
-        tableView.scrollRowToVisible(currentRow)
+        }) else { return nil }
+        if currentRow > 0, case .header = rows[currentRow - 1] {
+            return currentRow - 1
+        }
+        return currentRow
+    }
+
+    /// Leaves the reader where they were through a rebuild they didn't ask for —
+    /// loving a track or removing a row shouldn't throw them back up the queue.
+    private func restore(offset: CGFloat) {
+        let clip = scrollView.contentView
+        let viewport = clip.bounds.height
+        let ceiling = max(0, tableView.bounds.height + scrollView.contentInsets.bottom - viewport)
+        clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: min(offset, ceiling)))
+        scrollView.reflectScrolledClipView(clip)
     }
 
     private func upNextSummary() -> String {

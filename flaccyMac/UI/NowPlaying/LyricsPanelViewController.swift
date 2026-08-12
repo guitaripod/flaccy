@@ -7,6 +7,21 @@ import AppKit
 /// instrumental state, or an empty state.
 final class LyricsPanelViewController: NSViewController {
 
+    /// How far ahead of the clock a line lights up. The player reports the
+    /// position it has rendered, not the one you are hearing, and the emphasis
+    /// still has to animate in — without a lead the line always arrives late.
+    private static let lyricLead: TimeInterval = 0.22
+    /// Where the active line sits in the viewport — slightly above center, the
+    /// way every good lyrics view frames the line you are about to sing.
+    private static let activeLineAnchor: CGFloat = 0.42
+    /// Angular frequency of the critically damped follow spring, in rad/s.
+    private static let scrollResponse: CGFloat = 15
+    /// Frame deltas are clamped before integrating so a stalled frame can't blow
+    /// the spring up.
+    private static let maxFrameDelta: CFTimeInterval = 1.0 / 30
+    /// 60 Hz, the rate the lyric emphasis and the follow spring are integrated at.
+    private static let frameInterval: TimeInterval = 1.0 / 60
+
     private let player: AudioPlaying = AudioPlayer.shared
 
     private let scrollView = NSScrollView()
@@ -25,6 +40,11 @@ final class LyricsPanelViewController: NSViewController {
     private var lastUserScroll: Date = .distantPast
     private var isProgrammaticScroll = false
     private var isActive = true
+    private var ticker: Timer?
+    private var lastFrameTime: CFTimeInterval = 0
+    private var needsLineRefresh = false
+    private var scrollTarget: CGFloat?
+    private var scrollVelocity: CGFloat = 0
 
     override func loadView() {
         view = NSView()
@@ -94,6 +114,7 @@ final class LyricsPanelViewController: NSViewController {
         let center = NotificationCenter.default
         center.addObserver(self, selector: #selector(trackChanged), name: AudioPlayer.trackDidChange, object: nil)
         center.addObserver(self, selector: #selector(progressChanged), name: AudioPlayer.playbackProgressDidChange, object: nil)
+        center.addObserver(self, selector: #selector(playbackStateChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
         center.addObserver(
             self, selector: #selector(userScrolled),
             name: NSScrollView.willStartLiveScrollNotification, object: scrollView
@@ -108,14 +129,35 @@ final class LyricsPanelViewController: NSViewController {
     override func viewDidAppear() {
         super.viewDidAppear()
         loadForCurrentTrack()
+        syncDisplayLink()
+    }
+
+    override func viewDidDisappear() {
+        super.viewDidDisappear()
+        stopDisplayLink()
+    }
+
+    /// End padding scales with the viewport so the first and last lines can
+    /// reach the anchor instead of being pinned to an edge.
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        let viewport = scrollView.contentView.bounds.height
+        guard viewport > 1 else { return }
+        linesStack.edgeInsets = NSEdgeInsets(
+            top: max(24, viewport * Self.activeLineAnchor),
+            left: 20,
+            bottom: max(24, viewport * (1 - Self.activeLineAnchor)),
+            right: 20
+        )
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        ticker?.invalidate()
     }
 
     /// Called when this panel's Now Playing column shows or hides, so a hidden
-    /// lyrics column stops re-highlighting lines 4×/sec. Defaults to active for
+    /// lyrics column stops tracking lines every frame. Defaults to active for
     /// the always-on window inspector.
     func setActive(_ active: Bool) {
         guard isActive != active else { return }
@@ -123,6 +165,8 @@ final class LyricsPanelViewController: NSViewController {
         if active {
             loadForCurrentTrack()
             progressChanged()
+        } else {
+            stopDisplayLink()
         }
     }
 
@@ -133,11 +177,29 @@ final class LyricsPanelViewController: NSViewController {
     @objc private func userScrolled() {
         guard !isProgrammaticScroll else { return }
         lastUserScroll = Date()
+        cancelScroll()
     }
 
-    @objc private func progressChanged() {
-        guard isActive, !syncedLines.isEmpty else { return }
-        let time = player.currentTime
+    /// Re-evaluates the active line and advances the follow spring every frame
+    /// rather than on the player's quarter-second tick — a line change is only
+    /// ever a frame late, and the scroll is a glide instead of a series of hops.
+    @objc private func step() {
+        let now = CACurrentMediaTime()
+        let previous = lastFrameTime
+        lastFrameTime = now
+        let delta = previous == 0 ? Self.maxFrameDelta : min(max(now - previous, 0), Self.maxFrameDelta)
+
+        if player.isPlaying || needsLineRefresh {
+            needsLineRefresh = false
+            updateCurrentLine(at: player.currentTime + Self.lyricLead)
+        }
+        advanceScroll(by: CGFloat(delta))
+        if !player.isPlaying, scrollTarget == nil {
+            stopDisplayLink()
+        }
+    }
+
+    private func updateCurrentLine(at time: TimeInterval) {
         var index = -1
         for (offset, line) in syncedLines.enumerated() {
             if line.time <= time { index = offset } else { break }
@@ -146,6 +208,47 @@ final class LyricsPanelViewController: NSViewController {
         currentLineIndex = index
         applyLineStyles(animated: true)
         followCurrentLine()
+    }
+
+    @objc private func playbackStateChanged() {
+        syncDisplayLink()
+    }
+
+    @objc private func progressChanged() {
+        // A seek moves the clock without a frame of playback behind it.
+        needsLineRefresh = true
+        syncDisplayLink()
+    }
+
+    /// The link runs only while there is something to animate: a hidden or
+    /// paused panel with a settled scroll costs nothing.
+    private func syncDisplayLink() {
+        let wanted = isActive && !syncedLines.isEmpty && view.window != nil
+            && (player.isPlaying || scrollTarget != nil || needsLineRefresh)
+        if wanted {
+            startDisplayLink()
+        } else {
+            stopDisplayLink()
+        }
+    }
+
+    /// A run-loop ticker rather than a `CADisplayLink`: AppKit pauses a view's
+    /// display link whenever its app isn't frontmost, and a music player spends
+    /// most of its life in a window you are not clicking on — the lyrics would
+    /// simply stop moving. `.common` mode keeps it running through menu tracking
+    /// and live resize too.
+    private func startDisplayLink() {
+        guard ticker == nil else { return }
+        lastFrameTime = 0
+        let timer = Timer(timeInterval: Self.frameInterval, target: self, selector: #selector(step), userInfo: nil, repeats: true)
+        timer.tolerance = Self.frameInterval / 4
+        RunLoop.main.add(timer, forMode: .common)
+        ticker = timer
+    }
+
+    private func stopDisplayLink() {
+        ticker?.invalidate()
+        ticker = nil
     }
 
     private func loadForCurrentTrack() {
@@ -210,8 +313,11 @@ final class LyricsPanelViewController: NSViewController {
             let lineView = LyricLineView(text: line.text)
             lineView.onClick = { [weak self] in
                 guard let self, index < self.syncedLines.count else { return }
-                self.player.seek(to: self.syncedLines[index].time)
-                AppLogger.info("Lyrics line seek to \(self.syncedLines[index].time)", category: .ui)
+                // Nudge back a beat so the first syllable isn't clipped.
+                let time = max(0, self.syncedLines[index].time - 0.15)
+                self.player.seek(to: time)
+                self.lastUserScroll = .distantPast
+                AppLogger.info("Lyrics line seek to \(time)", category: .ui)
             }
             linesStack.addArrangedSubview(lineView)
             lineView.widthAnchor.constraint(equalTo: linesStack.widthAnchor, constant: -40).isActive = true
@@ -245,39 +351,72 @@ final class LyricsPanelViewController: NSViewController {
         }
     }
 
+    /// Aims the follow spring at the active line. The target comes from the
+    /// line's real geometry, so wrapped lines don't drift it out of step, and
+    /// retargeting mid-flight keeps the current velocity — consecutive lines
+    /// read as one continuous glide rather than a restart each time.
     private func followCurrentLine() {
         guard currentLineIndex >= 0, currentLineIndex < lineViews.count else { return }
         guard Date().timeIntervalSince(lastUserScroll) > 3 else { return }
-        let lineFrame = lineViews[currentLineIndex].convert(lineViews[currentLineIndex].bounds, to: documentView)
-        let targetY = max(0, lineFrame.minY - scrollView.contentView.bounds.height * 0.35)
-        isProgrammaticScroll = true
+        let line = lineViews[currentLineIndex]
+        let frame = line.convert(line.bounds, to: documentView)
+        let viewport = scrollView.contentView.bounds.height
+        guard viewport > 1 else { return }
+        let target = frame.midY - viewport * Self.activeLineAnchor
+        scrollTarget = min(max(target, 0), maxScrollOffset)
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            scrollView.contentView.setBoundsOrigin(NSPoint(x: 0, y: targetY))
-            scrollView.reflectScrolledClipView(scrollView.contentView)
-            isProgrammaticScroll = false
+            settleScroll(at: scrollTarget ?? 0)
         } else {
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.45
-                context.timingFunction = CAMediaTimingFunction(controlPoints: 0.25, 1, 0.35, 1)
-                context.allowsImplicitAnimation = true
-                scrollView.contentView.animator().setBoundsOrigin(NSPoint(x: 0, y: targetY))
-                scrollView.reflectScrolledClipView(scrollView.contentView)
-            }, completionHandler: { [weak self] in
-                self?.isProgrammaticScroll = false
-            })
+            syncDisplayLink()
         }
     }
 
-    private func scrollToTop() {
+    /// One frame of a critically damped spring toward the aimed-at offset.
+    private func advanceScroll(by delta: CGFloat) {
+        guard let target = scrollTarget else { return }
+        let value = scrollView.contentView.bounds.origin.y
+        let distance = target - value
+        if abs(distance) < 0.5, abs(scrollVelocity) < 4 {
+            settleScroll(at: target)
+            return
+        }
+        let response = Self.scrollResponse
+        scrollVelocity += (response * response * distance - 2 * response * scrollVelocity) * delta
+        scrollTo(value + scrollVelocity * delta)
+    }
+
+    private func settleScroll(at offset: CGFloat) {
+        scrollTo(offset)
+        scrollTarget = nil
+        scrollVelocity = 0
+    }
+
+    private func cancelScroll() {
+        scrollTarget = nil
+        scrollVelocity = 0
+    }
+
+    private func scrollTo(_ offset: CGFloat) {
         isProgrammaticScroll = true
-        scrollView.contentView.setBoundsOrigin(.zero)
+        scrollView.contentView.setBoundsOrigin(NSPoint(x: 0, y: offset))
         scrollView.reflectScrolledClipView(scrollView.contentView)
         isProgrammaticScroll = false
+    }
+
+    private var maxScrollOffset: CGFloat {
+        max(0, documentView.bounds.height - scrollView.contentView.bounds.height)
+    }
+
+    private func scrollToTop() {
+        cancelScroll()
+        scrollTo(0)
     }
 
     private func showState(icon: String?, text: String) {
         clearLines()
         syncedLines = []
+        cancelScroll()
+        stopDisplayLink()
         plainTextView.isHidden = true
         stateLabel.stringValue = text
         stateLabel.isHidden = text.isEmpty

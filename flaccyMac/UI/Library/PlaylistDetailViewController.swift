@@ -17,6 +17,7 @@ final class PlaylistDetailViewController: NSViewController {
     private let nameLabel = NSTextField(labelWithString: "")
     private let summaryLabel = NSTextField(labelWithString: "")
     private var rows: [Row] = []
+    private var playingPath: String?
 
     private static let dragType = NSPasteboard.PasteboardType("com.midgarcorp.flaccy.playlistRow")
 
@@ -116,7 +117,27 @@ final class PlaylistDetailViewController: NSViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(reload), name: .flaccyPlaylistsDidChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playbackChanged), name: AudioPlayer.trackDidChange, object: nil
+        )
         reload()
+    }
+
+    /// Repaints the title column so the playing row lights up here too, the way
+    /// it already does in the songs table and album detail.
+    @objc private func playbackChanged() {
+        let newPath = AudioPlayer.shared.currentTrack?.fileURL.path
+        guard newPath != playingPath else { return }
+        playingPath = newPath
+        guard let titleIndex = tableView.tableColumns.firstIndex(where: {
+            $0.identifier.rawValue == "title"
+        }) else { return }
+        let visible = tableView.rows(in: tableView.visibleRect)
+        guard visible.length > 0 else { return }
+        tableView.reloadData(
+            forRowIndexes: IndexSet(integersIn: visible.location..<(visible.location + visible.length)),
+            columnIndexes: IndexSet(integer: titleIndex)
+        )
     }
 
     deinit {

@@ -45,7 +45,7 @@ enum DebugDrive {
         case nowPlaying
         case playlistDetail(String)
         case nowPlayingLyrics
-        case queuePanel
+        case queuePanel(deep: Bool)
         case settings(paneIndex: Int)
     }
 
@@ -55,7 +55,8 @@ enum DebugDrive {
         if let name = value(after: "--shot-playlist") { return .playlistDetail(name) }
         if CommandLine.arguments.contains("--shot-nowplaying-lyrics") { return .nowPlayingLyrics }
         if CommandLine.arguments.contains("--shot-nowplaying") { return .nowPlaying }
-        if CommandLine.arguments.contains("--shot-queue") { return .queuePanel }
+        if CommandLine.arguments.contains("--shot-queue-deep") { return .queuePanel(deep: true) }
+        if CommandLine.arguments.contains("--shot-queue") { return .queuePanel(deep: false) }
         if let pane = value(after: "--shot-settings") { return .settings(paneIndex: Int(pane) ?? 0) }
         if let name = value(after: "--shot-section") {
             let section: SidebarSection? = switch name {
@@ -143,7 +144,7 @@ enum DebugDrive {
             NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
             name = "flaccy-shot-nowplaying"
         case .nowPlayingLyrics:
-            startHeroPlayback()
+            if CommandLine.arguments.contains("--deep") { startDeepPlayback() } else { startHeroPlayback() }
             try? await Task.sleep(for: .seconds(2))
             NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
             try? await Task.sleep(for: .seconds(2))
@@ -151,11 +152,11 @@ enum DebugDrive {
             NotificationCenter.default.post(name: .flaccyToggleQueue, object: nil)
             try? await Task.sleep(for: .seconds(2))
             name = "flaccy-shot-nowplaying-lyrics"
-        case .queuePanel:
-            startHeroPlayback()
+        case .queuePanel(let deep):
+            if deep { startDeepPlayback() } else { startHeroPlayback() }
             try? await Task.sleep(for: .seconds(2))
             NotificationCenter.default.post(name: .flaccyToggleQueue, object: nil)
-            name = "flaccy-shot-queue"
+            name = deep ? "flaccy-shot-queue-deep" : "flaccy-shot-queue"
         case .settings(let paneIndex):
             NSApp.delegate?.perform(NSSelectorFromString("showSettings:"), with: nil)
             try? await Task.sleep(for: .seconds(2))
@@ -280,6 +281,21 @@ enum DebugDrive {
         let index = hero.tracks.firstIndex { $0.title == "Slow Machine" } ?? 0
         AudioPlayer.shared.play(hero.tracks, startingAt: index)
         AudioPlayer.shared.seek(to: 58)
+    }
+
+    /// Playback from the middle of the longest album on hand, so the queue panel
+    /// has real history above the current track — the case where merely
+    /// scrolling the row into view leaves it off the bottom of the panel.
+    private static func startDeepPlayback() {
+        guard let album = Library.shared.albums.max(by: { $0.tracks.count < $1.tracks.count }),
+              album.tracks.count > 4 else {
+            startHeroPlayback()
+            return
+        }
+        AudioPlayer.shared.volume = 0.02
+        let last = CommandLine.arguments.contains("--deep-last")
+        AudioPlayer.shared.play(album.tracks, startingAt: last ? album.tracks.count - 1 : album.tracks.count / 2)
+        AudioPlayer.shared.seek(to: 45)
     }
 
     private static func capture(window: NSWindow?, name: String) {
