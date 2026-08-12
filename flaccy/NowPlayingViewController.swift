@@ -983,7 +983,12 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         setArtwork(state.artwork)
         updateBackdropPalette(artwork: state.artwork, state: state)
         updateArtistImage(artist: state.artist)
-        LyricsService.shared.prefetch(track: state.title, artist: state.artist, album: state.albumTitle)
+        let track = AudioPlayer.shared.currentTrack
+        LyricsService.shared.prefetch(
+            track: state.title, artist: state.artist, album: state.albumTitle,
+            fileURL: track?.title == state.title ? track?.fileURL : nil,
+            duration: track?.duration ?? 0
+        )
     }
 
     /// Resolves the artist photo off-main and applies it to the ambient

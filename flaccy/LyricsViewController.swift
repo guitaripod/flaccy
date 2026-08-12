@@ -2,6 +2,19 @@ import UIKit
 
 final class LyricsViewController: UIViewController {
 
+    /// How far ahead of the clock a line lights up. The player reports the
+    /// position it has rendered, not the one you are hearing, and the emphasis
+    /// still has to animate in — without a lead the line always arrives late.
+    private static let lyricLead: TimeInterval = 0.22
+    /// Where the active line sits in the viewport — slightly above center, the
+    /// way every good lyrics view frames the line you are about to sing.
+    private static let activeLineAnchor: CGFloat = 0.42
+    /// Angular frequency of the critically damped follow spring, in rad/s.
+    private static let scrollResponse: CGFloat = 15
+    /// Frame deltas are clamped before integrating so a stalled frame can't
+    /// blow the spring up.
+    private static let maxFrameDelta: CFTimeInterval = 1.0 / 30
+
     private var tableView: UITableView!
     private var plainTextView: UITextView!
     private var statusLabel: UILabel!
@@ -17,6 +30,12 @@ final class LyricsViewController: UIViewController {
     private var isUserScrolling = false
     private var scrollResumeWorkItem: DispatchWorkItem?
     private let lineSelectionFeedback = UIImpactFeedbackGenerator(style: .light)
+    private var displayLink: CADisplayLink?
+    private var lastFrameTime: CFTimeInterval = 0
+    private var needsLineRefresh = false
+    private var scrollTarget: CGFloat?
+    private var scrollVelocity: CGFloat = 0
+    private lazy var retryButton: UIButton = makeRetryButton()
 
     init(track: String, artist: String, album: String) {
         self.trackTitle = track
@@ -49,6 +68,20 @@ final class LyricsViewController: UIViewController {
             NotificationCenter.default.removeObserver(observer)
             trackObserver = nil
         }
+        stopDisplayLink()
+    }
+
+    /// End padding scales with the viewport so the first and last lines can
+    /// reach the anchor instead of being pinned to an edge.
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        guard !lyrics.isEmpty, view.bounds.height > 1 else { return }
+        tableView.contentInset = UIEdgeInsets(
+            top: view.bounds.height * Self.activeLineAnchor,
+            left: 0,
+            bottom: view.bounds.height * (1 - Self.activeLineAnchor),
+            right: 0
+        )
     }
 
     private func startTrackObservation() {
@@ -72,6 +105,9 @@ final class LyricsViewController: UIViewController {
     }
 
     private func resetContent() {
+        stopDisplayLink()
+        cancelScroll()
+        retryButton.isHidden = true
         lyrics = []
         currentLineIndex = -1
         tableView.isHidden = true
@@ -148,17 +184,29 @@ final class LyricsViewController: UIViewController {
         let generation = loadGeneration
         spinner.startAnimating()
 
+        let current = AudioPlayer.shared.currentTrack
+        let matchesCurrent = current?.title == trackTitle && current?.artist == artistName
         Task {
-            let result = await LyricsService.shared.fetchLyrics(
+            let outcome = await LyricsService.shared.fetchLyrics(
                 track: trackTitle,
                 artist: artistName,
-                album: albumName
+                album: albumName,
+                fileURL: matchesCurrent ? current?.fileURL : nil,
+                duration: matchesCurrent ? (current?.duration ?? 0) : 0
             )
             guard generation == loadGeneration else { return }
             spinner.stopAnimating()
 
-            guard let result else {
+            let result: LyricsResult
+            switch outcome {
+            case .found(let found):
+                result = found
+            case .missing:
                 showStatus(String(localized: "No lyrics available"))
+                return
+            case .failed:
+                showStatus(String(localized: "Couldn't reach lrclib.net"))
+                retryButton.isHidden = false
                 return
             }
 
@@ -180,6 +228,27 @@ final class LyricsViewController: UIViewController {
     private func showStatus(_ text: String) {
         statusLabel.text = text
         statusLabel.isHidden = false
+    }
+
+    /// A network failure is recoverable, so it gets a way to recover — a miss
+    /// is permanent until lrclib grows the song and gets none.
+    private func makeRetryButton() -> UIButton {
+        var config = UIButton.Configuration.borderedProminent()
+        config.title = String(localized: "Try Again")
+        config.cornerStyle = .capsule
+        let button = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.retryButton.isHidden = true
+            self?.statusLabel.isHidden = true
+            self?.loadLyrics()
+        })
+        button.isHidden = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            button.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: 16),
+        ])
+        return button
     }
 
     private func showInstrumental() {
@@ -212,15 +281,12 @@ final class LyricsViewController: UIViewController {
         tableView.isHidden = false
         tableView.reloadData()
 
-        tableView.contentInset = UIEdgeInsets(
-            top: view.bounds.height * 0.3,
-            left: 0,
-            bottom: view.bounds.height * 0.55,
-            right: 0
-        )
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
 
         startProgressObservation()
-        updateCurrentLine()
+        needsLineRefresh = true
+        syncDisplayLink()
         animateContentAppearance(tableView)
     }
 
@@ -253,6 +319,8 @@ final class LyricsViewController: UIViewController {
         animator.startAnimation()
     }
 
+    /// A seek moves the clock without a frame of playback behind it, so the
+    /// line has to be re-found even while paused.
     private func startProgressObservation() {
         guard progressObserver == nil else { return }
         progressObserver = NotificationCenter.default.addObserver(
@@ -260,16 +328,58 @@ final class LyricsViewController: UIViewController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.updateCurrentLine()
+            self?.needsLineRefresh = true
+            self?.syncDisplayLink()
         }
     }
 
-    private func updateCurrentLine() {
+    /// Re-evaluates the active line and advances the follow spring once per
+    /// displayed frame rather than on the player's quarter-second tick — a line
+    /// change is only ever a frame late, and the scroll is a glide instead of a
+    /// hop per line.
+    @objc private func step(_ link: CADisplayLink) {
+        let now = link.timestamp
+        let previous = lastFrameTime
+        lastFrameTime = now
+        let delta = previous == 0
+            ? Self.maxFrameDelta
+            : min(max(now - previous, 0), Self.maxFrameDelta)
+
+        let playing = AudioPlayer.shared.isPlaying
+        if playing || needsLineRefresh {
+            needsLineRefresh = false
+            updateCurrentLine(at: AudioPlayer.shared.currentTime + Self.lyricLead)
+        }
+        advanceScroll(by: CGFloat(delta))
+        if !playing, scrollTarget == nil {
+            stopDisplayLink()
+        }
+    }
+
+    /// The link runs only while there is something to animate, so a paused or
+    /// backgrounded lyrics view costs nothing.
+    private func syncDisplayLink() {
+        let wanted = !lyrics.isEmpty && view.window != nil
+            && (AudioPlayer.shared.isPlaying || scrollTarget != nil || needsLineRefresh)
+        if wanted { startDisplayLink() } else { stopDisplayLink() }
+    }
+
+    private func startDisplayLink() {
+        guard displayLink == nil else { return }
+        lastFrameTime = 0
+        let link = CADisplayLink(target: self, selector: #selector(step(_:)))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    private func stopDisplayLink() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    private func updateCurrentLine(at time: TimeInterval) {
         guard !lyrics.isEmpty else { return }
-
-        let time = AudioPlayer.shared.currentTime
         var newIndex = -1
-
         for (index, line) in lyrics.enumerated() {
             if line.time <= time {
                 newIndex = index
@@ -277,7 +387,6 @@ final class LyricsViewController: UIViewController {
                 break
             }
         }
-
         setCurrentLine(newIndex, scrolls: !isUserScrolling)
     }
 
@@ -287,11 +396,43 @@ final class LyricsViewController: UIViewController {
         applyEmphasisToVisibleCells(animated: true)
 
         guard newIndex >= 0, scrolls else { return }
-        tableView.scrollToRow(
-            at: IndexPath(row: newIndex, section: 0),
-            at: .top,
-            animated: true
+        aimScroll(atRow: newIndex)
+    }
+
+    /// Aims the follow spring so the line lands on the anchor. Retargeting
+    /// mid-flight keeps the current velocity, so consecutive lines read as one
+    /// continuous glide rather than a restart each time.
+    private func aimScroll(atRow row: Int) {
+        guard row < lyrics.count, tableView.bounds.height > 1 else { return }
+        let rect = tableView.rectForRow(at: IndexPath(row: row, section: 0))
+        let anchor = tableView.bounds.height * Self.activeLineAnchor
+        let lowest = -tableView.adjustedContentInset.top
+        let highest = max(
+            lowest,
+            tableView.contentSize.height + tableView.adjustedContentInset.bottom - tableView.bounds.height
         )
+        scrollTarget = min(max(rect.midY - anchor, lowest), highest)
+        syncDisplayLink()
+    }
+
+    /// One frame of a critically damped spring toward the aimed-at offset.
+    private func advanceScroll(by delta: CGFloat) {
+        guard let target = scrollTarget else { return }
+        let value = tableView.contentOffset.y
+        let distance = target - value
+        if abs(distance) < 0.5, abs(scrollVelocity) < 4 {
+            tableView.contentOffset.y = target
+            cancelScroll()
+            return
+        }
+        let response = Self.scrollResponse
+        scrollVelocity += (response * response * distance - 2 * response * scrollVelocity) * delta
+        tableView.contentOffset.y = value + scrollVelocity * delta
+    }
+
+    private func cancelScroll() {
+        scrollTarget = nil
+        scrollVelocity = 0
     }
 
     private func applyEmphasisToVisibleCells(animated: Bool) {
@@ -321,7 +462,8 @@ extension LyricsViewController: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         let line = lyrics[indexPath.row]
         lineSelectionFeedback.impactOccurred()
-        AudioPlayer.shared.seek(to: line.time)
+        // Nudge back a beat so the first syllable isn't clipped.
+        AudioPlayer.shared.seek(to: max(0, line.time - 0.15))
         scrollResumeWorkItem?.cancel()
         isUserScrolling = false
         setCurrentLine(indexPath.row, scrolls: true)
@@ -330,6 +472,7 @@ extension LyricsViewController: UITableViewDelegate {
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         scrollResumeWorkItem?.cancel()
         isUserScrolling = true
+        cancelScroll()
     }
 
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {

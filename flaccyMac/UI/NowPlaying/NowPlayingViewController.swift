@@ -56,8 +56,11 @@ final class NowPlayingViewController: NSViewController {
     private let queueColumn = NSView()
     private let lyricsPanel = LyricsPanelViewController()
     private let queuePanel = QueuePanelViewController()
-    private var lyricsShown = false
-    private var queueShown = false
+    private var lyricsShown = NowPlayingLayout.lyricsShown
+    private var queueShown = NowPlayingLayout.queueShown
+    private var swapSides = NowPlayingLayout.swapSides
+    private var body: NSStackView!
+    private var swapCapsule: TransportButton!
     private var lyricsWidthConstraint: NSLayoutConstraint?
     private var queueWidthConstraint: NSLayoutConstraint?
 
@@ -88,10 +91,11 @@ final class NowPlayingViewController: NSViewController {
         let center = buildCenterColumn()
         buildColumn(lyricsColumn, hosting: lyricsPanel, title: String(localized: "Lyrics"))
         buildColumn(queueColumn, hosting: queuePanel, title: String(localized: "Up Next"))
-        lyricsColumn.isHidden = true
-        queueColumn.isHidden = true
+        lyricsColumn.isHidden = !lyricsShown
+        queueColumn.isHidden = !queueShown
 
         let body = NSStackView(views: [lyricsColumn, center, queueColumn])
+        self.body = body
         body.orientation = .horizontal
         body.distribution = .fill
         body.spacing = 16
@@ -104,6 +108,9 @@ final class NowPlayingViewController: NSViewController {
         body.setContentCompressionResistancePriority(.init(1), for: .vertical)
         lyricsWidthConstraint = lyricsColumn.widthAnchor.constraint(equalTo: center.widthAnchor)
         queueWidthConstraint = queueColumn.widthAnchor.constraint(equalTo: center.widthAnchor)
+        lyricsWidthConstraint?.isActive = lyricsShown
+        queueWidthConstraint?.isActive = queueShown
+        applyColumnOrder()
         for column in [lyricsColumn, center, queueColumn] {
             NSLayoutConstraint.activate([
                 column.topAnchor.constraint(equalTo: body.topAnchor),
@@ -179,7 +186,14 @@ final class NowPlayingViewController: NSViewController {
         queueCapsule = CapsuleButton(symbolName: "list.bullet", title: String(localized: "Up Next")) { [weak self] _ in
             self?.togglePanel(.queue)
         }
-        let toggles = NSStackView(views: [lyricsCapsule, queueCapsule])
+        swapCapsule = TransportButton(
+            symbolName: "arrow.left.arrow.right", pointSize: 12,
+            accessibilityLabel: String(localized: "Swap panel sides"),
+            target: self, action: #selector(swapPanelSides)
+        )
+        swapCapsule.isHidden = !(lyricsShown && queueShown)
+
+        let toggles = NSStackView(views: [lyricsCapsule, queueCapsule, swapCapsule])
         toggles.orientation = .horizontal
         toggles.spacing = 8
         toggles.translatesAutoresizingMaskIntoConstraints = false
@@ -273,8 +287,10 @@ final class NowPlayingViewController: NSViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(trackChangedForCount), name: AudioPlayer.trackDidChange, object: nil
         )
-        lyricsPanel.setActive(false)
-        queuePanel.setActive(false)
+        // Restored from the reader's last session, not reset to closed.
+        lyricsPanel.setActive(lyricsShown)
+        queuePanel.setActive(queueShown)
+        refreshCapsuleToggles()
         apply(viewModel.currentState)
         applyProgress(viewModel.currentProgress)
         modesChanged()
@@ -314,12 +330,38 @@ final class NowPlayingViewController: NSViewController {
             lyricsShown.toggle()
             setColumn(lyricsColumn, visible: lyricsShown)
             lyricsPanel.setActive(lyricsShown)
+            NowPlayingLayout.lyricsShown = lyricsShown
         case .queue:
             queueShown.toggle()
             setColumn(queueColumn, visible: queueShown)
             queuePanel.setActive(queueShown)
+            NowPlayingLayout.queueShown = queueShown
         }
         refreshCapsuleToggles()
+    }
+
+    /// Which side each panel occupies is the reader's choice and is remembered,
+    /// the way it is on Linux — some people want the lyrics under their eye on
+    /// the left, some on the right.
+    @objc func swapPanelSides() {
+        swapSides.toggle()
+        NowPlayingLayout.swapSides = swapSides
+        applyColumnOrder()
+        refreshCapsuleToggles()
+    }
+
+    private func applyColumnOrder() {
+        guard let body, let center = body.arrangedSubviews.first(where: {
+            $0 !== lyricsColumn && $0 !== queueColumn
+        }) else { return }
+        let ordered = swapSides
+            ? [queueColumn, center, lyricsColumn]
+            : [lyricsColumn, center, queueColumn]
+        guard body.arrangedSubviews != ordered else { return }
+        for column in ordered {
+            body.removeArrangedSubview(column)
+            body.addArrangedSubview(column)
+        }
     }
 
     private func setColumn(_ column: NSView, visible: Bool) {
@@ -347,6 +389,7 @@ final class NowPlayingViewController: NSViewController {
     private func refreshCapsuleToggles() {
         lyricsCapsule.isActiveToggle = lyricsShown
         queueCapsule.isActiveToggle = queueShown
+        swapCapsule?.isHidden = !(lyricsShown && queueShown)
     }
 
     @objc private func queueChanged() {
@@ -662,7 +705,10 @@ final class NowPlayingViewController: NSViewController {
 
     private func prefetchLyrics() {
         guard let track = player.currentTrack else { return }
-        LyricsService.shared.prefetch(track: track.title, artist: track.artist, album: track.albumTitle)
+        LyricsService.shared.prefetch(
+            track: track.title, artist: track.artist, album: track.albumTitle,
+            fileURL: track.fileURL, duration: track.duration
+        )
     }
 
     private func chaseSeek(to time: TimeInterval) {

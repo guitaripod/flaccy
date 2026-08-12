@@ -36,6 +36,19 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         navigationItem.rightBarButtonItem = editButtonItem
         setupTableView()
         loadTracks()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playbackChanged), name: AudioPlayer.trackDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playbackChanged), name: AudioPlayer.playbackStateDidChange, object: nil
+        )
+    }
+
+    /// Repaints the visible rows so the playing one lights up here the way it
+    /// already does in album detail.
+    @objc private func playbackChanged() {
+        guard let visible = tableView.indexPathsForVisibleRows, !visible.isEmpty else { return }
+        tableView.reloadRows(at: visible, with: .none)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -275,7 +288,11 @@ extension PlaylistDetailViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: PlaylistTrackCell.reuseID, for: indexPath) as! PlaylistTrackCell
-        cell.configure(with: tracks[indexPath.row])
+        let track = tracks[indexPath.row]
+        cell.configure(
+            with: track,
+            isPlaying: AudioPlayer.shared.currentTrack?.fileURL == track.fileURL
+        )
         return cell
     }
 
@@ -331,6 +348,7 @@ private final class PlaylistTrackCell: UITableViewCell {
     private let titleLabel = UILabel()
     private let artistLabel = UILabel()
     private let durationLabel = UILabel()
+    private let barsView = NowPlayingBarsView()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -354,7 +372,12 @@ private final class PlaylistTrackCell: UITableViewCell {
         infoStack.axis = .vertical
         infoStack.spacing = 2
 
-        let stack = UIStackView(arrangedSubviews: [infoStack, durationLabel])
+        barsView.isHidden = true
+        barsView.tintColor = .tintColor
+        barsView.setContentHuggingPriority(.required, for: .horizontal)
+        barsView.widthAnchor.constraint(equalToConstant: 14).isActive = true
+
+        let stack = UIStackView(arrangedSubviews: [barsView, infoStack, durationLabel])
         stack.spacing = 12
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -372,11 +395,14 @@ private final class PlaylistTrackCell: UITableViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(with track: Track) {
+    func configure(with track: Track, isPlaying: Bool) {
         titleLabel.text = track.title
         artistLabel.text = track.artist
         let total = Int(track.duration)
         durationLabel.text = String(format: "%d:%02d", total / 60, total % 60)
+        titleLabel.textColor = isPlaying ? .tintColor : .label
+        barsView.isHidden = !isPlaying
+        barsView.setAnimating(isPlaying && AudioPlayer.shared.isPlaying)
     }
 }
 

@@ -31,6 +31,7 @@ final class LyricsPanelViewController: NSViewController {
     private let stateLabel = NSTextField(labelWithString: "")
     private let stateIcon = NSImageView()
     private let spinner = NSProgressIndicator()
+    private let retryButton = NSButton(title: "", target: nil, action: nil)
 
     private var lineViews: [LyricLineView] = []
     private var syncedLines: [LyricLine] = []
@@ -89,7 +90,14 @@ final class LyricsPanelViewController: NSViewController {
         spinner.controlSize = .small
         spinner.isDisplayedWhenStopped = false
 
-        let stateStack = NSStackView(views: [stateIcon, stateLabel, spinner])
+        retryButton.title = String(localized: "Try Again")
+        retryButton.bezelStyle = .accessoryBarAction
+        retryButton.controlSize = .large
+        retryButton.isHidden = true
+        retryButton.target = self
+        retryButton.action = #selector(retryLoad)
+
+        let stateStack = NSStackView(views: [stateIcon, stateLabel, spinner, retryButton])
         stateStack.orientation = .vertical
         stateStack.spacing = 8
         stateStack.alignment = .centerX
@@ -171,6 +179,12 @@ final class LyricsPanelViewController: NSViewController {
     }
 
     @objc private func trackChanged() {
+        loadForCurrentTrack()
+    }
+
+    @objc private func retryLoad() {
+        retryButton.isHidden = true
+        loadedTrackKey = nil
         loadForCurrentTrack()
     }
 
@@ -272,18 +286,28 @@ final class LyricsPanelViewController: NSViewController {
         spinner.startAnimation(nil)
 
         Task { [weak self] in
-            let result = await LyricsService.shared.fetchLyrics(
-                track: track.title, artist: track.artist, album: track.albumTitle
+            let outcome = await LyricsService.shared.fetchLyrics(
+                track: track.title, artist: track.artist, album: track.albumTitle,
+                fileURL: track.fileURL, duration: track.duration
             )
             guard let self, self.loadGeneration == generation else { return }
             self.spinner.stopAnimation(nil)
-            self.render(result)
+            self.render(outcome)
         }
     }
 
-    private func render(_ result: LyricsResult?) {
-        guard let result else {
+    private func render(_ outcome: LyricsOutcome) {
+        let result: LyricsResult
+        switch outcome {
+        case .found(let found):
+            result = found
+        case .missing:
             showState(icon: "quote.bubble", text: String(localized: "No lyrics found"))
+            return
+        case .failed:
+            // Recoverable, unlike a miss — offer the way back.
+            showState(icon: "wifi.exclamationmark", text: String(localized: "Couldn't reach lrclib.net"))
+            retryButton.isHidden = false
             return
         }
         if result.isInstrumental {
@@ -413,6 +437,7 @@ final class LyricsPanelViewController: NSViewController {
     }
 
     private func showState(icon: String?, text: String) {
+        retryButton.isHidden = true
         clearLines()
         syncedLines = []
         cancelScroll()

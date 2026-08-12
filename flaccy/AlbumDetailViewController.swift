@@ -768,7 +768,9 @@ private final class AlbumTrackCell: UITableViewCell {
 
 /// Three vertical bars that bounce while the track is playing and freeze at
 /// staggered heights when paused; Reduce Motion keeps them static.
-private final class NowPlayingBarsView: UIView {
+/// Three animated bars that stand in for the track number on the row the
+/// player is on. Shared by album detail and playlist detail.
+final class NowPlayingBarsView: UIView {
 
     private let barLayers: [CALayer] = (0..<3).map { _ in CALayer() }
     private var isAnimating = false

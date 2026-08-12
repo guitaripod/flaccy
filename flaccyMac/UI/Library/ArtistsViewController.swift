@@ -258,6 +258,14 @@ final class ArtistsViewController: NSViewController {
         menu.addItem(ClosureMenuItem(title: String(localized: "Shuffle All"), systemImage: "shuffle") {
             AudioPlayer.shared.play(tracks.shuffled(), startingAt: 0)
         })
+        menu.addItem(ClosureMenuItem(title: String(localized: "Play Next"), systemImage: "text.line.first.and.arrowtriangle.forward") {
+            for track in tracks.reversed() { AudioPlayer.shared.insertNext(track) }
+            MacToast.show(String(localized: "Playing \u{201C}\(name)\u{201D} next"), style: .success, in: anchor?.window)
+        })
+        menu.addItem(ClosureMenuItem(title: String(localized: "Add to Queue"), systemImage: "text.append") {
+            tracks.forEach { AudioPlayer.shared.addToQueue($0) }
+            MacToast.show(String(localized: "Added \u{201C}\(name)\u{201D} to queue"), style: .success, in: anchor?.window)
+        })
         menu.addItem(ClosureMenuItem(title: String(localized: "Start Station"), systemImage: "dot.radiowaves.left.and.right") {
             AudioPlayer.shared.startStation(seedArtist: name)
             MacToast.show(String(localized: "Station started from \(name)"), style: .success, in: anchor?.window)

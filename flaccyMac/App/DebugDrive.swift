@@ -144,6 +144,10 @@ enum DebugDrive {
             NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
             name = "flaccy-shot-nowplaying"
         case .nowPlayingLyrics:
+            // The panels persist now, so a shot has to state its own starting point.
+            NowPlayingLayout.lyricsShown = false
+            NowPlayingLayout.queueShown = false
+            NowPlayingLayout.swapSides = CommandLine.arguments.contains("--swap")
             if CommandLine.arguments.contains("--deep") { startDeepPlayback() } else { startHeroPlayback() }
             try? await Task.sleep(for: .seconds(2))
             NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
