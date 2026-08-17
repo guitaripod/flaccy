@@ -766,6 +766,76 @@ button.pill.suggested-action:active {
   color: @accent_color;
 }
 
+/* ---- now playing: the music video lens ---------------------------------- */
+/* The picture sits in a black, rounded 16:9 well so letterboxed uploads read
+   as framing rather than as a broken layout, and the wash behind Now Playing
+   never bleeds through the video. */
+.mv-stage {
+  background-color: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px alpha(#fff, 0.08),
+    0 18px 48px alpha(#000, 0.45);
+}
+
+.mv-picture {
+  background-color: #000;
+}
+
+/* Covers the well whenever there is no picture to show — searching, buffering,
+   nothing found. Dimmed rather than opaque so a first frame still shows
+   through while the stream is catching up. */
+.mv-status {
+  background-color: alpha(#000, 0.62);
+  border-radius: 16px;
+  padding: 24px 32px;
+  margin: 0;
+}
+
+/* Floating control strip over the foot of the picture. */
+.mv-controls {
+  background-color: alpha(#000, 0.55);
+  border-radius: 9999px;
+  padding: 4px 8px;
+  box-shadow: inset 0 0 0 1px alpha(#fff, 0.10);
+}
+
+.mv-controls .mv-button {
+  color: alpha(#fff, 0.88);
+  min-width: 28px;
+  min-height: 28px;
+  padding: 2px;
+  border-radius: 9999px;
+}
+
+.mv-controls .mv-button:hover {
+  background-color: alpha(#fff, 0.16);
+  color: #fff;
+}
+
+.mv-sep {
+  margin: 6px 4px;
+  background-color: alpha(#fff, 0.18);
+}
+
+/* Sync readout inside the control strip: alignment state, drift and quality. */
+.mv-chip {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 10px;
+  color: alpha(#fff, 0.86);
+}
+
+.mv-title {
+  font-weight: 600;
+}
+
+.mv-fullscreen {
+  background-color: #000;
+}
+
 .mini-art {
   transition: transform 150ms ease;
 }

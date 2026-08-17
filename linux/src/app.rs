@@ -35,6 +35,7 @@ pub struct AppCore {
     pub autoplay_in_flight: Cell<bool>,
     pub wantlist_in_flight: Cell<bool>,
     pub downloads: crate::downloads::DownloadHandle,
+    pub music_video: crate::musicvideo::MusicVideoHandle,
     reload_in_flight: Cell<bool>,
     reload_pending: Cell<bool>,
     enrich_total: Cell<usize>,
@@ -81,6 +82,7 @@ impl AppCore {
             autoplay_in_flight: Cell::new(false),
             wantlist_in_flight: Cell::new(false),
             downloads: crate::downloads::DownloadHandle::new(),
+            music_video: crate::musicvideo::MusicVideoHandle::new(),
             reload_in_flight: Cell::new(false),
             reload_pending: Cell::new(false),
             enrich_total: Cell::new(0),
@@ -175,6 +177,7 @@ impl AppCore {
         crate::scrobbler::startup_maintenance(self);
         crate::enrichment::start(self);
         crate::downloads::start(self);
+        crate::musicvideo::start(self);
         self.wire_autoplay();
         self.rescan();
         self.schedule_periodic_drain();

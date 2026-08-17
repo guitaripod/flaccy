@@ -3,6 +3,7 @@ use crate::library::format_time;
 use crate::ui::controls::{apply_repeat, attach_label_nav, build_volume_control, set_love_appearance};
 use crate::ui::lyrics_panel::{self, LyricsOptions};
 use crate::ui::queue_panel::{self, QueueOptions};
+use crate::ui::video_view;
 use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::glib;
@@ -17,7 +18,10 @@ use std::time::Instant;
 /// toggled, so any combination of the three can be shown at once, and a header
 /// swap button flips which side each column lives on (persisted) — over a
 /// single persistent transport dock with a volume cluster. The artist and
-/// album labels navigate to their library pages.
+/// album labels navigate to their library pages. A third toggle swaps the
+/// hero art for the music video lens — the video takes the centre column's
+/// place rather than becoming a fourth panel, because it is another way of
+/// looking at the song playing and it wants the width the artwork was using.
 pub fn present(ui: &Rc<Ui>) {
     if ui
         .shell
@@ -101,16 +105,26 @@ pub fn present(ui: &Rc<Ui>) {
     // A collapsed side reveals nothing and (via its toggle) drops hexpand, so
     // the visible columns always share the row equally — art alone, art+one
     // half/half, or all three in thirds.
+    let video = video_view::build(ui);
+    let centre = gtk::Stack::builder()
+        .transition_type(gtk::StackTransitionType::Crossfade)
+        .transition_duration(220)
+        .hexpand(true)
+        .vexpand(true)
+        .build();
+    centre.add_named(&art_page, Some("art"));
+    centre.add_named(&video.widget, Some("video"));
+
     let size_group = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
     size_group.add_widget(&lyrics.widget);
-    size_group.add_widget(&art_page);
+    size_group.add_widget(&centre);
     size_group.add_widget(&queue.widget);
 
     let content = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     content.set_hexpand(true);
     content.set_vexpand(true);
     content.append(&lyrics_reveal);
-    content.append(&art_page);
+    content.append(&centre);
     content.append(&queue_reveal);
 
     // Suppresses the config write while the view restores saved panels or the
@@ -152,13 +166,34 @@ pub fn present(ui: &Rc<Ui>) {
             }
         });
     }
+    let (video_toggle, _video_label) = toggle_button("video-display-symbolic", "Video");
+    video_toggle.set_tooltip_text(Some(
+        "Play the song's music video, synced to your lossless audio",
+    ));
+    video_toggle.set_visible(crate::musicvideo::available());
     {
-        let (show_lyrics, show_queue) = {
+        let centre = centre.clone();
+        let set_active = Rc::clone(&video.set_active);
+        let ui = Rc::clone(ui);
+        let syncing = Rc::clone(&syncing);
+        video_toggle.connect_toggled(move |button| {
+            let active = button.is_active();
+            centre.set_visible_child_name(if active { "video" } else { "art" });
+            set_active(active);
+            if !syncing.get() {
+                ui.core.config.borrow_mut().np_show_video = active;
+                ui.core.save_config();
+            }
+        });
+    }
+    {
+        let (show_lyrics, show_queue, show_video) = {
             let config = ui.core.config.borrow();
-            (config.np_show_lyrics, config.np_show_queue)
+            (config.np_show_lyrics, config.np_show_queue, config.np_show_video)
         };
         lyrics_toggle.set_active(show_lyrics);
         queue_toggle.set_active(show_queue);
+        video_toggle.set_active(show_video && crate::musicvideo::available());
     }
     // Below this width, keep at most one side panel open so art stays readable.
     install_now_playing_width_adaptation(
@@ -172,7 +207,7 @@ pub fn present(ui: &Rc<Ui>) {
 
     let apply_sides: Rc<dyn Fn(bool)> = {
         let content = content.clone();
-        let art_page = art_page.clone();
+        let centre = centre.clone();
         let lyrics_reveal = lyrics_reveal.clone();
         let queue_reveal = queue_reveal.clone();
         Rc::new(move |swapped| {
@@ -184,7 +219,7 @@ pub fn present(ui: &Rc<Ui>) {
             left.set_transition_type(gtk::RevealerTransitionType::SlideRight);
             right.set_transition_type(gtk::RevealerTransitionType::SlideLeft);
             content.reorder_child_after(left, gtk::Widget::NONE);
-            content.reorder_child_after(right, Some(&art_page));
+            content.reorder_child_after(right, Some(&centre));
         })
     };
     apply_sides(ui.core.config.borrow().np_swap_sides);
@@ -211,6 +246,7 @@ pub fn present(ui: &Rc<Ui>) {
     toggles.set_halign(gtk::Align::Center);
     toggles.add_css_class("np-toggles");
     toggles.append(&lyrics_toggle);
+    toggles.append(&video_toggle);
     toggles.append(&queue_toggle);
     toggles.append(&swap);
 
@@ -276,6 +312,8 @@ pub fn present(ui: &Rc<Ui>) {
     }
 
     syncing.set(false);
+
+    park_video_off_screen(ui, &overlay, &video_toggle);
 
     let page = adw::NavigationPage::builder()
         .title("Now Playing")
@@ -426,6 +464,21 @@ fn install_now_playing_width_adaptation(
             glib::ControlFlow::Continue
         });
     });
+}
+
+/// Parks the video pipeline whenever Now Playing isn't on screen, so browsing
+/// the library with music video mode on streams nothing, and resumes it on the
+/// way back in.
+fn park_video_off_screen(ui: &Rc<Ui>, host: &gtk::Overlay, video_toggle: &gtk::ToggleButton) {
+    {
+        let ui = Rc::clone(ui);
+        let video_toggle = video_toggle.clone();
+        host.connect_map(move |_| {
+            crate::musicvideo::set_visible(&ui.core, video_toggle.is_active());
+        });
+    }
+    let ui = Rc::clone(ui);
+    host.connect_unmap(move |_| crate::musicvideo::set_visible(&ui.core, false));
 }
 
 /// A pill toggle carrying an icon + label, returned with its label so a live

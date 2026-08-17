@@ -59,6 +59,11 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 ### Synced Lyrics
 - LRCLIB karaoke-style scrolling, current line highlighted, click/tap any line to seek
 
+### Music videos (Linux)
+- **Video lens in Now Playing** — the song's official music video, streamed, with your lossless file still doing the playing
+- **Locked to your audio** — the video's head start is measured by correlating both recordings' onsets, then held to within a frame or two for the whole song
+- **Knows a music video from a lyric video** — uploader, wording, reach and runtime are scored together; a local Ollama model breaks ties, and nothing plays when nothing convinces
+
 ### Adaptive design
 - **Color of what's playing** — Mac and Linux extract the dominant palette from the current cover and retint the whole app; ambient backdrops, glass surfaces, and accent everything follow the music
 - **Liquid Glass** (Mac, AppKit `NSGlassEffectView`) and a **runtime theme engine** (Linux — Adaptive plus seven curated palettes)

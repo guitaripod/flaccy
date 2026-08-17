@@ -1,6 +1,7 @@
 use crate::config::{self, Session};
 use crate::events::AppEvent;
 use crate::lastfm::{self, LastFmClient};
+use crate::musicvideo;
 use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::glib;
@@ -18,6 +19,9 @@ pub fn present(ui: &Rc<Ui>) {
     page.add(&hero_group(ui));
     page.add(&appearance_group(ui));
     page.add(&lyrics_group(ui));
+    if musicvideo::available() {
+        page.add(&music_video_group(ui));
+    }
     page.add(&library_group(ui));
     if lastfm::keys_available() {
         page.add(&lastfm_group(ui));
@@ -261,6 +265,156 @@ fn lyrics_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
     group.add(&row);
     group
+}
+
+/// Music video mode: what the video lens streams, who decides which video is
+/// the right one, and whether the picture is aligned to the audio by ear.
+fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title("Music Videos")
+        .description(
+            "The video lens in Now Playing streams a song's music video and locks it to your \
+             lossless audio",
+        )
+        .build();
+
+    let quality = adw::ComboRow::builder()
+        .title("Quality")
+        .subtitle("The tallest stream the lens will ask for")
+        .model(&gtk::StringList::new(
+            &musicvideo::QUALITY_HEIGHTS
+                .iter()
+                .map(|height| musicvideo::quality_label(*height))
+                .collect::<Vec<_>>()
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+        ))
+        .build();
+    let configured = ui.core.config.borrow().music_video_quality;
+    quality.set_selected(
+        musicvideo::QUALITY_HEIGHTS
+            .iter()
+            .position(|height| *height == configured)
+            .unwrap_or(2) as u32,
+    );
+    {
+        let ui = Rc::clone(ui);
+        quality.connect_selected_notify(move |row| {
+            let Some(height) = musicvideo::QUALITY_HEIGHTS.get(row.selected() as usize) else {
+                return;
+            };
+            if ui.core.config.borrow().music_video_quality == *height {
+                return;
+            }
+            ui.core.config.borrow_mut().music_video_quality = *height;
+            ui.core.save_config();
+            musicvideo::refresh(&ui.core);
+        });
+    }
+    group.add(&quality);
+
+    let align = adw::SwitchRow::builder()
+        .title("Align to Your Audio")
+        .subtitle("Listens to both recordings once and works out the video's head start")
+        .active(ui.core.config.borrow().music_video_align)
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        align.connect_active_notify(move |row| {
+            ui.core.config.borrow_mut().music_video_align = row.is_active();
+            ui.core.save_config();
+        });
+    }
+    group.add(&align);
+
+    let models = musicvideo::llm::installed_models();
+    let chosen = musicvideo::llm::choose_model(&ui.core.config.borrow().music_video_llm_model, &models);
+    let judge = adw::SwitchRow::builder()
+        .title("Let a Local Model Decide")
+        .subtitle(match &chosen {
+            Some(model) => format!("Ollama breaks ties between close results using {model}"),
+            None => "No Ollama model found — the scorer decides on its own".to_string(),
+        })
+        .active(ui.core.config.borrow().music_video_llm)
+        .sensitive(chosen.is_some())
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        judge.connect_active_notify(move |row| {
+            ui.core.config.borrow_mut().music_video_llm = row.is_active();
+            ui.core.save_config();
+        });
+    }
+    group.add(&judge);
+
+    if models.len() > 1 {
+        group.add(&model_row(ui, &models));
+    }
+
+    let matched = ui.core.db.music_video_count();
+    let remembered = adw::ActionRow::builder()
+        .title("Remembered Matches")
+        .subtitle(match matched {
+            0 => "Nothing matched yet".to_string(),
+            1 => "1 song has a video".to_string(),
+            count => format!("{count} songs have a video"),
+        })
+        .build();
+    let forget = gtk::Button::with_label("Forget All");
+    forget.set_valign(gtk::Align::Center);
+    forget.add_css_class("destructive-action");
+    forget.set_sensitive(matched > 0);
+    {
+        let ui = Rc::clone(ui);
+        let remembered = remembered.clone();
+        forget.connect_clicked(move |button| {
+            let cleared = ui.core.db.clear_music_videos();
+            remembered.set_subtitle("Nothing matched yet");
+            button.set_sensitive(false);
+            ui.core.toast(&format!("Forgot {cleared} music video matches"));
+            musicvideo::refresh(&ui.core);
+        });
+    }
+    remembered.add_suffix(&forget);
+    group.add(&remembered);
+
+    group
+}
+
+/// Only shown when there is a choice to make: which installed Ollama model
+/// gets the casting vote.
+fn model_row(ui: &Rc<Ui>, models: &[String]) -> adw::ComboRow {
+    let mut names = vec!["Automatic".to_string()];
+    names.extend(models.iter().cloned());
+    let row = adw::ComboRow::builder()
+        .title("Model")
+        .model(&gtk::StringList::new(
+            &names.iter().map(String::as_str).collect::<Vec<_>>(),
+        ))
+        .build();
+    let configured = ui.core.config.borrow().music_video_llm_model.clone();
+    row.set_selected(
+        names
+            .iter()
+            .position(|name| *name == configured)
+            .unwrap_or(0) as u32,
+    );
+    let ui = Rc::clone(ui);
+    row.connect_selected_notify(move |row| {
+        let selected = row.selected() as usize;
+        let chosen = if selected == 0 {
+            String::new()
+        } else {
+            names.get(selected).cloned().unwrap_or_default()
+        };
+        if ui.core.config.borrow().music_video_llm_model == chosen {
+            return;
+        }
+        ui.core.config.borrow_mut().music_video_llm_model = chosen;
+        ui.core.save_config();
+    });
+    row
 }
 
 fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {

@@ -17,6 +17,7 @@ pub mod songs;
 pub mod suggested_shelf;
 pub mod stats;
 pub mod transport;
+pub mod video_view;
 pub mod wantlist;
 pub mod window;
 pub mod year_in_music;

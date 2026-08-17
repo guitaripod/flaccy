@@ -12,6 +12,7 @@ mod load_progress;
 mod logger;
 mod lyrics;
 mod mpris;
+mod musicvideo;
 mod palette;
 mod player;
 mod recap;

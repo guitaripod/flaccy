@@ -96,6 +96,20 @@ pub struct LyricsRow {
     pub age_days: f64,
 }
 
+pub struct MusicVideoRow {
+    /// `None` records a search that found nothing, so the same fruitless
+    /// search isn't repeated on every play.
+    pub video_id: Option<String>,
+    pub video_title: String,
+    pub channel: String,
+    pub duration: f64,
+    pub offset: f64,
+    pub aligned: bool,
+    pub chosen_by_user: bool,
+    pub reason: String,
+    pub age_days: f64,
+}
+
 pub struct AlbumRetitle {
     pub from_title: String,
     pub from_artist: String,
@@ -342,7 +356,23 @@ impl Db {
                 createdAt DATETIME NOT NULL,
                 completedAt DATETIME
             );
-            CREATE INDEX IF NOT EXISTS downloads_on_status ON downloads(status);",
+            CREATE INDEX IF NOT EXISTS downloads_on_status ON downloads(status);
+            CREATE TABLE IF NOT EXISTS musicVideos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trackTitle TEXT NOT NULL,
+                artist TEXT NOT NULL,
+                videoId TEXT,
+                videoTitle TEXT NOT NULL DEFAULT '',
+                channel TEXT NOT NULL DEFAULT '',
+                duration DOUBLE NOT NULL DEFAULT 0,
+                offsetSeconds DOUBLE NOT NULL DEFAULT 0,
+                aligned BOOLEAN NOT NULL DEFAULT 0,
+                chosenByUser BOOLEAN NOT NULL DEFAULT 0,
+                score DOUBLE NOT NULL DEFAULT 0,
+                reason TEXT NOT NULL DEFAULT '',
+                fetchedAt DATETIME NOT NULL,
+                UNIQUE(trackTitle, artist)
+            );",
         )?;
         // Added after 1.8.0 so a remembered "no lyrics" answer can expire;
         // duplicate-column on an already-migrated database is the success case.
@@ -953,6 +983,97 @@ impl Db {
             params![title, artist, synced, plain, instrumental, now_string()],
         )?;
         Ok(())
+    }
+
+    pub fn fetch_music_video(&self, title: &str, artist: &str) -> Option<MusicVideoRow> {
+        self.conn
+            .query_row(
+                "SELECT videoId, videoTitle, channel, duration, offsetSeconds, aligned,
+                        chosenByUser, reason,
+                        COALESCE(julianday('now') - julianday(fetchedAt), 0.0)
+                 FROM musicVideos WHERE trackTitle = ?1 AND artist = ?2",
+                params![title, artist],
+                |row| {
+                    Ok(MusicVideoRow {
+                        video_id: row.get(0)?,
+                        video_title: row.get(1)?,
+                        channel: row.get(2)?,
+                        duration: row.get(3)?,
+                        offset: row.get(4)?,
+                        aligned: row.get(5)?,
+                        chosen_by_user: row.get(6)?,
+                        reason: row.get(7)?,
+                        age_days: row.get(8)?,
+                    })
+                },
+            )
+            .optional()
+            .ok()
+            .flatten()
+    }
+
+    /// Records a decision. `None` stores the fact that nothing matched, which
+    /// expires on its own so a video uploaded later is still found.
+    pub fn save_music_video(
+        &self,
+        title: &str,
+        artist: &str,
+        found: Option<&crate::musicvideo::VideoMatch>,
+        score: f64,
+    ) {
+        let _ = self.conn.execute(
+            "INSERT INTO musicVideos
+             (trackTitle, artist, videoId, videoTitle, channel, duration, offsetSeconds,
+              aligned, chosenByUser, score, reason, fetchedAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+             ON CONFLICT(trackTitle, artist) DO UPDATE SET
+                videoId = excluded.videoId,
+                videoTitle = excluded.videoTitle,
+                channel = excluded.channel,
+                duration = excluded.duration,
+                offsetSeconds = excluded.offsetSeconds,
+                aligned = excluded.aligned,
+                chosenByUser = excluded.chosenByUser,
+                score = excluded.score,
+                reason = excluded.reason,
+                fetchedAt = excluded.fetchedAt",
+            params![
+                title,
+                artist,
+                found.map(|f| f.video_id.as_str()),
+                found.map(|f| f.title.as_str()).unwrap_or_default(),
+                found.map(|f| f.channel.as_str()).unwrap_or_default(),
+                found.map(|f| f.duration).unwrap_or(0.0),
+                found.map(|f| f.offset).unwrap_or(0.0),
+                found.is_some_and(|f| f.aligned),
+                found.is_some_and(|f| f.chosen_by_user),
+                score,
+                found.map(|f| f.reason.as_str()).unwrap_or_default(),
+                now_string()
+            ],
+        );
+    }
+
+    pub fn set_music_video_offset(&self, title: &str, artist: &str, offset: f64, aligned: bool) {
+        let _ = self.conn.execute(
+            "UPDATE musicVideos SET offsetSeconds = ?3, aligned = ?4
+             WHERE trackTitle = ?1 AND artist = ?2",
+            params![title, artist, offset, aligned],
+        );
+    }
+
+    pub fn clear_music_videos(&self) -> usize {
+        self.conn.execute("DELETE FROM musicVideos", []).unwrap_or(0)
+    }
+
+    pub fn music_video_count(&self) -> i64 {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*) FROM musicVideos WHERE videoId IS NOT NULL",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
     }
 
     pub fn scrobble_count(&self) -> i64 {

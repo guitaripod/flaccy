@@ -666,7 +666,7 @@ fn is_noise_qualifier(content: &str) -> bool {
         .any(|noise| content.contains(noise))
 }
 
-fn friendly_error(stderr: &str) -> String {
+pub fn friendly_error(stderr: &str) -> String {
     let raw = stderr
         .lines()
         .rev()

@@ -6,6 +6,16 @@ An adaptive theme engine retints the whole app with the dominant color of whatev
 playing — ambient gradient backdrops, glass surfaces, a glowing now-playing pulse — or
 pick one of seven curated palettes in Preferences. Works in light and dark.
 
+Music video mode (Now Playing → Video): Flaccy finds the song's official music video,
+streams the picture, and locks it to the lossless file playing from your disk — your
+audio, its video, in step to within a frame or two. It works out the video's head start
+by listening to both recordings once, so a cold open or a spoken intro lines up on its
+own; nudge buttons and a full candidate list are there when you disagree. Deciding which
+result is the real music video — rather than a lyric video, a live take or a re-upload —
+is done by a scorer that weighs the uploader, the wording and the reach, with a local
+Ollama model breaking ties when the top two are close. Requires `yt-dlp`; Ollama is
+optional and everything works without it.
+
 Downloads (sidebar → Downloads, or Ctrl+D): paste a YouTube / YouTube Music /
 SoundCloud / Bandcamp link — a song, an album, or a whole playlist — and Flaccy pulls
 the best available audio, tags it (title, artist, album, track number, cover art), and

@@ -52,6 +52,8 @@ pub enum AppEvent {
     WantlistSeen,
     DownloadsChanged,
     DownloadProgress { id: i64, fraction: f64 },
+    MusicVideoChanged,
+    MusicVideoCandidates,
 }
 
 type Subscriber = Rc<dyn Fn(&AppEvent) -> bool>;

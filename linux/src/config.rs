@@ -27,6 +27,13 @@ pub struct Config {
     pub shuffle: bool,
     pub repeat_mode: String,
     pub lyrics_font_size: i32,
+    pub np_show_video: bool,
+    pub music_video_mode: bool,
+    pub music_video_quality: i32,
+    pub music_video_llm: bool,
+    /// Empty means "whichever installed Ollama model looks most suitable".
+    pub music_video_llm_model: String,
+    pub music_video_align: bool,
 }
 
 /// Bounds for the lyrics type scale, shared by Preferences and the panel's own
@@ -56,9 +63,19 @@ impl Default for Config {
             shuffle: false,
             repeat_mode: "off".to_string(),
             lyrics_font_size: LYRICS_FONT_DEFAULT,
+            np_show_video: false,
+            music_video_mode: false,
+            music_video_quality: MUSIC_VIDEO_QUALITY_DEFAULT,
+            music_video_llm: true,
+            music_video_llm_model: String::new(),
+            music_video_align: true,
         }
     }
 }
+
+/// A ceiling rather than a target: 720p is where a music video still looks
+/// sharp on a laptop panel without spending a phone tether's worth of data.
+pub const MUSIC_VIDEO_QUALITY_DEFAULT: i32 = 720;
 
 impl Config {
     pub fn music_root(&self) -> PathBuf {
