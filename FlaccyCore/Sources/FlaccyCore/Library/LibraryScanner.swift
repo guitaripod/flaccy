@@ -8,6 +8,7 @@ public enum LibraryScanner {
     public static let supportedExtensions: Set<String> =
         ["flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf"]
 
+    #if canImport(AVFoundation)
     /// Recursively scans `directory`, reading metadata for every supported file.
     /// `relativePath`s are computed against `directory`. `onProgress` reports the
     /// same phases the phone and desktop clients report, so a wait looks the
@@ -80,6 +81,7 @@ public enum LibraryScanner {
             artworkData: metadata.artworkData
         )
     }
+    #endif
 
     /// Groups items into albums sorted by artist/title, tracks sorted by number.
     public static func albums(from items: [MediaItem]) -> [MediaAlbum] {

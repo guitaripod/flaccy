@@ -1,3 +1,4 @@
+#if canImport(AVFoundation)
 import AVFoundation
 import Foundation
 
@@ -191,3 +192,5 @@ public enum AudioMetadataReader {
         return try? await item.load(.dataValue)
     }
 }
+
+#endif
