@@ -238,10 +238,11 @@ final class LastFMSettingsPane: SettingsPane {
     }
 
     @objc private func connectTapped() {
-        guard let window = view.window else { return }
-        connectButton.isEnabled = false
+        guard let window = view.window ?? NSApp.keyWindow ?? NSApp.windows.first else {
+            AppLogger.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
+            return
+        }
         Task { [weak self] in
-            defer { self?.connectButton.isEnabled = true }
             do {
                 try await LastFMService.shared.authenticate(from: window)
                 MacToast.show(String(localized: "Connected to Last.fm"), style: .success, in: self?.view.window)
@@ -251,7 +252,9 @@ final class LastFMSettingsPane: SettingsPane {
                     return
                 }
                 AppLogger.error("Last.fm authentication failed: \(error.localizedDescription)", category: .auth)
-                MacToast.show(String(localized: "Couldn't connect to Last.fm."), style: .error, in: self?.view.window)
+                let message = (error as? LastFMError)?.errorDescription
+                    ?? String(localized: "Couldn't connect to Last.fm.")
+                MacToast.show(message, style: .error, in: self?.view.window)
             }
         }
     }

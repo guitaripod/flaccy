@@ -634,7 +634,13 @@ final class SettingsViewController: UITableViewController {
 
     private func connectLastFM() {
         selectionFeedback.selectionChanged()
-        guard let window = view.window else { return }
+        let fallbackWindow = (view.window?.windowScene ?? UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive })?.keyWindow
+        guard let window = view.window ?? fallbackWindow else {
+            AppLogger.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
+            return
+        }
         Task {
             do {
                 try await LastFMService.shared.authenticate(from: window)
@@ -644,9 +650,11 @@ final class SettingsViewController: UITableViewController {
                 AppLogger.error("Last.fm auth failed: \(error.localizedDescription)", category: .auth)
                 guard !isAuthCancellation(error) else { return }
                 notificationFeedback.notificationOccurred(.error)
+                let message = (error as? LastFMError)?.errorDescription
+                    ?? String(localized: "Last.fm sign-in didn't complete. Check your connection and try again.")
                 let alert = UIAlertController(
                     title: String(localized: "Couldn't Connect"),
-                    message: String(localized: "Last.fm sign-in didn't complete. Check your connection and try again."),
+                    message: message,
                     preferredStyle: .alert
                 )
                 alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))

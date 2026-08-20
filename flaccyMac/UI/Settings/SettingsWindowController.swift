@@ -20,6 +20,11 @@ final class SettingsWindowController: NSWindowController {
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate()
     }
+
+    /// `NSWindowController` otherwise retitles the window after the document it
+    /// does not have, which is how a settings window ends up called "Untitled".
+    /// The tab controller owns the title here.
+    override func synchronizeWindowTitleWithDocumentName() {}
 }
 
 final class SettingsTabViewController: NSTabViewController {
@@ -44,12 +49,20 @@ final class SettingsTabViewController: NSTabViewController {
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        view.window?.title = tabViewItems[selectedTabViewItemIndex].label
+        applyTitle(tabViewItems[selectedTabViewItemIndex].label)
     }
 
     override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
         super.tabView(tabView, didSelect: tabViewItem)
-        view.window?.title = tabViewItem?.label ?? String(localized: "Settings")
+        applyTitle(tabViewItem?.label ?? String(localized: "Settings"))
+    }
+
+    /// A window built from a content view controller mirrors that controller's
+    /// `title`, and overwrites anything set straight on the window. Setting both
+    /// is what makes the pane name stick as tabs change.
+    private func applyTitle(_ title: String) {
+        self.title = title
+        view.window?.title = title
     }
 }
 

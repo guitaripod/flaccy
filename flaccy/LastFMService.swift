@@ -180,25 +180,41 @@ final class LastFMService {
 
     func authenticate(from anchor: ASPresentationAnchor) async throws {
         guard isConfigured else { throw LastFMError.apiKeyNotConfigured }
+        discardAuthSession()
         let authURL = URL(string: "https://www.last.fm/api/auth/?api_key=\(Self.apiKey)&cb=flaccy://auth")!
 
-        let callbackURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-            let session = ASWebAuthenticationSession(
-                url: authURL,
-                callbackURLScheme: "flaccy"
-            ) { url, error in
-                if let error { continuation.resume(throwing: error) }
-                else if let url { continuation.resume(returning: url) }
-                else { continuation.resume(throwing: LastFMError.authenticationFailed) }
-            }
-            let contextProvider = WebAuthContextProvider(anchor: anchor)
-            session.presentationContextProvider = contextProvider
-            session.prefersEphemeralWebBrowserSession = false
+        var started: ASWebAuthenticationSession?
+        let callbackURL: URL
+        do {
+            callbackURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
+                let session = ASWebAuthenticationSession(
+                    url: authURL,
+                    callbackURLScheme: "flaccy"
+                ) { url, error in
+                    if let error { continuation.resume(throwing: error) }
+                    else if let url { continuation.resume(returning: url) }
+                    else { continuation.resume(throwing: LastFMError.authenticationFailed) }
+                }
+                let contextProvider = WebAuthContextProvider(anchor: anchor)
+                session.presentationContextProvider = contextProvider
+                session.prefersEphemeralWebBrowserSession = false
 
-            self.authContextProvider = contextProvider
-            self.authSession = session
-            session.start()
+                started = session
+                self.authContextProvider = contextProvider
+                self.authSession = session
+                guard session.start() else {
+                    self.releaseAuthSession(session)
+                    AppLogger.error("Last.fm sign-in could not be presented", category: .auth)
+                    continuation.resume(throwing: LastFMError.authenticationUnavailable)
+                    return
+                }
+                AppLogger.info("Last.fm sign-in presented", category: .auth)
+            }
+        } catch {
+            releaseAuthSession(started)
+            throw error
         }
+        releaseAuthSession(started)
 
         guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),
               let token = components.queryItems?.first(where: { $0.name == "token" })?.value
@@ -219,6 +235,25 @@ final class LastFMService {
         username = session["name"] as? String
         AppLogger.info("Last.fm authentication successful", category: .auth)
         NotificationCenter.default.post(name: Self.authDidChange, object: nil)
+    }
+
+    /// Cancels and forgets any sign-in session left over from an earlier
+    /// attempt. A live `ASWebAuthenticationSession` the user walked away from
+    /// keeps the system's authentication agent busy, and every later `start()`
+    /// is queued behind it and silently never presents — the button looks dead.
+    /// Clearing the stale session first is what makes a retry work.
+    private func discardAuthSession() {
+        authSession?.cancel()
+        authSession = nil
+        authContextProvider = nil
+    }
+
+    /// Forgets `session` only if it is still the current one, so a finished
+    /// attempt cannot tear down the newer attempt that superseded it.
+    private func releaseAuthSession(_ session: ASWebAuthenticationSession?) {
+        guard let session, authSession === session else { return }
+        authSession = nil
+        authContextProvider = nil
     }
 
     func logout() {
@@ -1182,6 +1217,7 @@ private final class WebAuthContextProvider: NSObject, ASWebAuthenticationPresent
 enum LastFMError: Error, LocalizedError {
     case invalidCallbackURL
     case authenticationFailed
+    case authenticationUnavailable
     case invalidURL
     case invalidResponse
     case apiKeyNotConfigured
@@ -1191,6 +1227,7 @@ enum LastFMError: Error, LocalizedError {
         switch self {
         case .invalidCallbackURL: String(localized: "Invalid Last.fm callback URL")
         case .authenticationFailed: String(localized: "Last.fm authentication failed")
+        case .authenticationUnavailable: String(localized: "Couldn't open the Last.fm sign-in page")
         case .invalidURL: String(localized: "Invalid Last.fm API URL")
         case .invalidResponse: String(localized: "Invalid response from Last.fm")
         case .apiKeyNotConfigured: String(localized: "Last.fm API key not configured")
