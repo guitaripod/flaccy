@@ -574,9 +574,18 @@ fn metadata_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
                 .toast(&format!("Looking up artwork for {queued} albums…"));
         });
     }
+    let gave_up = adw::ExpanderRow::builder()
+        .title(job_copy::GAVE_UP_LIST)
+        .build();
+    let listed: Rc<RefCell<Vec<adw::ActionRow>>> = Rc::new(RefCell::new(Vec::new()));
+    group.add(&gave_up);
+    fill_gave_up(ui, &gave_up, &listed);
+
     {
         let ui = Rc::clone(ui);
         let retry = retry.clone();
+        let gave_up = gave_up.clone();
+        let listed = Rc::clone(&listed);
         ui.core
             .hub
             .clone()
@@ -586,6 +595,7 @@ fn metadata_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
                 };
                 render_metadata_counts(&ui, row, job);
                 retry.set_sensitive(can_retry_albums(&ui, job));
+                fill_gave_up(&ui, &gave_up, &listed);
             });
     }
 
@@ -609,6 +619,71 @@ fn metadata_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
 
     group
+}
+
+/// Names every album the job gave up on, the way iOS's enrichment report does.
+/// The stored key is normalized and lower-cased by design, so a row is titled
+/// from the live library where the key still matches one, and from the key's own
+/// two halves where it does not — a renamed album is still counted and named
+/// rather than silently dropped from a list that claims to be complete.
+fn fill_gave_up(ui: &Rc<Ui>, row: &adw::ExpanderRow, listed: &RefCell<Vec<adw::ActionRow>>) {
+    for old in listed.borrow_mut().drain(..) {
+        row.remove(&old);
+    }
+
+    let records = ui.core.db.exhausted_entities(Scope::Album);
+    row.set_visible(!records.is_empty());
+    row.set_subtitle(&records.len().to_string());
+
+    let names = exhausted_display_names(ui);
+    for record in records.iter().take(GAVE_UP_LIST_LIMIT) {
+        let when = record
+            .last_attempt_at
+            .map(|at| at.with_timezone(&chrono::Local).format("%-d %b").to_string())
+            .unwrap_or_default();
+        let title = names
+            .get(&record.key)
+            .cloned()
+            .unwrap_or_else(|| name_from_key(&record.key));
+        let entry = adw::ActionRow::builder()
+            .title(glib::markup_escape_text(&title).as_str())
+            .subtitle(&job_copy::report_row(
+                record.fields,
+                record.attempts.max(0) as usize,
+                &when,
+            ))
+            .build();
+        row.add_row(&entry);
+        listed.borrow_mut().push(entry);
+    }
+}
+
+/// The longest list worth building eagerly inside a preferences dialog; a
+/// library that gave up on more albums than this has a systemic problem the
+/// counts row already reports.
+const GAVE_UP_LIST_LIMIT: usize = 50;
+
+fn exhausted_display_names(ui: &Rc<Ui>) -> std::collections::HashMap<String, String> {
+    let library = ui.core.library.borrow();
+    library
+        .albums
+        .iter()
+        .map(|album| {
+            (
+                flaccy_shared::enrichment_job::key_album(&album.title, &album.artist),
+                format!("{} — {}", album.title, album.artist),
+            )
+        })
+        .collect()
+}
+
+fn name_from_key(key: &str) -> String {
+    let mut parts = key.split('\u{1F}');
+    let title = parts.next().unwrap_or_default();
+    match parts.next() {
+        Some(artist) if !artist.is_empty() => format!("{title} — {artist}"),
+        _ => title.to_string(),
+    }
 }
 
 /// macOS pins its Try Again to `countExhausted(scope: .album)`; Linux's

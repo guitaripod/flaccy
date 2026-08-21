@@ -602,6 +602,7 @@ pub mod copy {
     pub const UP_TO_DATE: &str = "Up to date — every album has artwork and a year.";
     pub const FIND_MISSING_ARTWORK: &str = "Find Missing Artwork";
     pub const TRY_AGAIN: &str = "Try Again";
+    pub const GAVE_UP_LIST: &str = "Albums Flaccy gave up on";
     pub const OPEN_LIBRARY_SETTINGS: &str = "Open Library Settings";
 
     pub fn headline(scope: Scope) -> &'static str {
