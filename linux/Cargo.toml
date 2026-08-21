@@ -1,3 +1,6 @@
+[workspace]
+members = ["shared"]
+
 [package]
 name = "flaccy"
 version = "1.11.0"
@@ -6,11 +9,12 @@ license = "GPL-3.0-only"
 description = "Lossless music player for Linux"
 
 [dependencies]
+flaccy-shared = { path = "shared" }
 gtk = { package = "gtk4", version = "0.11", features = ["v4_18"] }
 adw = { package = "libadwaita", version = "0.9", features = ["v1_7"] }
 cairo-rs = { version = "0.22", features = ["png"] }
 gst = { package = "gstreamer", version = "0.25" }
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["bundled", "functions"] }
 lofty = "0.22"
 ureq = { version = "2", features = ["json"] }
 serde = { version = "1", features = ["derive"] }

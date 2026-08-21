@@ -16,6 +16,63 @@ nonisolated enum LibraryItem: Hashable, Sendable {
     case suggestedPlaylist(SuggestedPlaylist)
     case charts
     case wantlist
+
+    /// The identity a diffable snapshot keys an album row by: the earliest file
+    /// path the album owns, which no amount of retitling moves.
+    ///
+    /// Keying by title and artist — which is what `Album`'s own `Hashable` does
+    /// — would make every AI correction during the Debut's second act a delete
+    /// followed by an insert, and the grid would tear under a reader who is
+    /// already scrolling it. Keyed by a path, the same correction is a move.
+    nonisolated static func identity(of album: Album) -> String {
+        album.tracks.lazy.map(\.fileURL.absoluteString).min() ?? album.id
+    }
+
+    /// What a row draws, so a snapshot can ask for a reconfigure when the
+    /// identity held but the words on screen changed.
+    nonisolated static func renderSignature(of album: Album) -> String {
+        "\(album.title)\u{1F}\(album.artist)\u{1F}\(album.year ?? "")\u{1F}\(album.genre ?? "")"
+    }
+
+    nonisolated static func == (lhs: LibraryItem, rhs: LibraryItem) -> Bool {
+        switch (lhs, rhs) {
+        case (.album(let a), .album(let b)), (.recentAlbum(let a), .recentAlbum(let b)):
+            return identity(of: a) == identity(of: b)
+        case (.song(let a), .song(let b)): return a == b
+        case (.artist(let a), .artist(let b)): return a == b
+        case (.playlist(let a), .playlist(let b)): return a == b
+        case (.suggestedPlaylist(let a), .suggestedPlaylist(let b)): return a == b
+        case (.charts, .charts), (.wantlist, .wantlist): return true
+        default: return false
+        }
+    }
+
+    nonisolated func hash(into hasher: inout Hasher) {
+        switch self {
+        case .album(let album):
+            hasher.combine(0)
+            hasher.combine(Self.identity(of: album))
+        case .recentAlbum(let album):
+            hasher.combine(1)
+            hasher.combine(Self.identity(of: album))
+        case .song(let track):
+            hasher.combine(2)
+            hasher.combine(track)
+        case .artist(let artist):
+            hasher.combine(3)
+            hasher.combine(artist)
+        case .playlist(let playlist):
+            hasher.combine(4)
+            hasher.combine(playlist)
+        case .suggestedPlaylist(let suggestion):
+            hasher.combine(5)
+            hasher.combine(suggestion)
+        case .charts:
+            hasher.combine(6)
+        case .wantlist:
+            hasher.combine(7)
+        }
+    }
 }
 
 nonisolated struct ArtistItem: Hashable, Sendable {
@@ -143,27 +200,73 @@ final class LibraryViewModel {
         let isPlaying: Bool
     }
 
-    /// What a scan looks like to the UI: the raw progress, the smoothed
-    /// fraction to draw, and whether there is already a library behind it —
-    /// which decides between the full-screen setup view and the inline banner.
+    /// What launch chrome looks like to the UI: which surface the router asked
+    /// for, and everything that surface could need to draw itself.
+    ///
+    /// There is deliberately no `showsFullScreen` / `showsBanner` / `hasLibrary`
+    /// here. Those were two booleans derived at Combine delivery time, and a
+    /// restored library flipping one of them between snapshots is exactly how
+    /// the debut ring got painted once at 1% and then crossfaded away frozen.
+    /// A client may render `surface` and nothing else.
     struct LibraryLoadState {
+        let surface: LibrarySurface
         let progress: LibraryLoadProgress
         let fraction: Double
-        let hasLibrary: Bool
-
-        var showsFullScreen: Bool { progress.phase.blocksLibrary && !hasLibrary }
-        var showsBanner: Bool { progress.isActive && hasLibrary }
+        let job: EnrichmentJobProgress
     }
 
+    /// The state to paint at bind time, before a single notification has
+    /// arrived — without it the first frame is an empty label at 0%.
+    ///
+    /// A launch that has loaded nothing yet reports `.openingLibrary` rather
+    /// than `.idle`, because that is what the very next frame will be. Routing
+    /// an idle phase here would take the Debut down for exactly one frame and
+    /// raise it again, which is the flash this whole path exists to remove.
     var currentLoadState: LibraryLoadState {
-        LibraryLoadState(
-            progress: library.loadProgress,
-            fraction: library.loadFraction,
-            hasLibrary: !library.albums.isEmpty
-        )
+        let load = library.loadProgress
+        latestLoad = load.isActive || !library.albums.isEmpty
+            ? load
+            : LibraryLoadProgress(phase: .openingLibrary)
+        latestFraction = library.loadFraction
+        latestJob = EnrichmentCoordinator.shared.progress
+        return routedState()
     }
 
-    private var progressCancellable: AnyCancellable?
+    /// How many covers the Debut's mosaic is allowed to decode: what it can hold
+    /// on screen plus what it can queue for rotation, so a three-thousand-album
+    /// first launch decodes sixty thumbnails, not three thousand.
+    static let mosaicCoverBudget = 60
+
+    /// The albums whose covers fuel the Debut's mosaic once the library has been
+    /// built. During Act I the covers arrive from `Library.albumCoversHoisted`
+    /// instead, because this list is empty until the phase after the one the
+    /// mosaic narrates.
+    func mosaicAlbums() -> [Album] {
+        Array(library.albums.prefix(Self.mosaicCoverBudget))
+    }
+
+    /// Which act the Debut is in. Read by the surface immediately after it
+    /// receives a state, so the act and the snapshot it belongs to are the same
+    /// pair the router just decided on.
+    private(set) var debutAct: LibraryDebutAct = .indexing
+
+    nonisolated private enum LibrarySignal: Sendable {
+        case load(LibraryLoadProgress, Double)
+        case job(EnrichmentJobProgress)
+        case tick
+    }
+
+    private var surfaceCancellable: AnyCancellable?
+    private var surfaceRouter = LibrarySurfaceRouter()
+    private var debutDirector = LibraryDebutDirector()
+    private var latestLoad: LibraryLoadProgress = .idle
+    private var latestFraction: Double = 0
+    private var latestJob: EnrichmentJobProgress = .idle
+    private var finishingStartedAt: Date?
+    private var heardFromJob = false
+    private let debutTick = PassthroughSubject<Void, Never>()
+    private var debutTicker: Task<Void, Never>?
+    private lazy var debutCompleted: Bool = Self.readDebutCompleted()
 
     private(set) var currentSegment: Segment = .albums
     private var searchQuery: String = ""
@@ -668,28 +771,172 @@ final class LibraryViewModel {
             self, selector: #selector(loadingStateChanged), name: Library.loadingStateChanged, object: nil
         )
 
-        progressCancellable = NotificationCenter.default.publisher(for: Library.progressDidChange)
-            .compactMap { notification -> (LibraryLoadProgress, Double)? in
-                guard let progress = notification.userInfo?[Library.ProgressKey.progress] as? LibraryLoadProgress,
-                      let fraction = notification.userInfo?[Library.ProgressKey.fraction] as? Double
-                else { return nil }
-                return (progress, fraction)
-            }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] progress, fraction in
-                guard let self else { return }
-                self.loadStatePublisher.send(
-                    LibraryLoadState(
-                        progress: progress,
-                        fraction: fraction,
-                        hasLibrary: !self.library.albums.isEmpty
-                    )
-                )
-            }
+        bindLibrarySurface()
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Merges the two things that decide launch chrome — the bounded load bar
+    /// and the unbounded enrichment job — onto **one** pipeline.
+    ///
+    /// Two subscriptions would let a job snapshot and the load fraction it
+    /// belongs to be applied in either order, and the surface would flicker
+    /// between them. Merged, every routing decision sees one consistent pair.
+    /// The third source is a tick the Debut needs while it is on screen: the
+    /// director's curtain budget and its "the queue drained" test are questions
+    /// about elapsed time that no notification will ever ask on its own.
+    private func bindLibrarySurface() {
+        let load = NotificationCenter.default.publisher(for: Library.progressDidChange)
+            .compactMap { notification -> LibrarySignal? in
+                guard let progress = notification.userInfo?[Library.ProgressKey.progress] as? LibraryLoadProgress,
+                      let fraction = notification.userInfo?[Library.ProgressKey.fraction] as? Double
+                else { return nil }
+                return .load(progress, fraction)
+            }
+            .eraseToAnyPublisher()
+
+        let job = NotificationCenter.default.publisher(for: EnrichmentCoordinator.progressDidChange)
+            .compactMap { notification -> LibrarySignal? in
+                guard let progress = notification.userInfo?[EnrichmentCoordinator.ProgressKey.progress]
+                    as? EnrichmentJobProgress else { return nil }
+                return .job(progress)
+            }
+            .eraseToAnyPublisher()
+
+        let tick = debutTick.map { LibrarySignal.tick }.eraseToAnyPublisher()
+
+        surfaceCancellable = Publishers.MergeMany(load, job, tick)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] signal in
+                guard let self else { return }
+                switch signal {
+                case .load(let progress, let fraction):
+                    self.latestLoad = progress
+                    self.latestFraction = fraction
+                case .job(let progress):
+                    self.latestJob = progress
+                    self.heardFromJob = true
+                case .tick:
+                    break
+                }
+                self.loadStatePublisher.send(self.routedState())
+            }
+    }
+
+    private func routedState() -> LibraryLoadState {
+        let surface = surfaceRouter.route(
+            load: latestLoad,
+            job: latestJob,
+            debutCompleted: debutCompleted,
+            hasLibrary: !library.albums.isEmpty,
+            elapsed: latestJob.startedAt.map { Date().timeIntervalSince($0) } ?? 0
+        )
+        advanceDebut(on: surface)
+        return LibraryLoadState(
+            surface: surface, progress: latestLoad, fraction: latestFraction, job: latestJob
+        )
+    }
+
+    /// Moves the Debut's director forward, and keeps the tick alive only while
+    /// there is an act left to reach. Act III is terminal until the card is
+    /// dismissed, so the timer stops there rather than polling behind a card.
+    private func advanceDebut(on surface: LibrarySurface) {
+        guard surface == .debut else {
+            stopDebutTicking()
+            return
+        }
+        let elapsedInFinishing = finishingStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+        debutDirector.advance(
+            load: latestLoad,
+            job: latestJob,
+            albumCount: library.albums.count,
+            elapsedInFinishing: elapsedInFinishing,
+            jobHeardFrom: jobHasSpoken(elapsedInFinishing: elapsedInFinishing)
+        )
+        debutAct = debutDirector.act
+        if debutAct == .finishing, finishingStartedAt == nil { finishingStartedAt = Date() }
+        if debutAct < .summary { startDebutTicking() } else { stopDebutTicking() }
+    }
+
+    /// Whether the director may believe a drained queue means the enrichment
+    /// job is over.
+    ///
+    /// The job's snapshot starts life `.idle` with nothing remaining, so the
+    /// first evaluation after Act I would otherwise skip the whole AI act
+    /// before the coordinator has even counted what is due. The floor keeps a
+    /// pass that never reports from stranding the act; the 90 s curtain
+    /// remains the ceiling either way.
+    private func jobHasSpoken(elapsedInFinishing: TimeInterval) -> Bool {
+        heardFromJob || elapsedInFinishing >= Self.jobReportFloor
+    }
+
+    private static let jobReportFloor: TimeInterval = 2
+
+    private func startDebutTicking() {
+        guard debutTicker == nil else { return }
+        debutTicker = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                self?.debutTick.send()
+            }
+        }
+    }
+
+    private func stopDebutTicking() {
+        debutTicker?.cancel()
+        debutTicker = nil
+    }
+
+    /// The figures the summary card reports.
+    func debutSummary() async -> LibraryDebutSummary {
+        await library.debutSummary()
+    }
+
+    /// Whether the AI pass was skipped because there was nothing entitling it.
+    ///
+    /// Read from the same predicate `AIIdentificationTask` gates itself on, not
+    /// from the job's activity: a `needsEntitlement` snapshot is throttled like
+    /// any other and can be superseded by the `.idle` that ends the pass, so a
+    /// card built from the stream would miss the one moment worth converting on.
+    var aiSkippedForEntitlement: Bool {
+        PurchaseManager.shared.state == .expired
+    }
+
+    /// Writes the once-per-library record and leaves the Debut for good. The
+    /// summary is what makes the launch a debut rather than a scan, so it is
+    /// persisted before the surface is released, not after.
+    func completeDebut(with summary: LibraryDebutSummary) {
+        do {
+            try DatabaseManager.shared.saveLibraryDebut(summary)
+        } catch {
+            AppLogger.error("Failed to record library debut: \(error.localizedDescription)", category: .database)
+        }
+        dismissDebut()
+    }
+
+    /// Whether this library has already had its Debut. The startup probe
+    /// answers first: a launch that indexed a library but died before the
+    /// summary card was dismissed leaves no `libraryDebut` row, and the
+    /// controller will not install the debut view for it — so deriving this from
+    /// the row alone would latch the router on a surface with nothing to draw
+    /// and nothing left to release it. Read once, at bind time, before
+    /// `Library.recordIndexedLibrary()` can fire in this same launch.
+    private static func readDebutCompleted() -> Bool {
+        if LibraryStartupProbe.hadIndexedLibrary { return true }
+        return ((try? DatabaseManager.shared.libraryDebut()) ?? nil) != nil
+    }
+
+    /// Leaves the Debut without writing one — an empty first build has no
+    /// library to be the debut of, and must earn the showpiece next time.
+    func dismissDebut() {
+        surfaceRouter.releaseDebut()
+        debutCompleted = true
+        debutAct = .done
+        stopDebutTicking()
+        loadStatePublisher.send(routedState())
     }
 
     func loadLibrary() async {
@@ -770,11 +1017,25 @@ final class LibraryViewModel {
     private var snapshotEpoch = 0
     private let snapshotQueue = DispatchQueue(label: "flaccy.library.snapshot", qos: .userInitiated)
 
+    /// Why the last snapshot was published.
+    ///
+    /// A list swap replaces every row and is cheaper to reload than to diff, but
+    /// a library refresh keeps the same rows — and during the Debut's second act
+    /// the AI is renaming albums under a reader who is already scrolling, so
+    /// that one has to diff and move rather than tear the grid down.
+    enum SnapshotIntent {
+        case replaceList
+        case refreshLibrary
+    }
+
+    private(set) var snapshotIntent: SnapshotIntent = .replaceList
+
     /// Builds the next snapshot off the main thread so segment switches and
     /// sort changes never stall the segmented control / menu animations.
-    private func publishSnapshot() {
+    private func publishSnapshot(intent: SnapshotIntent = .replaceList) {
         snapshotEpoch &+= 1
         let epoch = snapshotEpoch
+        snapshotIntent = intent
         snapshotQueue.async { [weak self] in
             guard let self else { return }
             let snapshot = self.buildSnapshot()
@@ -972,6 +1233,7 @@ final class LibraryViewModel {
     }
 
     private var cachedSongSearchKeys: [String: String]?
+    private var renderedAlbumSignatures = [String: String]()
 
     /// Folded "title artist album" haystacks keyed by file URL, computed once
     /// per library generation so typing in search does plain substring scans
@@ -1010,6 +1272,7 @@ final class LibraryViewModel {
                 snapshot.appendSections([0])
                 snapshot.appendItems(filtered.map { .album($0) })
             }
+            repaint(retitledItems(albums: filtered, recent: recent), in: &snapshot)
         case .songs:
             snapshot.appendSections([0])
             var songs = filteredSongs(sortedSongs)
@@ -1046,6 +1309,43 @@ final class LibraryViewModel {
         return snapshot
     }
 
+    /// Repaints rows in place. UIKit reconfigures a cell without rebuilding it;
+    /// AppKit's snapshot has no such call, so the Mac reloads the same rows.
+    private func repaint(_ items: [LibraryItem], in snapshot: inout Snapshot) {
+        guard !items.isEmpty else { return }
+        #if canImport(UIKit)
+        snapshot.reconfigureItems(items)
+        #else
+        snapshot.reloadItems(items)
+        #endif
+    }
+
+    /// The album rows whose identity held but whose words changed — a Groq
+    /// retitle during the Debut's second act, a year arriving from enrichment.
+    /// The diff moves such a row rather than replacing it, which is the point,
+    /// but a moved row is never re-rendered; only an explicit reconfigure
+    /// repaints one.
+    private func retitledItems(albums: [Album], recent: [Album]) -> [LibraryItem] {
+        var next = [String: String](minimumCapacity: albums.count + recent.count)
+        var changed: [LibraryItem] = []
+
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+
+        func note(_ album: Album, as item: (Album) -> LibraryItem) {
+            let key = LibraryItem.identity(of: album)
+            let signature = LibraryItem.renderSignature(of: album)
+            next[key] = signature
+            guard let previous = renderedAlbumSignatures[key], previous != signature else { return }
+            changed.append(item(album))
+        }
+
+        for album in recent { note(album, as: LibraryItem.recentAlbum) }
+        for album in albums { note(album, as: LibraryItem.album) }
+        renderedAlbumSignatures = next
+        return changed
+    }
+
     private func computeEmptyState(itemCount: Int) -> EmptyState {
         guard itemCount == 0 else { return .none }
         return searchQuery.isEmpty ? .noLibrary : .noSearchResults(searchQuery)
@@ -1061,7 +1361,7 @@ final class LibraryViewModel {
 
     @objc private func libraryDidUpdate() {
         invalidateSortCaches()
-        publishSnapshot()
+        publishSnapshot(intent: .refreshLibrary)
         prewarmSortCaches()
     }
 

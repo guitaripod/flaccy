@@ -1,6 +1,10 @@
 /// Mirrors `FlaccyCore.LibraryLoadProgress` on the Apple clients: the same
 /// phases, the same weights, and the same wording, so a scan reads identically
 /// on GNOME and on iPhone.
+///
+/// Every phase here is bounded disk work, which is why `fraction_completed`
+/// reaching 1.0 is a fact rather than a promise. Network enrichment is a
+/// durable job with its own countdown surface — see `enrichment_job`.
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum LoadPhase {
@@ -9,21 +13,22 @@ pub enum LoadPhase {
     OpeningLibrary,
     FindingFiles,
     ReadingTags,
-    IdentifyingMusic,
     BuildingAlbums,
-    EnrichingArtwork,
 }
 
 impl LoadPhase {
-    pub const ALL: [LoadPhase; 7] = [
+    pub const ALL: [LoadPhase; 5] = [
         LoadPhase::Idle,
         LoadPhase::OpeningLibrary,
         LoadPhase::FindingFiles,
         LoadPhase::ReadingTags,
-        LoadPhase::IdentifyingMusic,
         LoadPhase::BuildingAlbums,
-        LoadPhase::EnrichingArtwork,
     ];
+
+    /// Cumulative weight of every earlier phase, read from a table instead of
+    /// re-summing `ALL` on every publish; `starts_table_matches_accumulated_weights`
+    /// is what keeps the table and the weights from drifting apart.
+    const CUMULATIVE_STARTS: [f64; 5] = [0.0, 0.0, 0.05, 0.18, 0.85];
 
     fn order(self) -> usize {
         Self::ALL.iter().position(|phase| *phase == self).unwrap_or(0)
@@ -32,21 +37,15 @@ impl LoadPhase {
     pub fn weight(self) -> f64 {
         match self {
             LoadPhase::Idle => 0.0,
-            LoadPhase::OpeningLibrary => 0.02,
+            LoadPhase::OpeningLibrary => 0.05,
             LoadPhase::FindingFiles => 0.13,
-            LoadPhase::ReadingTags => 0.45,
-            LoadPhase::IdentifyingMusic => 0.15,
-            LoadPhase::BuildingAlbums => 0.05,
-            LoadPhase::EnrichingArtwork => 0.20,
+            LoadPhase::ReadingTags => 0.67,
+            LoadPhase::BuildingAlbums => 0.15,
         }
     }
 
     pub fn start(self) -> f64 {
-        Self::ALL
-            .iter()
-            .take(self.order())
-            .map(|phase| phase.weight())
-            .sum()
+        Self::CUMULATIVE_STARTS[self.order()]
     }
 
     pub fn headline(self) -> &'static str {
@@ -54,27 +53,29 @@ impl LoadPhase {
             LoadPhase::Idle => "Ready",
             LoadPhase::OpeningLibrary => "Opening your library",
             LoadPhase::FindingFiles => "Looking for music",
-            LoadPhase::ReadingTags => "Reading tags",
-            LoadPhase::IdentifyingMusic => "Identifying albums",
+            LoadPhase::ReadingTags => "Reading every file",
             LoadPhase::BuildingAlbums => "Building your shelves",
-            LoadPhase::EnrichingArtwork => "Fetching artwork",
         }
     }
 
     pub fn explanation(self) -> &'static str {
         match self {
             LoadPhase::Idle => "",
-            LoadPhase::OpeningLibrary => "Checking what you already have",
-            LoadPhase::FindingFiles => "Scanning your files for audio",
-            LoadPhase::ReadingTags => "Reading titles, artists and quality from each file",
-            LoadPhase::IdentifyingMusic => "Filling in the gaps in your tags",
-            LoadPhase::BuildingAlbums => "Grouping tracks into albums and artists",
-            LoadPhase::EnrichingArtwork => "Looking up covers, years and genres",
+            LoadPhase::OpeningLibrary => "Reading what you already have.",
+            LoadPhase::FindingFiles => {
+                "Nothing is copied or moved — Flaccy reads your files where they are."
+            }
+            LoadPhase::ReadingTags => {
+                "Titles, artists, and the exact bit depth and sample rate of every track."
+            }
+            LoadPhase::BuildingAlbums => "Grouping tracks into albums and artists.",
         }
     }
 
+    /// Every phase that is not `Idle` is work the user is waiting on before any
+    /// library can appear; nothing unbounded lives in this enum any more.
     pub fn blocks_library(self) -> bool {
-        self != LoadPhase::Idle && self != LoadPhase::EnrichingArtwork
+        self != LoadPhase::Idle
     }
 }
 
@@ -94,6 +95,10 @@ impl LoadProgress {
             phase,
             ..Self::default()
         }
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.phase != LoadPhase::Idle
     }
 
     pub fn is_determinate(&self) -> bool {
@@ -138,9 +143,7 @@ impl LoadProgress {
                     count_line(self.tracks_indexed, "track", "tracks")
                 }
             }
-            LoadPhase::IdentifyingMusic => of_line(self.completed, self.total, "folders"),
             LoadPhase::BuildingAlbums => count_line(self.tracks_indexed, "track", "tracks"),
-            LoadPhase::EnrichingArtwork => of_line(self.completed, self.total, "albums"),
         }
     }
 }
@@ -156,7 +159,7 @@ fn count_line(count: usize, singular: &str, plural: &str) -> String {
     }
 }
 
-fn of_line(completed: usize, total: usize, unit: &str) -> String {
+pub fn of_line(completed: usize, total: usize, unit: &str) -> String {
     if total == 0 {
         return String::new();
     }
@@ -168,7 +171,9 @@ fn of_line(completed: usize, total: usize, unit: &str) -> String {
 }
 
 /// Thin-space grouped digits; large counts are the whole point of the line, so
-/// they should be readable at a glance.
+/// they should be readable at a glance. The Apple clients use a locale-aware
+/// `NumberFormatter` instead — the one deliberate copy divergence, recorded in
+/// the spec's copy deck, and identical output below 1000.
 pub fn group_digits(value: usize) -> String {
     let digits = value.to_string();
     let mut grouped = String::with_capacity(digits.len() + digits.len() / 3);
@@ -193,11 +198,25 @@ mod tests {
 
     #[test]
     fn starts_match_the_apple_clients() {
-        assert!((LoadPhase::FindingFiles.start() - 0.02).abs() < 0.0001);
-        assert!((LoadPhase::ReadingTags.start() - 0.15).abs() < 0.0001);
-        assert!((LoadPhase::IdentifyingMusic.start() - 0.60).abs() < 0.0001);
-        assert!((LoadPhase::BuildingAlbums.start() - 0.75).abs() < 0.0001);
-        assert!((LoadPhase::EnrichingArtwork.start() - 0.80).abs() < 0.0001);
+        assert!((LoadPhase::Idle.start() - 0.0).abs() < 0.0001);
+        assert!((LoadPhase::OpeningLibrary.start() - 0.0).abs() < 0.0001);
+        assert!((LoadPhase::FindingFiles.start() - 0.05).abs() < 0.0001);
+        assert!((LoadPhase::ReadingTags.start() - 0.18).abs() < 0.0001);
+        assert!((LoadPhase::BuildingAlbums.start() - 0.85).abs() < 0.0001);
+    }
+
+    #[test]
+    fn starts_table_matches_accumulated_weights() {
+        let mut accumulated = 0.0;
+        for phase in LoadPhase::ALL {
+            assert!(
+                (phase.start() - accumulated).abs() < 0.0001,
+                "{phase:?} start {} accumulated {accumulated}",
+                phase.start()
+            );
+            accumulated += phase.weight();
+        }
+        assert!((accumulated - 1.0).abs() < 0.0001);
     }
 
     #[test]
@@ -208,20 +227,20 @@ mod tests {
             total: 100,
             ..LoadProgress::default()
         };
-        assert!((progress.fraction_completed() - (0.15 + 0.45 * 0.5)).abs() < 0.0001);
+        assert!((progress.fraction_completed() - (0.18 + 0.67 * 0.5)).abs() < 0.0001);
     }
 
     #[test]
     fn indeterminate_phase_counts_as_half_done() {
         let progress = LoadProgress::new(LoadPhase::FindingFiles);
         assert!(!progress.is_determinate());
-        assert!((progress.fraction_completed() - (0.02 + 0.13 * 0.5)).abs() < 0.0001);
+        assert!((progress.fraction_completed() - (0.05 + 0.13 * 0.5)).abs() < 0.0001);
     }
 
     #[test]
     fn fraction_never_exceeds_one() {
         let progress = LoadProgress {
-            phase: LoadPhase::EnrichingArtwork,
+            phase: LoadPhase::BuildingAlbums,
             completed: 999,
             total: 10,
             ..LoadProgress::default()
@@ -245,14 +264,15 @@ mod tests {
                 last = fraction;
             }
         }
+        assert!((last - 1.0).abs() < 0.0001);
     }
 
     #[test]
-    fn only_pre_library_phases_block_the_library() {
+    fn every_active_phase_blocks_the_library() {
         assert!(!LoadPhase::Idle.blocks_library());
-        assert!(LoadPhase::FindingFiles.blocks_library());
-        assert!(LoadPhase::BuildingAlbums.blocks_library());
-        assert!(!LoadPhase::EnrichingArtwork.blocks_library());
+        for phase in LoadPhase::ALL.iter().skip(1) {
+            assert!(phase.blocks_library(), "{phase:?}");
+        }
     }
 
     #[test]

@@ -7,10 +7,14 @@ use crate::player::Player;
 use crate::scanner::{self, ScanEvent};
 use crate::ui;
 use adw::prelude::*;
+use flaccy_shared::enrichment_job::{Activity, JobProgress, Scope};
+use flaccy_shared::library_debut::DebutSummary;
 use gtk::glib;
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 pub struct AppCore {
@@ -36,10 +40,28 @@ pub struct AppCore {
     pub wantlist_in_flight: Cell<bool>,
     pub downloads: crate::downloads::DownloadHandle,
     pub music_video: crate::musicvideo::MusicVideoHandle,
+    /// GIO's reachability verdict, shared with the enrichment workers so an
+    /// offline stretch suspends the job instead of burning attempts on it.
+    pub network_available: Arc<AtomicBool>,
+    /// How many enrichment requests are queued or being worked on right now.
+    /// The countdown is a `count(*)`, but *whether the job is running* is not
+    /// answerable from the database: a pass that ends with a hundred albums
+    /// still due after a hundred transport failures is idle, not busy.
+    pub enrich_in_flight: Cell<usize>,
+    /// Set when a pass is asked for while one is still draining, so a rescan
+    /// mid-pass costs one flag instead of a second copy of the backlog.
+    pub enrich_rerun: Cell<bool>,
+    /// Raised by the workers after a run of transport failures, and cleared by
+    /// a route change, a bounded timer or an explicit retry. Separate from
+    /// `network_available` on purpose: GIO can call a captive portal
+    /// reachable, and only the requests know it is not.
+    pub network_suspect: Arc<AtomicBool>,
+    /// Whether the reload now in flight is closing out an album build, so the
+    /// determinate 100% is emitted for a scan and not for every reload.
+    building_albums: Cell<bool>,
     reload_in_flight: Cell<bool>,
     reload_pending: Cell<bool>,
-    enrich_total: Cell<usize>,
-    enrich_done: Cell<usize>,
+    job: RefCell<JobProgress>,
 }
 
 impl AppCore {
@@ -83,10 +105,14 @@ impl AppCore {
             wantlist_in_flight: Cell::new(false),
             downloads: crate::downloads::DownloadHandle::new(),
             music_video: crate::musicvideo::MusicVideoHandle::new(),
+            network_available: Arc::new(AtomicBool::new(true)),
+            enrich_in_flight: Cell::new(0),
+            enrich_rerun: Cell::new(false),
+            network_suspect: Arc::new(AtomicBool::new(false)),
+            building_albums: Cell::new(false),
             reload_in_flight: Cell::new(false),
             reload_pending: Cell::new(false),
-            enrich_total: Cell::new(0),
-            enrich_done: Cell::new(0),
+            job: RefCell::new(JobProgress::idle()),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
@@ -100,11 +126,18 @@ impl AppCore {
     /// Loads the library on a dedicated thread (own SQLite connection) and
     /// applies the result on the main loop, so a large library never stalls
     /// the UI. Overlapping requests coalesce into one trailing reload.
+    ///
+    /// The read is the `OpeningLibrary` phase of the shared load bar — the
+    /// 0.05 slice every client mirrors — and it always ends by publishing
+    /// `Idle`, so a phase stream that starts is a phase stream that finishes.
     pub fn reload_library(self: &Rc<Self>) {
         if self.reload_in_flight.replace(true) {
             self.reload_pending.set(true);
             return;
         }
+        self.hub.emit(&AppEvent::ScanProgress(LoadProgress::new(
+            LoadPhase::OpeningLibrary,
+        )));
         let db_path = self.db_path.clone();
         let group_album_editions = self.config.borrow().group_album_editions;
         let (tx, rx) = async_channel::bounded::<(Library, Vec<(String, f64)>)>(1);
@@ -138,6 +171,12 @@ impl AppCore {
                 ),
             );
             *core.library.borrow_mut() = Rc::new(library);
+            core.record_library_debut();
+            if core.building_albums.replace(false) {
+                core.emit_build_completed();
+            }
+            core.hub
+                .emit(&AppEvent::ScanProgress(LoadProgress::new(LoadPhase::Idle)));
             core.hub.emit(&AppEvent::LibraryReloaded);
             if core.reload_pending.replace(false) {
                 core.reload_library();
@@ -145,29 +184,159 @@ impl AppCore {
         });
     }
 
+    /// Writes the once-per-library setup summary the first time a build yields
+    /// an album, and never again. This is Linux's counterpart to the Apple
+    /// clients' `LibraryStartupProbe.markIndexed()`, which fires at the same
+    /// point in the first build: a library that has been indexed once has had
+    /// its Debut, so quitting mid-show does not replay the showpiece on the
+    /// next launch. `Stage::finish` overwrites the row with what the reader
+    /// actually saw, so the build-time figures are a floor, not the report.
+    fn record_library_debut(&self) {
+        if self.library.borrow().albums.is_empty() || self.db.library_debut().is_some() {
+            return;
+        }
+        let summary = self.current_debut_summary();
+        match self.db.save_library_debut(&summary) {
+            Ok(()) => crate::logger::info(
+                "library",
+                &format!(
+                    "library debut recorded: {} tracks, {} albums, {} covers",
+                    summary.track_count, summary.album_count, summary.covers_resolved
+                ),
+            ),
+            Err(err) => {
+                crate::logger::error("database", &format!("libraryDebut write failed: {err}"))
+            }
+        }
+    }
+
+    /// The figures the summary card reports, computed from the library and the
+    /// database as they stand right now — so a card raised at Act III counts
+    /// every cover and year the job fetched during Act II, not just what the
+    /// scan hoisted out of embedded tags. Bitrate is derived from the PCM shape
+    /// the tags actually carry, averaged over the tracks that declare one;
+    /// Linux never calls Groq, so `ai_cleaned_tracks` is always zero here.
+    pub fn current_debut_summary(&self) -> DebutSummary {
+        let library = self.library.borrow().clone();
+        let (covers_resolved, albums_dated) = self.db.debut_album_tallies();
+        let mut lossless_track_count = 0;
+        let mut bitrate_total = 0_u64;
+        let mut bitrate_samples = 0_u64;
+        let mut total_duration_seconds = 0.0;
+        for track in &library.tracks {
+            total_duration_seconds += track.duration;
+            if crate::hygiene::is_lossless(track.codec.as_deref()) {
+                lossless_track_count += 1;
+            }
+            if let (Some(bits), Some(rate), Some(channels)) =
+                (track.bit_depth, track.sample_rate, track.channels)
+            {
+                bitrate_total += (bits as u64 * rate as u64 * channels as u64) / 1000;
+                bitrate_samples += 1;
+            }
+        }
+        DebutSummary {
+            track_count: library.tracks.len(),
+            album_count: library.albums.len(),
+            artist_count: library.artists.len(),
+            covers_resolved,
+            albums_dated,
+            ai_cleaned_tracks: 0,
+            lossless_track_count,
+            average_bitrate: bitrate_total.checked_div(bitrate_samples).unwrap_or(0) as usize,
+            total_duration_seconds,
+            completed_at: chrono::Utc::now(),
+        }
+    }
+
+    /// Closes `BuildingAlbums` out determinately. Every phase behind the bar is
+    /// bounded disk work, so the last thing a build says must be a real 100% —
+    /// an indeterminate final snapshot leaves the bar stopped at 92% and the
+    /// Debut's first act ending on a number that never arrived.
+    pub fn emit_build_completed(&self) {
+        let (albums, tracks) = {
+            let library = self.library.borrow();
+            (library.albums.len(), library.tracks.len())
+        };
+        let counted = albums.max(1);
+        self.hub.emit(&AppEvent::ScanProgress(LoadProgress {
+            phase: LoadPhase::BuildingAlbums,
+            completed: counted,
+            total: counted,
+            albums_built: albums,
+            tracks_indexed: tracks,
+            ..LoadProgress::default()
+        }));
+    }
+
     pub fn toast(&self, message: &str) {
         self.hub.emit(&AppEvent::Toast(message.to_string()));
     }
 
-    /// Tracks enrichment so the UI can show a running "finding artwork"
-    /// progress. Counting is balanced — every queued album (see
-    /// enrichment::request_album) is matched by one completion — and silent at
-    /// queue time so a bulk pass doesn't emit hundreds of updates; the indicator
-    /// appears as soon as the first album completes.
-    pub fn add_enrichment_pending(&self) {
-        self.enrich_total.set(self.enrich_total.get() + 1);
+    pub fn job_progress(&self) -> JobProgress {
+        self.job.borrow().clone()
     }
 
-    pub fn note_enrichment_done(&self) {
-        self.enrich_done.set(self.enrich_done.get() + 1);
-        if self.enrich_done.get() >= self.enrich_total.get() {
-            self.enrich_total.set(0);
-            self.enrich_done.set(0);
+    /// Notes one finished entity. Only `completed_this_run` is accumulated —
+    /// "how much did this launch fix" has no query — and even that is silent
+    /// here, because the countdown itself is republished from the database.
+    pub fn note_enrichment_completed(&self, title: Option<String>) {
+        let mut job = self.job.borrow_mut();
+        job.completed_this_run += 1;
+        job.current_title = title;
+    }
+
+    /// Re-reads the countdown from the database and emits it. `remaining` is a
+    /// `count(*)` over the very predicate the queue drains, never an
+    /// accumulator, so the class of bug where an unbalanced counter freezes the
+    /// label for a whole session is unrepresentable. The *activity* is the one
+    /// thing the count cannot answer — a hundred albums a transport failure
+    /// left pending are still due while nothing is being worked on — so it is
+    /// read off the requests actually in flight, which is what Apple's
+    /// `publish(.idle)` at the tail of a pass amounts to.
+    pub fn refresh_job_progress(&self) {
+        let now = chrono::Utc::now();
+        let (scope, remaining) = self.outstanding_scope(now);
+        let exhausted = self.db.count_exhausted(scope);
+        let reachable = self.network_available.load(Ordering::Relaxed)
+            && !self.network_suspect.load(Ordering::Relaxed);
+        let in_flight = self.enrich_in_flight.get();
+        let snapshot = {
+            let mut job = self.job.borrow_mut();
+            job.scope = scope;
+            job.remaining = remaining;
+            job.exhausted = exhausted;
+            job.activity = match (in_flight, remaining, reachable) {
+                (0, _, _) | (_, 0, _) => Activity::Idle,
+                (_, _, false) => Activity::WaitingForNetwork,
+                _ => Activity::Running,
+            };
+            if job.activity == Activity::Idle {
+                job.completed_this_run = 0;
+                job.current_title = None;
+                job.started_at = None;
+            } else if job.started_at.is_none() {
+                job.started_at = Some(now);
+            }
+            job.clone()
+        };
+        self.hub.emit(&AppEvent::EnrichmentProgress(snapshot));
+    }
+
+    /// The scope the countdown speaks for: albums while any are outstanding,
+    /// then artists. Each headline is paired with its own count, so "Finding
+    /// artwork · 12 left" always means exactly twelve albums.
+    fn outstanding_scope(&self, now: chrono::DateTime<chrono::Utc>) -> (Scope, usize) {
+        let albums = self
+            .db
+            .count_due(Scope::Album, Scope::Album.current_version(), now);
+        if albums > 0 {
+            return (Scope::Album, albums);
         }
-        self.hub.emit(&AppEvent::EnrichmentProgress {
-            done: self.enrich_done.get(),
-            total: self.enrich_total.get(),
-        });
+        let artists = self
+            .db
+            .count_due(Scope::Artist, Scope::Artist.current_version(), now);
+        (Scope::Artist, artists)
     }
 
     pub fn start(self: &Rc<Self>, _window: &adw::ApplicationWindow) {
@@ -181,7 +350,6 @@ impl AppCore {
         self.wire_autoplay();
         self.rescan();
         self.schedule_periodic_drain();
-        self.schedule_enrichment_pass();
         self.schedule_wantlist_refresh();
         self.schedule_history_import();
         self.wire_lastfm_sync();
@@ -249,22 +417,31 @@ impl AppCore {
                     ScanEvent::Progress(progress) => {
                         core.hub.emit(&AppEvent::ScanProgress(progress));
                     }
+                    ScanEvent::CoversHoisted(covers) => {
+                        core.hub.emit(&AppEvent::AlbumCoversHoisted(covers));
+                    }
                     ScanEvent::Done { added, removed } => {
                         core.scanning.set(false);
                         if added > 0 || removed > 0 {
+                            let indexed = core.library.borrow().tracks.len();
+                            core.building_albums.set(true);
                             core.hub.emit(&AppEvent::ScanProgress(LoadProgress {
                                 phase: LoadPhase::BuildingAlbums,
-                                tracks_indexed: core.library.borrow().tracks.len(),
+                                tracks_indexed: indexed,
                                 ..LoadProgress::default()
                             }));
                             core.reload_library();
+                        } else {
+                            core.emit_build_completed();
                         }
+                        crate::enrichment::request_background_pass(&core);
                         core.hub.emit(&AppEvent::ScanFinished { added, removed });
                         break;
                     }
                     ScanEvent::Failed(message) => {
                         crate::logger::error("library", &format!("scan failed: {message}"));
                         core.scanning.set(false);
+                        crate::enrichment::request_background_pass(&core);
                         core.hub
                             .emit(&AppEvent::ScanFinished { added: 0, removed: 0 });
                         break;
@@ -413,17 +590,6 @@ impl AppCore {
                 return;
             }
             run_smoke(&core);
-        });
-    }
-
-    /// Runs the library-wide background enrichment pass a few seconds after
-    /// launch so startup scan and first paint are never blocked by it.
-    fn schedule_enrichment_pass(self: &Rc<Self>) {
-        let weak = Rc::downgrade(self);
-        glib::timeout_add_local_once(Duration::from_secs(6), move || {
-            if let Some(core) = weak.upgrade() {
-                crate::enrichment::schedule_background_pass(&core);
-            }
         });
     }
 

@@ -1,0 +1,13 @@
+[package]
+name = "flaccy-shared"
+version = "1.11.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Cross-client Flaccy logic mirrored from FlaccyCore: the load bar, the enrichment job, surface routing and the debut"
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+rusqlite = { version = "0.32", features = ["bundled", "functions"] }

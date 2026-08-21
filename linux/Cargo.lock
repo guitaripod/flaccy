@@ -294,6 +294,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -507,6 +508,7 @@ dependencies = [
  "cairo-rs",
  "chrono",
  "dirs",
+ "flaccy-shared",
  "gst-plugin-gtk4",
  "gstreamer",
  "gtk4",
@@ -521,6 +523,15 @@ dependencies = [
  "serde_json",
  "toml 0.8.23",
  "ureq",
+]
+
+[[package]]
+name = "flaccy-shared"
+version = "1.11.0"
+dependencies = [
+ "chrono",
+ "rusqlite",
+ "serde",
 ]
 
 [[package]]

@@ -1,5 +1,6 @@
 #if targetEnvironment(simulator) || (os(macOS) && DEBUG)
 import CoreGraphics
+import FlaccyCore
 import Foundation
 
 #if canImport(UIKit)
@@ -17,9 +18,84 @@ enum ScreenshotSeeder {
 
     static let launchArgument = "--seed-screenshots"
 
+    /// Captures the once-per-library Debut. It re-runs the fictional seed and
+    /// then clears `libraryDebut`, so the showpiece is presentable again on a
+    /// simulator that has already been through it. Nothing here ever reads a
+    /// real library: an App Store frame of somebody's actual record collection
+    /// is a licensing problem, not a design decision.
+    static let debutArgument = "--debut"
+
+    static var isDebutRoute: Bool {
+        CommandLine.arguments.contains(launchArgument) && CommandLine.arguments.contains(debutArgument)
+    }
+
     static func seedIfRequested() {
         guard CommandLine.arguments.contains(launchArgument) else { return }
         seed()
+        guard isDebutRoute else { return }
+        do {
+            try DatabaseManager.shared.clearLibraryDebut()
+            AppLogger.info("Screenshot seed: debut cleared, ready to replay", category: .content)
+        } catch {
+            AppLogger.error("Screenshot seed: debut not cleared: \(error.localizedDescription)", category: .database)
+        }
+    }
+
+    /// Act I, frozen at 62%: far enough in for the mosaic to be dense and the
+    /// tallies to read as a real library, early enough that the hairline is
+    /// visibly unfinished. `readingTags` owns 0.18…0.85, so 0.62 is 65.7%
+    /// through the phase and the file counter is derived from that rather than
+    /// invented, which keeps the caption and the bar telling the same story.
+    static let scriptedLoadFraction = 0.62
+
+    static var scriptedLoadProgress: LibraryLoadProgress {
+        let total = catalog.reduce(0) { $0 + $1.tracks.count }
+        let within = (scriptedLoadFraction - LibraryLoadPhase.readingTags.start)
+            / LibraryLoadPhase.readingTags.weight
+        let completed = Int((Double(total) * within).rounded())
+        return LibraryLoadProgress(
+            phase: .readingTags,
+            completed: completed,
+            total: total,
+            filesFound: total,
+            tracksIndexed: completed,
+            albumsBuilt: 0
+        )
+    }
+
+    /// Act II's countdown, mid-drain: enough left to be counting, enough done
+    /// for the ambient surface to have earned its place.
+    static var scriptedJobProgress: EnrichmentJobProgress {
+        EnrichmentJobProgress(
+            activity: .running,
+            scope: .album,
+            remaining: 12,
+            completedThisRun: catalog.count - 12,
+            exhausted: 0,
+            currentTitle: heroAlbum,
+            startedAt: Date().addingTimeInterval(-42)
+        )
+    }
+
+    /// Act III's card, computed from the fictional catalog so every figure on
+    /// the marketing frame is one the seeded database can actually produce.
+    static var scriptedDebutSummary: LibraryDebutSummary {
+        let tracks = catalog.flatMap { album in album.tracks.map { (album, $0) } }
+        let lossless = tracks.filter { $0.0.bitDepth >= 24 }.count
+        let duration = tracks.reduce(0.0) { $0 + $1.1.duration }
+        let bitrate = tracks.reduce(0) { $0 + $1.0.bitDepth * $1.0.sampleRate * 2 / 1000 }
+        return LibraryDebutSummary(
+            trackCount: tracks.count,
+            albumCount: catalog.count,
+            artistCount: Set(catalog.map(\.artist)).count,
+            coversResolved: catalog.count,
+            albumsDated: catalog.count,
+            aiCleanedTracks: Int(Double(tracks.count) * 0.49),
+            losslessTrackCount: lossless,
+            averageBitrate: tracks.isEmpty ? 0 : bitrate / tracks.count,
+            totalDurationSeconds: duration,
+            completedAt: Date()
+        )
     }
 
     private static func seed() {

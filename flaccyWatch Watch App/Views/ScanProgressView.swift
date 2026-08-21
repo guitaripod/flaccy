@@ -3,6 +3,8 @@ import SwiftUI
 
 /// The watch face of a library scan: the same phases the phone reports, sized
 /// for a wrist — a determinate ring, the stage, and what it has found so far.
+/// Every word comes from `LibraryLoadPhaseCopy`, so the wrist can never fall
+/// out of step with the phone the way a hand-copied switch does.
 struct ScanProgressView: View {
 
     let progress: LibraryLoadProgress
@@ -26,7 +28,7 @@ struct ScanProgressView: View {
             }
             .frame(width: 54, height: 54)
 
-            Text(headline)
+            Text(LibraryLoadPhaseCopy.headline(for: progress.phase))
                 .font(.footnote.weight(.semibold))
                 .multilineTextAlignment(.center)
 
@@ -35,33 +37,14 @@ struct ScanProgressView: View {
                     .font(.caption2)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+                    .animation(.snappy, value: detail)
             }
         }
         .padding(.horizontal, 8)
         .accessibilityElement(children: .combine)
+        .accessibilityValue(LibraryLoadPhaseCopy.accessibilityValue(for: progress, fraction: fraction))
     }
 
-    private var headline: String {
-        switch progress.phase {
-        case .idle, .openingLibrary: return String(localized: "Opening your library")
-        case .findingFiles: return String(localized: "Looking for music")
-        case .readingTags: return String(localized: "Reading tags")
-        case .identifyingMusic: return String(localized: "Identifying albums")
-        case .buildingAlbums: return String(localized: "Building your shelves")
-        case .enrichingArtwork: return String(localized: "Fetching artwork")
-        }
-    }
-
-    private var detail: String {
-        switch progress.phase {
-        case .findingFiles where progress.filesFound > 0:
-            return String(localized: "\(progress.filesFound) files found")
-        case .readingTags where progress.total > 0:
-            return String(localized: "\(min(progress.completed, progress.total)) of \(progress.total)")
-        case .buildingAlbums where progress.tracksIndexed > 0:
-            return String(localized: "\(progress.tracksIndexed) tracks")
-        default:
-            return ""
-        }
-    }
+    private var detail: String { LibraryLoadPhaseCopy.detail(for: progress) }
 }

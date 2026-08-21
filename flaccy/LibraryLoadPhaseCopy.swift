@@ -2,8 +2,9 @@ import FlaccyCore
 import Foundation
 
 /// The words every client puts on a library load: one headline per phase and a
-/// detail line built from the live tallies, so a scan reads the same on iPhone
-/// and on the Mac.
+/// detail line built from the live tallies, so a scan reads the same on iPhone,
+/// on the Mac and on the wrist. Every phase here is bounded disk work, so the
+/// fraction these words sit next to is one the bar can honestly finish.
 nonisolated enum LibraryLoadPhaseCopy {
 
     static func headline(for phase: LibraryLoadPhase) -> String {
@@ -11,10 +12,8 @@ nonisolated enum LibraryLoadPhaseCopy {
         case .idle: return String(localized: "Ready")
         case .openingLibrary: return String(localized: "Opening your library")
         case .findingFiles: return String(localized: "Looking for music")
-        case .readingTags: return String(localized: "Reading tags")
-        case .identifyingMusic: return String(localized: "Identifying albums")
+        case .readingTags: return String(localized: "Reading every file")
         case .buildingAlbums: return String(localized: "Building your shelves")
-        case .enrichingArtwork: return String(localized: "Fetching artwork")
         }
     }
 
@@ -22,13 +21,16 @@ nonisolated enum LibraryLoadPhaseCopy {
     /// the library is still empty and there is nothing else on screen.
     static func explanation(for phase: LibraryLoadPhase) -> String {
         switch phase {
-        case .idle: return ""
-        case .openingLibrary: return String(localized: "Checking what you already have")
-        case .findingFiles: return String(localized: "Scanning your files for audio")
-        case .readingTags: return String(localized: "Reading titles, artists and quality from each file")
-        case .identifyingMusic: return String(localized: "Filling in the gaps in your tags")
-        case .buildingAlbums: return String(localized: "Grouping tracks into albums and artists")
-        case .enrichingArtwork: return String(localized: "Looking up covers, years and genres")
+        case .idle:
+            return ""
+        case .openingLibrary:
+            return String(localized: "Reading what you already have.")
+        case .findingFiles:
+            return String(localized: "Nothing is copied or moved — Flaccy reads your files where they are.")
+        case .readingTags:
+            return String(localized: "Titles, artists, and the exact bit depth and sample rate of every track.")
+        case .buildingAlbums:
+            return String(localized: "Grouping tracks into albums and artists.")
         }
     }
 
@@ -49,16 +51,10 @@ nonisolated enum LibraryLoadPhaseCopy {
         case .readingTags:
             guard progress.total > 0 else { return countLine(progress.tracksIndexed, unit: .tracks) }
             return ofLine(progress.completed, progress.total, unit: .files)
-        case .identifyingMusic:
-            guard progress.total > 0 else { return "" }
-            return ofLine(progress.completed, progress.total, unit: .folders)
         case .buildingAlbums:
             return progress.tracksIndexed > 0
                 ? countLine(progress.tracksIndexed, unit: .tracks)
                 : ""
-        case .enrichingArtwork:
-            guard progress.total > 0 else { return "" }
-            return ofLine(progress.completed, progress.total, unit: .albums)
         }
     }
 
@@ -103,9 +99,22 @@ nonisolated enum LibraryLoadPhaseCopy {
         Self.formatter.string(from: NSNumber(value: value)) ?? String(value)
     }
 
+    /// A day and a month, in the reader's own order — the granularity every
+    /// enrichment date is quoted at, shared so the report and the Debut's
+    /// settings line can never disagree about how a date looks.
+    static func day(_ date: Date) -> String {
+        Self.dayFormatter.string(from: date)
+    }
+
     private static let formatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
+        return formatter
+    }()
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
         return formatter
     }()
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Sync the working tree to the Mac and compile the Apple clients there.
 # The Linux box authors; the Mac (over Tailscale) owns the iOS/macOS/watchOS SDKs.
+# scripts/test-shared.sh gates the builds: a cross-language change that breaks
+# the FlaccyCore/flaccy-shared parity proof must never reach a device build.
 # The Mac keeps its own gitignored flaccy/Secrets.swift, so the sync must never
 # delete it; everything else mirrors this tree exactly, uncommitted work included.
 #
@@ -27,6 +29,11 @@ fi
 ssh macbook "ONLY=$(printf %q "$ONLY") bash -l" <<'REMOTE'
 set -euo pipefail
 cd ~/Dev/ios/flaccy
+
+if ! scripts/test-shared.sh; then
+    echo "** SHARED TESTS FAILED — NOT BUILDING **"
+    exit 1
+fi
 
 build_one() {
     local scheme=$1 dest=$2 log=/tmp/flaccy-build-$3.log

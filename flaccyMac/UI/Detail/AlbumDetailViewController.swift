@@ -16,6 +16,7 @@ final class AlbumDetailViewController: NSViewController {
     private let titleLabel = NSTextField(wrappingLabelWithString: "")
     private let artistButton = NSButton()
     private let metaLabel = NSTextField(labelWithString: "")
+    private let metaPlaceholder = ShimmerLineView(width: 60, height: 13)
     private let chipsRow = NSStackView()
     private let tracksStack = NSStackView()
     private let footerLabel = NSTextField(labelWithString: "")
@@ -24,6 +25,7 @@ final class AlbumDetailViewController: NSViewController {
     private var rowTracks: [Track] = []
     private var rowByURL: [URL: DetailTrackRowView] = [:]
     private var playingURL: URL?
+    private var isAwaitingMetadata = false
 
     init(album: Album) {
         self.album = album
@@ -59,6 +61,7 @@ final class AlbumDetailViewController: NSViewController {
 
         metaLabel.font = .systemFont(ofSize: 12.5)
         metaLabel.textColor = MacColors.secondaryLabel
+        metaPlaceholder.isHidden = true
 
         chipsRow.orientation = .horizontal
         chipsRow.spacing = 8
@@ -71,7 +74,7 @@ final class AlbumDetailViewController: NSViewController {
         actions.orientation = .horizontal
         actions.spacing = 10
 
-        let headerText = NSStackView(views: [titleLabel, artistButton, metaLabel, chipsRow, actions])
+        let headerText = NSStackView(views: [titleLabel, artistButton, metaLabel, metaPlaceholder, chipsRow, actions])
         headerText.orientation = .vertical
         headerText.alignment = .leading
         headerText.spacing = 10
@@ -185,7 +188,7 @@ final class AlbumDetailViewController: NSViewController {
         if let year = album.year, !year.isEmpty { metaParts.append(year) }
         if let genre = album.genre, !genre.isEmpty { metaParts.append(genre) }
         metaLabel.stringValue = metaParts.joined(separator: " · ")
-        metaLabel.isHidden = metaParts.isEmpty
+        metaLabel.isHidden = metaParts.isEmpty || isAwaitingMetadata
 
         rebuildChips(playCount: DetailEnrichmentCache.shared.cachedAlbumPlayCount(
             artist: album.artist, album: album.title
@@ -296,6 +299,12 @@ final class AlbumDetailViewController: NSViewController {
         }
     }
 
+    /// Repairs this album's metadata when the queue says it is due, jumping it
+    /// ahead of the background pass so the page the reader is looking at is
+    /// fixed first and the result is persisted with everything else the job
+    /// knows — no second write path, and no attempt charged for merely arriving
+    /// on the page. An album the ladder has settled or given up on stays that
+    /// way until the reader asks for it by name.
     private func enrichOnAppear() {
         let title = album.title
         let artist = album.artist
@@ -305,31 +314,77 @@ final class AlbumDetailViewController: NSViewController {
             self.rebuildChips(playCount: playCount)
         }
         guard album.year == nil || album.genre == nil else { return }
+        guard isEnrichmentDue(title: title, artist: artist) else {
+            renderUnresolvedMetadata(title: title, artist: artist)
+            return
+        }
+        setAwaitingMetadata(true)
         Task { [weak self] in
-            let result = await MetadataEnrichmentService.shared.enrichAlbum(title: title, artist: artist)
-            guard result.year != nil || result.genre != nil || result.coverArtData != nil else { return }
-            do {
-                var info = try DatabaseManager.shared.fetchOrCreateAlbumInfo(title: title, artist: artist)
-                info.coverArtURL = result.coverArtURL ?? info.coverArtURL
-                info.coverArtData = result.coverArtData ?? info.coverArtData
-                info.musicBrainzID = result.musicBrainzID ?? info.musicBrainzID
-                info.year = result.year ?? info.year
-                info.genre = result.genre ?? info.genre
-                info.lastFetched = Date()
-                try DatabaseManager.shared.updateAlbumInfo(info)
-            } catch {
-                AppLogger.error("Detail enrichment save failed: \(error.localizedDescription)", category: .database)
-            }
+            _ = await EnrichmentCoordinator.shared.requestNow(title: title, artist: artist)
             guard let self, self.album.title == title else { return }
+            self.setAwaitingMetadata(false)
+            let resolved = self.storedMetadata(title: title, artist: artist)
+            guard resolved.year != nil || resolved.genre != nil else {
+                self.renderUnresolvedMetadata(title: title, artist: artist)
+                return
+            }
             self.album = Album(
                 title: self.album.title,
                 artist: self.album.artist,
                 artwork: self.album.artwork,
                 tracks: self.album.tracks,
-                year: result.year ?? self.album.year,
-                genre: result.genre ?? self.album.genre
+                year: resolved.year ?? self.album.year,
+                genre: resolved.genre ?? self.album.genre
             )
             self.populate()
+        }
+    }
+
+    /// Whether a page open is worth a network attempt. This is a presentation
+    /// decision, not a second gate — the authoritative one is the single
+    /// `EnrichmentPolicy.isDue` call inside the album task — but reading it here
+    /// keeps a settled album from flashing a shimmer for a frame on its way to
+    /// showing nothing.
+    private func isEnrichmentDue(title: String, artist: String) -> Bool {
+        let record = (try? DatabaseManager.shared.fetchEnrichmentRecord(
+            scope: .album, key: EnrichmentKey.album(title: title, artist: artist)
+        )) ?? nil
+        return EnrichmentPolicy.isDue(record, scope: .album, now: Date())
+    }
+
+    private func storedMetadata(title: String, artist: String) -> (year: String?, genre: String?) {
+        do {
+            let status = try DatabaseManager.shared.fetchAlbumInfoStatus(title: title, artist: artist)
+            return (status.year, status.genre)
+        } catch {
+            AppLogger.error("Album metadata read failed: \(error.localizedDescription)", category: .database)
+            return (nil, nil)
+        }
+    }
+
+    /// Nothing came back. A source that answered and had nothing says so by
+    /// staying silent — an absent year is not worth a sentence — but a lookup
+    /// that never reached a source is the reader's network, and saying so is the
+    /// difference between "this album is obscure" and "you are offline".
+    private func renderUnresolvedMetadata(title: String, artist: String) {
+        let record = (try? DatabaseManager.shared.fetchEnrichmentRecord(
+            scope: .album, key: EnrichmentKey.album(title: title, artist: artist)
+        )) ?? nil
+        guard record?.lastFailure == .transport else { return }
+        metaLabel.stringValue = String(localized: "Metadata unavailable offline")
+        metaLabel.textColor = MacColors.tertiaryLabel
+        metaLabel.isHidden = false
+    }
+
+    private func setAwaitingMetadata(_ awaiting: Bool) {
+        isAwaitingMetadata = awaiting
+        metaPlaceholder.isHidden = !awaiting
+        metaPlaceholder.setShimmering(awaiting)
+        if awaiting {
+            metaLabel.isHidden = true
+        } else {
+            metaLabel.textColor = MacColors.secondaryLabel
+            metaLabel.isHidden = metaLabel.stringValue.isEmpty
         }
     }
 
@@ -363,5 +418,68 @@ final class AlbumDetailViewController: NSViewController {
         guard let refreshed = Library.shared.albums.first(where: { $0 == self.album }) else { return }
         album = refreshed
         populate()
+    }
+}
+
+/// A single line of text that has not arrived yet: the same sweeping highlight
+/// `ArtworkTileView` uses for a decoding cover, sized to the line it stands in
+/// for so the header does not reflow when the real words land.
+final class ShimmerLineView: NSView {
+
+    private let fillLayer = CALayer()
+    private let shimmerLayer = CAGradientLayer()
+    private let size: NSSize
+
+    init(width: CGFloat, height: CGFloat) {
+        size = NSSize(width: width, height: height)
+        super.init(frame: NSRect(origin: .zero, size: size))
+        translatesAutoresizingMaskIntoConstraints = false
+        wantsLayer = true
+        layer?.cornerRadius = height / 2
+        layer?.cornerCurve = .continuous
+        layer?.masksToBounds = true
+
+        fillLayer.backgroundColor = MacColors.fill(0.14, light: 0.10).cgColor
+        layer?.addSublayer(fillLayer)
+
+        shimmerLayer.colors = [
+            MacColors.fill(0, light: 0).cgColor,
+            MacColors.fill(0.22, light: 0.16).cgColor,
+            MacColors.fill(0, light: 0).cgColor,
+        ]
+        shimmerLayer.startPoint = CGPoint(x: 0, y: 0.5)
+        shimmerLayer.endPoint = CGPoint(x: 1, y: 0.5)
+        shimmerLayer.locations = [0, 0.5, 1]
+        shimmerLayer.isHidden = true
+        layer?.addSublayer(shimmerLayer)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var intrinsicContentSize: NSSize { size }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        fillLayer.frame = bounds
+        shimmerLayer.frame = bounds
+        CATransaction.commit()
+    }
+
+    func setShimmering(_ shimmering: Bool) {
+        let animate = shimmering && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        shimmerLayer.isHidden = !animate
+        guard animate else {
+            shimmerLayer.removeAnimation(forKey: "shimmer")
+            return
+        }
+        guard shimmerLayer.animation(forKey: "shimmer") == nil else { return }
+        let sweep = CABasicAnimation(keyPath: "locations")
+        sweep.fromValue = [-1.0, -0.5, 0.0]
+        sweep.toValue = [1.0, 1.5, 2.0]
+        sweep.duration = 1.35
+        sweep.repeatCount = .infinity
+        shimmerLayer.add(sweep, forKey: "shimmer")
     }
 }

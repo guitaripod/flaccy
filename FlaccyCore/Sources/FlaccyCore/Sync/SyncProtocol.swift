@@ -19,6 +19,11 @@ public enum SyncKeys {
     public static let lastErrorPath = "lastErrorPath"
     public static let lastErrorReason = "lastErrorReason"
 
+    /// The phone's enrichment job (phone -> watch, via updateApplicationContext).
+    /// The watch renders what the phone is doing and never fetches metadata
+    /// itself, so this is the only enrichment state that exists on the wrist.
+    public static let enrichmentJob = "enrichmentJob"
+
     /// User-info command (phone -> watch).
     public static let command = "command"
     public static let removePaths = "removePaths"
@@ -90,5 +95,28 @@ public struct TransferMetadata: Sendable, Equatable {
         self.album = dictionary[SyncKeys.album] as? String ?? ""
         self.trackNumber = dictionary[SyncKeys.trackNumber] as? Int ?? 0
         self.duration = dictionary[SyncKeys.duration] as? TimeInterval ?? 0
+    }
+}
+
+/// Typed wrapper around the enrichment job the phone puts in its application
+/// context. `EnrichmentJobProgress` is `Codable` but not a property-list type
+/// and WatchConnectivity carries plist values only, so the wire form is one JSON
+/// blob of the shared model itself — never a hand-copied dictionary, which is
+/// how a fraction or a stale field would sneak onto the wrist.
+public enum EnrichmentJobTransfer {
+
+    public static func encode(_ progress: EnrichmentJobProgress) -> Data? {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return try? encoder.encode(progress)
+    }
+
+    /// Decodes a context value, tolerating both an absent key (the phone has
+    /// nothing to say) and a payload written by an older build.
+    public static func decode(_ value: Any?) -> EnrichmentJobProgress? {
+        guard let data = value as? Data else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(EnrichmentJobProgress.self, from: data)
     }
 }

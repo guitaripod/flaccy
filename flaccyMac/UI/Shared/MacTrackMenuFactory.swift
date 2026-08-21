@@ -1,4 +1,5 @@
 import AppKit
+import FlaccyCore
 
 /// Builds the canonical right-click menus for tracks and albums so every
 /// surface — grid, songs table, details, playlists — offers the identical
@@ -169,43 +170,35 @@ enum MacTrackMenuFactory {
         return item
     }
 
+    /// Hands the album to the coordinator rather than fetching and writing it
+    /// here: one durable queue, one write transaction, one place that decides
+    /// whether an album has been settled or given up on. This is the Mac's
+    /// per-album Try Again, so it forces: an explicit command may ignore the
+    /// backoff — and pay for it with an attempt — where passive browsing may not.
     private static func enrichAlbum(_ album: Album, in window: NSWindow?) {
         MacToast.show(String(localized: "Enriching \u{201C}\(album.title)\u{201D}…"), style: .info, in: window)
         Task {
-            let result = await MetadataEnrichmentService.shared.enrichAlbum(
-                title: album.title, artist: album.artist
+            let changed = await EnrichmentCoordinator.shared.requestNow(
+                title: album.title, artist: album.artist, force: true
             )
-            do {
-                var info = try DatabaseManager.shared.fetchOrCreateAlbumInfo(
-                    title: album.title, artist: album.artist
-                )
-                info.coverArtURL = result.coverArtURL ?? info.coverArtURL
-                info.coverArtData = result.coverArtData ?? info.coverArtData
-                info.musicBrainzID = result.musicBrainzID ?? info.musicBrainzID
-                info.year = result.year ?? info.year
-                info.genre = result.genre ?? info.genre
-                info.lastFetched = Date()
-                try DatabaseManager.shared.updateAlbumInfo(info)
-
-                if let bio = result.artistBio {
-                    var artist = try DatabaseManager.shared.fetchOrCreateArtist(name: album.artist)
-                    artist.bio = bio
-                    artist.imageURL = result.artistImageURL ?? artist.imageURL
-                    artist.musicBrainzID = result.artistMusicBrainzID ?? artist.musicBrainzID
-                    artist.lastFetched = Date()
-                    try DatabaseManager.shared.updateArtist(artist)
-                }
-                await Library.shared.reload()
-                let foundAnything = result.coverArtData != nil || result.year != nil || result.genre != nil
-                MacToast.show(
-                    foundAnything ? String(localized: "Metadata updated") : String(localized: "No new metadata found"),
-                    style: foundAnything ? .success : .info, in: window
-                )
-            } catch {
-                AppLogger.error("Manual enrichment failed: \(error.localizedDescription)", category: .database)
-                MacToast.show(String(localized: "Couldn't update metadata."), style: .error, in: window)
+            guard changed else {
+                MacToast.show(offlineOrEmptyMessage(for: album), style: .info, in: window)
+                return
             }
+            await Library.shared.reload()
+            MacToast.show(String(localized: "Metadata updated"), style: .success, in: window)
         }
+    }
+
+    /// Nothing changed for one of two very different reasons, and the persisted
+    /// record is what tells them apart.
+    private static func offlineOrEmptyMessage(for album: Album) -> String {
+        let record = (try? DatabaseManager.shared.fetchEnrichmentRecord(
+            scope: .album, key: EnrichmentKey.album(title: album.title, artist: album.artist)
+        )) ?? nil
+        return record?.lastFailure == .transport
+            ? String(localized: "Metadata unavailable offline")
+            : String(localized: "No new metadata found")
     }
 
     private static func disabledHeader(_ title: String) -> NSMenuItem {

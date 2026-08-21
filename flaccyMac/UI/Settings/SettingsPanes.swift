@@ -1,6 +1,7 @@
 import AppKit
 import AuthenticationServices
 import Combine
+import FlaccyCore
 import ServiceManagement
 import UserNotifications
 
@@ -450,7 +451,8 @@ final class NotificationsSettingsPane: SettingsPane {
     }
 }
 
-/// Library: root folder, storage usage, rescan and AI re-analysis, reveals.
+/// Library: root folder, storage usage, rescan and AI re-analysis, the live
+/// metadata job, and reveals.
 final class LibrarySettingsPane: SettingsPane {
 
     private let rootLabel = NSTextField(labelWithString: "")
@@ -460,9 +462,20 @@ final class LibrarySettingsPane: SettingsPane {
     private let analyzeButton = NSButton(title: String(localized: "Re-analyze with AI…"), target: nil, action: nil)
     private let groupEditionsCheckbox = NSButton(checkboxWithTitle: String(localized: "Group album editions (Deluxe, Remaster…) as one album"), target: nil, action: nil)
     private let cleanUpButton = NSButton(title: String(localized: "Clean Up Library…"), target: nil, action: nil)
-    private let workSpinner = NSProgressIndicator()
-    private let workLabel = NSTextField(labelWithString: "")
+    private let activitySpinner = NSProgressIndicator()
+    private let activityLabel = NSTextField(labelWithString: "")
+    private let activityDetail = NSTextField(labelWithString: "")
+    private let activityBar = NSProgressIndicator()
+    private let metadataCountsLabel = NSTextField(labelWithString: "")
+    private let metadataStatusLabel = NSTextField(labelWithString: "")
+    private let tryAgainButton = NSButton(title: EnrichmentJobCopy.tryAgain, target: nil, action: nil)
+    private let appleMusicCheckbox = NSButton(checkboxWithTitle: String(localized: "Use Apple Music artwork"), target: nil, action: nil)
+    private let debutLabel = NSTextField(labelWithString: "")
+    private lazy var debutCaveat = explanation(LibraryDebutCopy.settingsCaveat)
     private var isWorking = false
+    private var restingActivity = ""
+    private var wasJobActive = false
+    private var knownAlbumCount = 0
 
     override func buildForm() {
         formStack.addArrangedSubview(sectionLabel(String(localized: "Music Folder")))
@@ -491,14 +504,11 @@ final class LibrarySettingsPane: SettingsPane {
         analyzeButton.bezelStyle = .rounded
         analyzeButton.target = self
         analyzeButton.action = #selector(analyzeTapped)
-        workSpinner.style = .spinning
-        workSpinner.controlSize = .small
-        workSpinner.isDisplayedWhenStopped = false
-        workLabel.font = .systemFont(ofSize: 12)
-        workLabel.textColor = .secondaryLabelColor
-        addRow([rescanButton, analyzeButton, workSpinner, workLabel], spacing: 10)
+        buildActivityRow()
         addFullWidth(explanation(String(localized: "Re-analyze sends track filenames through Flaccy's AI to clean up titles, artists, and album grouping. It can take a few minutes for large libraries.")))
         formStack.addArrangedSubview(separator())
+
+        buildMetadataGroup()
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "Tidy Up")))
         groupEditionsCheckbox.target = self
@@ -522,15 +532,73 @@ final class LibrarySettingsPane: SettingsPane {
         addRow([revealLibrary, revealLogs], spacing: 10)
     }
 
+    /// One row for whatever the library is doing right now: a determinate bar
+    /// for the bounded disk work of a scan, and a spinner beside a countdown for
+    /// the unbounded metadata job, which has no fraction to draw.
+    private func buildActivityRow() {
+        activitySpinner.style = .spinning
+        activitySpinner.controlSize = .small
+        activitySpinner.isDisplayedWhenStopped = true
+        activityLabel.font = .systemFont(ofSize: 12)
+        activityLabel.textColor = .secondaryLabelColor
+        activityDetail.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        activityDetail.textColor = .tertiaryLabelColor
+        activityBar.isIndeterminate = false
+        activityBar.minValue = 0
+        activityBar.maxValue = 1
+        activityBar.controlSize = .small
+        activityBar.setAccessibilityRole(.progressIndicator)
+        activitySpinner.setAccessibilityRole(.progressIndicator)
+        addRow([rescanButton, analyzeButton, activitySpinner, activityLabel, activityDetail], spacing: 10)
+        addFullWidth(activityBar)
+    }
+
+    private func buildMetadataGroup() {
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Metadata")))
+        metadataCountsLabel.font = .systemFont(ofSize: 13)
+        metadataStatusLabel.font = .systemFont(ofSize: 12)
+        metadataStatusLabel.textColor = .secondaryLabelColor
+        tryAgainButton.bezelStyle = .rounded
+        tryAgainButton.controlSize = .small
+        tryAgainButton.target = self
+        tryAgainButton.action = #selector(tryAgainTapped)
+        tryAgainButton.isEnabled = false
+        addRow([metadataCountsLabel, tryAgainButton], spacing: 12)
+        formStack.addArrangedSubview(metadataStatusLabel)
+        addFullWidth(explanation(String(localized: "Re-fetch artwork and release dates for albums Flaccy gave up on.")))
+
+        appleMusicCheckbox.target = self
+        appleMusicCheckbox.action = #selector(appleMusicArtworkToggled)
+        formStack.addArrangedSubview(appleMusicCheckbox)
+        addFullWidth(explanation(String(localized: "Flaccy asks Apple Music for covers it can't find anywhere else. Turning this on asks for permission once.")))
+
+        debutLabel.font = .systemFont(ofSize: 12)
+        debutLabel.textColor = .secondaryLabelColor
+        debutLabel.isHidden = true
+        debutCaveat.isHidden = true
+        formStack.addArrangedSubview(debutLabel)
+        addFullWidth(debutCaveat)
+        formStack.addArrangedSubview(separator())
+    }
+
     override func viewWillAppear() {
         super.viewWillAppear()
         refresh()
+        refreshMetadata()
+        renderActivity()
         groupEditionsCheckbox.state = GroupAlbumEditionsSetting.isEnabled ? .on : .off
+        appleMusicCheckbox.state = AppleMusicArtworkSetting.isEnabled ? .on : .off
         NotificationCenter.default.addObserver(
             self, selector: #selector(libraryChanged), name: Library.didUpdateNotification, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(libraryChanged), name: LibraryRoot.didChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(activityChanged), name: Library.progressDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(activityChanged), name: EnrichmentCoordinator.progressDidChange, object: nil
         )
     }
 
@@ -549,6 +617,22 @@ final class LibrarySettingsPane: SettingsPane {
 
     @objc private func libraryChanged() {
         refresh()
+        refreshMetadata()
+    }
+
+    /// Both streams are re-read from their live sources rather than from the
+    /// notification, so a delivery that arrives out of order can only ever
+    /// repaint newer state.
+    @objc private func activityChanged() {
+        renderActivity()
+        let job = EnrichmentCoordinator.shared.progress
+        if job.scope == .album, job.isActive {
+            applyMetadataCounts(inProgress: job.remaining, gaveUp: job.exhausted)
+        }
+        if wasJobActive, !job.isActive {
+            refreshMetadata()
+        }
+        wasJobActive = job.isActive
     }
 
     private func refresh() {
@@ -558,6 +642,147 @@ final class LibrarySettingsPane: SettingsPane {
         let tracks = Library.shared.allTracks.count
         statsLabel.stringValue = String(localized: "\(albums) albums · \(tracks) tracks")
         refreshStorage()
+    }
+
+    private func renderActivity() {
+        let load = Library.shared.loadProgress
+        guard !load.isActive else {
+            renderLoadActivity(load, fraction: Library.shared.loadFraction)
+            return
+        }
+        let job = EnrichmentCoordinator.shared.progress
+        guard job.isActive else {
+            renderRestingActivity()
+            return
+        }
+        renderJobActivity(job)
+    }
+
+    private func renderLoadActivity(_ load: LibraryLoadProgress, fraction: Double) {
+        activitySpinner.stopAnimation(nil)
+        activitySpinner.isHidden = true
+        activityLabel.stringValue = LibraryLoadPhaseCopy.headline(for: load.phase)
+        activityDetail.stringValue = LibraryLoadPhaseCopy.detail(for: load)
+        activityBar.isHidden = false
+        activityBar.isIndeterminate = !load.isDeterminate
+        if load.isDeterminate {
+            activityBar.stopAnimation(nil)
+            activityBar.doubleValue = min(1, max(0, fraction))
+        } else {
+            activityBar.startAnimation(nil)
+        }
+        activityBar.setAccessibilityValueDescription(
+            LibraryLoadPhaseCopy.accessibilityValue(for: load, fraction: fraction)
+        )
+    }
+
+    /// The job is counted, never measured: a spinner and a countdown, because
+    /// the work behind it is unbounded and any bar drawn for it would be a lie.
+    private func renderJobActivity(_ job: EnrichmentJobProgress) {
+        activityBar.stopAnimation(nil)
+        activityBar.isHidden = true
+        activitySpinner.isHidden = false
+        switch job.activity {
+        case .running:
+            activitySpinner.startAnimation(nil)
+            activityLabel.stringValue = EnrichmentJobCopy.headline(for: job.scope)
+            activityDetail.stringValue = EnrichmentJobCopy.detail(remaining: job.remaining)
+        case .waitingForNetwork:
+            activitySpinner.stopAnimation(nil)
+            activityLabel.stringValue = EnrichmentJobCopy.waitingForNetwork
+            activityDetail.stringValue = ""
+        case .needsEntitlement:
+            activitySpinner.stopAnimation(nil)
+            activityLabel.stringValue = EnrichmentJobCopy.needsEntitlement
+            activityDetail.stringValue = ""
+        case .idle:
+            renderRestingActivity()
+            return
+        }
+        activitySpinner.setAccessibilityValueDescription(EnrichmentJobCopy.accessibilityValue(for: job))
+    }
+
+    private func renderRestingActivity() {
+        activitySpinner.stopAnimation(nil)
+        activitySpinner.isHidden = true
+        activityBar.stopAnimation(nil)
+        activityBar.isHidden = true
+        activityLabel.stringValue = restingActivity
+        activityDetail.stringValue = ""
+    }
+
+    /// Reads the counts the job publishes from the database, for the launches
+    /// where the job never runs at all — the tenth-launch case, where nothing is
+    /// due and the pane still owes the reader an answer.
+    private func refreshMetadata() {
+        let albumCount = Library.shared.albums.count
+        Task.detached(priority: .utility) { [weak self] in
+            let db = DatabaseManager.shared
+            let scope = EnrichmentScope.album
+            let inProgress = (try? db.countDue(scope: scope, version: scope.currentVersion, now: Date())) ?? 0
+            let gaveUp = (try? db.countExhausted(scope: scope)) ?? 0
+            let debut = try? db.libraryDebut()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.knownAlbumCount = albumCount
+                self.applyMetadataCounts(inProgress: inProgress, gaveUp: gaveUp)
+                self.applyDebutSummary(debut)
+            }
+        }
+    }
+
+    private func applyMetadataCounts(inProgress: Int, gaveUp: Int) {
+        let complete = max(0, knownAlbumCount - inProgress - gaveUp)
+        metadataCountsLabel.stringValue = EnrichmentJobCopy.reportCounts(
+            complete: complete, inProgress: inProgress, gaveUp: gaveUp
+        )
+        metadataStatusLabel.stringValue = EnrichmentJobCopy.settled(remaining: inProgress, gaveUp: gaveUp)
+        tryAgainButton.isEnabled = gaveUp > 0
+    }
+
+    private func applyDebutSummary(_ summary: LibraryDebutSummary?) {
+        guard let summary else {
+            debutLabel.isHidden = true
+            debutCaveat.isHidden = true
+            return
+        }
+        debutLabel.stringValue = LibraryDebutCopy.settingsSummary(
+            builtOn: summary.completedAt,
+            trackCount: summary.trackCount,
+            aiCleanedTracks: summary.aiCleanedTracks
+        )
+        debutLabel.isHidden = false
+        debutCaveat.isHidden = false
+    }
+
+    @objc private func tryAgainTapped() {
+        tryAgainButton.isEnabled = false
+        Task { [weak self] in
+            await EnrichmentCoordinator.shared.retryExhausted(scope: .album)
+            self?.refreshMetadata()
+        }
+    }
+
+    /// Turning the source on asks for permission the one time it is flipped;
+    /// the checkbox reflects what was actually granted, not what was clicked.
+    @objc private func appleMusicArtworkToggled() {
+        guard appleMusicCheckbox.state == .on else {
+            AppleMusicArtworkSetting.set(false)
+            return
+        }
+        appleMusicCheckbox.isEnabled = false
+        Task { [weak self] in
+            let granted = await MusicKitService.shared.enableArtworkSource()
+            guard let self else { return }
+            self.appleMusicCheckbox.isEnabled = true
+            self.appleMusicCheckbox.state = granted ? .on : .off
+            guard !granted else { return }
+            AppLogger.info("Apple Music artwork source declined", category: .content)
+            MacToast.show(
+                String(localized: "Flaccy needs Apple Music access to use its artwork."),
+                style: .error, in: self.view.window
+            )
+        }
     }
 
     private func refreshStorage() {
@@ -629,21 +854,24 @@ final class LibrarySettingsPane: SettingsPane {
         }
     }
 
+    /// Names the action until the first progress snapshot arrives; from then on
+    /// the live row narrates the phases and counts instead of one fixed word.
     private func runWork(label: String, _ work: @escaping () async -> Void) {
         isWorking = true
         rescanButton.isEnabled = false
         analyzeButton.isEnabled = false
-        workSpinner.startAnimation(nil)
-        workLabel.stringValue = label
+        restingActivity = label
+        renderActivity()
         Task { [weak self] in
             await work()
             guard let self else { return }
             self.isWorking = false
             self.rescanButton.isEnabled = true
             self.analyzeButton.isEnabled = true
-            self.workSpinner.stopAnimation(nil)
-            self.workLabel.stringValue = String(localized: "Done")
+            self.restingActivity = String(localized: "Done")
+            self.renderActivity()
             self.refresh()
+            self.refreshMetadata()
         }
     }
 

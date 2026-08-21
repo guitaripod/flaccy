@@ -12,6 +12,19 @@ nonisolated struct LibraryImportOutcome: Sendable {
     let failed: Int
 }
 
+/// One album cover the scan has just moved out of a file and into the database,
+/// announced while the tags are still being read.
+///
+/// It carries both spellings on purpose. `albumTitle`/`artist` are the raw tag
+/// values the `albumInfo` row was written under, so an artwork lookup hits its
+/// exact-match arm; `tileKey` is the identity the album model will eventually
+/// have, so the mosaic dedupes this tile against the post-build pass.
+nonisolated struct HoistedAlbumCover: Sendable, Hashable {
+    let albumTitle: String
+    let artist: String
+    let tileKey: String
+}
+
 protocol LibraryProviding: AnyObject {
     var albums: [Album] { get }
     var allTracks: [Track] { get }
@@ -21,6 +34,7 @@ protocol LibraryProviding: AnyObject {
     func reload() async
     func resetAndReload() async
     func reloadFromDatabase() async
+    func debutSummary() async -> LibraryDebutSummary
     @discardableResult
     func importFiles(from urls: [URL]) async -> LibraryImportOutcome
     func deleteTracks(_ tracks: [Track]) async
@@ -32,10 +46,15 @@ final class Library: LibraryProviding {
     static let didUpdateNotification = Notification.Name("LibraryDidUpdate")
     static let loadingStateChanged = Notification.Name("LibraryLoadingStateChanged")
     static let progressDidChange = Notification.Name("LibraryLoadProgressChanged")
+    static let albumCoversHoisted = Notification.Name("LibraryAlbumCoversHoisted")
 
     enum ProgressKey {
         static let progress = "progress"
         static let fraction = "fraction"
+    }
+
+    enum CoverKey {
+        static let covers = "covers"
     }
 
     private(set) var albums: [Album] = []
@@ -65,12 +84,17 @@ final class Library: LibraryProviding {
         )
     }
 
+    /// Ends the load on the fraction the tracker actually reached. Every phase
+    /// left in the bar is bounded disk work, so a completed scan reports a real
+    /// 1.0 and a scan that stopped short reports where it stopped, instead of
+    /// the flat 1.0 the old network phases could never honestly claim.
     nonisolated private func finishProgress() {
+        let reached = progressTracker.displayFraction
         let idle = progressTracker.finish()
         NotificationCenter.default.post(
             name: Library.progressDidChange,
             object: nil,
-            userInfo: [ProgressKey.progress: idle, ProgressKey.fraction: 1.0]
+            userInfo: [ProgressKey.progress: idle, ProgressKey.fraction: reached]
         )
     }
 
@@ -109,14 +133,8 @@ final class Library: LibraryProviding {
 
         emitProgress(force: true) { $0.phase = .findingFiles }
         let syncChanged = await syncFilesWithDatabase()
-        let needsAnalysis = hasUnanalyzedTracks()
 
-        if needsAnalysis {
-            isLoading = true
-            await analyzeLibrary(dirtyOnly: true)
-        }
-
-        if firstLoad || syncChanged || needsAnalysis {
+        if firstLoad || syncChanged {
             emitProgress(force: true) { $0.phase = .buildingAlbums; $0.completed = 0; $0.total = 0 }
             await loadFromDatabase()
             publishLibraryTallies()
@@ -126,7 +144,7 @@ final class Library: LibraryProviding {
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         isLoading = false
 
-        await enrichAndPublish()
+        Task { await EnrichmentCoordinator.shared.resume() }
     }
 
     /// Shows whatever was indexed on a previous run before any disk work
@@ -139,12 +157,23 @@ final class Library: LibraryProviding {
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
     }
 
+    /// Publishes the tallies, and closes `.buildingAlbums` out on a real total so
+    /// a finished load reports 1.0 instead of the half credit an indeterminate
+    /// phase is given — the bar used to stall at 92.5% and then vanish.
+    ///
+    /// The phase guard is load-bearing: `restoreLastIndexedLibrary()` calls this
+    /// during `.openingLibrary`, and a completed count left behind there would
+    /// make the file sweep that follows look determinate and already done.
+    /// `max(albumCount, 1)` keeps an empty folder from staying indeterminate.
     private func publishLibraryTallies() {
         let albumCount = albums.count
         let trackCount = allTracks.count
         emitProgress(force: true) {
             $0.albumsBuilt = albumCount
             $0.tracksIndexed = max($0.tracksIndexed, trackCount)
+            guard $0.phase == .buildingAlbums else { return }
+            $0.total = max(albumCount, 1)
+            $0.completed = $0.total
         }
     }
 
@@ -157,33 +186,45 @@ final class Library: LibraryProviding {
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
     }
 
-    private func enrichAndPublish() async {
-        guard await enrichMissingMetadata(for: albums) else { return }
-        await loadFromDatabase()
-        NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
-    }
-
     func resetAndReload() async {
         isLoading = true
         defer { finishProgress() }
         emitProgress(force: true) { $0 = LibraryLoadProgress(phase: .openingLibrary) }
-        AppLogger.info("=== RESETTING AI ANALYSIS FLAGS ===", category: .database)
-        do {
-            try db.resetAllAIAnalyzed()
-        } catch {
-            AppLogger.error("Failed to reset AI flags: \(error.localizedDescription)", category: .database)
-        }
+        AppLogger.info("=== RESETTING LIBRARY ENRICHMENT STATE ===", category: .database)
+        discardEnrichmentState()
 
         emitProgress(force: true) { $0.phase = .findingFiles }
         await syncFilesWithDatabase()
-        await analyzeLibrary(dirtyOnly: false)
         emitProgress(force: true) { $0.phase = .buildingAlbums; $0.completed = 0; $0.total = 0 }
         await loadFromDatabase()
         publishLibraryTallies()
         logLibraryState()
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         isLoading = false
-        await enrichAndPublish()
+        forgetIndexedLibrary()
+
+        Task { await EnrichmentCoordinator.shared.resume() }
+    }
+
+    /// Puts every durable enrichment verdict back to "never attempted": the AI
+    /// flags, every `enrichmentState` row, and the once-per-library Debut. A
+    /// reset that kept the negative cache would find nothing due and quietly do
+    /// nothing at all.
+    private func discardEnrichmentState() {
+        do {
+            try db.resetAllAIAnalyzed()
+            try db.deleteAllEnrichmentState()
+            try db.clearLibraryDebut()
+        } catch {
+            AppLogger.error("Failed to reset enrichment state: \(error.localizedDescription)", category: .database)
+        }
+    }
+
+    /// Forgets that any earlier launch indexed this library, so the next launch
+    /// earns the Debut again. Cleared last, because the rebuild this reset just
+    /// ran marks the library indexed on its way through `loadFromDatabase()`.
+    private func forgetIndexedLibrary() {
+        LibraryStartupProbe.clear()
     }
 
     @discardableResult
@@ -386,109 +427,33 @@ final class Library: LibraryProviding {
         guard !records.isEmpty else { return }
         do {
             try db.insertTracks(records)
+            announceHoistedCovers(in: records)
         } catch {
             AppLogger.error("Insert tracks error: \(error.localizedDescription)", category: .database)
         }
     }
 
-    @concurrent
-    nonisolated private func analyzeLibrary(dirtyOnly: Bool) async {
-        do {
-            let allDBTracks = try db.fetchAllTracks()
-            guard !allDBTracks.isEmpty else { return }
-
-            let tracksToAnalyze: [TrackRecord]
-            if dirtyOnly {
-                tracksToAnalyze = allDBTracks.filter { !$0.aiAnalyzed }
-                guard !tracksToAnalyze.isEmpty else {
-                    AppLogger.info("No tracks need AI analysis", category: .content)
-                    return
-                }
-            } else {
-                tracksToAnalyze = allDBTracks
-            }
-
-            let grouped = Dictionary(grouping: tracksToAnalyze) { track -> String in
-                let components = track.fileURL.split(separator: "/")
-                return components.count > 1 ? String(components.dropLast().joined(separator: "/")) : ""
-            }
-
-            AppLogger.info("Analyzing \(tracksToAnalyze.count) tracks in \(grouped.count) batches", category: .content)
-            let batchCount = grouped.count
-            emitProgress(force: true) {
-                $0.phase = .identifyingMusic
-                $0.completed = 0
-                $0.total = batchCount
-            }
-
-            var totalUpdated = 0
-            var batchesDone = 0
-            for (dir, tracks) in grouped {
-                defer {
-                    batchesDone += 1
-                    let done = batchesDone
-                    emitProgress(force: true) { $0.completed = done }
-                }
-                let contexts = tracks.map { track in
-                    TrackContext(
-                        relativePath: track.fileURL,
-                        currentTitle: track.title,
-                        currentArtist: track.artist,
-                        currentAlbum: track.albumTitle,
-                        trackNumber: track.trackNumber
-                    )
-                }
-
-                AppLogger.info("Batch: \(dir) (\(tracks.count) tracks)", category: .content)
-                try? db.markAnalysisAttempted(fileURLs: tracks.map(\.fileURL))
-
-                guard let identified = await GroqService.shared.analyzeLibrary(tracks: contexts) else {
-                    AppLogger.warning("Groq returned no results for batch: \(dir)", category: .content)
-                    continue
-                }
-
-                for identifiedAlbum in identified.albums {
-                    AppLogger.info("  Identified: \(identifiedAlbum.artist) — \(identifiedAlbum.album)", category: .content)
-
-                    for identifiedTrack in identifiedAlbum.tracks {
-                        guard var dbTrack = tracks.first(where: { track in
-                            let filename = URL(fileURLWithPath: track.fileURL).lastPathComponent
-                            return filename.lowercased() == identifiedTrack.filename.lowercased()
-                                || track.fileURL.lowercased().hasSuffix(identifiedTrack.filename.lowercased())
-                        }) else { continue }
-
-                        dbTrack.artist = identifiedAlbum.artist
-                        dbTrack.albumTitle = identifiedAlbum.album
-                        dbTrack.title = identifiedTrack.title
-                        dbTrack.trackNumber = identifiedTrack.trackNumber
-                        dbTrack.aiAnalyzed = true
-
-                        do {
-                            try db.updateTrackPreservingArtwork(dbTrack)
-                            totalUpdated += 1
-                        } catch {
-                            AppLogger.error("Track update failed: \(error.localizedDescription)", category: .database)
-                        }
-                    }
-
-                    do {
-                        var albumInfo = try db.fetchOrCreateAlbumInfo(
-                            title: identifiedAlbum.album, artist: identifiedAlbum.artist
-                        )
-                        if let year = identifiedAlbum.year { albumInfo.year = year }
-                        if let genre = identifiedAlbum.genre { albumInfo.genre = genre }
-                        albumInfo.lastFetched = nil
-                        try db.updateAlbumInfo(albumInfo)
-                    } catch {
-                        AppLogger.error("Album info save failed: \(error.localizedDescription)", category: .database)
-                    }
-                }
-            }
-
-            AppLogger.info("AI analysis done: \(totalUpdated)/\(tracksToAnalyze.count) tracks updated", category: .content)
-        } catch {
-            AppLogger.error("Library analysis failed: \(error.localizedDescription)", category: .database)
+    /// Announces the covers this batch just hoisted into `albumInfo`, so the
+    /// Debut's mosaic can fill during `readingTags` rather than after it.
+    ///
+    /// The album model does not exist until the phase that follows the whole
+    /// scan, so a reader watching Act I has nothing to look at unless the art is
+    /// pushed from the insert that wrote it. Only sent once the write has
+    /// committed, so every announced cover is already readable.
+    nonisolated private func announceHoistedCovers(in records: [TrackRecord]) {
+        var seen = Set<String>()
+        var covers: [HoistedAlbumCover] = []
+        for record in records where record.artworkData != nil && !record.albumTitle.isEmpty {
+            let tileKey = "\(record.albumTitle)|\(LibraryHygiene.primaryArtist(record.artist))"
+            guard seen.insert(tileKey).inserted else { continue }
+            covers.append(HoistedAlbumCover(
+                albumTitle: record.albumTitle, artist: record.artist, tileKey: tileKey
+            ))
         }
+        guard !covers.isEmpty else { return }
+        NotificationCenter.default.post(
+            name: Library.albumCoversHoisted, object: nil, userInfo: [CoverKey.covers: covers]
+        )
     }
 
     private func loadFromDatabase() async {
@@ -496,9 +461,65 @@ final class Library: LibraryProviding {
             let loadedAlbums = try await fetchAlbumsFromDatabase()
             albums = loadedAlbums
             allTracks = loadedAlbums.flatMap(\.tracks)
+            recordIndexedLibrary()
         } catch {
             AppLogger.error("Load from DB failed: \(error.localizedDescription)", category: .database)
         }
+    }
+
+    /// Records that this library has been built at least once, the moment the
+    /// first read actually yields albums. The Debut has to decide whether to
+    /// take the screen over before any `SELECT` could answer that, so the answer
+    /// is written where the next launch can read it without opening anything.
+    private func recordIndexedLibrary() {
+        guard !albums.isEmpty, !LibraryStartupProbe.hadIndexedLibrary else { return }
+        LibraryStartupProbe.markIndexed()
+    }
+
+    /// The figures the Debut's summary card reports, read from the database and
+    /// the model the person just watched being built rather than from counters
+    /// the scan kept — a scan that restarted must not make the card lie.
+    func debutSummary() async -> LibraryDebutSummary {
+        await Self.buildDebutSummary(albums: albums, tracks: allTracks)
+    }
+
+    @concurrent
+    nonisolated private static func buildDebutSummary(
+        albums: [Album], tracks: [Track]
+    ) async -> LibraryDebutSummary {
+        let db = DatabaseManager.shared
+        var coversResolved = 0
+        var albumsDated = 0
+        for album in albums {
+            guard let status = try? db.fetchAlbumInfoStatus(title: album.title, artist: album.artist) else { continue }
+            if status.hasCover { coversResolved += 1 }
+            if status.year != nil { albumsDated += 1 }
+        }
+
+        let aiCleanedTracks = ((try? db.fetchAllTracks()) ?? []).count { $0.aiAnalyzed }
+        let bitrates = tracks.compactMap(bitrate(of:))
+
+        return LibraryDebutSummary(
+            trackCount: tracks.count,
+            albumCount: albums.count,
+            artistCount: Set(albums.map(\.artist)).count,
+            coversResolved: coversResolved,
+            albumsDated: albumsDated,
+            aiCleanedTracks: aiCleanedTracks,
+            losslessTrackCount: tracks.count(where: \.isLossless),
+            averageBitrate: bitrates.isEmpty ? 0 : bitrates.reduce(0, +) / bitrates.count,
+            totalDurationSeconds: tracks.reduce(0) { $0 + $1.duration },
+            completedAt: Date()
+        )
+    }
+
+    /// A track's uncompressed stream rate in kbps, which is what a lossless
+    /// library's average is actually made of. Nil when the tags did not carry
+    /// enough to say, so an unknown file lowers no average.
+    nonisolated private static func bitrate(of track: Track) -> Int? {
+        guard let sampleRate = track.sampleRate, let bitDepth = track.bitDepth else { return nil }
+        let channels = track.channels ?? 2
+        return sampleRate * bitDepth * channels / 1000
     }
 
     /// Builds the album list without decoded artwork: pinning full-tier
@@ -549,62 +570,6 @@ final class Library: LibraryProviding {
         }?.key ?? values[0]
     }
 
-    @concurrent
-    nonisolated private func enrichMissingMetadata(for albums: [Album]) async -> Bool {
-        var enrichedAny = false
-        let albumCount = albums.count
-        emitProgress(force: true) {
-            $0.phase = .enrichingArtwork
-            $0.completed = 0
-            $0.total = albumCount
-            $0.albumsBuilt = albumCount
-        }
-
-        for (index, album) in albums.enumerated() {
-            emitProgress { $0.completed = index }
-            let albumInfo = try? db.fetchAlbumInfo(title: album.title, artist: album.artist)
-            if albumInfo?.coverArtData != nil { continue }
-            if let lastFetched = albumInfo?.lastFetched,
-               Date().timeIntervalSince(lastFetched) < 24 * 3600 {
-                continue
-            }
-
-            AppLogger.info("Enriching: \(album.artist) — \(album.title)", category: .content)
-
-            let result = await MetadataEnrichmentService.shared.enrichAlbum(
-                title: album.title, artist: album.artist
-            )
-
-            if result.coverArtData != nil || result.year != nil || result.genre != nil {
-                enrichedAny = true
-            }
-
-            do {
-                var info = try db.fetchOrCreateAlbumInfo(title: album.title, artist: album.artist)
-                info.coverArtURL = result.coverArtURL ?? info.coverArtURL
-                info.coverArtData = result.coverArtData ?? info.coverArtData
-                info.musicBrainzID = result.musicBrainzID ?? info.musicBrainzID
-                info.year = result.year ?? info.year
-                info.genre = result.genre ?? info.genre
-                info.lastFetched = Date()
-                try db.updateAlbumInfo(info)
-
-                if let artistBio = result.artistBio {
-                    var artist = try db.fetchOrCreateArtist(name: album.artist)
-                    artist.bio = artistBio
-                    artist.imageURL = result.artistImageURL ?? artist.imageURL
-                    artist.musicBrainzID = result.artistMusicBrainzID ?? artist.musicBrainzID
-                    artist.lastFetched = Date()
-                    try db.updateArtist(artist)
-                }
-            } catch {
-                AppLogger.error("Enrichment save failed: \(error.localizedDescription)", category: .database)
-            }
-        }
-
-        return enrichedAny
-    }
-
     nonisolated private func relativePath(for url: URL) -> String {
         let docsPath = documentsDirectory.standardizedFileURL.path
         let filePath = url.standardizedFileURL.path
@@ -620,14 +585,6 @@ final class Library: LibraryProviding {
         #else
         return relative
         #endif
-    }
-
-    private static let analysisRetryInterval: TimeInterval = 24 * 60 * 60
-
-    private func hasUnanalyzedTracks() -> Bool {
-        do {
-            return try db.hasUnanalyzedTracks(attemptedBefore: Date().addingTimeInterval(-Self.analysisRetryInterval))
-        } catch { return false }
     }
 
     private func uniqueDestination(for sourceURL: URL) -> URL {

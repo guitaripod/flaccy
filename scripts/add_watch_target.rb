@@ -8,6 +8,18 @@ WATCH_BUNDLE_ID = 'com.midgarcorp.flaccy.watchkitapp'
 IOS_BUNDLE_ID = 'com.midgarcorp.flaccy'
 TEAM = 'P4DQK6SRKR'
 
+# The copy deck lives in `flaccy/` because FlaccyCore declares no
+# defaultLocalization and so may hold no user-facing string. The glob below only
+# walks the watch folder, so these three have to be named explicitly or the
+# watch silently falls back to its own hand-copied wording — which is exactly
+# how it ended up describing phases that no longer exist.
+SHARED_GROUP = 'Shared Copy'.freeze
+SHARED_SOURCES = [
+  'flaccy/LibraryLoadPhaseCopy.swift',
+  'flaccy/EnrichmentJobCopy.swift',
+  'flaccy/LibraryDebutCopy.swift',
+].freeze
+
 project = Xcodeproj::Project.open(PROJECT)
 
 ios_target = project.targets.find { |t| t.name == 'flaccy' }
@@ -92,6 +104,15 @@ Dir.chdir(File.dirname(__FILE__) + '/..') do
   watch_target.resources_build_phase.add_file_reference(assets_ref)
   group.new_file('Info.plist')
 end
+
+stale_shared = project.main_group.children.find { |c| c.display_name == SHARED_GROUP }
+stale_shared.remove_from_project if stale_shared
+shared_group = project.main_group.new_group(SHARED_GROUP, nil)
+SHARED_SOURCES.each do |path|
+  ref = shared_group.new_file(path)
+  watch_target.source_build_phase.add_file_reference(ref)
+end
+puts "Added #{SHARED_SOURCES.count} shared copy files to watch target"
 
 # --- 4. Link FlaccyCore --------------------------------------------------
 link_core(project, watch_target)

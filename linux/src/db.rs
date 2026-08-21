@@ -1,6 +1,9 @@
 use crate::library::TrackRow;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use rusqlite::{params, Connection, OptionalExtension};
+use flaccy_shared::enrichment_job::{self as job, EnrichmentRecord, Fields, Scope, Status};
+use flaccy_shared::library_debut::DebutSummary;
+use rusqlite::functions::FunctionFlags;
+use rusqlite::{named_params, params, Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -62,7 +65,6 @@ pub struct AlbumInfoStatus {
     pub year: Option<String>,
     pub genre: Option<String>,
     pub has_cover: bool,
-    pub last_fetched_unix: Option<i64>,
 }
 
 #[derive(Clone, Debug)]
@@ -177,10 +179,31 @@ impl Db {
         let _ = conn.busy_timeout(std::time::Duration::from_secs(5));
         let _ = conn.pragma_update(None, "journal_mode", "WAL");
         let _ = conn.pragma_update(None, "foreign_keys", "ON");
+        Self::register_normalizer(&conn)?;
         let db = Self { conn };
         db.migrate()?;
         db.backfill_enrichment_markers()?;
         Ok(db)
+    }
+
+    /// Teaches this connection the key normalizer every enrichment statement
+    /// calls, before a migration or a seed can run against it.
+    ///
+    /// SQLite's own `lower()` folds ASCII only and its `trim()` strips spaces
+    /// only, so an album titled "Ágætis byrjun" would be keyed one way by the
+    /// queue and another by the code that reads and writes the row — and the
+    /// orphan sweep, which runs at the end of every scan, would delete the state
+    /// and re-enrich the library from zero, forever. Deterministic so SQLite may
+    /// still use the `enrichmentState(scope, key)` index seek.
+    fn register_normalizer(conn: &Connection) -> Result<(), rusqlite::Error> {
+        conn.create_scalar_function(
+            job::NORM_FN,
+            1,
+            FunctionFlags::SQLITE_UTF8
+                | FunctionFlags::SQLITE_DETERMINISTIC
+                | FunctionFlags::SQLITE_INNOCUOUS,
+            |ctx| Ok(job::normalize(ctx.get_raw(0).as_str()?)),
+        )
     }
 
     /// Opens the library database, renaming a corrupt file aside and recreating
@@ -202,25 +225,36 @@ impl Db {
         }
     }
 
-    /// One-time backfill (guarded by user_version): scan-era albumInfo rows
-    /// carry a lastFetched stamped by the cover hoist, which would wrongly
-    /// suppress the first metadata enrichment pass — clear it for rows that
-    /// have never been enriched.
+    /// Staged one-time backfills, guarded by `user_version`.
+    ///
+    /// Stage 1 clears the `lastFetched` a scan-era cover hoist stamped onto
+    /// albumInfo rows that were never actually enriched. Stage 2 seeds
+    /// `enrichmentState` from what the library already resolved, at
+    /// `version = 0` — below `Scope::current_version` — so legacy exhausted and
+    /// partial rows are due exactly once and legacy satisfied rows are left
+    /// alone. Linux has no `aiBatch` scope (it never calls Groq), so that seed
+    /// is deliberately absent.
     fn backfill_enrichment_markers(&self) -> Result<(), rusqlite::Error> {
         let version: i64 = self
             .conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap_or(0);
-        if version >= 1 {
-            return Ok(());
+
+        if version < 1 {
+            self.conn.execute(
+                "UPDATE albumInfo SET lastFetched = NULL
+                 WHERE coverArtURL IS NULL AND musicBrainzID IS NULL
+                   AND year IS NULL AND genre IS NULL",
+                [],
+            )?;
+            self.conn.pragma_update(None, "user_version", 1)?;
         }
-        self.conn.execute(
-            "UPDATE albumInfo SET lastFetched = NULL
-             WHERE coverArtURL IS NULL AND musicBrainzID IS NULL
-               AND year IS NULL AND genre IS NULL",
-            [],
-        )?;
-        self.conn.pragma_update(None, "user_version", 1)?;
+
+        if version < 2 {
+            self.conn.execute(job::SEED_ALBUM_STATE_SQL, [])?;
+            self.conn.execute(job::SEED_ARTIST_STATE_SQL, [])?;
+            self.conn.pragma_update(None, "user_version", 2)?;
+        }
         Ok(())
     }
 
@@ -372,6 +406,25 @@ impl Db {
                 reason TEXT NOT NULL DEFAULT '',
                 fetchedAt DATETIME NOT NULL,
                 UNIQUE(trackTitle, artist)
+            );
+            CREATE TABLE IF NOT EXISTS enrichmentState (
+                scope TEXT NOT NULL,
+                key TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 0,
+                status INTEGER NOT NULL DEFAULT 0,
+                fields INTEGER NOT NULL DEFAULT 0,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                lastAttemptAt DATETIME,
+                nextEligibleAt DATETIME,
+                lastFailure TEXT,
+                PRIMARY KEY (scope, key)
+            ) WITHOUT ROWID;
+            CREATE INDEX IF NOT EXISTS enrichmentState_on_due
+                ON enrichmentState(scope, status, nextEligibleAt);
+            CREATE TABLE IF NOT EXISTS libraryDebut (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                completedAt DATETIME NOT NULL,
+                summaryJSON TEXT NOT NULL
             );",
         )?;
         // Added after 1.8.0 so a remembered "no lyrics" answer can expire;
@@ -438,15 +491,17 @@ impl Db {
         Ok(())
     }
 
-    /// Clears the enrichment retry stamp for every album still missing cover
-    /// art, so the next background pass re-attempts them immediately (e.g. after
-    /// adding the Cover Art Archive source) instead of waiting out the 30-day
-    /// retry window. Returns the number of albums queued for a retry.
-    pub fn reset_missing_cover_retry(&self) -> usize {
+    /// Revives every entity that burned all its attempts, so a user asking for
+    /// a retry gets exactly those and nothing else. `fields` is deliberately
+    /// preserved: a retry chases only what is still missing. Returns how many
+    /// rows re-entered the queue.
+    pub fn reset_exhausted(&self, scope: Scope) -> usize {
         self.conn
             .execute(
-                "UPDATE albumInfo SET lastFetched = NULL WHERE coverArtData IS NULL",
-                [],
+                "UPDATE enrichmentState
+                 SET status = 0, attempts = 0, nextEligibleAt = NULL, lastFailure = NULL
+                 WHERE scope = ?1 AND status = ?2",
+                params![scope.as_str(), Status::Exhausted.as_i64()],
             )
             .unwrap_or(0)
     }
@@ -466,18 +521,19 @@ impl Db {
 
     pub fn delete_tracks_not_in(&self, keep: &HashSet<String>) -> Result<usize, rusqlite::Error> {
         let existing = self.fetch_relative_paths();
+        let tx = self.conn.unchecked_transaction()?;
         let mut removed = 0;
         for path in existing {
             if !keep.contains(&path) {
-                removed += self
-                    .conn
-                    .execute("DELETE FROM tracks WHERE fileURL = ?1", params![path])?;
+                removed += tx.execute("DELETE FROM tracks WHERE fileURL = ?1", params![path])?;
             }
         }
-        self.conn.execute(
+        tx.execute(
             "DELETE FROM playlistTracks WHERE trackFileURL NOT IN (SELECT fileURL FROM tracks)",
             [],
         )?;
+        tx.execute(job::ORPHAN_SWEEP_SQL, [])?;
+        tx.commit()?;
         Ok(removed)
     }
 
@@ -632,10 +688,12 @@ impl Db {
         )
     }
 
-    /// COALESCE-folds each variant `albumInfo` row — including its `lastFetched`
-    /// cache stamp, so a fused edition is not re-enriched — into the canonical
-    /// album, then deletes the orphaned variant row. Runs on the current
-    /// connection so `apply_cleanup` can wrap it in a single transaction.
+    /// COALESCE-folds each variant `albumInfo` row into the canonical album,
+    /// then deletes the orphaned variant row. Runs on the current connection so
+    /// `apply_cleanup` can wrap it in a single transaction; the variant's
+    /// enrichment state is swept by the orphan pass at the end of that same
+    /// transaction, because the fused album is a different entity with a
+    /// different key.
     fn merge_album_info(
         &self,
         canonical_title: &str,
@@ -705,6 +763,7 @@ impl Db {
                 params![update.loved, update.rel_path],
             )?;
         }
+        tx.execute(job::ORPHAN_SWEEP_SQL, [])?;
         tx.commit()
     }
 
@@ -1138,10 +1197,14 @@ impl Db {
         result
     }
 
+    /// What an album already has, without ever selecting the cover BLOB.
+    /// `lastFetched` is deliberately not read: scheduling moved to
+    /// `enrichmentState` and the column survives only for one release of
+    /// migration history.
     pub fn album_info_status(&self, title: &str, artist: &str) -> Option<AlbumInfoStatus> {
         self.conn
             .query_row(
-                "SELECT year, genre, coverArtData IS NOT NULL, lastFetched
+                "SELECT year, genre, coverArtData IS NOT NULL
                  FROM albumInfo WHERE title = ?1 AND artist = ?2",
                 params![title, artist],
                 |row| {
@@ -1149,9 +1212,6 @@ impl Db {
                         year: row.get(0)?,
                         genre: row.get(1)?,
                         has_cover: row.get(2)?,
-                        last_fetched_unix: row
-                            .get::<_, Option<String>>(3)?
-                            .map(|s| unix_from_string(&s)),
                     })
                 },
             )
@@ -1160,9 +1220,12 @@ impl Db {
             .flatten()
     }
 
-    /// Writes enrichment results into albumInfo, only filling fields that are
-    /// still missing (iOS fill-missing semantics), and always bumping
-    /// lastFetched so failed/empty lookups are not retried immediately.
+    /// Writes enrichment results into albumInfo, only filling columns that are
+    /// still missing (iOS fill-missing semantics). It deliberately does NOT
+    /// stamp `lastFetched`: every scheduling decision lives in
+    /// `enrichmentState`, so one offline launch can no longer write off an
+    /// album for the length of a retry window.
+    #[allow(clippy::too_many_arguments)]
     pub fn apply_album_enrichment(
         &self,
         title: &str,
@@ -1174,18 +1237,56 @@ impl Db {
         mbid: Option<&str>,
     ) -> Result<(), rusqlite::Error> {
         self.conn.execute(
-            "INSERT INTO albumInfo (title, artist, year, genre, coverArtURL, coverArtData, musicBrainzID, lastFetched)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            "INSERT INTO albumInfo (title, artist, year, genre, coverArtURL, coverArtData, musicBrainzID)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
              ON CONFLICT(title, artist) DO UPDATE SET
                 year = COALESCE(albumInfo.year, excluded.year),
                 genre = COALESCE(albumInfo.genre, excluded.genre),
                 coverArtURL = COALESCE(albumInfo.coverArtURL, excluded.coverArtURL),
                 coverArtData = COALESCE(albumInfo.coverArtData, excluded.coverArtData),
-                musicBrainzID = COALESCE(albumInfo.musicBrainzID, excluded.musicBrainzID),
-                lastFetched = excluded.lastFetched",
-            params![title, artist, year, genre, cover_url, cover_data, mbid, now_string()],
+                musicBrainzID = COALESCE(albumInfo.musicBrainzID, excluded.musicBrainzID)",
+            params![title, artist, year, genre, cover_url, cover_data, mbid],
         )?;
         Ok(())
+    }
+
+    /// The metadata write and the `enrichmentState` write are ONE transaction,
+    /// per album, on purpose. Three worker threads share this database through
+    /// WAL with a busy timeout, and two separate statements with a crash between
+    /// them would leave a satisfied album marked pending — harmless in itself,
+    /// but the invariant is cheaper to hold than to rediscover.
+    #[allow(clippy::too_many_arguments)]
+    pub fn commit_album_enrichment(
+        &self,
+        title: &str,
+        artist: &str,
+        year: Option<&str>,
+        genre: Option<&str>,
+        cover_url: Option<&str>,
+        cover_data: Option<&[u8]>,
+        mbid: Option<&str>,
+        record: &EnrichmentRecord,
+    ) -> Result<(), rusqlite::Error> {
+        let tx = self.conn.unchecked_transaction()?;
+        self.apply_album_enrichment(title, artist, year, genre, cover_url, cover_data, mbid)?;
+        self.upsert_enrichment_record(record)?;
+        tx.commit()
+    }
+
+    /// The artist twin of `commit_album_enrichment`, with the same one-write
+    /// invariant.
+    pub fn commit_artist_enrichment(
+        &self,
+        name: &str,
+        bio: Option<&str>,
+        image_url: Option<&str>,
+        mbid: Option<&str>,
+        record: &EnrichmentRecord,
+    ) -> Result<(), rusqlite::Error> {
+        let tx = self.conn.unchecked_transaction()?;
+        self.upsert_artist_info(name, bio, image_url, mbid)?;
+        self.upsert_enrichment_record(record)?;
+        tx.commit()
     }
 
     pub fn upsert_artist_info(
@@ -1432,6 +1533,231 @@ impl Db {
         }
         Ok(())
     }
+}
+
+/// The durable enrichment queue. Everything here reads or writes
+/// `enrichmentState`, whose rows *are* the cursor: there is no in-memory
+/// position to lose to a force-quit, and no launch-scoped "already seen" set.
+impl Db {
+    /// The albums the §2.3 predicate says are due, coverless ones first so the
+    /// visible gap in the grid is repaired before anything else. Reads no BLOB.
+    pub fn due_album_keys(
+        &self,
+        version: i64,
+        now: DateTime<Utc>,
+        limit: usize,
+    ) -> Vec<(String, String)> {
+        let Ok(mut stmt) = self.conn.prepare(job::DUE_ALBUMS_SQL) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map(
+            named_params! {
+                ":requiredFields": Fields::required(Scope::Album).0,
+                ":version": version,
+                ":now": job::encode_timestamp(now),
+                ":limit": limit as i64,
+            },
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        );
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// The artist twin of `due_album_keys`, over the artists the track table
+    /// actually credits. Artists are a first-class scope rather than an inline
+    /// side effect of album enrichment, so each one is looked up once ever.
+    pub fn due_artist_names(&self, version: i64, now: DateTime<Utc>, limit: usize) -> Vec<String> {
+        let Ok(mut stmt) = self.conn.prepare(job::DUE_ARTISTS_SQL) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map(
+            named_params! {
+                ":requiredFields": Fields::required(Scope::Artist).0,
+                ":version": version,
+                ":now": job::encode_timestamp(now),
+                ":limit": limit as i64,
+            },
+            |row| row.get::<_, String>(0),
+        );
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// `count(*)` over the identical FROM/WHERE the queue drains, so a reported
+    /// "12 left" is a fact about the database rather than a counter that can
+    /// drift. `Scope::AiBatch` is always zero here: Linux never calls Groq.
+    pub fn count_due(&self, scope: Scope, version: i64, now: DateTime<Utc>) -> usize {
+        let (sql, required) = match scope {
+            Scope::Album => (job::COUNT_DUE_ALBUMS_SQL, Fields::required(Scope::Album)),
+            Scope::Artist => (job::COUNT_DUE_ARTISTS_SQL, Fields::required(Scope::Artist)),
+            Scope::AiBatch => return 0,
+        };
+        self.conn
+            .query_row(
+                sql,
+                named_params! {
+                    ":requiredFields": required.0,
+                    ":version": version,
+                    ":now": job::encode_timestamp(now),
+                },
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap_or(0)
+            .max(0) as usize
+    }
+
+    pub fn count_exhausted(&self, scope: Scope) -> usize {
+        self.conn
+            .query_row(
+                "SELECT count(*) FROM enrichmentState WHERE scope = ?1 AND status = ?2",
+                params![scope.as_str(), Status::Exhausted.as_i64()],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap_or(0)
+            .max(0) as usize
+    }
+
+    /// Every entity that burned all its attempts, most recently attempted
+    /// first — the rows the Preferences report lists one by one.
+    pub fn exhausted_entities(&self, scope: Scope) -> Vec<EnrichmentRecord> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT scope, key, version, status, fields, attempts,
+                    lastAttemptAt, nextEligibleAt, lastFailure
+             FROM enrichmentState
+             WHERE scope = ?1 AND status = ?2
+             ORDER BY lastAttemptAt DESC, key",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map(
+            params![scope.as_str(), Status::Exhausted.as_i64()],
+            record_from_row,
+        );
+        match rows {
+            Ok(rows) => rows.flatten().flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    pub fn fetch_enrichment_record(&self, scope: Scope, key: &str) -> Option<EnrichmentRecord> {
+        self.conn
+            .query_row(
+                "SELECT scope, key, version, status, fields, attempts,
+                        lastAttemptAt, nextEligibleAt, lastFailure
+                 FROM enrichmentState WHERE scope = ?1 AND key = ?2",
+                params![scope.as_str(), key],
+                record_from_row,
+            )
+            .optional()
+            .ok()
+            .flatten()
+            .flatten()
+    }
+
+    pub fn upsert_enrichment_record(
+        &self,
+        record: &EnrichmentRecord,
+    ) -> Result<(), rusqlite::Error> {
+        let columns = record.columns();
+        self.conn.execute(
+            "INSERT INTO enrichmentState
+                (scope, key, version, status, fields, attempts, lastAttemptAt, nextEligibleAt, lastFailure)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+             ON CONFLICT(scope, key) DO UPDATE SET
+                version = excluded.version,
+                status = excluded.status,
+                fields = excluded.fields,
+                attempts = excluded.attempts,
+                lastAttemptAt = excluded.lastAttemptAt,
+                nextEligibleAt = excluded.nextEligibleAt,
+                lastFailure = excluded.lastFailure",
+            params![
+                columns.scope,
+                columns.key,
+                columns.version,
+                columns.status,
+                columns.fields,
+                columns.attempts,
+                columns.last_attempt_at,
+                columns.next_eligible_at,
+                columns.last_failure,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// The once-per-library setup summary, or `None` while the Debut has never
+    /// run to completion. A row that fails to decode is treated as absent
+    /// rather than wedging the client on it.
+    pub fn library_debut(&self) -> Option<DebutSummary> {
+        let json: String = self
+            .conn
+            .query_row("SELECT summaryJSON FROM libraryDebut WHERE id = 1", [], |row| {
+                row.get(0)
+            })
+            .optional()
+            .ok()
+            .flatten()?;
+        match serde_json::from_str(&json) {
+            Ok(summary) => Some(summary),
+            Err(err) => {
+                crate::logger::warn("database", &format!("libraryDebut decode failed: {err}"));
+                None
+            }
+        }
+    }
+
+    pub fn save_library_debut(&self, summary: &DebutSummary) -> Result<(), rusqlite::Error> {
+        let json = serde_json::to_string(summary).unwrap_or_default();
+        self.conn.execute(
+            "INSERT INTO libraryDebut (id, completedAt, summaryJSON) VALUES (1, ?1, ?2)
+             ON CONFLICT(id) DO UPDATE SET
+                completedAt = excluded.completedAt,
+                summaryJSON = excluded.summaryJSON",
+            params![job::encode_timestamp(summary.completed_at), json],
+        )?;
+        Ok(())
+    }
+
+    /// How many albums already carry a cover and how many carry a year — the
+    /// two figures the Debut summary card reports about the build it just
+    /// watched.
+    pub fn debut_album_tallies(&self) -> (usize, usize) {
+        self.conn
+            .query_row(
+                "SELECT count(coverArtData), count(year) FROM albumInfo",
+                [],
+                |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)),
+            )
+            .map(|(covers, dated)| (covers.max(0) as usize, dated.max(0) as usize))
+            .unwrap_or((0, 0))
+    }
+}
+
+/// Decodes one `enrichmentState` row through the shared record's persistence
+/// contract, so timestamp encoding lives in exactly one place across both
+/// languages.
+fn record_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Option<EnrichmentRecord>> {
+    let scope: String = row.get(0)?;
+    let key: String = row.get(1)?;
+    let last_attempt_at: Option<String> = row.get(6)?;
+    let next_eligible_at: Option<String> = row.get(7)?;
+    let last_failure: Option<String> = row.get(8)?;
+    Ok(EnrichmentRecord::from_columns(
+        &scope,
+        key,
+        row.get(2)?,
+        row.get(3)?,
+        row.get(4)?,
+        row.get(5)?,
+        last_attempt_at.as_deref(),
+        next_eligible_at.as_deref(),
+        last_failure.as_deref(),
+    ))
 }
 
 impl Db {
@@ -1781,6 +2107,8 @@ mod cleanup_tests {
             None,
         )
         .expect("seed variant albumInfo");
+        let variant_key = job::key_album("Aurora (Deluxe Edition)", "aurora band");
+        seed_state(db, &variant_key, Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
 
         let raw = library::load(db, false);
         let consolidations = hygiene::consolidation_groups(&raw.albums);
@@ -1826,12 +2154,12 @@ mod cleanup_tests {
         assert_eq!(canonical_info.year.as_deref(), Some("2021"), "variant year folded in");
         assert_eq!(canonical_info.genre.as_deref(), Some("Dream Pop"), "variant genre folded in");
         assert!(
-            canonical_info.last_fetched_unix.is_some(),
-            "variant lastFetched cache stamp preserved on the canonical row"
-        );
-        assert!(
             db.album_info_status("Aurora (Deluxe Edition)", "aurora band").is_none(),
             "variant albumInfo row removed"
+        );
+        assert!(
+            state_row(db, &variant_key).is_none(),
+            "the folded edition's enrichment state is swept in the same transaction"
         );
 
         let after = library::load(db, false);
@@ -1950,5 +2278,205 @@ mod cleanup_tests {
         assert_eq!(rows.len(), 2, "one row per playlist entry, no leftover link row");
         assert!(rows.iter().all(|r| r.kind == "track" && r.status == "queued"));
         assert!(rows.iter().any(|r| r.playlist_index == Some(1) && r.title.as_deref() == Some("One")));
+    }
+
+    fn seed_state(db: &Db, key: &str, status: Status, fields: Fields, attempts: i64) {
+        let mut record = EnrichmentRecord::new(Scope::Album, key);
+        record.status = status;
+        record.fields = fields;
+        record.attempts = attempts;
+        record.version = Scope::Album.current_version();
+        record.last_attempt_at = Some(Utc::now());
+        db.upsert_enrichment_record(&record).expect("seed state");
+    }
+
+    fn state_row(db: &Db, key: &str) -> Option<EnrichmentRecord> {
+        db.fetch_enrichment_record(Scope::Album, key)
+    }
+
+    /// The queue is a query, never a cursor. What it hands out has to follow the
+    /// durable rows exactly, and `count_due` has to agree with it — the whole
+    /// point of reading `remaining` from the database is that it cannot drift.
+    #[test]
+    fn due_queue_follows_the_durable_state() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        insert(db, "a/01.flac", "One", "Alpha", "First", 1, 100.0, "flac", Some(16), Some(44100));
+        insert(db, "b/01.flac", "Two", "Beta", "Second", 1, 100.0, "flac", Some(16), Some(44100));
+        let now = Utc::now();
+        let version = Scope::Album.current_version();
+
+        assert_eq!(db.due_album_keys(version, now, 10).len(), 2, "an album with no state row is due");
+        assert_eq!(db.count_due(Scope::Album, version, now), 2, "the count agrees with the queue");
+        assert_eq!(
+            db.due_artist_names(Scope::Artist.current_version(), now, 10),
+            vec!["Alpha".to_string(), "Beta".to_string()],
+            "artists are their own queue, in name order"
+        );
+
+        seed_state(db, &job::key_album("First", "Alpha"), Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+        assert_eq!(
+            db.due_album_keys(version, now, 10),
+            vec![("Second".to_string(), "Beta".to_string())],
+            "a satisfied album leaves the queue"
+        );
+        assert_eq!(db.count_due(Scope::Album, version, now), 1);
+
+        seed_state(db, &job::key_album("Second", "Beta"), Status::Exhausted, Fields::NONE, 4);
+        assert!(db.due_album_keys(version, now, 10).is_empty(), "a terminal album leaves the queue");
+        assert_eq!(db.count_due(Scope::Album, version, now), 0);
+        assert_eq!(db.count_exhausted(Scope::Album), 1);
+        assert_eq!(db.exhausted_entities(Scope::Album).len(), 1, "the report lists it");
+    }
+
+    #[test]
+    fn library_debut_round_trips() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        assert!(db.library_debut().is_none(), "no debut until a build produces one");
+
+        let summary = DebutSummary {
+            track_count: 2847,
+            album_count: 214,
+            artist_count: 38,
+            covers_resolved: 191,
+            albums_dated: 168,
+            ai_cleaned_tracks: 0,
+            lossless_track_count: 2619,
+            average_bitrate: 1984,
+            total_duration_seconds: 1_656_000.0,
+            completed_at: Utc::now(),
+        };
+        db.save_library_debut(&summary).expect("save debut");
+
+        let stored = db.library_debut().expect("debut present");
+        assert_eq!(stored.track_count, 2847);
+        assert_eq!(stored.covers_resolved, 191);
+        assert_eq!(stored.average_bitrate, 1984);
+        assert_eq!(
+            stored.completed_at.timestamp(),
+            summary.completed_at.timestamp(),
+            "the completion instant survives the round trip"
+        );
+    }
+
+    /// The build writes the row, and Act III overwrites it with what the reader
+    /// actually saw. Without the upsert the card's covers — every one the job
+    /// fetched during Act II — would be lost to the build-time figures.
+    #[test]
+    fn saving_the_debut_twice_keeps_the_later_figures() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        let mut summary = DebutSummary {
+            track_count: 2847,
+            album_count: 214,
+            artist_count: 38,
+            covers_resolved: 61,
+            albums_dated: 40,
+            ai_cleaned_tracks: 0,
+            lossless_track_count: 2619,
+            average_bitrate: 1984,
+            total_duration_seconds: 1_656_000.0,
+            completed_at: Utc::now(),
+        };
+        db.save_library_debut(&summary).expect("save build figures");
+
+        summary.covers_resolved = 191;
+        summary.albums_dated = 168;
+        db.save_library_debut(&summary).expect("save card figures");
+
+        let stored = db.library_debut().expect("debut present");
+        assert_eq!(stored.covers_resolved, 191);
+        assert_eq!(stored.albums_dated, 168);
+    }
+
+    /// A vanished album must not keep a durable row claiming it is settled —
+    /// otherwise a folder that comes back (or an AI retitle, which changes the
+    /// key) inherits the wrong verdict.
+    #[test]
+    fn orphan_sweep_drops_removed_albums() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        insert(db, "keep/01.flac", "Kept", "Stayer", "Stays", 1, 100.0, "flac", Some(16), Some(44100));
+        insert(db, "gone/01.flac", "Left", "Leaver", "Leaves", 1, 100.0, "flac", Some(16), Some(44100));
+        let kept_key = job::key_album("Stays", "Stayer");
+        let gone_key = job::key_album("Leaves", "Leaver");
+        seed_state(db, &kept_key, Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+        seed_state(db, &gone_key, Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+
+        let mut keep = HashSet::new();
+        keep.insert("keep/01.flac".to_string());
+        let removed = db.delete_tracks_not_in(&keep).expect("delete");
+
+        assert_eq!(removed, 1, "exactly the track that left the disk is deleted");
+        assert!(state_row(db, &kept_key).is_some(), "a surviving album keeps its verdict");
+        assert!(
+            state_row(db, &gone_key).is_none(),
+            "the departed album's enrichment state is swept in the same transaction"
+        );
+    }
+
+    /// The bug this kills: one offline pass used to stamp `lastFetched` on every
+    /// queued album, writing all of them off for the length of the retry window.
+    /// All scheduling now lives in `enrichmentState`.
+    #[test]
+    fn apply_album_enrichment_no_longer_stamps_last_fetched() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        insert(db, "a/01.flac", "One", "Band", "Record", 1, 100.0, "flac", Some(16), Some(44100));
+
+        db.apply_album_enrichment("Record", "Band", Some("1994"), None, None, None, None)
+            .expect("apply enrichment");
+
+        let (year, last_fetched): (Option<String>, Option<String>) = db
+            .conn
+            .query_row(
+                "SELECT year, lastFetched FROM albumInfo WHERE title = 'Record' AND artist = 'Band'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("albumInfo row");
+        assert_eq!(year.as_deref(), Some("1994"), "the missing year is filled");
+        assert!(last_fetched.is_none(), "no retry stamp is written to albumInfo");
+
+        db.apply_album_enrichment("Record", "Band", Some("2001"), Some("Jazz"), None, None, None)
+            .expect("apply enrichment again");
+        let year: Option<String> = db
+            .conn
+            .query_row(
+                "SELECT year FROM albumInfo WHERE title = 'Record' AND artist = 'Band'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("albumInfo row");
+        assert_eq!(year.as_deref(), Some("1994"), "fill-missing never overwrites what is there");
+    }
+
+    /// "Try Again" means exactly the entities that gave up, and it must not
+    /// throw away the fields they did resolve — a retry chases the gap only.
+    #[test]
+    fn reset_exhausted_requeues_only_terminal_rows() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        seed_state(db, "pending", Status::Pending, Fields::NONE, 0);
+        seed_state(db, "partial", Status::Partial, Fields::COVER, 2);
+        seed_state(db, "satisfied", Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+        seed_state(db, "exhausted", Status::Exhausted, Fields::COVER, 4);
+
+        assert_eq!(db.count_exhausted(Scope::Album), 1);
+        let revived = db.reset_exhausted(Scope::Album);
+        assert_eq!(revived, 1, "only the terminal row re-enters the queue");
+        assert_eq!(db.count_exhausted(Scope::Album), 0);
+
+        let revived_row = state_row(db, "exhausted").expect("row survives the reset");
+        assert_eq!(revived_row.status, Status::Pending);
+        assert_eq!(revived_row.attempts, 0, "the ladder starts over");
+        assert!(revived_row.next_eligible_at.is_none());
+        assert!(revived_row.last_failure.is_none());
+        assert_eq!(revived_row.fields, Fields::COVER, "partial resolution is preserved");
+
+        assert_eq!(state_row(db, "partial").expect("row").attempts, 2, "a backing-off row is untouched");
+        assert_eq!(state_row(db, "satisfied").expect("row").status, Status::Satisfied);
+        assert_eq!(state_row(db, "pending").expect("row").status, Status::Pending);
     }
 }

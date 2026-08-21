@@ -13,7 +13,16 @@ final class WatchSyncStatus {
     private(set) var isReceiving = false
     var lastErrorReason: StoreFailureReason?
 
+    /// The phone's enrichment job, mirrored. The watch never looks metadata up
+    /// itself, so this is the only enrichment state that exists on the wrist —
+    /// it is reported, never produced here.
+    private(set) var jobProgress: EnrichmentJobProgress = .idle
+
     @ObservationIgnored private var quietTask: Task<Void, Never>?
+
+    func apply(jobProgress: EnrichmentJobProgress) {
+        self.jobProgress = jobProgress
+    }
 
     func markReceiving() {
         isReceiving = true
@@ -125,6 +134,14 @@ final class WatchSyncReceiver: NSObject {
         DispatchQueue.main.async { self.onLibraryChanged?() }
     }
 
+    /// Reads the phone's half of the application context. An absent key means
+    /// the phone has nothing to say about metadata right now, which is not the
+    /// same as an idle job — the last state stands until the phone replaces it.
+    private func ingestPhoneContext(_ context: [String: Any]) {
+        guard let progress = EnrichmentJobTransfer.decode(context[SyncKeys.enrichmentJob]) else { return }
+        DispatchQueue.main.async { self.status.apply(jobProgress: progress) }
+    }
+
     private func isOutOfSpace(_ error: Error) -> Bool {
         let nsError = error as NSError
         if nsError.domain == NSCocoaErrorDomain, nsError.code == NSFileWriteOutOfSpaceError { return true }
@@ -146,7 +163,12 @@ extension WatchSyncReceiver: WCSessionDelegate {
             AppLogger.error("WCSession activation error (watch): \(error.localizedDescription)", category: .connectivity)
         }
         AppLogger.info("WCSession activated (watch): state=\(activationState.rawValue)", category: .connectivity)
+        ingestPhoneContext(session.receivedApplicationContext)
         sendHeartbeat()
+    }
+
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        ingestPhoneContext(applicationContext)
     }
 
     func session(_ session: WCSession, didReceive file: WCSessionFile) {

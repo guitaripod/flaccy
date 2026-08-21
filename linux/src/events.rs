@@ -1,6 +1,7 @@
 use crate::library::Track;
 use crate::load_progress::LoadProgress;
 use crate::player::RepeatMode;
+use flaccy_shared::enrichment_job::JobProgress;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -33,10 +34,13 @@ pub enum AppEvent {
         title: String,
         artist: String,
     },
-    EnrichmentProgress {
-        done: usize,
-        total: usize,
-    },
+    /// Albums whose embedded cover the tag pass just committed, batched per
+    /// insert chunk. This is what fuels the Debut's mosaic while the scan is
+    /// still reading, rather than all at once when the first build lands.
+    AlbumCoversHoisted(Vec<(String, String)>),
+    /// The durable enrichment job, reported as a countdown read from the
+    /// database — never as a fraction, because the work is unbounded.
+    EnrichmentProgress(JobProgress),
     HistoryImport {
         imported: usize,
         page: u32,

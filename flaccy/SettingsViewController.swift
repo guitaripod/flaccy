@@ -1,4 +1,5 @@
 import AuthenticationServices
+import FlaccyCore
 import StoreKit
 import MidgarKit
 import UIKit
@@ -15,6 +16,7 @@ final class SettingsViewController: UITableViewController {
         case guide
         case watch
         case library
+        case setup
         case moreApps
 
         var header: String? {
@@ -26,6 +28,7 @@ final class SettingsViewController: UITableViewController {
             case .guide: return nil
             case .watch: return String(localized: "Apple Watch")
             case .library: return String(localized: "Library")
+            case .setup: return nil
             case .moreApps: return nil
             }
         }
@@ -38,9 +41,18 @@ final class SettingsViewController: UITableViewController {
             case .playback: return String(localized: "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends.")
             case .guide: return String(localized: "How Bluetooth, AAC, and lossless files really affect what you hear.")
             case .watch: return nil
-            case .library: return String(localized: "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song.")
+            case .library: return Self.libraryFooter
+            case .setup: return LibraryDebutCopy.settingsCaveat
             case .moreApps: return nil
             }
+        }
+
+        /// Two sentences, one per switch in the section, in the order the
+        /// switches appear.
+        private static var libraryFooter: String {
+            let editions = String(localized: "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song.")
+            let appleMusic = String(localized: "Flaccy asks Apple Music for covers it can't find anywhere else. Turning this on asks for permission once.")
+            return "\(editions)\n\n\(appleMusic)"
         }
     }
 
@@ -60,8 +72,12 @@ final class SettingsViewController: UITableViewController {
         case importFiles
         case rescanLibrary
         case groupAlbumEditions
+        case metadataReport(complete: Int, gaveUp: Int)
+        case findMissingArtwork(count: Int)
+        case appleMusicArtwork(Bool)
         case libraryStats(albums: Int, tracks: Int)
         case storage(used: String)
+        case libraryDebutSummary
         case moreApps
     }
 
@@ -117,6 +133,8 @@ final class SettingsViewController: UITableViewController {
     private var playsCount: Int?
     private var lastFMImportProgress: Int?
     private var isRescanning = false
+    private let metadataViewModel = EnrichmentReportViewModel()
+    private var libraryDebut: LibraryDebutSummary?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -136,7 +154,9 @@ final class SettingsViewController: UITableViewController {
         refreshHeader()
         refreshStorageUsed()
         refreshPlaysCount()
+        refreshLibraryDebut()
         loadPriceIfNeeded()
+        observeMetadata()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateChanged),
@@ -144,10 +164,20 @@ final class SettingsViewController: UITableViewController {
         )
     }
 
+    /// The Metadata row and the report it pushes read the same view model, so a
+    /// count can never be stale in one place and live in the other.
+    private func observeMetadata() {
+        metadataViewModel.onChange = { [weak self] in
+            self?.applySnapshot(animated: true)
+        }
+        metadataViewModel.start()
+    }
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         applySnapshot(animated: false)
         refreshHeader()
+        metadataViewModel.refresh()
     }
 
     override func viewDidLayoutSubviews() {
@@ -248,18 +278,32 @@ final class SettingsViewController: UITableViewController {
         snapshot.appendItems([.listeningGuide], toSection: .guide)
         snapshot.appendItems([.moreApps], toSection: .moreApps)
         snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedPaths.count)], toSection: .watch)
-        snapshot.appendItems(
-            [
-                .importFiles,
-                .rescanLibrary,
-                .groupAlbumEditions,
-                .libraryStats(albums: Library.shared.albums.count, tracks: Library.shared.allTracks.count),
-                .storage(used: storageUsed ?? "…"),
-            ],
-            toSection: .library
-        )
+        snapshot.appendItems(libraryRows(), toSection: .library)
+        if libraryDebut != nil {
+            snapshot.appendItems([.libraryDebutSummary], toSection: .setup)
+        }
         snapshot.reloadSections([.lastFM])
         dataSource.apply(snapshot, animatingDifferences: animated)
+    }
+
+    /// `Find Missing Artwork` appears only while there is something to find. A
+    /// button that does nothing visible when tapped is worse than no button, and
+    /// a settled library is supposed to be quiet everywhere.
+    private func libraryRows() -> [Row] {
+        let counts = metadataViewModel.counts
+        var rows: [Row] = [
+            .importFiles,
+            .rescanLibrary,
+            .groupAlbumEditions,
+            .metadataReport(complete: counts.complete, gaveUp: counts.gaveUp),
+        ]
+        if counts.inProgress > 0 {
+            rows.append(.findMissingArtwork(count: counts.inProgress))
+        }
+        rows.append(.appleMusicArtwork(AppleMusicArtworkSetting.isEnabled))
+        rows.append(.libraryStats(albums: Library.shared.albums.count, tracks: Library.shared.allTracks.count))
+        rows.append(.storage(used: storageUsed ?? "…"))
+        return rows
     }
 
     private func cell(for row: Row, at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
@@ -276,13 +320,7 @@ final class SettingsViewController: UITableViewController {
         cell.accessibilityHint = nil
         cell.accessibilityIdentifier = nil
 
-        var content = UIListContentConfiguration.valueCell()
-        content.textProperties.font = .preferredFont(forTextStyle: .body)
-        content.textProperties.adjustsFontForContentSizeCategory = true
-        content.secondaryTextProperties.font = .preferredFont(forTextStyle: .body)
-        content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
-        content.secondaryTextProperties.color = .secondaryLabel
-        content.imageProperties.maximumSize = CGSize(width: RowIcon.side, height: RowIcon.side)
+        var content = Self.baseContent(for: row)
 
         switch row {
         case .appearance:
@@ -430,6 +468,46 @@ final class SettingsViewController: UITableViewController {
             cell.accessibilityLabel = String(localized: "Group Album Editions")
             cell.accessibilityHint = String(localized: "Folds deluxe, remaster, and explicit variants into one album")
 
+        case .metadataReport(let complete, let gaveUp):
+            content.image = RowIcon.image(systemName: "tag.fill", tint: .systemBlue)
+            content.text = String(localized: "Metadata")
+            content.secondaryText = EnrichmentJobCopy.reportCounts(
+                complete: complete, inProgress: metadataViewModel.counts.inProgress, gaveUp: gaveUp
+            )
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = String(localized: "Metadata")
+            cell.accessibilityValue = content.secondaryText
+            cell.accessibilityIdentifier = "settings.row.metadata"
+
+        case .findMissingArtwork(let count):
+            content.image = RowIcon.image(systemName: "photo.on.rectangle.angled", tint: .systemPink)
+            content.text = EnrichmentJobCopy.findMissingArtwork
+            content.secondaryText = EnrichmentJobCopy.detail(remaining: count)
+            content.textProperties.color = .tintColor
+            cell.accessibilityLabel = EnrichmentJobCopy.findMissingArtwork
+            cell.accessibilityValue = content.secondaryText
+
+        case .appleMusicArtwork(let isEnabled):
+            content.image = RowIcon.image(systemName: "music.note", tint: .systemRed)
+            content.text = String(localized: "Use Apple Music artwork")
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = []
+            cell.accessoryView = makeAppleMusicArtworkSwitch(isEnabled: isEnabled)
+            cell.accessibilityLabel = String(localized: "Use Apple Music artwork")
+
+        case .libraryDebutSummary:
+            content.image = RowIcon.image(systemName: "checkmark.seal.fill", tint: .systemGreen)
+            content.text = LibraryDebutCopy.cardTitle
+            content.secondaryText = libraryDebut.map {
+                LibraryDebutCopy.settingsSummary(
+                    builtOn: $0.completedAt, trackCount: $0.trackCount, aiCleanedTracks: $0.aiCleanedTracks
+                )
+            }
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = .staticText
+            cell.accessibilityLabel = LibraryDebutCopy.cardTitle
+            cell.accessibilityValue = content.secondaryText
+
         case .libraryStats(let albums, let tracks):
             content.image = RowIcon.image(systemName: "chart.bar.fill", tint: .systemTeal)
             content.text = String(localized: "Library")
@@ -451,6 +529,28 @@ final class SettingsViewController: UITableViewController {
 
         cell.contentConfiguration = content
         return cell
+    }
+
+    /// Rows whose secondary text is a sentence rather than a value get the
+    /// subtitle layout, because a trailing value cell truncates the counts to
+    /// nothing on a phone.
+    private static func baseContent(for row: Row) -> UIListContentConfiguration {
+        var content: UIListContentConfiguration
+        switch row {
+        case .metadataReport, .libraryDebutSummary:
+            content = .subtitleCell()
+            content.secondaryTextProperties.font = .preferredFont(forTextStyle: .footnote)
+            content.secondaryTextProperties.numberOfLines = 0
+        default:
+            content = .valueCell()
+            content.secondaryTextProperties.font = .preferredFont(forTextStyle: .body)
+        }
+        content.textProperties.font = .preferredFont(forTextStyle: .body)
+        content.textProperties.adjustsFontForContentSizeCategory = true
+        content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
+        content.secondaryTextProperties.color = .secondaryLabel
+        content.imageProperties.maximumSize = CGSize(width: RowIcon.side, height: RowIcon.side)
+        return content
     }
 
     private func appearanceCell(current: AppAppearance, in tableView: UITableView, at indexPath: IndexPath) -> UITableViewCell {
@@ -494,6 +594,42 @@ final class SettingsViewController: UITableViewController {
             GroupAlbumEditionsSetting.set(toggle.isOn)
         }, for: .valueChanged)
         return toggle
+    }
+
+    /// Turning it on asks Apple Music for permission exactly once. A refusal
+    /// snaps the switch back rather than leaving a setting on that the system
+    /// will silently ignore.
+    private func makeAppleMusicArtworkSwitch(isEnabled: Bool) -> UISwitch {
+        let toggle = UISwitch()
+        toggle.isOn = isEnabled
+        toggle.accessibilityLabel = String(localized: "Use Apple Music artwork")
+        toggle.addAction(UIAction { [weak self] action in
+            guard let toggle = action.sender as? UISwitch else { return }
+            self?.selectionFeedback.selectionChanged()
+            self?.setAppleMusicArtwork(enabled: toggle.isOn, toggle: toggle)
+        }, for: .valueChanged)
+        return toggle
+    }
+
+    private func setAppleMusicArtwork(enabled: Bool, toggle: UISwitch) {
+        guard enabled else {
+            AppleMusicArtworkSetting.set(false)
+            return
+        }
+        toggle.isEnabled = false
+        Task { [weak self] in
+            let granted = await MusicKitService.shared.enableArtworkSource()
+            toggle.isEnabled = true
+            toggle.setOn(granted, animated: true)
+            guard let self else { return }
+            if granted {
+                await EnrichmentCoordinator.shared.resume()
+            } else {
+                self.notificationFeedback.notificationOccurred(.warning)
+                AppLogger.info("Apple Music artwork declined", category: .content)
+            }
+            self.applySnapshot(animated: false)
+        }
     }
 
     private func makeAutoplaySwitch() -> UISwitch {
@@ -561,7 +697,9 @@ final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
         switch row {
-        case .appearance, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .libraryStats, .storage: return false
+        case .appearance, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions,
+             .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary:
+            return false
         case .importLastFM: return lastFMImportProgress == nil
         case .rescanLibrary: return !isRescanning
         default: return true
@@ -584,8 +722,29 @@ final class SettingsViewController: UITableViewController {
         case .watchSync: handleWatchTap()
         case .importFiles: handleImportTap()
         case .rescanLibrary: handleRescanTap()
-        case .appearance, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .libraryStats, .storage: break
+        case .metadataReport: handleMetadataTap()
+        case .findMissingArtwork: handleFindMissingArtworkTap()
+        case .appearance, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions,
+             .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary:
+            break
         }
+    }
+
+    private func handleMetadataTap() {
+        selectionFeedback.selectionChanged()
+        navigationController?.pushViewController(EnrichmentReportViewController(), animated: true)
+    }
+
+    /// Nudges the durable queue rather than starting a scan: everything still
+    /// owed a lookup is already a row in the database, so this only asks the
+    /// coordinator to get on with it.
+    private func handleFindMissingArtworkTap() {
+        impactLight.impactOccurred()
+        Task { [weak self] in
+            await EnrichmentCoordinator.shared.resume()
+            self?.metadataViewModel.refresh()
+        }
+        AppLogger.info("Find Missing Artwork requested from Settings", category: .content)
     }
 
     private func handleLastFMTap() {
@@ -795,6 +954,8 @@ final class SettingsViewController: UITableViewController {
             self.refreshHeader()
             self.refreshStorageUsed()
             self.refreshPlaysCount()
+            self.refreshLibraryDebut()
+            self.metadataViewModel.refresh()
         }
     }
 
@@ -820,6 +981,20 @@ final class SettingsViewController: UITableViewController {
                 guard let self else { return }
                 self.playsCount = plays
                 self.refreshHeader()
+            }
+        }
+    }
+
+    /// The once-per-library setup summary, read off the main thread. It is
+    /// absent until a first build has actually completed one, and the section's
+    /// caveat footer says what "this library" means.
+    private func refreshLibraryDebut() {
+        Task.detached(priority: .utility) { [weak self] in
+            let summary = try? DatabaseManager.shared.libraryDebut()
+            await MainActor.run { [weak self] in
+                guard let self, self.libraryDebut != summary else { return }
+                self.libraryDebut = summary
+                self.applySnapshot(animated: false)
             }
         }
     }

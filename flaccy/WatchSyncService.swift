@@ -39,9 +39,13 @@ final class WatchSyncService: NSObject {
     private let confirmationSafetyValve: TimeInterval = 86_400
     private let confirmationHeartbeatSlack: TimeInterval = 10
 
+    private var lastPublishedJob: EnrichmentJobProgress?
+    private var jobObserver: NSObjectProtocol?
+
     override init() {
         super.init()
         requestedPaths = Set(UserDefaults.standard.stringArray(forKey: requestedKey) ?? [])
+        observeEnrichmentJob()
     }
 
     private var wcSession: WCSession? { WCSession.isSupported() ? WCSession.default : nil }
@@ -59,6 +63,36 @@ final class WatchSyncService: NSObject {
         wcSession.delegate = self
         wcSession.activate()
         AppLogger.info("WCSession activate requested (iOS)", category: .connectivity)
+    }
+
+    /// The coordinator already coalesces its notification at 0.25 s, so this
+    /// only has to drop payloads that say nothing new — a context update costs
+    /// the watch's radio, and a job that is counting down republishes often.
+    private func observeEnrichmentJob() {
+        jobObserver = NotificationCenter.default.addObserver(
+            forName: EnrichmentCoordinator.progressDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            let progress = notification.userInfo?[EnrichmentCoordinator.ProgressKey.progress] as? EnrichmentJobProgress
+            self?.publish(jobProgress: progress ?? EnrichmentCoordinator.shared.progress)
+        }
+    }
+
+    /// Mirrors the phone's job onto the wrist. The watch never fetches metadata
+    /// itself, so the application context is the only enrichment state it has;
+    /// it carries the shared model as one JSON blob rather than a hand-copied
+    /// dictionary, which is how a stale field would reach the smallest screen.
+    func publish(jobProgress: EnrichmentJobProgress) {
+        guard let wcSession, wcSession.activationState == .activated, wcSession.isWatchAppInstalled else { return }
+        guard jobProgress != lastPublishedJob else { return }
+        guard let payload = EnrichmentJobTransfer.encode(jobProgress) else { return }
+        do {
+            try wcSession.updateApplicationContext([SyncKeys.enrichmentJob: payload])
+            lastPublishedJob = jobProgress
+        } catch {
+            AppLogger.warning("Enrichment context update failed: \(error.localizedDescription)", category: .connectivity)
+        }
     }
 
     // MARK: - Query
@@ -436,6 +470,7 @@ extension WatchSyncService: WCSessionDelegate {
         )
         if session.isWatchAppInstalled {
             ingest(context: session.receivedApplicationContext)
+            publish(jobProgress: EnrichmentCoordinator.shared.progress)
             requestWatchState()
             DispatchQueue.main.async { [weak self] in
                 self?.reconcileOutstanding()

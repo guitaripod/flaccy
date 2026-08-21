@@ -1,3 +1,4 @@
+import FlaccyCore
 import UIKit
 
 final class AlbumDetailViewController: UIViewController, SonglinkShareable {
@@ -15,7 +16,9 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     private var hasAnimatedAppearance = false
     private let genreChipsHolder = UIView()
     private let playCountLabel = UILabel()
+    private let metaLabel = UILabel()
     private var enrichmentTask: Task<Void, Never>?
+    private var metadataTask: Task<Void, Never>?
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
@@ -43,6 +46,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(lovedChanged), name: LovedTracksService.didChange, object: nil)
         loadEnrichment()
+        repairMetadataIfNeeded()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -57,7 +61,49 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
     deinit {
         enrichmentTask?.cancel()
+        metadataTask?.cancel()
         NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Repairs the album the reader is actually looking at, the way the Mac's
+    /// detail page does. The request is not forced: an album the ladder has
+    /// already settled — or given up on — costs zero network calls to open, so
+    /// browsing can never burn the four-attempt ladder.
+    private func repairMetadataIfNeeded() {
+        guard album.year == nil || album.genre == nil else { return }
+        let title = album.title
+        let artist = album.artist
+        guard isEnrichmentDue(title: title, artist: artist) else { return }
+        metadataTask = Task { [weak self] in
+            let changed = await EnrichmentCoordinator.shared.requestNow(title: title, artist: artist)
+            guard changed, !Task.isCancelled else { return }
+            self?.applyStoredMetadata(title: title, artist: artist)
+        }
+    }
+
+    /// The presentation half of the ladder. The authoritative gate is the one
+    /// inside the task itself; this only keeps the page from asking for work
+    /// the durable queue has already answered.
+    private func isEnrichmentDue(title: String, artist: String) -> Bool {
+        let record = (try? DatabaseManager.shared.fetchEnrichmentRecord(
+            scope: .album, key: EnrichmentKey.album(title: title, artist: artist)
+        )) ?? nil
+        return EnrichmentPolicy.isDue(record, scope: .album, now: Date())
+    }
+
+    private func applyStoredMetadata(title: String, artist: String) {
+        let status = try? DatabaseManager.shared.fetchAlbumInfoStatus(title: title, artist: artist)
+        renderMetaLine(year: status?.year, genre: status?.genre)
+    }
+
+    /// The year and genre under the artist name, hidden entirely when neither
+    /// is known rather than left as an empty line.
+    private func renderMetaLine(year: String?, genre: String?) {
+        var parts: [String] = []
+        if let year, !year.isEmpty { parts.append(year) }
+        if let genre, !genre.isEmpty { parts.append(genre) }
+        metaLabel.text = parts.joined(separator: " \u{00B7} ")
+        metaLabel.isHidden = parts.isEmpty
     }
 
     private func setupOverflowMenu() {
@@ -304,15 +350,10 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         artistButton.accessibilityHint = String(localized: "Shows the artist's albums")
         artistButton.addAction(UIAction { [weak self] _ in self?.artistTapped() }, for: .touchUpInside)
 
-        let metaLabel = UILabel()
         metaLabel.font = .scaled(.footnote, size: 13, weight: .regular)
         metaLabel.adjustsFontForContentSizeCategory = true
         metaLabel.textColor = .white.withAlphaComponent(0.55)
-        var metaParts: [String] = []
-        if let year = album.year, !year.isEmpty { metaParts.append(year) }
-        if let genre = album.genre, !genre.isEmpty { metaParts.append(genre) }
-        metaLabel.text = metaParts.joined(separator: " \u{00B7} ")
-        metaLabel.isHidden = metaParts.isEmpty
+        renderMetaLine(year: album.year, genre: album.genre)
 
         playCountLabel.font = .scaled(.footnote, size: 13, weight: .semibold)
         playCountLabel.adjustsFontForContentSizeCategory = true

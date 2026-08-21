@@ -1,4 +1,6 @@
 import AppKit
+import Combine
+import FlaccyCore
 import UniformTypeIdentifiers
 
 /// The single main window: unified-toolbar chrome with a library search
@@ -123,20 +125,50 @@ extension MainWindowController: NSToolbarDelegate {
 /// Stacks the split view under the floating transport bar, reserves safe
 /// area at the bottom so scrolled content never hides behind the glass, and
 /// accepts audio file/folder drops that import into the library root.
+///
+/// The status strip lives here rather than inside the content column on
+/// purpose: the Now Playing overlay takes the whole split view, and a scan
+/// surface underneath it is a scan surface nobody sees. Being a later sibling
+/// is not enough to stay in front of it — the overlay is installed on this very
+/// view and `addSubview(_:)` lands it frontmost — so the strip is re-raised
+/// every time anything else joins the stack.
 final class RootContainerViewController: NSViewController {
 
     let splitViewController = MainSplitViewController()
     let transportBarViewController = TransportBarViewController()
 
+    private let statusStrip = MacStatusStripView()
+    private var surfaceCancellable: AnyCancellable?
+
     private static let transportHeight: CGFloat = 84
     private static let transportMargin: CGFloat = 12
+    private static let stripInset: CGFloat = 20
+    private static let stripWidth: CGFloat = 320
 
     override func loadView() {
-        view = AudioDropView()
+        let container = AudioDropView()
+        container.onSubviewAdded = { [weak self] subview in
+            self?.raiseStatusStrip(above: subview)
+        }
+        view = container
 
         addChild(splitViewController)
         splitViewController.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(splitViewController.view)
+
+        view.addSubview(statusStrip, positioned: .above, relativeTo: splitViewController.view)
+        NSLayoutConstraint.activate([
+            statusStrip.leadingAnchor.constraint(
+                greaterThanOrEqualTo: view.leadingAnchor, constant: Self.stripInset
+            ),
+            statusStrip.trailingAnchor.constraint(
+                equalTo: view.trailingAnchor, constant: -Self.stripInset
+            ),
+            statusStrip.bottomAnchor.constraint(
+                equalTo: view.bottomAnchor, constant: -(Self.transportHeight + Self.stripInset)
+            ),
+            statusStrip.widthAnchor.constraint(equalToConstant: Self.stripWidth),
+        ])
 
         addChild(transportBarViewController)
         transportBarViewController.view.translatesAutoresizingMaskIntoConstraints = false
@@ -166,11 +198,55 @@ final class RootContainerViewController: NSViewController {
             top: 0, left: 0, bottom: Self.transportHeight + Self.transportMargin * 2, right: 0
         )
     }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        surfaceCancellable = MacLibrarySurfaceModel.shared.state
+            .removeDuplicates()
+            .sink { [weak self] state in
+                self?.render(state)
+            }
+        render(MacLibrarySurfaceModel.shared.state.value)
+    }
+
+    /// The strip carries the ambient surface and nothing else. A Debut has its
+    /// own stage in the onboarding panel, and `.none` genuinely means silence —
+    /// a relaunch that finds no work due shows no chrome at all.
+    private func render(_ state: MacLibrarySurfaceModel.State) {
+        guard state.surface == .ambient else {
+            statusStrip.setVisible(false)
+            return
+        }
+        statusStrip.update(state.load.isActive ? .load(state.load, state.fraction) : .job(state.job))
+        statusStrip.setVisible(true)
+        raiseStatusStrip()
+    }
+
+    /// Answers a newcomer to the stack — in practice the full-window Now Playing
+    /// overlay, which `MainSplitViewController` installs on this view — by
+    /// lifting the strip back over it. Ignores the strip's own re-insertion so
+    /// the raise cannot recurse.
+    private func raiseStatusStrip(above subview: NSView) {
+        guard subview !== statusStrip else { return }
+        raiseStatusStrip()
+    }
+
+    /// Moves the strip to the front of its superview's z-order. Re-inserting a
+    /// view that is already a subview only reorders it: constraints and frame
+    /// survive, so this is safe to call on every render.
+    private func raiseStatusStrip() {
+        guard statusStrip.superview === view else { return }
+        view.addSubview(statusStrip, positioned: .above, relativeTo: nil)
+    }
 }
 
 /// Full-window drop target: highlights on drag-over with audio files or
 /// folders, copies them into the library root and triggers a rescan.
 final class AudioDropView: NSView {
+
+    /// Reports every view added on top, so the owner can keep a floating
+    /// surface in front of a full-window overlay it does not install itself.
+    var onSubviewAdded: ((NSView) -> Void)?
 
     private let highlight = NSView()
     private var isImporting = false
@@ -196,6 +272,11 @@ final class AudioDropView: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func didAddSubview(_ subview: NSView) {
+        super.didAddSubview(subview)
+        onSubviewAdded?(subview)
+    }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !droppableURLs(from: sender).isEmpty else { return [] }

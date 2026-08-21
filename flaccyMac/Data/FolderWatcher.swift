@@ -1,11 +1,15 @@
 import CoreServices
 import Foundation
 
-/// FSEvents watcher over the library root. Events are debounced for a second
-/// because imports land files back-to-back, and a generation counter makes a
-/// restart drop any change callback that was already in flight for the old
-/// root.
+/// FSEvents watcher over the library root. Events are debounced because imports
+/// land files back-to-back, and a generation counter makes a restart drop any
+/// change callback that was already in flight for the old root.
 final class FolderWatcher {
+
+    /// A copy of an album arrives as dozens of file events spread over seconds;
+    /// one second was short enough to start a rescan halfway through a paste and
+    /// then immediately need another one.
+    private static let debounce: TimeInterval = 3
 
     nonisolated(unsafe) private var stream: FSEventStreamRef?
     private var debounceTask: Task<Void, Never>?
@@ -70,7 +74,7 @@ final class FolderWatcher {
         let scheduledGeneration = generation
         debounceTask?.cancel()
         debounceTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: .seconds(Self.debounce))
             guard !Task.isCancelled, let self, self.generation == scheduledGeneration else { return }
             AppLogger.info("Library folder changed, triggering rescan", category: .content)
             self.onChange?()

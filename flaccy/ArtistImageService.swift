@@ -1,18 +1,23 @@
+import FlaccyCore
 import UIKit
 
 /// Resolves a representative artist photo with the chain: memory/disk cache →
-/// Apple Music catalog artwork → Last.fm artist image (rejecting the star
-/// placeholder) → nil, remembering misses so tracks by the same artist don't
-/// re-query the network.
+/// the photo URL the library already holds → Apple Music catalog artwork →
+/// Last.fm / Deezer (rejecting Last.fm's star placeholder) → nil.
+///
+/// A miss is durable. It used to live in an `NSCache` with a 30-minute TTL,
+/// which meant every launch re-issued an Apple Music search *and* an
+/// `artist.getInfo` for every artist in the library that has no photo anywhere.
+/// The answer now goes into `enrichmentState` under `EnrichmentScope.artist`,
+/// so an artist nobody has a picture of is asked about four times in total
+/// rather than four times a day — and a failure that never reached a source
+/// costs nothing, because the classification comes from
+/// `MetadataEnrichmentService` rather than from an optional being nil.
 final class ArtistImageService {
 
     static let shared = ArtistImageService()
 
-    private let missCache = NSCache<NSString, NSDate>()
     private var inFlight: [String: Task<UIImage?, Never>] = [:]
-
-    nonisolated private static let lastFMPlaceholderHash = "2a96cbd8b46e442fc41c2b86b821562f"
-    private static let missTTL: TimeInterval = 60 * 30
 
     nonisolated private static let downloadSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -21,9 +26,7 @@ final class ArtistImageService {
         return URLSession(configuration: config)
     }()
 
-    private init() {
-        missCache.countLimit = 300
-    }
+    private init() {}
 
     func image(for artist: String) async -> UIImage? {
         let trimmed = artist.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -32,10 +35,6 @@ final class ArtistImageService {
 
         if let cached = ImageCache.shared.image(forKey: key) {
             return cached
-        }
-        if let miss = missCache.object(forKey: key as NSString),
-           Date().timeIntervalSince(miss as Date) < Self.missTTL {
-            return nil
         }
         if let existing = inFlight[key] {
             return await existing.value
@@ -48,8 +47,6 @@ final class ArtistImageService {
 
         if let image {
             ImageCache.shared.store(image, forKey: key)
-        } else {
-            missCache.setObject(NSDate(), forKey: key as NSString)
         }
         return image
     }
@@ -59,34 +56,91 @@ final class ArtistImageService {
     }
 
     nonisolated private static func resolve(artist: String) async -> UIImage? {
-        if let data = await MusicKitService.shared.fetchArtistImage(artist: artist),
-           let image = UIImage(data: data) {
-            await AppLogger.debug("Artist photo from Apple Music for \(artist)", category: .content)
+        let db = DatabaseManager.shared
+        let key = EnrichmentKey.artist(artist)
+        let record = try? db.fetchEnrichmentRecord(scope: .artist, key: key)
+
+        if let stored = try? db.fetchArtist(name: artist)?.imageURL,
+           let image = await download(stored) {
             return image
         }
-        if let image = await fetchLastFMImage(artist: artist) {
-            await AppLogger.debug("Artist photo from Last.fm for \(artist)", category: .content)
-            return image
+        guard !isSettledMiss(record, now: Date()) else {
+            AppLogger.debug("Artist photo settled as missing for \(artist)", category: .content)
+            return nil
         }
-        await AppLogger.debug("No artist photo found for \(artist)", category: .content)
-        return nil
+        return await lookUp(artist: artist, key: key, record: record)
     }
 
-    nonisolated private static func fetchLastFMImage(artist: String) async -> UIImage? {
-        guard let info = await LastFMService.shared.fetchArtistInfo(artist: artist),
-              let urlString = info.imageURL,
-              !isPlaceholder(urlString),
-              let url = URL(string: urlString)
-        else { return nil }
+    /// True when the job has already asked every source and either has not
+    /// earned another attempt yet or has burned all of them. Only ever consulted
+    /// for a record that carries no `.artistImage`: a record that *does* means a
+    /// photo exists and is worth fetching again, however empty the disk cache is.
+    nonisolated private static func isSettledMiss(_ record: EnrichmentRecord?, now: Date) -> Bool {
+        guard let record, !record.fields.contains(.artistImage) else { return false }
+        return !EnrichmentPolicy.isDue(record, scope: .artist, now: now)
+    }
+
+    /// One attempt across every source, persisted as one attempt. Apple Music is
+    /// asked first because its portraits are the best of the three, and it
+    /// answers with bytes rather than a URL — so a hit there resolves
+    /// `.artistImage` without anything to write into `artists.imageURL`.
+    nonisolated private static func lookUp(
+        artist: String, key: String, record: EnrichmentRecord?
+    ) async -> UIImage? {
+        var state = record ?? EnrichmentRecord(scope: .artist, key: key)
+        let present = state.fields
+        var image: UIImage?
+
+        if await isAppleMusicUsable(), let data = await MusicKitService.shared.fetchArtistImage(artist: artist) {
+            image = UIImage(data: data)
+        }
+
+        let (fields, failure, values) = await MetadataEnrichmentService.shared.enrichArtist(
+            name: artist, resolved: present
+        )
+        if image == nil, let url = values.imageURL {
+            image = await download(url)
+        }
+
+        let resolved = image == nil ? fields : fields.union(.artistImage)
+        EnrichmentPolicy.apply(
+            to: &state, scope: .artist, resolved: resolved,
+            failure: image == nil ? failure : nil, now: Date()
+        )
 
         do {
-            let (data, response) = try await downloadSession.data(from: url)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-                  let image = UIImage(data: data)
-            else { return nil }
-            return image
+            try DatabaseManager.shared.applyArtistEnrichment(
+                name: artist, bio: values.bio, imageURL: values.imageURL,
+                musicBrainzID: values.musicBrainzID, record: state
+            )
         } catch {
-            await AppLogger.error("Last.fm artist image download failed: \(error.localizedDescription)", category: .content)
+            AppLogger.error("Artist photo state not saved: \(error.localizedDescription)", category: .database)
+        }
+
+        if image != nil {
+            AppLogger.debug("Artist photo resolved for \(artist)", category: .content)
+        } else {
+            AppLogger.debug("No artist photo found for \(artist)", category: .content)
+        }
+        return image
+    }
+
+    /// Apple Music is asked only once somebody has opted in and the system has
+    /// already granted access. Calling `fetchArtistImage` without this gate would
+    /// raise `MusicAuthorization.request()` out of a scrolling artist list.
+    nonisolated private static func isAppleMusicUsable() async -> Bool {
+        guard AppleMusicArtworkSetting.isEnabled else { return false }
+        return await MusicKitService.isAlreadyAuthorized()
+    }
+
+    nonisolated private static func download(_ urlString: String) async -> UIImage? {
+        guard !isPlaceholder(urlString), let url = URL(string: urlString) else { return nil }
+        do {
+            let (data, response) = try await downloadSession.data(from: url)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            return UIImage(data: data)
+        } catch {
+            AppLogger.error("Artist image download failed: \(error.localizedDescription)", category: .content)
             return nil
         }
     }
@@ -96,4 +150,6 @@ final class ArtistImageService {
     nonisolated private static func isPlaceholder(_ urlString: String) -> Bool {
         urlString.contains(lastFMPlaceholderHash)
     }
+
+    nonisolated private static let lastFMPlaceholderHash = "2a96cbd8b46e442fc41c2b86b821562f"
 }

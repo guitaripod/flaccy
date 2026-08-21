@@ -8,7 +8,11 @@ mod hygiene;
 mod importer;
 mod lastfm;
 mod library;
-mod load_progress;
+/// The load bar mirrors `FlaccyCore.LibraryLoadProgress` and lives in the
+/// `flaccy-shared` workspace member, whose tests build on any machine — the
+/// Mac that owns the Apple clients has no GStreamer for this crate. Re-exported
+/// at the crate root so every `crate::load_progress::…` path still resolves.
+pub(crate) use flaccy_shared::load_progress;
 mod logger;
 mod lyrics;
 mod mpris;

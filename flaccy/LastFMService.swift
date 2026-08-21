@@ -413,6 +413,35 @@ final class LastFMService {
     }
 
     nonisolated func fetchAlbumInfo(artist: String, album: String) async -> AlbumInfo? {
+        switch await classifiedAlbumInfo(artist: artist, album: album) {
+        case .value(let info):
+            return info
+        case .empty:
+            return nil
+        case .failed(let failure):
+            await AppLogger.error("Fetch album info failed: \(failure.rawValue)", category: .content)
+            return nil
+        }
+    }
+
+    nonisolated func fetchArtistInfo(artist: String) async -> ArtistInfo? {
+        switch await classifiedArtistInfo(artist: artist) {
+        case .value(let info):
+            return info
+        case .empty:
+            return nil
+        case .failed(let failure):
+            await AppLogger.error("Fetch artist info failed: \(failure.rawValue)", category: .content)
+            return nil
+        }
+    }
+
+    /// `album.getInfo` with the outcome classified for `EnrichmentPolicy`:
+    /// `.empty` is Last.fm answering that it has no such album, which may cost
+    /// the album an attempt, while `.failed` never does.
+    nonisolated func classifiedAlbumInfo(
+        artist: String, album: String
+    ) async -> EnrichmentSourceOutcome<AlbumInfo> {
         var params: [String: String] = [
             "method": "album.getInfo",
             "api_key": Self.apiKey,
@@ -422,61 +451,38 @@ final class LastFMService {
         ]
         if let user = await username { params["username"] = user }
 
-        do {
-            let data = try await throttledGET(params: params)
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let albumDict = json["album"] as? [String: Any]
-            else { return nil }
-
-            let title = albumDict["name"] as? String ?? album
-            let artistName = albumDict["artist"] as? String ?? artist
-            let imageURL = Self.extractLargestImage(from: albumDict["image"])
-            let wiki = albumDict["wiki"] as? [String: Any]
-            let summary = wiki?["summary"] as? String
-            let mbid = albumDict["mbid"] as? String
-            let userPlayCount = Self.intValue(albumDict["userplaycount"])
-
+        return await classifiedRead(params: params) { json in
+            guard let albumDict = json["album"] as? [String: Any] else { return nil }
             return AlbumInfo(
-                title: title,
-                artist: artistName,
-                imageURL: imageURL,
-                summary: summary,
-                musicBrainzID: mbid,
-                userPlayCount: userPlayCount
+                title: albumDict["name"] as? String ?? album,
+                artist: albumDict["artist"] as? String ?? artist,
+                imageURL: Self.extractLargestImage(from: albumDict["image"]),
+                summary: (albumDict["wiki"] as? [String: Any])?["summary"] as? String,
+                musicBrainzID: albumDict["mbid"] as? String,
+                userPlayCount: Self.intValue(albumDict["userplaycount"])
             )
-        } catch {
-            await AppLogger.error("Fetch album info failed: \(error.localizedDescription)", category: .content)
-            return nil
         }
     }
 
-    nonisolated func fetchArtistInfo(artist: String) async -> ArtistInfo? {
+    /// The artist twin of `classifiedAlbumInfo`. This is the endpoint the
+    /// enrichment job hits most, which is why it now goes through the same
+    /// 0.25 s read throttle as every other unsigned read.
+    nonisolated func classifiedArtistInfo(artist: String) async -> EnrichmentSourceOutcome<ArtistInfo> {
         let params: [String: String] = [
             "method": "artist.getInfo",
             "api_key": Self.apiKey,
             "artist": artist,
+            "autocorrect": "1",
         ]
 
-        do {
-            let data = try await performUnsignedGET(params: params)
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let artistDict = json["artist"] as? [String: Any]
-            else { return nil }
-
-            let name = artistDict["name"] as? String ?? artist
-            let bio = (artistDict["bio"] as? [String: Any])?["summary"] as? String
-            let imageURL = Self.extractLargestImage(from: artistDict["image"])
-            let mbid = artistDict["mbid"] as? String
-
+        return await classifiedRead(params: params) { json in
+            guard let artistDict = json["artist"] as? [String: Any] else { return nil }
             return ArtistInfo(
-                name: name,
-                bio: bio,
-                imageURL: imageURL,
-                musicBrainzID: mbid
+                name: artistDict["name"] as? String ?? artist,
+                bio: (artistDict["bio"] as? [String: Any])?["summary"] as? String,
+                imageURL: Self.extractLargestImage(from: artistDict["image"]),
+                musicBrainzID: artistDict["mbid"] as? String
             )
-        } catch {
-            await AppLogger.error("Fetch artist info failed: \(error.localizedDescription)", category: .content)
-            return nil
         }
     }
 
@@ -967,6 +973,69 @@ final class LastFMService {
     nonisolated private func throttledGET(params: [String: String]) async throws -> Data {
         await Self.readThrottle.acquire()
         return try await performUnsignedGET(params: params)
+    }
+
+    /// Performs a throttled read and classifies the outcome the way
+    /// `EnrichmentPolicy` needs it. `parse` runs on the decoded body inside this
+    /// call so the untyped JSON never leaves the function.
+    ///
+    /// Only a body that decoded as JSON can produce `.success`, because
+    /// `.success(nil)` is what eventually writes an album off as `.exhausted`.
+    /// A captive portal answering HTTP 200 with a login page is `.transport`,
+    /// which costs the album nothing.
+    nonisolated private func classifiedRead<Value: Sendable>(
+        params: [String: String],
+        parse: @Sendable ([String: Any]) -> Value?
+    ) async -> EnrichmentSourceOutcome<Value> {
+        var allParams = params
+        allParams["format"] = "json"
+
+        var components = URLComponents(string: Self.baseURL)!
+        components.percentEncodedQuery = allParams
+            .map { "\(percentEncode($0.key))=\(percentEncode($0.value))" }
+            .joined(separator: "&")
+        guard let url = components.url else { return .failed(.transport) }
+
+        await Self.readThrottle.acquire()
+
+        do {
+            let (data, response) = try await urlSession.data(from: url)
+            guard let http = response as? HTTPURLResponse else { return .failed(.transport) }
+            if http.statusCode == 429 { return .failed(.rateLimited) }
+
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return .failed(.transport)
+            }
+            if let code = Self.intValue(json["error"]) {
+                switch Self.verdict(forAPIError: code) {
+                case .answeredEmpty: return .empty
+                case .failed(let failure): return .failed(failure)
+                }
+            }
+            guard (200...299).contains(http.statusCode) else { return .failed(.transport) }
+            guard let value = parse(json) else { return .empty }
+            return .value(value)
+        } catch {
+            return .failed(await EnrichmentFailureClassifier.classify(error))
+        }
+    }
+
+    nonisolated private enum APIVerdict {
+        case answeredEmpty
+        case failed(EnrichmentFailure)
+    }
+
+    /// Maps a Last.fm error code onto the enrichment vocabulary. Only code 6
+    /// ("item not found") is the service genuinely answering that it has
+    /// nothing; every other code is a condition that may clear on its own, so
+    /// it must not count towards the attempts an entity is allowed.
+    nonisolated private static func verdict(forAPIError code: Int) -> APIVerdict {
+        switch code {
+        case 6: return .answeredEmpty
+        case 29: return .failed(.rateLimited)
+        case 4, 9, 10, 13, 26: return .failed(.unauthorized)
+        default: return .failed(.transport)
+        }
     }
 
     /// Retries an operation whose response body carries Last.fm error 29 (rate

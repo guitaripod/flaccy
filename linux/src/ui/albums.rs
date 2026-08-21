@@ -1,6 +1,6 @@
 use crate::events::AppEvent;
 use crate::library::{format_time, Album, Track};
-use crate::ui::{context, Ui};
+use crate::ui::{context, debut, Ui};
 use adw::prelude::*;
 use gtk::glib::BoxedAnyObject;
 use gtk::{gdk, gio, glib, pango};
@@ -78,6 +78,12 @@ fn sort_albums(albums: &mut [Album], sort: AlbumSort) {
     }
 }
 
+/// The albums page.
+///
+/// `debut_presenting` is why the empty state and the Debut cannot collide: the
+/// once-per-library Debut owns the whole page while it runs, so the empty state
+/// never gets to tell a first-time user their library is empty over the top of
+/// the library being built.
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let store = gio::ListStore::new::<BoxedAnyObject>();
     let sort_mode = Rc::new(Cell::new(AlbumSort::from_id(
@@ -293,12 +299,15 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.add_named(&empty, Some("empty"));
     stack.add_named(&grid_content, Some("grid"));
 
+    let debut_presenting = Rc::new(Cell::new(false));
+
     let rebuild: Rc<dyn Fn()> = {
         let store = store.clone();
         let stack = stack.clone();
         let scroll = scroll.clone();
         let ui = Rc::clone(ui);
         let sort_mode = Rc::clone(&sort_mode);
+        let debut_presenting = Rc::clone(&debut_presenting);
         let applied = Cell::new(0u64);
         Rc::new(move || {
             let library = ui.core.library.borrow().clone();
@@ -317,13 +326,16 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                     glib::idle_add_local_once(move || adj.set_value(saved));
                 }
             }
-            stack.set_visible_child_name(if library.albums.is_empty() {
+            stack.set_visible_child_name(if debut_presenting.get() {
+                "debut"
+            } else if library.albums.is_empty() {
                 "empty"
             } else {
                 "grid"
             });
         })
     };
+    debut::install(ui, &stack, &debut_presenting, &rebuild);
     rebuild();
 
     {
@@ -384,13 +396,10 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.upcast()
 }
 
-/// Digest of the album set plus the metadata the grid renders; any add,
-/// removal, reorder, or enriched year/genre changes it, triggering a model
-/// splice (the virtualized GridView only rebinds the handful of visible cells).
-/// Turns the "No Music Found" page into a live scan report while a first scan
-/// is running, matching the iPhone setup screen: the stage, what it means, and
-/// the running counts — instead of telling someone their library is empty
-/// while it is still being read.
+/// Turns the "No Music Found" page into a live scan report while a *rescan* is
+/// running: the stage, what it means, and the running counts — instead of
+/// telling someone their library is empty while it is still being read. A first
+/// scan is the Debut's, not this one's.
 fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) {
     let idle_title = empty.title().to_string();
     let idle_description = empty.description().map(|text| text.to_string());
@@ -421,6 +430,9 @@ fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) 
         });
 }
 
+/// Digest of the album set plus the metadata the grid renders; any add,
+/// removal, reorder, or enriched year/genre changes it, triggering a model
+/// splice (the virtualized GridView only rebinds the handful of visible cells).
 fn albums_fingerprint(albums: &[Album]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for album in albums {

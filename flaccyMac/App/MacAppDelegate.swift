@@ -12,6 +12,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindowController: SettingsWindowController?
     private let menuBarExtra = MenuBarExtraController()
     private let trialAccessory = TrialStatusAccessoryController()
+    private let syncAccessory = SyncTitlebarAccessoryController()
 
     static func main() {
         let app = NSApplication.shared
@@ -28,11 +29,13 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
         NSApp.mainMenu = MainMenu.build()
         PurchaseManager.shared.start()
+        MacLibrarySurfaceModel.shared.start()
 
         let windowController = MainWindowController()
         mainWindowController = windowController
         windowController.showWindow(nil)
         windowController.window?.addTitlebarAccessoryViewController(trialAccessory)
+        windowController.window?.addTitlebarAccessoryViewController(syncAccessory)
         NSApp.activate()
 
         menuBarExtra.onOpenApp = { [weak self] in
@@ -97,14 +100,22 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     private func startLibraryPipeline() {
         folderWatcher.onChange = {
-            Task { await Library.shared.reload() }
+            Task { await Self.reloadAndEnrich() }
         }
         folderWatcher.start(watching: LibraryRoot.current)
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(libraryRootChanged), name: LibraryRoot.didChange, object: nil
         )
-        Task { await Library.shared.reload() }
+        Task { await Self.reloadAndEnrich() }
+    }
+
+    /// Every rescan ends by asking the enrichment queue to look again: files that
+    /// just arrived have no `enrichmentState` row, so they are due, and a pass
+    /// that finds nothing due costs one `count(*)` and raises no surface.
+    private static func reloadAndEnrich() async {
+        await Library.shared.reload()
+        await EnrichmentCoordinator.shared.resume()
     }
 
     private func observeAppEvents() {
@@ -129,7 +140,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             "Library folder: \(LibraryRoot.current.lastPathComponent)",
             style: .success, in: mainWindowController?.window
         )
-        Task { await Library.shared.reload() }
+        Task { await Self.reloadAndEnrich() }
     }
 
     private func notifyLibraryRootFallbackIfNeeded() {
@@ -222,6 +233,16 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         let controller = settingsWindowController ?? SettingsWindowController()
         settingsWindowController = controller
         controller.show()
+    }
+
+    /// Opens Settings already on the Library pane, which is where everything the
+    /// enrichment job reports lives.
+    @objc func showLibrarySettings(_ sender: Any?) {
+        showSettings(sender)
+        guard let tabs = settingsWindowController?.contentViewController as? SettingsTabViewController,
+              let index = tabs.tabViewItems.firstIndex(where: { $0.viewController is LibrarySettingsPane })
+        else { return }
+        tabs.selectedTabViewItemIndex = index
     }
 
     @objc func focusSearch(_ sender: Any?) {

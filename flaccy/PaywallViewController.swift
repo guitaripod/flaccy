@@ -24,6 +24,11 @@ final class PaywallViewController: UIViewController {
             detail: String(localized: "FLAC albums flow track to track with zero silence.")
         ),
         Feature(
+            symbolName: "wand.and.stars",
+            title: String(localized: "AI tag cleanup"),
+            detail: String(localized: "Scrambled filenames become real titles, artists and albums.")
+        ),
+        Feature(
             symbolName: "dot.radiowaves.left.and.right",
             title: String(localized: "Last.fm scrobbling"),
             detail: String(localized: "Every listen counted, with an offline queue that never drops a play.")

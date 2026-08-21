@@ -4,6 +4,8 @@ use crate::lastfm::{self, LastFmClient};
 use crate::musicvideo;
 use crate::ui::Ui;
 use adw::prelude::*;
+use flaccy_shared::enrichment_job::{copy as job_copy, Activity, JobProgress, Scope};
+use flaccy_shared::library_debut::copy as debut_copy;
 use gtk::glib;
 use gtk::gio;
 use std::cell::RefCell;
@@ -23,6 +25,7 @@ pub fn present(ui: &Rc<Ui>) {
         page.add(&music_video_group(ui));
     }
     page.add(&library_group(ui));
+    page.add(&metadata_group(ui));
     if lastfm::keys_available() {
         page.add(&lastfm_group(ui));
     }
@@ -30,6 +33,19 @@ pub fn present(ui: &Rc<Ui>) {
 
     dialog.add(&page);
     dialog.present(Some(&ui.window));
+    republish_job_progress(ui);
+}
+
+/// The Metadata rows are fed by the job's own event rather than by whatever it
+/// happened to be when the page was built, so opening Preferences mid-pass
+/// re-reads the countdown from the database instead of showing a stale one.
+fn republish_job_progress(ui: &Rc<Ui>) {
+    let weak = Rc::downgrade(&ui.core);
+    glib::idle_add_local_once(move || {
+        if let Some(core) = weak.upgrade() {
+            core.refresh_job_progress();
+        }
+    });
 }
 
 /// A branded banner atop Preferences: an app glyph, the wordmark, and a live
@@ -509,26 +525,6 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     rescan_row.add_suffix(&rescan);
     group.add(&rescan_row);
 
-    let artwork_row = adw::ActionRow::builder()
-        .title("Find Missing Artwork")
-        .subtitle("Re-fetch covers for albums that don't have one yet")
-        .build();
-    let artwork = gtk::Button::builder()
-        .child(&adw::ButtonContent::builder().icon_name("image-x-generic-symbolic").label("Find Artwork").build())
-        .valign(gtk::Align::Center)
-        .build();
-    {
-        let ui = Rc::clone(ui);
-        artwork.connect_clicked(move |btn| {
-            let queued = ui.core.db.reset_missing_cover_retry();
-            crate::enrichment::schedule_background_pass(&ui.core);
-            btn.set_sensitive(false);
-            ui.core.toast(&format!("Looking up artwork for {queued} albums…"));
-        });
-    }
-    artwork_row.add_suffix(&artwork);
-    group.add(&artwork_row);
-
     let cleanup_row = adw::ActionRow::builder()
         .title("Clean Up Library…")
         .subtitle("Trash duplicate files and merge album editions")
@@ -546,6 +542,103 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     group.add(&cleanup_row);
 
     group
+}
+
+/// What the durable enrichment job is holding, on demand. It reads as a
+/// countdown and a tally, never as a bar: the work is unbounded network work,
+/// and `exhausted` is genuinely terminal, so **Try Again** is one of only two
+/// ways an album Flaccy gave up on is ever looked at again.
+fn metadata_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title("Metadata")
+        .description("Re-fetch artwork and release dates for albums Flaccy gave up on.")
+        .build();
+
+    let counts_row = adw::ActionRow::builder().build();
+    let retry = gtk::Button::builder()
+        .label(job_copy::TRY_AGAIN)
+        .valign(gtk::Align::Center)
+        .build();
+    counts_row.add_suffix(&retry);
+    group.add(&counts_row);
+    let job = ui.core.job_progress();
+    render_metadata_counts(ui, &counts_row, &job);
+    retry.set_sensitive(can_retry_albums(ui, &job));
+
+    {
+        let ui = Rc::clone(ui);
+        retry.connect_clicked(move |button| {
+            button.set_sensitive(false);
+            let queued = crate::ui::retry_missing_artwork(&ui);
+            ui.core
+                .toast(&format!("Looking up artwork for {queued} albums…"));
+        });
+    }
+    {
+        let ui = Rc::clone(ui);
+        let retry = retry.clone();
+        ui.core
+            .hub
+            .clone()
+            .subscribe_widget(&counts_row, move |row, event| {
+                let AppEvent::EnrichmentProgress(job) = event else {
+                    return;
+                };
+                render_metadata_counts(&ui, row, job);
+                retry.set_sensitive(can_retry_albums(&ui, job));
+            });
+    }
+
+    if let Some(summary) = ui.core.db.library_debut() {
+        let built = summary
+            .completed_at
+            .with_timezone(&chrono::Local)
+            .format("%-d %b")
+            .to_string();
+        let line = debut_copy::settings_permanent_line(
+            &built,
+            summary.track_count,
+            summary.ai_cleaned_tracks,
+        );
+        group.add(
+            &adw::ActionRow::builder()
+                .title(line.as_str())
+                .subtitle(debut_copy::SETTINGS_CAVEAT_FOOTER)
+                .build(),
+        );
+    }
+
+    group
+}
+
+/// macOS pins its Try Again to `countExhausted(scope: .album)`; Linux's
+/// `JobProgress.exhausted` follows `outstanding_scope`, which flips to artists
+/// as soon as no album is due — precisely the idle state a user retries from.
+/// Ask the database for the album count directly, so a library with nothing to
+/// revive shows a greyed-out button rather than a control that does nothing.
+fn can_retry_albums(ui: &Rc<Ui>, job: &JobProgress) -> bool {
+    job.activity != Activity::Running && ui.core.db.count_exhausted(Scope::Album) > 0
+}
+
+/// `Complete · In progress · Gave up`, where "complete" is what is left once the
+/// two counts the database can answer are taken off the entities the library
+/// actually holds — the report never invents a total of its own.
+fn render_metadata_counts(ui: &Rc<Ui>, row: &adw::ActionRow, job: &JobProgress) {
+    let total = {
+        let library = ui.core.library.borrow();
+        match job.scope {
+            Scope::Album => library.albums.len(),
+            Scope::Artist => library.artists.len(),
+            Scope::AiBatch => 0,
+        }
+    };
+    let complete = total.saturating_sub(job.remaining + job.exhausted);
+    row.set_title(&job_copy::report_counts(
+        complete,
+        job.remaining,
+        job.exhausted,
+    ));
+    row.set_subtitle(&job_copy::settled(job.remaining, job.exhausted));
 }
 
 fn lastfm_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {

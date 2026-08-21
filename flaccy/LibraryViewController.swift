@@ -1,4 +1,5 @@
 import Combine
+import FlaccyCore
 import UIKit
 import UniformTypeIdentifiers
 
@@ -19,12 +20,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private var lastRenderedFilter: LibraryFilter?
     private var lastRenderedLayout: LibraryLayoutMode?
     private let selectionFeedback = UISelectionFeedbackGenerator()
-    private let loadingView = LibraryLoadingView()
-    private let scanBanner = LibraryScanBanner()
-    private var scanBannerHeight: NSLayoutConstraint!
-    private var loadingShownAt: Date?
-    private var bannerStallTimer: Timer?
-    private var lastBannerFraction: Double = -1
+    private var debutView: LibraryDebutView?
+    private var renderedDebutAct: LibraryDebutAct?
+    private var debutSummary: LibraryDebutSummary?
+    private var fedMosaicKeys = Set<String>()
+    private let statusBanner = LibraryStatusBanner()
+    private var statusBannerHeight: NSLayoutConstraint!
     private let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
     private let emptyStateLabel = UILabel()
     private var lastRenderedSegment: LibraryViewModel.Segment?
@@ -78,17 +79,16 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        setupLoadingView()
-        navigationController?.setNavigationBarHidden(true, animated: false)
+        installDebutViewIfNeeded()
 
         setupSearchController()
         setupSegmentedControl()
         setupFilterChips()
-        setupScanBanner()
+        setupStatusBanner()
         setupCollectionView()
         setupSectionIndex()
         configureDataSource()
-        view.bringSubviewToFront(loadingView)
+        if let debutView { view.bringSubviewToFront(debutView) }
         bindViewModel()
         updateRightBarButton(for: .albums)
         updateChips(for: .albums)
@@ -413,7 +413,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: scanBanner.bottomAnchor),
+            collectionView.topAnchor.constraint(equalTo: statusBanner.bottomAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -426,7 +426,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         NSLayoutConstraint.activate([
             sectionIndexView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
-            sectionIndexView.topAnchor.constraint(equalTo: scanBanner.bottomAnchor, constant: 8),
+            sectionIndexView.topAnchor.constraint(equalTo: statusBanner.bottomAnchor, constant: 8),
             sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
         ])
@@ -511,103 +511,246 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func setupLoadingView() {
-        loadingView.translatesAutoresizingMaskIntoConstraints = false
-        loadingView.accessibilityIdentifier = "library.loading"
-        loadingView.alpha = 1
-        loadingShownAt = Date()
-        view.addSubview(loadingView)
+    /// Adds the Debut only when no earlier launch ever indexed a library.
+    ///
+    /// The question is answered from `UserDefaults` rather than the database,
+    /// because by the time a `SELECT` could answer it the first frame is already
+    /// on screen — which is how a relaunch used to get a 1% ring it then had to
+    /// crossfade away. A returning library never puts the view in the hierarchy
+    /// at all, so there is nothing to flash.
+    private func installDebutViewIfNeeded() {
+        guard !LibraryStartupProbe.hadIndexedLibrary else { return }
+        let debut = LibraryDebutView()
+        debut.translatesAutoresizingMaskIntoConstraints = false
+        debut.accessibilityIdentifier = "library.debut"
+        debut.alpha = 1
+        debut.onDismiss = { [weak self] in self?.finishDebut() }
+        debut.onShowPaywall = { [weak self] in
+            guard let self else { return }
+            PaywallViewController.presentSheet(from: self)
+        }
+        view.addSubview(debut)
+        debutView = debut
+        navigationController?.setNavigationBarHidden(true, animated: false)
 
         NSLayoutConstraint.activate([
-            loadingView.topAnchor.constraint(equalTo: view.topAnchor),
-            loadingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            loadingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            loadingView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            debut.topAnchor.constraint(equalTo: view.topAnchor),
+            debut.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            debut.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            debut.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
     }
 
-    private func setupScanBanner() {
-        scanBanner.accessibilityIdentifier = "library.scanBanner"
-        view.addSubview(scanBanner)
-        scanBannerHeight = scanBanner.heightAnchor.constraint(equalToConstant: 0)
+    private func setupStatusBanner() {
+        statusBanner.accessibilityIdentifier = "library.statusBanner"
+        statusBanner.onTap = { [weak self] in
+            self?.navigationController?.pushViewController(EnrichmentReportViewController(), animated: true)
+        }
+        view.addSubview(statusBanner)
+        statusBannerHeight = statusBanner.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
-            scanBanner.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
-            scanBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scanBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scanBannerHeight,
+            statusBanner.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
+            statusBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            statusBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            statusBannerHeight,
         ])
     }
 
-    /// Routes one scan update to whichever surface fits: the full-screen setup
-    /// view while there is nothing to browse, the inline banner once there is.
+    /// Renders exactly the surface the router asked for, and nothing derived.
+    ///
+    /// The Debut is repainted on **every** snapshot, before visibility is
+    /// decided. Painting it only inside the "is it showing?" branch is what left
+    /// the ring frozen at 1%: the restored library flipped the branch between
+    /// the first snapshot and the second, so the second never reached the view.
     private func render(loadState state: LibraryViewModel.LibraryLoadState, animated: Bool = true) {
-        if state.showsFullScreen {
-            loadingView.update(progress: state.progress, fraction: state.fraction)
-            showLoadingView()
-        } else {
-            hideLoadingView(animated: animated)
-        }
+        updateDebut(with: state)
 
-        guard state.showsBanner else {
-            bannerStallTimer?.invalidate()
-            bannerStallTimer = nil
-            lastBannerFraction = -1
-            setScanBanner(visible: false, animated: animated)
-            return
-        }
-        if scanBannerHeight.constant == 0 { scanBanner.prepareForShow() }
-        scanBanner.update(progress: state.progress, fraction: state.fraction)
-        guard state.fraction > lastBannerFraction + 0.0001 else { return }
-        lastBannerFraction = state.fraction
-        setScanBanner(visible: true, animated: animated)
-        armBannerStallTimer()
-    }
-
-    /// Artwork lookups can stall on a slow network for minutes; a bar that has
-    /// not moved reads as a hung app, so the banner steps aside and comes back
-    /// the moment progress resumes.
-    private func armBannerStallTimer() {
-        bannerStallTimer?.invalidate()
-        bannerStallTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.setScanBanner(visible: false, animated: true)
+        switch state.surface {
+        case .debut:
+            guard debutView != nil else {
+                viewModel.dismissDebut()
+                return
             }
+            showDebut()
+            setStatusBanner(visible: false, animated: false)
+        case .ambient:
+            hideDebut(animated: animated)
+            showAmbient(state, animated: animated)
+        case .none:
+            hideDebut(animated: animated)
+            setStatusBanner(visible: false, animated: animated)
         }
     }
 
-    private func showLoadingView() {
-        guard loadingView.isHidden || loadingView.alpha < 1 else { return }
-        loadingShownAt = Date()
-        loadingView.isHidden = false
-        loadingView.alpha = 1
-        view.bringSubviewToFront(loadingView)
+    private func updateDebut(with state: LibraryViewModel.LibraryLoadState) {
+        guard let debutView else { return }
+        let act = viewModel.debutAct
+        debutView.update(progress: state.progress, fraction: state.fraction, job: state.job, act: act)
+        feedDebutMosaic()
+        guard renderedDebutAct != act else { return }
+        renderedDebutAct = act
+        enter(act)
+    }
+
+    /// Pours the artwork the built library holds into the mosaic — the backstop
+    /// for anything Act I's live feed missed, and the only source once the scan
+    /// found no new files to read.
+    private func feedDebutMosaic() {
+        for album in viewModel.mosaicAlbums() where fedMosaicKeys.count < LibraryViewModel.mosaicCoverBudget {
+            guard fedMosaicKeys.insert(album.id).inserted else { continue }
+            loadMosaicCover(albumTitle: album.title, artist: album.artist, tileKey: album.id)
+        }
+    }
+
+    /// Fills the mosaic *during* Act I, from the covers the scan is hoisting out
+    /// of the tags as it reads them. This is the act's whole show: the album
+    /// model does not exist until the phase after it, so without this the grid
+    /// stays a wall of gradients for the entire scan and then fills all at once.
+    private func absorbHoistedCovers(_ notification: Notification) {
+        guard debutView != nil,
+              let covers = notification.userInfo?[Library.CoverKey.covers] as? [HoistedAlbumCover]
+        else { return }
+        for cover in covers where fedMosaicKeys.count < LibraryViewModel.mosaicCoverBudget {
+            guard fedMosaicKeys.insert(cover.tileKey).inserted else { continue }
+            loadMosaicCover(albumTitle: cover.albumTitle, artist: cover.artist, tileKey: cover.tileKey)
+        }
+    }
+
+    /// Decodes one cover off the main thread and places it under the identity the
+    /// album model will carry, so the live feed and the post-build pass cannot
+    /// tile the same album twice.
+    private func loadMosaicCover(albumTitle: String, artist: String, tileKey: String) {
+        AlbumArtworkCache.shared.loadThumbnail(forAlbum: albumTitle, artist: artist) { [weak self] image in
+            guard let image, let debutView = self?.debutView else { return }
+            debutView.insert(cover: image, forKey: tileKey)
+        }
+    }
+
+    /// Moves the Debut into an act. No haptic fires here: the Debut's single
+    /// haptic belongs to `LibraryDebutView.presentSummary(_:aiSkippedForEntitlement:)`, which plays it
+    /// at the moment the card actually rises rather than one database pass
+    /// earlier. Acts I and II are background work, and the HIG is explicit that
+    /// background work does not get repeated feedback.
+    private func enter(_ act: LibraryDebutAct) {
+        switch act {
+        case .indexing, .finishing:
+            break
+        case .summary:
+            presentDebutSummary()
+        case .done:
+            viewModel.dismissDebut()
+        }
+    }
+
+    private func presentDebutSummary() {
+        Task { [weak self] in
+            guard let self else { return }
+            let summary = await self.viewModel.debutSummary()
+            self.debutSummary = summary
+            self.debutView?.presentSummary(
+                summary, aiSkippedForEntitlement: self.viewModel.aiSkippedForEntitlement
+            )
+        }
+    }
+
+    /// Leaves the Debut for good, recording the summary the person just read so
+    /// no later launch can offer them the showpiece again, and flying the mosaic
+    /// onto the album grid it was a picture of all along.
+    ///
+    /// The grid's frames are measured and the view is released *before* the
+    /// latch is dropped: releasing it raises the status banner, which would
+    /// otherwise shift the grid under tiles already in flight. Nilling the
+    /// property up front also makes `updateDebut` and `hideDebut` no-ops for the
+    /// duration, so no second crossfade competes with the morph — which leaves
+    /// the nav bar to be restored by hand.
+    private func finishDebut() {
+        guard let debut = debutView else { return }
+        view.layoutIfNeeded()
+        let targets = UIAccessibility.isReduceMotionEnabled ? [] : albumGridTargetFrames(in: debut)
+        debutView = nil
+        view.bringSubviewToFront(debut)
+        navigationController?.setNavigationBarHidden(false, animated: false)
+        if let debutSummary {
+            viewModel.completeDebut(with: debutSummary)
+        } else {
+            viewModel.dismissDebut()
+        }
+        debut.morph(to: targets) { [weak self] in
+            debut.removeFromSuperview()
+            self?.retireDebutState()
+        }
+    }
+
+    /// The frames the album grid's first screen is about to occupy, in the debut
+    /// view's own space, so the tiles land on their own counterparts.
+    private func albumGridTargetFrames(in space: UIView) -> [CGRect] {
+        collectionView.indexPathsForVisibleItems
+            .sorted()
+            .compactMap { collectionView.layoutAttributesForItem(at: $0)?.frame }
+            .map { collectionView.convert($0, to: space) }
+    }
+
+    /// Drops everything the Debut was holding — thirty-six decoded covers, the
+    /// summary it read from, and the keys that stopped it tiling an album twice.
+    private func retireDebutState() {
+        renderedDebutAct = nil
+        debutSummary = nil
+        fedMosaicKeys.removeAll()
+    }
+
+    private func showDebut() {
+        guard let debutView, debutView.isHidden || debutView.alpha < 1 else { return }
+        debutView.isHidden = false
+        debutView.alpha = 1
+        view.bringSubviewToFront(debutView)
         navigationController?.setNavigationBarHidden(true, animated: false)
     }
 
-    /// Dismisses the setup view, holding it on screen long enough to read when
-    /// the scan turns out to be instant, then crossfading into the library.
-    private func hideLoadingView(animated: Bool) {
-        guard !loadingView.isHidden else { return }
-        let shownFor = loadingShownAt.map { Date().timeIntervalSince($0) } ?? .greatestFiniteMagnitude
-        let remaining = max(0, 0.4 - shownFor)
-        guard animated else {
-            loadingView.isHidden = true
-            loadingView.alpha = 0
-            navigationController?.setNavigationBarHidden(false, animated: false)
+    /// Takes the Debut down. A hide that follows the terminal act retires the
+    /// view entirely rather than merely hiding it, because the router can never
+    /// ask for `.debut` again once the act is `.done` — and a debut left in the
+    /// hierarchy keeps its decoded covers and its rotation timer for the life of
+    /// the process. A non-terminal hide keeps the view so `showDebut()` still
+    /// has something to raise.
+    private func hideDebut(animated: Bool) {
+        guard let debutView, !debutView.isHidden else { return }
+        navigationController?.setNavigationBarHidden(false, animated: false)
+        let retire = viewModel.debutAct == .done
+        let finish = { [weak self] in
+            debutView.isHidden = true
+            guard retire else { return }
+            debutView.removeFromSuperview()
+            self?.debutView = nil
+            self?.retireDebutState()
+        }
+        guard animated, !UIAccessibility.isReduceMotionEnabled else {
+            debutView.alpha = 0
+            finish()
             return
         }
-        navigationController?.setNavigationBarHidden(false, animated: false)
-        UIView.animate(withDuration: 0.45, delay: remaining, options: .curveEaseOut) {
-            self.loadingView.alpha = 0
+        UIView.animate(withDuration: 0.45, delay: 0, options: .curveEaseOut) {
+            debutView.alpha = 0
         } completion: { _ in
-            self.loadingView.isHidden = true
+            finish()
         }
     }
 
-    private func setScanBanner(visible: Bool, animated: Bool) {
-        let target = visible ? LibraryScanBanner.expandedHeight : 0
-        guard scanBannerHeight.constant != target else { return }
-        scanBannerHeight.constant = target
+    /// The quiet surface: one line under the segments reporting work going on
+    /// behind a library the person can already use. A live disk scan wins the
+    /// line, because it is the thing that changes what is on screen; the job
+    /// gets it the rest of the time.
+    private func showAmbient(_ state: LibraryViewModel.LibraryLoadState, animated: Bool) {
+        if statusBannerHeight.constant == 0 { statusBanner.prepareForShow() }
+        statusBanner.update(
+            state.progress.isActive ? .load(state.progress, state.fraction) : .job(state.job)
+        )
+        setStatusBanner(visible: true, animated: animated)
+    }
+
+    private func setStatusBanner(visible: Bool, animated: Bool) {
+        let target = visible ? LibraryStatusBanner.expandedHeight : 0
+        guard statusBannerHeight.constant != target else { return }
+        statusBannerHeight.constant = target
         guard animated, !UIAccessibility.isReduceMotionEnabled else {
             view.layoutIfNeeded()
             return
@@ -946,12 +1089,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 self.lastRenderedSegment = segment
                 self.lastRenderedFilter = filter
                 self.filterChipsView.setSelected(filter, animated: false)
-                // Full list swaps (segment/sort of large libraries) are cheaper as
-                // reload than as a 6k-item identity diff. In-place filter tweaks
-                // keep the normal apply path.
-                let useReload = segmentChanged
-                    || previousSegment == nil
-                    || snapshot.numberOfItems > 200
+                let useReload = self.shouldReload(
+                    snapshot, segmentChanged: segmentChanged, isFirstRender: previousSegment == nil
+                )
                 self.applyLibrarySnapshot(
                     snapshot,
                     segment: segment,
@@ -971,6 +1111,28 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in self?.render(loadState: state) }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: Library.albumCoversHoisted)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in self?.absorbHoistedCovers(notification) }
+            .store(in: &cancellables)
+
+        render(loadState: viewModel.currentLoadState, animated: false)
+    }
+
+    /// Whether to swap the list wholesale instead of diffing it.
+    ///
+    /// A full list swap of a large library is far cheaper as a reload than as a
+    /// 6 000-item identity diff, but a library refresh keeps its rows — and
+    /// during the Debut's second act the AI is retitling albums under a reader
+    /// who is scrolling, where a reload would tear the grid down rather than
+    /// move the one row that changed.
+    private func shouldReload(
+        _ snapshot: LibraryViewModel.Snapshot, segmentChanged: Bool, isFirstRender: Bool
+    ) -> Bool {
+        if segmentChanged || isFirstRender { return true }
+        guard viewModel.snapshotIntent == .replaceList else { return false }
+        return snapshot.numberOfItems > 200
     }
 
     /// Refreshes loved heart indicators when love state changes elsewhere. When

@@ -1,8 +1,10 @@
 use crate::app::AppCore;
 use crate::config;
 use crate::events::AppEvent;
+use crate::load_progress::LoadPhase;
 use crate::ui::{self, Ui};
 use adw::prelude::*;
+use flaccy_shared::enrichment_job::{copy as job_copy, Activity};
 use gtk::glib;
 use gtk::{gdk, gio};
 use std::cell::{Cell, RefCell};
@@ -68,38 +70,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     }
     header.pack_start(&rescan_button);
 
-    let enrich_spinner = gtk::Spinner::new();
-    let enrich_label = gtk::Label::new(None);
-    enrich_label.add_css_class("caption");
-    enrich_label.add_css_class("dim");
-    let enrich_box = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(6)
-        .margin_start(4)
-        .build();
-    enrich_box.append(&enrich_spinner);
-    enrich_box.append(&enrich_label);
-    let enrich_revealer = gtk::Revealer::builder()
-        .child(&enrich_box)
-        .transition_type(gtk::RevealerTransitionType::SlideRight)
-        .build();
-    header.pack_start(&enrich_revealer);
-    {
-        let spinner = enrich_spinner.clone();
-        let label = enrich_label.clone();
-        core.hub.subscribe_widget(&enrich_revealer, move |revealer, event| {
-            if let AppEvent::EnrichmentProgress { done, total } = event {
-                if *total > 0 {
-                    spinner.start();
-                    label.set_text(&format!("Finding artwork… {done}/{total}"));
-                    revealer.set_reveal_child(true);
-                } else {
-                    spinner.stop();
-                    revealer.set_reveal_child(false);
-                }
-            }
-        });
-    }
+    header.pack_start(&build_job_status(&ui));
 
     let menu = gio::Menu::new();
     menu.append(Some("Download from Link"), Some("app.downloads"));
@@ -139,7 +110,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     let progress = gtk::ProgressBar::builder()
         .hexpand(true)
         .show_text(true)
-        .text("Looking for music")
+        .text(LoadPhase::FindingFiles.headline())
         .build();
     progress.add_css_class("osd");
     let progress_revealer = gtk::Revealer::builder()
@@ -153,7 +124,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
             .subscribe_widget(&progress_revealer, move |revealer, event| match event {
                 AppEvent::ScanStarted => {
                     progress.set_fraction(0.0);
-                    progress.set_text(Some("Opening your library"));
+                    progress.set_text(Some(LoadPhase::OpeningLibrary.headline()));
                     revealer.set_reveal_child(true);
                     rescan_button.set_sensitive(false);
                     let spinner = gtk::Spinner::new();
@@ -494,6 +465,110 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     }
 
     window
+}
+
+/// The ambient enrichment surface: one line in the header that counts down and
+/// dismisses itself at zero. It is a `MenuButton` rather than a bare label
+/// because while the job runs this is the only place it is visible, so it also
+/// has to be the way in to the two things a reader can do about it. There is
+/// deliberately no bar and no percentage — the work is unbounded network work,
+/// so it is quoted as what is left.
+fn build_job_status(ui: &Rc<Ui>) -> gtk::Revealer {
+    let spinner = gtk::Spinner::new();
+    let label = gtk::Label::new(None);
+    label.add_css_class("caption");
+    label.add_css_class("dim");
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(6)
+        .build();
+    content.append(&spinner);
+    content.append(&label);
+
+    let summary = gtk::Label::builder()
+        .xalign(0.0)
+        .wrap(true)
+        .max_width_chars(30)
+        .build();
+    summary.add_css_class("caption");
+    summary.add_css_class("dim");
+
+    let find = gtk::Button::with_label(job_copy::FIND_MISSING_ARTWORK);
+    find.add_css_class("flat");
+    let settings = gtk::Button::with_label(job_copy::OPEN_LIBRARY_SETTINGS);
+    settings.add_css_class("flat");
+
+    let menu = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(8)
+        .margin_top(10)
+        .margin_bottom(10)
+        .margin_start(10)
+        .margin_end(10)
+        .build();
+    menu.append(&summary);
+    menu.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+    menu.append(&find);
+    menu.append(&settings);
+    let popover = gtk::Popover::builder().child(&menu).build();
+
+    let button = gtk::MenuButton::builder()
+        .child(&content)
+        .popover(&popover)
+        .margin_start(4)
+        .build();
+    button.add_css_class("flat");
+
+    {
+        let ui = Rc::clone(ui);
+        let popover = popover.clone();
+        find.connect_clicked(move |_| {
+            popover.popdown();
+            let queued = crate::ui::retry_missing_artwork(&ui);
+            ui.core
+                .toast(&format!("Looking up artwork for {queued} albums…"));
+        });
+    }
+    {
+        let ui = Rc::clone(ui);
+        let popover = popover.clone();
+        settings.connect_clicked(move |_| {
+            popover.popdown();
+            crate::ui::prefs::present(&ui);
+        });
+    }
+
+    let revealer = gtk::Revealer::builder()
+        .child(&button)
+        .transition_type(gtk::RevealerTransitionType::SlideRight)
+        .build();
+    {
+        let button = button.clone();
+        ui.core
+            .hub
+            .subscribe_widget(&revealer, move |revealer, event| {
+                let AppEvent::EnrichmentProgress(job) = event else {
+                    return;
+                };
+                summary.set_label(&job_copy::settled(job.remaining, job.exhausted));
+                let Some(line) = job_copy::ambient(job) else {
+                    spinner.stop();
+                    revealer.set_reveal_child(false);
+                    return;
+                };
+                label.set_label(&line);
+                button.update_property(&[gtk::accessible::Property::Label(
+                    &job_copy::accessibility(job),
+                )]);
+                if job.activity == Activity::Running {
+                    spinner.start();
+                } else {
+                    spinner.stop();
+                }
+                revealer.set_reveal_child(true);
+            });
+    }
+    revealer
 }
 
 const SHELL_COLLAPSE_WIDTH: f64 = 820.0;

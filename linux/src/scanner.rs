@@ -9,6 +9,10 @@ const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "w
 
 pub enum ScanEvent {
     Progress(LoadProgress),
+    /// Albums whose embedded cover this chunk just wrote into `albumInfo`,
+    /// announced so the Debut's mosaic fills during the tag pass instead of
+    /// waiting for the first build.
+    CoversHoisted(Vec<(String, String)>),
     Done { added: usize, removed: usize },
     Failed(String),
 }
@@ -70,25 +74,38 @@ fn run_scan(
     progress.tracks_indexed = already_indexed;
     let _ = tx.send_blocking(ScanEvent::Progress(progress));
 
+    let mut hoisted: Vec<(String, String)> = Vec::new();
+    let mut announced: HashSet<String> = HashSet::new();
+
     for (index, path) in to_add.iter().enumerate() {
         if index % 25 == 0 || index + 1 == total {
             progress.completed = index + 1;
             progress.tracks_indexed = already_indexed + added;
             let _ = tx.send_blocking(ScanEvent::Progress(progress));
+            if !hoisted.is_empty() {
+                let _ = tx.send_blocking(ScanEvent::CoversHoisted(std::mem::take(&mut hoisted)));
+            }
         }
         let rel = relative_path(root, path);
         match read_track(path, &rel) {
             Some(track) => {
+                let cover = track.artwork.is_some() && !track.album.is_empty();
                 if let Err(err) = db.insert_track(&track) {
                     crate::logger::error("library", &format!("insert failed for {rel}: {err}"));
                 } else {
                     added += 1;
+                    if cover && announced.insert(format!("{}|{}", track.album, track.artist)) {
+                        hoisted.push((track.album.clone(), track.artist.clone()));
+                    }
                 }
             }
             None => {
                 crate::logger::warn("library", &format!("skipped unreadable audio: {rel}"));
             }
         }
+    }
+    if !hoisted.is_empty() {
+        let _ = tx.send_blocking(ScanEvent::CoversHoisted(hoisted));
     }
 
     let removed = db

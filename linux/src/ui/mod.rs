@@ -4,6 +4,7 @@ pub mod artwork;
 pub mod cleanup;
 pub mod context;
 pub mod controls;
+pub mod debut;
 pub mod delete;
 pub mod downloads;
 pub mod guide;
@@ -24,9 +25,66 @@ pub mod year_in_music;
 
 use crate::app::AppCore;
 use adw::prelude::*;
+use flaccy_shared::enrichment_job::Scope;
 use gtk::glib;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+
+/// Frame deltas are clamped before anything integrates against them, so a
+/// stalled frame can't blow a spring up.
+pub const MAX_FRAME_DELTA: f64 = 1.0 / 30.0;
+
+/// Runs a step function once per frame off a widget's own frame clock, which is
+/// the only clock that stays in step with what is actually being painted.
+/// Re-arming a running driver is a no-op, and `stop` tears the callback down so
+/// a settled animation costs nothing.
+#[derive(Default)]
+pub struct FrameDriver {
+    handle: RefCell<Option<gtk::TickCallbackId>>,
+}
+
+impl FrameDriver {
+    pub fn start(&self, widget: &impl IsA<gtk::Widget>, step: impl Fn(f64) + 'static) {
+        if self.handle.borrow().is_some() {
+            return;
+        }
+        let previous: Cell<i64> = Cell::new(0);
+        let handle = widget.as_ref().add_tick_callback(move |_, clock| {
+            let now = clock.frame_time();
+            let last = previous.replace(now);
+            let delta = if last == 0 {
+                MAX_FRAME_DELTA
+            } else {
+                ((now - last) as f64 / 1_000_000.0).clamp(0.0, MAX_FRAME_DELTA)
+            };
+            step(delta);
+            glib::ControlFlow::Continue
+        });
+        *self.handle.borrow_mut() = Some(handle);
+    }
+
+    pub fn stop(&self) {
+        if let Some(handle) = self.handle.borrow_mut().take() {
+            handle.remove();
+        }
+    }
+}
+
+/// Revives every album the job wrote off and re-queues everything the database
+/// then says is due, returning that count so the caller can name it. `exhausted`
+/// is otherwise terminal by design, so this — and a producer version bump — are
+/// the only two ways back.
+pub fn retry_missing_artwork(ui: &Rc<Ui>) -> usize {
+    ui.core.db.reset_exhausted(Scope::Album);
+    let queued = ui.core.db.count_due(
+        Scope::Album,
+        Scope::Album.current_version(),
+        chrono::Utc::now(),
+    );
+    crate::enrichment::schedule_background_pass(&ui.core);
+    ui.core.refresh_job_progress();
+    queued
+}
 
 pub struct Ui {
     pub core: Rc<AppCore>,

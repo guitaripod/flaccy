@@ -2,45 +2,41 @@ import Foundation
 
 /// The stage a library load is in, in the order the clients perform them.
 /// Shared so iOS, macOS and watchOS describe a scan with the same vocabulary.
+/// Every phase is disk-bound and bounded, so a finished load reports a real 1.0
+/// rather than a fraction that network work can never actually reach.
 public enum LibraryLoadPhase: Int, Sendable, CaseIterable, Comparable {
     case idle
     case openingLibrary
     case findingFiles
     case readingTags
-    case identifyingMusic
     case buildingAlbums
-    case enrichingArtwork
 
     public static func < (lhs: LibraryLoadPhase, rhs: LibraryLoadPhase) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
 
-    /// Share of a whole first load this phase accounts for, tuned so the bar
-    /// moves at a roughly steady rate on a real library instead of sitting at
-    /// zero through the tag read and then jumping.
     public var weight: Double {
         switch self {
         case .idle: return 0
-        case .openingLibrary: return 0.02
+        case .openingLibrary: return 0.05
         case .findingFiles: return 0.13
-        case .readingTags: return 0.45
-        case .identifyingMusic: return 0.15
-        case .buildingAlbums: return 0.05
-        case .enrichingArtwork: return 0.20
+        case .readingTags: return 0.67
+        case .buildingAlbums: return 0.15
         }
     }
 
-    /// Cumulative weight of every phase before this one.
-    public var start: Double {
-        LibraryLoadPhase.allCases
-            .filter { $0.rawValue < rawValue }
-            .reduce(0) { $0 + $1.weight }
-    }
+    /// Cumulative weight of every earlier phase, read from a table instead of
+    /// re-summing `allCases` on every publish; `testStartsTableMatchesAccumulatedWeights`
+    /// is what keeps the table and the weights from drifting apart.
+    public var start: Double { Self.cumulativeStarts[rawValue] }
 
-    /// Phases whose work the user is waiting on before any library can appear.
-    /// Artwork enrichment continues behind an already-usable library.
+    private static let cumulativeStarts: [Double] = [0, 0, 0.05, 0.18, 0.85]
+
     public var blocksLibrary: Bool {
-        self > .idle && self < .enrichingArtwork
+        switch self {
+        case .idle: return false
+        default: return true
+        }
     }
 }
 
@@ -141,6 +137,7 @@ public final class LibraryLoadProgressTracker: @unchecked Sendable {
         var next = current
         mutate(&next)
         current = next
+        resetPublishStateIfRestarted(from: previous.phase, to: next.phase)
         highWaterFraction = max(highWaterFraction, next.fractionCompleted)
         let now = Date().timeIntervalSinceReferenceDate
         let fractionMoved = abs(highWaterFraction - lastPublishedFraction) >= Self.fractionEpsilon
@@ -153,6 +150,16 @@ public final class LibraryLoadProgressTracker: @unchecked Sendable {
         }
         lock.unlock()
         return shouldPublish ? next : nil
+    }
+
+    /// A scan that restarts must not inherit the previous pass's near-full bar,
+    /// so a backwards phase move drops the high-water mark and the publish gate
+    /// along with it. Called with `lock` already held.
+    private func resetPublishStateIfRestarted(from previous: LibraryLoadPhase, to next: LibraryLoadPhase) {
+        guard next < previous else { return }
+        highWaterFraction = 0
+        lastPublishedFraction = 0
+        lastPublishedAt = 0
     }
 
     /// Ends the load and resets the high-water mark for the next one.

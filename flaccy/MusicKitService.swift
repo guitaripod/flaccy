@@ -1,6 +1,20 @@
 import Foundation
 import MusicKit
 
+/// Whether Flaccy may ask Apple Music for artwork it could not find anywhere
+/// else. Off unless the user says otherwise, and never turned on implicitly:
+/// a background enrichment pass must never be the thing that raises the
+/// system's Apple Music permission alert.
+nonisolated enum AppleMusicArtworkSetting {
+    static let key = "useAppleMusicArtwork"
+
+    static var isEnabled: Bool { UserDefaults.standard.bool(forKey: key) }
+
+    static func set(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: key)
+    }
+}
+
 nonisolated struct MusicKitSongMatch: Sendable {
     let title: String
     let artist: String
@@ -142,6 +156,27 @@ final class MusicKitService {
             await AppLogger.error("MusicKit artist image fetch failed: \(error.localizedDescription)", category: .content)
             return nil
         }
+    }
+
+    /// The enrichment job's only door into Apple Music. It answers nil unless
+    /// the user opted in *and* authorization has already been granted, so a
+    /// background loop can never reach `MusicAuthorization.request()` and put a
+    /// permission alert in front of somebody who was just browsing.
+    nonisolated func artworkForEnrichment(title: String, artist: String) async -> Data? {
+        guard AppleMusicArtworkSetting.isEnabled, await Self.isAlreadyAuthorized() else { return nil }
+        return await fetchAlbumArtwork(title: title, artist: artist)
+    }
+
+    /// Turns the Apple Music artwork source on, asking for permission the one
+    /// time the toggle is flipped. Returns whether it is now usable.
+    nonisolated func enableArtworkSource() async -> Bool {
+        let granted = await requestAuthorizationIfNeeded()
+        AppleMusicArtworkSetting.set(granted)
+        return granted
+    }
+
+    nonisolated static func isAlreadyAuthorized() async -> Bool {
+        await MainActor.run { MusicAuthorization.currentStatus == .authorized }
     }
 
     nonisolated func fetchAlbumArtwork(title: String, artist: String) async -> Data? {

@@ -204,12 +204,37 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    /// Opens a database at an arbitrary path, for tests that need to watch the
+    /// real migrator run against a fixture instead of the app's own library.
+    /// Nothing in the app uses it: the app has exactly one database, `shared`.
+    init(path: String) throws {
+        dbQueue = try Self.openDatabase(at: path)
+    }
+
     /// Opens the SQLite database and runs all migrations, throwing instead of crashing
     /// so a corrupt file can be moved aside and the library rebuilt from Documents.
-    private static func openDatabase(at path: String) throws -> DatabaseQueue {
-        let queue = try DatabaseQueue(path: path)
+    static func openDatabase(at path: String) throws -> DatabaseQueue {
+        var configuration = Configuration()
+        configuration.prepareDatabase { db in db.add(function: enrichmentKeyNormalizer) }
+        let queue = try DatabaseQueue(path: path, configuration: configuration)
         try migrator().migrate(queue)
         return queue
+    }
+
+    /// The key normalizer every enrichment statement calls, installed on each
+    /// connection before the migrator runs so the v10 seeds get it too.
+    ///
+    /// SQLite's own `lower()` folds ASCII only and its `trim()` strips spaces
+    /// only, so an album titled "Ágætis byrjun" would be keyed one way by the
+    /// queue and another by `EnrichmentKey`, which reads and writes the row —
+    /// and the orphan sweep would delete the state on every sync that removes a
+    /// file. `pure` maps to SQLITE_DETERMINISTIC, so the index seek on
+    /// `enrichmentState(scope, key)` survives.
+    private static let enrichmentKeyNormalizer = DatabaseFunction(
+        EnrichmentKey.sqlFunctionName, argumentCount: 1, pure: true
+    ) { arguments in
+        guard let value = String.fromDatabaseValue(arguments[0]) else { return nil }
+        return EnrichmentKey.normalize(value)
     }
 
     private static func moveCorruptDatabaseAside(at path: String) {
@@ -227,7 +252,7 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
-    private static func migrator() -> DatabaseMigrator {
+    static func migrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
 
         migrator.registerMigration("v1") { db in
@@ -413,6 +438,83 @@ nonisolated final class DatabaseManager: Sendable {
             }
         }
 
+        migrator.registerMigration("v10") { db in
+            try db.create(table: "enrichmentState", options: [.withoutRowID]) { t in
+                t.column("scope", .text).notNull()
+                t.column("key", .text).notNull()
+                t.column("version", .integer).notNull().defaults(to: 0)
+                t.column("status", .integer).notNull().defaults(to: 0)
+                t.column("fields", .integer).notNull().defaults(to: 0)
+                t.column("attempts", .integer).notNull().defaults(to: 0)
+                t.column("lastAttemptAt", .datetime)
+                t.column("nextEligibleAt", .datetime)
+                t.column("lastFailure", .text)
+                t.primaryKey(["scope", "key"])
+            }
+            try db.create(
+                index: "enrichmentState_on_due", on: "enrichmentState",
+                columns: ["scope", "status", "nextEligibleAt"]
+            )
+
+            try db.create(table: "libraryDebut") { t in
+                t.column("id", .integer).primaryKey().check { $0 == 1 }
+                t.column("completedAt", .datetime).notNull()
+                t.column("summaryJSON", .text).notNull()
+            }
+
+            try db.execute(sql: """
+                INSERT INTO albumInfo (title, artist, coverArtData)
+                SELECT albumTitle, artist, artworkData FROM tracks
+                WHERE artworkData IS NOT NULL AND albumTitle <> ''
+                GROUP BY albumTitle, artist
+                ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
+                WHERE albumInfo.coverArtData IS NULL
+                """)
+            try db.execute(sql: """
+                UPDATE tracks SET artworkData = NULL
+                WHERE artworkData IS NOT NULL AND albumTitle <> ''
+                """)
+
+            try db.execute(sql: """
+                INSERT OR IGNORE INTO enrichmentState
+                    (scope, key, version, status, fields, attempts, lastAttemptAt, nextEligibleAt, lastFailure)
+                SELECT 'album',
+                       flaccy_norm(title) || char(31) || flaccy_norm(artist),
+                       0,
+                       CASE WHEN coverArtData IS NOT NULL AND year IS NOT NULL THEN 1 ELSE 0 END,
+                         (CASE WHEN coverArtData  IS NOT NULL THEN 1  ELSE 0 END)
+                       + (CASE WHEN year          IS NOT NULL THEN 2  ELSE 0 END)
+                       + (CASE WHEN genre         IS NOT NULL THEN 4  ELSE 0 END)
+                       + (CASE WHEN musicBrainzID IS NOT NULL THEN 8  ELSE 0 END),
+                       0, lastFetched, NULL, NULL
+                FROM albumInfo
+                """)
+
+            try db.execute(sql: """
+                INSERT OR IGNORE INTO enrichmentState
+                    (scope, key, version, status, fields, attempts)
+                SELECT 'artist',
+                       flaccy_norm(name),
+                       0,
+                       CASE WHEN imageURL IS NOT NULL THEN 1 ELSE 0 END,
+                         (CASE WHEN bio      IS NOT NULL THEN 16 ELSE 0 END)
+                       + (CASE WHEN imageURL IS NOT NULL THEN 32 ELSE 0 END),
+                       0
+                FROM artists
+                """)
+
+            try db.execute(sql: """
+                INSERT OR IGNORE INTO enrichmentState
+                    (scope, key, version, status, fields, attempts)
+                SELECT 'aiBatch',
+                       flaccy_norm(rtrim(rtrim(fileURL, replace(fileURL, '/', '')), '/')),
+                       0, 1, 64, 0
+                FROM tracks
+                WHERE aiAnalyzed = 1
+                GROUP BY 2
+                """)
+        }
+
         return migrator
     }
 
@@ -510,38 +612,34 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
-    func markAnalysisAttempted(fileURLs: [String], date: Date = Date()) throws {
-        guard !fileURLs.isEmpty else { return }
-        try dbQueue.write { db in
-            _ = try TrackRecord
-                .filter(fileURLs.contains(Column("fileURL")))
-                .updateAll(db, Column("analysisAttemptedAt").set(to: date))
-        }
-    }
-
-    func markAnalyzed(fileURLs: [String], date: Date = Date()) throws {
-        guard !fileURLs.isEmpty else { return }
-        try dbQueue.write { db in
-            _ = try TrackRecord
-                .filter(fileURLs.contains(Column("fileURL")))
-                .updateAll(db, Column("aiAnalyzed").set(to: true), Column("analysisAttemptedAt").set(to: date))
-        }
-    }
-
     /// Inserts each row independently inside the batch transaction so one
     /// conflicting row (e.g. a duplicate fileURL from a concurrent import)
-    /// never rolls back the other tracks in the batch.
+    /// never rolls back the other tracks in the batch. Embedded artwork is
+    /// hoisted into `albumInfo` once per album rather than duplicated on every
+    /// track row, which is what lets the enrichment queue see that an album
+    /// already has a cover and skip it.
     func insertTracks(_ tracks: [TrackRecord]) throws {
         guard !tracks.isEmpty else { return }
         try dbQueue.write { db in
             for track in tracks {
                 do {
-                    try track.insert(db)
+                    try Self.hoistingCoverArt(track, in: db).insert(db)
                 } catch {
                     AppLogger.error("Skipped track insert for \(track.fileURL): \(error.localizedDescription)", category: .database)
                 }
             }
         }
+    }
+
+    /// Moves a track's embedded artwork to its album and returns the row to
+    /// store. A track with no album title keeps its own artwork, since there is
+    /// no album row that could hold it — the same rule migration v10 applies.
+    private static func hoistingCoverArt(_ track: TrackRecord, in db: Database) throws -> TrackRecord {
+        guard !track.albumTitle.isEmpty, let artwork = track.artworkData else { return track }
+        try saveAlbumCoverArtIfMissing(title: track.albumTitle, artist: track.artist, data: artwork, in: db)
+        var stripped = track
+        stripped.artworkData = nil
+        return stripped
     }
 
     /// Fetches every track without the artwork BLOB column so full-library reads stay lean;
@@ -566,18 +664,6 @@ nonisolated final class DatabaseManager: Sendable {
         try dbQueue.read { db in
             let paths = try String.fetchAll(db, sql: "SELECT fileURL FROM tracks")
             return Set(paths)
-        }
-    }
-
-    /// Reports whether any track is both unanalyzed and eligible for a retry,
-    /// i.e. never attempted or last attempted before `attemptedBefore`.
-    func hasUnanalyzedTracks(attemptedBefore cutoff: Date) throws -> Bool {
-        try dbQueue.read { db in
-            let count = try TrackRecord
-                .filter(Column("aiAnalyzed") == false)
-                .filter(Column("analysisAttemptedAt") == nil || Column("analysisAttemptedAt") < cutoff)
-                .fetchCount(db)
-            return count > 0
         }
     }
 
@@ -612,7 +698,33 @@ nonisolated final class DatabaseManager: Sendable {
                 _ = try PlaylistTrackRecord.filter(!relativePaths.contains(Column("trackFileURL"))).deleteAll(db)
                 _ = try TrackRecord.filter(!relativePaths.contains(Column("fileURL"))).deleteAll(db)
             }
+            try Self.sweepOrphanedAlbumEnrichment(in: db)
         }
+    }
+
+    /// Drops enrichment state for albums the library no longer contains, for
+    /// callers that retitle without deleting a track — an AI identification
+    /// pass rewrites `albumTitle`/`artist`, which changes the key, so the old
+    /// one would otherwise keep its exhausted verdict and keep inflating the
+    /// report's "Gave up" count forever. Run it once per batch: it is a
+    /// full-table anti-join, not per-row work.
+    func sweepOrphanedAlbumEnrichment() throws {
+        try dbQueue.write { db in try Self.sweepOrphanedAlbumEnrichment(in: db) }
+    }
+
+    /// Drops enrichment state for albums the library no longer contains, in the
+    /// same transaction as the track delete so the two can never disagree. An
+    /// AI retitle changes the key, so the renamed album arrives as a new pending
+    /// entity instead of inheriting the old one's exhausted verdict.
+    private static func sweepOrphanedAlbumEnrichment(in db: Database) throws {
+        try db.execute(sql: """
+            DELETE FROM enrichmentState
+            WHERE scope = 'album'
+              AND key NOT IN (
+                  SELECT flaccy_norm(albumTitle) || char(31) || flaccy_norm(artist)
+                  FROM tracks WHERE albumTitle <> ''
+              )
+            """)
     }
 
     func setPlayCount(relativePath: String, count: Int) throws {
@@ -677,6 +789,7 @@ nonisolated final class DatabaseManager: Sendable {
                     arguments: [update.loved, update.playCount, update.relativePath]
                 )
             }
+            try Self.sweepOrphanedAlbumEnrichment(in: db)
         }
     }
 
@@ -717,12 +830,16 @@ nonisolated final class DatabaseManager: Sendable {
     /// duplicating the BLOB on every track row.
     func saveAlbumCoverArtIfMissing(title: String, artist: String, data: Data) throws {
         try dbQueue.write { db in
-            try db.execute(sql: """
-                INSERT INTO albumInfo (title, artist, coverArtData) VALUES (?, ?, ?)
-                ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
-                WHERE albumInfo.coverArtData IS NULL
-            """, arguments: [title, artist, data])
+            try Self.saveAlbumCoverArtIfMissing(title: title, artist: artist, data: data, in: db)
         }
+    }
+
+    private static func saveAlbumCoverArtIfMissing(title: String, artist: String, data: Data, in db: Database) throws {
+        try db.execute(sql: """
+            INSERT INTO albumInfo (title, artist, coverArtData) VALUES (?, ?, ?)
+            ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
+            WHERE albumInfo.coverArtData IS NULL
+        """, arguments: [title, artist, data])
     }
 
     func updateAlbumInfo(_ album: AlbumInfoRecord) throws {
@@ -738,6 +855,363 @@ nonisolated final class DatabaseManager: Sendable {
                 .fetchOne(db)
         }
     }
+
+    /// Reports what an album is still missing without touching `coverArtData`,
+    /// so deciding whether to enrich a thousand albums never pulls a thousand
+    /// JPEGs through SQLite.
+    func fetchAlbumInfoStatus(title: String, artist: String) throws -> (hasCover: Bool, year: String?, genre: String?, mbid: String?) {
+        try dbQueue.read { db in
+            guard let row = try Row.fetchOne(db, sql: """
+                SELECT CASE WHEN coverArtData IS NOT NULL THEN 1 ELSE 0 END AS hasCover,
+                       year, genre, musicBrainzID
+                FROM albumInfo WHERE title = ? AND artist = ?
+                """, arguments: [title, artist]) else {
+                return (hasCover: false, year: nil, genre: nil, mbid: nil)
+            }
+            let hasCover: Int = row["hasCover"]
+            return (hasCover: hasCover != 0, year: row["year"], genre: row["genre"], mbid: row["musicBrainzID"])
+        }
+    }
+
+    func fetchEnrichmentRecord(scope: EnrichmentScope, key: String) throws -> EnrichmentRecord? {
+        try dbQueue.read { db in
+            guard let row = try Row.fetchOne(
+                db,
+                sql: "SELECT * FROM enrichmentState WHERE scope = ? AND key = ?",
+                arguments: [scope.rawValue, key]
+            ) else { return nil }
+            return Self.enrichmentRecord(from: row, scope: scope)
+        }
+    }
+
+    func upsertEnrichmentRecord(_ record: EnrichmentRecord) throws {
+        try dbQueue.write { db in
+            try Self.upsertEnrichmentRecord(record, in: db)
+        }
+    }
+
+    /// Writes an album's newly-found metadata and the attempt's outcome in ONE
+    /// transaction. Two separate writes with a crash between them would leave an
+    /// album that is genuinely satisfied marked pending, costing a redundant
+    /// attempt on the next launch. Every column fills only when it is still
+    /// empty, and `lastFetched` is deliberately never stamped — all scheduling
+    /// state lives in `enrichmentState` now.
+    func applyAlbumEnrichment(
+        title: String,
+        artist: String,
+        coverArtURL: String?,
+        coverArtData: Data?,
+        musicBrainzID: String?,
+        year: String?,
+        genre: String?,
+        record: EnrichmentRecord
+    ) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: """
+                INSERT INTO albumInfo (title, artist, coverArtURL, coverArtData, musicBrainzID, year, genre)
+                VALUES (:title, :artist, :coverArtURL, :coverArtData, :musicBrainzID, :year, :genre)
+                ON CONFLICT(title, artist) DO UPDATE SET
+                    coverArtURL = COALESCE(albumInfo.coverArtURL, excluded.coverArtURL),
+                    coverArtData = COALESCE(albumInfo.coverArtData, excluded.coverArtData),
+                    musicBrainzID = COALESCE(albumInfo.musicBrainzID, excluded.musicBrainzID),
+                    year = COALESCE(albumInfo.year, excluded.year),
+                    genre = COALESCE(albumInfo.genre, excluded.genre)
+                """, arguments: [
+                    "title": title,
+                    "artist": artist,
+                    "coverArtURL": coverArtURL,
+                    "coverArtData": coverArtData,
+                    "musicBrainzID": musicBrainzID,
+                    "year": year,
+                    "genre": genre,
+                ])
+            try Self.upsertEnrichmentRecord(record, in: db)
+        }
+    }
+
+    /// The artist twin of `applyAlbumEnrichment`, with the same one-transaction
+    /// and fill-missing-only guarantees.
+    func applyArtistEnrichment(
+        name: String,
+        bio: String?,
+        imageURL: String?,
+        musicBrainzID: String?,
+        record: EnrichmentRecord
+    ) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: """
+                INSERT INTO artists (name, bio, imageURL, musicBrainzID)
+                VALUES (:name, :bio, :imageURL, :musicBrainzID)
+                ON CONFLICT(name) DO UPDATE SET
+                    bio = COALESCE(artists.bio, excluded.bio),
+                    imageURL = COALESCE(artists.imageURL, excluded.imageURL),
+                    musicBrainzID = COALESCE(artists.musicBrainzID, excluded.musicBrainzID)
+                """, arguments: [
+                    "name": name,
+                    "bio": bio,
+                    "imageURL": imageURL,
+                    "musicBrainzID": musicBrainzID,
+                ])
+            try Self.upsertEnrichmentRecord(record, in: db)
+        }
+    }
+
+    /// The albums the job should attempt next, in one SELECT that reads no BLOB
+    /// column. Albums with no cover sort first because a coverless tile is the
+    /// visible gap in the grid.
+    func dueAlbumKeys(version: Int, now: Date, limit: Int) throws -> [(title: String, artist: String)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT a.title, a.artist
+                \(Self.albumDueSource)
+                ORDER BY (i.coverArtData IS NULL) DESC, a.artist, a.title
+                LIMIT :limit
+                """, arguments: Self.dueArguments(scope: .album, version: version, now: now, limit: limit))
+            return rows.map { (title: $0["title"], artist: $0["artist"]) }
+        }
+    }
+
+    func dueArtistNames(version: Int, now: Date, limit: Int) throws -> [String] {
+        try dbQueue.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT a.name
+                \(Self.artistDueSource)
+                ORDER BY a.name
+                LIMIT :limit
+                """, arguments: Self.dueArguments(scope: .artist, version: version, now: now, limit: limit))
+        }
+    }
+
+    /// The directories still owed an AI identification pass, named exactly the
+    /// way `Library` batches them: the parent path with no trailing slash, or
+    /// the empty string for a track sitting at the library root.
+    func dueAIBatchDirectories(version: Int, now: Date, limit: Int) throws -> [String] {
+        try dbQueue.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT a.directory
+                \(Self.aiBatchDueSource)
+                ORDER BY a.directory
+                LIMIT :limit
+                """, arguments: Self.dueArguments(scope: .aiBatch, version: version, now: now, limit: limit))
+        }
+    }
+
+    /// The `remaining` a job reports: a `count(*)` over the very predicate the
+    /// queue drains, so the countdown is a fact about the database rather than
+    /// a counter that can drift.
+    func countDue(scope: EnrichmentScope, version: Int, now: Date) throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: """
+                SELECT count(*)
+                \(Self.dueSource(for: scope))
+                """, arguments: Self.dueArguments(scope: scope, version: version, now: now, limit: nil)) ?? 0
+        }
+    }
+
+    func countExhausted(scope: EnrichmentScope) throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(
+                db,
+                sql: "SELECT count(*) FROM enrichmentState WHERE scope = ? AND status = ?",
+                arguments: [scope.rawValue, EnrichmentStatus.exhausted.rawValue]
+            ) ?? 0
+        }
+    }
+
+    func exhaustedEntities(scope: EnrichmentScope) throws -> [EnrichmentRecord] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT * FROM enrichmentState
+                WHERE scope = ? AND status = ?
+                ORDER BY lastAttemptAt DESC, key
+                """, arguments: [scope.rawValue, EnrichmentStatus.exhausted.rawValue])
+            return rows.map { Self.enrichmentRecord(from: $0, scope: scope) }
+        }
+    }
+
+    /// Requeues everything the job gave up on, keeping the fields already
+    /// resolved so a retry only chases what is still missing. Returns how many
+    /// entities were revived.
+    @discardableResult
+    func resetExhausted(scope: EnrichmentScope) throws -> Int {
+        try dbQueue.write { db in
+            try db.execute(sql: """
+                UPDATE enrichmentState
+                SET status = ?, attempts = 0, nextEligibleAt = NULL, lastFailure = NULL
+                WHERE scope = ? AND status = ?
+                """, arguments: [
+                    EnrichmentStatus.pending.rawValue,
+                    scope.rawValue,
+                    EnrichmentStatus.exhausted.rawValue,
+                ])
+            return db.changesCount
+        }
+    }
+
+    func deleteAllEnrichmentState() throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM enrichmentState")
+        }
+    }
+
+    func libraryDebut() throws -> LibraryDebutSummary? {
+        try dbQueue.read { db in
+            guard let json = try String.fetchOne(db, sql: "SELECT summaryJSON FROM libraryDebut WHERE id = 1") else {
+                return nil
+            }
+            do {
+                return try Self.debutDecoder().decode(LibraryDebutSummary.self, from: Data(json.utf8))
+            } catch {
+                AppLogger.error("Library debut summary unreadable: \(error.localizedDescription)", category: .database)
+                return nil
+            }
+        }
+    }
+
+    func saveLibraryDebut(_ summary: LibraryDebutSummary) throws {
+        let json = String(decoding: try Self.debutEncoder().encode(summary), as: UTF8.self)
+        try dbQueue.write { db in
+            try db.execute(sql: """
+                INSERT INTO libraryDebut (id, completedAt, summaryJSON) VALUES (1, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    completedAt = excluded.completedAt,
+                    summaryJSON = excluded.summaryJSON
+                """, arguments: [summary.completedAt, json])
+        }
+    }
+
+    func clearLibraryDebut() throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM libraryDebut")
+        }
+    }
+
+    private static func debutEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+
+    private static func debutDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+
+    private static func enrichmentRecord(from row: Row, scope: EnrichmentScope) -> EnrichmentRecord {
+        let status: Int = row["status"]
+        let fields: Int = row["fields"]
+        let failure: String? = row["lastFailure"]
+        return EnrichmentRecord(
+            scope: scope,
+            key: row["key"],
+            version: row["version"],
+            status: EnrichmentStatus(rawValue: status) ?? .pending,
+            fields: EnrichmentFields(rawValue: fields),
+            attempts: row["attempts"],
+            lastAttemptAt: row["lastAttemptAt"],
+            nextEligibleAt: row["nextEligibleAt"],
+            lastFailure: failure.flatMap(EnrichmentFailure.init(rawValue:))
+        )
+    }
+
+    private static func upsertEnrichmentRecord(_ record: EnrichmentRecord, in db: Database) throws {
+        try db.execute(sql: """
+            INSERT INTO enrichmentState
+                (scope, key, version, status, fields, attempts, lastAttemptAt, nextEligibleAt, lastFailure)
+            VALUES (:scope, :key, :version, :status, :fields, :attempts, :lastAttemptAt, :nextEligibleAt, :lastFailure)
+            ON CONFLICT(scope, key) DO UPDATE SET
+                version = excluded.version,
+                status = excluded.status,
+                fields = excluded.fields,
+                attempts = excluded.attempts,
+                lastAttemptAt = excluded.lastAttemptAt,
+                nextEligibleAt = excluded.nextEligibleAt,
+                lastFailure = excluded.lastFailure
+            """, arguments: [
+                "scope": record.scope.rawValue,
+                "key": record.key,
+                "version": record.version,
+                "status": record.status.rawValue,
+                "fields": record.fields.rawValue,
+                "attempts": record.attempts,
+                "lastAttemptAt": record.lastAttemptAt,
+                "nextEligibleAt": record.nextEligibleAt,
+                "lastFailure": record.lastFailure?.rawValue,
+            ])
+    }
+
+    private static func dueArguments(scope: EnrichmentScope, version: Int, now: Date, limit: Int?) -> StatementArguments {
+        var arguments: StatementArguments = [
+            "requiredFields": EnrichmentFields.required(for: scope).rawValue,
+            "version": version,
+            "now": now,
+        ]
+        if let limit {
+            arguments += ["limit": limit]
+        }
+        return arguments
+    }
+
+    private static func dueSource(for scope: EnrichmentScope) -> String {
+        switch scope {
+        case .album: return albumDueSource
+        case .artist: return artistDueSource
+        case .aiBatch: return aiBatchDueSource
+        }
+    }
+
+    /// `EnrichmentPolicy.isDue` written as SQL, mirrored character for
+    /// character by the Linux client. SQLite binds AND tighter than OR, so this
+    /// reads as "there is no row at all, OR the required fields are still
+    /// missing AND the ladder allows another attempt" — the same two-level
+    /// shape as the Swift predicate.
+    private static let dueClause = """
+        e.key IS NULL
+           OR (e.fields & :requiredFields) <> :requiredFields
+          AND (
+                e.status = 0
+             OR e.status = 1
+             OR (e.status = 2 AND e.version < :version)
+             OR (e.status = 3 AND (e.version < :version OR e.nextEligibleAt IS NULL OR e.nextEligibleAt <= :now))
+              )
+        """
+
+    private static let albumDueSource = """
+        FROM (
+            SELECT albumTitle AS title, artist FROM tracks WHERE albumTitle <> '' GROUP BY 1, 2
+        ) a
+        LEFT JOIN enrichmentState e
+               ON e.scope = 'album'
+              AND e.key = flaccy_norm(a.title) || char(31) || flaccy_norm(a.artist)
+        LEFT JOIN albumInfo i
+               ON i.title = a.title AND i.artist = a.artist
+        WHERE \(DatabaseManager.dueClause)
+        """
+
+    private static let artistDueSource = """
+        FROM (
+            SELECT artist AS name FROM tracks WHERE artist <> '' GROUP BY 1
+        ) a
+        LEFT JOIN enrichmentState e
+               ON e.scope = 'artist'
+              AND e.key = flaccy_norm(a.name)
+        WHERE \(DatabaseManager.dueClause)
+        """
+
+    /// The directory universe is deliberately narrowed to folders that still
+    /// hold an unanalyzed track: a folder Flaccy has already been through is not
+    /// work, whether or not migration v10 happened to seed a row for it.
+    private static let aiBatchDueSource = """
+        FROM (
+            SELECT rtrim(rtrim(fileURL, replace(fileURL, '/', '')), '/') AS directory
+            FROM tracks WHERE aiAnalyzed = 0 GROUP BY 1
+        ) a
+        LEFT JOIN enrichmentState e
+               ON e.scope = 'aiBatch'
+              AND e.key = flaccy_norm(a.directory)
+        WHERE \(DatabaseManager.dueClause)
+        """
 
     func insertScrobble(_ scrobble: ScrobbleRecord) throws {
         try dbQueue.write { db in
@@ -775,10 +1249,17 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    /// Clears every track's analyzed flag and the per-directory verdicts that
+    /// remember the batches were already identified, so a re-analysis is a real
+    /// re-analysis rather than a queue that finds nothing due.
     func resetAllAIAnalyzed() throws {
-        _ = try dbQueue.write { db in
-            try TrackRecord
+        try dbQueue.write { db in
+            _ = try TrackRecord
                 .updateAll(db, Column("aiAnalyzed").set(to: false))
+            try db.execute(
+                sql: "DELETE FROM enrichmentState WHERE scope = ?",
+                arguments: [EnrichmentScope.aiBatch.rawValue]
+            )
         }
     }
 

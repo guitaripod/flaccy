@@ -11,11 +11,25 @@ final class LibraryLoadProgressTests: XCTestCase {
     func testPhaseStartsAreCumulative() {
         XCTAssertEqual(LibraryLoadPhase.idle.start, 0, accuracy: 0.0001)
         XCTAssertEqual(LibraryLoadPhase.openingLibrary.start, 0, accuracy: 0.0001)
-        XCTAssertEqual(LibraryLoadPhase.findingFiles.start, 0.02, accuracy: 0.0001)
-        XCTAssertEqual(LibraryLoadPhase.readingTags.start, 0.15, accuracy: 0.0001)
-        XCTAssertEqual(LibraryLoadPhase.identifyingMusic.start, 0.60, accuracy: 0.0001)
-        XCTAssertEqual(LibraryLoadPhase.buildingAlbums.start, 0.75, accuracy: 0.0001)
-        XCTAssertEqual(LibraryLoadPhase.enrichingArtwork.start, 0.80, accuracy: 0.0001)
+        XCTAssertEqual(LibraryLoadPhase.findingFiles.start, 0.05, accuracy: 0.0001)
+        XCTAssertEqual(LibraryLoadPhase.readingTags.start, 0.18, accuracy: 0.0001)
+        XCTAssertEqual(LibraryLoadPhase.buildingAlbums.start, 0.85, accuracy: 0.0001)
+    }
+
+    func testStartsTableMatchesAccumulatedWeights() {
+        var accumulated = 0.0
+        for phase in LibraryLoadPhase.allCases {
+            XCTAssertEqual(phase.start, accumulated, accuracy: 0.0001, "\(phase)")
+            accumulated += phase.weight
+        }
+        XCTAssertEqual(accumulated, 1.0, accuracy: 0.0001)
+    }
+
+    func testEveryActivePhaseBlocksTheLibrary() {
+        XCTAssertFalse(LibraryLoadPhase.idle.blocksLibrary)
+        for phase in LibraryLoadPhase.allCases where phase != .idle {
+            XCTAssertTrue(phase.blocksLibrary, "\(phase)")
+        }
     }
 
     func testIdleProgressIsZeroAndInactive() {
@@ -27,17 +41,22 @@ final class LibraryLoadProgressTests: XCTestCase {
     func testFractionCombinesPhaseStartAndPhaseProgress() {
         let progress = LibraryLoadProgress(phase: .readingTags, completed: 50, total: 100)
         XCTAssertEqual(progress.phaseFraction, 0.5, accuracy: 0.0001)
-        XCTAssertEqual(progress.fractionCompleted, 0.15 + 0.45 * 0.5, accuracy: 0.0001)
+        XCTAssertEqual(progress.fractionCompleted, 0.18 + 0.67 * 0.5, accuracy: 0.0001)
     }
 
     func testIndeterminatePhaseCountsAsHalfDone() {
         let progress = LibraryLoadProgress(phase: .findingFiles)
         XCTAssertFalse(progress.isDeterminate)
-        XCTAssertEqual(progress.fractionCompleted, 0.02 + 0.13 * 0.5, accuracy: 0.0001)
+        XCTAssertEqual(progress.fractionCompleted, 0.05 + 0.13 * 0.5, accuracy: 0.0001)
     }
 
     func testFractionNeverExceedsOne() {
-        let progress = LibraryLoadProgress(phase: .enrichingArtwork, completed: 999, total: 10)
+        let progress = LibraryLoadProgress(phase: .buildingAlbums, completed: 999, total: 10)
+        XCTAssertEqual(progress.fractionCompleted, 1.0, accuracy: 0.0001)
+    }
+
+    func testAFinishedLoadReachesAnHonestHundredPercent() {
+        let progress = LibraryLoadProgress(phase: .buildingAlbums, completed: 214, total: 214)
         XCTAssertEqual(progress.fractionCompleted, 1.0, accuracy: 0.0001)
     }
 
@@ -59,6 +78,17 @@ final class LibraryLoadProgressTests: XCTestCase {
         let peak = tracker.displayFraction
         tracker.update(force: true) { $0 = LibraryLoadProgress(phase: .readingTags, completed: 90, total: 1000) }
         XCTAssertEqual(tracker.displayFraction, peak, accuracy: 0.0001)
+    }
+
+    func testTrackerResetsHighWaterWhenPhaseMovesBackwards() {
+        let tracker = LibraryLoadProgressTracker()
+        tracker.update(force: true) { $0 = LibraryLoadProgress(phase: .buildingAlbums, completed: 9, total: 10) }
+        XCTAssertGreaterThan(tracker.displayFraction, 0.9)
+
+        let restarted = tracker.update { $0 = LibraryLoadProgress(phase: .openingLibrary) }
+
+        XCTAssertNotNil(restarted)
+        XCTAssertEqual(tracker.displayFraction, LibraryLoadPhase.openingLibrary.weight * 0.5, accuracy: 0.0001)
     }
 
     func testTrackerDropsImperceptibleUpdates() {
@@ -98,12 +128,5 @@ final class LibraryLoadProgressTests: XCTestCase {
         XCTAssertEqual(tracker.finish(), .idle)
         XCTAssertEqual(tracker.displayFraction, 0, accuracy: 0.0001)
         XCTAssertFalse(tracker.progress.isActive)
-    }
-
-    func testOnlyPreLibraryPhasesBlockTheLibrary() {
-        XCTAssertFalse(LibraryLoadPhase.idle.blocksLibrary)
-        XCTAssertTrue(LibraryLoadPhase.findingFiles.blocksLibrary)
-        XCTAssertTrue(LibraryLoadPhase.buildingAlbums.blocksLibrary)
-        XCTAssertFalse(LibraryLoadPhase.enrichingArtwork.blocksLibrary)
     }
 }

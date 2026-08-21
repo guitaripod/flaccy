@@ -13,6 +13,10 @@ public enum LibraryScanner {
     /// `relativePath`s are computed against `directory`. `onProgress` reports the
     /// same phases the phone and desktop clients report, so a wait looks the
     /// same on every screen.
+    ///
+    /// The last snapshot closes `buildingAlbums` out determinately: nothing is
+    /// reported after it, so a bar left indeterminate here would stop at 92%
+    /// forever instead of reaching the 100% the bounded disk work earned.
     public static func scan(
         directory: URL,
         onProgress: (@Sendable (LibraryLoadProgress) -> Void)? = nil
@@ -59,6 +63,8 @@ public enum LibraryScanner {
         onProgress?(
             LibraryLoadProgress(
                 phase: .buildingAlbums,
+                completed: max(items.count, 1),
+                total: max(items.count, 1),
                 filesFound: urls.count,
                 tracksIndexed: items.count
             )
