@@ -74,9 +74,15 @@ settings = {
   'ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME' => 'AccentColor',
   'ENABLE_PREVIEWS' => 'YES',
   'SWIFT_EMIT_LOC_STRINGS' => 'YES',
-  'SKIP_INSTALL' => 'NO',
   'LD_RUNPATH_SEARCH_PATHS' => '$(inherited) @executable_path/Frameworks',
 }
+
+# The watch app reaches the archive by being embedded in flaccy.app, never on
+# its own. Installed as a sibling it lands a second bundle in
+# Products/Applications, which leaves the archive with no ApplicationProperties
+# at all — Xcode then offers zero distribution methods and exportArchive dies
+# with "expected one {}", naming the method rather than the real cause.
+RELEASE_ONLY = { 'SKIP_INSTALL' => 'YES' }.freeze
 
 # Release ships through buildvm, which passes a manual profile on the command
 # line; a target left on Automatic makes xcodebuild refuse the archive with
@@ -91,9 +97,10 @@ RELEASE_SIGNING = {
 watch_target.build_configurations.each do |config|
   config.build_settings.merge!(settings)
   if config.name == 'Release'
-    config.build_settings.merge!(RELEASE_SIGNING)
+    config.build_settings.merge!(RELEASE_SIGNING).merge!(RELEASE_ONLY)
   else
     config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+    config.build_settings['SKIP_INSTALL'] = 'YES'
   end
 end
 
