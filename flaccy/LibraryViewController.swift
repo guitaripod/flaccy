@@ -21,6 +21,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private var lastRenderedLayout: LibraryLayoutMode?
     private let selectionFeedback = UISelectionFeedbackGenerator()
     private var debutView: LibraryDebutView?
+    private weak var debutSheet: LibraryDebutSheetController?
     private var renderedDebutAct: LibraryDebutAct?
     private var debutSummary: LibraryDebutSummary?
     private var fedMosaicKeys = Set<String>()
@@ -544,7 +545,12 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private func setupStatusBanner() {
         statusBanner.accessibilityIdentifier = "library.statusBanner"
         statusBanner.onTap = { [weak self] in
-            self?.navigationController?.pushViewController(EnrichmentReportViewController(), animated: true)
+            guard let self else { return }
+            if self.viewModel.debutIsPending, self.debutView != nil {
+                self.presentDebutSheet()
+            } else {
+                self.navigationController?.pushViewController(EnrichmentReportViewController(), animated: true)
+            }
         }
         view.addSubview(statusBanner)
         statusBannerHeight = statusBanner.heightAnchor.constraint(equalToConstant: 0)
@@ -574,12 +580,40 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             showDebut()
             setStatusBanner(visible: false, animated: false)
         case .ambient:
-            hideDebut(animated: animated)
+            demoteDebutToSheet()
             showAmbient(state, animated: animated)
         case .none:
-            hideDebut(animated: animated)
+            demoteDebutToSheet()
             setStatusBanner(visible: false, animated: animated)
         }
+    }
+
+    /// Takes the Debut off the screen the moment the library behind it is worth
+    /// looking at, without throwing away what it still has to show. The view
+    /// keeps living — the mosaic keeps filling, the countdown keeps counting —
+    /// but from here it is reached through the banner or raised once for the
+    /// summary, never left standing in the reader's way.
+    private func demoteDebutToSheet() {
+        guard let debut = debutView, debut.superview === view else { return }
+        debut.removeFromSuperview()
+        navigationController?.setNavigationBarHidden(false, animated: true)
+    }
+
+    /// Opens the Debut over whatever the reader is doing, on their say-so.
+    private func presentDebutSheet() {
+        guard let debut = debutView, presentedViewController == nil else { return }
+        let sheet = LibraryDebutSheetController(debutView: debut)
+        debutSheet = sheet
+        present(sheet, animated: true)
+    }
+
+    private func dismissDebutSheet(completion: (() -> Void)? = nil) {
+        guard let sheet = debutSheet, presentedViewController === sheet else {
+            completion?()
+            return
+        }
+        debutSheet = nil
+        sheet.dismiss(animated: true, completion: completion)
     }
 
     private func updateDebut(with state: LibraryViewModel.LibraryLoadState) {
@@ -636,6 +670,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         case .indexing, .finishing:
             break
         case .summary:
+            if debutView?.superview !== view { presentDebutSheet() }
             presentDebutSummary()
         case .done:
             viewModel.dismissDebut()
@@ -660,11 +695,24 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     /// The grid's frames are measured and the view is released *before* the
     /// latch is dropped: releasing it raises the status banner, which would
     /// otherwise shift the grid under tiles already in flight. Nilling the
-    /// property up front also makes `updateDebut` and `hideDebut` no-ops for the
+    /// property up front also makes `updateDebut` a no-op for the
     /// duration, so no second crossfade competes with the morph — which leaves
     /// the nav bar to be restored by hand.
     private func finishDebut() {
         guard let debut = debutView else { return }
+        guard debut.superview === view else {
+            debutView = nil
+            if let debutSummary {
+                viewModel.completeDebut(with: debutSummary)
+            } else {
+                viewModel.dismissDebut()
+            }
+            dismissDebutSheet { [weak self] in
+                debut.removeFromSuperview()
+                self?.retireDebutState()
+            }
+            return
+        }
         view.layoutIfNeeded()
         let targets = UIAccessibility.isReduceMotionEnabled ? [] : albumGridTargetFrames(in: debut)
         debutView = nil
@@ -704,35 +752,6 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         debutView.alpha = 1
         view.bringSubviewToFront(debutView)
         navigationController?.setNavigationBarHidden(true, animated: false)
-    }
-
-    /// Takes the Debut down. A hide that follows the terminal act retires the
-    /// view entirely rather than merely hiding it, because the router can never
-    /// ask for `.debut` again once the act is `.done` — and a debut left in the
-    /// hierarchy keeps its decoded covers and its rotation timer for the life of
-    /// the process. A non-terminal hide keeps the view so `showDebut()` still
-    /// has something to raise.
-    private func hideDebut(animated: Bool) {
-        guard let debutView, !debutView.isHidden else { return }
-        navigationController?.setNavigationBarHidden(false, animated: false)
-        let retire = viewModel.debutAct == .done
-        let finish = { [weak self] in
-            debutView.isHidden = true
-            guard retire else { return }
-            debutView.removeFromSuperview()
-            self?.debutView = nil
-            self?.retireDebutState()
-        }
-        guard animated, !UIAccessibility.isReduceMotionEnabled else {
-            debutView.alpha = 0
-            finish()
-            return
-        }
-        UIView.animate(withDuration: 0.45, delay: 0, options: .curveEaseOut) {
-            debutView.alpha = 0
-        } completion: { _ in
-            finish()
-        }
     }
 
     /// The quiet surface: one line under the segments reporting work going on

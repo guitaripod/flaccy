@@ -43,7 +43,7 @@ impl SurfaceRouter {
             self.debut_latched = true;
             return Surface::Debut;
         }
-        if self.debut_latched && !debut_completed {
+        if self.debut_latched && !debut_completed && !has_library {
             return Surface::Debut;
         }
         if load.is_active() && has_library {
@@ -60,6 +60,13 @@ impl SurfaceRouter {
 
     /// Called once the summary card is dismissed (or the build produced no
     /// albums); the debut can never be re-entered for this launch.
+    /// True while the debut owns the screen but the library has become
+    /// browsable underneath it — the point at which the showpiece has to stop
+    /// being a wall and become something the reader opens when they want it.
+    pub fn debut_is_pending(&self) -> bool {
+        self.debut_latched
+    }
+
     pub fn release_debut(&mut self) {
         self.debut_latched = false;
     }
@@ -100,17 +107,40 @@ mod tests {
     }
 
     #[test]
-    fn debut_stays_presented_until_it_is_released() {
+    fn debut_holds_while_there_is_nothing_to_browse() {
         let mut router = SurfaceRouter::new();
         assert_eq!(
             router.route(&scanning(), &JobProgress::idle(), false, false, 0.0),
             Surface::Debut
         );
         assert_eq!(
-            router.route(&LoadProgress::default(), &JobProgress::idle(), false, true, 1.0),
+            router.route(&scanning(), &JobProgress::idle(), false, false, 3.0),
             Surface::Debut
         );
+        assert!(router.debut_is_pending());
+    }
+
+    /// The regression the user reported by screenshot: the showpiece standing in
+    /// front of a library that was already built, playing music behind it. It
+    /// steps aside the moment there is something to browse, and stays pending so
+    /// the client can offer it rather than impose it.
+    #[test]
+    fn debut_steps_aside_once_the_library_is_browsable() {
+        let mut router = SurfaceRouter::new();
+        let _ = router.route(&scanning(), &JobProgress::idle(), false, false, 0.0);
+        assert_eq!(
+            router.route(&LoadProgress::default(), &JobProgress::idle(), false, true, 1.0),
+            Surface::None
+        );
+        assert!(router.debut_is_pending());
+    }
+
+    #[test]
+    fn releasing_the_debut_clears_its_pending_state() {
+        let mut router = SurfaceRouter::new();
+        let _ = router.route(&scanning(), &JobProgress::idle(), false, false, 0.0);
         router.release_debut();
+        assert!(!router.debut_is_pending());
         assert_eq!(
             router.route(&LoadProgress::default(), &JobProgress::idle(), true, true, 1.0),
             Surface::None

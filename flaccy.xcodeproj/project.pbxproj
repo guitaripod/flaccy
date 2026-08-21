@@ -152,6 +152,7 @@
 				HeatmapView.swift,
 				IdentifiedSegmentedControl.swift,
 				Info.plist,
+				LibraryDebutSheetController.swift,
 				LibraryDebutSummaryCard.swift,
 				LibraryDebutView.swift,
 				LibraryMosaicView.swift,

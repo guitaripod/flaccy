@@ -250,6 +250,11 @@ final class LibraryViewModel {
     /// pair the router just decided on.
     private(set) var debutAct: LibraryDebutAct = .indexing
 
+    /// True while the Debut still has something to show but the library has
+    /// become browsable, so the showpiece belongs in a sheet the reader opens
+    /// rather than across the screen they are already using.
+    var debutIsPending: Bool { surfaceRouter.debutIsPending }
+
     nonisolated private enum LibrarySignal: Sendable {
         case load(LibraryLoadProgress, Double)
         case job(EnrichmentJobProgress)

@@ -43,7 +43,7 @@ final class LibrarySurfaceRouterTests: XCTestCase {
         XCTAssertEqual(surface, .debut)
     }
 
-    func testDebutStaysPresentedUntilItIsReleased() {
+    func testDebutHoldsWhileThereIsNothingToBrowse() {
         var router = LibrarySurfaceRouter()
         XCTAssertEqual(
             router.route(
@@ -55,6 +55,32 @@ final class LibrarySurfaceRouterTests: XCTestCase {
             ),
             .debut
         )
+        XCTAssertEqual(
+            router.route(
+                load: LibraryLoadProgress(phase: .readingTags),
+                job: job(.idle),
+                debutCompleted: false,
+                hasLibrary: false,
+                elapsed: 3
+            ),
+            .debut
+        )
+        XCTAssertTrue(router.debutIsPending)
+    }
+
+    /// The regression the user reported by screenshot: the showpiece standing in
+    /// front of a library that was already built, playing music behind it. It
+    /// steps aside the moment there is something to browse, and stays pending so
+    /// the client can offer it rather than impose it.
+    func testDebutStepsAsideOnceTheLibraryIsBrowsable() {
+        var router = LibrarySurfaceRouter()
+        _ = router.route(
+            load: LibraryLoadProgress(phase: .findingFiles),
+            job: job(.idle),
+            debutCompleted: false,
+            hasLibrary: false,
+            elapsed: 0
+        )
 
         XCTAssertEqual(
             router.route(
@@ -64,10 +90,23 @@ final class LibrarySurfaceRouterTests: XCTestCase {
                 hasLibrary: true,
                 elapsed: 5
             ),
-            .debut
+            .none
+        )
+        XCTAssertTrue(router.debutIsPending)
+    }
+
+    func testReleasingTheDebutClearsItsPendingState() {
+        var router = LibrarySurfaceRouter()
+        _ = router.route(
+            load: LibraryLoadProgress(phase: .findingFiles),
+            job: job(.idle),
+            debutCompleted: false,
+            hasLibrary: false,
+            elapsed: 0
         )
 
         router.releaseDebut()
+        XCTAssertFalse(router.debutIsPending)
 
         XCTAssertEqual(
             router.route(

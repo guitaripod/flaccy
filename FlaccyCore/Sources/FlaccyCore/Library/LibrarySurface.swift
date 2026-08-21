@@ -28,7 +28,7 @@ public struct LibrarySurfaceRouter: Sendable, Equatable {
             debutLatched = true
             return .debut
         }
-        if debutLatched && !debutCompleted { return .debut }
+        if debutLatched && !debutCompleted && !hasLibrary { return .debut }
         if load.isActive && hasLibrary { return .ambient }
         if job.activity == .running || job.activity == .waitingForNetwork {
             guard job.completedThisRun >= 1, elapsed >= Self.ambientGrace else { return .none }
@@ -36,6 +36,11 @@ public struct LibrarySurfaceRouter: Sendable, Equatable {
         }
         return .none
     }
+
+    /// True while the debut owns the screen but the library has become
+    /// browsable underneath it — the point at which the showpiece has to stop
+    /// being a wall and become something the reader opens when they want it.
+    public var debutIsPending: Bool { debutLatched }
 
     /// Called once the summary card is dismissed (or the build produced no
     /// albums); the debut can never be re-entered for this launch.
