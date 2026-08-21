@@ -3,7 +3,7 @@ members = ["shared"]
 
 [package]
 name = "flaccy"
-version = "1.11.0"
+version = "1.12.0"
 edition = "2021"
 license = "GPL-3.0-only"
 description = "Lossless music player for Linux"
