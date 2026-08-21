@@ -76,10 +76,25 @@ settings = {
   'SWIFT_EMIT_LOC_STRINGS' => 'YES',
   'SKIP_INSTALL' => 'NO',
   'LD_RUNPATH_SEARCH_PATHS' => '$(inherited) @executable_path/Frameworks',
-  'CODE_SIGN_STYLE' => 'Automatic',
 }
+
+# Release ships through buildvm, which passes a manual profile on the command
+# line; a target left on Automatic makes xcodebuild refuse the archive with
+# "conflicting provisioning settings" long after whoever re-ran this script has
+# forgotten they did. Debug is signed automatically for device runs.
+RELEASE_SIGNING = {
+  'CODE_SIGN_STYLE' => 'Manual',
+  'CODE_SIGN_IDENTITY' => 'Apple Distribution',
+  'PROVISIONING_PROFILE_SPECIFIER' => 'flaccy Watch AppStore 2026',
+}.freeze
+
 watch_target.build_configurations.each do |config|
   config.build_settings.merge!(settings)
+  if config.name == 'Release'
+    config.build_settings.merge!(RELEASE_SIGNING)
+  else
+    config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+  end
 end
 
 # --- 3. Watch sources, resources, Info.plist -----------------------------

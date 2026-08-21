@@ -7,36 +7,36 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		07CFE85E5B8E10E64A3D77A7 /* WatchDebutSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88725A891DC753A522F232B0 /* WatchDebutSummaryView.swift */; };
+		01046B7354523DEF5F470612 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CDF7B7FB2EE27650318EC4BE /* Assets.xcassets */; };
 		0BB345FBD38D4072779FC1A1 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = D2E21F4867B0D1251124B5D3 /* FlaccyCore */; };
 		116895A2A917B259B81DA330 /* DatabaseManagerEnrichmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADAD3DBD7F3EF9060D9CB722 /* DatabaseManagerEnrichmentTests.swift */; };
+		1C05DBDE3F071539DA56DF66 /* WatchAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 985E9E1F8B543319E977BE52 /* WatchAudioPlayer.swift */; };
 		20364068D2334231B84E65AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F54FEC40BC514CE9408F611 /* Foundation.framework */; };
+		229AA98DC63BFBDD78ADBBED /* ArtworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9D577CC6BEB2186B819E18E /* ArtworkView.swift */; };
 		2C21267046BDFDCB76F13F69 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = A734BCDDBC66217E19FC32B7 /* FlaccyCore */; };
 		2C2777462F7D0B80007FF196 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 2C2777012F7D0301007FF196 /* GRDB */; };
-		35E308D38018C4AB8538F9B3 /* LibraryLoadPhaseCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F09B852829BC87E23EDC9531 /* LibraryLoadPhaseCopy.swift */; };
-		3907FEE27066FC93F4A45FFC /* AlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67B646CB62D20228F29144D1 /* AlbumDetailView.swift */; };
-		3C2E8C52AEC954452D48CAB2 /* ScanProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A4E73BF9610B2D8033315A2 /* ScanProgressView.swift */; };
-		3F1E8E9C8B5B56ACCA9CC745 /* WatchSyncReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D87C3CE7F47D7F9C67BF57E5 /* WatchSyncReceiver.swift */; };
 		4114B9F2DAEFCEF2104A7CF6 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5939164CA91FCC865B69DB94 /* FlaccyCore */; };
-		411C4F8305EA652FABC84774 /* ArtworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5896BB2E188CAF8DF7A95733 /* ArtworkView.swift */; };
-		50FB925395BCF5DA77849FEC /* flaccyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4059665FD886E53D91A42EA4 /* flaccyWatchApp.swift */; };
+		425DA6758294BF9C160EBDBA /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83E026CF71986B037C412588 /* NowPlayingView.swift */; };
 		53EF5930CEB68FBD982F5AB8 /* DatabaseMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619EA141A4B4BEFC29745792 /* DatabaseMigrationTests.swift */; };
-		5D4F256C497349431343814F /* EnrichmentJobCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFE570A8B65D4F1E9C3139B /* EnrichmentJobCopy.swift */; };
-		68E18CC79800396117BF003C /* SampleContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBBB3B48B4E900F53B51050 /* SampleContent.swift */; };
+		66DE7AF197E8388E78AA5A0D /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7C8AAC3BBAE717452A9B9AE /* LibraryView.swift */; };
+		736B4585DEDB7F3A41896C46 /* WatchDebutSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D1E78AD4A75E517B0EBA1 /* WatchDebutSummaryView.swift */; };
+		87131AE693849FC6BCEEDFD6 /* flaccyWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8E47E1D598B706E94B056080 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C433D55BD6A1974A842EC01C /* GRDB */; };
-		978F399B5BD451809B79AF29 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C920493C6233907FE9199FB1 /* LibraryView.swift */; };
+		982A7219DB26B9EACF868222 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3238B37A95CF4C0D0E2BC187 /* RootView.swift */; };
+		98897BA08851917538C5F5AF /* SampleContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA27C450E8835789FFFECFC /* SampleContent.swift */; };
 		A1D00E014A13D8A615E7C46D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1AB36944B652EA1E9E81BEA /* Cocoa.framework */; };
-		A26F7D4E3C43E2293D6D3439 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8E8B7B0355F4B173C9039E3 /* NowPlayingView.swift */; };
-		A547D911124A81F3B7B3EAFC /* WatchTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC1C8F31FC52B4A16F1E5B0 /* WatchTheme.swift */; };
-		C2AF79D259035AFC06EDEC6A /* EnrichmentStatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DC2C72C889CF1F2BE843C0 /* EnrichmentStatusRow.swift */; };
-		CD9F37BAACCAEE7D0155D668 /* WatchAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03A9A6766ABAAB1A18531614 /* WatchAudioPlayer.swift */; };
-		CE506B15F6D217C22892D28F /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733E029D2450F85BE6F47CF6 /* RootView.swift */; };
-		D84C5173DA1049B08E78EDC2 /* WatchLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C995E7CBBBBCECF464ACD720 /* WatchLibraryStore.swift */; };
-		DE9753383E73D0F2800403A2 /* flaccyWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A36803C9E3EC349713DBBEAD /* WatchLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8BB90B89C3A5EB505C63873 /* WatchLibraryStore.swift */; };
+		CBA976E6F92EC1C15A7FA620 /* WatchTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837AB16168DE572D1E53A971 /* WatchTheme.swift */; };
+		CCEC6E873883D2AB65540E36 /* LibraryLoadPhaseCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1646ED4EB3C394FC6406048B /* LibraryLoadPhaseCopy.swift */; };
+		D447A95CAB0EBEE6A6F218B9 /* EnrichmentStatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ECB8D4D945F274FEEBB35DC /* EnrichmentStatusRow.swift */; };
+		D5107651BFBF16CED19E1C52 /* ScanProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04141D7257966D180B7FF43B /* ScanProgressView.swift */; };
+		D9CDAE92B6E8512861E552D4 /* AlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C402134FF933306B7C6943F4 /* AlbumDetailView.swift */; };
+		DF1675B5B768AE538CDEA180 /* LibraryDebutCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2C6D1C12BA699C6CCB4321F /* LibraryDebutCopy.swift */; };
 		E9970FA6D1EC49C0BCAF9677 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE89F29B26EC5F4E7FE691A5 /* Foundation.framework */; };
 		EBDAC9950D4E8507C67D4518 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1AB36944B652EA1E9E81BEA /* Cocoa.framework */; };
-		F688836F6EC803107B7DDF8D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 40EDB540FE9564BE77568642 /* Assets.xcassets */; };
-		F8D61927441944ABAD4B2395 /* LibraryDebutCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77CC37E72971C632E36FF266 /* LibraryDebutCopy.swift */; };
+		EF99BDC3366FE6B784932BD8 /* flaccyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FC3EEB18AAFEDF21A271E2 /* flaccyWatchApp.swift */; };
+		FDB0556A76444AE69CED1C5B /* WatchSyncReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD0A0425DD0D74672B6134D0 /* WatchSyncReceiver.swift */; };
+		FF6185B6D397BDB33AA21772 /* EnrichmentJobCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB05CD0BDFF50AD5F7C4C4CB /* EnrichmentJobCopy.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,7 +87,7 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				DE9753383E73D0F2800403A2 /* flaccyWatch Watch App.app in Embed Watch Content */,
+				87131AE693849FC6BCEEDFD6 /* flaccyWatch Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -95,36 +95,36 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		03A9A6766ABAAB1A18531614 /* WatchAudioPlayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAudioPlayer.swift; sourceTree = "<group>"; };
-		0DFE570A8B65D4F1E9C3139B /* EnrichmentJobCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EnrichmentJobCopy.swift; path = flaccy/EnrichmentJobCopy.swift; sourceTree = "<group>"; };
-		1FBBB3B48B4E900F53B51050 /* SampleContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SampleContent.swift; sourceTree = "<group>"; };
+		04141D7257966D180B7FF43B /* ScanProgressView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScanProgressView.swift; path = Views/ScanProgressView.swift; sourceTree = "<group>"; };
+		11FC3EEB18AAFEDF21A271E2 /* flaccyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = flaccyWatchApp.swift; sourceTree = "<group>"; };
+		1646ED4EB3C394FC6406048B /* LibraryLoadPhaseCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryLoadPhaseCopy.swift; path = flaccy/LibraryLoadPhaseCopy.swift; sourceTree = "<group>"; };
 		2C2776CA2F7D0282007FF196 /* flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2DB333CC150B8B35EA228C7F /* flaccyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F54FEC40BC514CE9408F611 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		4059665FD886E53D91A42EA4 /* flaccyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = flaccyWatchApp.swift; sourceTree = "<group>"; };
-		40EDB540FE9564BE77568642 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3238B37A95CF4C0D0E2BC187 /* RootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RootView.swift; path = Views/RootView.swift; sourceTree = "<group>"; };
+		3EA27C450E8835789FFFECFC /* SampleContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SampleContent.swift; sourceTree = "<group>"; };
 		483CF523EE5ED3E295BFF6B1 /* Flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4ECB8D4D945F274FEEBB35DC /* EnrichmentStatusRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EnrichmentStatusRow.swift; path = Views/EnrichmentStatusRow.swift; sourceTree = "<group>"; };
 		5174AF607781A6F23E0F345D /* flaccyMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		5896BB2E188CAF8DF7A95733 /* ArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ArtworkView.swift; path = Support/ArtworkView.swift; sourceTree = "<group>"; };
+		59F8BBC1B5676BB291B0FBAD /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		619EA141A4B4BEFC29745792 /* DatabaseMigrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DatabaseMigrationTests.swift; sourceTree = "<group>"; };
-		67B646CB62D20228F29144D1 /* AlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AlbumDetailView.swift; path = Views/AlbumDetailView.swift; sourceTree = "<group>"; };
-		6A4E73BF9610B2D8033315A2 /* ScanProgressView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScanProgressView.swift; path = Views/ScanProgressView.swift; sourceTree = "<group>"; };
 		714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flaccyWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		733E029D2450F85BE6F47CF6 /* RootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RootView.swift; path = Views/RootView.swift; sourceTree = "<group>"; };
-		77CC37E72971C632E36FF266 /* LibraryDebutCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryDebutCopy.swift; path = flaccy/LibraryDebutCopy.swift; sourceTree = "<group>"; };
-		7CC1C8F31FC52B4A16F1E5B0 /* WatchTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTheme.swift; path = Support/WatchTheme.swift; sourceTree = "<group>"; };
-		88725A891DC753A522F232B0 /* WatchDebutSummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchDebutSummaryView.swift; path = Views/WatchDebutSummaryView.swift; sourceTree = "<group>"; };
-		90DC2C72C889CF1F2BE843C0 /* EnrichmentStatusRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EnrichmentStatusRow.swift; path = Views/EnrichmentStatusRow.swift; sourceTree = "<group>"; };
+		837AB16168DE572D1E53A971 /* WatchTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTheme.swift; path = Support/WatchTheme.swift; sourceTree = "<group>"; };
+		83E026CF71986B037C412588 /* NowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NowPlayingView.swift; path = Views/NowPlayingView.swift; sourceTree = "<group>"; };
+		985E9E1F8B543319E977BE52 /* WatchAudioPlayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAudioPlayer.swift; sourceTree = "<group>"; };
 		AA00UITESTPRODUCT0000001 /* flaccyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ADAD3DBD7F3EF9060D9CB722 /* DatabaseManagerEnrichmentTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DatabaseManagerEnrichmentTests.swift; sourceTree = "<group>"; };
-		B2E4280CD1E86342F124A57E /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B7C8AAC3BBAE717452A9B9AE /* LibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = Views/LibraryView.swift; sourceTree = "<group>"; };
+		BB05CD0BDFF50AD5F7C4C4CB /* EnrichmentJobCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EnrichmentJobCopy.swift; path = flaccy/EnrichmentJobCopy.swift; sourceTree = "<group>"; };
 		BE89F29B26EC5F4E7FE691A5 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		C1AB36944B652EA1E9E81BEA /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
-		C920493C6233907FE9199FB1 /* LibraryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = Views/LibraryView.swift; sourceTree = "<group>"; };
-		C995E7CBBBBCECF464ACD720 /* WatchLibraryStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLibraryStore.swift; sourceTree = "<group>"; };
-		D87C3CE7F47D7F9C67BF57E5 /* WatchSyncReceiver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSyncReceiver.swift; sourceTree = "<group>"; };
-		D8E8B7B0355F4B173C9039E3 /* NowPlayingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NowPlayingView.swift; path = Views/NowPlayingView.swift; sourceTree = "<group>"; };
-		F09B852829BC87E23EDC9531 /* LibraryLoadPhaseCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryLoadPhaseCopy.swift; path = flaccy/LibraryLoadPhaseCopy.swift; sourceTree = "<group>"; };
+		C402134FF933306B7C6943F4 /* AlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AlbumDetailView.swift; path = Views/AlbumDetailView.swift; sourceTree = "<group>"; };
+		CD0A0425DD0D74672B6134D0 /* WatchSyncReceiver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSyncReceiver.swift; sourceTree = "<group>"; };
+		CDF7B7FB2EE27650318EC4BE /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D2C6D1C12BA699C6CCB4321F /* LibraryDebutCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryDebutCopy.swift; path = flaccy/LibraryDebutCopy.swift; sourceTree = "<group>"; };
+		D9D577CC6BEB2186B819E18E /* ArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ArtworkView.swift; path = Support/ArtworkView.swift; sourceTree = "<group>"; };
+		E8BB90B89C3A5EB505C63873 /* WatchLibraryStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLibraryStore.swift; sourceTree = "<group>"; };
+		F00D1E78AD4A75E517B0EBA1 /* WatchDebutSummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchDebutSummaryView.swift; path = Views/WatchDebutSummaryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -294,16 +294,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		03F214A3969BAB58C81DAB4D /* Shared Copy */ = {
-			isa = PBXGroup;
-			children = (
-				F09B852829BC87E23EDC9531 /* LibraryLoadPhaseCopy.swift */,
-				0DFE570A8B65D4F1E9C3139B /* EnrichmentJobCopy.swift */,
-				77CC37E72971C632E36FF266 /* LibraryDebutCopy.swift */,
-			);
-			name = "Shared Copy";
-			sourceTree = "<group>";
-		};
 		15B5311A7E82EDA911001AC6 /* flaccyTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -323,9 +313,9 @@
 				F7E3E335AA05BD4FE7CF88E7 /* Frameworks */,
 				2B3287BCA5BE0FDC3FC9217B /* flaccyMac */,
 				8B3F5C02CFF1C98FB1BF8562 /* flaccyMacUITests */,
-				8336D4794D31DC74500F9E66 /* flaccyWatch Watch App */,
-				03F214A3969BAB58C81DAB4D /* Shared Copy */,
 				15B5311A7E82EDA911001AC6 /* flaccyTests */,
+				B2FBD5F04577E9116AAA667D /* flaccyWatch Watch App */,
+				53AB4D5D7EBD538B74CD2599 /* Shared Copy */,
 			);
 			sourceTree = "<group>";
 		};
@@ -350,28 +340,14 @@
 			name = "OS X";
 			sourceTree = "<group>";
 		};
-		8336D4794D31DC74500F9E66 /* flaccyWatch Watch App */ = {
+		53AB4D5D7EBD538B74CD2599 /* Shared Copy */ = {
 			isa = PBXGroup;
 			children = (
-				1FBBB3B48B4E900F53B51050 /* SampleContent.swift */,
-				5896BB2E188CAF8DF7A95733 /* ArtworkView.swift */,
-				7CC1C8F31FC52B4A16F1E5B0 /* WatchTheme.swift */,
-				67B646CB62D20228F29144D1 /* AlbumDetailView.swift */,
-				90DC2C72C889CF1F2BE843C0 /* EnrichmentStatusRow.swift */,
-				C920493C6233907FE9199FB1 /* LibraryView.swift */,
-				D8E8B7B0355F4B173C9039E3 /* NowPlayingView.swift */,
-				733E029D2450F85BE6F47CF6 /* RootView.swift */,
-				6A4E73BF9610B2D8033315A2 /* ScanProgressView.swift */,
-				88725A891DC753A522F232B0 /* WatchDebutSummaryView.swift */,
-				03A9A6766ABAAB1A18531614 /* WatchAudioPlayer.swift */,
-				C995E7CBBBBCECF464ACD720 /* WatchLibraryStore.swift */,
-				D87C3CE7F47D7F9C67BF57E5 /* WatchSyncReceiver.swift */,
-				4059665FD886E53D91A42EA4 /* flaccyWatchApp.swift */,
-				40EDB540FE9564BE77568642 /* Assets.xcassets */,
-				B2E4280CD1E86342F124A57E /* Info.plist */,
+				1646ED4EB3C394FC6406048B /* LibraryLoadPhaseCopy.swift */,
+				BB05CD0BDFF50AD5F7C4C4CB /* EnrichmentJobCopy.swift */,
+				D2C6D1C12BA699C6CCB4321F /* LibraryDebutCopy.swift */,
 			);
-			name = "flaccyWatch Watch App";
-			path = "flaccyWatch Watch App";
+			name = "Shared Copy";
 			sourceTree = "<group>";
 		};
 		937ACA69B8A57323276B0855 /* watchOS */ = {
@@ -380,6 +356,30 @@
 				2F54FEC40BC514CE9408F611 /* Foundation.framework */,
 			);
 			name = watchOS;
+			sourceTree = "<group>";
+		};
+		B2FBD5F04577E9116AAA667D /* flaccyWatch Watch App */ = {
+			isa = PBXGroup;
+			children = (
+				3EA27C450E8835789FFFECFC /* SampleContent.swift */,
+				D9D577CC6BEB2186B819E18E /* ArtworkView.swift */,
+				837AB16168DE572D1E53A971 /* WatchTheme.swift */,
+				C402134FF933306B7C6943F4 /* AlbumDetailView.swift */,
+				4ECB8D4D945F274FEEBB35DC /* EnrichmentStatusRow.swift */,
+				B7C8AAC3BBAE717452A9B9AE /* LibraryView.swift */,
+				83E026CF71986B037C412588 /* NowPlayingView.swift */,
+				3238B37A95CF4C0D0E2BC187 /* RootView.swift */,
+				04141D7257966D180B7FF43B /* ScanProgressView.swift */,
+				F00D1E78AD4A75E517B0EBA1 /* WatchDebutSummaryView.swift */,
+				985E9E1F8B543319E977BE52 /* WatchAudioPlayer.swift */,
+				E8BB90B89C3A5EB505C63873 /* WatchLibraryStore.swift */,
+				CD0A0425DD0D74672B6134D0 /* WatchSyncReceiver.swift */,
+				11FC3EEB18AAFEDF21A271E2 /* flaccyWatchApp.swift */,
+				CDF7B7FB2EE27650318EC4BE /* Assets.xcassets */,
+				59F8BBC1B5676BB291B0FBAD /* Info.plist */,
+			);
+			name = "flaccyWatch Watch App";
+			path = "flaccyWatch Watch App";
 			sourceTree = "<group>";
 		};
 		E80B8F810BD523F06C80D451 /* iOS */ = {
@@ -600,7 +600,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F688836F6EC803107B7DDF8D /* Assets.xcassets in Resources */,
+				01046B7354523DEF5F470612 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -662,23 +662,23 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				68E18CC79800396117BF003C /* SampleContent.swift in Sources */,
-				411C4F8305EA652FABC84774 /* ArtworkView.swift in Sources */,
-				A547D911124A81F3B7B3EAFC /* WatchTheme.swift in Sources */,
-				3907FEE27066FC93F4A45FFC /* AlbumDetailView.swift in Sources */,
-				C2AF79D259035AFC06EDEC6A /* EnrichmentStatusRow.swift in Sources */,
-				978F399B5BD451809B79AF29 /* LibraryView.swift in Sources */,
-				A26F7D4E3C43E2293D6D3439 /* NowPlayingView.swift in Sources */,
-				CE506B15F6D217C22892D28F /* RootView.swift in Sources */,
-				3C2E8C52AEC954452D48CAB2 /* ScanProgressView.swift in Sources */,
-				07CFE85E5B8E10E64A3D77A7 /* WatchDebutSummaryView.swift in Sources */,
-				CD9F37BAACCAEE7D0155D668 /* WatchAudioPlayer.swift in Sources */,
-				D84C5173DA1049B08E78EDC2 /* WatchLibraryStore.swift in Sources */,
-				3F1E8E9C8B5B56ACCA9CC745 /* WatchSyncReceiver.swift in Sources */,
-				50FB925395BCF5DA77849FEC /* flaccyWatchApp.swift in Sources */,
-				35E308D38018C4AB8538F9B3 /* LibraryLoadPhaseCopy.swift in Sources */,
-				5D4F256C497349431343814F /* EnrichmentJobCopy.swift in Sources */,
-				F8D61927441944ABAD4B2395 /* LibraryDebutCopy.swift in Sources */,
+				98897BA08851917538C5F5AF /* SampleContent.swift in Sources */,
+				229AA98DC63BFBDD78ADBBED /* ArtworkView.swift in Sources */,
+				CBA976E6F92EC1C15A7FA620 /* WatchTheme.swift in Sources */,
+				D9CDAE92B6E8512861E552D4 /* AlbumDetailView.swift in Sources */,
+				D447A95CAB0EBEE6A6F218B9 /* EnrichmentStatusRow.swift in Sources */,
+				66DE7AF197E8388E78AA5A0D /* LibraryView.swift in Sources */,
+				425DA6758294BF9C160EBDBA /* NowPlayingView.swift in Sources */,
+				982A7219DB26B9EACF868222 /* RootView.swift in Sources */,
+				D5107651BFBF16CED19E1C52 /* ScanProgressView.swift in Sources */,
+				736B4585DEDB7F3A41896C46 /* WatchDebutSummaryView.swift in Sources */,
+				1C05DBDE3F071539DA56DF66 /* WatchAudioPlayer.swift in Sources */,
+				A36803C9E3EC349713DBBEAD /* WatchLibraryStore.swift in Sources */,
+				FDB0556A76444AE69CED1C5B /* WatchSyncReceiver.swift in Sources */,
+				EF99BDC3366FE6B784932BD8 /* flaccyWatchApp.swift in Sources */,
+				CCEC6E873883D2AB65540E36 /* LibraryLoadPhaseCopy.swift in Sources */,
+				FF6185B6D397BDB33AA21772 /* EnrichmentJobCopy.swift in Sources */,
+				DF1675B5B768AE538CDEA180 /* LibraryDebutCopy.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1121,7 +1121,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = P4DQK6SRKR;
 				ENABLE_PREVIEWS = YES;
