@@ -25,7 +25,7 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 |---|---|---|
 | **iPhone** | The full app: gapless playback, AI organization, scrobbling, charts, Year in Music, wantlist, lyrics, stations | [App Store](https://apps.apple.com/app/id6787493695) |
 | **Apple Watch** | Standalone phone-free player — sync tracks, play offline through AirPods | Bundled with the iOS app |
-| **Mac** | Native AppKit app with Liquid Glass and an adaptive artwork palette that tints the whole window to what's playing: full feature parity plus folder watching, menu bar player, media keys, multi-column sorting, keyboard-first browsing | Mac App Store — in review |
+| **Mac** | Native AppKit app with Liquid Glass and an adaptive artwork palette that tints the whole window to what's playing: full feature parity plus folder watching, menu bar player, media keys, multi-column sorting, keyboard-first browsing | [Mac App Store](https://apps.apple.com/app/id6789594504) |
 | **Linux** | Native GTK4/libadwaita player with an adaptive theme engine, gapless GStreamer playback, MPRIS media keys, scrobbling, synced lyrics, listening stats | `curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh \| sh` or `yay -S flaccy-bin` |
 
 ## Features
@@ -40,7 +40,8 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 
 ### Library
 - **Albums, Songs, Artists, Playlists** with search, sorting, and filter chips (Lossless / Hi-Res / Loved)
-- **AI organization** — messy folder names and scene releases identified and cleaned automatically
+- **AI organization** — messy folder names and scene releases identified and cleaned automatically (7-day trial, then one-time lifetime purchase via StoreKit)
+- **Popular on every artist page** — Last.fm top tracks intersected with what you own (top 5)
 - **Folder watching** (Mac) — files you add appear instantly, indexed in place from any folder
 - **Context menus everywhere** — play next, queue, station, playlist, share, lyrics
 
@@ -52,17 +53,20 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 
 ### Discovery
 - **Stations** — start a radio queue from any song, artist, or your whole library
-- **Suggested playlists** — Heavy Rotation, On Repeat, Rediscover
+- **Suggested playlists** — Heavy Rotation, Crate Dig, On Repeat, Rediscover, and Tonight's Spin — built from your scrobble history intersected with the tracks you own
 - **Wantlist** — tracks albums you're hunting for, resolves automatically when you acquire them
 - **Songlink sharing** — share any track as a universal link (Spotify, YouTube, Tidal, Apple Music…)
 
 ### Synced Lyrics
-- LRCLIB karaoke-style scrolling, current line highlighted, click/tap any line to seek
+- LRCLIB karaoke-style scrolling, current line highlighted, click/tap any line to seek — with `.lrc`/`.elrc` sidecar and embedded tag fallback, same resolution on every client
 
 ### Music videos (Linux)
 - **Video lens in Now Playing** — the song's official music video, streamed, with your lossless file still doing the playing
 - **Locked to your audio** — the video's head start is measured by correlating both recordings' onsets, then held to within a frame or two for the whole song
 - **Knows a music video from a lyric video** — uploader, wording, reach and runtime are scored together; a local Ollama model breaks ties, and nothing plays when nothing convinces
+
+### Downloads (Linux)
+- **Paste a link, get the music** — YouTube / YouTube Music / SoundCloud / Bandcamp — song, album, or playlist — best audio pulled via `yt-dlp`/`ffmpeg`, tagged, and dropped straight into your library (sidebar → Downloads, or Ctrl+D)
 
 ### Adaptive design
 - **Color of what's playing** — Mac and Linux extract the dominant palette from the current cover and retint the whole app; ambient backdrops, glass surfaces, and accent everything follow the music
@@ -72,12 +76,16 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 ## Repository layout
 
 ```
-flaccy/                 iOS app (programmatic UIKit, MVVM) — many files shared with the Mac target
+flaccy/                 iOS app (programmatic UIKit, MVVM)
 flaccyMac/              macOS app (programmatic AppKit, Liquid Glass, MVVM)
 flaccyWatch Watch App/  standalone watchOS app (SwiftUI + Observation)
-FlaccyCore/             shared SPM package: models, playback protocol, scanner, logging, sync contract
-linux/                  Linux app (Rust, GTK4 + libadwaita + GStreamer + rusqlite)
-scripts/                target generators (ruby xcodeproj): add_mac_target.rb, add_watch_target.rb
+FlaccyCore/             shared SPM package: LibraryScanner, TrackOrdering, LibraryLoadProgress,
+                        AudioMetadataReader, MediaItem, AudioPlaybackEngine, AppLogger, SyncProtocol
+linux/                  Linux app (Rust, GTK4 + libadwaita + GStreamer + rusqlite + lofty + mpris-server)
+marketing/              App Store screenshots (localized, 10 languages)
+Design/                 app icon and screenshot compositors
+scripts/                add_mac_target.rb, add_watch_target.rb, build-mac.sh (rsync + xcodebuild bridge)
+flaccy.xcodeproj        Xcode project (iOS + Mac + Watch targets)
 ```
 
 ## Setup (Apple platforms)
@@ -92,22 +100,31 @@ open flaccy.xcodeproj
 
 - [Last.fm](https://www.last.fm/api/account/create) — scrobbling, artist bios, album art, charts
 - **MusicKit** — enable in the Apple Developer portal (Identifiers → your App ID → App Services → MusicKit). Used for Songlink sharing and Apple Music artwork fallback; degrades gracefully without it.
-- AI metadata cleanup needs no key — it goes through the flaccy-api proxy Worker.
+- AI metadata cleanup needs no key — it goes through the flaccy-api proxy Worker (Groq llama-3.3-70b) and is gated behind the 7-day trial / lifetime purchase.
+- Verify the Mac target from Linux: `scripts/build-mac.sh [ios|mac|watch]` rsyncs and builds over Tailscale.
 
 ## Setup (Linux)
 
 ```
-cd linux && cargo build --release
+cd linux
+cargo build --release
+./install.sh
 ```
 
-GTK4, libadwaita ≥ 1.7, and GStreamer (base + good plugins) required. Building without `FLACCY_LASTFM_KEY`/`FLACCY_LASTFM_SECRET` env vars just disables scrobbling. See [linux/README.md](linux/README.md).
+Requires Rust 1.85+, GTK 4.18+, libadwaita ≥ 1.7, and GStreamer (base + good + `gst-libav` for AAC/M4A/ALAC). Without `gst-libav` FLAC and MP3 play but AAC/M4A won't — flaccy toasts the missing codec. Optional: `yt-dlp` + `ffmpeg` for Downloads and music videos, `ollama` to break ties when picking a video.
+
+Building without `FLACCY_LASTFM_KEY`/`FLACCY_LASTFM_SECRET` env vars just hides scrobbling. Keys can also live in `~/.config/flaccy/build-keys.env` (`FLACCY_KEYS_FILE` overrides the path) so every local build picks them up without touching the working copy. See [linux/README.md](linux/README.md).
 
 ## Stack
 
-Apple: Programmatic UIKit & AppKit · SwiftUI (watch) · MVVM · GRDB (SQLite) · AVQueuePlayer · MusicKit · Combine — one dependency: [GRDB.swift](https://github.com/groue/GRDB.swift)
+Apple: Programmatic UIKit & AppKit · SwiftUI (watch) · MVVM · GRDB (SQLite) · AVQueuePlayer · MusicKit · StoreKit · Combine — dependencies: [GRDB.swift](https://github.com/groue/GRDB.swift), [MidgarKit](https://github.com/guitaripod/MidgarKit), and local `FlaccyCore` SPM
 
-Linux: Rust · gtk4-rs + libadwaita · GStreamer (playbin3) · rusqlite · lofty · mpris-server
+Linux: Rust · gtk4-rs + libadwaita · GStreamer (playbin3 + gtk4 paintable) · rusqlite · lofty · mpris-server · cairo · serde/toml · image (jpeg/png/webp/bmp) — optional `yt-dlp`/`ffmpeg`/`ollama` at runtime
 
 ## Requirements
 
-iOS 18.6+ / watchOS 11+ / macOS 26+ · Xcode 26+ — Linux: any distro with GTK 4.14+ (x86_64 prebuilt, or build from source)
+iOS 18.6+ / watchOS 11+ / macOS 26+ · Xcode 26+ — Linux: any distro with GTK 4.18+ / libadwaita 1.7+ / GStreamer + gst-libav (x86_64 prebuilt glibc ≥ 2.39, or build from source with Rust 1.85+)
+
+## License
+
+GPL-3.0-only
