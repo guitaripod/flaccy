@@ -229,24 +229,37 @@ final class Library: LibraryProviding {
 
     @discardableResult
     func importFiles(from urls: [URL]) async -> LibraryImportOutcome {
-        var imported = 0
-        var failed = 0
-        for url in urls {
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-
-            let destination = uniqueDestination(for: url)
-            do {
-                try FileManager.default.copyItem(at: url, to: destination)
-                imported += 1
-                AppLogger.info("Imported: \(url.lastPathComponent)", category: .content)
-            } catch {
-                failed += 1
-                AppLogger.error("Import failed: \(error.localizedDescription)", category: .content)
-            }
-        }
+        let outcome = await Self.copyPickedFiles(urls, into: documentsDirectory)
         await reload()
-        return LibraryImportOutcome(imported: imported, failed: failed)
+        return outcome
+    }
+
+    /// Copying runs off the main actor because a document picked from a network
+    /// location (Files app over SMB/SSH) streams the whole file inside
+    /// `FileManager.copyItem` — main-thread work here freezes the UI for the
+    /// length of every transfer.
+    private nonisolated static func copyPickedFiles(
+        _ urls: [URL], into directory: URL
+    ) async -> LibraryImportOutcome {
+        await Task.detached(priority: .userInitiated) {
+            var imported = 0
+            var failed = 0
+            for url in urls {
+                let accessing = url.startAccessingSecurityScopedResource()
+                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+
+                let destination = uniqueDestination(for: url, in: directory)
+                do {
+                    try FileManager.default.copyItem(at: url, to: destination)
+                    imported += 1
+                    AppLogger.info("Imported: \(url.lastPathComponent)", category: .content)
+                } catch {
+                    failed += 1
+                    AppLogger.error("Import failed: \(error.localizedDescription)", category: .content)
+                }
+            }
+            return LibraryImportOutcome(imported: imported, failed: failed)
+        }.value
     }
 
     /// Deleting the files is the single source of truth — the reload's file
@@ -356,8 +369,12 @@ final class Library: LibraryProviding {
         }
 
         await withTaskGroup(of: TrackRecord?.self) { group in
-            for relPath in newPaths {
-                guard let fileURL = diskFilesByPath[relPath] else { continue }
+            var pending = newPaths.makeIterator()
+            var inflight = 0
+            let maxInflight = 8
+            func addNext(_ group: inout TaskGroup<TrackRecord?>) -> Bool {
+                guard let relPath = pending.next() else { return false }
+                guard let fileURL = diskFilesByPath[relPath] else { return true }
                 group.addTask {
                     let metadata = await MetadataService.extractMetadata(from: fileURL)
                     return TrackRecord(
@@ -382,16 +399,20 @@ final class Library: LibraryProviding {
                         channels: metadata.channels
                     )
                 }
+                return true
             }
+            while inflight < maxInflight && addNext(&group) { inflight += 1 }
 
             var buffer: [TrackRecord] = []
             var read = 0
             for await record in group {
                 read += 1
+                inflight -= 1
                 emitProgress {
                     $0.completed = read
                     $0.tracksIndexed = alreadyIndexed + read
                 }
+                if addNext(&group) { inflight += 1 }
                 guard let record else { continue }
                 buffer.append(record)
                 if buffer.count >= Self.insertBatchSize {
@@ -587,8 +608,8 @@ final class Library: LibraryProviding {
         #endif
     }
 
-    private func uniqueDestination(for sourceURL: URL) -> URL {
-        let destination = documentsDirectory.appendingPathComponent(sourceURL.lastPathComponent)
+    private nonisolated static func uniqueDestination(for sourceURL: URL, in directory: URL) -> URL {
+        let destination = directory.appendingPathComponent(sourceURL.lastPathComponent)
         let fm = FileManager.default
         guard fm.fileExists(atPath: destination.path) else { return destination }
 
@@ -597,7 +618,7 @@ final class Library: LibraryProviding {
         var counter = 1
         var newDest = destination
         while fm.fileExists(atPath: newDest.path) {
-            newDest = documentsDirectory.appendingPathComponent("\(name)_\(counter).\(ext)")
+            newDest = directory.appendingPathComponent("\(name)_\(counter).\(ext)")
             counter += 1
         }
         return newDest
