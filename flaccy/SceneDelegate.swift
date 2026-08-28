@@ -73,6 +73,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = rootVC
         window.makeKeyAndVisible()
         self.window = window
+        #if DEBUG
+        PaywallShot.runIfRequested(in: window)
+        #endif
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(trackDidChange), name: AudioPlayer.trackDidChange, object: nil
