@@ -175,7 +175,7 @@ final class MacLibraryDebutView: NSView {
 
         headline.stringValue = LibraryDebutCopy.headline(for: state.job.scope)
         explanation.stringValue = LibraryDebutCopy.explanation(for: state.job.scope)
-        chip.isHidden = !(state.job.scope == .aiBatch && PurchaseManager.shared.state != .purchased)
+        chip.isHidden = !(state.job.scope == .aiBatch && !PurchaseManager.shared.state.isPurchased)
         aiButton.isHidden = true
         countdown.isHidden = false
         countdown.stringValue = state.job.activity == .waitingForNetwork

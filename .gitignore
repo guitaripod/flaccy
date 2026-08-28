@@ -31,3 +31,4 @@ fastlane/test_output
 .swiftpm/
 Package.resolved
 xcuserdata/
+.asc/

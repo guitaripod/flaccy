@@ -212,7 +212,7 @@ final class SettingsViewController: UITableViewController {
     private func refreshHeader() {
         headerView.configure(
             state: PurchaseManager.shared.state,
-            priceText: PurchaseManager.shared.product?.displayPrice,
+            priceText: PurchaseManager.shared.yearlyOffer?.displayPrice,
             albums: Library.shared.albums.count,
             tracks: Library.shared.allTracks.count,
             plays: playsCount
@@ -1000,9 +1000,9 @@ final class SettingsViewController: UITableViewController {
     }
 
     private func loadPriceIfNeeded() {
-        guard PurchaseManager.shared.product == nil else { return }
+        guard PurchaseManager.shared.offers.isEmpty else { return }
         Task { [weak self] in
-            await PurchaseManager.shared.loadProductIfNeeded()
+            await PurchaseManager.shared.loadOffersIfNeeded()
             self?.refreshHeader()
         }
     }

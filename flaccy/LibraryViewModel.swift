@@ -952,9 +952,11 @@ final class LibraryViewModel {
         audioPlayer.restoreQueueState()
     }
 
-    func importFiles(from urls: [URL]) async {
+    @discardableResult
+    func importFiles(from urls: [URL]) async -> LibraryImportOutcome {
         let outcome = await library.importFiles(from: urls)
         ReviewPrompt.recordImportedTracks(outcome.imported)
+        return outcome
     }
 
     func setAlbumSort(_ sort: AlbumSort) {

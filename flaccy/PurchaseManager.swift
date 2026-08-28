@@ -1,13 +1,42 @@
 import Foundation
+import RevenueCat
 import Security
-import StoreKit
+
+nonisolated enum PurchasePlan: String, Equatable, Hashable, Sendable {
+    case yearly
+    case lifetime
+}
 
 nonisolated enum EntitlementState: Equatable, Hashable {
     case trial(daysRemaining: Int)
     case expired
-    case purchased
+    case purchased(PurchasePlan)
+
+    var isPurchased: Bool {
+        if case .purchased = self { return true }
+        return false
+    }
 }
 
+/// One buyable plan as the paywall renders it: the store's localized price plus
+/// the RevenueCat package that purchases it.
+struct PurchaseOffer: Equatable {
+    let plan: PurchasePlan
+    let displayPrice: String
+    let package: Package
+
+    static func == (lhs: PurchaseOffer, rhs: PurchaseOffer) -> Bool {
+        lhs.plan == rhs.plan && lhs.package.identifier == rhs.package.identifier
+    }
+}
+
+/// Entitlement source of truth for the Apple clients, backed by RevenueCat.
+///
+/// RevenueCat owns receipts, restores, renewals and cross-device state; the
+/// seven-day trial stays local because it starts before any purchase exists and
+/// must survive a reinstall, which the Keychain gives us for free. The `pro`
+/// entitlement is attached to both the yearly subscription and the lifetime
+/// unlock, so one boolean answers "may this person play music".
 final class PurchaseManager {
 
     static let shared = PurchaseManager()
@@ -15,17 +44,13 @@ final class PurchaseManager {
     static let stateDidChange = Notification.Name("PurchaseStateDidChange")
     static let paywallRequired = Notification.Name("PaywallRequired")
 
-    #if os(macOS)
-    static let lifetimeProductID = "com.midgarcorp.flaccy.mac.lifetime"
-    #else
-    static let lifetimeProductID = "com.midgarcorp.flaccy.lifetime"
-    #endif
+    static let entitlementID = "pro"
     static let trialLengthDays = 7
 
     private(set) var state: EntitlementState = .trial(daysRemaining: trialLengthDays)
-    private(set) var product: Product?
+    private(set) var offers: [PurchaseOffer] = []
 
-    private var updatesTask: Task<Void, Never>?
+    private var customerInfoTask: Task<Void, Never>?
 
     private init() {}
 
@@ -33,38 +58,67 @@ final class PurchaseManager {
         state != .expired
     }
 
+    var yearlyOffer: PurchaseOffer? { offers.first { $0.plan == .yearly } }
+    var lifetimeOffer: PurchaseOffer? { offers.first { $0.plan == .lifetime } }
+
     func start() {
         let trialStart = TrialClock.ensureStartDate()
         setState(trialState(from: trialStart))
-        listenForTransactionUpdates()
+        configureRevenueCat()
+        listenForCustomerInfo()
         Task {
             await refresh()
-            await loadProductIfNeeded()
+            await loadOffersIfNeeded()
         }
     }
 
+    private func configureRevenueCat() {
+        guard !Purchases.isConfigured else { return }
+        Purchases.logLevel = .warn
+        Purchases.configure(
+            with: .builder(withAPIKey: Secrets.revenueCatAPIKey)
+                .with(storeKitVersion: .storeKit2)
+                .build()
+        )
+        AppLogger.info("RevenueCat configured", category: .purchases)
+    }
+
     func refresh() async {
-        if await hasLifetimeEntitlement() {
-            setState(.purchased)
-        } else {
-            setState(trialState(from: TrialClock.ensureStartDate()))
+        do {
+            let info = try await Purchases.shared.customerInfo()
+            apply(info)
+        } catch {
+            AppLogger.error("Customer info fetch failed: \(error.localizedDescription)", category: .purchases)
+            if !state.isPurchased {
+                setState(trialState(from: TrialClock.ensureStartDate()))
+            }
         }
     }
 
     @discardableResult
-    func loadProductIfNeeded() async -> Product? {
-        if let product { return product }
+    func loadOffersIfNeeded() async -> [PurchaseOffer] {
+        if !offers.isEmpty { return offers }
         do {
-            product = try await Product.products(for: [Self.lifetimeProductID]).first
-            if let product {
-                AppLogger.info("Loaded product \(product.id) at \(product.displayPrice)", category: .purchases)
-            } else {
-                AppLogger.warning("Product \(Self.lifetimeProductID) not found in store response", category: .purchases)
+            guard let current = try await Purchases.shared.offerings().current else {
+                AppLogger.warning("No current RevenueCat offering", category: .purchases)
+                return []
             }
+            var loaded: [PurchaseOffer] = []
+            if let annual = current.annual {
+                loaded.append(PurchaseOffer(plan: .yearly, displayPrice: annual.storeProduct.localizedPriceString, package: annual))
+            }
+            if let lifetime = current.lifetime {
+                loaded.append(PurchaseOffer(plan: .lifetime, displayPrice: lifetime.storeProduct.localizedPriceString, package: lifetime))
+            }
+            offers = loaded
+            AppLogger.info(
+                "Loaded offers: \(loaded.map { "\($0.plan.rawValue)=\($0.displayPrice)" }.joined(separator: ", "))",
+                category: .purchases
+            )
         } catch {
-            AppLogger.error("Product load failed: \(error.localizedDescription)", category: .purchases)
+            AppLogger.error("Offerings load failed: \(error.localizedDescription)", category: .purchases)
         }
-        return product
+        return offers
     }
 
     enum PurchaseOutcome {
@@ -73,26 +127,25 @@ final class PurchaseManager {
         case cancelled
     }
 
-    func purchase() async throws -> PurchaseOutcome {
-        guard let product = await loadProductIfNeeded() else {
-            throw StoreKitError.notAvailableInStorefront
+    func purchase(_ plan: PurchasePlan) async throws -> PurchaseOutcome {
+        let offers = await loadOffersIfNeeded()
+        guard let offer = offers.first(where: { $0.plan == plan }) else {
+            throw ErrorCode.productNotAvailableForPurchaseError
         }
-        let result = try await product.purchase()
-        switch result {
-        case .success(let verification):
-            let transaction = try verified(verification)
-            await transaction.finish()
-            setState(.purchased)
-            AppLogger.info("Lifetime purchase completed (transaction \(transaction.id))", category: .purchases)
+        do {
+            let result = try await Purchases.shared.purchase(package: offer.package)
+            if result.userCancelled {
+                AppLogger.info("Purchase cancelled by user", category: .purchases)
+                return .cancelled
+            }
+            apply(result.customerInfo)
+            AppLogger.info("Purchase completed for \(plan.rawValue)", category: .purchases)
             return .purchased
-        case .pending:
+        } catch let error as ErrorCode where error == .paymentPendingError {
             AppLogger.info("Purchase pending external approval", category: .purchases)
             return .pending
-        case .userCancelled:
+        } catch let error as ErrorCode where error == .purchaseCancelledError {
             AppLogger.info("Purchase cancelled by user", category: .purchases)
-            return .cancelled
-        @unknown default:
-            AppLogger.warning("Purchase returned unknown result", category: .purchases)
             return .cancelled
         }
     }
@@ -100,50 +153,38 @@ final class PurchaseManager {
     @discardableResult
     func restore() async -> Bool {
         do {
-            try await AppStore.sync()
+            let info = try await Purchases.shared.restorePurchases()
+            apply(info)
         } catch {
-            AppLogger.error("AppStore.sync failed during restore: \(error.localizedDescription)", category: .purchases)
+            AppLogger.error("Restore failed: \(error.localizedDescription)", category: .purchases)
         }
-        await refresh()
-        let restored = state == .purchased
+        let restored = state.isPurchased
         AppLogger.info("Restore finished, purchased: \(restored)", category: .purchases)
         return restored
     }
 
-    private func listenForTransactionUpdates() {
-        guard updatesTask == nil else { return }
-        updatesTask = Task { [weak self] in
-            for await update in Transaction.updates {
+    private func listenForCustomerInfo() {
+        guard customerInfoTask == nil else { return }
+        customerInfoTask = Task { [weak self] in
+            for await info in Purchases.shared.customerInfoStream {
                 guard let self else { return }
-                do {
-                    let transaction = try self.verified(update)
-                    await transaction.finish()
-                    AppLogger.info("Transaction update for \(transaction.productID), revoked: \(transaction.revocationDate != nil)", category: .purchases)
-                    await self.refresh()
-                } catch {
-                    AppLogger.error("Unverified transaction update: \(error.localizedDescription)", category: .purchases)
-                }
+                await MainActor.run { self.apply(info) }
             }
         }
     }
 
-    private func hasLifetimeEntitlement() async -> Bool {
-        for await entitlement in Transaction.currentEntitlements {
-            guard case .verified(let transaction) = entitlement else { continue }
-            if transaction.productID == Self.lifetimeProductID, transaction.revocationDate == nil {
-                return true
-            }
+    private func apply(_ info: CustomerInfo) {
+        if let entitlement = info.entitlements[Self.entitlementID], entitlement.isActive {
+            setState(.purchased(Self.plan(for: entitlement)))
+        } else {
+            setState(trialState(from: TrialClock.ensureStartDate()))
         }
-        return false
     }
 
-    private func verified(_ result: VerificationResult<Transaction>) throws -> Transaction {
-        switch result {
-        case .verified(let transaction):
-            return transaction
-        case .unverified(_, let error):
-            throw error
-        }
+    /// A lifetime unlock never expires; anything with an expiration date is the
+    /// subscription, whatever its product identifier ends up being called.
+    private static func plan(for entitlement: EntitlementInfo) -> PurchasePlan {
+        entitlement.expirationDate == nil ? .lifetime : .yearly
     }
 
     /// Days elapsed are clamped at zero so winding the device clock behind the

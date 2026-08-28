@@ -1512,8 +1512,14 @@ extension LibraryViewController: UISearchResultsUpdating {
 extension LibraryViewController: UIDocumentPickerDelegate {
 
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-        Task { await viewModel.importFiles(from: urls) }
+        guard !urls.isEmpty else { return }
+        ToastView.show(ImportOutcomeCopy.importing(count: urls.count), in: view, style: .info)
+        Task {
+            let outcome = await viewModel.importFiles(from: urls)
+            let report = ImportOutcomeCopy.report(outcome)
+            UINotificationFeedbackGenerator().notificationOccurred(report.isFailure ? .error : (report.isNoOp ? .warning : .success))
+            ToastView.show(report.message, in: view, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
+        }
     }
 }
 

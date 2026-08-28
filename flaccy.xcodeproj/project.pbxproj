@@ -15,6 +15,7 @@
 		2C21267046BDFDCB76F13F69 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = A734BCDDBC66217E19FC32B7 /* FlaccyCore */; };
 		2C2777462F7D0B80007FF196 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 2C2777012F7D0301007FF196 /* GRDB */; };
 		36074D00E7EB85E910B8AAC6 /* ScanProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32EB40ABEF2CB5616D1E4B4 /* ScanProgressView.swift */; };
+		3724C6A57FC0CFFC751B4106 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = A5F788D51B23AECE3A587D07 /* RevenueCat */; };
 		3FF846A10F0809D6ECB6DA8D /* AlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0117CDD1ECFB9C7D3C332A5 /* AlbumDetailView.swift */; };
 		4114B9F2DAEFCEF2104A7CF6 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5939164CA91FCC865B69DB94 /* FlaccyCore */; };
 		47C108E909F602CC3BC5C55E /* WatchAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A48061B3D4D070C0DFBDD081 /* WatchAudioPlayer.swift */; };
@@ -28,6 +29,7 @@
 		7947AF93B85568CC533A46B2 /* EnrichmentStatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB68BB0D452D5B0930B36C8E /* EnrichmentStatusRow.swift */; };
 		81AAE5ED210A88AD2436FF6C /* LibraryLoadPhaseCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D1C98EC8C5F80101664ACB /* LibraryLoadPhaseCopy.swift */; };
 		85C684918CD5C7EC5C66D575 /* ArtworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8B5871FABA46552868150ED /* ArtworkView.swift */; };
+		89E88A1A9F95A493FCDDB3BF /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 46BAB714076C0A5D9D0986AA /* RevenueCat */; };
 		8E47E1D598B706E94B056080 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C433D55BD6A1974A842EC01C /* GRDB */; };
 		A1D00E014A13D8A615E7C46D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1AB36944B652EA1E9E81BEA /* Cocoa.framework */; };
 		AD689F5274B6D57E849EACA7 /* EnrichmentJobCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD71D40AC9BB109B183D34C /* EnrichmentJobCopy.swift */; };
@@ -255,6 +257,7 @@
 			files = (
 				2C2777462F7D0B80007FF196 /* GRDB in Frameworks */,
 				0BB345FBD38D4072779FC1A1 /* FlaccyCore in Frameworks */,
+				3724C6A57FC0CFFC751B4106 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -289,6 +292,7 @@
 				EBDAC9950D4E8507C67D4518 /* Cocoa.framework in Frameworks */,
 				2C21267046BDFDCB76F13F69 /* FlaccyCore in Frameworks */,
 				8E47E1D598B706E94B056080 /* GRDB in Frameworks */,
+				89E88A1A9F95A493FCDDB3BF /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -427,6 +431,7 @@
 				2C2777012F7D0301007FF196 /* GRDB */,
 				D2E21F4867B0D1251124B5D3 /* FlaccyCore */,
 				2CAA00022F000002007FF196 /* MidgarKit */,
+				A5F788D51B23AECE3A587D07 /* RevenueCat */,
 			);
 			productName = flaccy;
 			productReference = 2C2776CA2F7D0282007FF196 /* flaccy.app */;
@@ -473,6 +478,7 @@
 			packageProductDependencies = (
 				A734BCDDBC66217E19FC32B7 /* FlaccyCore */,
 				C433D55BD6A1974A842EC01C /* GRDB */,
+				46BAB714076C0A5D9D0986AA /* RevenueCat */,
 			);
 			productName = flaccyMac;
 			productReference = 483CF523EE5ED3E295BFF6B1 /* Flaccy.app */;
@@ -573,6 +579,7 @@
 				2C2777002F7D0300007FF196 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				87B8F983431A9C5256D98CCC /* XCLocalSwiftPackageReference "FlaccyCore" */,
 				2CAA00012F000001007FF196 /* XCRemoteSwiftPackageReference "MidgarKit" */,
+				BF5291636293FE2A88DE954B /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2C2776CB2F7D0282007FF196 /* Products */;
@@ -1273,6 +1280,14 @@
 				minimumVersion = 2.1.0;
 			};
 		};
+		BF5291636293FE2A88DE954B /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.87.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1286,9 +1301,19 @@
 			package = 2CAA00012F000001007FF196 /* XCRemoteSwiftPackageReference "MidgarKit" */;
 			productName = MidgarKit;
 		};
+		46BAB714076C0A5D9D0986AA /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF5291636293FE2A88DE954B /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
 		5939164CA91FCC865B69DB94 /* FlaccyCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FlaccyCore;
+		};
+		A5F788D51B23AECE3A587D07 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF5291636293FE2A88DE954B /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
 		};
 		A734BCDDBC66217E19FC32B7 /* FlaccyCore */ = {
 			isa = XCSwiftPackageProductDependency;

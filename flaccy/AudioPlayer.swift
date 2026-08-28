@@ -988,6 +988,7 @@ final class AudioPlayer: AudioPlaying {
     private func performScrobble(submitToLastFM: Bool = true) {
         guard let track = currentTrack else { return }
         hasScrobbled = true
+        Task { @MainActor in ReviewPrompt.recordCompletedPlay() }
         let startTime = trackStartTime ?? Date()
         let trackDuration = Int(track.duration)
         let dbID = track.dbID

@@ -81,8 +81,11 @@ final class GeneralSettingsPane: SettingsPane {
 
     private func refreshEntitlement() {
         switch PurchaseManager.shared.state {
-        case .purchased:
+        case .purchased(.lifetime):
             entitlementLabel.stringValue = String(localized: "Lifetime unlocked. Thank you.")
+            unlockButton.isHidden = true
+        case .purchased(.yearly):
+            entitlementLabel.stringValue = String(localized: "Flaccy Pro — yearly. Thank you.")
             unlockButton.isHidden = true
         case .trial(let daysRemaining):
             entitlementLabel.stringValue = String(localized: "Trial — \(daysRemaining) days left")

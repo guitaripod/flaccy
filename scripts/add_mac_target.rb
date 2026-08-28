@@ -19,6 +19,7 @@ SHARED_IOS_FILES = %w[
   DetailEnrichment.swift
   GroqService.swift
   ImageCache.swift
+  ImportOutcomeCopy.swift
   LastFMService.swift
   LastFMStatsService.swift
   Library.swift
@@ -36,6 +37,7 @@ SHARED_IOS_FILES = %w[
   PlatformImage.swift
   PurchaseManager.swift
   RecapModels.swift
+  ReviewPrompt.swift
   SampleMusicService.swift
   ScreenshotSeeder.swift
   Secrets.swift
@@ -64,6 +66,11 @@ grdb_pkg = project.root_object.package_references.find do |ref|
   ref.respond_to?(:repositoryURL) && ref.repositoryURL.to_s.include?('GRDB')
 end
 raise 'GRDB package reference not found' unless grdb_pkg
+
+revenuecat_pkg = project.root_object.package_references.find do |ref|
+  ref.respond_to?(:repositoryURL) && ref.repositoryURL.to_s.include?('purchases-ios')
+end
+raise 'RevenueCat package reference not found (run scripts/add_revenuecat_package.rb)' unless revenuecat_pkg
 
 def link_package_product(project, target, product_name, package = nil)
   return if target.package_product_dependencies.any? { |d| d.product_name == product_name }
@@ -176,6 +183,7 @@ end
 
 link_package_product(project, mac_target, 'FlaccyCore')
 link_package_product(project, mac_target, 'GRDB', grdb_pkg)
+link_package_product(project, mac_target, 'RevenueCat', revenuecat_pkg)
 
 UITEST_NAME = 'flaccyMacUITests'
 uitest_target = project.targets.find { |t| t.name == UITEST_NAME }

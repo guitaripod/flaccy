@@ -38,7 +38,7 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
 
         let click = NSClickGestureRecognizer(target: self, action: #selector(openPaywall))
         pill.addGestureRecognizer(click)
-        pill.toolTip = String(localized: "Unlock Flaccy Lifetime")
+        pill.toolTip = String(localized: "Unlock Flaccy Pro")
     }
 
     override func viewDidLoad() {

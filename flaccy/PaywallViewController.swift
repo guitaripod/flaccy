@@ -53,12 +53,13 @@ final class PaywallViewController: UIViewController {
     private let backdropView = AmbientPaletteBackdropView()
     private let scrollView = UIScrollView()
     private let contentStack = UIStackView()
-    private let priceLabel = UILabel()
+    private let planPicker = PlanPickerView()
     private let statusLabel = UILabel()
     private let purchaseButton = UIButton(configuration: .filled())
     private let restoreButton = UIButton(configuration: .plain())
 
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
+    private let selectionFeedback = UISelectionFeedbackGenerator()
     private let notificationFeedback = UINotificationFeedbackGenerator()
 
     private var isTransacting = false {
@@ -82,20 +83,20 @@ final class PaywallViewController: UIViewController {
         setupScrollView()
         buildContent()
         updateStatusLine()
-        updatePriceLine()
+        updateOffers()
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.stateDidChange, object: nil
         )
         Task {
-            await PurchaseManager.shared.loadProductIfNeeded()
-            updatePriceLine()
+            await PurchaseManager.shared.loadOffersIfNeeded()
+            updateOffers()
         }
         AppLogger.info("Paywall presented (state \(PurchaseManager.shared.state))", category: .purchases)
     }
 
     @objc private func purchaseStateDidChange() {
         updateStatusLine()
-        if PurchaseManager.shared.state == .purchased, presentedViewController == nil, !isTransacting {
+        if PurchaseManager.shared.state.isPurchased, presentedViewController == nil, !isTransacting {
             dismiss(animated: true)
         }
     }
@@ -150,9 +151,12 @@ final class PaywallViewController: UIViewController {
         contentStack.addArrangedSubview(featureCard)
         contentStack.setCustomSpacing(28, after: featureCard)
 
-        configurePriceLabel()
-        contentStack.addArrangedSubview(priceLabel)
-        contentStack.setCustomSpacing(14, after: priceLabel)
+        planPicker.onSelectionChange = { [weak self] _ in
+            self?.selectionFeedback.selectionChanged()
+            self?.updatePurchaseButtonTitle()
+        }
+        contentStack.addArrangedSubview(planPicker)
+        contentStack.setCustomSpacing(16, after: planPicker)
 
         configurePurchaseButton()
         contentStack.addArrangedSubview(purchaseButton)
@@ -230,7 +234,7 @@ final class PaywallViewController: UIViewController {
 
         let captionLabel = UILabel()
         captionLabel.attributedText = NSAttributedString(
-            string: String(localized: "FLACCY LIFETIME"),
+            string: String(localized: "FLACCY PRO"),
             attributes: [
                 .font: UIFont.scaled(.caption1, size: 12, weight: .bold),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.65),
@@ -330,26 +334,14 @@ final class PaywallViewController: UIViewController {
         return row
     }
 
-    private func configurePriceLabel() {
-        priceLabel.font = .scaled(.headline, size: 17, weight: .semibold)
-        priceLabel.adjustsFontForContentSizeCategory = true
-        priceLabel.textColor = .white
-        priceLabel.textAlignment = .center
-        priceLabel.numberOfLines = 0
-    }
-
     private func configurePurchaseButton() {
         var config = UIButton.Configuration.filled()
         config.baseBackgroundColor = .white
         config.baseForegroundColor = .black
         config.cornerStyle = .capsule
-        config.attributedTitle = AttributedString(
-            String(localized: "Unlock Lifetime"),
-            attributes: AttributeContainer([.font: UIFont.scaled(.headline, size: 17, weight: .bold)])
-        )
         purchaseButton.configuration = config
         purchaseButton.heightAnchor.constraint(equalToConstant: 54).isActive = true
-        purchaseButton.accessibilityHint = String(localized: "Buys lifetime access with a one-time purchase")
+        updatePurchaseButtonTitle()
         purchaseButton.addAction(UIAction { [weak self] _ in
             self?.handlePurchaseTap()
         }, for: .touchUpInside)
@@ -377,12 +369,30 @@ final class PaywallViewController: UIViewController {
         statusLabel.numberOfLines = 0
     }
 
-    private func updatePriceLine() {
-        if let product = PurchaseManager.shared.product {
-            priceLabel.text = String(localized: "\(product.displayPrice) · once, forever")
-        } else {
-            priceLabel.text = String(localized: "Once, forever")
+    private func updateOffers() {
+        planPicker.configure(offers: PurchaseManager.shared.offers)
+        updatePurchaseButtonTitle()
+    }
+
+    private func updatePurchaseButtonTitle() {
+        let title: String
+        let hint: String
+        switch planPicker.selectedPlan {
+        case .yearly:
+            title = planPicker.selectedOffer.map { String(localized: "Start Yearly · \($0.displayPrice)") }
+                ?? String(localized: "Start Yearly")
+            hint = String(localized: "Subscribes for a year, renewing automatically until cancelled")
+        case .lifetime:
+            title = planPicker.selectedOffer.map { String(localized: "Unlock Lifetime · \($0.displayPrice)") }
+                ?? String(localized: "Unlock Lifetime")
+            hint = String(localized: "Buys lifetime access with a one-time purchase")
         }
+        purchaseButton.configuration?.attributedTitle = AttributedString(
+            title,
+            attributes: AttributeContainer([.font: UIFont.scaled(.headline, size: 17, weight: .bold)])
+        )
+        purchaseButton.accessibilityHint = hint
+        purchaseButton.isEnabled = !isTransacting && planPicker.selectedOffer != nil
     }
 
     private func updateStatusLine() {
@@ -391,14 +401,17 @@ final class PaywallViewController: UIViewController {
             statusLabel.text = String(localized: "\(daysRemaining) days left in your trial")
         case .expired:
             statusLabel.text = String(localized: "Your trial has ended")
-        case .purchased:
+        case .purchased(.lifetime):
             statusLabel.text = String(localized: "Lifetime unlocked. Thank you.")
+        case .purchased(.yearly):
+            statusLabel.text = String(localized: "Flaccy Pro is active. Thank you.")
         }
     }
 
     private func updateControlsForTransactionState() {
-        purchaseButton.isEnabled = !isTransacting
+        purchaseButton.isEnabled = !isTransacting && planPicker.selectedOffer != nil
         restoreButton.isEnabled = !isTransacting
+        planPicker.isUserInteractionEnabled = !isTransacting
         purchaseButton.configuration?.showsActivityIndicator = isTransacting
     }
 
@@ -409,7 +422,7 @@ final class PaywallViewController: UIViewController {
         Task {
             defer { isTransacting = false }
             do {
-                switch try await PurchaseManager.shared.purchase() {
+                switch try await PurchaseManager.shared.purchase(planPicker.selectedPlan) {
                 case .purchased:
                     notificationFeedback.notificationOccurred(.success)
                     dismiss(animated: true)
@@ -454,5 +467,201 @@ final class PaywallViewController: UIViewController {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
         present(alert, animated: true)
+    }
+}
+
+/// Two selectable plan cards — yearly and lifetime — with a radio affordance,
+/// the store's localized price, and a caption that says what each one buys.
+/// Yearly is the default because it is the lower commitment; lifetime is
+/// labeled as the one-time option so the choice reads at a glance.
+final class PlanPickerView: UIView {
+
+    private(set) var selectedPlan: PurchasePlan = .yearly
+    var onSelectionChange: ((PurchasePlan) -> Void)?
+
+    private var offers: [PurchaseOffer] = []
+    private let stack = UIStackView()
+    private var cards: [PurchasePlan: PlanCardControl] = [:]
+
+    var selectedOffer: PurchaseOffer? {
+        offers.first { $0.plan == selectedPlan }
+    }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        stack.axis = .vertical
+        stack.spacing = 10
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: topAnchor),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+        for plan in [PurchasePlan.yearly, .lifetime] {
+            let card = PlanCardControl(plan: plan)
+            card.addAction(UIAction { [weak self] _ in self?.select(plan) }, for: .touchUpInside)
+            cards[plan] = card
+            stack.addArrangedSubview(card)
+        }
+        configure(offers: [])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func configure(offers: [PurchaseOffer]) {
+        self.offers = offers
+        for (plan, card) in cards {
+            card.setPrice(offers.first { $0.plan == plan }?.displayPrice)
+            card.isSelectedPlan = plan == selectedPlan
+        }
+    }
+
+    private func select(_ plan: PurchasePlan) {
+        guard plan != selectedPlan else { return }
+        selectedPlan = plan
+        for (candidate, card) in cards {
+            card.isSelectedPlan = candidate == plan
+        }
+        onSelectionChange?(plan)
+    }
+}
+
+private final class PlanCardControl: UIControl {
+
+    private static let accent = QualityBadgeView.losslessTint
+
+    let plan: PurchasePlan
+    private let radio = UIImageView()
+    private let titleLabel = UILabel()
+    private let captionLabel = UILabel()
+    private let priceLabel = UILabel()
+    private let badge = UILabel()
+
+    var isSelectedPlan = false {
+        didSet { applySelection() }
+    }
+
+    override var isHighlighted: Bool {
+        didSet {
+            UIView.animate(withDuration: 0.15) {
+                self.transform = self.isHighlighted ? CGAffineTransform(scaleX: 0.985, y: 0.985) : .identity
+            }
+        }
+    }
+
+    init(plan: PurchasePlan) {
+        self.plan = plan
+        super.init(frame: .zero)
+        layer.cornerRadius = 18
+        layer.cornerCurve = .continuous
+        layer.borderWidth = 1.5
+        isAccessibilityElement = true
+        accessibilityTraits = .button
+
+        radio.contentMode = .center
+        radio.setContentHuggingPriority(.required, for: .horizontal)
+        radio.translatesAutoresizingMaskIntoConstraints = false
+        radio.widthAnchor.constraint(equalToConstant: 24).isActive = true
+
+        titleLabel.font = .scaled(.headline, size: 16, weight: .semibold)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.textColor = .white
+
+        captionLabel.font = .scaled(.footnote, size: 13, weight: .regular)
+        captionLabel.adjustsFontForContentSizeCategory = true
+        captionLabel.textColor = UIColor.white.withAlphaComponent(0.6)
+        captionLabel.numberOfLines = 2
+
+        badge.font = .scaled(.caption2, size: 10, weight: .bold)
+        badge.adjustsFontForContentSizeCategory = true
+        badge.textColor = .black
+        badge.backgroundColor = Self.accent
+        badge.layer.cornerRadius = 7
+        badge.layer.cornerCurve = .continuous
+        badge.layer.masksToBounds = true
+        badge.textAlignment = .center
+        badge.setContentHuggingPriority(.required, for: .horizontal)
+
+        let titleRow = UIStackView(arrangedSubviews: [titleLabel, badge, UIView()])
+        titleRow.axis = .horizontal
+        titleRow.spacing = 8
+        titleRow.alignment = .center
+
+        let textStack = UIStackView(arrangedSubviews: [titleRow, captionLabel])
+        textStack.axis = .vertical
+        textStack.spacing = 2
+
+        priceLabel.font = .scaled(.headline, size: 16, weight: .bold)
+        priceLabel.adjustsFontForContentSizeCategory = true
+        priceLabel.textColor = .white
+        priceLabel.textAlignment = .right
+        priceLabel.setContentHuggingPriority(.required, for: .horizontal)
+        priceLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        let row = UIStackView(arrangedSubviews: [radio, textStack, priceLabel])
+        row.axis = .horizontal
+        row.spacing = 12
+        row.alignment = .center
+        row.isUserInteractionEnabled = false
+        row.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(row)
+        NSLayoutConstraint.activate([
+            row.topAnchor.constraint(equalTo: topAnchor, constant: 14),
+            row.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -14),
+            row.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            row.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+        ])
+
+        switch plan {
+        case .yearly:
+            titleLabel.text = String(localized: "Yearly")
+            captionLabel.text = String(localized: "Everything, renews each year. Cancel anytime.")
+            badge.text = "  \(String(localized: "MOST POPULAR").uppercased())  "
+        case .lifetime:
+            titleLabel.text = String(localized: "Lifetime")
+            captionLabel.text = String(localized: "Pay once, own it forever.")
+            badge.text = "  \(String(localized: "PAY ONCE").uppercased())  "
+        }
+        setPrice(nil)
+        applySelection()
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func setPrice(_ price: String?) {
+        switch (plan, price) {
+        case (.yearly, let price?):
+            priceLabel.text = String(localized: "\(price)/yr")
+        case (.lifetime, let price?):
+            priceLabel.text = price
+        case (_, nil):
+            priceLabel.text = "—"
+        }
+        refreshAccessibility()
+    }
+
+    private func applySelection() {
+        let symbol = isSelectedPlan ? "checkmark.circle.fill" : "circle"
+        radio.image = UIImage(
+            systemName: symbol,
+            withConfiguration: UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold)
+        )
+        radio.tintColor = isSelectedPlan ? Self.accent : UIColor.white.withAlphaComponent(0.35)
+        backgroundColor = isSelectedPlan
+            ? Self.accent.withAlphaComponent(0.14)
+            : UIColor.white.withAlphaComponent(UIAccessibility.isReduceTransparencyEnabled ? 0.1 : 0.06)
+        layer.borderColor = (isSelectedPlan ? Self.accent : UIColor.white.withAlphaComponent(0.1)).cgColor
+        if isSelectedPlan {
+            accessibilityTraits.insert(.selected)
+        } else {
+            accessibilityTraits.remove(.selected)
+        }
+        refreshAccessibility()
+    }
+
+    private func refreshAccessibility() {
+        accessibilityLabel = [titleLabel.text, priceLabel.text, captionLabel.text].compactMap { $0 }.joined(separator: ", ")
     }
 }

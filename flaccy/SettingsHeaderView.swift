@@ -153,7 +153,7 @@ final class SettingsHeaderView: UIView {
 
     private func configureStatus(state: EntitlementState, priceText: String?) {
         switch state {
-        case .purchased:
+        case .purchased(.lifetime):
             statusControl.configure(
                 symbolName: "crown.fill",
                 title: String(localized: "Lifetime member"),
@@ -161,22 +161,30 @@ final class SettingsHeaderView: UIView {
                 tint: .systemYellow,
                 interactive: false
             )
+        case .purchased(.yearly):
+            statusControl.configure(
+                symbolName: "checkmark.seal.fill",
+                title: String(localized: "Flaccy Pro"),
+                subtitle: String(localized: "Yearly · thanks for supporting flaccy"),
+                tint: .systemYellow,
+                interactive: false
+            )
         case .trial(let daysRemaining):
             let days = String(localized: "\(daysRemaining) days left")
-            let subtitle = priceText.map { String(localized: "\(days) · \($0) once, forever") }
+            let subtitle = priceText.map { String(localized: "\(days) · from \($0) a year") }
                 ?? String(localized: "\(days) in your free trial")
             statusControl.configure(
                 symbolName: "sparkles",
-                title: String(localized: "Unlock Lifetime"),
+                title: String(localized: "Unlock Flaccy Pro"),
                 subtitle: subtitle,
                 tint: daysRemaining <= 2 ? .systemOrange : QualityBadgeView.losslessTint,
                 interactive: true
             )
         case .expired:
-            let subtitle = priceText.map { String(localized: "Your trial ended · \($0) once, forever") } ?? String(localized: "Your free trial has ended")
+            let subtitle = priceText.map { String(localized: "Your trial ended · from \($0) a year") } ?? String(localized: "Your free trial has ended")
             statusControl.configure(
                 symbolName: "lock.fill",
-                title: String(localized: "Unlock Lifetime"),
+                title: String(localized: "Unlock Flaccy Pro"),
                 subtitle: subtitle,
                 tint: .systemRed,
                 interactive: true

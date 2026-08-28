@@ -216,6 +216,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             Task {
                 let outcome = await Library.shared.importFiles(from: urls)
                 MacToast.showImportOutcome(outcome, in: window)
+                ReviewPrompt.recordImportedTracks(outcome.imported)
             }
         }
     }

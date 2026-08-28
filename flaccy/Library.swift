@@ -7,9 +7,12 @@ import UIKit
 import AppKit
 #endif
 
-nonisolated struct LibraryImportOutcome: Sendable {
+nonisolated struct LibraryImportOutcome: Sendable, Equatable {
     let imported: Int
+    let skipped: Int
     let failed: Int
+
+    static let empty = LibraryImportOutcome(imported: 0, skipped: 0, failed: 0)
 }
 
 /// One album cover the scan has just moved out of a file and into the database,
@@ -243,11 +246,17 @@ final class Library: LibraryProviding {
     ) async -> LibraryImportOutcome {
         await Task.detached(priority: .userInitiated) {
             var imported = 0
+            var skipped = 0
             var failed = 0
             for url in urls {
                 let accessing = url.startAccessingSecurityScopedResource()
                 defer { if accessing { url.stopAccessingSecurityScopedResource() } }
 
+                if alreadyInLibrary(url, in: directory) {
+                    skipped += 1
+                    AppLogger.info("Import skipped, already in library: \(url.lastPathComponent)", category: .content)
+                    continue
+                }
                 let destination = uniqueDestination(for: url, in: directory)
                 do {
                     try FileManager.default.copyItem(at: url, to: destination)
@@ -258,7 +267,7 @@ final class Library: LibraryProviding {
                     AppLogger.error("Import failed: \(error.localizedDescription)", category: .content)
                 }
             }
-            return LibraryImportOutcome(imported: imported, failed: failed)
+            return LibraryImportOutcome(imported: imported, skipped: skipped, failed: failed)
         }.value
     }
 
@@ -606,6 +615,19 @@ final class Library: LibraryProviding {
         #else
         return relative
         #endif
+    }
+
+    /// A file with the same name and byte size as one already at the library
+    /// root is the same file picked twice; importing it again would only create
+    /// a `name 2.flac` duplicate the person then has to clean up.
+    private nonisolated static func alreadyInLibrary(_ sourceURL: URL, in directory: URL) -> Bool {
+        let existing = directory.appendingPathComponent(sourceURL.lastPathComponent)
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: existing.path),
+              let sourceSize = try? fm.attributesOfItem(atPath: sourceURL.path)[.size] as? NSNumber,
+              let existingSize = try? fm.attributesOfItem(atPath: existing.path)[.size] as? NSNumber
+        else { return false }
+        return sourceSize == existingSize
     }
 
     private nonisolated static func uniqueDestination(for sourceURL: URL, in directory: URL) -> URL {
