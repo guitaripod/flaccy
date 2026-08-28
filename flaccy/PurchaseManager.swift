@@ -67,8 +67,27 @@ final class PurchaseManager {
         configureRevenueCat()
         listenForCustomerInfo()
         Task {
+            await migrateStoreKitPurchasesIfNeeded()
             await refresh()
             await loadOffersIfNeeded()
+        }
+    }
+
+    private static let migratedKey = "flaccy.revenuecat.migratedStoreKit"
+
+    /// Lifetime unlocks bought before RevenueCat existed live only in StoreKit's
+    /// transaction history; one sync on the first RevenueCat launch hands them
+    /// over so nobody who already paid is asked again.
+    private func migrateStoreKitPurchasesIfNeeded() async {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.migratedKey) else { return }
+        do {
+            let info = try await Purchases.shared.syncPurchases()
+            apply(info)
+            defaults.set(true, forKey: Self.migratedKey)
+            AppLogger.info("Synced StoreKit history into RevenueCat (pro active: \(state.isPurchased))", category: .purchases)
+        } catch {
+            AppLogger.error("StoreKit → RevenueCat sync failed: \(error.localizedDescription)", category: .purchases)
         }
     }
 
