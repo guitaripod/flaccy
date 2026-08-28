@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
 """Idempotent RevenueCat (v2) setup for Flaccy.
 
-Registers the two App Store apps (iOS and Mac are separate SKUs on purpose),
-imports each app's yearly subscription and lifetime unlock, attaches all four
-products to the single `pro` entitlement, and builds a `default` offering with
-`$rc_annual` and `$rc_lifetime` packages carrying both platforms' products.
+iOS and Mac are separate SKUs with separate RevenueCat projects. For the chosen
+platform this registers the App Store app, imports its yearly subscription and
+lifetime unlock, attaches both to the `pro` entitlement, and builds a `default`
+offering with `$rc_annual` and `$rc_lifetime` packages.
 
-Reads RC_SECRET_FLACCY (project v2 secret key) and RC_PROJECT_FLACCY from the
-environment.
+Reads RC_SECRET_FLACCY_<IOS|MAC> (project v2 secret key) from the environment.
 
-Usage: source ~/.config/midgar/credentials.env && python3 scripts/rc-setup.py
+Usage: source ~/.config/midgar/credentials.env && python3 scripts/rc-setup.py ios|mac
 """
 import os
 import sys
 
 import requests
 
-KEY = os.environ["RC_SECRET_FLACCY"]
-PROJECT = os.environ["RC_PROJECT_FLACCY"]
+PLATFORM = sys.argv[1] if len(sys.argv) > 1 else ""
+if PLATFORM not in ("ios", "mac"):
+    sys.exit("usage: rc-setup.py ios|mac")
+KEY = os.environ[f"RC_SECRET_FLACCY_{PLATFORM.upper()}"]
 BASE = "https://api.revenuecat.com/v2"
 H = {"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
 
-APPS = [
-    ("Flaccy (iOS)", "com.midgarcorp.flaccy", "com.midgarcorp.flaccy"),
-    ("Flaccy (Mac)", "com.midgarcorp.flaccy.mac", "com.midgarcorp.flaccy.mac"),
-]
+APPS = {
+    "ios": [("Flaccy (iOS)", "com.midgarcorp.flaccy", "com.midgarcorp.flaccy")],
+    "mac": [("Flaccy (Mac)", "com.midgarcorp.flaccy.mac", "com.midgarcorp.flaccy.mac")],
+}[PLATFORM]
 PRODUCTS = {
     "com.midgarcorp.flaccy": [
         ("com.midgarcorp.flaccy.pro.yearly", "subscription", "Flaccy Pro Yearly", "$rc_annual"),
@@ -55,6 +56,13 @@ def items(path):
     return get(path).get("items", [])
 
 
+def project_id():
+    projects = items("/projects")
+    if len(projects) != 1:
+        sys.exit(f"expected one project for this key, got {[p['id'] for p in projects]}")
+    return projects[0]["id"]
+
+
 def ensure_apps():
     existing = {a.get("app_store", {}).get("bundle_id"): a for a in items(f"/projects/{PROJECT}/apps")
                 if a.get("type") == "app_store"}
@@ -73,6 +81,9 @@ def ensure_apps():
 
 
 def main():
+    global PROJECT
+    PROJECT = project_id()
+    print("project:", PROJECT)
     app_ids = ensure_apps()
 
     ents = {e["lookup_key"]: e for e in items(f"/projects/{PROJECT}/entitlements")}
@@ -122,7 +133,7 @@ def main():
             pkg = r["id"]
             print(f"  + package {pkg_key}")
         attach = [{"product_id": product_ids[sid], "eligibility_criteria": "all"}
-                  for plist in PRODUCTS.values() for sid, _t, _n, key in plist
+                  for key_ in app_ids for sid, _t, _n, key in PRODUCTS[key_]
                   if key == pkg_key and sid in product_ids]
         post(f"/projects/{PROJECT}/packages/{pkg}/actions/attach_products", {"products": attach})
         print(f"  {pkg_key}: {len(attach)} products attached")
