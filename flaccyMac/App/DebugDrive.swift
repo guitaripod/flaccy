@@ -9,6 +9,12 @@ import AppKit
 enum DebugDrive {
 
     static func runIfRequested(window: NSWindow?) {
+        if let target = value(after: "--dump-log") {
+            Task {
+                try? await Task.sleep(for: .seconds(8))
+                dumpLog(to: target)
+            }
+        }
         if CommandLine.arguments.contains("--capture-window") {
             Task {
                 try? await Task.sleep(for: .seconds(3))
@@ -75,6 +81,20 @@ enum DebugDrive {
         if let title = value(after: "--shot-album") { return .album(title) }
         if let artist = value(after: "--shot-artist") { return .artist(artist) }
         return nil
+    }
+
+    /// Copies the sandboxed file log somewhere a shell can read it — TCC keeps
+    /// `~/Library/Containers` closed to Terminal, so headless verification asks
+    /// the app to hand its own log out.
+    private static func dumpLog(to path: String) {
+        let destination = URL(fileURLWithPath: path)
+        try? FileManager.default.removeItem(at: destination)
+        do {
+            try FileManager.default.copyItem(at: LogFileWriter.shared.currentLogURL, to: destination)
+            AppLogger.info("DebugDrive: log dumped to \(path)", category: .general)
+        } catch {
+            AppLogger.error("DebugDrive: log dump failed: \(error.localizedDescription)", category: .general)
+        }
     }
 
     private static func value(after flag: String) -> String? {

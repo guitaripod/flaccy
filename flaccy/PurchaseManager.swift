@@ -67,10 +67,10 @@ final class PurchaseManager {
         configureRevenueCat()
         listenForCustomerInfo()
         Task {
-            await migrateStoreKitPurchasesIfNeeded()
             await refresh()
             await loadOffersIfNeeded()
         }
+        Task { await migrateStoreKitPurchasesIfNeeded() }
     }
 
     private static let migratedKey = "flaccy.revenuecat.migratedStoreKit"
