@@ -408,27 +408,27 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     let toast_overlay = adw::ToastOverlay::new();
     toast_overlay.set_child(Some(&inner));
-    core.hub.subscribe_widget(&toast_overlay, |overlay, event| {
-        if let AppEvent::Toast(message) = event {
-            let toast = adw::Toast::new(message);
-            toast.set_timeout(3);
-            overlay.add_toast(toast);
-        }
-        if let AppEvent::ScanFinished { added, removed } = event {
-            let toast = if *added > 0 || *removed > 0 {
-                let toast = adw::Toast::new(&format!(
-                    "Library updated · {added} added · {removed} removed"
-                ));
-                toast.set_timeout(4);
-                toast
-            } else {
-                let toast = adw::Toast::new("Library up to date");
-                toast.set_timeout(2);
-                toast
-            };
-            overlay.add_toast(toast);
-        }
-    });
+    let live_toast: Rc<RefCell<Option<adw::Toast>>> = Rc::new(RefCell::new(None));
+    core.hub
+        .subscribe_widget(&toast_overlay, move |overlay, event| {
+            if let AppEvent::Toast(message) = event {
+                show_toast(overlay, &live_toast, message);
+            }
+            if let AppEvent::ScanFinished { added, removed } = event {
+                let toast = if *added > 0 || *removed > 0 {
+                    let toast = adw::Toast::new(&format!(
+                        "Library updated · {added} added · {removed} removed"
+                    ));
+                    toast.set_timeout(4);
+                    toast
+                } else {
+                    let toast = adw::Toast::new("Library up to date");
+                    toast.set_timeout(2);
+                    toast
+                };
+                overlay.add_toast(toast);
+            }
+        });
 
     let toolbar_view = adw::ToolbarView::new();
     toolbar_view.add_top_bar(&header);
@@ -1232,6 +1232,27 @@ fn present_about(window: &adw::ApplicationWindow) {
     dialog.present(Some(window));
 }
 
+/// One toast at a time: a new message retitles the one on screen instead of
+/// queueing behind it, so a burst of Ctrl+= presses reads the final value the
+/// moment the key goes up rather than replaying every step for three seconds each.
+fn show_toast(overlay: &adw::ToastOverlay, live: &Rc<RefCell<Option<adw::Toast>>>, message: &str) {
+    if let Some(toast) = live.borrow().as_ref() {
+        toast.set_title(message);
+        toast.set_timeout(3);
+        return;
+    }
+    let toast = adw::Toast::new(message);
+    toast.set_timeout(3);
+    {
+        let live = Rc::clone(live);
+        toast.connect_dismissed(move |_| {
+            live.borrow_mut().take();
+        });
+    }
+    *live.borrow_mut() = Some(toast.clone());
+    overlay.add_toast(toast);
+}
+
 /// Ctrl+= / Ctrl++ / Ctrl+- / Ctrl+0 zoom the whole interface, persisted in
 /// `ui_scale` and mirrored by the Preferences spinner. Each step toasts the new
 /// percentage so the reader can see where they landed.
@@ -1616,6 +1637,15 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
             let (artist, title) = spec.split_once('|').unwrap_or(("Pantera", "Domination"));
             ui::songlink_dialog::share(&ui, title.to_string(), artist.to_string(), false);
+        });
+    }
+    if std::env::var_os("FLACCY_DEMO_ZOOM_BURST").is_some() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            for _ in 0..5 {
+                let current = ui.core.config.borrow().ui_scale();
+                set_ui_scale(&ui, current + config::UI_SCALE_STEP);
+            }
         });
     }
     if std::env::var_os("FLACCY_DEMO_ABOUT").is_some() {
