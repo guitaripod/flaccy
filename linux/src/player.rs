@@ -131,7 +131,9 @@ impl Player {
                 let Some(playbin) = args.first().and_then(|v| v.get::<gst::Element>().ok()) else {
                     return None;
                 };
-                let Ok(mut guard) = shared.lock() else { return None };
+                let Ok(mut guard) = shared.lock() else {
+                    return None;
+                };
                 if let Some(next) = gapless_next_index(&guard) {
                     let track = guard.queue[next].clone();
                     if let Some(uri) = uri_for(&guard.root, &track) {
@@ -162,12 +164,7 @@ impl Player {
                     MessageView::StreamStart(_) => {
                         let is_pipeline = playbin_weak
                             .upgrade()
-                            .map(|pb| {
-                                message
-                                    .src()
-                                    .map(|src| *src == pb)
-                                    .unwrap_or(false)
-                            })
+                            .map(|pb| message.src().map(|src| *src == pb).unwrap_or(false))
                             .unwrap_or(false);
                         if is_pipeline {
                             player.on_stream_start();
@@ -210,7 +207,9 @@ impl Player {
 
     fn on_stream_start(&self) {
         let advanced = {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             guard.pending_advance.take().map(|track| {
                 let previous = guard.queue.get(guard.current).cloned();
                 if let Some(index) = resolve_pending_index(&guard, &track) {
@@ -258,7 +257,9 @@ impl Player {
             self.hub.emit(&AppEvent::NaturalEnd(track));
         }
         let next = {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             guard.pending_advance = None;
             gapless_next_index(&guard)
         };
@@ -288,7 +289,9 @@ impl Player {
             return;
         }
         let track = {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             guard.original = tracks.clone();
             if guard.shuffle {
                 let chosen = tracks[start.min(tracks.len() - 1)].clone();
@@ -321,7 +324,9 @@ impl Player {
 
     fn load_and_play(&self, track: &Track) {
         let uri = {
-            let Ok(guard) = self.shared.lock() else { return };
+            let Ok(guard) = self.shared.lock() else {
+                return;
+            };
             uri_for(&guard.root, track)
         };
         let Some(uri) = uri else {
@@ -367,7 +372,9 @@ impl Player {
 
     pub fn next(&self) -> bool {
         let target = {
-            let Ok(guard) = self.shared.lock() else { return false };
+            let Ok(guard) = self.shared.lock() else {
+                return false;
+            };
             if guard.queue.is_empty() {
                 None
             } else {
@@ -396,7 +403,9 @@ impl Player {
             return;
         }
         let target = {
-            let Ok(guard) = self.shared.lock() else { return };
+            let Ok(guard) = self.shared.lock() else {
+                return;
+            };
             if guard.queue.is_empty() {
                 None
             } else if guard.current > 0 {
@@ -417,7 +426,9 @@ impl Player {
 
     pub fn jump_to(&self, index: usize) {
         let track = {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             if index >= guard.queue.len() {
                 return;
             }
@@ -436,7 +447,9 @@ impl Player {
     /// deleted file is cancelled.
     pub fn handle_deleted(&self, rel_paths: &std::collections::HashSet<String>) {
         let (removed_any, current_deleted, replacement) = {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             let before = guard.queue.len();
             if before == 0 {
                 return;
@@ -451,8 +464,12 @@ impl Player {
                 .take(guard.current)
                 .filter(|track| rel_paths.contains(&track.rel_path))
                 .count();
-            guard.queue.retain(|track| !rel_paths.contains(&track.rel_path));
-            guard.original.retain(|track| !rel_paths.contains(&track.rel_path));
+            guard
+                .queue
+                .retain(|track| !rel_paths.contains(&track.rel_path));
+            guard
+                .original
+                .retain(|track| !rel_paths.contains(&track.rel_path));
             let removed_any = guard.queue.len() != before;
             let current_deleted = current_rel
                 .as_ref()
@@ -490,7 +507,9 @@ impl Player {
     }
 
     pub fn insert_next(&self, track: Track) {
-        let Ok(mut guard) = self.shared.lock() else { return };
+        let Ok(mut guard) = self.shared.lock() else {
+            return;
+        };
         if guard.queue.is_empty() {
             drop(guard);
             self.play_queue(vec![track], 0);
@@ -511,7 +530,9 @@ impl Player {
     }
 
     pub fn add_to_queue(&self, track: Track) {
-        let Ok(mut guard) = self.shared.lock() else { return };
+        let Ok(mut guard) = self.shared.lock() else {
+            return;
+        };
         if guard.queue.is_empty() {
             drop(guard);
             self.play_queue(vec![track], 0);
@@ -525,7 +546,9 @@ impl Player {
 
     pub fn toggle_shuffle(&self) {
         let enabled = {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             guard.shuffle = !guard.shuffle;
             if guard.shuffle {
                 if !guard.queue.is_empty() {
@@ -568,7 +591,9 @@ impl Player {
 
     pub fn cycle_repeat(&self) {
         let mode = {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             guard.repeat = guard.repeat.cycled();
             guard.repeat
         };
@@ -614,8 +639,7 @@ impl Player {
     }
 
     pub fn set_volume(&self, volume: f64) {
-        self.playbin
-            .set_property("volume", volume.clamp(0.0, 1.0));
+        self.playbin.set_property("volume", volume.clamp(0.0, 1.0));
     }
 
     pub fn position(&self) -> Option<f64> {
@@ -654,7 +678,10 @@ impl Player {
 
     #[allow(dead_code)]
     pub fn has_previous(&self) -> bool {
-        self.shared.lock().map(|g| !g.queue.is_empty()).unwrap_or(false)
+        self.shared
+            .lock()
+            .map(|g| !g.queue.is_empty())
+            .unwrap_or(false)
     }
 
     pub fn queue_snapshot(&self) -> QueueSnapshot {
@@ -678,7 +705,9 @@ impl Player {
     /// keeping the current index pointing at the same track.
     pub fn remove_at(&self, index: usize) {
         {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             if index >= guard.queue.len() || index == guard.current {
                 return;
             }
@@ -700,7 +729,9 @@ impl Player {
     /// Moves an up-next entry (index > current) to another up-next slot.
     pub fn move_queue_entry(&self, from: usize, to: usize) {
         {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             let len = guard.queue.len();
             if from >= len || to >= len || from <= guard.current || to <= guard.current {
                 return;
@@ -713,7 +744,9 @@ impl Player {
 
     pub fn clear_up_next(&self) {
         {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             let keep = guard.current + 1;
             if keep >= guard.queue.len() {
                 return;
@@ -723,9 +756,7 @@ impl Player {
                 .map(|t| t.rel_path.clone())
                 .collect();
             guard.queue.truncate(keep);
-            guard
-                .original
-                .retain(|t| !dropped.contains(&t.rel_path));
+            guard.original.retain(|t| !dropped.contains(&t.rel_path));
         }
         self.hub.emit(&AppEvent::QueueChanged);
     }
@@ -737,7 +768,9 @@ impl Player {
             return;
         }
         {
-            let Ok(mut guard) = self.shared.lock() else { return };
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
             for track in tracks {
                 guard.queue.push(track.clone());
                 guard.original.push(track);

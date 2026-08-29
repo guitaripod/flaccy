@@ -19,9 +19,31 @@ const RELEASE_ARTIST_LIMIT: usize = 15;
 const ITUNES_THROTTLE: Duration = Duration::from_secs(3);
 
 pub const EDITION_KEYWORDS: [&str; 25] = [
-    "deluxe", "edition", "remaster", "bonus", "expanded", "anniversary", "special", "extended",
-    "complete", "reissue", "version", "collector", "platinum", "legacy", "super", "tour", "feat",
-    "ft.", "with", "explicit", "clean", "mono", "stereo", "single", "ep",
+    "deluxe",
+    "edition",
+    "remaster",
+    "bonus",
+    "expanded",
+    "anniversary",
+    "special",
+    "extended",
+    "complete",
+    "reissue",
+    "version",
+    "collector",
+    "platinum",
+    "legacy",
+    "super",
+    "tour",
+    "feat",
+    "ft.",
+    "with",
+    "explicit",
+    "clean",
+    "mono",
+    "stereo",
+    "single",
+    "ep",
 ];
 
 /// Strips diacritics and every non-alphanumeric character, lowercased —
@@ -361,9 +383,7 @@ fn fetch_itunes_albums(artist: &str) -> Option<Vec<NewReleaseRow>> {
                     return None;
                 }
                 let date = entry["releaseDate"].as_str()?;
-                let release_unix = chrono::DateTime::parse_from_rfc3339(date)
-                    .ok()?
-                    .timestamp();
+                let release_unix = chrono::DateTime::parse_from_rfc3339(date).ok()?.timestamp();
                 Some(NewReleaseRow {
                     artist: result_artist.to_string(),
                     album: name.to_string(),
@@ -804,12 +824,18 @@ mod tests {
         assert_eq!(base_title("OK Computer (Deluxe Edition)"), "okcomputer");
         assert_eq!(base_title("Abbey Road [2019 Remaster]"), "abbeyroad");
         assert_eq!(base_title("Lonerism (feat. Someone)"), "lonerism");
-        assert_eq!(base_title("Blue (Live at Somewhere)"), "blueliveatsomewhere");
+        assert_eq!(
+            base_title("Blue (Live at Somewhere)"),
+            "blueliveatsomewhere"
+        );
     }
 
     #[test]
     fn base_title_keeps_non_edition_brackets() {
-        assert_eq!(base_title("(What's the Story) Morning Glory?"), "whatsthestorymorningglory");
+        assert_eq!(
+            base_title("(What's the Story) Morning Glory?"),
+            "whatsthestorymorningglory"
+        );
     }
 
     #[test]
@@ -842,7 +868,13 @@ mod tests {
         let albums = vec![album(
             "OK Computer (Deluxe Edition)",
             "Radiohead",
-            vec![track("Airbag", "Radiohead", "OK Computer (Deluxe Edition)", 1, "FLAC")],
+            vec![track(
+                "Airbag",
+                "Radiohead",
+                "OK Computer (Deluxe Edition)",
+                1,
+                "FLAC",
+            )],
         )];
         let tracks = albums[0].tracks.clone();
         let ownership = Ownership::new(&albums, &tracks);
@@ -896,14 +928,18 @@ mod tests {
         let gap = suggestions.iter().find(|s| s.source == "gap").expect("gap");
         assert_eq!(gap.title, "Incomplete");
         assert!(gap.reason.contains("2 of 9"));
-        let upgrade = suggestions.iter().find(|s| s.source == "upgrade").expect("upgrade");
+        let upgrade = suggestions
+            .iter()
+            .find(|s| s.source == "upgrade")
+            .expect("upgrade");
         assert_eq!(upgrade.title, "Lossy");
         assert!(upgrade.reason.contains("MP3"));
     }
 
     #[test]
     fn merge_does_not_resurrect_dismissed() {
-        let temp = std::env::temp_dir().join(format!("flaccy-wl-test-{}.sqlite", std::process::id()));
+        let temp =
+            std::env::temp_dir().join(format!("flaccy-wl-test-{}.sqlite", std::process::id()));
         let _ = std::fs::remove_file(&temp);
         let db = Db::open(&temp).expect("db");
         let item = WantlistItemRow {
@@ -917,11 +953,17 @@ mod tests {
             reason: "r".to_string(),
             play_count: 10,
         };
-        db.merge_wantlist_suggestions(&[item.clone()]).expect("merge");
+        db.merge_wantlist_suggestions(&[item.clone()])
+            .expect("merge");
         assert_eq!(db.fetch_wanted_items().len(), 1);
-        db.set_wantlist_state(&item.norm_key, "dismissed").expect("dismiss");
+        db.set_wantlist_state(&item.norm_key, "dismissed")
+            .expect("dismiss");
         db.merge_wantlist_suggestions(&[item]).expect("re-merge");
-        assert_eq!(db.fetch_wanted_items().len(), 0, "dismissed row must not resurrect");
+        assert_eq!(
+            db.fetch_wanted_items().len(),
+            0,
+            "dismissed row must not resurrect"
+        );
         let _ = std::fs::remove_file(&temp);
     }
 }

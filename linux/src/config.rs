@@ -27,6 +27,9 @@ pub struct Config {
     pub shuffle: bool,
     pub repeat_mode: String,
     pub lyrics_font_size: i32,
+    /// Whole-interface zoom, 1.0 = the platform default. Lyrics scale on top of
+    /// this with their own `lyrics_font_size`.
+    pub ui_scale: f64,
     pub np_show_video: bool,
     pub music_video_mode: bool,
     pub music_video_quality: i32,
@@ -41,6 +44,29 @@ pub struct Config {
 pub const LYRICS_FONT_MIN: i32 = 12;
 pub const LYRICS_FONT_MAX: i32 = 34;
 pub const LYRICS_FONT_DEFAULT: i32 = 16;
+
+/// Bounds and step for the interface zoom (Ctrl+= / Ctrl+- / Ctrl+0).
+pub const UI_SCALE_MIN: f64 = 0.75;
+pub const UI_SCALE_MAX: f64 = 2.0;
+pub const UI_SCALE_STEP: f64 = 0.1;
+pub const UI_SCALE_DEFAULT: f64 = 1.0;
+
+/// Snaps a requested zoom onto the step grid inside the supported range so
+/// repeated Ctrl+= / Ctrl+- never accumulate float drift.
+pub fn clamp_ui_scale(scale: f64) -> f64 {
+    let stepped = (scale / UI_SCALE_STEP).round() * UI_SCALE_STEP;
+    (stepped * 100.0).round() / 100.0
+}
+
+impl Config {
+    pub fn ui_scale(&self) -> f64 {
+        if self.ui_scale.is_finite() {
+            clamp_ui_scale(self.ui_scale.clamp(UI_SCALE_MIN, UI_SCALE_MAX))
+        } else {
+            UI_SCALE_DEFAULT
+        }
+    }
+}
 
 impl Default for Config {
     fn default() -> Self {
@@ -63,6 +89,7 @@ impl Default for Config {
             shuffle: false,
             repeat_mode: "off".to_string(),
             lyrics_font_size: LYRICS_FONT_DEFAULT,
+            ui_scale: UI_SCALE_DEFAULT,
             np_show_video: false,
             music_video_mode: false,
             music_video_quality: MUSIC_VIDEO_QUALITY_DEFAULT,

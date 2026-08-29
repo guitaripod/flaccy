@@ -14,7 +14,12 @@ impl Lyrics {
     fn is_empty(&self) -> bool {
         !self.instrumental
             && self.synced.is_empty()
-            && self.plain.as_deref().map(str::trim).unwrap_or("").is_empty()
+            && self
+                .plain
+                .as_deref()
+                .map(str::trim)
+                .unwrap_or("")
+                .is_empty()
     }
 }
 
@@ -64,7 +69,12 @@ pub fn prefetch(db_path: &Path, music_root: &Path, track: &Track) {
 
 fn is_stale_miss(row: &crate::db::LyricsRow) -> bool {
     let empty = !row.instrumental
-        && row.synced.as_deref().map(str::trim).unwrap_or("").is_empty()
+        && row
+            .synced
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or("")
+            .is_empty()
         && row.plain.as_deref().map(str::trim).unwrap_or("").is_empty();
     empty && row.age_days > MISS_TTL_DAYS
 }
@@ -100,14 +110,22 @@ pub fn fetch_blocking(db_path: &PathBuf, music_root: &Path, track: &Track) -> Ly
             false,
         );
         return LyricsResult::Found(Lyrics {
-            synced: local.synced_raw.as_deref().map(parse_lrc).unwrap_or_default(),
+            synced: local
+                .synced_raw
+                .as_deref()
+                .map(parse_lrc)
+                .unwrap_or_default(),
             plain: local.plain,
             instrumental: false,
         });
     }
 
     match lookup_remote(track) {
-        Remote::Found { synced, plain, instrumental } => {
+        Remote::Found {
+            synced,
+            plain,
+            instrumental,
+        } => {
             let _ = db.save_lyrics(
                 &track.title,
                 &track.artist,
@@ -125,7 +143,10 @@ pub fn fetch_blocking(db_path: &PathBuf, music_root: &Path, track: &Track) -> Ly
             let _ = db.save_lyrics(&track.title, &track.artist, None, None, false);
             crate::logger::info(
                 "lyrics",
-                &format!("no lyrics for {} — {} (cached miss)", track.title, track.artist),
+                &format!(
+                    "no lyrics for {} — {} (cached miss)",
+                    track.title, track.artist
+                ),
             );
             LyricsResult::Missing
         }
@@ -238,7 +259,9 @@ fn score_candidate(track: &Track, value: &serde_json::Value) -> Option<f64> {
     let artist = value["artistName"].as_str().unwrap_or_default();
     let album = value["albumName"].as_str().unwrap_or_default();
     let duration = value["duration"].as_f64().unwrap_or(0.0);
-    if track.duration > 0.0 && duration > 0.0 && (track.duration - duration).abs() > MAX_DURATION_DRIFT
+    if track.duration > 0.0
+        && duration > 0.0
+        && (track.duration - duration).abs() > MAX_DURATION_DRIFT
     {
         return None;
     }
@@ -247,7 +270,9 @@ fn score_candidate(track: &Track, value: &serde_json::Value) -> Option<f64> {
     } else {
         0.5
     };
-    let has_synced = value["syncedLyrics"].as_str().is_some_and(|s| !s.trim().is_empty());
+    let has_synced = value["syncedLyrics"]
+        .as_str()
+        .is_some_and(|s| !s.trim().is_empty());
     Some(
         0.35 * similarity(&track.title, title)
             + 0.30 * similarity(&track.artist, artist)
@@ -293,7 +318,11 @@ fn record_from_value(value: &serde_json::Value) -> Option<Remote> {
     if synced.is_none() && plain.is_none() && !instrumental {
         return Some(Remote::Missing);
     }
-    Some(Remote::Found { synced, plain, instrumental })
+    Some(Remote::Found {
+        synced,
+        plain,
+        instrumental,
+    })
 }
 
 struct LocalLyrics {
@@ -320,9 +349,15 @@ fn read_local(path: &Path) -> Option<LocalLyrics> {
 fn classify_local(text: &str) -> LocalLyrics {
     let text = strip_word_timestamps(text);
     if parse_lrc(&text).is_empty() {
-        LocalLyrics { synced_raw: None, plain: Some(text) }
+        LocalLyrics {
+            synced_raw: None,
+            plain: Some(text),
+        }
     } else {
-        LocalLyrics { synced_raw: Some(text), plain: None }
+        LocalLyrics {
+            synced_raw: Some(text),
+            plain: None,
+        }
     }
 }
 
@@ -449,13 +484,19 @@ mod tests {
     #[test]
     fn strips_enhanced_word_tags() {
         let text = "[00:12.00]<00:12.00>Hello <00:12.50>world";
-        assert_eq!(parse_lrc(&strip_word_timestamps(text)), vec![(12.0, "Hello world".to_string())]);
+        assert_eq!(
+            parse_lrc(&strip_word_timestamps(text)),
+            vec![(12.0, "Hello world".to_string())]
+        );
     }
 
     #[test]
     fn repeated_timestamps_expand_to_one_line_each() {
         let lines = parse_lrc("[00:10.00][01:10.00]Chorus");
-        assert_eq!(lines, vec![(10.0, "Chorus".into()), (70.0, "Chorus".into())]);
+        assert_eq!(
+            lines,
+            vec![(10.0, "Chorus".into()), (70.0, "Chorus".into())]
+        );
     }
 
     #[test]

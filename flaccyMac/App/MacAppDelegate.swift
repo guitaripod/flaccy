@@ -302,6 +302,18 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     @objc func toggleNowPlaying(_ sender: Any?) {
         NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
     }
+
+    @objc func zoomIn(_ sender: Any?) {
+        MacInterfaceScale.zoomIn()
+    }
+
+    @objc func zoomOut(_ sender: Any?) {
+        MacInterfaceScale.zoomOut()
+    }
+
+    @objc func zoomReset(_ sender: Any?) {
+        MacInterfaceScale.reset()
+    }
 }
 
 extension MacAppDelegate: UNUserNotificationCenterDelegate {

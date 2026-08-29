@@ -21,7 +21,10 @@ pub fn copy_link(core: &Rc<AppCore>, title: String, artist: String, album: bool)
 
     let weak = Rc::downgrade(core);
     glib::spawn_future_local(async move {
-        let result = rx.recv().await.unwrap_or(Err("lookup cancelled".to_string()));
+        let result = rx
+            .recv()
+            .await
+            .unwrap_or(Err("lookup cancelled".to_string()));
         let Some(core) = weak.upgrade() else { return };
         match result {
             Ok(url) => {
@@ -48,7 +51,9 @@ fn agent() -> ureq::Agent {
 
 fn throttle() {
     let wait = {
-        let Ok(mut guard) = LAST_LOOKUP.lock() else { return };
+        let Ok(mut guard) = LAST_LOOKUP.lock() else {
+            return;
+        };
         let wait = guard
             .map(|last| MIN_INTERVAL.saturating_sub(last.elapsed()))
             .unwrap_or(Duration::ZERO);
@@ -90,11 +95,12 @@ fn itunes_seed_url(title: &str, artist: &str, album: bool) -> Result<String, Str
     let response = agent().get(&url).call().map_err(|e| format!("{e}"))?;
     let text = response.into_string().map_err(|e| format!("{e}"))?;
     let json: serde_json::Value = serde_json::from_str(&text).map_err(|e| format!("{e}"))?;
-    let results = json["results"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
-    let key = if album { "collectionViewUrl" } else { "trackViewUrl" };
+    let results = json["results"].as_array().cloned().unwrap_or_default();
+    let key = if album {
+        "collectionViewUrl"
+    } else {
+        "trackViewUrl"
+    };
     let name_key = if album { "collectionName" } else { "trackName" };
     let title_lower = title.to_lowercase();
     let artist_lower = artist.to_lowercase();

@@ -22,7 +22,7 @@ final class MainWindowController: NSWindowController {
         window.title = "Flaccy"
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
-        window.minSize = NSSize(width: 960, height: 600)
+        window.minSize = Self.minimumSize(at: MacInterfaceScale.current)
         window.center()
         if Self.debugWindowSize() == nil {
             window.setFrameAutosaveName("FlaccyMainWindow")
@@ -45,6 +45,33 @@ final class MainWindowController: NSWindowController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(focusSearchField), name: .flaccyFocusSearch, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(interfaceScaleChanged), name: .flaccyInterfaceScaleChanged, object: nil
+        )
+    }
+
+    private static let baseMinimumSize = NSSize(width: 960, height: 600)
+
+    /// The content needs proportionally more room as it zooms, so the floor
+    /// grows with the scale, capped at what a laptop panel can still show.
+    private static func minimumSize(at scale: CGFloat) -> NSSize {
+        let grown = NSSize(width: baseMinimumSize.width * scale, height: baseMinimumSize.height * scale)
+        let visible = NSScreen.main?.visibleFrame.size ?? grown
+        return NSSize(width: min(grown.width, visible.width), height: min(grown.height, visible.height))
+    }
+
+    @objc private func interfaceScaleChanged() {
+        guard let window else { return }
+        let scale = MacInterfaceScale.current
+        window.minSize = Self.minimumSize(at: scale)
+        var frame = window.frame
+        frame.size.width = max(frame.width, window.minSize.width)
+        frame.size.height = max(frame.height, window.minSize.height)
+        if frame.size != window.frame.size {
+            window.setFrame(frame, display: true, animate: true)
+        }
+        window.contentView?.needsLayout = true
+        MacToast.show(String(localized: "Interface \(MacInterfaceScale.percent)%"), in: window)
     }
 
     deinit {
@@ -137,6 +164,10 @@ final class RootContainerViewController: NSViewController {
     let splitViewController = MainSplitViewController()
     let transportBarViewController = TransportBarViewController()
 
+    /// Every zoomed surface lives here; full-window overlays must be added to
+    /// this host rather than to `view` so they zoom with the rest.
+    private let zoomHost = InterfaceZoomHostView(frame: .zero)
+    var overlayHost: NSView { zoomHost.content }
     private let statusStrip = MacStatusStripView()
     private var surfaceCancellable: AnyCancellable?
 
@@ -147,10 +178,13 @@ final class RootContainerViewController: NSViewController {
 
     override func loadView() {
         let container = AudioDropView()
-        container.onSubviewAdded = { [weak self] subview in
+        view = container
+        zoomHost.frame = container.bounds
+        zoomHost.content.onSubviewAdded = { [weak self] subview in
             self?.raiseStatusStrip(above: subview)
         }
-        view = container
+        container.addSubview(zoomHost, positioned: .below, relativeTo: nil)
+        let view = overlayHost
 
         addChild(splitViewController)
         splitViewController.view.translatesAutoresizingMaskIntoConstraints = false
@@ -235,18 +269,14 @@ final class RootContainerViewController: NSViewController {
     /// view that is already a subview only reorders it: constraints and frame
     /// survive, so this is safe to call on every render.
     private func raiseStatusStrip() {
-        guard statusStrip.superview === view else { return }
-        view.addSubview(statusStrip, positioned: .above, relativeTo: nil)
+        guard statusStrip.superview === overlayHost else { return }
+        overlayHost.addSubview(statusStrip, positioned: .above, relativeTo: nil)
     }
 }
 
 /// Full-window drop target: highlights on drag-over with audio files or
 /// folders, copies them into the library root and triggers a rescan.
 final class AudioDropView: NSView {
-
-    /// Reports every view added on top, so the owner can keep a floating
-    /// surface in front of a full-window overlay it does not install itself.
-    var onSubviewAdded: ((NSView) -> Void)?
 
     private let highlight = NSView()
     private var isImporting = false
@@ -272,11 +302,6 @@ final class AudioDropView: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    override func didAddSubview(_ subview: NSView) {
-        super.didAddSubview(subview)
-        onSubviewAdded?(subview)
-    }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !droppableURLs(from: sender).isEmpty else { return [] }

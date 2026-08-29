@@ -91,10 +91,7 @@ impl LastFmClient {
 
     fn signed_get(&self, params: BTreeMap<String, String>) -> Result<serde_json::Value, String> {
         let url = format!("{}?{}", BASE_URL, self.signed_query(&params));
-        let response = Self::agent()
-            .get(&url)
-            .call()
-            .map_err(|e| format!("{e}"))?;
+        let response = Self::agent().get(&url).call().map_err(|e| format!("{e}"))?;
         let text = response.into_string().map_err(|e| format!("{e}"))?;
         serde_json::from_str(&text).map_err(|e| format!("{e}"))
     }
@@ -214,7 +211,10 @@ impl LastFmClient {
                 if code != 0 {
                     crate::logger::info(
                         "scrobble",
-                        &format!("scrobble ignored (code {code}): {} — {}", entry.title, entry.artist),
+                        &format!(
+                            "scrobble ignored (code {code}): {} — {}",
+                            entry.title, entry.artist
+                        ),
                     );
                 }
                 submitted.push(entry.id);
@@ -224,7 +224,9 @@ impl LastFmClient {
 
         let accepted = scrobbles["@attr"]["accepted"].as_i64().unwrap_or(0);
         if accepted > 0 {
-            Ok(BatchOutcome::Submitted(batch.iter().map(|e| e.id).collect()))
+            Ok(BatchOutcome::Submitted(
+                batch.iter().map(|e| e.id).collect(),
+            ))
         } else {
             Ok(BatchOutcome::Retryable {
                 code: 0,
@@ -262,11 +264,17 @@ impl LastFmClient {
         let json = self.unsigned_get(params)?;
         let album_dict = &json["album"];
         if album_dict.is_null() {
-            return Err(format!("album.getInfo: {}", json["message"].as_str().unwrap_or("no album")));
+            return Err(format!(
+                "album.getInfo: {}",
+                json["message"].as_str().unwrap_or("no album")
+            ));
         }
         Ok((
             largest_image(&album_dict["image"]),
-            album_dict["mbid"].as_str().filter(|s| !s.is_empty()).map(String::from),
+            album_dict["mbid"]
+                .as_str()
+                .filter(|s| !s.is_empty())
+                .map(String::from),
         ))
     }
 
@@ -281,7 +289,10 @@ impl LastFmClient {
         let json = self.unsigned_get(params)?;
         let dict = &json["artist"];
         if dict.is_null() {
-            return Err(format!("artist.getInfo: {}", json["message"].as_str().unwrap_or("no artist")));
+            return Err(format!(
+                "artist.getInfo: {}",
+                json["message"].as_str().unwrap_or("no artist")
+            ));
         }
         let bio = dict["bio"]["summary"]
             .as_str()
@@ -290,7 +301,10 @@ impl LastFmClient {
         Ok((
             bio,
             largest_image(&dict["image"]),
-            dict["mbid"].as_str().filter(|s| !s.is_empty()).map(String::from),
+            dict["mbid"]
+                .as_str()
+                .filter(|s| !s.is_empty())
+                .map(String::from),
         ))
     }
 
@@ -384,7 +398,10 @@ impl LastFmClient {
         Ok(list
             .iter()
             .filter_map(|entry| {
-                Some((entry["name"].as_str()?.to_string(), int_value(&entry["playcount"])))
+                Some((
+                    entry["name"].as_str()?.to_string(),
+                    int_value(&entry["playcount"]),
+                ))
             })
             .collect())
     }
@@ -530,11 +547,7 @@ impl LastFmClient {
 
     /// artist.getTopTracks — what the world plays most by this artist, which is
     /// what the artist page leads with once it is matched against the library.
-    pub fn fetch_artist_top_tracks(
-        &self,
-        artist: &str,
-        limit: u32,
-    ) -> Result<Vec<String>, String> {
+    pub fn fetch_artist_top_tracks(&self, artist: &str, limit: u32) -> Result<Vec<String>, String> {
         let mut params = self.base_params("artist.getTopTracks");
         params.insert("artist".to_string(), artist.to_string());
         params.insert("autocorrect".to_string(), "1".to_string());
@@ -599,9 +612,12 @@ fn largest_image(images: &serde_json::Value) -> Option<String> {
             }
         }
     }
-    list.iter()
-        .rev()
-        .find_map(|entry| entry["#text"].as_str().filter(|s| !s.is_empty()).map(String::from))
+    list.iter().rev().find_map(|entry| {
+        entry["#text"]
+            .as_str()
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+    })
 }
 
 /// Removes the trailing `<a href="https://www.last.fm/...">Read more…</a>`
@@ -635,7 +651,11 @@ fn ignored_code(entry: &serde_json::Value) -> i64 {
     let ignored = &entry["ignoredMessage"];
     ignored["@attr"]["code"]
         .as_i64()
-        .or_else(|| ignored["@attr"]["code"].as_str().and_then(|s| s.parse().ok()))
+        .or_else(|| {
+            ignored["@attr"]["code"]
+                .as_str()
+                .and_then(|s| s.parse().ok())
+        })
         .or_else(|| ignored["code"].as_i64())
         .or_else(|| ignored["code"].as_str().and_then(|s| s.parse().ok()))
         .unwrap_or(0)

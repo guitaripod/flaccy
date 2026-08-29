@@ -12,9 +12,31 @@ use std::path::Path;
 /// pressings, remasters and explicit/clean variants. Must stay in sync with the
 /// macOS `LibraryHygiene.consolidationKeywords`.
 pub const CONSOLIDATION_KEYWORDS: [&str; 25] = [
-    "deluxe", "edition", "remaster", "bonus", "expanded", "anniversary", "special", "extended",
-    "complete", "reissue", "collector", "platinum", "legacy", "super", "tour", "explicit", "clean",
-    "mono", "stereo", "remastered", "remasters", "remix", "remixed", "remixes", "reissued",
+    "deluxe",
+    "edition",
+    "remaster",
+    "bonus",
+    "expanded",
+    "anniversary",
+    "special",
+    "extended",
+    "complete",
+    "reissue",
+    "collector",
+    "platinum",
+    "legacy",
+    "super",
+    "tour",
+    "explicit",
+    "clean",
+    "mono",
+    "stereo",
+    "remastered",
+    "remasters",
+    "remix",
+    "remixed",
+    "remixes",
+    "reissued",
 ];
 
 type QualityRank = (u8, i64, i64, i64, u64);
@@ -52,8 +74,23 @@ pub fn primary_artist(raw: &str) -> String {
     let lower = raw.to_lowercase();
     let mut cut = raw.len();
     for sep in [
-        ";", " / ", " \u{00D7} ", " x ", " & ", " + ", " vs. ", " vs ", " feat. ", " feat ", " ft. ",
-        " ft ", " featuring ", " (feat.", " (ft.", " (featuring", " with ",
+        ";",
+        " / ",
+        " \u{00D7} ",
+        " x ",
+        " & ",
+        " + ",
+        " vs. ",
+        " vs ",
+        " feat. ",
+        " feat ",
+        " ft. ",
+        " ft ",
+        " featuring ",
+        " (feat.",
+        " (ft.",
+        " (featuring",
+        " with ",
     ] {
         if let Some(idx) = lower.find(sep) {
             cut = cut.min(idx);
@@ -78,7 +115,11 @@ pub fn artist_key(credit: &str) -> String {
 /// The grouping key that fuses editions of the same release for display and
 /// cleanup: lead artist (feat. stripped) ⊕ edition-free base title.
 pub fn consolidation_key(title: &str, artist: &str) -> String {
-    format!("{}\u{0}{}", artist_key(artist), consolidation_base_title(title))
+    format!(
+        "{}\u{0}{}",
+        artist_key(artist),
+        consolidation_base_title(title)
+    )
 }
 
 /// The identity of one physical track across encodings: lead artist ⊕ edition-free
@@ -176,9 +217,16 @@ fn build_duplicate_group(cluster: Vec<&Track>, root: &Path) -> DuplicateGroup {
             .then(a.1.rel_path.cmp(&b.1.rel_path))
     });
     let loved = cluster.iter().any(|track| track.loved);
-    let play_count = cluster.iter().map(|track| track.play_count).max().unwrap_or(0);
+    let play_count = cluster
+        .iter()
+        .map(|track| track.play_count)
+        .max()
+        .unwrap_or(0);
     let keeper = ranked[0].1.clone();
-    let losers = ranked[1..].iter().map(|(_, track)| (*track).clone()).collect();
+    let losers = ranked[1..]
+        .iter()
+        .map(|(_, track)| (*track).clone())
+        .collect();
     DuplicateGroup {
         keeper,
         losers,
@@ -276,12 +324,20 @@ fn merge_album_group(group: Vec<Album>) -> Album {
         .year
         .clone()
         .filter(|value| !value.is_empty())
-        .or_else(|| group.iter().find_map(|album| album.year.clone().filter(|v| !v.is_empty())));
+        .or_else(|| {
+            group
+                .iter()
+                .find_map(|album| album.year.clone().filter(|v| !v.is_empty()))
+        });
     let genre = group[canonical]
         .genre
         .clone()
         .filter(|value| !value.is_empty())
-        .or_else(|| group.iter().find_map(|album| album.genre.clone().filter(|v| !v.is_empty())));
+        .or_else(|| {
+            group
+                .iter()
+                .find_map(|album| album.genre.clone().filter(|v| !v.is_empty()))
+        });
 
     let mut order: Vec<String> = Vec::new();
     let mut best: HashMap<String, Track> = HashMap::new();
@@ -289,7 +345,8 @@ fn merge_album_group(group: Vec<Album>) -> Album {
         for track in &album.tracks {
             let key = dup_key(track);
             match best.get(&key) {
-                Some(existing) if track_quality_scalar(existing) >= track_quality_scalar(track) => {}
+                Some(existing) if track_quality_scalar(existing) >= track_quality_scalar(track) => {
+                }
                 Some(_) => {
                     best.insert(key, track.clone());
                 }
@@ -350,17 +407,41 @@ mod tests {
     #[test]
     fn artist_key_folds_collaborators_and_casing() {
         let base = artist_key("deadmau5");
-        assert_eq!(artist_key("Deadmau5"), base, "casing variants group together");
-        assert_eq!(artist_key("deadmau5 & Kaskade"), base, "& collaborations fold under the lead");
-        assert_eq!(artist_key("deadmau5 feat. Rob Swire"), base, "feat. folds under the lead");
-        assert_eq!(artist_key("Deadmau5 x Skrillex"), base, "x collaborations fold under the lead");
+        assert_eq!(
+            artist_key("Deadmau5"),
+            base,
+            "casing variants group together"
+        );
+        assert_eq!(
+            artist_key("deadmau5 & Kaskade"),
+            base,
+            "& collaborations fold under the lead"
+        );
+        assert_eq!(
+            artist_key("deadmau5 feat. Rob Swire"),
+            base,
+            "feat. folds under the lead"
+        );
+        assert_eq!(
+            artist_key("Deadmau5 x Skrillex"),
+            base,
+            "x collaborations fold under the lead"
+        );
         assert_eq!(
             primary_artist("Billy Newton-Davis vs. Deadmau5"),
             "Billy Newton-Davis",
             "the first-named artist wins"
         );
-        assert_eq!(artist_key("Beyoncé"), artist_key("Beyonce"), "diacritics fold");
-        assert_eq!(artist_key("Jay-Z"), artist_key("Jay Z"), "punctuation and whitespace fold");
+        assert_eq!(
+            artist_key("Beyoncé"),
+            artist_key("Beyonce"),
+            "diacritics fold"
+        );
+        assert_eq!(
+            artist_key("Jay-Z"),
+            artist_key("Jay Z"),
+            "punctuation and whitespace fold"
+        );
         assert_eq!(
             artist_key("Takahito Eguchi  & Noriko Matsueda"),
             artist_key("Takahito Eguchi & Noriko Matsueda"),
@@ -438,7 +519,11 @@ mod tests {
             consolidation_key("Greatest Hits Vol. 2", "Artist"),
             "numbered volumes are different records"
         );
-        assert_ne!(consolidation_key("X - Single", "Artist"), base, "a single is not the album");
+        assert_ne!(
+            consolidation_key("X - Single", "Artist"),
+            base,
+            "a single is not the album"
+        );
         assert_ne!(
             consolidation_key("X (Acoustic Version)", "Artist"),
             base,
@@ -449,7 +534,11 @@ mod tests {
     #[test]
     fn remastered_and_remix_forms_consolidate() {
         let base = consolidation_key("Album", "Artist");
-        for variant in ["Album (Remastered)", "Album (2011 Remaster)", "Album (Remixes)"] {
+        for variant in [
+            "Album (Remastered)",
+            "Album (2011 Remaster)",
+            "Album (Remixes)",
+        ] {
             assert_eq!(
                 consolidation_key(variant, "Artist"),
                 base,
@@ -483,7 +572,11 @@ mod tests {
         let mut long = track("Song", "Artist", "Album", 1, "mp3");
         long.duration = 600.0;
         let groups = find_duplicate_groups(&[short, near, long], root);
-        assert_eq!(groups.len(), 1, "the 600s edit must not fuse with the 180s pair");
+        assert_eq!(
+            groups.len(),
+            1,
+            "the 600s edit must not fuse with the 180s pair"
+        );
         assert_eq!(groups[0].losers.len(), 1);
     }
 
@@ -497,7 +590,10 @@ mod tests {
         let groups = consolidation_groups(&albums);
         assert_eq!(groups.len(), 1, "only the two-variant release consolidates");
         let group = &groups[0];
-        assert_eq!(group.canonical_title, "Album (Deluxe Edition)", "the fuller pressing wins");
+        assert_eq!(
+            group.canonical_title, "Album (Deluxe Edition)",
+            "the fuller pressing wins"
+        );
         assert_eq!(group.variants.len(), 1);
         assert_eq!(group.variants[0].title, "Album");
     }
@@ -564,8 +660,24 @@ mod tests {
             year: Some("2010".into()),
             genre: None,
             tracks: vec![
-                detailed_track("Song A", "Artist", "Album", 1, "flac", Some(16), Some(44100)),
-                detailed_track("Song B", "Artist", "Album", 2, "flac", Some(16), Some(44100)),
+                detailed_track(
+                    "Song A",
+                    "Artist",
+                    "Album",
+                    1,
+                    "flac",
+                    Some(16),
+                    Some(44100),
+                ),
+                detailed_track(
+                    "Song B",
+                    "Artist",
+                    "Album",
+                    2,
+                    "flac",
+                    Some(16),
+                    Some(44100),
+                ),
             ],
         };
         let deluxe = Album {
@@ -608,10 +720,16 @@ mod tests {
         assert_eq!(result.len(), 2, "unrelated album stays separate");
         let fused = result
             .iter()
-            .find(|a| consolidation_key(&a.title, &a.artist) == consolidation_key("Album", "Artist"))
+            .find(|a| {
+                consolidation_key(&a.title, &a.artist) == consolidation_key("Album", "Artist")
+            })
             .expect("edition group fused");
         assert_eq!(fused.title, "Album (Deluxe Edition)");
-        assert_eq!(fused.tracks.len(), 3, "shared tracks collapse; bonus remains");
+        assert_eq!(
+            fused.tracks.len(),
+            3,
+            "shared tracks collapse; bonus remains"
+        );
         assert_eq!(fused.year.as_deref(), Some("2010"));
         assert_eq!(fused.genre.as_deref(), Some("Rock"));
         let song_a = fused.tracks.iter().find(|t| t.title == "Song A").unwrap();

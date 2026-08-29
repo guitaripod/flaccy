@@ -102,15 +102,14 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             }
             let entry = entry.clone();
             let submit = Rc::clone(&submit);
-            entry.clipboard().read_text_async(
-                None::<&gtk::gio::Cancellable>,
-                move |result| {
+            entry
+                .clipboard()
+                .read_text_async(None::<&gtk::gio::Cancellable>, move |result| {
                     if let Ok(Some(text)) = result {
                         entry.set_text(text.trim());
                         submit();
                     }
-                },
-            );
+                });
         });
     }
 
@@ -138,7 +137,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let queue_section = gtk::Box::new(gtk::Orientation::Vertical, 10);
     let queue_header = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    let queue_heading = gtk::Label::builder().label("Queue").xalign(0.0).hexpand(true).build();
+    let queue_heading = gtk::Label::builder()
+        .label("Queue")
+        .xalign(0.0)
+        .hexpand(true)
+        .build();
     queue_heading.add_css_class("heading");
     queue_header.append(&queue_heading);
     let clear_button = gtk::Button::builder().label("Clear Finished").build();
@@ -184,20 +187,27 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let rebuild = Rc::clone(&rebuild);
         let bars = Rc::clone(&bars);
-        ui.core.hub.subscribe_widget(&list, move |_, event| match event {
-            AppEvent::DownloadsChanged => rebuild(),
-            AppEvent::DownloadProgress { id, fraction } => {
-                if let Some(bar) = bars.borrow().get(id) {
-                    bar.set_fraction(*fraction);
+        ui.core
+            .hub
+            .subscribe_widget(&list, move |_, event| match event {
+                AppEvent::DownloadsChanged => rebuild(),
+                AppEvent::DownloadProgress { id, fraction } => {
+                    if let Some(bar) = bars.borrow().get(id) {
+                        bar.set_fraction(*fraction);
+                    }
                 }
-            }
-            _ => {}
-        });
+                _ => {}
+            });
     }
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&adw::Clamp::builder().maximum_size(760).child(&content).build())
+        .child(
+            &adw::Clamp::builder()
+                .maximum_size(760)
+                .child(&content)
+                .build(),
+        )
         .build();
     ui.register_scroller(&scroll);
 
@@ -277,7 +287,10 @@ fn render_setup(
     let icon = gtk::Image::from_icon_name("applications-system-symbolic");
     icon.add_css_class("accent-toggle");
     header.append(&icon);
-    let title = gtk::Label::builder().label("One-minute setup").xalign(0.0).build();
+    let title = gtk::Label::builder()
+        .label("One-minute setup")
+        .xalign(0.0)
+        .build();
     title.add_css_class("heading");
     header.append(&title);
     card.append(&header);
@@ -293,9 +306,15 @@ fn render_setup(
         "yt-dlp — the downloader",
         status.yt_dlp_version.as_deref(),
     ));
-    card.append(&tool_row("FFmpeg — the audio toolbox", status.ffmpeg.then_some("installed")));
+    card.append(&tool_row(
+        "FFmpeg — the audio toolbox",
+        status.ffmpeg.then_some("installed"),
+    ));
 
-    let run_caption = gtk::Label::builder().label("Run this in a terminal").xalign(0.0).build();
+    let run_caption = gtk::Label::builder()
+        .label("Run this in a terminal")
+        .xalign(0.0)
+        .build();
     run_caption.add_css_class("stat-caption");
     card.append(&run_caption);
 
@@ -364,7 +383,11 @@ fn tool_row(name: &str, version: Option<&str>) -> gtk::Widget {
         icon.add_css_class("dim");
     }
     row.append(&icon);
-    let label = gtk::Label::builder().label(name).xalign(0.0).hexpand(true).build();
+    let label = gtk::Label::builder()
+        .label(name)
+        .xalign(0.0)
+        .hexpand(true)
+        .build();
     row.append(&label);
     let state = gtk::Label::builder()
         .label(version.unwrap_or("not installed"))
@@ -487,19 +510,46 @@ fn queue_row(
         .build();
     match row.status.as_str() {
         downloads::STATUS_QUEUED | downloads::STATUS_FETCHING | downloads::STATUS_DOWNLOADING => {
-            actions.append(&action_button(ui, "media-playback-stop-symbolic", "Cancel", row.id, downloads::cancel));
+            actions.append(&action_button(
+                ui,
+                "media-playback-stop-symbolic",
+                "Cancel",
+                row.id,
+                downloads::cancel,
+            ));
         }
         downloads::STATUS_FAILED => {
-            actions.append(&action_button(ui, "view-refresh-symbolic", "Retry", row.id, downloads::retry));
-            actions.append(&action_button(ui, "window-close-symbolic", "Remove from list", row.id, downloads::remove));
+            actions.append(&action_button(
+                ui,
+                "view-refresh-symbolic",
+                "Retry",
+                row.id,
+                downloads::retry,
+            ));
+            actions.append(&action_button(
+                ui,
+                "window-close-symbolic",
+                "Remove from list",
+                row.id,
+                downloads::remove,
+            ));
         }
         _ => {
-            actions.append(&action_button(ui, "window-close-symbolic", "Remove from list", row.id, downloads::remove));
+            actions.append(&action_button(
+                ui,
+                "window-close-symbolic",
+                "Remove from list",
+                row.id,
+                downloads::remove,
+            ));
         }
     }
     outer.append(&actions);
 
-    gtk::ListBoxRow::builder().child(&outer).activatable(false).build()
+    gtk::ListBoxRow::builder()
+        .child(&outer)
+        .activatable(false)
+        .build()
 }
 
 fn subtitle_text(row: &DownloadRow) -> String {
@@ -516,7 +566,10 @@ fn subtitle_text(row: &DownloadRow) -> String {
             Some(note) => with_artist(note),
             None => with_artist("Added to library"),
         },
-        downloads::STATUS_FAILED => row.error.clone().unwrap_or_else(|| "Download failed".to_string()),
+        downloads::STATUS_FAILED => row
+            .error
+            .clone()
+            .unwrap_or_else(|| "Download failed".to_string()),
         downloads::STATUS_CANCELLED => "Cancelled".to_string(),
         other => other.to_string(),
     }

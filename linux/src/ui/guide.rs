@@ -88,14 +88,22 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .margin_end(28)
         .build();
 
-    let caption = gtk::Label::builder().label("AUDIO QUALITY").xalign(0.0).build();
+    let caption = gtk::Label::builder()
+        .label("AUDIO QUALITY")
+        .xalign(0.0)
+        .build();
     caption.add_css_class("stat-caption");
     content.append(&caption);
-    let headline = gtk::Label::builder().label("Listening Guide").xalign(0.0).build();
+    let headline = gtk::Label::builder()
+        .label("Listening Guide")
+        .xalign(0.0)
+        .build();
     headline.add_css_class("title-1");
     content.append(&headline);
     let intro = gtk::Label::builder()
-        .label("Five facts about Bluetooth, AAC, and what your files actually deliver to your ears.")
+        .label(
+            "Five facts about Bluetooth, AAC, and what your files actually deliver to your ears.",
+        )
         .xalign(0.0)
         .wrap(true)
         .build();
@@ -108,7 +116,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&adw::Clamp::builder().maximum_size(760).child(&content).build())
+        .child(
+            &adw::Clamp::builder()
+                .maximum_size(760)
+                .child(&content)
+                .build(),
+        )
         .build();
     ui.register_scroller(&scroll);
     scroll.upcast()

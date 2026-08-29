@@ -109,6 +109,10 @@ enum MainMenu {
         let nowPlaying = menu.addItem(withTitle: String(localized: "Now Playing"), action: #selector(MacAppDelegate.toggleNowPlaying(_:)), keyEquivalent: "F")
         nowPlaying.keyEquivalentModifierMask = [.command, .shift]
         menu.addItem(.separator())
+        menu.addItem(withTitle: String(localized: "Zoom In"), action: #selector(MacAppDelegate.zoomIn(_:)), keyEquivalent: "=")
+        menu.addItem(withTitle: String(localized: "Zoom Out"), action: #selector(MacAppDelegate.zoomOut(_:)), keyEquivalent: "-")
+        menu.addItem(withTitle: String(localized: "Actual Size"), action: #selector(MacAppDelegate.zoomReset(_:)), keyEquivalent: "0")
+        menu.addItem(.separator())
         menu.addItem(withTitle: String(localized: "Toggle Sidebar"), action: #selector(NSSplitViewController.toggleSidebar(_:)), keyEquivalent: "s")
             .keyEquivalentModifierMask = [.command, .control]
         return submenuItem(menu)

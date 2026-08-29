@@ -401,9 +401,7 @@ impl ThemeController {
     fn seed(&self) -> (u8, u8, u8) {
         let theme = self.theme.get();
         if theme.follows_artwork() {
-            self.artwork_seed
-                .borrow()
-                .unwrap_or_else(|| theme.seed())
+            self.artwork_seed.borrow().unwrap_or_else(|| theme.seed())
         } else {
             theme.seed()
         }

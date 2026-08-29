@@ -336,7 +336,8 @@ impl ControlBar {
                 let Some(found) = ui.core.music_video.state().matched().cloned() else {
                     return;
                 };
-                let launcher = gtk::UriLauncher::new(&musicvideo::search::watch_url(&found.video_id));
+                let launcher =
+                    gtk::UriLauncher::new(&musicvideo::search::watch_url(&found.video_id));
                 launcher.launch(Some(&ui.window), gtk::gio::Cancellable::NONE, |_| {});
             });
         }
@@ -529,7 +530,11 @@ fn present_chooser(ui: &Rc<Ui>) {
         .build();
 
     let toolbar = adw::ToolbarView::new();
-    toolbar.add_top_bar(&adw::HeaderBar::builder().show_end_title_buttons(false).build());
+    toolbar.add_top_bar(
+        &adw::HeaderBar::builder()
+            .show_end_title_buttons(false)
+            .build(),
+    );
     toolbar.set_content(Some(&scroll));
 
     let dialog = adw::Dialog::builder()
@@ -675,7 +680,10 @@ fn present_fullscreen(ui: &Rc<Ui>) {
     {
         let window = window.clone();
         dismiss.connect_key_pressed(move |_, key, _, _| {
-            if matches!(key, gtk::gdk::Key::Escape | gtk::gdk::Key::f | gtk::gdk::Key::q) {
+            if matches!(
+                key,
+                gtk::gdk::Key::Escape | gtk::gdk::Key::f | gtk::gdk::Key::q
+            ) {
                 window.close();
                 return glib::Propagation::Stop;
             }
@@ -717,7 +725,10 @@ mod tests {
 
     #[test]
     fn a_locked_video_reads_as_synced() {
-        assert_eq!(sync_line(&found(0.0, false, "", "x"), Some(0.01), None), "Synced");
+        assert_eq!(
+            sync_line(&found(0.0, false, "", "x"), Some(0.01), None),
+            "Synced"
+        );
     }
 
     #[test]
@@ -772,7 +783,10 @@ mod tests {
             provenance_line(&found(0.0, false, "Chosen by qwen3", "Daft Punk")),
             "Daft Punk · Chosen by qwen3"
         );
-        assert_eq!(provenance_line(&found(0.0, false, "", "Daft Punk")), "Daft Punk");
+        assert_eq!(
+            provenance_line(&found(0.0, false, "", "Daft Punk")),
+            "Daft Punk"
+        );
         assert_eq!(provenance_line(&found(0.0, false, "", "")), "YouTube");
     }
 
@@ -786,10 +800,16 @@ mod tests {
             view_count: None,
             live_now: false,
         };
-        assert_eq!(candidate_subtitle(&candidate, 200.0), "Band · 4:20 · +60s vs your file");
+        assert_eq!(
+            candidate_subtitle(&candidate, 200.0),
+            "Band · 4:20 · +60s vs your file"
+        );
         assert_eq!(candidate_subtitle(&candidate, 259.0), "Band · 4:20");
         candidate.view_count = Some(1_234_567);
-        assert_eq!(candidate_subtitle(&candidate, 259.0), "Band · 4:20 · 1.2M views");
+        assert_eq!(
+            candidate_subtitle(&candidate, 259.0),
+            "Band · 4:20 · 1.2M views"
+        );
     }
 
     #[test]

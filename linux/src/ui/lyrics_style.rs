@@ -1,10 +1,16 @@
 use crate::config;
 use gtk::gdk;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 thread_local! {
     static PROVIDER: RefCell<Option<gtk::CssProvider>> = const { RefCell::new(None) };
     static LAST_CSS: RefCell<String> = const { RefCell::new(String::new()) };
+    static LAST_SIZE: Cell<i32> = const { Cell::new(config::LYRICS_FONT_DEFAULT) };
+}
+
+/// Re-renders the last requested size under the current interface zoom.
+pub fn reapply() {
+    apply(LAST_SIZE.with(|last| last.get()));
 }
 
 /// Lyrics typography lives in its own swappable provider rather than in
@@ -12,6 +18,9 @@ thread_local! {
 /// recompute. It sits above both the base stylesheet and the theme provider.
 pub fn apply(size: i32) {
     let size = size.clamp(config::LYRICS_FONT_MIN, config::LYRICS_FONT_MAX);
+    LAST_SIZE.with(|last| last.set(size));
+    let scale = crate::ui::ui_scale::current();
+    let size = ((size as f64) * scale).round() as i32;
     let css = format!(
         ".lyric-line, .lyric-line-near, .lyric-line-current {{ font-size: {size}px; }}\n\
          .lyric-line-current {{ font-size: {current}px; }}\n\

@@ -10,7 +10,8 @@ use std::rc::Rc;
 
 pub fn present(ui: &Rc<Ui>, years: Vec<i32>) {
     if years.is_empty() {
-        ui.core.toast("No listening history yet for a Year in Music");
+        ui.core
+            .toast("No listening history yet for a Year in Music");
         return;
     }
 
@@ -55,7 +56,9 @@ pub fn present(ui: &Rc<Ui>, years: Vec<i32>) {
         let data = Rc::clone(&data);
         let years = years.clone();
         Rc::new(move |index: usize| {
-            let Some(year) = years.get(index).copied() else { return };
+            let Some(year) = years.get(index).copied() else {
+                return;
+            };
             let db_path = ui.core.db_path.clone();
             let durations: HashMap<String, i64> = ui
                 .core
@@ -64,7 +67,12 @@ pub fn present(ui: &Rc<Ui>, years: Vec<i32>) {
                 .tracks
                 .iter()
                 .filter(|t| t.duration > 0.0)
-                .map(|t| (recap::track_key(&t.title, &t.artist), t.duration.round() as i64))
+                .map(|t| {
+                    (
+                        recap::track_key(&t.title, &t.artist),
+                        t.duration.round() as i64,
+                    )
+                })
                 .collect();
             let (tx, rx) = async_channel::bounded::<YearData>(1);
             std::thread::Builder::new()
@@ -79,7 +87,9 @@ pub fn present(ui: &Rc<Ui>, years: Vec<i32>) {
             let summary = summary.clone();
             let data = Rc::clone(&data);
             glib::spawn_future_local(async move {
-                let Ok(computed) = rx.recv().await else { return };
+                let Ok(computed) = rx.recv().await else {
+                    return;
+                };
                 let computed = Rc::new(computed);
                 *data.borrow_mut() = Some(Rc::clone(&computed));
                 render_summary(&summary, &computed);
@@ -240,7 +250,9 @@ fn top_section(title: &str, rows: &[(String, i64)]) -> gtk::Widget {
 }
 
 fn export(ui: &Rc<Ui>, data: &Rc<RefCell<Option<Rc<YearData>>>>, story: bool) {
-    let Some(data) = data.borrow().clone() else { return };
+    let Some(data) = data.borrow().clone() else {
+        return;
+    };
     let kind = if story { "story" } else { "post" };
     let suggested = format!("flaccy-year-in-music-{}-{}.png", data.year, kind);
     let (tx, rx) = async_channel::bounded::<Option<Vec<u8>>>(1);

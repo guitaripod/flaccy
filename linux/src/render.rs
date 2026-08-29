@@ -112,7 +112,10 @@ fn ranked_list(cr: &Context, x: f64, mut y: f64, width: f64, rows: &[(String, i6
         set_font(cr, 36.0, true);
         let mut display = name.clone();
         while text_width(cr, &display) > width - 200.0 && display.chars().count() > 4 {
-            display = display.chars().take(display.chars().count() - 2).collect::<String>();
+            display = display
+                .chars()
+                .take(display.chars().count() - 2)
+                .collect::<String>();
             display.push('…');
         }
         text(cr, x + 56.0, y, &display);
@@ -143,7 +146,11 @@ fn footer(cr: &Context, width: f64, height: f64, label: &str) {
 
 /// 1080×1350 recap share card: period, plays/minutes, top-5 artists, persona
 /// badge, flaccy footer over a palette gradient.
-pub fn recap_share_card(data: &RecapData, period_name: &str, username: Option<&str>) -> Option<Card> {
+pub fn recap_share_card(
+    data: &RecapData,
+    period_name: &str,
+    username: Option<&str>,
+) -> Option<Card> {
     let (width, height) = (1080, 1350);
     let (card, cr) = Card::new(width, height)?;
     let (w, h) = (width as f64, height as f64);
@@ -159,10 +166,27 @@ pub fn recap_share_card(data: &RecapData, period_name: &str, username: Option<&s
     text_centered(&cr, w / 2.0, 150.0, username.unwrap_or("Your Recap"));
     cr.set_source_rgba(1.0, 1.0, 1.0, 0.6);
     set_font(&cr, 32.0, true);
-    text_centered(&cr, w / 2.0, 208.0, &format!("{period_name} · flaccy Recap"));
+    text_centered(
+        &cr,
+        w / 2.0,
+        208.0,
+        &format!("{period_name} · flaccy Recap"),
+    );
 
-    stat_column(&cr, w * 0.3, 380.0, &format_count(data.total_plays), "PLAYS");
-    stat_column(&cr, w * 0.7, 380.0, &format_count(data.total_minutes), "MINUTES");
+    stat_column(
+        &cr,
+        w * 0.3,
+        380.0,
+        &format_count(data.total_plays),
+        "PLAYS",
+    );
+    stat_column(
+        &cr,
+        w * 0.7,
+        380.0,
+        &format_count(data.total_minutes),
+        "MINUTES",
+    );
 
     cr.set_source_rgba(1.0, 1.0, 1.0, 0.55);
     set_font(&cr, 28.0, true);
@@ -188,15 +212,32 @@ pub fn year_in_music_card(data: &YearData, story: bool) -> Option<Card> {
     set_font(&cr, 30.0, true);
     text(&cr, 96.0, 130.0, "FLACCY");
     let year_text = data.year.to_string();
-    text(&cr, w - 96.0 - text_width(&cr, &year_text), 130.0, &year_text);
+    text(
+        &cr,
+        w - 96.0 - text_width(&cr, &year_text),
+        130.0,
+        &year_text,
+    );
 
     cr.set_source_rgb(1.0, 1.0, 1.0);
     set_font(&cr, 96.0, true);
     text(&cr, 96.0, 280.0, "YEAR IN");
     text(&cr, 96.0, 380.0, "MUSIC");
 
-    stat_column(&cr, w * 0.28, 540.0, &format_count(data.total_plays), "PLAYS");
-    stat_column(&cr, w * 0.72, 540.0, &format_count(data.total_minutes), "MINUTES");
+    stat_column(
+        &cr,
+        w * 0.28,
+        540.0,
+        &format_count(data.total_plays),
+        "PLAYS",
+    );
+    stat_column(
+        &cr,
+        w * 0.72,
+        540.0,
+        &format_count(data.total_minutes),
+        "MINUTES",
+    );
 
     cr.set_source_rgba(1.0, 1.0, 1.0, 0.7);
     set_font(&cr, 30.0, false);
@@ -293,7 +334,11 @@ mod tests {
                 ("Meridian Wolde".to_string(), 300),
                 ("Marisol Vane".to_string(), 250),
             ],
-            top_albums: vec![("Parallax Hours".to_string(), "Meridian Wolde".to_string(), 120)],
+            top_albums: vec![(
+                "Parallax Hours".to_string(),
+                "Meridian Wolde".to_string(),
+                120,
+            )],
             top_tracks: vec![("Slow Machine".to_string(), "Meridian Wolde".to_string(), 60)],
             peak_day: chrono::NaiveDate::from_ymd_opt(2026, 3, 14),
             peak_day_plays: 42,
@@ -305,8 +350,14 @@ mod tests {
 
     fn assert_not_blank(card: &Card, min_colors: usize) {
         let bytes = card.png_bytes().expect("png bytes");
-        assert!(bytes.len() > 10_000, "png suspiciously small: {} bytes", bytes.len());
-        let decoded = image::load_from_memory(&bytes).expect("decodable png").to_rgba8();
+        assert!(
+            bytes.len() > 10_000,
+            "png suspiciously small: {} bytes",
+            bytes.len()
+        );
+        let decoded = image::load_from_memory(&bytes)
+            .expect("decodable png")
+            .to_rgba8();
         let mut colors = std::collections::HashSet::new();
         for pixel in decoded.pixels() {
             colors.insert(pixel.0);
@@ -314,7 +365,10 @@ mod tests {
                 return;
             }
         }
-        panic!("rendered card is near-blank: only {} distinct colors", colors.len());
+        panic!(
+            "rendered card is near-blank: only {} distinct colors",
+            colors.len()
+        );
     }
 
     #[test]

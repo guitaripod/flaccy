@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG && os(iOS)
 import UIKit
 
 /// Headless capture of the live paywall — real store prices, real device —

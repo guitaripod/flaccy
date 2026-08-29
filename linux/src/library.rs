@@ -164,7 +164,12 @@ pub fn disc_sections(tracks: &[Track]) -> Option<Vec<DiscSection>> {
         .iter()
         .map(|t| disc_label(&t.rel_path))
         .collect::<Option<Vec<_>>>()?;
-    if labels.iter().collect::<std::collections::HashSet<_>>().len() < 2 {
+    if labels
+        .iter()
+        .collect::<std::collections::HashSet<_>>()
+        .len()
+        < 2
+    {
         return None;
     }
     let mut sections: Vec<DiscSection> = Vec::new();
@@ -186,7 +191,10 @@ pub fn disc_sections(tracks: &[Track]) -> Option<Vec<DiscSection>> {
 /// not match because the character after the dash is not a digit.
 fn disc_label(rel_path: &str) -> Option<String> {
     let file = rel_path.rsplit('/').next().unwrap_or(rel_path);
-    let stem = file.rsplit_once('.').map_or(file, |(s, _)| s).to_lowercase();
+    let stem = file
+        .rsplit_once('.')
+        .map_or(file, |(s, _)| s)
+        .to_lowercase();
 
     let mut chars = stem.chars();
     if let (Some(letter), Some(next)) = (chars.next(), chars.next()) {
@@ -310,9 +318,9 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
                 .get(&(title.clone(), artist.clone()))
                 .cloned()
                 .or_else(|| {
-                    group.iter().find_map(|t| {
-                        meta.get(&(t.album.clone(), t.artist.clone())).cloned()
-                    })
+                    group
+                        .iter()
+                        .find_map(|t| meta.get(&(t.album.clone(), t.artist.clone())).cloned())
                 })
                 .unwrap_or((None, None));
             Some(Album {
@@ -338,7 +346,10 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     // shared track collapses to one best-quality keeper. When grouping is off,
     // keep the raw file inventory so every pressing remains addressable.
     let tracks = if group_album_editions {
-        albums.iter().flat_map(|album| album.tracks.iter().cloned()).collect()
+        albums
+            .iter()
+            .flat_map(|album| album.tracks.iter().cloned())
+            .collect()
     } else {
         tracks
     };
@@ -361,13 +372,15 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     }
     let mut artists: Vec<ArtistEntry> = artist_map
         .into_values()
-        .map(|(name, album_count, track_count, play_count, last_played)| ArtistEntry {
-            name,
-            album_count,
-            track_count,
-            play_count,
-            last_played,
-        })
+        .map(
+            |(name, album_count, track_count, play_count, last_played)| ArtistEntry {
+                name,
+                album_count,
+                track_count,
+                play_count,
+                last_played,
+            },
+        )
         .collect();
     artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
@@ -468,10 +481,18 @@ mod sort_tests {
             );
             grouped.entry(key).or_default().push(track.clone());
         }
-        assert_eq!(grouped.len(), 1, "all featuring credits collapse to one album");
+        assert_eq!(
+            grouped.len(),
+            1,
+            "all featuring credits collapse to one album"
+        );
         let group = grouped.into_values().next().unwrap();
         assert_eq!(group.len(), 3);
-        let artist = majority_value(group.iter().map(|t| crate::hygiene::primary_artist(&t.artist)));
+        let artist = majority_value(
+            group
+                .iter()
+                .map(|t| crate::hygiene::primary_artist(&t.artist)),
+        );
         assert_eq!(artist, "50 Cent");
     }
 

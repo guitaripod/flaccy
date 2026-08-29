@@ -82,7 +82,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&adw::Clamp::builder().maximum_size(880).child(&content).build())
+        .child(
+            &adw::Clamp::builder()
+                .maximum_size(880)
+                .child(&content)
+                .build(),
+        )
         .build();
     ui.register_scroller(&scroll);
 
@@ -135,7 +140,10 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 if !section.filters.contains(&active) {
                     continue;
                 }
-                match grouped.iter_mut().find(|(title, _)| *title == section.title) {
+                match grouped
+                    .iter_mut()
+                    .find(|(title, _)| *title == section.title)
+                {
                     Some((_, items)) => items.push(item),
                     None => grouped.push((section.title, vec![item])),
                 }
@@ -156,10 +164,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let render = Rc::clone(&render);
         ui.core.hub.subscribe_widget(&stack, move |_, event| {
-            if matches!(
-                event,
-                AppEvent::WantlistChanged | AppEvent::LibraryReloaded
-            ) {
+            if matches!(event, AppEvent::WantlistChanged | AppEvent::LibraryReloaded) {
                 render();
             }
         });
@@ -243,11 +248,7 @@ fn section_list() -> gtk::ListBox {
     list
 }
 
-fn artwork_widget(
-    images: &Rc<RemoteImages>,
-    image_url: Option<&str>,
-    seed: &str,
-) -> gtk::Widget {
+fn artwork_widget(images: &Rc<RemoteImages>, image_url: Option<&str>, seed: &str) -> gtk::Widget {
     let picture = gtk::Picture::builder()
         .width_request(48)
         .height_request(48)
@@ -324,11 +325,7 @@ fn row_shell(
     (row_box, actions)
 }
 
-fn wantlist_row(
-    ui: &Rc<Ui>,
-    images: &Rc<RemoteImages>,
-    item: &WantlistItemRow,
-) -> gtk::ListBoxRow {
+fn wantlist_row(ui: &Rc<Ui>, images: &Rc<RemoteImages>, item: &WantlistItemRow) -> gtk::ListBoxRow {
     let title = if item.kind == "artist" {
         item.artist.clone()
     } else {
@@ -395,11 +392,7 @@ fn wantlist_row(
         .build()
 }
 
-fn release_row(
-    ui: &Rc<Ui>,
-    images: &Rc<RemoteImages>,
-    release: &NewReleaseRow,
-) -> gtk::ListBoxRow {
+fn release_row(ui: &Rc<Ui>, images: &Rc<RemoteImages>, release: &NewReleaseRow) -> gtk::ListBoxRow {
     let released = chrono::DateTime::from_timestamp(release.release_unix, 0)
         .map(|dt| dt.format("%b %-d, %Y").to_string())
         .unwrap_or_default();
@@ -438,7 +431,8 @@ fn release_row(
                 crate::logger::error("wantlist", &format!("manual add failed: {err}"));
                 return;
             }
-            ui.core.toast(&format!("Added {} to wantlist", release.album));
+            ui.core
+                .toast(&format!("Added {} to wantlist", release.album));
             ui.core.hub.emit(&AppEvent::WantlistChanged);
         });
     }
@@ -475,7 +469,11 @@ fn prompt_manual_add(ui: &Rc<Ui>) {
             ui.core.toast("Title and artist are required");
             return;
         }
-        let kind = if kind.selected() == 1 { "track" } else { "album" };
+        let kind = if kind.selected() == 1 {
+            "track"
+        } else {
+            "album"
+        };
         let record = WantlistItemRow {
             norm_key: crate::wantlist::norm_key(kind, &title, &artist),
             kind: kind.to_string(),
@@ -498,15 +496,11 @@ fn prompt_manual_add(ui: &Rc<Ui>) {
 }
 
 fn open_url(ui: &Rc<Ui>, url: &str) {
-    gtk::UriLauncher::new(url).launch(
-        Some(&ui.window),
-        None::<&gtk::gio::Cancellable>,
-        |result| {
-            if let Err(err) = result {
-                crate::logger::warn("ui", &format!("browser launch failed: {err}"));
-            }
-        },
-    );
+    gtk::UriLauncher::new(url).launch(Some(&ui.window), None::<&gtk::gio::Cancellable>, |result| {
+        if let Err(err) = result {
+            crate::logger::warn("ui", &format!("browser launch failed: {err}"));
+        }
+    });
 }
 
 fn url_path_encode(input: &str) -> String {
@@ -587,7 +581,10 @@ impl RemoteImages {
             });
             match &texture {
                 Some(texture) => {
-                    images.cache.borrow_mut().insert(url.clone(), texture.clone());
+                    images
+                        .cache
+                        .borrow_mut()
+                        .insert(url.clone(), texture.clone());
                 }
                 None => {
                     images.misses.borrow_mut().insert(url.clone());

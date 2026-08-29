@@ -163,13 +163,7 @@ impl Stage {
         let job = self.job.borrow().clone();
         let album_count = self.ui.core.library.borrow().albums.len();
         let mut router = self.router.get();
-        let surface = router.route(
-            &load,
-            &job,
-            false,
-            album_count > 0,
-            self.job_elapsed(&job),
-        );
+        let surface = router.route(&load, &job, false, album_count > 0, self.job_elapsed(&job));
         self.router.set(router);
 
         let wanted = surface == Surface::Debut;
@@ -262,7 +256,13 @@ impl Stage {
             .set_label(&group_digits(load.files_found.max(load.total)));
         widgets.tracks.set_label(&group_digits(load.tracks_indexed));
         widgets.albums.set_label(&group_digits(
-            self.ui.core.library.borrow().albums.len().max(load.albums_built),
+            self.ui
+                .core
+                .library
+                .borrow()
+                .albums
+                .len()
+                .max(load.albums_built),
         ));
 
         if self.director.get().act() == DebutAct::Indexing {
@@ -490,18 +490,9 @@ fn build_summary_card(summary: &DebutSummary) -> (gtk::Widget, gtk::Button) {
         .column_homogeneous(true)
         .build();
     let cells = [
-        (
-            group_digits(summary.track_count),
-            debut_copy::STAT_TRACKS,
-        ),
-        (
-            group_digits(summary.album_count),
-            debut_copy::STAT_ALBUMS,
-        ),
-        (
-            group_digits(summary.artist_count),
-            debut_copy::STAT_ARTISTS,
-        ),
+        (group_digits(summary.track_count), debut_copy::STAT_TRACKS),
+        (group_digits(summary.album_count), debut_copy::STAT_ALBUMS),
+        (group_digits(summary.artist_count), debut_copy::STAT_ARTISTS),
         (
             format_library_duration(summary.total_duration_seconds),
             debut_copy::STAT_DURATION,
@@ -516,10 +507,7 @@ fn build_summary_card(summary: &DebutSummary) -> (gtk::Widget, gtk::Button) {
 
     for line in [
         debut_copy::card_line_covers(summary.covers_resolved, summary.albums_dated),
-        debut_copy::card_line_quality(
-            lossless_percent(summary),
-            summary.average_bitrate,
-        ),
+        debut_copy::card_line_quality(lossless_percent(summary), summary.average_bitrate),
     ] {
         let label = gtk::Label::builder()
             .label(line.as_str())
@@ -554,7 +542,11 @@ fn format_library_duration(seconds: f64) -> String {
     let hours = (total % 86_400) / 3_600;
     let minutes = (total % 3_600) / 60;
     if days > 0 {
-        return format!("{} {}", unit(days, "day", "days"), unit(hours, "hour", "hours"));
+        return format!(
+            "{} {}",
+            unit(days, "day", "days"),
+            unit(hours, "hour", "hours")
+        );
     }
     if hours > 0 {
         return format!(
@@ -1092,8 +1084,8 @@ impl Tile {
 /// is parameterised — same numbers, same motion.
 fn spring(value: f64, velocity: f64, target: f64, delta: f64) -> (f64, f64) {
     let omega = std::f64::consts::TAU / SPRING_RESPONSE;
-    let velocity =
-        velocity + (omega * omega * (target - value) - 2.0 * SPRING_DAMPING * omega * velocity) * delta;
+    let velocity = velocity
+        + (omega * omega * (target - value) - 2.0 * SPRING_DAMPING * omega * velocity) * delta;
     (value + velocity * delta, velocity)
 }
 
@@ -1121,18 +1113,8 @@ fn rounded_rect(cr: &cairo::Context, side: f64, radius: f64) {
 fn paint_gradient(cr: &cairo::Context, seed: &str, side: f64, alpha: f64) {
     let ((r1, g1, b1), (r2, g2, b2)) = crate::palette::placeholder_colors(seed);
     let gradient = cairo::LinearGradient::new(0.0, 0.0, side, side);
-    gradient.add_color_stop_rgb(
-        0.0,
-        r1 as f64 / 255.0,
-        g1 as f64 / 255.0,
-        b1 as f64 / 255.0,
-    );
-    gradient.add_color_stop_rgb(
-        1.0,
-        r2 as f64 / 255.0,
-        g2 as f64 / 255.0,
-        b2 as f64 / 255.0,
-    );
+    gradient.add_color_stop_rgb(0.0, r1 as f64 / 255.0, g1 as f64 / 255.0, b1 as f64 / 255.0);
+    gradient.add_color_stop_rgb(1.0, r2 as f64 / 255.0, g2 as f64 / 255.0, b2 as f64 / 255.0);
     if cr.set_source(&gradient).is_ok() {
         let _ = cr.paint_with_alpha(alpha);
     }
@@ -1148,10 +1130,7 @@ fn paint_surface(cr: &cairo::Context, surface: &cairo::ImageSurface, side: f64, 
     }
     let scale = (side / width).max(side / height);
     let _ = cr.save();
-    cr.translate(
-        (side - width * scale) / 2.0,
-        (side - height * scale) / 2.0,
-    );
+    cr.translate((side - width * scale) / 2.0, (side - height * scale) / 2.0);
     cr.scale(scale, scale);
     if cr.set_source_surface(surface, 0.0, 0.0).is_ok() {
         let _ = cr.paint_with_alpha(alpha);

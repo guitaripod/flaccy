@@ -1,6 +1,8 @@
 use crate::events::AppEvent;
 use crate::library::format_time;
-use crate::ui::controls::{apply_repeat, attach_label_nav, build_volume_control, set_love_appearance};
+use crate::ui::controls::{
+    apply_repeat, attach_label_nav, build_volume_control, set_love_appearance,
+};
 use crate::ui::lyrics_panel::{self, LyricsOptions};
 use crate::ui::queue_panel::{self, QueueOptions};
 use crate::ui::video_view;
@@ -189,7 +191,11 @@ pub fn present(ui: &Rc<Ui>) {
     {
         let (show_lyrics, show_queue, show_video) = {
             let config = ui.core.config.borrow();
-            (config.np_show_lyrics, config.np_show_queue, config.np_show_video)
+            (
+                config.np_show_lyrics,
+                config.np_show_queue,
+                config.np_show_video,
+            )
         };
         lyrics_toggle.set_active(show_lyrics);
         queue_toggle.set_active(show_queue);
@@ -294,11 +300,21 @@ pub fn present(ui: &Rc<Ui>) {
     transport.sync_initial(ui);
     if let Some(track) = ui.core.player.current_track() {
         seek_row.seek.set_range(0.0, track.duration.max(1.0));
-        seek_row.duration_label.set_label(&format_time(track.duration));
+        seek_row
+            .duration_label
+            .set_label(&format_time(track.duration));
     }
     update_up_next_label(ui, &queue_label);
 
-    wire_events(ui, &overlay, &seek_row, &transport, &current_rel, &queue_label, update);
+    wire_events(
+        ui,
+        &overlay,
+        &seek_row,
+        &transport,
+        &current_rel,
+        &queue_label,
+        update,
+    );
 
     if crate::config::demo_mode() {
         if let Ok(which) = std::env::var("FLACCY_DEMO_NP_PANELS") {
@@ -530,7 +546,13 @@ impl SeekRow {
         container.append(&position_label);
         container.append(&seek);
         container.append(&duration_label);
-        Self { container, seek, position_label, duration_label, last_user_seek }
+        Self {
+            container,
+            seek,
+            position_label,
+            duration_label,
+            last_user_seek,
+        }
     }
 }
 
@@ -600,7 +622,13 @@ impl TransportControls {
         container.append(&next);
         container.append(&repeat);
         container.append(&love);
-        Self { container, play, shuffle, repeat, love }
+        Self {
+            container,
+            play,
+            shuffle,
+            repeat,
+            love,
+        }
     }
 
     fn sync_initial(&self, ui: &Rc<Ui>) {

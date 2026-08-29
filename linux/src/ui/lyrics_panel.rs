@@ -41,10 +41,18 @@ pub struct LyricsOptions {
 
 impl LyricsOptions {
     pub fn sidebar() -> Self {
-        Self { show_header: true, bottom_margin: 120, react_to_global_toggle: true }
+        Self {
+            show_header: true,
+            bottom_margin: 120,
+            react_to_global_toggle: true,
+        }
     }
     pub fn in_view() -> Self {
-        Self { show_header: false, bottom_margin: 8, react_to_global_toggle: false }
+        Self {
+            show_header: false,
+            bottom_margin: 8,
+            react_to_global_toggle: false,
+        }
     }
 }
 
@@ -120,20 +128,24 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
     {
         let head_spacer = head_spacer.clone();
         let tail_spacer = tail_spacer.clone();
-        synced_scroll.vadjustment().connect_page_size_notify(move |adjustment| {
-            let page = adjustment.page_size();
-            head_spacer.set_height_request(spacer_height(page * ACTIVE_LINE_ANCHOR));
-            tail_spacer.set_height_request(spacer_height(page * (1.0 - ACTIVE_LINE_ANCHOR)));
-        });
+        synced_scroll
+            .vadjustment()
+            .connect_page_size_notify(move |adjustment| {
+                let page = adjustment.page_size();
+                head_spacer.set_height_request(spacer_height(page * ACTIVE_LINE_ANCHOR));
+                tail_spacer.set_height_request(spacer_height(page * (1.0 - ACTIVE_LINE_ANCHOR)));
+            });
     }
 
     // "Jump to current line" — the only way back once the user has scrolled
     // away, which is otherwise an invisible and unrecoverable state.
     let resume = gtk::Button::builder()
-        .child(&adw::ButtonContent::builder()
-            .icon_name("go-down-symbolic")
-            .label("Jump to Current")
-            .build())
+        .child(
+            &adw::ButtonContent::builder()
+                .icon_name("go-down-symbolic")
+                .label("Jump to Current")
+                .build(),
+        )
         .halign(gtk::Align::Center)
         .valign(gtk::Align::End)
         .margin_bottom(14)
@@ -195,8 +207,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let panel = panel.downgrade();
         let ui = Rc::clone(ui);
         Rc::new(move || {
-            let idle =
-                !ui.core.player.is_playing() && !scroller.is_busy() && !refresh.get();
+            let idle = !ui.core.player.is_playing() && !scroller.is_busy() && !refresh.get();
             let wanted = visible.get()
                 && panel.upgrade().is_some_and(|panel| panel.is_mapped())
                 && !state.borrow().lyrics.synced.is_empty()
@@ -424,7 +435,11 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let state = Rc::clone(&state);
         let ui = Rc::clone(ui);
         retry.connect_clicked(move |_| {
-            let track = state.borrow().track.clone().or_else(|| ui.core.player.current_track());
+            let track = state
+                .borrow()
+                .track
+                .clone()
+                .or_else(|| ui.core.player.current_track());
             if let Some(track) = track {
                 fetch_for(&track);
             }
@@ -472,30 +487,35 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let react_to_global_toggle = opts.react_to_global_toggle;
         let toggle_set_active = Rc::clone(&set_active);
         let panel_map = panel.clone();
-        ui.core.hub.subscribe_widget(&panel, move |_, event| match event {
-            AppEvent::TrackChanged(track) => {
-                state.borrow_mut().track = track.clone();
-                if visible.get() && panel_map.is_mapped() {
-                    if let Some(track) = track {
-                        fetch_for(track);
+        ui.core
+            .hub
+            .subscribe_widget(&panel, move |_, event| match event {
+                AppEvent::TrackChanged(track) => {
+                    state.borrow_mut().track = track.clone();
+                    if visible.get() && panel_map.is_mapped() {
+                        if let Some(track) = track {
+                            fetch_for(track);
+                        }
                     }
                 }
-            }
-            AppEvent::LyricsToggled(shown) => {
-                if react_to_global_toggle {
-                    toggle_set_active(*shown);
+                AppEvent::LyricsToggled(shown) => {
+                    if react_to_global_toggle {
+                        toggle_set_active(*shown);
+                    }
                 }
-            }
-            AppEvent::PlayingChanged(_) => sync_driver(),
-            AppEvent::Seeked(_) => {
-                refresh.set(true);
-                sync_driver();
-            }
-            _ => {}
-        });
+                AppEvent::PlayingChanged(_) => sync_driver(),
+                AppEvent::Seeked(_) => {
+                    refresh.set(true);
+                    sync_driver();
+                }
+                _ => {}
+            });
     }
 
-    LyricsPanel { widget: panel.upcast(), set_active }
+    LyricsPanel {
+        widget: panel.upcast(),
+        set_active,
+    }
 }
 
 /// A- / A+ buttons on the panel header. Same config key as the Preferences
@@ -508,8 +528,10 @@ fn font_size_controls(ui: &Rc<Ui>) -> gtk::Box {
     let step = |ui: &Rc<Ui>, delta: i32| {
         let size = {
             let mut config = ui.core.config.borrow_mut();
-            config.lyrics_font_size = (config.lyrics_font_size + delta)
-                .clamp(crate::config::LYRICS_FONT_MIN, crate::config::LYRICS_FONT_MAX);
+            config.lyrics_font_size = (config.lyrics_font_size + delta).clamp(
+                crate::config::LYRICS_FONT_MIN,
+                crate::config::LYRICS_FONT_MAX,
+            );
             config.lyrics_font_size
         };
         ui.core.save_config();
@@ -603,7 +625,9 @@ fn repaint_depth(
     touched.sort_unstable();
     touched.dedup();
     for index in touched {
-        let Some(row) = line_row(list, index) else { continue };
+        let Some(row) = line_row(list, index) else {
+            continue;
+        };
         let Some(label) = row.child() else { continue };
         label.remove_css_class("lyric-line-current");
         label.remove_css_class("lyric-line-near");
@@ -695,7 +719,9 @@ impl SmoothScroller {
     }
 
     fn aim_at(&self, list: &gtk::ListBox, row: &gtk::ListBoxRow) {
-        let Some(bounds) = row.compute_bounds(list) else { return };
+        let Some(bounds) = row.compute_bounds(list) else {
+            return;
+        };
         let page = self.adjustment.page_size();
         if page <= 1.0 {
             return;
@@ -706,7 +732,9 @@ impl SmoothScroller {
     }
 
     fn advance(&self, delta: f64) {
-        let Some(target) = self.target.get() else { return };
+        let Some(target) = self.target.get() else {
+            return;
+        };
         let value = self.adjustment.value();
         let distance = target - value;
         let velocity = self.velocity.get();
@@ -716,7 +744,8 @@ impl SmoothScroller {
             return;
         }
         let response = SCROLL_RESPONSE;
-        let velocity = velocity + (response * response * distance - 2.0 * response * velocity) * delta;
+        let velocity =
+            velocity + (response * response * distance - 2.0 * response * velocity) * delta;
         self.velocity.set(velocity);
         self.adjustment.set_value(value + velocity * delta);
     }

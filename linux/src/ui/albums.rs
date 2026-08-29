@@ -66,7 +66,10 @@ fn sort_albums(albums: &mut [Album], sort: AlbumSort) {
         AlbumSort::Artist => albums.sort_by_key(|a| (a.artist.to_lowercase(), title_key(a))),
         AlbumSort::Year => albums.sort_by_key(|a| {
             (
-                a.year.clone().filter(|y| !y.is_empty()).unwrap_or_else(|| "9999".to_string()),
+                a.year
+                    .clone()
+                    .filter(|y| !y.is_empty())
+                    .unwrap_or_else(|| "9999".to_string()),
                 title_key(a),
             )
         }),
@@ -118,11 +121,15 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             return;
         };
         let cell = build_album_cell();
-        let gesture = gtk::GestureClick::builder().button(gdk::BUTTON_SECONDARY).build();
+        let gesture = gtk::GestureClick::builder()
+            .button(gdk::BUTTON_SECONDARY)
+            .build();
         let item_weak = item.downgrade();
         let anchor = cell.clone();
         gesture.connect_pressed(move |_, _, x, y| {
-            let Some(item) = item_weak.upgrade() else { return };
+            let Some(item) = item_weak.upgrade() else {
+                return;
+            };
             let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
                 return;
             };
@@ -160,13 +167,15 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let expected = album.key();
             let item_weak = item.downgrade();
             let weak = picture.downgrade();
-            ui.core.artwork.request(&album.title, &album.artist, 168, move |texture, _| {
-                if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
-                    if still_bound_album(&item_weak, &expected) {
-                        picture.set_paintable(Some(texture));
+            ui.core
+                .artwork
+                .request(&album.title, &album.artist, 168, move |texture, _| {
+                    if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
+                        if still_bound_album(&item_weak, &expected) {
+                            picture.set_paintable(Some(texture));
+                        }
                     }
-                }
-            });
+                });
             bound.borrow_mut().insert(album.key(), picture.downgrade());
         });
     }
@@ -358,39 +367,46 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let rebuild = Rc::clone(&rebuild);
         let filter = filter.clone();
-        ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
-            AppEvent::LibraryReloaded => rebuild(),
-            AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
-            _ => {}
-        });
+        ui.core
+            .hub
+            .subscribe_widget(&stack, move |_, event| match event {
+                AppEvent::LibraryReloaded => rebuild(),
+                AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
+                _ => {}
+            });
     }
 
     {
         let ui = Rc::clone(ui);
         let bound = Rc::clone(&bound);
-        ui.core.hub.clone().subscribe_widget(&stack, move |_, event| {
-            if let AppEvent::AlbumEnriched { title, artist } = event {
-                ui.core.artwork.invalidate(title, artist);
-                let key = format!("{title}|{artist}");
-                let picture = bound.borrow().get(&key).and_then(|w| w.upgrade());
-                if let Some(picture) = picture {
-                    let weak = picture.downgrade();
-                    let bound = Rc::clone(&bound);
-                    ui.core.artwork.request(title, artist, 168, move |texture, _| {
-                        if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
-                            let still = bound
-                                .borrow()
-                                .get(&key)
-                                .and_then(|w| w.upgrade())
-                                .is_some_and(|current| current == picture);
-                            if still {
-                                picture.set_paintable(Some(texture));
-                            }
-                        }
-                    });
+        ui.core
+            .hub
+            .clone()
+            .subscribe_widget(&stack, move |_, event| {
+                if let AppEvent::AlbumEnriched { title, artist } = event {
+                    ui.core.artwork.invalidate(title, artist);
+                    let key = format!("{title}|{artist}");
+                    let picture = bound.borrow().get(&key).and_then(|w| w.upgrade());
+                    if let Some(picture) = picture {
+                        let weak = picture.downgrade();
+                        let bound = Rc::clone(&bound);
+                        ui.core
+                            .artwork
+                            .request(title, artist, 168, move |texture, _| {
+                                if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
+                                    let still = bound
+                                        .borrow()
+                                        .get(&key)
+                                        .and_then(|w| w.upgrade())
+                                        .is_some_and(|current| current == picture);
+                                    if still {
+                                        picture.set_paintable(Some(texture));
+                                    }
+                                }
+                            });
+                    }
                 }
-            }
-        });
+            });
     }
 
     stack.upcast()
@@ -436,7 +452,10 @@ fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) 
 fn albums_fingerprint(albums: &[Album]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for album in albums {
-        let row = format!("{}|{}|{:?}|{:?}", album.title, album.artist, album.year, album.genre);
+        let row = format!(
+            "{}|{}|{:?}|{:?}",
+            album.title, album.artist, album.year, album.genre
+        );
         hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
     }
     hash
@@ -629,7 +648,9 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
     {
         let dominant = Rc::clone(&dominant);
         backdrop.set_draw_func(move |_, cr, width, height| {
-            let Some((r, g, b)) = *dominant.borrow() else { return };
+            let Some((r, g, b)) = *dominant.borrow() else {
+                return;
+            };
             let dark = adw::StyleManager::default().is_dark();
             let blend = |channel: u8| {
                 let value = channel as f64 / 255.0;
@@ -708,7 +729,10 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
         .build();
     title.add_css_class("title-1");
     meta.append(&title);
-    let artist = gtk::Label::builder().label(&album.artist).xalign(0.0).build();
+    let artist = gtk::Label::builder()
+        .label(&album.artist)
+        .xalign(0.0)
+        .build();
     artist.add_css_class("title-4");
     artist.add_css_class("dim");
     artist.set_halign(gtk::Align::Start);
@@ -776,7 +800,9 @@ pub fn push_album_detail(ui: &Rc<Ui>, album: &Album) {
             }
         };
         ui.core.hub.subscribe_widget(&info, move |info, event| {
-            let AppEvent::AlbumEnriched { title, artist } = event else { return };
+            let AppEvent::AlbumEnriched { title, artist } = event else {
+                return;
+            };
             if title != &album_title || artist != &album_artist {
                 return;
             }
@@ -940,7 +966,9 @@ fn install_album_detail_breakpoints(
 /// Personal Last.fm play count for this album ("You've played this N times"),
 /// fetched via album.getInfo with the username param when authenticated.
 fn load_user_playcount(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
-    let Some(session) = ui.core.session.borrow().clone() else { return };
+    let Some(session) = ui.core.session.borrow().clone() else {
+        return;
+    };
     let Some(client) = crate::lastfm::LastFmClient::new(Some(session.key.clone())) else {
         return;
     };
@@ -958,7 +986,9 @@ fn load_user_playcount(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
         .ok();
     let weak = label.downgrade();
     gtk::glib::spawn_future_local(async move {
-        let Ok(Some(count)) = rx.recv().await else { return };
+        let Ok(Some(count)) = rx.recv().await else {
+            return;
+        };
         if count <= 0 {
             return;
         }
@@ -973,7 +1003,11 @@ fn load_user_playcount(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
 }
 
 fn album_quality_summary(album: &Album) -> Option<String> {
-    let badges: Vec<String> = album.tracks.iter().filter_map(|t| t.quality_badge()).collect();
+    let badges: Vec<String> = album
+        .tracks
+        .iter()
+        .filter_map(|t| t.quality_badge())
+        .collect();
     if badges.is_empty() {
         return None;
     }
@@ -1053,7 +1087,12 @@ mod sort_tests {
         sort_albums(&mut albums, AlbumSort::RecentlyPlayed);
         assert_eq!(
             titles(&albums),
-            vec!["Played Newer", "Played Older", "Alpha Unplayed", "Zebra Unplayed"]
+            vec![
+                "Played Newer",
+                "Played Older",
+                "Alpha Unplayed",
+                "Zebra Unplayed"
+            ]
         );
     }
 
@@ -1065,4 +1104,3 @@ mod sort_tests {
         assert!(AlbumSort::from_id("garbage") == AlbumSort::Artist);
     }
 }
-

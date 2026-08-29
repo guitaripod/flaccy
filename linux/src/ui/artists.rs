@@ -50,11 +50,15 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             return;
         };
         let cell = build_artist_cell();
-        let gesture = gtk::GestureClick::builder().button(gdk::BUTTON_SECONDARY).build();
+        let gesture = gtk::GestureClick::builder()
+            .button(gdk::BUTTON_SECONDARY)
+            .build();
         let item_weak = item.downgrade();
         let anchor = cell.clone();
         gesture.connect_pressed(move |_, _, x, y| {
-            let Some(item) = item_weak.upgrade() else { return };
+            let Some(item) = item_weak.upgrade() else {
+                return;
+            };
             let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
                 return;
             };
@@ -102,13 +106,15 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 let expected = key.clone();
                 let item_weak = item.downgrade();
                 let weak = avatar.downgrade();
-                ui.core.artwork.request(&title, &album_artist, 120, move |texture, _| {
-                    if let (Some(avatar), Some(texture)) = (weak.upgrade(), texture) {
-                        if still_bound_artist(&item_weak, &expected) {
-                            avatar.set_custom_image(Some(texture));
+                ui.core
+                    .artwork
+                    .request(&title, &album_artist, 120, move |texture, _| {
+                        if let (Some(avatar), Some(texture)) = (weak.upgrade(), texture) {
+                            if still_bound_artist(&item_weak, &expected) {
+                                avatar.set_custom_image(Some(texture));
+                            }
                         }
-                    }
-                });
+                    });
             }
             bound.borrow_mut().insert(key, avatar.downgrade());
         });
@@ -205,8 +211,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             *covers.borrow_mut() = representative_covers(&library.albums);
             let mut sorted = library.artists.clone();
             sort_artists(&mut sorted, sort_mode.get());
-            let items: Vec<BoxedAnyObject> =
-                sorted.into_iter().map(BoxedAnyObject::new).collect();
+            let items: Vec<BoxedAnyObject> = sorted.into_iter().map(BoxedAnyObject::new).collect();
             store.splice(0, store.n_items(), &items);
         })
     };
@@ -252,11 +257,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let rebuild = rebuild.clone();
         let filter = filter.clone();
-        ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
-            AppEvent::LibraryReloaded => rebuild(),
-            AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
-            _ => {}
-        });
+        ui.core
+            .hub
+            .subscribe_widget(&stack, move |_, event| match event {
+                AppEvent::LibraryReloaded => rebuild(),
+                AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
+                _ => {}
+            });
     }
 
     {
@@ -315,18 +322,23 @@ fn representative_covers(albums: &[Album]) -> HashMap<String, (String, String)> 
 }
 
 fn sort_artists(artists: &mut [ArtistEntry], mode: ArtistSort) {
-    let by_name = |a: &ArtistEntry, b: &ArtistEntry| a.name.to_lowercase().cmp(&b.name.to_lowercase());
+    let by_name =
+        |a: &ArtistEntry, b: &ArtistEntry| a.name.to_lowercase().cmp(&b.name.to_lowercase());
     match mode {
         ArtistSort::Name => artists.sort_by(by_name),
         ArtistSort::MostPlayed => {
             artists.sort_by(|a, b| b.play_count.cmp(&a.play_count).then_with(|| by_name(a, b)))
         }
-        ArtistSort::RecentlyPlayed => {
-            artists.sort_by(|a, b| b.last_played.cmp(&a.last_played).then_with(|| by_name(a, b)))
-        }
-        ArtistSort::TrackCount => {
-            artists.sort_by(|a, b| b.track_count.cmp(&a.track_count).then_with(|| by_name(a, b)))
-        }
+        ArtistSort::RecentlyPlayed => artists.sort_by(|a, b| {
+            b.last_played
+                .cmp(&a.last_played)
+                .then_with(|| by_name(a, b))
+        }),
+        ArtistSort::TrackCount => artists.sort_by(|a, b| {
+            b.track_count
+                .cmp(&a.track_count)
+                .then_with(|| by_name(a, b))
+        }),
     }
 }
 
@@ -336,7 +348,9 @@ fn still_bound_artist(item: &glib::WeakRef<gtk::ListItem>, expected: &str) -> bo
     item.upgrade()
         .and_then(|item| item.item())
         .and_downcast::<BoxedAnyObject>()
-        .is_some_and(|boxed| crate::hygiene::artist_key(&boxed.borrow::<ArtistEntry>().name) == expected)
+        .is_some_and(|boxed| {
+            crate::hygiene::artist_key(&boxed.borrow::<ArtistEntry>().name) == expected
+        })
 }
 
 /// Empty artist-card shell reused by the GridView factory: an `adw::Avatar`
@@ -380,7 +394,9 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
     let albums: Vec<Album> = library
         .albums
         .iter()
-        .filter(|album| crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist))
+        .filter(|album| {
+            crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist)
+        })
         .cloned()
         .collect();
 
@@ -529,7 +545,9 @@ fn load_artist_extras(
     std::thread::Builder::new()
         .name("flaccy-artist-page".into())
         .spawn(move || {
-            let Ok(db) = crate::db::Db::open(&db_path) else { return };
+            let Ok(db) = crate::db::Db::open(&db_path) else {
+                return;
+            };
             let client = crate::lastfm::LastFmClient::new(session_key);
             let image = db
                 .artist_image_url(&artist_for_thread)
@@ -554,7 +572,12 @@ fn load_artist_extras(
             .map(|(name, _)| name)
             .take(8)
             .collect();
-            let _ = tx.send_blocking(ArtistExtras { image, tags, similar, popular });
+            let _ = tx.send_blocking(ArtistExtras {
+                image,
+                tags,
+                similar,
+                popular,
+            });
         })
         .ok();
 
@@ -722,7 +745,9 @@ fn library_genre_fallback(ui: &Rc<Ui>, artist: &str) -> Vec<String> {
     library
         .albums
         .iter()
-        .filter(|album| crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist))
+        .filter(|album| {
+            crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist)
+        })
         .filter_map(|album| album.genre.clone())
         .filter(|genre| !genre.is_empty() && seen.insert(genre.to_lowercase()))
         .take(6)

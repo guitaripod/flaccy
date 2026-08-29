@@ -132,12 +132,7 @@ pub fn popup_menu_at(parent: &impl IsA<gtk::Widget>, menu: &gio::Menu, x: f64, y
     popover.popup();
 }
 
-fn append_menu_row(
-    content: &gtk::Box,
-    items: &gio::MenuModel,
-    index: i32,
-    popover: &gtk::Popover,
-) {
+fn append_menu_row(content: &gtk::Box, items: &gio::MenuModel, index: i32, popover: &gtk::Popover) {
     let Some(label) = items.item_attribute_value(index, "label", Some(glib::VariantTy::STRING))
     else {
         return;
@@ -161,11 +156,7 @@ fn append_menu_row(
     let action_name = action.str().unwrap_or_default().to_string();
     button.connect_clicked(move |button| {
         popover.popdown();
-        let _ = gtk::prelude::WidgetExt::activate_action(
-            button,
-            &action_name,
-            target.as_ref(),
-        );
+        let _ = gtk::prelude::WidgetExt::activate_action(button, &action_name, target.as_ref());
     });
     content.append(&button);
 }

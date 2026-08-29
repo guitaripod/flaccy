@@ -93,7 +93,9 @@ final class MainSplitViewController: NSSplitViewController {
     }
 
     private func openNowPlaying() {
-        guard nowPlayingController == nil, let host = parent?.view else { return }
+        guard nowPlayingController == nil,
+              let host = (parent as? RootContainerViewController)?.overlayHost ?? parent?.view
+        else { return }
         let controller = NowPlayingViewController()
         controller.onClose = { [weak self] in
             self?.closeNowPlaying()

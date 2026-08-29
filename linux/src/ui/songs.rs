@@ -103,11 +103,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let selected = selected_tracks(&selection);
             let clicked_in_selection = selected.iter().any(|t| t.rel_path == track.rel_path);
             if selected.len() >= 2 && clicked_in_selection {
-                let has_duplicates = !crate::hygiene::find_duplicate_groups(
-                    &selected,
-                    &ui.core.music_root(),
-                )
-                .is_empty();
+                let has_duplicates =
+                    !crate::hygiene::find_duplicate_groups(&selected, &ui.core.music_root())
+                        .is_empty();
                 context::popup_menu_at(anchor, &bulk_menu(selected.len(), has_duplicates), x, y);
             } else {
                 let menu = context::track_menu(&track.rel_path, track.loved);
@@ -150,7 +148,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         "Duration",
         false,
         |track| format_time(track.duration),
-        |a, b| a.duration.partial_cmp(&b.duration).unwrap_or(Ordering::Equal),
+        |a, b| {
+            a.duration
+                .partial_cmp(&b.duration)
+                .unwrap_or(Ordering::Equal)
+        },
         None,
     );
     column_view.append_column(&duration_column);
@@ -245,7 +247,10 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let list_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
     list_box.append(&chip_bar);
-    let scroll = gtk::ScrolledWindow::builder().vexpand(true).child(&column_view).build();
+    let scroll = gtk::ScrolledWindow::builder()
+        .vexpand(true)
+        .child(&column_view)
+        .build();
     list_box.append(&scroll);
     ui.register_scroller(&scroll);
     install_sort_scroll_reset(&column_view, &scroll);
@@ -289,11 +294,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     {
         let rebuild = rebuild.clone();
-        ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
-            AppEvent::LibraryReloaded | AppEvent::LovedChanged { .. } => rebuild(),
-            AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
-            _ => {}
-        });
+        ui.core
+            .hub
+            .subscribe_widget(&stack, move |_, event| match event {
+                AppEvent::LibraryReloaded | AppEvent::LovedChanged { .. } => rebuild(),
+                AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
+                _ => {}
+            });
     }
 
     stack.upcast()
@@ -303,7 +310,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 /// the view deep in the new order; snap back to the top so a fresh sort reads
 /// from its beginning, matching the Albums sort dropdown.
 fn install_sort_scroll_reset(column_view: &gtk::ColumnView, scroll: &gtk::ScrolledWindow) {
-    let Some(sorter) = column_view.sorter() else { return };
+    let Some(sorter) = column_view.sorter() else {
+        return;
+    };
     let vadj = scroll.vadjustment();
     sorter.connect_changed(move |_, _| {
         let vadj = vadj.clone();
@@ -419,7 +428,10 @@ fn install_bulk_actions(ui: &Rc<Ui>, selection: &gtk::MultiSelection) {
 fn bulk_menu(count: usize, has_duplicates: bool) -> gio::Menu {
     let menu = gio::Menu::new();
     let play_section = gio::Menu::new();
-    play_section.append(Some(&format!("Play {count} Songs")), Some("songs.bulk-play"));
+    play_section.append(
+        Some(&format!("Play {count} Songs")),
+        Some("songs.bulk-play"),
+    );
     menu.append_section(None, &play_section);
 
     let queue_section = gio::Menu::new();
@@ -498,7 +510,9 @@ fn track_number_column(ui: &Rc<Ui>) -> gtk::ColumnViewColumn {
     {
         let ui = Rc::clone(ui);
         factory.connect_setup(move |_, item| {
-            let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+                return;
+            };
             let cell = controls::track_index_cell("");
             item.set_child(Some(&cell.widget));
             watch_now_playing_cell(&ui, &cell.widget, item);
@@ -507,10 +521,16 @@ fn track_number_column(ui: &Rc<Ui>) -> gtk::ColumnViewColumn {
     {
         let ui = Rc::clone(ui);
         factory.connect_bind(move |_, item| {
-            let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+                return;
+            };
             let Some(widget) = item.child() else { return };
-            let Some(cell) = controls::TrackIndexCell::from_widget(&widget) else { return };
-            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else { return };
+            let Some(cell) = controls::TrackIndexCell::from_widget(&widget) else {
+                return;
+            };
+            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
+                return;
+            };
             let track = boxed.borrow::<Track>();
             cell.set_text(&if track.track_number > 0 {
                 track.track_number.to_string()
@@ -567,9 +587,7 @@ fn watch_now_playing_cell(ui: &Rc<Ui>, widget: &gtk::Widget, item: &gtk::ListIte
     });
 }
 
-fn track_sorter(
-    compare: impl Fn(&Track, &Track) -> Ordering + 'static,
-) -> gtk::CustomSorter {
+fn track_sorter(compare: impl Fn(&Track, &Track) -> Ordering + 'static) -> gtk::CustomSorter {
     gtk::CustomSorter::new(move |a, b| {
         let (Some(a), Some(b)) = (
             a.downcast_ref::<BoxedAnyObject>(),
@@ -596,7 +614,9 @@ fn string_column(
     let factory = gtk::SignalListItemFactory::new();
     let setup_ui = Rc::clone(ui);
     factory.connect_setup(move |_, item| {
-        let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
+        let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+            return;
+        };
         let label = gtk::Label::builder()
             .xalign(0.0)
             .ellipsize(pango::EllipsizeMode::End)
@@ -610,7 +630,9 @@ fn string_column(
             let item_weak = item.downgrade();
             let label_ref = label.clone();
             gesture.connect_pressed(move |_, _, x, y| {
-                let Some(item) = item_weak.upgrade() else { return };
+                let Some(item) = item_weak.upgrade() else {
+                    return;
+                };
                 let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
                     return;
                 };
@@ -625,9 +647,15 @@ fn string_column(
         let text_for = Rc::clone(&text_for);
         let bind_ui = Rc::clone(ui);
         factory.connect_bind(move |_, item| {
-            let Some(item) = item.downcast_ref::<gtk::ListItem>() else { return };
-            let Some(label) = item.child().and_downcast::<gtk::Label>() else { return };
-            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else { return };
+            let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
+                return;
+            };
+            let Some(label) = item.child().and_downcast::<gtk::Label>() else {
+                return;
+            };
+            let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
+                return;
+            };
             let track = boxed.borrow::<Track>();
             label.set_label(&text_for(&track));
             drop(track);

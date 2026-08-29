@@ -13,7 +13,10 @@ pub enum ScanEvent {
     /// announced so the Debut's mosaic fills during the tag pass instead of
     /// waiting for the first build.
     CoversHoisted(Vec<(String, String)>),
-    Done { added: usize, removed: usize },
+    Done {
+        added: usize,
+        removed: usize,
+    },
     Failed(String),
 }
 
@@ -43,10 +46,7 @@ fn run_scan(
     let files = collect_audio_files(root);
     progress.files_found = files.len();
     let _ = tx.send_blocking(ScanEvent::Progress(progress));
-    let disk_paths: HashSet<String> = files
-        .iter()
-        .map(|path| relative_path(root, path))
-        .collect();
+    let disk_paths: HashSet<String> = files.iter().map(|path| relative_path(root, path)).collect();
     let existing = db.fetch_relative_paths();
 
     if disk_paths.is_empty() && !existing.is_empty() {
@@ -113,7 +113,10 @@ fn run_scan(
         .map_err(|e| format!("prune failed: {e}"))?;
     crate::logger::info(
         "library",
-        &format!("scan complete: {added} added, {removed} removed, {} on disk", disk_paths.len()),
+        &format!(
+            "scan complete: {added} added, {removed} removed, {} on disk",
+            disk_paths.len()
+        ),
     );
     Ok((added, removed))
 }
@@ -158,7 +161,12 @@ fn collect_audio_files(root: &Path) -> Vec<PathBuf> {
 fn relative_path(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
         .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|_| path.file_name().unwrap_or_default().to_string_lossy().to_string())
+        .unwrap_or_else(|_| {
+            path.file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        })
 }
 
 fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
@@ -189,7 +197,11 @@ fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
         .or(path_album)
         .unwrap_or_else(|| "Unknown Album".to_string());
     let tag_track = tag.and_then(|t| t.track()).unwrap_or(0) as i32;
-    let track_number = if tag_track > 0 { tag_track } else { parsed.track_number };
+    let track_number = if tag_track > 0 {
+        tag_track
+    } else {
+        parsed.track_number
+    };
 
     let artwork = tag.and_then(|t| {
         t.pictures()
@@ -288,7 +300,10 @@ pub fn parse_filename(filename: &str) -> ParsedFilename {
     let mut name = filename.to_string();
     let mut track_number = 0;
 
-    let digits: String = filename.chars().take_while(|c| c.is_ascii_digit()).collect();
+    let digits: String = filename
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
     let digit_count = filename.chars().take_while(|c| c.is_ascii_digit()).count();
     if (1..=3).contains(&digit_count) && digit_count < filename.chars().count() {
         let rest: String = filename.chars().skip(digit_count).collect();

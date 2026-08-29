@@ -77,7 +77,10 @@ pub fn format_selector(max_height: i32, strict: bool) -> String {
 /// Reads yt-dlp's `--print` line. A format whose URL is missing is treated as
 /// no stream at all rather than as an empty one.
 pub fn parse_resolved(printed: &str, now: i64) -> Option<Stream> {
-    let line = printed.lines().map(str::trim).find(|line| !line.is_empty())?;
+    let line = printed
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())?;
     let (url, height) = line.rsplit_once('|')?;
     let url = url.trim();
     if !url.starts_with("http") {
@@ -108,7 +111,12 @@ pub fn download_audio(video_id: &str, into: &Path) -> Option<PathBuf> {
     std::fs::create_dir_all(into).ok()?;
     let template = into.join(format!("{video_id}.%(ext)s"));
     let status = Command::new(yt_dlp)
-        .args(["--no-warnings", "--ignore-config", "--no-playlist", "--quiet"])
+        .args([
+            "--no-warnings",
+            "--ignore-config",
+            "--no-playlist",
+            "--quiet",
+        ])
         .args(["--socket-timeout", RESOLVE_TIMEOUT_SECS])
         .args(["-f", "ba[ext=m4a]/ba/b"])
         .arg("-o")

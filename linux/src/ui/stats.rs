@@ -40,7 +40,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let empty = adw::StatusPage::builder()
         .icon_name("flaccy-stats-symbolic")
         .title("No Listening History")
-        .description("Play some music and your stats will build up here — or import your Last.fm history.")
+        .description(
+            "Play some music and your stats will build up here — or import your Last.fm history.",
+        )
         .build();
     if crate::lastfm::keys_available() {
         let import_button = gtk::Button::with_label("Import Last.fm History");
@@ -56,7 +58,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&adw::Clamp::builder().maximum_size(980).child(&content).build())
+        .child(
+            &adw::Clamp::builder()
+                .maximum_size(980)
+                .child(&content)
+                .build(),
+        )
         .build();
     ui.register_scroller(&scroll);
 
@@ -77,23 +84,25 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let reload = Rc::clone(&reload);
         let dirty = Rc::clone(&dirty);
         let stack_ref = stack.clone();
-        ui.core.hub.subscribe_widget(&stack, move |_, event| match event {
-            AppEvent::NaturalEnd(_) | AppEvent::LibraryReloaded => {
-                if stack_ref.is_mapped() {
-                    reload();
-                } else {
-                    dirty.set(true);
+        ui.core
+            .hub
+            .subscribe_widget(&stack, move |_, event| match event {
+                AppEvent::NaturalEnd(_) | AppEvent::LibraryReloaded => {
+                    if stack_ref.is_mapped() {
+                        reload();
+                    } else {
+                        dirty.set(true);
+                    }
                 }
-            }
-            AppEvent::HistoryImport { done, .. } => {
-                if *done && stack_ref.is_mapped() {
-                    reload();
-                } else if *done {
-                    dirty.set(true);
+                AppEvent::HistoryImport { done, .. } => {
+                    if *done && stack_ref.is_mapped() {
+                        reload();
+                    } else if *done {
+                        dirty.set(true);
+                    }
                 }
-            }
-            _ => {}
-        });
+                _ => {}
+            });
     }
     {
         let reload = Rc::clone(&reload);
@@ -130,8 +139,7 @@ fn build_loader(ui: &Rc<Ui>, state: &Rc<StatsState>, render: &Action) -> Action 
             .spawn(move || {
                 let data = Db::open(&db_path).ok().map(|db| {
                     let rows: Vec<ScrobbleRow> = db.fetch_all_scrobble_rows();
-                    let mut data =
-                        recap::compute(&rows, period, chrono::Utc::now().timestamp());
+                    let mut data = recap::compute(&rows, period, chrono::Utc::now().timestamp());
                     backfill_from_lastfm(&mut data, period, session.as_ref());
                     data
                 });
@@ -170,10 +178,15 @@ fn backfill_from_lastfm(
     match client.fetch_top_artists(&session.username, api_period, 10) {
         Ok(artists) if !artists.is_empty() => {
             data.top_artists = artists;
-            crate::logger::info("charts", &format!("charts backfill: artists from Last.fm ({api_period})"));
+            crate::logger::info(
+                "charts",
+                &format!("charts backfill: artists from Last.fm ({api_period})"),
+            );
         }
         Ok(_) => {}
-        Err(err) => crate::logger::warn("charts", &format!("charts backfill artists failed: {err}")),
+        Err(err) => {
+            crate::logger::warn("charts", &format!("charts backfill artists failed: {err}"))
+        }
     }
     match client.fetch_top_albums(&session.username, api_period, 10) {
         Ok(albums) if !albums.is_empty() => {
@@ -304,7 +317,9 @@ fn actions_row(ui: &Rc<Ui>, state: &Rc<StatsState>) -> gtk::Widget {
         let ui = Rc::clone(ui);
         let state = Rc::clone(state);
         share.connect_clicked(move |_| {
-            let Some(data) = state.data.borrow().clone() else { return };
+            let Some(data) = state.data.borrow().clone() else {
+                return;
+            };
             let period_name = state.period.get().display_name();
             let username = ui
                 .core
@@ -375,27 +390,29 @@ fn present_share_options(ui: &Rc<Ui>, png: Vec<u8>) {
     let window = ui.window.clone();
     let ui = Rc::clone(ui);
     let pending: Rc<RefCell<Option<Vec<u8>>>> = Rc::new(RefCell::new(Some(png)));
-    dialog.connect_response(None, move |_, response| {
-        match response {
-            "save" => {
-                let Some(bytes) = pending.borrow_mut().take() else { return };
-                crate::ui::year_in_music::save_card(&ui, bytes, "flaccy-recap.png");
-            }
-            "copy" => {
-                let Some(bytes) = pending.borrow_mut().take() else { return };
-                match gtk::gdk::Texture::from_bytes(&glib::Bytes::from_owned(bytes)) {
-                    Ok(texture) => {
-                        ui.window.clipboard().set_texture(&texture);
-                        ui.core.toast("Recap card copied to clipboard");
-                    }
-                    Err(err) => {
-                        crate::logger::error("ui", &format!("clipboard copy failed: {err}"));
-                        ui.core.toast("Copy failed");
-                    }
+    dialog.connect_response(None, move |_, response| match response {
+        "save" => {
+            let Some(bytes) = pending.borrow_mut().take() else {
+                return;
+            };
+            crate::ui::year_in_music::save_card(&ui, bytes, "flaccy-recap.png");
+        }
+        "copy" => {
+            let Some(bytes) = pending.borrow_mut().take() else {
+                return;
+            };
+            match gtk::gdk::Texture::from_bytes(&glib::Bytes::from_owned(bytes)) {
+                Ok(texture) => {
+                    ui.window.clipboard().set_texture(&texture);
+                    ui.core.toast("Recap card copied to clipboard");
+                }
+                Err(err) => {
+                    crate::logger::error("ui", &format!("clipboard copy failed: {err}"));
+                    ui.core.toast("Copy failed");
                 }
             }
-            _ => {}
         }
+        _ => {}
     });
     dialog.present(Some(&window));
 }
@@ -489,8 +506,7 @@ fn heatmap_widget(data: &Rc<RecapData>) -> gtk::Widget {
             cr.set_font_size(10.0);
             let mut last_month = 0;
             for week in 0..grid.weeks {
-                let week_start =
-                    grid.start_sunday + chrono::Duration::days(week as i64 * 7);
+                let week_start = grid.start_sunday + chrono::Duration::days(week as i64 * 7);
                 if week_start.month() != last_month {
                     last_month = week_start.month();
                     cr.set_source_rgba(fg_r, fg_g, fg_b, 0.5);
@@ -662,7 +678,10 @@ fn top_list(ui: &Rc<Ui>, title: &str, rows: &[(String, i64)], artist_nav: bool) 
         .build();
     column.append(&section_title(title));
     if rows.is_empty() {
-        let label = gtk::Label::builder().label("No plays yet").xalign(0.0).build();
+        let label = gtk::Label::builder()
+            .label("No plays yet")
+            .xalign(0.0)
+            .build();
         label.add_css_class("dim");
         column.append(&label);
     }

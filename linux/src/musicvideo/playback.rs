@@ -246,9 +246,8 @@ impl VideoStage {
     /// behind, seeking again and again to chase it.
     fn seek_to(&self, seconds: f64) {
         let aim = seconds.max(0.0) + self.seek_latency.get();
-        let position = gst::ClockTime::from_nseconds(
-            (aim * gst::ClockTime::SECOND.nseconds() as f64) as u64,
-        );
+        let position =
+            gst::ClockTime::from_nseconds((aim * gst::ClockTime::SECOND.nseconds() as f64) as u64);
         self.seeking.set(true);
         self.seek_started_at.set(self.now());
         if self
@@ -267,8 +266,8 @@ impl VideoStage {
         if !(0.0..SEEK_WATCHDOG).contains(&elapsed) {
             return;
         }
-        let blended = self.seek_latency.get() * (1.0 - SEEK_LATENCY_WEIGHT)
-            + elapsed * SEEK_LATENCY_WEIGHT;
+        let blended =
+            self.seek_latency.get() * (1.0 - SEEK_LATENCY_WEIGHT) + elapsed * SEEK_LATENCY_WEIGHT;
         self.seek_latency.set(blended.clamp(0.0, MAX_SEEK_LATENCY));
     }
 
@@ -325,7 +324,9 @@ impl VideoStage {
     }
 
     fn watch_bus(self: &Rc<Self>) {
-        let Some(bus) = self.pipeline.bus() else { return };
+        let Some(bus) = self.pipeline.bus() else {
+            return;
+        };
         let weak = Rc::downgrade(self);
         let watch = bus.add_watch_local(move |_, message| {
             let Some(stage) = weak.upgrade() else {
@@ -400,8 +401,11 @@ impl Drop for VideoStage {
 /// fix — reopening the video — is one the app can offer.
 pub fn friendly_pipeline_error(raw: &str) -> String {
     let lowered = raw.to_lowercase();
-    if lowered.contains("plug-in") || lowered.contains("plugin") || lowered.contains("decode")
-        || lowered.contains("decoder") || lowered.contains("codec")
+    if lowered.contains("plug-in")
+        || lowered.contains("plugin")
+        || lowered.contains("decode")
+        || lowered.contains("decoder")
+        || lowered.contains("codec")
     {
         return NO_DECODER.to_string();
     }
@@ -436,6 +440,9 @@ mod tests {
             friendly_pipeline_error("Your GStreamer installation is missing a decoder"),
             "No decoder for this video"
         );
-        assert_eq!(friendly_pipeline_error("Internal data stream error"), "Video playback failed");
+        assert_eq!(
+            friendly_pipeline_error("Internal data stream error"),
+            "Video playback failed"
+        );
     }
 }

@@ -156,7 +156,9 @@ pub fn drain_pending(core: &Rc<AppCore>) {
     if core.drain_in_flight.get() {
         return;
     }
-    let Some(client) = client_for(core) else { return };
+    let Some(client) = client_for(core) else {
+        return;
+    };
     if client.session_key.is_none() {
         return;
     }
@@ -172,7 +174,10 @@ pub fn drain_pending(core: &Rc<AppCore>) {
         let submitted = rx.recv().await.unwrap_or(0);
         flag.set(false);
         if submitted > 0 {
-            crate::logger::info("scrobble", &format!("drained {submitted} pending scrobbles"));
+            crate::logger::info(
+                "scrobble",
+                &format!("drained {submitted} pending scrobbles"),
+            );
         }
     });
 }
@@ -204,7 +209,10 @@ fn drain_blocking(db_path: &PathBuf, client: &LastFmClient) -> usize {
             Ok(BatchOutcome::Retryable { code, message }) => {
                 crate::logger::warn(
                     "scrobble",
-                    &format!("batch deferred (error {code}: {message}), {} kept pending", chunk.len()),
+                    &format!(
+                        "batch deferred (error {code}: {message}), {} kept pending",
+                        chunk.len()
+                    ),
                 );
             }
             Err(err) => {
@@ -235,7 +243,9 @@ fn mark_submitted_with_retry(db: &Db, ids: &[i64]) {
 }
 
 pub fn submit_love(core: &Rc<AppCore>, rel_path: &str, title: &str, artist: &str, loved: bool) {
-    let Some(client) = client_for(core) else { return };
+    let Some(client) = client_for(core) else {
+        return;
+    };
     if client.session_key.is_none() {
         return;
     }
@@ -250,13 +260,18 @@ pub fn submit_love(core: &Rc<AppCore>, rel_path: &str, title: &str, artist: &str
             }
         }
         Err(err) => {
-            crate::logger::warn("scrobble", &format!("love submit failed, kept pending: {err}"));
+            crate::logger::warn(
+                "scrobble",
+                &format!("love submit failed, kept pending: {err}"),
+            );
         }
     });
 }
 
 pub fn flush_pending_love_ops(core: &Rc<AppCore>) {
-    let Some(client) = client_for(core) else { return };
+    let Some(client) = client_for(core) else {
+        return;
+    };
     if client.session_key.is_none() {
         return;
     }
@@ -306,8 +321,12 @@ pub fn reconcile_loved(
 /// reconciles `tracks.loved` for matching library rows, then reloads the
 /// library if anything changed.
 pub fn sync_loved_from_lastfm(core: &Rc<AppCore>) {
-    let Some(session) = core.session.borrow().clone() else { return };
-    let Some(client) = LastFmClient::new(Some(session.key.clone())) else { return };
+    let Some(session) = core.session.borrow().clone() else {
+        return;
+    };
+    let Some(client) = LastFmClient::new(Some(session.key.clone())) else {
+        return;
+    };
     let db_path = core.db_path.clone();
     let username = session.username.clone();
     let (tx, rx) = async_channel::bounded::<usize>(1);
@@ -387,7 +406,10 @@ pub fn startup_maintenance(core: &Rc<AppCore>) {
     let cutoff = chrono::Utc::now().timestamp() - 14 * 24 * 3600;
     let retired = core.db.retire_pending_scrobbles_older_than(cutoff);
     if retired > 0 {
-        crate::logger::info("scrobble", &format!("retired {retired} stale pending scrobbles"));
+        crate::logger::info(
+            "scrobble",
+            &format!("retired {retired} stale pending scrobbles"),
+        );
     }
     drain_pending(core);
     flush_pending_love_ops(core);
@@ -399,8 +421,20 @@ mod tests {
     use super::reconcile_loved;
     use std::collections::HashSet;
 
-    fn row(rel: &str, title: &str, artist: &str, loved: bool, pending: bool) -> (String, String, String, bool, bool) {
-        (rel.to_string(), title.to_string(), artist.to_string(), loved, pending)
+    fn row(
+        rel: &str,
+        title: &str,
+        artist: &str,
+        loved: bool,
+        pending: bool,
+    ) -> (String, String, String, bool, bool) {
+        (
+            rel.to_string(),
+            title.to_string(),
+            artist.to_string(),
+            loved,
+            pending,
+        )
     }
 
     #[test]

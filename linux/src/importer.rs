@@ -39,8 +39,12 @@ pub fn start(core: &Rc<AppCore>) {
     if core.import_in_flight.get() {
         return;
     }
-    let Some(session) = core.session.borrow().clone() else { return };
-    let Some(client) = LastFmClient::new(Some(session.key.clone())) else { return };
+    let Some(session) = core.session.borrow().clone() else {
+        return;
+    };
+    let Some(client) = LastFmClient::new(Some(session.key.clone())) else {
+        return;
+    };
     core.import_in_flight.set(true);
 
     let db_path = core.db_path.clone();
@@ -127,7 +131,10 @@ fn run_import(
     let mut imported = 0usize;
     crate::logger::info(
         "import",
-        &format!("history import starting at page {page} ({} local rows)", existing.len()),
+        &format!(
+            "history import starting at page {page} ({} local rows)",
+            existing.len()
+        ),
     );
     loop {
         let (tracks, pages) = match fetch_page_with_retry(client, username, page) {

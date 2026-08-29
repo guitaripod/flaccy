@@ -84,7 +84,10 @@ pub struct RecapData {
 
 pub fn compute(all_rows: &[ScrobbleRow], period: Period, now_unix: i64) -> RecapData {
     let scoped: Vec<&ScrobbleRow> = match period.cutoff_unix(now_unix) {
-        Some(cutoff) => all_rows.iter().filter(|r| r.timestamp_unix >= cutoff).collect(),
+        Some(cutoff) => all_rows
+            .iter()
+            .filter(|r| r.timestamp_unix >= cutoff)
+            .collect(),
         None => all_rows.iter().collect(),
     };
     let clock = listening_clock(&scoped);
@@ -204,10 +207,9 @@ pub struct HeatmapGrid {
 pub fn heatmap_grid(heatmap: &HashMap<NaiveDate, i64>, now_unix: i64) -> Option<HeatmapGrid> {
     let earliest = heatmap.keys().min().copied()?;
     let today = local_date(now_unix);
-    let start_sunday = earliest
-        - chrono::Duration::days(earliest.weekday().num_days_from_sunday() as i64);
-    let end_sunday =
-        today - chrono::Duration::days(today.weekday().num_days_from_sunday() as i64);
+    let start_sunday =
+        earliest - chrono::Duration::days(earliest.weekday().num_days_from_sunday() as i64);
+    let end_sunday = today - chrono::Duration::days(today.weekday().num_days_from_sunday() as i64);
     let weeks = ((end_sunday - start_sunday).num_days() / 7 + 1).max(1) as usize;
     Some(HeatmapGrid {
         start_sunday,
@@ -286,7 +288,9 @@ pub fn compute_year(
         *track_counts
             .entry((row.title.clone(), row.artist.clone()))
             .or_insert(0) += 1;
-        *day_counts.entry(local_date(row.timestamp_unix)).or_insert(0) += 1;
+        *day_counts
+            .entry(local_date(row.timestamp_unix))
+            .or_insert(0) += 1;
         hour_counts[local_hour(row.timestamp_unix) % 24] += 1;
     }
 
@@ -361,7 +365,9 @@ fn year_persona(plays: usize, distinct_artists: usize, hour_counts: &[i64; 24]) 
 fn longest_streak(days: &HashSet<NaiveDate>) -> i64 {
     let mut longest = 0i64;
     for day in days {
-        let Some(previous) = day.pred_opt() else { continue };
+        let Some(previous) = day.pred_opt() else {
+            continue;
+        };
         if days.contains(&previous) {
             continue;
         }
@@ -406,7 +412,9 @@ mod tests {
 
     #[test]
     fn persona_night_owl() {
-        let rows: Vec<ScrobbleRow> = (0..10).map(|i| row(&format!("t{i}"), &format!("a{i}"), 0)).collect();
+        let rows: Vec<ScrobbleRow> = (0..10)
+            .map(|i| row(&format!("t{i}"), &format!("a{i}"), 0))
+            .collect();
         let refs: Vec<&ScrobbleRow> = rows.iter().collect();
         let mut clock = [0i64; 24];
         clock[1] = 6;

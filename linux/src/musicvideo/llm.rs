@@ -42,7 +42,9 @@ pub fn installed_models() -> Vec<String> {
     let response = ureq::get(&format!("{}/api/tags", host()))
         .timeout(PROBE_TIMEOUT)
         .call();
-    let Ok(response) = response else { return Vec::new() };
+    let Ok(response) = response else {
+        return Vec::new();
+    };
     let Ok(value) = response.into_json::<serde_json::Value>() else {
         return Vec::new();
     };
@@ -241,7 +243,11 @@ pub fn blend(scores: &[f64], verdict: &Verdict) -> Vec<f64> {
         .iter()
         .enumerate()
         .map(|(index, score)| {
-            let target = if verdict.index == Some(index) { 1.0 } else { 0.0 };
+            let target = if verdict.index == Some(index) {
+                1.0
+            } else {
+                0.0
+            };
             score * (1.0 - weight) + target * weight
         })
         .collect()
@@ -261,7 +267,8 @@ mod tests {
 
     #[test]
     fn parses_a_plain_verdict() {
-        let parsed = parse_verdict(r#"{"index":0,"confidence":0.98,"reason":"official"}"#, 3).unwrap();
+        let parsed =
+            parse_verdict(r#"{"index":0,"confidence":0.98,"reason":"official"}"#, 3).unwrap();
         assert_eq!(parsed.index, Some(0));
         assert!((parsed.confidence - 0.98).abs() < 1e-9);
         assert_eq!(parsed.reason, "official");
@@ -280,8 +287,11 @@ mod tests {
 
     #[test]
     fn a_negative_index_means_none_of_them() {
-        let parsed = parse_verdict(r#"{"index":-1,"confidence":0.9,"reason":"all lyric videos"}"#, 4)
-            .unwrap();
+        let parsed = parse_verdict(
+            r#"{"index":-1,"confidence":0.9,"reason":"all lyric videos"}"#,
+            4,
+        )
+        .unwrap();
         assert_eq!(parsed.index, None);
     }
 
@@ -323,9 +333,18 @@ mod tests {
             choose_model("qwen3.8:4b-q8_0", &installed).as_deref(),
             Some("qwen3.8:4b-q8_0")
         );
-        assert_eq!(choose_model("qwen3.8", &installed).as_deref(), Some("qwen3.8:4b-q8_0"));
-        assert_eq!(choose_model("", &installed).as_deref(), Some("qwen3.8:4b-q8_0"));
-        assert_eq!(choose_model("missing", &installed).as_deref(), Some("qwen3.8:4b-q8_0"));
+        assert_eq!(
+            choose_model("qwen3.8", &installed).as_deref(),
+            Some("qwen3.8:4b-q8_0")
+        );
+        assert_eq!(
+            choose_model("", &installed).as_deref(),
+            Some("qwen3.8:4b-q8_0")
+        );
+        assert_eq!(
+            choose_model("missing", &installed).as_deref(),
+            Some("qwen3.8:4b-q8_0")
+        );
         assert_eq!(choose_model("", &[]), None);
         assert_eq!(
             choose_model("", &["something-exotic:1b".to_string()]).as_deref(),

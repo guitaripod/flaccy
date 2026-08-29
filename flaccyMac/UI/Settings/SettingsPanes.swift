@@ -31,8 +31,24 @@ final class GeneralSettingsPane: SettingsPane {
     private let autoplayCheckbox = NSButton(checkboxWithTitle: String(localized: "Keep the music going when the queue ends"), target: nil, action: nil)
     private let loginCheckbox = NSButton(checkboxWithTitle: String(localized: "Open Flaccy at login"), target: nil, action: nil)
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Flaccy in the menu bar"), target: nil, action: nil)
+    private let scaleStepper = NSStepper()
+    private let scaleLabel = NSTextField(labelWithString: "")
 
     override func buildForm() {
+        formStack.addArrangedSubview(sectionLabel(String(localized: "Appearance")))
+        scaleLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+        scaleStepper.minValue = Double(MacInterfaceScale.minimum * 100)
+        scaleStepper.maxValue = Double(MacInterfaceScale.maximum * 100)
+        scaleStepper.increment = Double(MacInterfaceScale.step * 100)
+        scaleStepper.target = self
+        scaleStepper.action = #selector(scaleStepped)
+        let scaleTitle = NSTextField(labelWithString: String(localized: "Interface scale"))
+        scaleTitle.font = .systemFont(ofSize: 13)
+        addRow([scaleTitle, scaleLabel, scaleStepper], spacing: 8)
+        addFullWidth(explanation(String(localized: "Zoom the whole window. ⌘= and ⌘- work anywhere; ⌘0 returns to actual size.")))
+        renderScale()
+        formStack.addArrangedSubview(separator())
+
         formStack.addArrangedSubview(sectionLabel(String(localized: "Flaccy Lifetime")))
         entitlementLabel.font = .systemFont(ofSize: 13)
         unlockButton.bezelStyle = .rounded
@@ -61,6 +77,10 @@ final class GeneralSettingsPane: SettingsPane {
 
     override func viewWillAppear() {
         super.viewWillAppear()
+        renderScale()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(scaleChanged), name: .flaccyInterfaceScaleChanged, object: nil
+        )
         refreshEntitlement()
         autoplayCheckbox.state = AudioPlayer.shared.autoplaySimilarWhenQueueEnds ? .on : .off
         loginCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -98,6 +118,19 @@ final class GeneralSettingsPane: SettingsPane {
 
     @objc private func unlockTapped() {
         PurchaseManager.shared.requestPaywall()
+    }
+
+    private func renderScale() {
+        scaleLabel.stringValue = "\(MacInterfaceScale.percent)%"
+        scaleStepper.doubleValue = Double(MacInterfaceScale.percent)
+    }
+
+    @objc private func scaleChanged() {
+        renderScale()
+    }
+
+    @objc private func scaleStepped() {
+        MacInterfaceScale.set(CGFloat(scaleStepper.doubleValue) / 100)
     }
 
     @objc private func autoplayToggled() {

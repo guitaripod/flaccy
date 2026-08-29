@@ -33,10 +33,20 @@ pub struct QueueOptions {
 
 impl QueueOptions {
     pub fn sidebar() -> Self {
-        Self { show_title: true, bottom_margin: 12, self_map_rebuild: true, initial_active: true }
+        Self {
+            show_title: true,
+            bottom_margin: 12,
+            self_map_rebuild: true,
+            initial_active: true,
+        }
     }
     pub fn in_view() -> Self {
-        Self { show_title: false, bottom_margin: 8, self_map_rebuild: false, initial_active: false }
+        Self {
+            show_title: false,
+            bottom_margin: 8,
+            self_map_rebuild: false,
+            initial_active: false,
+        }
     }
 }
 
@@ -62,7 +72,11 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
         .margin_start(16)
         .margin_end(16)
         .build();
-    let title = gtk::Label::builder().label("Queue").xalign(0.0).hexpand(true).build();
+    let title = gtk::Label::builder()
+        .label("Queue")
+        .xalign(0.0)
+        .hexpand(true)
+        .build();
     title.add_css_class("title-4");
     if opts.show_title {
         header.append(&title);
@@ -82,7 +96,11 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
     header.append(&clear);
     root.append(&header);
 
-    let summary = gtk::Label::builder().xalign(0.0).margin_start(16).margin_end(16).build();
+    let summary = gtk::Label::builder()
+        .xalign(0.0)
+        .margin_start(16)
+        .margin_end(16)
+        .build();
     summary.add_css_class("dim");
     summary.add_css_class("caption");
     root.append(&summary);
@@ -267,7 +285,10 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
             }
         })
     };
-    QueuePanel { widget: root.upcast(), set_active }
+    QueuePanel {
+        widget: root.upcast(),
+        set_active,
+    }
 }
 
 fn section_row(text: &str) -> gtk::ListBoxRow {
@@ -395,7 +416,9 @@ impl Pinner {
     /// One frame of work; true once the goal is done with (reached, abandoned,
     /// or out of patience).
     fn step(&self) -> bool {
-        let Some(goal) = self.goal.get() else { return true };
+        let Some(goal) = self.goal.get() else {
+            return true;
+        };
         self.frames.set(self.frames.get().saturating_add(1));
         if self.frames.get() > SETTLE_FRAMES {
             self.goal.set(None);
@@ -547,11 +570,13 @@ fn queue_row(ui: &Rc<Ui>, track: &Track, index: usize, current: usize) -> gtk::L
         let indicator = crate::ui::controls::build_equalizer_indicator();
         indicator.set_valign(gtk::Align::Center);
         crate::ui::controls::drive_equalizer(&indicator, ui.core.player.is_playing());
-        ui.core.hub.subscribe_widget(&indicator, |indicator, event| {
-            if let AppEvent::PlayingChanged(playing) = event {
-                crate::ui::controls::drive_equalizer(indicator, *playing);
-            }
-        });
+        ui.core
+            .hub
+            .subscribe_widget(&indicator, |indicator, event| {
+                if let AppEvent::PlayingChanged(playing) = event {
+                    crate::ui::controls::drive_equalizer(indicator, *playing);
+                }
+            });
         row_box.append(&indicator);
     }
 
@@ -566,7 +591,9 @@ fn queue_row(ui: &Rc<Ui>, track: &Track, index: usize, current: usize) -> gtk::L
 }
 
 fn attach_reorder(ui: &Rc<Ui>, row: &gtk::ListBoxRow, index: usize) {
-    let drag = gtk::DragSource::builder().actions(gdk::DragAction::MOVE).build();
+    let drag = gtk::DragSource::builder()
+        .actions(gdk::DragAction::MOVE)
+        .build();
     drag.connect_prepare(move |_, _, _| {
         Some(gdk::ContentProvider::for_value(&(index as i32).to_value()))
     });
@@ -576,15 +603,14 @@ fn attach_reorder(ui: &Rc<Ui>, row: &gtk::ListBoxRow, index: usize) {
     {
         let ui = Rc::clone(ui);
         drop.connect_drop(move |_, value, _, _| {
-            let Ok(source) = value.get::<i32>() else { return false };
+            let Ok(source) = value.get::<i32>() else {
+                return false;
+            };
             if source < 0 || source as usize == index {
                 return false;
             }
             ui.core.player.move_queue_entry(source as usize, index);
-            crate::logger::info(
-                "ui",
-                &format!("queue: reorder {} -> {}", source, index),
-            );
+            crate::logger::info("ui", &format!("queue: reorder {} -> {}", source, index));
             true
         });
     }

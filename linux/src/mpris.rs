@@ -112,8 +112,12 @@ pub fn start(core: &Rc<AppCore>) {
         let hub = Rc::clone(&core.hub);
         let weak_core = Rc::downgrade(&core);
         hub.subscribe(move |event| {
-            let Some(core) = weak_core.upgrade() else { return false };
-            let Some(player) = core.mpris.borrow().clone() else { return true };
+            let Some(core) = weak_core.upgrade() else {
+                return false;
+            };
+            let Some(player) = core.mpris.borrow().clone() else {
+                return true;
+            };
             match event {
                 AppEvent::TrackChanged(track) => {
                     let metadata = metadata_for(&core, track.as_ref());

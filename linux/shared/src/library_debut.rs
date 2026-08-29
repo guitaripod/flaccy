@@ -115,8 +115,7 @@ pub mod copy {
     pub const AI_EXPLANATION: &str =
         "Flaccy's AI turns scrambled filenames into real titles, artists and albums.";
     pub const ARTWORK_HEADLINE: &str = "Finding your covers";
-    pub const ARTWORK_EXPLANATION: &str =
-        "Looking up artwork, years and genres for every album.";
+    pub const ARTWORK_EXPLANATION: &str = "Looking up artwork, years and genres for every album.";
     pub const TRIAL_CHIP: &str = "AI · included in your 7-day trial";
     pub const AI_SKIPPED_HEADLINE: &str = "Tag cleanup skipped — your trial has ended";
     pub const AI_SKIPPED_BUTTON: &str = "Turn on AI cleanup";

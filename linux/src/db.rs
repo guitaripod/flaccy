@@ -746,7 +746,11 @@ impl Db {
             self.delete_track_by_rel_path(path)?;
         }
         for merge in album_info_merges {
-            self.merge_album_info(&merge.canonical_title, &merge.canonical_artist, &merge.variants)?;
+            self.merge_album_info(
+                &merge.canonical_title,
+                &merge.canonical_artist,
+                &merge.variants,
+            )?;
         }
         for retitle in retitles {
             self.rewrite_album_title(
@@ -1122,7 +1126,9 @@ impl Db {
     }
 
     pub fn clear_music_videos(&self) -> usize {
-        self.conn.execute("DELETE FROM musicVideos", []).unwrap_or(0)
+        self.conn
+            .execute("DELETE FROM musicVideos", [])
+            .unwrap_or(0)
     }
 
     pub fn music_video_count(&self) -> i64 {
@@ -1169,9 +1175,7 @@ impl Db {
         ) else {
             return Vec::new();
         };
-        let rows = stmt.query_map([], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-        });
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)));
         match rows {
             Ok(rows) => rows.flatten().collect(),
             Err(_) => Vec::new(),
@@ -1184,10 +1188,7 @@ impl Db {
             return result;
         };
         let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, Option<String>>(1)?,
-            ))
+            Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
         });
         if let Ok(rows) = rows {
             for (path, last_played) in rows.flatten() {
@@ -1452,8 +1453,10 @@ impl Db {
     }
 
     pub fn acknowledge_wantlist(&self) -> Result<(), rusqlite::Error> {
-        self.conn
-            .execute("UPDATE wantlist SET acknowledged = 1 WHERE state = 'wanted'", [])?;
+        self.conn.execute(
+            "UPDATE wantlist SET acknowledged = 1 WHERE state = 'wanted'",
+            [],
+        )?;
         Ok(())
     }
 
@@ -1481,11 +1484,9 @@ impl Db {
 
     pub fn new_releases_fetched_at(&self) -> Option<i64> {
         self.conn
-            .query_row(
-                "SELECT MAX(fetchedAt) FROM newReleaseCache",
-                [],
-                |row| row.get::<_, Option<String>>(0),
-            )
+            .query_row("SELECT MAX(fetchedAt) FROM newReleaseCache", [], |row| {
+                row.get::<_, Option<String>>(0)
+            })
             .ok()
             .flatten()
             .map(|s| unix_from_string(&s))
@@ -1696,9 +1697,11 @@ impl Db {
     pub fn library_debut(&self) -> Option<DebutSummary> {
         let json: String = self
             .conn
-            .query_row("SELECT summaryJSON FROM libraryDebut WHERE id = 1", [], |row| {
-                row.get(0)
-            })
+            .query_row(
+                "SELECT summaryJSON FROM libraryDebut WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
             .optional()
             .ok()
             .flatten()?;
@@ -1883,14 +1886,19 @@ impl Db {
     }
 
     pub fn set_download_file(&self, id: i64, path: &str) {
-        let _ = self
-            .conn
-            .execute("UPDATE downloads SET filePath = ?1 WHERE id = ?2", params![path, id]);
+        let _ = self.conn.execute(
+            "UPDATE downloads SET filePath = ?1 WHERE id = ?2",
+            params![path, id],
+        );
     }
 
     pub fn download_status(&self, id: i64) -> Option<String> {
         self.conn
-            .query_row("SELECT status FROM downloads WHERE id = ?1", params![id], |row| row.get(0))
+            .query_row(
+                "SELECT status FROM downloads WHERE id = ?1",
+                params![id],
+                |row| row.get(0),
+            )
             .optional()
             .ok()
             .flatten()
@@ -2030,7 +2038,12 @@ mod cleanup_tests {
     fn plan_vectors(
         consolidations: &[ConsolidationGroup],
         duplicates: &[DuplicateGroup],
-    ) -> (Vec<AlbumRetitle>, Vec<KeeperUpdate>, Vec<AlbumInfoMerge>, Vec<String>) {
+    ) -> (
+        Vec<AlbumRetitle>,
+        Vec<KeeperUpdate>,
+        Vec<AlbumInfoMerge>,
+        Vec<String>,
+    ) {
         let retitles = consolidations
             .iter()
             .flat_map(|group| {
@@ -2080,19 +2093,109 @@ mod cleanup_tests {
         let db = &temp.db;
         let root = std::env::temp_dir();
 
-        insert(db, "aurora/01.flac", "Opening", "Aurora Band", "Aurora", 1, 200.0, "flac", Some(24), Some(96000));
-        insert(db, "aurora/02.flac", "Second", "Aurora Band", "Aurora", 2, 210.0, "flac", Some(24), Some(96000));
-        insert(db, "aurora/03.flac", "Third", "Aurora Band", "Aurora", 3, 220.0, "flac", Some(24), Some(96000));
-        insert(db, "aurora/04.flac", "Fourth", "Aurora Band", "Aurora", 4, 230.0, "flac", Some(24), Some(96000));
-        insert(db, "aurora-deluxe/01.flac", "Opening", "aurora band", "Aurora (Deluxe Edition)", 1, 200.5, "flac", Some(16), Some(44100));
-        insert(db, "aurora-deluxe/12.flac", "Bonus Cut", "aurora band", "Aurora (Deluxe Edition)", 12, 180.0, "flac", Some(16), Some(44100));
+        insert(
+            db,
+            "aurora/01.flac",
+            "Opening",
+            "Aurora Band",
+            "Aurora",
+            1,
+            200.0,
+            "flac",
+            Some(24),
+            Some(96000),
+        );
+        insert(
+            db,
+            "aurora/02.flac",
+            "Second",
+            "Aurora Band",
+            "Aurora",
+            2,
+            210.0,
+            "flac",
+            Some(24),
+            Some(96000),
+        );
+        insert(
+            db,
+            "aurora/03.flac",
+            "Third",
+            "Aurora Band",
+            "Aurora",
+            3,
+            220.0,
+            "flac",
+            Some(24),
+            Some(96000),
+        );
+        insert(
+            db,
+            "aurora/04.flac",
+            "Fourth",
+            "Aurora Band",
+            "Aurora",
+            4,
+            230.0,
+            "flac",
+            Some(24),
+            Some(96000),
+        );
+        insert(
+            db,
+            "aurora-deluxe/01.flac",
+            "Opening",
+            "aurora band",
+            "Aurora (Deluxe Edition)",
+            1,
+            200.5,
+            "flac",
+            Some(16),
+            Some(44100),
+        );
+        insert(
+            db,
+            "aurora-deluxe/12.flac",
+            "Bonus Cut",
+            "aurora band",
+            "Aurora (Deluxe Edition)",
+            12,
+            180.0,
+            "flac",
+            Some(16),
+            Some(44100),
+        );
 
-        insert(db, "nova/01.flac", "Dusk", "Nova", "Nightfall", 1, 250.0, "flac", Some(24), Some(96000));
-        insert(db, "nova/01.mp3", "Dusk", "Nova", "Nightfall", 1, 250.0, "mp3", None, Some(44100));
+        insert(
+            db,
+            "nova/01.flac",
+            "Dusk",
+            "Nova",
+            "Nightfall",
+            1,
+            250.0,
+            "flac",
+            Some(24),
+            Some(96000),
+        );
+        insert(
+            db,
+            "nova/01.mp3",
+            "Dusk",
+            "Nova",
+            "Nightfall",
+            1,
+            250.0,
+            "mp3",
+            None,
+            Some(44100),
+        );
 
         db.set_play_count("aurora/01.flac", 5).expect("play count");
-        db.set_play_count("aurora-deluxe/01.flac", 9).expect("play count");
-        db.set_loved("aurora-deluxe/01.flac", true, None).expect("loved");
+        db.set_play_count("aurora-deluxe/01.flac", 9)
+            .expect("play count");
+        db.set_loved("aurora-deluxe/01.flac", true, None)
+            .expect("loved");
         db.set_play_count("nova/01.flac", 3).expect("play count");
         db.set_play_count("nova/01.mp3", 1).expect("play count");
         db.set_loved("nova/01.mp3", true, None).expect("loved");
@@ -2108,18 +2211,37 @@ mod cleanup_tests {
         )
         .expect("seed variant albumInfo");
         let variant_key = job::key_album("Aurora (Deluxe Edition)", "aurora band");
-        seed_state(db, &variant_key, Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+        seed_state(
+            db,
+            &variant_key,
+            Status::Satisfied,
+            Fields::COVER.union(Fields::YEAR),
+            1,
+        );
 
         let raw = library::load(db, false);
         let consolidations = hygiene::consolidation_groups(&raw.albums);
         let duplicates = hygiene::find_duplicate_groups(&raw.tracks, &root);
 
         assert_eq!(consolidations.len(), 1, "one edition group");
-        assert_eq!(consolidations[0].canonical_title, "Aurora", "standard is the fuller pressing");
-        assert_eq!(consolidations[0].artist, "Aurora Band", "canonical carries the clean artist spelling");
+        assert_eq!(
+            consolidations[0].canonical_title, "Aurora",
+            "standard is the fuller pressing"
+        );
+        assert_eq!(
+            consolidations[0].artist, "Aurora Band",
+            "canonical carries the clean artist spelling"
+        );
         assert_eq!(consolidations[0].variants.len(), 1);
-        assert_eq!(consolidations[0].variants[0].artist, "aurora band", "variant keeps its raw artist");
-        assert_eq!(duplicates.len(), 2, "the shared track and the FLAC/MP3 pair");
+        assert_eq!(
+            consolidations[0].variants[0].artist, "aurora band",
+            "variant keeps its raw artist"
+        );
+        assert_eq!(
+            duplicates.len(),
+            2,
+            "the shared track and the FLAC/MP3 pair"
+        );
 
         let (retitles, keeper_updates, merges, losers) = plan_vectors(&consolidations, &duplicates);
         db.apply_cleanup(&retitles, &keeper_updates, &merges, &losers)
@@ -2133,28 +2255,59 @@ mod cleanup_tests {
             "no track keeps the Deluxe title"
         );
         let bonus = by_path("aurora-deluxe/12.flac").expect("bonus track survives");
-        assert_eq!(bonus.album, "Aurora", "bonus track retitled to the canonical album");
-        assert_eq!(bonus.artist, "Aurora Band", "bonus track artist converged to canonical");
+        assert_eq!(
+            bonus.album, "Aurora",
+            "bonus track retitled to the canonical album"
+        );
+        assert_eq!(
+            bonus.artist, "Aurora Band",
+            "bonus track artist converged to canonical"
+        );
 
-        assert!(by_path("aurora-deluxe/01.flac").is_none(), "Deluxe duplicate loser is gone");
-        assert!(by_path("nova/01.mp3").is_none(), "MP3 duplicate loser is gone");
+        assert!(
+            by_path("aurora-deluxe/01.flac").is_none(),
+            "Deluxe duplicate loser is gone"
+        );
+        assert!(
+            by_path("nova/01.mp3").is_none(),
+            "MP3 duplicate loser is gone"
+        );
 
         let nova_keeper = by_path("nova/01.flac").expect("FLAC keeper survives");
-        assert_eq!(nova_keeper.codec.as_deref(), Some("flac"), "the FLAC is kept");
+        assert_eq!(
+            nova_keeper.codec.as_deref(),
+            Some("flac"),
+            "the FLAC is kept"
+        );
         assert_eq!(nova_keeper.play_count, 3, "keeper takes the max play count");
         assert!(nova_keeper.loved, "keeper takes the OR of loved");
 
         let aurora_keeper = by_path("aurora/01.flac").expect("Aurora keeper survives");
-        assert_eq!(aurora_keeper.play_count, 9, "shared-track keeper takes the max play count");
-        assert!(aurora_keeper.loved, "shared-track keeper inherits loved from the loser");
+        assert_eq!(
+            aurora_keeper.play_count, 9,
+            "shared-track keeper takes the max play count"
+        );
+        assert!(
+            aurora_keeper.loved,
+            "shared-track keeper inherits loved from the loser"
+        );
 
         let canonical_info = db
             .album_info_status("Aurora", "Aurora Band")
             .expect("canonical albumInfo exists");
-        assert_eq!(canonical_info.year.as_deref(), Some("2021"), "variant year folded in");
-        assert_eq!(canonical_info.genre.as_deref(), Some("Dream Pop"), "variant genre folded in");
+        assert_eq!(
+            canonical_info.year.as_deref(),
+            Some("2021"),
+            "variant year folded in"
+        );
+        assert_eq!(
+            canonical_info.genre.as_deref(),
+            Some("Dream Pop"),
+            "variant genre folded in"
+        );
         assert!(
-            db.album_info_status("Aurora (Deluxe Edition)", "aurora band").is_none(),
+            db.album_info_status("Aurora (Deluxe Edition)", "aurora band")
+                .is_none(),
             "variant albumInfo row removed"
         );
         assert!(
@@ -2202,8 +2355,30 @@ mod cleanup_tests {
     fn reconcile_backfills_play_counts_from_scrobbles() {
         let temp = TempDb::open();
         let db = &temp.db;
-        insert(db, "a/01.flac", "Loved Song", "The Band", "Record", 1, 200.0, "flac", Some(24), Some(96000));
-        insert(db, "a/02.flac", "Never Played", "The Band", "Record", 2, 210.0, "flac", Some(24), Some(96000));
+        insert(
+            db,
+            "a/01.flac",
+            "Loved Song",
+            "The Band",
+            "Record",
+            1,
+            200.0,
+            "flac",
+            Some(24),
+            Some(96000),
+        );
+        insert(
+            db,
+            "a/02.flac",
+            "Never Played",
+            "The Band",
+            "Record",
+            2,
+            210.0,
+            "flac",
+            Some(24),
+            Some(96000),
+        );
 
         let scrobbles: Vec<(String, String, String, i64, i64, bool)> =
             [1_700_000_100i64, 1_700_000_200, 1_700_000_300]
@@ -2219,15 +2394,25 @@ mod cleanup_tests {
                     )
                 })
                 .collect();
-        db.insert_scrobbles_batch(&scrobbles).expect("insert scrobbles");
+        db.insert_scrobbles_batch(&scrobbles)
+            .expect("insert scrobbles");
 
         db.reconcile_play_counts_from_scrobbles();
 
         let tracks = db.fetch_all_tracks();
-        let loved = tracks.iter().find(|t| t.title == "Loved Song").expect("track present");
-        let never = tracks.iter().find(|t| t.title == "Never Played").expect("track present");
+        let loved = tracks
+            .iter()
+            .find(|t| t.title == "Loved Song")
+            .expect("track present");
+        let never = tracks
+            .iter()
+            .find(|t| t.title == "Never Played")
+            .expect("track present");
         assert_eq!(loved.play_count, 3, "reconciled to the scrobble count");
-        assert_eq!(never.play_count, 0, "a track with no scrobbles is left untouched");
+        assert_eq!(
+            never.play_count, 0,
+            "a track with no scrobbles is left untouched"
+        );
 
         let last_played: Option<String> = db
             .conn
@@ -2237,7 +2422,10 @@ mod cleanup_tests {
                 |row| row.get(0),
             )
             .expect("query lastPlayed");
-        assert!(last_played.is_some(), "lastPlayed stamped from MAX(scrobble timestamp)");
+        assert!(
+            last_played.is_some(),
+            "lastPlayed stamped from MAX(scrobble timestamp)"
+        );
     }
 
     #[test]
@@ -2246,7 +2434,10 @@ mod cleanup_tests {
         let db = &temp.db;
         let id = db.insert_download("https://example.com/a").expect("insert");
 
-        assert!(db.claim_download(id, "downloading"), "first claim of a queued row succeeds");
+        assert!(
+            db.claim_download(id, "downloading"),
+            "first claim of a queued row succeeds"
+        );
         assert_eq!(db.download_status(id).as_deref(), Some("downloading"));
         assert!(
             !db.claim_download(id, "downloading"),
@@ -2266,18 +2457,42 @@ mod cleanup_tests {
     fn expand_playlist_is_atomic() {
         let temp = TempDb::open();
         let db = &temp.db;
-        let link = db.insert_download("https://example.com/list").expect("insert");
+        let link = db
+            .insert_download("https://example.com/list")
+            .expect("insert");
         let entries = vec![
-            ("https://example.com/1".to_string(), "One".to_string(), "Artist".to_string(), 1),
-            ("https://example.com/2".to_string(), "Two".to_string(), "Artist".to_string(), 2),
+            (
+                "https://example.com/1".to_string(),
+                "One".to_string(),
+                "Artist".to_string(),
+                1,
+            ),
+            (
+                "https://example.com/2".to_string(),
+                "Two".to_string(),
+                "Artist".to_string(),
+                2,
+            ),
         ];
-        db.expand_playlist(link, &entries, "The List").expect("expand");
+        db.expand_playlist(link, &entries, "The List")
+            .expect("expand");
 
-        assert!(db.download_status(link).is_none(), "the link row is gone after expansion");
+        assert!(
+            db.download_status(link).is_none(),
+            "the link row is gone after expansion"
+        );
         let rows = db.download_rows();
-        assert_eq!(rows.len(), 2, "one row per playlist entry, no leftover link row");
-        assert!(rows.iter().all(|r| r.kind == "track" && r.status == "queued"));
-        assert!(rows.iter().any(|r| r.playlist_index == Some(1) && r.title.as_deref() == Some("One")));
+        assert_eq!(
+            rows.len(),
+            2,
+            "one row per playlist entry, no leftover link row"
+        );
+        assert!(rows
+            .iter()
+            .all(|r| r.kind == "track" && r.status == "queued"));
+        assert!(rows
+            .iter()
+            .any(|r| r.playlist_index == Some(1) && r.title.as_deref() == Some("One")));
     }
 
     fn seed_state(db: &Db, key: &str, status: Status, fields: Fields, attempts: i64) {
@@ -2301,20 +2516,56 @@ mod cleanup_tests {
     fn due_queue_follows_the_durable_state() {
         let temp = TempDb::open();
         let db = &temp.db;
-        insert(db, "a/01.flac", "One", "Alpha", "First", 1, 100.0, "flac", Some(16), Some(44100));
-        insert(db, "b/01.flac", "Two", "Beta", "Second", 1, 100.0, "flac", Some(16), Some(44100));
+        insert(
+            db,
+            "a/01.flac",
+            "One",
+            "Alpha",
+            "First",
+            1,
+            100.0,
+            "flac",
+            Some(16),
+            Some(44100),
+        );
+        insert(
+            db,
+            "b/01.flac",
+            "Two",
+            "Beta",
+            "Second",
+            1,
+            100.0,
+            "flac",
+            Some(16),
+            Some(44100),
+        );
         let now = Utc::now();
         let version = Scope::Album.current_version();
 
-        assert_eq!(db.due_album_keys(version, now, 10).len(), 2, "an album with no state row is due");
-        assert_eq!(db.count_due(Scope::Album, version, now), 2, "the count agrees with the queue");
+        assert_eq!(
+            db.due_album_keys(version, now, 10).len(),
+            2,
+            "an album with no state row is due"
+        );
+        assert_eq!(
+            db.count_due(Scope::Album, version, now),
+            2,
+            "the count agrees with the queue"
+        );
         assert_eq!(
             db.due_artist_names(Scope::Artist.current_version(), now, 10),
             vec!["Alpha".to_string(), "Beta".to_string()],
             "artists are their own queue, in name order"
         );
 
-        seed_state(db, &job::key_album("First", "Alpha"), Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+        seed_state(
+            db,
+            &job::key_album("First", "Alpha"),
+            Status::Satisfied,
+            Fields::COVER.union(Fields::YEAR),
+            1,
+        );
         assert_eq!(
             db.due_album_keys(version, now, 10),
             vec![("Second".to_string(), "Beta".to_string())],
@@ -2322,18 +2573,34 @@ mod cleanup_tests {
         );
         assert_eq!(db.count_due(Scope::Album, version, now), 1);
 
-        seed_state(db, &job::key_album("Second", "Beta"), Status::Exhausted, Fields::NONE, 4);
-        assert!(db.due_album_keys(version, now, 10).is_empty(), "a terminal album leaves the queue");
+        seed_state(
+            db,
+            &job::key_album("Second", "Beta"),
+            Status::Exhausted,
+            Fields::NONE,
+            4,
+        );
+        assert!(
+            db.due_album_keys(version, now, 10).is_empty(),
+            "a terminal album leaves the queue"
+        );
         assert_eq!(db.count_due(Scope::Album, version, now), 0);
         assert_eq!(db.count_exhausted(Scope::Album), 1);
-        assert_eq!(db.exhausted_entities(Scope::Album).len(), 1, "the report lists it");
+        assert_eq!(
+            db.exhausted_entities(Scope::Album).len(),
+            1,
+            "the report lists it"
+        );
     }
 
     #[test]
     fn library_debut_round_trips() {
         let temp = TempDb::open();
         let db = &temp.db;
-        assert!(db.library_debut().is_none(), "no debut until a build produces one");
+        assert!(
+            db.library_debut().is_none(),
+            "no debut until a build produces one"
+        );
 
         let summary = DebutSummary {
             track_count: 2847,
@@ -2397,19 +2664,59 @@ mod cleanup_tests {
     fn orphan_sweep_drops_removed_albums() {
         let temp = TempDb::open();
         let db = &temp.db;
-        insert(db, "keep/01.flac", "Kept", "Stayer", "Stays", 1, 100.0, "flac", Some(16), Some(44100));
-        insert(db, "gone/01.flac", "Left", "Leaver", "Leaves", 1, 100.0, "flac", Some(16), Some(44100));
+        insert(
+            db,
+            "keep/01.flac",
+            "Kept",
+            "Stayer",
+            "Stays",
+            1,
+            100.0,
+            "flac",
+            Some(16),
+            Some(44100),
+        );
+        insert(
+            db,
+            "gone/01.flac",
+            "Left",
+            "Leaver",
+            "Leaves",
+            1,
+            100.0,
+            "flac",
+            Some(16),
+            Some(44100),
+        );
         let kept_key = job::key_album("Stays", "Stayer");
         let gone_key = job::key_album("Leaves", "Leaver");
-        seed_state(db, &kept_key, Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
-        seed_state(db, &gone_key, Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+        seed_state(
+            db,
+            &kept_key,
+            Status::Satisfied,
+            Fields::COVER.union(Fields::YEAR),
+            1,
+        );
+        seed_state(
+            db,
+            &gone_key,
+            Status::Satisfied,
+            Fields::COVER.union(Fields::YEAR),
+            1,
+        );
 
         let mut keep = HashSet::new();
         keep.insert("keep/01.flac".to_string());
         let removed = db.delete_tracks_not_in(&keep).expect("delete");
 
-        assert_eq!(removed, 1, "exactly the track that left the disk is deleted");
-        assert!(state_row(db, &kept_key).is_some(), "a surviving album keeps its verdict");
+        assert_eq!(
+            removed, 1,
+            "exactly the track that left the disk is deleted"
+        );
+        assert!(
+            state_row(db, &kept_key).is_some(),
+            "a surviving album keeps its verdict"
+        );
         assert!(
             state_row(db, &gone_key).is_none(),
             "the departed album's enrichment state is swept in the same transaction"
@@ -2423,7 +2730,18 @@ mod cleanup_tests {
     fn apply_album_enrichment_no_longer_stamps_last_fetched() {
         let temp = TempDb::open();
         let db = &temp.db;
-        insert(db, "a/01.flac", "One", "Band", "Record", 1, 100.0, "flac", Some(16), Some(44100));
+        insert(
+            db,
+            "a/01.flac",
+            "One",
+            "Band",
+            "Record",
+            1,
+            100.0,
+            "flac",
+            Some(16),
+            Some(44100),
+        );
 
         db.apply_album_enrichment("Record", "Band", Some("1994"), None, None, None, None)
             .expect("apply enrichment");
@@ -2437,10 +2755,21 @@ mod cleanup_tests {
             )
             .expect("albumInfo row");
         assert_eq!(year.as_deref(), Some("1994"), "the missing year is filled");
-        assert!(last_fetched.is_none(), "no retry stamp is written to albumInfo");
+        assert!(
+            last_fetched.is_none(),
+            "no retry stamp is written to albumInfo"
+        );
 
-        db.apply_album_enrichment("Record", "Band", Some("2001"), Some("Jazz"), None, None, None)
-            .expect("apply enrichment again");
+        db.apply_album_enrichment(
+            "Record",
+            "Band",
+            Some("2001"),
+            Some("Jazz"),
+            None,
+            None,
+            None,
+        )
+        .expect("apply enrichment again");
         let year: Option<String> = db
             .conn
             .query_row(
@@ -2449,7 +2778,11 @@ mod cleanup_tests {
                 |row| row.get(0),
             )
             .expect("albumInfo row");
-        assert_eq!(year.as_deref(), Some("1994"), "fill-missing never overwrites what is there");
+        assert_eq!(
+            year.as_deref(),
+            Some("1994"),
+            "fill-missing never overwrites what is there"
+        );
     }
 
     /// "Try Again" means exactly the entities that gave up, and it must not
@@ -2460,7 +2793,13 @@ mod cleanup_tests {
         let db = &temp.db;
         seed_state(db, "pending", Status::Pending, Fields::NONE, 0);
         seed_state(db, "partial", Status::Partial, Fields::COVER, 2);
-        seed_state(db, "satisfied", Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+        seed_state(
+            db,
+            "satisfied",
+            Status::Satisfied,
+            Fields::COVER.union(Fields::YEAR),
+            1,
+        );
         seed_state(db, "exhausted", Status::Exhausted, Fields::COVER, 4);
 
         assert_eq!(db.count_exhausted(Scope::Album), 1);
@@ -2473,10 +2812,24 @@ mod cleanup_tests {
         assert_eq!(revived_row.attempts, 0, "the ladder starts over");
         assert!(revived_row.next_eligible_at.is_none());
         assert!(revived_row.last_failure.is_none());
-        assert_eq!(revived_row.fields, Fields::COVER, "partial resolution is preserved");
+        assert_eq!(
+            revived_row.fields,
+            Fields::COVER,
+            "partial resolution is preserved"
+        );
 
-        assert_eq!(state_row(db, "partial").expect("row").attempts, 2, "a backing-off row is untouched");
-        assert_eq!(state_row(db, "satisfied").expect("row").status, Status::Satisfied);
-        assert_eq!(state_row(db, "pending").expect("row").status, Status::Pending);
+        assert_eq!(
+            state_row(db, "partial").expect("row").attempts,
+            2,
+            "a backing-off row is untouched"
+        );
+        assert_eq!(
+            state_row(db, "satisfied").expect("row").status,
+            Status::Satisfied
+        );
+        assert_eq!(
+            state_row(db, "pending").expect("row").status,
+            Status::Pending
+        );
     }
 }

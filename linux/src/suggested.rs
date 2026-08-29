@@ -94,8 +94,7 @@ fn heavy_rotation(
         "The songs you keep coming back to"
     };
     let ordered = ordered_owned_tracks(pool_by_key, counts);
-    let mut tracks =
-        station::spaced_by_artist(ordered.into_iter().take(MAX_TRACKS * 2).collect());
+    let mut tracks = station::spaced_by_artist(ordered.into_iter().take(MAX_TRACKS * 2).collect());
     tracks.truncate(MAX_TRACKS);
     if tracks.len() < MIN_TRACKS {
         return None;
@@ -162,8 +161,7 @@ fn rediscover(
         .map(|(k, v)| (k.clone(), *v))
         .collect();
     let ordered = ordered_owned_tracks(pool_by_key, &filtered);
-    let mut tracks =
-        station::spaced_by_artist(ordered.into_iter().take(MAX_TRACKS * 2).collect());
+    let mut tracks = station::spaced_by_artist(ordered.into_iter().take(MAX_TRACKS * 2).collect());
     tracks.truncate(MAX_TRACKS);
     if tracks.len() < MIN_TRACKS {
         return None;
@@ -291,7 +289,10 @@ fn stable_mix(day_seed: i64, title: &str, artist: &str) -> f64 {
     let mut hash: u64 = 5381u64.wrapping_add(day_seed as u64);
     let bytes = format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase());
     for byte in bytes.bytes() {
-        hash = hash.wrapping_shl(5).wrapping_add(hash).wrapping_add(byte as u64);
+        hash = hash
+            .wrapping_shl(5)
+            .wrapping_add(hash)
+            .wrapping_add(byte as u64);
     }
     (hash % 10_000) as f64 / 10_000.0
 }
@@ -340,7 +341,9 @@ mod tests {
 
     #[test]
     fn heavy_rotation_uses_month_counts_when_enough() {
-        let pool: Vec<Track> = (0..12).map(|i| format!("t{i}")).enumerate()
+        let pool: Vec<Track> = (0..12)
+            .map(|i| format!("t{i}"))
+            .enumerate()
             .map(|(i, t)| track(&t, &format!("artist{}", i % 4)))
             .collect();
         let mut rows = Vec::new();
@@ -350,14 +353,19 @@ mod tests {
             }
         }
         let result = build(&pool, &rows, NOW);
-        let heavy = result.iter().find(|p| p.id == "heavy-rotation").expect("heavy");
+        let heavy = result
+            .iter()
+            .find(|p| p.id == "heavy-rotation")
+            .expect("heavy");
         assert_eq!(heavy.subtitle, "Your most-played this month");
         assert!(heavy.tracks.len() >= 8);
     }
 
     #[test]
     fn heavy_rotation_falls_back_to_all_time() {
-        let pool: Vec<Track> = (0..12).map(|i| format!("t{i}")).enumerate()
+        let pool: Vec<Track> = (0..12)
+            .map(|i| format!("t{i}"))
+            .enumerate()
             .map(|(i, t)| track(&t, &format!("artist{}", i % 4)))
             .collect();
         let mut rows = Vec::new();
@@ -365,26 +373,36 @@ mod tests {
             rows.push(row(&t.title, &t.artist, NOW - 200 * 86_400));
         }
         let result = build(&pool, &rows, NOW);
-        let heavy = result.iter().find(|p| p.id == "heavy-rotation").expect("heavy");
+        let heavy = result
+            .iter()
+            .find(|p| p.id == "heavy-rotation")
+            .expect("heavy");
         assert_eq!(heavy.subtitle, "The songs you keep coming back to");
     }
 
     #[test]
     fn on_repeat_requires_eight_owned_tracks_by_top_artist() {
-        let pool: Vec<Track> = (0..9).map(|i| track(&format!("t{i}"), "Big Artist")).collect();
+        let pool: Vec<Track> = (0..9)
+            .map(|i| track(&format!("t{i}"), "Big Artist"))
+            .collect();
         let mut rows = Vec::new();
         for t in &pool {
             rows.push(row(&t.title, &t.artist, NOW - 86_400));
         }
         let result = build(&pool, &rows, NOW);
-        let repeat = result.iter().find(|p| p.id == "on-repeat").expect("on-repeat");
+        let repeat = result
+            .iter()
+            .find(|p| p.id == "on-repeat")
+            .expect("on-repeat");
         assert_eq!(repeat.subtitle, "The best of Big Artist");
         assert_eq!(repeat.tracks.len(), 9);
     }
 
     #[test]
     fn rediscover_excludes_recently_played() {
-        let old: Vec<Track> = (0..10).map(|i| track(&format!("old{i}"), &format!("a{}", i % 3))).collect();
+        let old: Vec<Track> = (0..10)
+            .map(|i| track(&format!("old{i}"), &format!("a{}", i % 3)))
+            .collect();
         let fresh = track("fresh", "b");
         let mut pool = old.clone();
         pool.push(fresh.clone());
@@ -398,7 +416,10 @@ mod tests {
             rows.push(row(&fresh.title, &fresh.artist, NOW - 86_400));
         }
         let result = build(&pool, &rows, NOW);
-        let rediscover = result.iter().find(|p| p.id == "rediscover").expect("rediscover");
+        let rediscover = result
+            .iter()
+            .find(|p| p.id == "rediscover")
+            .expect("rediscover");
         assert!(rediscover.tracks.iter().all(|t| t.title != "fresh"));
         assert_eq!(rediscover.tracks.len(), 10);
     }

@@ -74,11 +74,7 @@ pub fn dominant_color(rgba: &[u8], width: u32, height: u32) -> (u8, u8, u8) {
             let sy = y * height / 24;
             let idx = ((sy * width + sx) * 4) as usize;
             if idx + 2 < rgba.len() {
-                pixels.push([
-                    rgba[idx] as f64,
-                    rgba[idx + 1] as f64,
-                    rgba[idx + 2] as f64,
-                ]);
+                pixels.push([rgba[idx] as f64, rgba[idx + 1] as f64, rgba[idx + 2] as f64]);
             }
         }
     }
@@ -86,9 +82,7 @@ pub fn dominant_color(rgba: &[u8], width: u32, height: u32) -> (u8, u8, u8) {
         return (72, 72, 96);
     }
     let k = 4usize.min(pixels.len());
-    let mut centroids: Vec<[f64; 3]> = (0..k)
-        .map(|i| pixels[i * pixels.len() / k])
-        .collect();
+    let mut centroids: Vec<[f64; 3]> = (0..k).map(|i| pixels[i * pixels.len() / k]).collect();
     let mut assignments = vec![0usize; pixels.len()];
     for _ in 0..6 {
         for (pi, pixel) in pixels.iter().enumerate() {

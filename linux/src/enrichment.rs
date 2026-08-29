@@ -656,7 +656,10 @@ fn enrich_artist(db: &Db, client: Option<&LastFmClient>, gates: &Gates, name: &s
         mbid.as_deref(),
         &record,
     ) {
-        crate::logger::error("enrichment", &format!("artist write failed for {name}: {err}"));
+        crate::logger::error(
+            "enrichment",
+            &format!("artist write failed for {name}: {err}"),
+        );
         return false;
     }
     bio.is_some() || image_url.is_some()
@@ -713,7 +716,8 @@ fn settle_album(
     artist: &str,
 ) {
     job::apply(record, Scope::Album, resolved, None, now);
-    if let Err(err) = db.commit_album_enrichment(title, artist, None, None, None, None, None, record)
+    if let Err(err) =
+        db.commit_album_enrichment(title, artist, None, None, None, None, None, record)
     {
         crate::logger::error(
             "enrichment",

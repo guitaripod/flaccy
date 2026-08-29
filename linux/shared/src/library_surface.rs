@@ -129,7 +129,13 @@ mod tests {
         let mut router = SurfaceRouter::new();
         let _ = router.route(&scanning(), &JobProgress::idle(), false, false, 0.0);
         assert_eq!(
-            router.route(&LoadProgress::default(), &JobProgress::idle(), false, true, 1.0),
+            router.route(
+                &LoadProgress::default(),
+                &JobProgress::idle(),
+                false,
+                true,
+                1.0
+            ),
             Surface::None
         );
         assert!(router.debut_is_pending());
@@ -142,7 +148,13 @@ mod tests {
         router.release_debut();
         assert!(!router.debut_is_pending());
         assert_eq!(
-            router.route(&LoadProgress::default(), &JobProgress::idle(), true, true, 1.0),
+            router.route(
+                &LoadProgress::default(),
+                &JobProgress::idle(),
+                true,
+                true,
+                1.0
+            ),
             Surface::None
         );
     }
@@ -164,7 +176,13 @@ mod tests {
             Surface::None
         );
         assert_eq!(
-            router.route(&LoadProgress::default(), &working(1), true, true, AMBIENT_GRACE),
+            router.route(
+                &LoadProgress::default(),
+                &working(1),
+                true,
+                true,
+                AMBIENT_GRACE
+            ),
             Surface::Ambient
         );
     }
@@ -213,7 +231,13 @@ mod tests {
     fn surface_is_none_when_nothing_is_happening() {
         let mut router = SurfaceRouter::new();
         assert_eq!(
-            router.route(&LoadProgress::default(), &JobProgress::idle(), true, true, 10.0),
+            router.route(
+                &LoadProgress::default(),
+                &JobProgress::idle(),
+                true,
+                true,
+                10.0
+            ),
             Surface::None
         );
     }

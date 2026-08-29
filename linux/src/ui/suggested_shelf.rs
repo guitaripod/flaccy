@@ -21,7 +21,10 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .build();
     shelf.set_visible(false);
 
-    let title = gtk::Label::builder().label("MADE FOR YOU").xalign(0.0).build();
+    let title = gtk::Label::builder()
+        .label("MADE FOR YOU")
+        .xalign(0.0)
+        .build();
     title.add_css_class("stat-caption");
     shelf.append(&title);
 
@@ -115,11 +118,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     {
         let run_recompute = Rc::clone(&run_recompute);
-        ui.core.hub.subscribe_widget(&shelf, move |_, event| match event {
-            AppEvent::LibraryReloaded => run_recompute(),
-            AppEvent::HistoryImport { done: true, .. } => run_recompute(),
-            _ => {}
-        });
+        ui.core
+            .hub
+            .subscribe_widget(&shelf, move |_, event| match event {
+                AppEvent::LibraryReloaded => run_recompute(),
+                AppEvent::HistoryImport { done: true, .. } => run_recompute(),
+                _ => {}
+            });
     }
 
     shelf.upcast()
@@ -164,12 +169,19 @@ fn card(ui: &Rc<Ui>, playlist: &SuggestedPlaylist) -> gtk::Widget {
     text_box.set_valign(gtk::Align::Center);
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     header.append(&gtk::Image::from_icon_name(playlist.icon_name));
-    let name = gtk::Label::builder().label(&playlist.title).xalign(0.0).build();
+    let name = gtk::Label::builder()
+        .label(&playlist.title)
+        .xalign(0.0)
+        .build();
     name.add_css_class("album-title");
     header.append(&name);
     text_box.append(&header);
     let subtitle = gtk::Label::builder()
-        .label(format!("{} · {} songs", playlist.subtitle, playlist.tracks.len()))
+        .label(format!(
+            "{} · {} songs",
+            playlist.subtitle,
+            playlist.tracks.len()
+        ))
         .xalign(0.0)
         .ellipsize(pango::EllipsizeMode::End)
         .build();

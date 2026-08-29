@@ -74,7 +74,9 @@ pub fn rank<'a>(
 /// True when the deterministic ranking is clear enough to skip the language
 /// model: a confident leader that no one is close to.
 pub fn decisive(scored: &[Scored]) -> bool {
-    let Some(best) = scored.first() else { return false };
+    let Some(best) = scored.first() else {
+        return false;
+    };
     if best.score < ACCEPT {
         return false;
     }
@@ -149,7 +151,10 @@ fn phrase_score(haystack: &str, needle: &str) -> f64 {
     if words.is_empty() {
         return 0.0;
     }
-    let hits = words.iter().filter(|word| haystack.contains(**word)).count();
+    let hits = words
+        .iter()
+        .filter(|word| haystack.contains(**word))
+        .count();
     let ratio = hits as f64 / words.len() as f64;
     if ratio < 0.6 {
         0.0
@@ -280,9 +285,33 @@ fn contains_word(haystack: &str, needle: &str) -> bool {
 /// "Acoustic", "Live", a remixer's name — identifies a different recording and
 /// is kept, because that recording has a different video or none at all.
 const PRESSING_WORDS: [&str; 27] = [
-    "album", "single", "version", "radio", "edit", "remaster", "remastered", "remasters", "mono",
-    "stereo", "explicit", "clean", "bonus", "track", "deluxe", "edition", "anniversary",
-    "expanded", "original", "mix", "master", "mastered", "digital", "reissue", "hd", "hq", "the",
+    "album",
+    "single",
+    "version",
+    "radio",
+    "edit",
+    "remaster",
+    "remastered",
+    "remasters",
+    "mono",
+    "stereo",
+    "explicit",
+    "clean",
+    "bonus",
+    "track",
+    "deluxe",
+    "edition",
+    "anniversary",
+    "expanded",
+    "original",
+    "mix",
+    "master",
+    "mastered",
+    "digital",
+    "reissue",
+    "hd",
+    "hq",
+    "the",
 ];
 
 /// The song title as it should be searched for: the library's title with any
@@ -330,7 +359,10 @@ pub fn search_title(title: &str) -> String {
 
 fn is_pressing_qualifier(group: &str) -> bool {
     let normalized = normalize(group);
-    let mut words = normalized.split(' ').filter(|word| !word.is_empty()).peekable();
+    let mut words = normalized
+        .split(' ')
+        .filter(|word| !word.is_empty())
+        .peekable();
     if words.peek().is_none() {
         return false;
     }
@@ -385,8 +417,14 @@ mod tests {
 
     #[test]
     fn a_pressing_qualifier_is_not_part_of_the_song() {
-        assert_eq!(search_title("Heart-Shaped Box (Album Version)"), "Heart-Shaped Box");
-        assert_eq!(search_title("Come As You Are (2013 Mix)"), "Come As You Are");
+        assert_eq!(
+            search_title("Heart-Shaped Box (Album Version)"),
+            "Heart-Shaped Box"
+        );
+        assert_eq!(
+            search_title("Come As You Are (2013 Mix)"),
+            "Come As You Are"
+        );
         assert_eq!(search_title("Song [Remastered 2011]"), "Song");
         assert_eq!(search_title("Song (Radio Edit)"), "Song");
         assert_eq!(search_title("Song (Original Mix)"), "Song");
@@ -395,7 +433,10 @@ mod tests {
     #[test]
     fn a_different_performance_keeps_its_qualifier() {
         assert_eq!(search_title("Song (Acoustic)"), "Song (Acoustic)");
-        assert_eq!(search_title("Song (Live at Wembley)"), "Song (Live at Wembley)");
+        assert_eq!(
+            search_title("Song (Live at Wembley)"),
+            "Song (Live at Wembley)"
+        );
         assert_eq!(search_title("Song (Kaskade Remix)"), "Song (Kaskade Remix)");
         assert_eq!(
             search_title("Heart Shaped Box (Original Steve Albini 1993 Mix)"),
@@ -412,7 +453,10 @@ mod tests {
 
     #[test]
     fn normalizes_punctuation_and_case() {
-        assert_eq!(normalize("Instant Crush (Official Video)"), "instant crush official video");
+        assert_eq!(
+            normalize("Instant Crush (Official Video)"),
+            "instant crush official video"
+        );
         assert_eq!(normalize("Don't — Stop!"), "don t stop");
         assert_eq!(normalize("  "), "");
     }
@@ -436,7 +480,11 @@ mod tests {
             ),
             candidate("UNOFFICIAL Daft Punk - Instant Crush", "Daniel m", 333.0),
             candidate("Daft Punk - Instant Crush (Lyrics)", "7clouds", 330.0),
-            candidate("Instant Crush - Daft Punk, Unofficial, Extended", "Yuri Zhukov", 735.0),
+            candidate(
+                "Instant Crush - Daft Punk, Unofficial, Extended",
+                "Yuri Zhukov",
+                735.0,
+            ),
         ];
         let ranked = rank("Instant Crush", "Daft Punk", 337.0, &candidates);
         assert_eq!(ranked[0].candidate.channel, "Daft Punk");
@@ -467,7 +515,12 @@ mod tests {
                 251.0,
                 80_558_943,
             ),
-            watched("Avenged Sevenfold - Bat Country / Lyrics", "MOSHPIT", 312.0, 2_071_488),
+            watched(
+                "Avenged Sevenfold - Bat Country / Lyrics",
+                "MOSHPIT",
+                312.0,
+                2_071_488,
+            ),
             watched(
                 "Avenged Sevenfold - Bat Country - Official  Video!",
                 "VengeanceTelevision",
@@ -486,12 +539,20 @@ mod tests {
                 330.0,
                 1_535_325,
             ),
-            watched("Avenged Sevenfold - Bat Country", "lavenged7xl", 314.0, 264_601),
+            watched(
+                "Avenged Sevenfold - Bat Country",
+                "lavenged7xl",
+                314.0,
+                264_601,
+            ),
         ];
         let ranked = rank("Bat Country", "Avenged Sevenfold", 313.0, &candidates);
         assert_eq!(ranked[0].candidate.channel, "Avenged Sevenfold");
         assert!(ranked[0].score >= ACCEPT);
-        assert!(decisive(&ranked), "the official upload should not need a tie-break");
+        assert!(
+            decisive(&ranked),
+            "the official upload should not need a tie-break"
+        );
     }
 
     #[test]
@@ -508,7 +569,12 @@ mod tests {
     #[test]
     fn reach_separates_an_official_upload_from_a_faithful_copy() {
         let candidates = vec![
-            watched("Artist - Song (Official Video)", "Artist", 200.0, 50_000_000),
+            watched(
+                "Artist - Song (Official Video)",
+                "Artist",
+                200.0,
+                50_000_000,
+            ),
             watched("Artist - Song (Official Video)", "Artist Fan", 200.0, 900),
         ];
         let ranked = rank("Song", "Artist", 200.0, &candidates);
@@ -532,7 +598,11 @@ mod tests {
     fn topic_uploads_lose_to_a_real_video() {
         let candidates = vec![
             candidate("Instant Crush", "Daft Punk - Topic", 337.0),
-            candidate("Daft Punk - Instant Crush (Official Video)", "DaftPunkVEVO", 340.0),
+            candidate(
+                "Daft Punk - Instant Crush (Official Video)",
+                "DaftPunkVEVO",
+                340.0,
+            ),
         ];
         let ranked = rank("Instant Crush", "Daft Punk", 337.0, &candidates);
         assert_eq!(ranked[0].candidate.channel, "DaftPunkVEVO");
@@ -564,7 +634,12 @@ mod tests {
             "Calvin Harris",
             210.0,
         )];
-        let ranked = rank("Feel So Close", "Calvin Harris feat. Example", 208.0, &candidates);
+        let ranked = rank(
+            "Feel So Close",
+            "Calvin Harris feat. Example",
+            208.0,
+            &candidates,
+        );
         assert!(ranked[0].score >= ACCEPT);
     }
 }

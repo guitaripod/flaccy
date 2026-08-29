@@ -390,7 +390,9 @@ fn compose(value: &str) -> String {
 }
 
 fn composed(base: char, mark: char) -> Option<char> {
-    let (_, bases, composed) = COMPOSITIONS.iter().find(|(candidate, _, _)| *candidate == mark)?;
+    let (_, bases, composed) = COMPOSITIONS
+        .iter()
+        .find(|(candidate, _, _)| *candidate == mark)?;
     let index = bases.chars().position(|candidate| candidate == base)?;
     composed.chars().nth(index)
 }
@@ -840,11 +842,7 @@ mod tests {
     #[test]
     fn not_found_backs_off_one_day_seven_days_thirty_days_then_exhausts() {
         let mut state = record(Status::Pending, Fields::NONE);
-        let ladder = [
-            Duration::days(1),
-            Duration::days(7),
-            Duration::days(30),
-        ];
+        let ladder = [Duration::days(1), Duration::days(7), Duration::days(30)];
         for (index, step) in ladder.iter().enumerate() {
             apply(
                 &mut state,
@@ -867,7 +865,11 @@ mod tests {
         assert_eq!(state.attempts, 4);
         assert_eq!(state.status, Status::Exhausted);
         assert_eq!(state.next_eligible_at, None);
-        assert!(!is_due(Some(&state), Scope::Album, now() + Duration::days(4000)));
+        assert!(!is_due(
+            Some(&state),
+            Scope::Album,
+            now() + Duration::days(4000)
+        ));
     }
 
     #[test]
@@ -1022,7 +1024,10 @@ mod tests {
             for pair in composed.chars() {
                 assert!(!pair.is_ascii(), "{mark:?} composes to bare {pair:?}");
                 assert!(pair.is_lowercase(), "{mark:?} composes to {pair:?}");
-                assert!(seen.insert(pair), "{pair:?} is produced by two different marks");
+                assert!(
+                    seen.insert(pair),
+                    "{pair:?} is produced by two different marks"
+                );
             }
         }
     }
@@ -1175,14 +1180,21 @@ mod tests {
         /// 36 seeded rows covering every status × schedule × field mask, plus
         /// four albums with no state row at all — the "never attempted" case
         /// the `e.key IS NULL` arm exists for.
-        fn seed_matrix(conn: &Connection, at: DateTime<Utc>) -> Vec<(String, Option<EnrichmentRecord>)> {
+        fn seed_matrix(
+            conn: &Connection,
+            at: DateTime<Utc>,
+        ) -> Vec<(String, Option<EnrichmentRecord>)> {
             let statuses = [
                 Status::Pending,
                 Status::Satisfied,
                 Status::Exhausted,
                 Status::Partial,
             ];
-            let masks = [Fields::NONE, Fields::COVER, Fields::COVER.union(Fields::YEAR)];
+            let masks = [
+                Fields::NONE,
+                Fields::COVER,
+                Fields::COVER.union(Fields::YEAR),
+            ];
             let schedules = [
                 None,
                 Some(at - Duration::days(1)),
@@ -1196,7 +1208,8 @@ mod tests {
                         let title = spelling(index);
                         let artist = credited(index);
                         insert_track(conn, index, &title, &artist);
-                        let mut state = EnrichmentRecord::new(Scope::Album, key_album(&title, &artist));
+                        let mut state =
+                            EnrichmentRecord::new(Scope::Album, key_album(&title, &artist));
                         state.status = status;
                         state.fields = mask;
                         state.version = (index % 2) as i64;
@@ -1537,11 +1550,14 @@ mod tests {
             };
 
             conn.execute(SEED_ALBUM_STATE_SQL, []).expect("album seed");
-            conn.execute(SEED_ARTIST_STATE_SQL, []).expect("artist seed");
+            conn.execute(SEED_ARTIST_STATE_SQL, [])
+                .expect("artist seed");
             let first = snapshot(&conn);
 
-            conn.execute(SEED_ALBUM_STATE_SQL, []).expect("album reseed");
-            conn.execute(SEED_ARTIST_STATE_SQL, []).expect("artist reseed");
+            conn.execute(SEED_ALBUM_STATE_SQL, [])
+                .expect("album reseed");
+            conn.execute(SEED_ARTIST_STATE_SQL, [])
+                .expect("artist reseed");
             let second = snapshot(&conn);
 
             assert_eq!(first, second);
@@ -1554,7 +1570,10 @@ mod tests {
                     .unwrap_or_else(|| panic!("missing {key}"));
                 (row.2, row.3, row.4)
             };
-            assert_eq!(album_of(&key_album("Kind of Blue", "Miles Davis")), (0, 1, 15));
+            assert_eq!(
+                album_of(&key_album("Kind of Blue", "Miles Davis")),
+                (0, 1, 15)
+            );
             assert_eq!(album_of(&key_album("  Homogenic ", "Bjork")), (0, 0, 0));
             assert_eq!(album_of(&key_album("Blue", "Joni Mitchell")), (0, 0, 1));
             assert_eq!(

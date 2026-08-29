@@ -118,7 +118,13 @@ pub fn track_station(
     excluding: &std::collections::HashSet<String>,
     limit: usize,
 ) -> Vec<Track> {
-    let mut station = artist_station(&seed_track.artist, similar_in_library, pool, excluding, limit);
+    let mut station = artist_station(
+        &seed_track.artist,
+        similar_in_library,
+        pool,
+        excluding,
+        limit,
+    );
     if !excluding.contains(&seed_track.rel_path) {
         station.retain(|t| t.rel_path != seed_track.rel_path);
         station.insert(0, seed_track.clone());
@@ -308,7 +314,10 @@ mod tests {
                 adjacent += 1;
             }
         }
-        assert!(adjacent <= 1, "too many adjacent same-artist pairs: {adjacent}");
+        assert!(
+            adjacent <= 1,
+            "too many adjacent same-artist pairs: {adjacent}"
+        );
     }
 
     #[test]
@@ -336,7 +345,11 @@ mod tests {
 
     #[test]
     fn track_station_puts_seed_first() {
-        let pool = vec![track("s1", "Seed"), track("s2", "Seed"), track("s3", "Seed")];
+        let pool = vec![
+            track("s1", "Seed"),
+            track("s2", "Seed"),
+            track("s3", "Seed"),
+        ];
         let seed = pool[1].clone();
         let excluding = std::collections::HashSet::new();
         let station = track_station(&seed, &[], &pool, &excluding, 60);

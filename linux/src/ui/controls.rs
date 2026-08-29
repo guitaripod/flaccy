@@ -182,7 +182,11 @@ pub fn track_index_cell(text: &str) -> TrackIndexCell {
     let slot = gtk::Overlay::new();
     slot.set_child(Some(&number));
     slot.add_overlay(&indicator);
-    TrackIndexCell { widget: slot.upcast(), number, indicator }
+    TrackIndexCell {
+        widget: slot.upcast(),
+        number,
+        indicator,
+    }
 }
 
 impl TrackIndexCell {
@@ -192,7 +196,11 @@ impl TrackIndexCell {
         let slot = widget.downcast_ref::<gtk::Overlay>()?;
         let number = slot.child().and_downcast::<gtk::Label>()?;
         let indicator = number.next_sibling().and_downcast::<gtk::DrawingArea>()?;
-        Some(TrackIndexCell { widget: widget.clone(), number, indicator })
+        Some(TrackIndexCell {
+            widget: widget.clone(),
+            number,
+            indicator,
+        })
     }
 
     pub fn set_text(&self, text: &str) {
@@ -276,8 +284,20 @@ fn rounded_bar(cr: &gtk::cairo::Context, x: f64, y: f64, width: f64, height: f64
     cr.new_sub_path();
     cr.arc(right - radius, y + radius, radius, -half_pi, 0.0);
     cr.arc(right - radius, bottom - radius, radius, 0.0, half_pi);
-    cr.arc(x + radius, bottom - radius, radius, half_pi, std::f64::consts::PI);
-    cr.arc(x + radius, y + radius, radius, std::f64::consts::PI, 3.0 * half_pi);
+    cr.arc(
+        x + radius,
+        bottom - radius,
+        radius,
+        half_pi,
+        std::f64::consts::PI,
+    );
+    cr.arc(
+        x + radius,
+        y + radius,
+        radius,
+        std::f64::consts::PI,
+        3.0 * half_pi,
+    );
     cr.close_path();
 }
 
@@ -353,21 +373,25 @@ pub fn attach_now_playing_row(
     );
 
     let ui_ref = Rc::clone(ui);
-    ui.core.hub.subscribe_widget(row, move |_, event| match event {
-        AppEvent::TrackChanged(track) => apply(
-            track.as_ref().is_some_and(|track| track.rel_path == rel_path),
-            ui_ref.core.player.is_playing(),
-        ),
-        AppEvent::PlayingChanged(playing) => apply(
-            ui_ref
-                .core
-                .player
-                .current_track()
-                .is_some_and(|track| track.rel_path == rel_path),
-            *playing,
-        ),
-        _ => {}
-    });
+    ui.core
+        .hub
+        .subscribe_widget(row, move |_, event| match event {
+            AppEvent::TrackChanged(track) => apply(
+                track
+                    .as_ref()
+                    .is_some_and(|track| track.rel_path == rel_path),
+                ui_ref.core.player.is_playing(),
+            ),
+            AppEvent::PlayingChanged(playing) => apply(
+                ui_ref
+                    .core
+                    .player
+                    .current_track()
+                    .is_some_and(|track| track.rel_path == rel_path),
+                *playing,
+            ),
+            _ => {}
+        });
 }
 
 /// Feeds the now-playing dominant color to the theme engine; a no-op unless the

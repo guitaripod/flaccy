@@ -65,9 +65,9 @@ fn run_query(query: &str) -> Result<Vec<Candidate>, String> {
         .output()
         .map_err(|err| format!("could not start yt-dlp: {err}"))?;
     if !output.status.success() {
-        return Err(crate::downloads::friendly_error(
-            &String::from_utf8_lossy(&output.stderr),
-        ));
+        return Err(crate::downloads::friendly_error(&String::from_utf8_lossy(
+            &output.stderr,
+        )));
     }
     let value: serde_json::Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| "yt-dlp returned something unreadable".to_string())?;
@@ -112,7 +112,10 @@ pub fn parse_entries(value: &serde_json::Value) -> Vec<Candidate> {
                 .and_then(|v| v.as_str())
                 .map(|status| status == "is_live" || status == "is_upcoming")
                 .unwrap_or(false)
-                || entry.get("is_live").and_then(|v| v.as_bool()).unwrap_or(false);
+                || entry
+                    .get("is_live")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
             Some(Candidate {
                 id,
                 title,

@@ -158,7 +158,10 @@ mod tests {
     #[test]
     fn tiny_rate_changes_are_not_worth_an_event() {
         let mut governor = Governor::default();
-        assert!(matches!(governor.step(0.30, 0.0), Some(Correction::Rate(_))));
+        assert!(matches!(
+            governor.step(0.30, 0.0),
+            Some(Correction::Rate(_))
+        ));
         assert_eq!(governor.step(0.3005, 0.2), None);
     }
 

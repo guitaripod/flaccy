@@ -204,7 +204,10 @@ impl MusicVideoHandle {
     /// The paintable every video surface draws, created on first use so a
     /// session that never opens the video lens never builds a pipeline.
     pub fn paintable(&self) -> Option<gtk::gdk::Paintable> {
-        self.stage.borrow().as_ref().map(|stage| stage.paintable.clone())
+        self.stage
+            .borrow()
+            .as_ref()
+            .map(|stage| stage.paintable.clone())
     }
 }
 
@@ -244,8 +247,12 @@ pub fn start(core: &Rc<AppCore>) {
 /// first, in which case it is left behind. Anything older than a day cannot
 /// belong to this session, so it goes.
 fn sweep_download_buffers() {
-    let Some(cache) = dirs::cache_dir() else { return };
-    let Ok(entries) = std::fs::read_dir(&cache) else { return };
+    let Some(cache) = dirs::cache_dir() else {
+        return;
+    };
+    let Ok(entries) = std::fs::read_dir(&cache) else {
+        return;
+    };
     let cutoff = std::time::Duration::from_secs(24 * 60 * 60);
     let mut removed = 0usize;
     for entry in entries.filter_map(Result::ok) {
@@ -276,7 +283,9 @@ fn sweep_download_buffers() {
 fn wire_transport(core: &Rc<AppCore>) {
     let weak = Rc::downgrade(core);
     core.hub.subscribe(move |event| {
-        let Some(core) = weak.upgrade() else { return false };
+        let Some(core) = weak.upgrade() else {
+            return false;
+        };
         if !core.music_video.enabled.get() {
             return true;
         }
@@ -379,7 +388,10 @@ fn recover_from(core: &Rc<AppCore>, message: &str) -> bool {
         return false;
     }
     if message == playback::NO_DECODER {
-        crate::logger::info("musicvideo", "no decoder for that format; retrying in H.264");
+        crate::logger::info(
+            "musicvideo",
+            "no decoder for that format; retrying in H.264",
+        );
         renew_stream(core, true);
         return true;
     }
@@ -441,7 +453,9 @@ pub fn reset_offset(core: &Rc<AppCore>) {
 }
 
 fn apply_offset(core: &Rc<AppCore>, found: VideoMatch) {
-    let Some(track) = core.player.current_track() else { return };
+    let Some(track) = core.player.current_track() else {
+        return;
+    };
     core.db
         .set_music_video_offset(&track.title, &track.artist, found.offset, found.aligned);
     if let Some(stage) = core.music_video.stage.borrow().as_ref() {
@@ -454,7 +468,9 @@ fn apply_offset(core: &Rc<AppCore>, found: VideoMatch) {
 /// Replaces the match with one the user picked from the chooser. A hand-picked
 /// video is remembered as such and never second-guessed by a later search.
 pub fn choose(core: &Rc<AppCore>, candidate: Candidate) {
-    let Some(track) = core.player.current_track() else { return };
+    let Some(track) = core.player.current_track() else {
+        return;
+    };
     let seq = next_seq(core);
     publish(core, VideoState::Searching);
     send(
@@ -470,7 +486,9 @@ pub fn choose(core: &Rc<AppCore>, candidate: Candidate) {
 
 /// Asks for the full candidate list so the chooser has something to show.
 pub fn request_candidates(core: &Rc<AppCore>) {
-    let Some(track) = core.player.current_track() else { return };
+    let Some(track) = core.player.current_track() else {
+        return;
+    };
     let seq = core.music_video.seq.get();
     core.music_video.candidates_seq.set(seq);
     send(core, Request::Candidates { seq, track });
@@ -489,7 +507,10 @@ fn request_resolve(core: &Rc<AppCore>, force: bool) {
         return;
     };
     if !available() {
-        publish(core, VideoState::Failed("Video playback is unavailable".into()));
+        publish(
+            core,
+            VideoState::Failed("Video playback is unavailable".into()),
+        );
         return;
     }
     let seq = next_seq(core);
@@ -556,7 +577,10 @@ fn apply_response(core: &Rc<AppCore>, response: Response) {
                 return;
             }
             let Some(stream) = stream else {
-                publish(core, VideoState::Failed("This video's stream expired".into()));
+                publish(
+                    core,
+                    VideoState::Failed("This video's stream expired".into()),
+                );
                 return;
             };
             *core.music_video.stream.borrow_mut() = Some(stream.clone());
@@ -604,7 +628,10 @@ fn ensure_stage(core: &Rc<AppCore>) -> Option<Rc<VideoStage>> {
     if !core.music_video.sink_ready.get() {
         if let Err(err) = playback::register_sink() {
             crate::logger::error("musicvideo", &format!("video sink unavailable: {err}"));
-            publish(core, VideoState::Failed("Video playback is unavailable".into()));
+            publish(
+                core,
+                VideoState::Failed("Video playback is unavailable".into()),
+            );
             return None;
         }
         core.music_video.sink_ready.set(true);

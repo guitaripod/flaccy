@@ -78,7 +78,10 @@ impl AppCore {
         player.set_repeat(crate::player::RepeatMode::from_id(&config.repeat_mode));
         let session = config::load_session();
         if let Some(session) = &session {
-            crate::logger::info("auth", &format!("last.fm session loaded for {}", session.username));
+            crate::logger::info(
+                "auth",
+                &format!("last.fm session loaded for {}", session.username),
+            );
         }
         let artwork = ui::artwork::ArtworkCache::new(db_path.clone());
 
@@ -150,7 +153,9 @@ impl AppCore {
                 let weights = db
                     .track_sort_keys()
                     .into_iter()
-                    .map(|(rel, last_played)| (rel, crate::station::history_weight(last_played, now)))
+                    .map(|(rel, last_played)| {
+                        (rel, crate::station::history_weight(last_played, now))
+                    })
                     .collect();
                 let _ = tx.send_blocking((library, weights));
             })
@@ -159,8 +164,11 @@ impl AppCore {
         glib::spawn_future_local(async move {
             let received = rx.recv().await;
             core.reload_in_flight.set(false);
-            let Ok((library, weights)) = received else { return };
-            core.player.set_history_weights(weights.into_iter().collect());
+            let Ok((library, weights)) = received else {
+                return;
+            };
+            core.player
+                .set_history_weights(weights.into_iter().collect());
             crate::logger::info(
                 "library",
                 &format!(
@@ -366,7 +374,8 @@ impl AppCore {
     /// marketing screenshots show a live transport.
     fn schedule_demo_autoplay(self: &Rc<Self>) {
         let core = Rc::clone(self);
-        let wanted = std::env::var("FLACCY_DEMO_TRACK").unwrap_or_else(|_| "Slow Machine".to_string());
+        let wanted =
+            std::env::var("FLACCY_DEMO_TRACK").unwrap_or_else(|_| "Slow Machine".to_string());
         glib::timeout_add_local(Duration::from_millis(600), move || {
             let library = core.library.borrow().clone();
             let Some(album) = library
@@ -377,7 +386,11 @@ impl AppCore {
             else {
                 return glib::ControlFlow::Continue;
             };
-            let start = album.tracks.iter().position(|t| t.title == wanted).unwrap_or(0);
+            let start = album
+                .tracks
+                .iter()
+                .position(|t| t.title == wanted)
+                .unwrap_or(0);
             core.play_tracks(album.tracks.clone(), start);
             if std::env::var_os("FLACCY_DEMO_QUEUE").is_some() {
                 core.hub.emit(&AppEvent::QueueToggled(true));
@@ -442,8 +455,10 @@ impl AppCore {
                         crate::logger::error("library", &format!("scan failed: {message}"));
                         core.scanning.set(false);
                         crate::enrichment::request_background_pass(&core);
-                        core.hub
-                            .emit(&AppEvent::ScanFinished { added: 0, removed: 0 });
+                        core.hub.emit(&AppEvent::ScanFinished {
+                            added: 0,
+                            removed: 0,
+                        });
                         break;
                     }
                 }
@@ -458,7 +473,9 @@ impl AppCore {
 
     pub fn play_album_key(self: &Rc<Self>, key: &str, shuffle: bool) {
         let library = self.library.borrow().clone();
-        let Some(album) = library.album_by_key(key) else { return };
+        let Some(album) = library.album_by_key(key) else {
+            return;
+        };
         if shuffle && !self.player.shuffle_enabled() {
             self.player.toggle_shuffle();
         }
@@ -482,7 +499,9 @@ impl AppCore {
         library
             .albums
             .iter()
-            .filter(|album| crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist))
+            .filter(|album| {
+                crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist)
+            })
             .flat_map(|album| album.tracks.iter().cloned())
             .collect()
     }
@@ -545,7 +564,9 @@ impl AppCore {
 
     pub fn toggle_love(self: &Rc<Self>, rel_path: &str) {
         let library = self.library.borrow().clone();
-        let Some(track) = library.track_by_rel_path(rel_path) else { return };
+        let Some(track) = library.track_by_rel_path(rel_path) else {
+            return;
+        };
         let loved = !track.loved;
         let pending_op = if loved { "love" } else { "unlove" };
         if let Err(err) = self.db.set_loved(rel_path, loved, Some(pending_op)) {
@@ -638,7 +659,9 @@ impl AppCore {
         std::thread::Builder::new()
             .name("flaccy-import-check".into())
             .spawn(move || {
-                let count = Db::open(&db_path).map(|db| db.scrobble_count()).unwrap_or(0);
+                let count = Db::open(&db_path)
+                    .map(|db| db.scrobble_count())
+                    .unwrap_or(0);
                 let _ = tx.send_blocking(count);
             })
             .ok();
@@ -661,7 +684,9 @@ impl AppCore {
     fn wire_lastfm_sync(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
         self.hub.subscribe(move |event| {
-            let Some(core) = weak.upgrade() else { return false };
+            let Some(core) = weak.upgrade() else {
+                return false;
+            };
             if let crate::events::AppEvent::LastFmChanged = event {
                 if core.session.borrow().is_some() {
                     crate::scrobbler::sync_loved_from_lastfm(&core);
@@ -737,15 +762,16 @@ impl AppCore {
 
     pub fn start_track_station(self: &Rc<Self>, rel_path: &str) {
         let library = self.library.borrow().clone();
-        let Some(track) = library.track_by_rel_path(rel_path).cloned() else { return };
+        let Some(track) = library.track_by_rel_path(rel_path).cloned() else {
+            return;
+        };
         self.start_station(track.artist.clone(), Some(track));
     }
 
     fn start_station(self: &Rc<Self>, seed_artist: String, seed_track: Option<Track>) {
         let library = self.library.borrow().clone();
         let pool = library.tracks.clone();
-        let library_artists: Vec<String> =
-            library.artists.iter().map(|a| a.name.clone()).collect();
+        let library_artists: Vec<String> = library.artists.iter().map(|a| a.name.clone()).collect();
         let db_path = self.db_path.clone();
         let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());
         let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
@@ -794,7 +820,10 @@ impl AppCore {
             }
             crate::logger::info(
                 "playback",
-                &format!("station started: seed '{seed_artist}', {} tracks", station.len()),
+                &format!(
+                    "station started: seed '{seed_artist}', {} tracks",
+                    station.len()
+                ),
             );
             crate::scrobbler::checkpoint_skip(&core);
             core.player
@@ -808,7 +837,9 @@ impl AppCore {
     fn wire_autoplay(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
         self.hub.subscribe(move |event| {
-            let Some(core) = weak.upgrade() else { return false };
+            let Some(core) = weak.upgrade() else {
+                return false;
+            };
             if let AppEvent::TrackChanged(Some(_)) = event {
                 core.maybe_schedule_autoplay();
             }
@@ -830,7 +861,9 @@ impl AppCore {
         if len == 0 || current + 2 < len {
             return;
         }
-        let Some(current_track) = self.player.current_track() else { return };
+        let Some(current_track) = self.player.current_track() else {
+            return;
+        };
         let seed_artist = self
             .player
             .station_seed()
@@ -843,8 +876,7 @@ impl AppCore {
 
         let library = self.library.borrow().clone();
         let pool = library.tracks.clone();
-        let library_artists: Vec<String> =
-            library.artists.iter().map(|a| a.name.clone()).collect();
+        let library_artists: Vec<String> = library.artists.iter().map(|a| a.name.clone()).collect();
         let snapshot = self.player.queue_snapshot();
         let excluding: std::collections::HashSet<String> =
             snapshot.queue.iter().map(|t| t.rel_path.clone()).collect();
@@ -919,7 +951,9 @@ impl AppCore {
             .ok();
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
-            let Ok((copied, skipped)) = rx.recv().await else { return };
+            let Ok((copied, skipped)) = rx.recv().await else {
+                return;
+            };
             let Some(core) = weak.upgrade() else { return };
             crate::logger::info(
                 "library",
@@ -945,7 +979,9 @@ impl AppCore {
     fn wire_scrobbler(self: &Rc<Self>) {
         let core = Rc::downgrade(self);
         self.hub.subscribe(move |event| {
-            let Some(core) = core.upgrade() else { return false };
+            let Some(core) = core.upgrade() else {
+                return false;
+            };
             match event {
                 AppEvent::TrackChanged(track) => {
                     crate::scrobbler::on_track_started(&core, track.clone());
@@ -973,7 +1009,10 @@ fn run_smoke(core: &Rc<AppCore>) {
     };
     crate::logger::info(
         "smoke",
-        &format!("SMOKE: starting playback of '{} — {}'", track.title, track.artist),
+        &format!(
+            "SMOKE: starting playback of '{} — {}'",
+            track.title, track.artist
+        ),
     );
     core.play_tracks(library.tracks.clone(), 0);
     let check = Rc::clone(core);
@@ -1020,7 +1059,12 @@ impl Library {
 
 const IMPORT_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
 
-fn copy_into_library(source: &std::path::Path, root: &std::path::Path, copied: &mut usize, skipped: &mut usize) {
+fn copy_into_library(
+    source: &std::path::Path,
+    root: &std::path::Path,
+    copied: &mut usize,
+    skipped: &mut usize,
+) {
     if source.is_dir() {
         let Ok(entries) = std::fs::read_dir(source) else {
             *skipped += 1;

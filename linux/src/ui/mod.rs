@@ -12,12 +12,13 @@ pub mod lyrics_panel;
 pub mod lyrics_style;
 pub mod now_playing;
 pub mod playlists;
-pub mod queue_panel;
 pub mod prefs;
+pub mod queue_panel;
 pub mod songs;
-pub mod suggested_shelf;
 pub mod stats;
+pub mod suggested_shelf;
 pub mod transport;
+pub mod ui_scale;
 pub mod video_view;
 pub mod wantlist;
 pub mod window;
@@ -136,10 +137,9 @@ pub fn goto_artist(ui: &Rc<Ui>, artist: &str) {
     let lead = crate::hygiene::primary_artist(artist);
     let known = {
         let library = ui.core.library.borrow();
-        library
-            .albums
-            .iter()
-            .any(|album| crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(&lead))
+        library.albums.iter().any(|album| {
+            crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(&lead)
+        })
     };
     if !known {
         ui.core.toast(&format!("{lead} isn't in your library"));
@@ -162,7 +162,9 @@ pub fn goto_album_of_track(ui: &Rc<Ui>, rel_path: &str) {
             .or_else(|| {
                 library
                     .track_by_rel_path(rel_path)
-                    .and_then(|track| library.album_by_key(&format!("{}|{}", track.album, track.artist)))
+                    .and_then(|track| {
+                        library.album_by_key(&format!("{}|{}", track.album, track.artist))
+                    })
                     .cloned()
             })
     };

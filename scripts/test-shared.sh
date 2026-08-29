@@ -19,8 +19,12 @@ SWIFT_LOG="$(mktemp -t flaccy-swift-tests)"
 RUST_LOG="$(mktemp -t flaccy-rust-tests)"
 trap 'rm -f "$SWIFT_LOG" "$RUST_LOG"' EXIT
 
-echo "== swift test --package-path FlaccyCore"
-swift test --package-path FlaccyCore 2>&1 | tee "$SWIFT_LOG"
+SWIFT=(swift)
+if [[ "$(uname)" == "Darwin" ]]; then
+    SWIFT=(xcrun swift)
+fi
+echo "== ${SWIFT[*]} test --package-path FlaccyCore"
+"${SWIFT[@]}" test --package-path FlaccyCore 2>&1 | tee "$SWIFT_LOG"
 swift_status=${PIPESTATUS[0]}
 
 echo

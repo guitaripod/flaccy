@@ -202,7 +202,10 @@ fn standardize(values: &[f64]) -> Vec<f64> {
     if deviation <= f64::EPSILON {
         return vec![0.0; values.len()];
     }
-    values.iter().map(|value| (value - mean) / deviation).collect()
+    values
+        .iter()
+        .map(|value| (value - mean) / deviation)
+        .collect()
 }
 
 fn correlation_at(local: &[f64], video: &[f64], lag: isize, min_overlap: usize) -> Option<f64> {

@@ -21,9 +21,16 @@ pub fn present_delete_tracks(ui: &Rc<Ui>, tracks: Vec<Track>) {
 
 pub fn present_delete_album(ui: &Rc<Ui>, key: &str) {
     let library = ui.core.library.borrow().clone();
-    let Some(album) = library.album_by_key(key) else { return };
+    let Some(album) = library.album_by_key(key) else {
+        return;
+    };
     let subject = format!("\u{201c}{}\u{201d}", album.title);
-    confirm(ui, &subject, file_clause(album.tracks.len()), album.tracks.clone());
+    confirm(
+        ui,
+        &subject,
+        file_clause(album.tracks.len()),
+        album.tracks.clone(),
+    );
 }
 
 fn file_clause(count: usize) -> &'static str {
@@ -58,7 +65,9 @@ fn confirm(ui: &Rc<Ui>, subject: &str, file_clause: &str, tracks: Vec<Track>) {
         if response != "trash" {
             return;
         }
-        let Some(tracks) = pending.borrow_mut().take() else { return };
+        let Some(tracks) = pending.borrow_mut().take() else {
+            return;
+        };
         apply(&ui, tracks);
     });
     dialog.present(Some(&window));
@@ -93,7 +102,8 @@ fn apply(ui: &Rc<Ui>, tracks: Vec<Track>) {
         if trashed == total {
             ui.core.toast("Moved to Trash");
         } else {
-            ui.core.toast(&format!("Removed {trashed} of {total} — see log"));
+            ui.core
+                .toast(&format!("Removed {trashed} of {total} — see log"));
         }
     });
 }
@@ -109,7 +119,10 @@ fn apply_blocking(db_path: &Path, root: &Path, rel_paths: &[String]) -> usize {
     let mut trashed = 0;
     for rel_path in rel_paths {
         if let Err(err) = db.delete_track_by_rel_path(rel_path) {
-            crate::logger::error("database", &format!("delete row failed for {rel_path}: {err}"));
+            crate::logger::error(
+                "database",
+                &format!("delete row failed for {rel_path}: {err}"),
+            );
             continue;
         }
         if trash_file(&root.join(rel_path)) {
@@ -122,7 +135,11 @@ fn apply_blocking(db_path: &Path, root: &Path, rel_paths: &[String]) -> usize {
 /// Sends a file to the desktop trash so a mistaken removal stays recoverable,
 /// unlike an unlink.
 pub(crate) fn trash_file(path: &PathBuf) -> bool {
-    match std::process::Command::new("gio").arg("trash").arg(path).status() {
+    match std::process::Command::new("gio")
+        .arg("trash")
+        .arg(path)
+        .status()
+    {
         Ok(status) if status.success() => true,
         Ok(status) => {
             crate::logger::warn(

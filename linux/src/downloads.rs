@@ -96,8 +96,15 @@ impl ToolStatus {
 
 enum WorkerEvent {
     Changed,
-    Progress { id: i64, fraction: f64 },
-    Finished { title: String, artist: String, album: String },
+    Progress {
+        id: i64,
+        fraction: f64,
+    },
+    Finished {
+        title: String,
+        artist: String,
+        album: String,
+    },
     Toast(String),
 }
 
@@ -124,7 +131,11 @@ pub fn start(core: &Rc<AppCore>) {
                 WorkerEvent::Progress { id, fraction } => {
                     core.hub.emit(&AppEvent::DownloadProgress { id, fraction });
                 }
-                WorkerEvent::Finished { title, artist, album } => {
+                WorkerEvent::Finished {
+                    title,
+                    artist,
+                    album,
+                } => {
                     core.hub.emit(&AppEvent::DownloadsChanged);
                     core.toast(&format!("Added {title} — {artist}"));
                     if core.scanning.get() {
@@ -143,7 +154,9 @@ pub fn start(core: &Rc<AppCore>) {
 
     let weak = Rc::downgrade(core);
     core.hub.subscribe(move |event| {
-        let Some(core) = weak.upgrade() else { return false };
+        let Some(core) = weak.upgrade() else {
+            return false;
+        };
         if let AppEvent::ScanFinished { .. } = event {
             if core.downloads.rescan_pending.replace(false) {
                 core.rescan();
@@ -251,7 +264,10 @@ pub fn check_tools() -> ToolStatus {
             .filter(|v| !v.is_empty())
     });
     let ffmpeg = resolve_tool("ffmpeg").is_some();
-    ToolStatus { yt_dlp_version, ffmpeg }
+    ToolStatus {
+        yt_dlp_version,
+        ffmpeg,
+    }
 }
 
 fn worker(
@@ -280,7 +296,12 @@ fn worker(
     }
 }
 
-fn probe(db: &Db, row: &DownloadRow, tx: &async_channel::Sender<WorkerEvent>, current: &CurrentJob) {
+fn probe(
+    db: &Db,
+    row: &DownloadRow,
+    tx: &async_channel::Sender<WorkerEvent>,
+    current: &CurrentJob,
+) {
     if !db.claim_download(row.id, STATUS_FETCHING) {
         let _ = tx.send_blocking(WorkerEvent::Changed);
         return;
@@ -294,7 +315,13 @@ fn probe(db: &Db, row: &DownloadRow, tx: &async_channel::Sender<WorkerEvent>, cu
 
     let mut command = Command::new(yt_dlp);
     command
-        .args(["--flat-playlist", "-J", "--no-warnings", "--socket-timeout", "15"])
+        .args([
+            "--flat-playlist",
+            "-J",
+            "--no-warnings",
+            "--socket-timeout",
+            "15",
+        ])
         .arg(&row.url)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -321,10 +348,18 @@ fn probe(db: &Db, row: &DownloadRow, tx: &async_channel::Sender<WorkerEvent>, cu
         let playlist_title = json["title"].as_str().unwrap_or_default().to_string();
         let entries: Vec<&serde_json::Value> = json["entries"]
             .as_array()
-            .map(|list| list.iter().filter(|e| e["url"].as_str().is_some()).collect())
+            .map(|list| {
+                list.iter()
+                    .filter(|e| e["url"].as_str().is_some())
+                    .collect()
+            })
             .unwrap_or_default();
         if entries.is_empty() {
-            db.set_download_status(row.id, STATUS_FAILED, Some("Nothing to download at this link"));
+            db.set_download_status(
+                row.id,
+                STATUS_FAILED,
+                Some("Nothing to download at this link"),
+            );
             let _ = tx.send_blocking(WorkerEvent::Changed);
             return;
         }
@@ -393,7 +428,9 @@ fn download(
     };
 
     let home = root.join(LIBRARY_SUBDIR);
-    let temp = dirs::cache_dir().unwrap_or_default().join("flaccy/downloads");
+    let temp = dirs::cache_dir()
+        .unwrap_or_default()
+        .join("flaccy/downloads");
     let _ = std::fs::create_dir_all(&home);
     let _ = std::fs::create_dir_all(&temp);
 
@@ -425,7 +462,11 @@ fn download(
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(err) => {
-            db.set_download_status(row.id, STATUS_FAILED, Some(&format!("could not start yt-dlp: {err}")));
+            db.set_download_status(
+                row.id,
+                STATUS_FAILED,
+                Some(&format!("could not start yt-dlp: {err}")),
+            );
             let _ = tx.send_blocking(WorkerEvent::Changed);
             return;
         }
@@ -466,14 +507,20 @@ fn download(
         .unwrap_or_default();
 
     if db.download_status(row.id).as_deref() == Some(STATUS_CANCELLED) {
-        crate::logger::info("downloads", &format!("download {} cancelled mid-flight", row.id));
+        crate::logger::info(
+            "downloads",
+            &format!("download {} cancelled mid-flight", row.id),
+        );
         let _ = tx.send_blocking(WorkerEvent::Changed);
         return;
     }
     let succeeded = status.map(|s| s.success()).unwrap_or(false);
     if !succeeded {
         let message = friendly_error(&stderr);
-        crate::logger::error("downloads", &format!("download {} failed: {message}", row.id));
+        crate::logger::error(
+            "downloads",
+            &format!("download {} failed: {message}", row.id),
+        );
         db.set_download_status(row.id, STATUS_FAILED, Some(&message));
         let _ = tx.send_blocking(WorkerEvent::Changed);
         return;
@@ -489,11 +536,18 @@ fn download(
                 "downloads",
                 &format!("downloaded '{title} — {artist}' to {}", path.display()),
             );
-            let _ = tx.send_blocking(WorkerEvent::Finished { title, artist, album });
+            let _ = tx.send_blocking(WorkerEvent::Finished {
+                title,
+                artist,
+                album,
+            });
         }
         None => {
             db.set_download_status(row.id, STATUS_DONE, Some("Already in your library"));
-            crate::logger::info("downloads", &format!("download {} already present, skipped", row.id));
+            crate::logger::info(
+                "downloads",
+                &format!("download {} already present, skipped", row.id),
+            );
             let _ = tx.send_blocking(WorkerEvent::Changed);
         }
     }
@@ -506,7 +560,9 @@ fn run_captured(
     id: i64,
     current: &CurrentJob,
 ) -> Result<(String, String), String> {
-    let mut child = command.spawn().map_err(|err| format!("could not start yt-dlp: {err}"))?;
+    let mut child = command
+        .spawn()
+        .map_err(|err| format!("could not start yt-dlp: {err}"))?;
     current.set(id, child.id());
     let stderr_handle = child.stderr.take().map(|mut pipe| {
         std::thread::spawn(move || {
@@ -592,14 +648,19 @@ fn finalize_tags(path: &Path, row: &DownloadRow) -> (String, String, String) {
         }
     }
     if let Err(err) = tag.save_to_path(path, WriteOptions::default()) {
-        crate::logger::warn("downloads", &format!("tag write failed for {}: {err}", path.display()));
+        crate::logger::warn(
+            "downloads",
+            &format!("tag write failed for {}: {err}", path.display()),
+        );
     }
     let _ = std::fs::remove_file(&thumbnail);
     (title, artist, album)
 }
 
 fn non_empty(text: Option<&str>) -> Option<String> {
-    text.map(str::trim).filter(|t| !t.is_empty()).map(String::from)
+    text.map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(String::from)
 }
 
 /// Strips YouTube video-title noise a music library doesn't want: a leading
@@ -643,7 +704,9 @@ fn remove_noise_groups(text: &str) -> String {
     while let Some(open_index) = rest.find(['(', '[']) {
         let open = rest[open_index..].chars().next().unwrap_or('(');
         let close = if open == '(' { ')' } else { ']' };
-        let Some(close_offset) = rest[open_index..].find(close) else { break };
+        let Some(close_offset) = rest[open_index..].find(close) else {
+            break;
+        };
         let close_index = open_index + close_offset;
         let content = rest[open_index + open.len_utf8()..close_index].to_lowercase();
         if is_noise_qualifier(&content) {
@@ -658,12 +721,24 @@ fn remove_noise_groups(text: &str) -> String {
 }
 
 fn is_noise_qualifier(content: &str) -> bool {
-    if matches!(content, "audio" | "video" | "hd" | "hq" | "4k" | "mv" | "m/v" | "official") {
+    if matches!(
+        content,
+        "audio" | "video" | "hd" | "hq" | "4k" | "mv" | "m/v" | "official"
+    ) {
         return true;
     }
-    ["official", "lyric", "lyrics", "visuali", "remaster", "music video", "out now", "premiere"]
-        .iter()
-        .any(|noise| content.contains(noise))
+    [
+        "official",
+        "lyric",
+        "lyrics",
+        "visuali",
+        "remaster",
+        "music video",
+        "out now",
+        "premiere",
+    ]
+    .iter()
+    .any(|noise| content.contains(noise))
 }
 
 pub fn friendly_error(stderr: &str) -> String {
@@ -673,7 +748,10 @@ pub fn friendly_error(stderr: &str) -> String {
         .find_map(|line| line.trim().strip_prefix("ERROR: "))
         .map(strip_extractor_prefix)
         .unwrap_or_else(|| "Download failed".to_string());
-    if raw.contains("Sign in to confirm") || raw.contains("not a bot") || raw.contains("HTTP Error 403") {
+    if raw.contains("Sign in to confirm")
+        || raw.contains("not a bot")
+        || raw.contains("HTTP Error 403")
+    {
         return "YouTube blocked the request — updating yt-dlp usually fixes this".to_string();
     }
     if raw.contains("Unsupported URL") {
@@ -727,7 +805,10 @@ mod tests {
 
     #[test]
     fn friendly_error_falls_back_to_last_error_line() {
-        assert_eq!(friendly_error("ERROR: Video unavailable"), "Video unavailable");
+        assert_eq!(
+            friendly_error("ERROR: Video unavailable"),
+            "Video unavailable"
+        );
         assert_eq!(
             friendly_error("ERROR: [youtube] 00000000000: Video unavailable"),
             "Video unavailable"
@@ -748,7 +829,10 @@ mod tests {
             clean_video_title("Rick Astley - Shivers (Official Audio)", "Rick Astley"),
             "Shivers"
         );
-        assert_eq!(clean_video_title("She Makes Me", "Rick Astley"), "She Makes Me");
+        assert_eq!(
+            clean_video_title("She Makes Me", "Rick Astley"),
+            "She Makes Me"
+        );
         assert_eq!(
             clean_video_title("Daft Punk - Something About Us (Live)", "Daft Punk"),
             "Something About Us (Live)"
@@ -761,7 +845,10 @@ mod tests {
             clean_video_title("Other Band - Their Song", "Rick Astley"),
             "Other Band - Their Song"
         );
-        assert_eq!(clean_video_title("(Official Video)", "Artist"), "(Official Video)");
+        assert_eq!(
+            clean_video_title("(Official Video)", "Artist"),
+            "(Official Video)"
+        );
         assert_eq!(
             clean_video_title(
                 "Daft Punk - Instant Crush (Official Video) ft. Julian Casablancas",

@@ -5,9 +5,9 @@ use crate::ui::controls::{
 };
 use crate::ui::Ui;
 use adw::prelude::*;
+use gtk::gio;
 use gtk::glib;
 use gtk::pango;
-use gtk::gio;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Instant;
@@ -33,7 +33,10 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     artwork.set_visible(false);
 
     let equalizer = build_equalizer();
-    let art_frame = gtk::Box::builder().width_request(44).height_request(44).build();
+    let art_frame = gtk::Box::builder()
+        .width_request(44)
+        .height_request(44)
+        .build();
     let art_overlay = gtk::Overlay::new();
     art_overlay.set_child(Some(&art_frame));
     art_overlay.add_overlay(&artwork);
@@ -227,7 +230,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let ui = Rc::clone(ui);
         lyrics_toggle.connect_toggled(move |button| {
-            ui.core.hub.emit(&AppEvent::LyricsToggled(button.is_active()));
+            ui.core
+                .hub
+                .emit(&AppEvent::LyricsToggled(button.is_active()));
         });
     }
 
@@ -239,14 +244,19 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let ui = Rc::clone(ui);
         queue_toggle.connect_toggled(move |button| {
-            ui.core.hub.emit(&AppEvent::QueueToggled(button.is_active()));
+            ui.core
+                .hub
+                .emit(&AppEvent::QueueToggled(button.is_active()));
         });
     }
 
     let sleep_menu = gio::Menu::new();
     for minutes in [15, 30, 45, 60, 90] {
         let item = gio::MenuItem::new(Some(&format!("{minutes} minutes")), None);
-        item.set_action_and_target_value(Some("app.sleep-minutes"), Some(&(minutes as i32).to_variant()));
+        item.set_action_and_target_value(
+            Some("app.sleep-minutes"),
+            Some(&(minutes as i32).to_variant()),
+        );
         sleep_menu.append_item(&item);
     }
     sleep_menu.append(Some("End of Track"), Some("app.sleep-end-of-track"));
@@ -329,149 +339,154 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let lyrics_toggle = lyrics_toggle.clone();
         let current_rel = Rc::clone(&current_rel);
         let last_user_seek = Rc::clone(&last_user_seek);
-        ui.core.hub.subscribe_widget(&root, move |_, event| match event {
-            AppEvent::TrackChanged(track) => match track {
-                Some(track) => {
-                    title.set_label(&track.title);
-                    title.set_tooltip_text(Some(&track.title));
-                    artist.set_label(&track.artist);
-                    artist.set_tooltip_text(Some(&track.artist));
-                    match track.quality_badge() {
-                        Some(badge) => {
-                            quality.set_label(&badge);
-                            if !bar_ref.has_css_class("transport-compact")
-                                && !bar_ref.has_css_class("transport-slim")
-                            {
-                                quality.set_visible(true);
+        ui.core
+            .hub
+            .subscribe_widget(&root, move |_, event| match event {
+                AppEvent::TrackChanged(track) => match track {
+                    Some(track) => {
+                        title.set_label(&track.title);
+                        title.set_tooltip_text(Some(&track.title));
+                        artist.set_label(&track.artist);
+                        artist.set_tooltip_text(Some(&track.artist));
+                        match track.quality_badge() {
+                            Some(badge) => {
+                                quality.set_label(&badge);
+                                if !bar_ref.has_css_class("transport-compact")
+                                    && !bar_ref.has_css_class("transport-slim")
+                                {
+                                    quality.set_visible(true);
+                                }
                             }
+                            None => quality.set_visible(false),
                         }
-                        None => quality.set_visible(false),
+                        love.set_sensitive(true);
+                        set_love_appearance(&love, track.loved);
+                        *current_rel.borrow_mut() = Some(track.rel_path.clone());
+                        seek.set_range(0.0, track.duration.max(1.0));
+                        seek.set_value(0.0);
+                        position_label.set_label("0:00");
+                        duration_label.set_label(&format_time(track.duration));
+                        art_overlay.set_visible(true);
+                        artwork.set_paintable(Some(
+                            &ui_ref
+                                .core
+                                .artwork
+                                .placeholder(&format!("{}|{}", track.album, track.artist)),
+                        ));
+                        let seed_color = crate::palette::placeholder_colors(&format!(
+                            "{}|{}",
+                            track.album, track.artist
+                        ))
+                        .0;
+                        if ui_ref.core.player.is_playing() {
+                            bar_ref.add_css_class("playing");
+                            equalizer.set_visible(true);
+                        }
+                        let weak = artwork.downgrade();
+                        ui_ref.core.artwork.request(
+                            &track.album,
+                            &track.artist,
+                            52,
+                            move |texture, color| {
+                                if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
+                                    picture.set_paintable(Some(texture));
+                                }
+                                set_adaptive_accent(Some(color.unwrap_or(seed_color)));
+                            },
+                        );
                     }
-                    love.set_sensitive(true);
-                    set_love_appearance(&love, track.loved);
-                    *current_rel.borrow_mut() = Some(track.rel_path.clone());
-                    seek.set_range(0.0, track.duration.max(1.0));
-                    seek.set_value(0.0);
-                    position_label.set_label("0:00");
-                    duration_label.set_label(&format_time(track.duration));
-                    art_overlay.set_visible(true);
-                    artwork.set_paintable(Some(
-                        &ui_ref
-                            .core
-                            .artwork
-                            .placeholder(&format!("{}|{}", track.album, track.artist)),
-                    ));
-                    let seed_color =
-                        crate::palette::placeholder_colors(&format!("{}|{}", track.album, track.artist)).0;
-                    if ui_ref.core.player.is_playing() {
+                    None => {
+                        title.set_label("Not Playing");
+                        artist.set_label("");
+                        quality.set_visible(false);
+                        love.set_sensitive(false);
+                        art_overlay.set_visible(false);
+                        equalizer.set_visible(false);
+                        bar_ref.remove_css_class("playing");
+                        set_adaptive_accent(None);
+                        *current_rel.borrow_mut() = None;
+                    }
+                },
+                AppEvent::PlayingChanged(playing) => {
+                    play.set_icon_name(if *playing {
+                        "media-playback-pause-symbolic"
+                    } else {
+                        "media-playback-start-symbolic"
+                    });
+                    if *playing {
                         bar_ref.add_css_class("playing");
-                        equalizer.set_visible(true);
+                        equalizer.set_visible(current_rel.borrow().is_some());
+                    } else {
+                        bar_ref.remove_css_class("playing");
+                        equalizer.set_visible(false);
                     }
-                    let weak = artwork.downgrade();
-                    ui_ref.core.artwork.request(
-                        &track.album,
-                        &track.artist,
-                        52,
-                        move |texture, color| {
-                            if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
-                                picture.set_paintable(Some(texture));
-                            }
-                            set_adaptive_accent(Some(color.unwrap_or(seed_color)));
-                        },
-                    );
                 }
-                None => {
-                    title.set_label("Not Playing");
-                    artist.set_label("");
-                    quality.set_visible(false);
-                    love.set_sensitive(false);
-                    art_overlay.set_visible(false);
-                    equalizer.set_visible(false);
-                    bar_ref.remove_css_class("playing");
-                    set_adaptive_accent(None);
-                    *current_rel.borrow_mut() = None;
-                }
-            },
-            AppEvent::PlayingChanged(playing) => {
-                play.set_icon_name(if *playing {
-                    "media-playback-pause-symbolic"
-                } else {
-                    "media-playback-start-symbolic"
-                });
-                if *playing {
-                    bar_ref.add_css_class("playing");
-                    equalizer.set_visible(current_rel.borrow().is_some());
-                } else {
-                    bar_ref.remove_css_class("playing");
-                    equalizer.set_visible(false);
-                }
-            }
-            AppEvent::Tick { position, duration } => {
-                let user_recent = last_user_seek
-                    .get()
-                    .map(|t| t.elapsed().as_millis() < 600)
-                    .unwrap_or(false);
-                if !user_recent {
-                    if *duration > 0.0 {
-                        seek.set_range(0.0, *duration);
-                        duration_label.set_label(&format_time(*duration));
+                AppEvent::Tick { position, duration } => {
+                    let user_recent = last_user_seek
+                        .get()
+                        .map(|t| t.elapsed().as_millis() < 600)
+                        .unwrap_or(false);
+                    if !user_recent {
+                        if *duration > 0.0 {
+                            seek.set_range(0.0, *duration);
+                            duration_label.set_label(&format_time(*duration));
+                        }
+                        seek.set_value(*position);
+                        position_label.set_label(&format_time(*position));
                     }
+                }
+                AppEvent::Seeked(position) => {
                     seek.set_value(*position);
                     position_label.set_label(&format_time(*position));
                 }
-            }
-            AppEvent::Seeked(position) => {
-                seek.set_value(*position);
-                position_label.set_label(&format_time(*position));
-            }
-            AppEvent::ShuffleChanged(enabled) => {
-                shuffle.set_active(*enabled);
-            }
-            AppEvent::RepeatChanged(mode) => apply_repeat(&repeat, *mode),
-            AppEvent::LovedChanged { rel_path, loved } => {
-                if current_rel.borrow().as_deref() == Some(rel_path.as_str()) {
-                    set_love_appearance(&love, *loved);
+                AppEvent::ShuffleChanged(enabled) => {
+                    shuffle.set_active(*enabled);
                 }
-            }
-            AppEvent::SleepTimerChanged {
-                remaining_seconds,
-                end_of_track,
-            } => match (remaining_seconds, end_of_track) {
-                (Some(seconds), _) => {
-                    sleep_label.set_label(&format_time(*seconds as f64));
-                    if !bar_ref.has_css_class("transport-compact")
-                        && !bar_ref.has_css_class("transport-slim")
-                    {
-                        sleep_label.set_visible(true);
+                AppEvent::RepeatChanged(mode) => apply_repeat(&repeat, *mode),
+                AppEvent::LovedChanged { rel_path, loved } => {
+                    if current_rel.borrow().as_deref() == Some(rel_path.as_str()) {
+                        set_love_appearance(&love, *loved);
                     }
-                    sleep_button.add_css_class("accent-toggle");
                 }
-                (None, true) => {
-                    sleep_label.set_label("EOT");
-                    if !bar_ref.has_css_class("transport-compact")
-                        && !bar_ref.has_css_class("transport-slim")
-                    {
-                        sleep_label.set_visible(true);
+                AppEvent::SleepTimerChanged {
+                    remaining_seconds,
+                    end_of_track,
+                } => match (remaining_seconds, end_of_track) {
+                    (Some(seconds), _) => {
+                        sleep_label.set_label(&format_time(*seconds as f64));
+                        if !bar_ref.has_css_class("transport-compact")
+                            && !bar_ref.has_css_class("transport-slim")
+                        {
+                            sleep_label.set_visible(true);
+                        }
+                        sleep_button.add_css_class("accent-toggle");
                     }
-                    sleep_button.add_css_class("accent-toggle");
+                    (None, true) => {
+                        sleep_label.set_label("EOT");
+                        if !bar_ref.has_css_class("transport-compact")
+                            && !bar_ref.has_css_class("transport-slim")
+                        {
+                            sleep_label.set_visible(true);
+                        }
+                        sleep_button.add_css_class("accent-toggle");
+                    }
+                    (None, false) => {
+                        sleep_label.set_visible(false);
+                        sleep_button.remove_css_class("accent-toggle");
+                    }
+                },
+                AppEvent::QueueToggled(shown) => {
+                    if queue_toggle.is_active() != *shown {
+                        queue_toggle.set_active(*shown);
+                    }
                 }
-                (None, false) => {
-                    sleep_label.set_visible(false);
-                    sleep_button.remove_css_class("accent-toggle");
+                AppEvent::LyricsToggled(shown) => {
+                    if lyrics_toggle.is_active() != *shown {
+                        lyrics_toggle.set_active(*shown);
+                    }
                 }
-            },
-            AppEvent::QueueToggled(shown) => {
-                if queue_toggle.is_active() != *shown {
-                    queue_toggle.set_active(*shown);
-                }
-            }
-            AppEvent::LyricsToggled(shown) => {
-                if lyrics_toggle.is_active() != *shown {
-                    lyrics_toggle.set_active(*shown);
-                }
-            }
-            _ => {}
-        });
+                _ => {}
+            });
     }
 
     root.upcast()

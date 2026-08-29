@@ -89,7 +89,8 @@ pub fn present(ui: &Rc<Ui>) {
     glib::spawn_future_local(async move {
         let Ok(plan) = rx.recv().await else { return };
         if plan.is_empty() {
-            ui.core.toast("Library is already tidy — nothing to clean up");
+            ui.core
+                .toast("Library is already tidy — nothing to clean up");
             return;
         }
         present_plan(&ui, plan);
@@ -274,7 +275,10 @@ fn apply_plan(ui: &Rc<Ui>, plan: CleanupPlan) {
 fn apply_blocking(db_path: &Path, root: &Path, plan: CleanupPlan) -> CleanupResult {
     let Ok(db) = Db::open(db_path) else {
         crate::logger::error("library", "cleanup apply: database open failed");
-        return CleanupResult { removed: 0, merged: 0 };
+        return CleanupResult {
+            removed: 0,
+            merged: 0,
+        };
     };
 
     let retitles: Vec<AlbumRetitle> = plan
@@ -318,11 +322,17 @@ fn apply_blocking(db_path: &Path, root: &Path, plan: CleanupPlan) -> CleanupResu
         .collect();
     let merged = retitles.len();
 
-    if let Err(err) =
-        db.apply_cleanup(&retitles, &keeper_updates, &album_info_merges, &loser_rel_paths)
-    {
+    if let Err(err) = db.apply_cleanup(
+        &retitles,
+        &keeper_updates,
+        &album_info_merges,
+        &loser_rel_paths,
+    ) {
         crate::logger::error("library", &format!("cleanup apply failed: {err}"));
-        return CleanupResult { removed: 0, merged: 0 };
+        return CleanupResult {
+            removed: 0,
+            merged: 0,
+        };
     }
 
     let mut removed = 0;

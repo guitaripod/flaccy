@@ -99,7 +99,9 @@ impl ArtworkCache {
         self.misses
             .borrow_mut()
             .retain(|key| !key.starts_with(&prefix));
-        self.lru.borrow_mut().retain(|key| !key.starts_with(&prefix));
+        self.lru
+            .borrow_mut()
+            .retain(|key| !key.starts_with(&prefix));
     }
 
     pub fn request(
@@ -187,7 +189,9 @@ impl ArtworkCache {
 /// crisp on HiDPI displays (GTK downscales the paintable to logical size).
 fn display_scale() -> u32 {
     use gtk::prelude::*;
-    let Some(display) = gdk::Display::default() else { return 1 };
+    let Some(display) = gdk::Display::default() else {
+        return 1;
+    };
     let monitors = display.monitors();
     let mut scale = 1;
     for index in 0..monitors.n_items() {

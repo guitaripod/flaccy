@@ -31,7 +31,10 @@ impl LoadPhase {
     const CUMULATIVE_STARTS: [f64; 5] = [0.0, 0.0, 0.05, 0.18, 0.85];
 
     fn order(self) -> usize {
-        Self::ALL.iter().position(|phase| *phase == self).unwrap_or(0)
+        Self::ALL
+            .iter()
+            .position(|phase| *phase == self)
+            .unwrap_or(0)
     }
 
     pub fn weight(self) -> f64 {

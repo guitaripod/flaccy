@@ -13,7 +13,9 @@ struct LogFile {
 static LOGGER: OnceLock<Mutex<Option<LogFile>>> = OnceLock::new();
 
 pub fn init() {
-    let Some(data_dir) = dirs::data_dir() else { return };
+    let Some(data_dir) = dirs::data_dir() else {
+        return;
+    };
     let dir = data_dir.join("flaccy");
     if fs::create_dir_all(&dir).is_err() {
         return;
@@ -49,7 +51,9 @@ fn write_line(level: &str, category: &str, message: &str) {
 }
 
 fn rotate_if_needed(log: &mut LogFile) {
-    let Ok(meta) = log.file.metadata() else { return };
+    let Ok(meta) = log.file.metadata() else {
+        return;
+    };
     if meta.len() < MAX_LOG_BYTES {
         return;
     }

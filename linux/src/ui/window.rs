@@ -11,7 +11,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
-    load_css();
+    ui::ui_scale::apply(core.config.borrow().ui_scale());
     register_icon_paths();
     apply_color_scheme(&core.config.borrow().appearance);
     crate::theme::ThemeController::install(crate::theme::Theme::from_id(
@@ -76,6 +76,11 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     menu.append(Some("Download from Link"), Some("app.downloads"));
     menu.append(Some("Rescan Library"), Some("app.rescan"));
     menu.append(Some("Preferences"), Some("app.preferences"));
+    let zoom = gio::Menu::new();
+    zoom.append(Some("Zoom In"), Some("app.zoom-in"));
+    zoom.append(Some("Zoom Out"), Some("app.zoom-out"));
+    zoom.append(Some("Actual Size"), Some("app.zoom-reset"));
+    menu.append_section(None, &zoom);
     menu.append(Some("About Flaccy"), Some("app.about"));
     menu.append(Some("Quit"), Some("app.quit"));
     let menu_button = gtk::MenuButton::builder()
@@ -252,7 +257,13 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         sidebar.connect_row_selected(move |_, row| {
             let Some(row) = row else { return };
             let names = [
-                "albums", "songs", "artists", "playlists", "stats", "wantlist", "downloads",
+                "albums",
+                "songs",
+                "artists",
+                "playlists",
+                "stats",
+                "wantlist",
+                "downloads",
                 "guide",
             ];
             let index = row.index().clamp(0, 7) as usize;
@@ -326,55 +337,59 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         let side_stack = side_stack.clone();
         let hub = Rc::clone(&core.hub);
         let core = Rc::clone(core);
-        core.hub.clone().subscribe_widget(&panel_split, move |split, event| {
-            match event {
-                AppEvent::LyricsToggled(show) => {
-                    if *show {
-                        if side_stack.visible_child_name().as_deref() == Some("queue")
-                            && split.shows_sidebar()
-                        {
-                            hub.emit(&AppEvent::QueueToggled(false));
+        core.hub
+            .clone()
+            .subscribe_widget(&panel_split, move |split, event| {
+                match event {
+                    AppEvent::LyricsToggled(show) => {
+                        if *show {
+                            if side_stack.visible_child_name().as_deref() == Some("queue")
+                                && split.shows_sidebar()
+                            {
+                                hub.emit(&AppEvent::QueueToggled(false));
+                            }
+                            side_stack.set_visible_child_name("lyrics");
+                            split.set_show_sidebar(true);
+                        } else if side_stack.visible_child_name().as_deref() == Some("lyrics") {
+                            split.set_show_sidebar(false);
                         }
-                        side_stack.set_visible_child_name("lyrics");
-                        split.set_show_sidebar(true);
-                    } else if side_stack.visible_child_name().as_deref() == Some("lyrics") {
-                        split.set_show_sidebar(false);
                     }
-                }
-                AppEvent::QueueToggled(show) => {
-                    if *show {
-                        if side_stack.visible_child_name().as_deref() == Some("lyrics")
-                            && split.shows_sidebar()
-                        {
-                            hub.emit(&AppEvent::LyricsToggled(false));
+                    AppEvent::QueueToggled(show) => {
+                        if *show {
+                            if side_stack.visible_child_name().as_deref() == Some("lyrics")
+                                && split.shows_sidebar()
+                            {
+                                hub.emit(&AppEvent::LyricsToggled(false));
+                            }
+                            side_stack.set_visible_child_name("queue");
+                            split.set_show_sidebar(true);
+                        } else if side_stack.visible_child_name().as_deref() == Some("queue") {
+                            split.set_show_sidebar(false);
                         }
-                        side_stack.set_visible_child_name("queue");
-                        split.set_show_sidebar(true);
-                    } else if side_stack.visible_child_name().as_deref() == Some("queue") {
-                        split.set_show_sidebar(false);
                     }
+                    _ => return,
                 }
-                _ => return,
-            }
-            remember_side_panel(&core, split, &side_stack);
-        });
+                remember_side_panel(&core, split, &side_stack);
+            });
     }
     restore_side_panel(core);
     {
         let core = Rc::clone(core);
-        core.hub.clone().subscribe_widget(&panel_split, move |_, event| {
-            match event {
-                AppEvent::ShuffleChanged(_) | AppEvent::RepeatChanged(_) => {
-                    core.persist_transport_modes()
+        core.hub
+            .clone()
+            .subscribe_widget(&panel_split, move |_, event| {
+                match event {
+                    AppEvent::ShuffleChanged(_) | AppEvent::RepeatChanged(_) => {
+                        core.persist_transport_modes()
+                    }
+                    // Warm the lyrics cache while the song plays, so opening the
+                    // panel on the current track never spins.
+                    AppEvent::TrackChanged(Some(track)) => {
+                        crate::lyrics::prefetch(&core.db_path, &core.music_root(), track)
+                    }
+                    _ => {}
                 }
-                // Warm the lyrics cache while the song plays, so opening the
-                // panel on the current track never spins.
-                AppEvent::TrackChanged(Some(track)) => {
-                    crate::lyrics::prefetch(&core.db_path, &core.music_root(), track)
-                }
-                _ => {}
-            }
-        });
+            });
     }
 
     let inner = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -393,28 +408,27 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     let toast_overlay = adw::ToastOverlay::new();
     toast_overlay.set_child(Some(&inner));
-    core.hub
-        .subscribe_widget(&toast_overlay, |overlay, event| {
-            if let AppEvent::Toast(message) = event {
-                let toast = adw::Toast::new(message);
-                toast.set_timeout(3);
-                overlay.add_toast(toast);
-            }
-            if let AppEvent::ScanFinished { added, removed } = event {
-                let toast = if *added > 0 || *removed > 0 {
-                    let toast = adw::Toast::new(&format!(
-                        "Library updated · {added} added · {removed} removed"
-                    ));
-                    toast.set_timeout(4);
-                    toast
-                } else {
-                    let toast = adw::Toast::new("Library up to date");
-                    toast.set_timeout(2);
-                    toast
-                };
-                overlay.add_toast(toast);
-            }
-        });
+    core.hub.subscribe_widget(&toast_overlay, |overlay, event| {
+        if let AppEvent::Toast(message) = event {
+            let toast = adw::Toast::new(message);
+            toast.set_timeout(3);
+            overlay.add_toast(toast);
+        }
+        if let AppEvent::ScanFinished { added, removed } = event {
+            let toast = if *added > 0 || *removed > 0 {
+                let toast = adw::Toast::new(&format!(
+                    "Library updated · {added} added · {removed} removed"
+                ));
+                toast.set_timeout(4);
+                toast
+            } else {
+                let toast = adw::Toast::new("Library up to date");
+                toast.set_timeout(2);
+                toast
+            };
+            overlay.add_toast(toast);
+        }
+    });
 
     let toolbar_view = adw::ToolbarView::new();
     toolbar_view.add_top_bar(&header);
@@ -701,8 +715,12 @@ fn install_shell_breakpoints(
 /// Keeps an unseen-count badge on the Wantlist sidebar row, cleared when the
 /// page is opened (WantlistSeen) and refreshed after every wantlist change.
 fn attach_wantlist_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
-    let Some(row) = sidebar.row_at_index(5) else { return };
-    let Some(row_box) = row.child().and_downcast::<gtk::Box>() else { return };
+    let Some(row) = sidebar.row_at_index(5) else {
+        return;
+    };
+    let Some(row_box) = row.child().and_downcast::<gtk::Box>() else {
+        return;
+    };
     let badge = gtk::Label::new(None);
     badge.add_css_class("wantlist-badge");
     badge.set_hexpand(true);
@@ -722,17 +740,22 @@ fn attach_wantlist_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
         }
     };
     update();
-    core.hub.subscribe_widget(&badge, move |_, event| match event {
-        AppEvent::WantlistChanged | AppEvent::WantlistSeen => update(),
-        _ => {}
-    });
+    core.hub
+        .subscribe_widget(&badge, move |_, event| match event {
+            AppEvent::WantlistChanged | AppEvent::WantlistSeen => update(),
+            _ => {}
+        });
 }
 
 /// Keeps an active-count badge on the Downloads sidebar row so queued work is
 /// visible from anywhere in the app.
 fn attach_downloads_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
-    let Some(row) = sidebar.row_at_index(6) else { return };
-    let Some(row_box) = row.child().and_downcast::<gtk::Box>() else { return };
+    let Some(row) = sidebar.row_at_index(6) else {
+        return;
+    };
+    let Some(row_box) = row.child().and_downcast::<gtk::Box>() else {
+        return;
+    };
     let badge = gtk::Label::new(None);
     badge.add_css_class("wantlist-badge");
     badge.set_hexpand(true);
@@ -779,9 +802,9 @@ fn attach_paste_to_download(ui: &Rc<Ui>, sidebar: &gtk::ListBox) {
         }
         let ui = Rc::clone(&ui);
         let sidebar = sidebar.clone();
-        ui.window.clipboard().read_text_async(
-            None::<&gtk::gio::Cancellable>,
-            move |result| {
+        ui.window
+            .clipboard()
+            .read_text_async(None::<&gtk::gio::Cancellable>, move |result| {
                 let Ok(Some(text)) = result else { return };
                 if !crate::downloads::looks_like_url(text.trim()) {
                     return;
@@ -790,8 +813,7 @@ fn attach_paste_to_download(ui: &Rc<Ui>, sidebar: &gtk::ListBox) {
                     sidebar.select_row(Some(&row));
                 }
                 crate::downloads::enqueue(&ui.core, text.trim());
-            },
-        );
+            });
         glib::Propagation::Stop
     });
     window.add_controller(controller);
@@ -988,7 +1010,9 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     });
     add_string_action(ui, "album-enrich", |ui, key| {
         let library = ui.core.library.borrow().clone();
-        let Some(album) = library.album_by_key(key) else { return };
+        let Some(album) = library.album_by_key(key) else {
+            return;
+        };
         let complete = ui
             .core
             .db
@@ -1072,6 +1096,7 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     app.set_accels_for_action("app.previous-track", &["<Control>Left"]);
     app.set_accels_for_action("app.love-current", &["<Control>l"]);
     app.set_accels_for_action("app.shortcuts", &["<Control>question"]);
+    install_zoom_actions(app, ui);
     add_string_action(ui, "playlist-new-with-track", |ui, rel| {
         ui::playlists::prompt_new_playlist(ui, Some(rel.to_string()));
     });
@@ -1143,7 +1168,9 @@ fn attach_file_drop(ui: &Rc<Ui>, host: &impl IsA<gtk::Widget>) {
     let drop = gtk::DropTarget::new(gdk::FileList::static_type(), gdk::DragAction::COPY);
     let ui = Rc::clone(ui);
     drop.connect_drop(move |_, value, _, _| {
-        let Ok(files) = value.get::<gdk::FileList>() else { return false };
+        let Ok(files) = value.get::<gdk::FileList>() else {
+            return false;
+        };
         let paths: Vec<std::path::PathBuf> =
             files.files().iter().filter_map(|f| f.path()).collect();
         if paths.is_empty() {
@@ -1193,8 +1220,62 @@ fn present_about(window: &adw::ApplicationWindow) {
     dialog.present(Some(window));
 }
 
+/// Ctrl+= / Ctrl++ / Ctrl+- / Ctrl+0 zoom the whole interface, persisted in
+/// `ui_scale` and mirrored by the Preferences spinner. Each step toasts the new
+/// percentage so the reader can see where they landed.
+fn install_zoom_actions(app: &adw::Application, ui: &Rc<Ui>) {
+    let bind = |name: &str, accels: &[&str], delta: Option<f64>| {
+        let action = gio::SimpleAction::new(name, None);
+        let ui = Rc::clone(ui);
+        action.connect_activate(move |_, _| {
+            let current = ui.core.config.borrow().ui_scale();
+            let target = match delta {
+                Some(delta) => current + delta,
+                None => config::UI_SCALE_DEFAULT,
+            };
+            set_ui_scale(&ui, target);
+        });
+        app.add_action(&action);
+        app.set_accels_for_action(&format!("app.{name}"), accels);
+    };
+    bind(
+        "zoom-in",
+        &["<Control>equal", "<Control>plus", "<Control>KP_Add"],
+        Some(config::UI_SCALE_STEP),
+    );
+    bind(
+        "zoom-out",
+        &["<Control>minus", "<Control>KP_Subtract"],
+        Some(-config::UI_SCALE_STEP),
+    );
+    bind("zoom-reset", &["<Control>0", "<Control>KP_0"], None);
+}
+
+/// The one place the interface zoom changes: clamps, persists, restyles and
+/// reports. Returns the scale that was actually applied.
+pub fn set_ui_scale(ui: &Rc<Ui>, scale: f64) -> f64 {
+    let scale = config::clamp_ui_scale(scale.clamp(config::UI_SCALE_MIN, config::UI_SCALE_MAX));
+    let changed = {
+        let mut config = ui.core.config.borrow_mut();
+        let changed = (config.ui_scale() - scale).abs() > f64::EPSILON;
+        config.ui_scale = scale;
+        changed
+    };
+    if changed {
+        ui.core.save_config();
+        ui::ui_scale::apply(scale);
+        crate::logger::info(
+            "ui",
+            &format!("interface scale set to {}%", ui::ui_scale::percent(scale)),
+        );
+    }
+    ui.core
+        .toast(&format!("Interface {}%", ui::ui_scale::percent(scale)));
+    scale
+}
+
 fn present_shortcuts(window: &adw::ApplicationWindow) {
-    let groups: [(&str, &[(&str, &str)]); 3] = [
+    let groups: [(&str, &[(&str, &str)]); 4] = [
         (
             "Playback",
             &[
@@ -1210,6 +1291,14 @@ fn present_shortcuts(window: &adw::ApplicationWindow) {
                 ("J / K", "Scroll the list"),
                 ("G G", "Jump to top"),
                 ("Shift+G", "Jump to bottom"),
+            ],
+        ),
+        (
+            "View",
+            &[
+                ("Ctrl++", "Zoom in"),
+                ("Ctrl+-", "Zoom out"),
+                ("Ctrl+0", "Actual size"),
             ],
         ),
         (
@@ -1317,7 +1406,9 @@ fn attach_list_navigation(ui: &Rc<Ui>) {
             return glib::Propagation::Proceed;
         }
         if modifiers.intersects(
-            gdk::ModifierType::CONTROL_MASK | gdk::ModifierType::ALT_MASK | gdk::ModifierType::SUPER_MASK,
+            gdk::ModifierType::CONTROL_MASK
+                | gdk::ModifierType::ALT_MASK
+                | gdk::ModifierType::SUPER_MASK,
         ) {
             return glib::Propagation::Proceed;
         }
@@ -1361,7 +1452,9 @@ fn handle_vim_navigation(
         }
         _ => return false,
     }
-    let Some(scroll) = ui.active_scroller() else { return true };
+    let Some(scroll) = ui.active_scroller() else {
+        return true;
+    };
     let vadj = scroll.vadjustment();
     let step = vadj.step_increment().max(48.0);
     let target = match key {
@@ -1401,27 +1494,19 @@ pub fn apply_color_scheme(appearance: &str) {
     adw::StyleManager::default().set_color_scheme(scheme);
 }
 
-fn load_css() {
-    let provider = gtk::CssProvider::new();
-    provider.load_from_string(include_str!("style.css"));
-    if let Some(display) = gdk::Display::default() {
-        gtk::style_context_add_provider_for_display(
-            &display,
-            &provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
-    }
-}
-
 /// Makes the bundled hicolor fallback icons (emote-love, view-list, dialogs,
 /// the flaccy-* set, the app icon) resolvable regardless of install layout or
 /// active icon theme: registers `<prefix>/share/icons` next to the binary and
 /// the repo's `data/icons` for uninstalled dev/demo runs. XDG-installed copies
 /// are already on the default search path; extra entries are harmless.
 fn register_icon_paths() {
-    let Some(display) = gdk::Display::default() else { return };
+    let Some(display) = gdk::Display::default() else {
+        return;
+    };
     let theme = gtk::IconTheme::for_display(&display);
-    let Ok(exe) = std::env::current_exe() else { return };
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
     let Some(bin_dir) = exe.parent() else { return };
     let installed = bin_dir.parent().map(|prefix| prefix.join("share/icons"));
     let dev = bin_dir
@@ -1436,11 +1521,7 @@ fn register_icon_paths() {
 }
 
 /// Records which side panel the shell is showing so the next launch reopens it.
-fn remember_side_panel(
-    core: &Rc<AppCore>,
-    split: &adw::OverlaySplitView,
-    side_stack: &gtk::Stack,
-) {
+fn remember_side_panel(core: &Rc<AppCore>, split: &adw::OverlaySplitView, side_stack: &gtk::Stack) {
     let panel = if split.shows_sidebar() {
         side_stack.visible_child_name().map(|name| name.to_string())
     } else {

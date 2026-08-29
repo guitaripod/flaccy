@@ -45,7 +45,10 @@ fn main() -> glib::ExitCode {
     logger::init();
     logger::info(
         "lifecycle",
-        &format!("flaccy {} starting (smoke={smoke})", env!("CARGO_PKG_VERSION")),
+        &format!(
+            "flaccy {} starting (smoke={smoke})",
+            env!("CARGO_PKG_VERSION")
+        ),
     );
     if let Err(err) = gst::init() {
         logger::error("playback", &format!("gstreamer init failed: {err}"));
@@ -66,10 +69,12 @@ fn main() -> glib::ExitCode {
         return run_headless_import();
     }
 
-    let app_id = if config::demo_mode() { DEMO_APP_ID } else { APP_ID };
-    let application = adw::Application::builder()
-        .application_id(app_id)
-        .build();
+    let app_id = if config::demo_mode() {
+        DEMO_APP_ID
+    } else {
+        APP_ID
+    };
+    let application = adw::Application::builder().application_id(app_id).build();
     application.connect_activate(move |app| app::activate(app, smoke));
 
     let args: Vec<String> = std::env::args()
@@ -98,6 +103,9 @@ fn run_headless_import() -> glib::ExitCode {
     );
     let imported = importer::import_blocking(&db_path, &session, start_page);
     println!("imported {imported} scrobbles for {}", session.username);
-    logger::info("import", &format!("headless history import done: {imported} scrobbles"));
+    logger::info(
+        "import",
+        &format!("headless history import done: {imported} scrobbles"),
+    );
     glib::ExitCode::SUCCESS
 }

@@ -63,7 +63,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&adw::Clamp::builder().maximum_size(760).child(&content).build())
+        .child(
+            &adw::Clamp::builder()
+                .maximum_size(760)
+                .child(&content)
+                .build(),
+        )
         .build();
     ui.register_scroller(&scroll);
 
@@ -116,7 +121,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 list.append(&list_row);
             }
             *ids.borrow_mut() = collected;
-            stack.set_visible_child_name(if playlists.is_empty() { "empty" } else { "list" });
+            stack.set_visible_child_name(if playlists.is_empty() {
+                "empty"
+            } else {
+                "list"
+            });
         }
     };
     rebuild();
@@ -290,7 +299,8 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
             let rows = ui.core.db.playlist_tracks(playlist_id);
             let mut collected = Vec::new();
             for row in rows {
-                let Some(track) = by_rel_path.get(row.rel_path.as_str()).map(|t| (*t).clone()) else {
+                let Some(track) = by_rel_path.get(row.rel_path.as_str()).map(|t| (*t).clone())
+                else {
                     continue;
                 };
                 collected.push((row.row_id, track.clone()));
@@ -359,7 +369,11 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         .orientation(gtk::Orientation::Horizontal)
         .spacing(12)
         .build();
-    let title = gtk::Label::builder().label(&name).xalign(0.0).hexpand(true).build();
+    let title = gtk::Label::builder()
+        .label(&name)
+        .xalign(0.0)
+        .hexpand(true)
+        .build();
     title.add_css_class("title-1");
     header.append(&title);
 
@@ -425,7 +439,12 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&adw::Clamp::builder().maximum_size(760).child(&content).build())
+        .child(
+            &adw::Clamp::builder()
+                .maximum_size(760)
+                .child(&content)
+                .build(),
+        )
         .build();
     ui.register_scroller(&scroll);
 
@@ -438,7 +457,10 @@ fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         });
     }
 
-    let page = adw::NavigationPage::builder().title(&name).child(&scroll).build();
+    let page = adw::NavigationPage::builder()
+        .title(&name)
+        .child(&scroll)
+        .build();
     ui.nav.push(&page);
 }
 
@@ -457,10 +479,18 @@ fn playlist_list_menu(playlist_id: i64) -> gtk::gio::Menu {
     let menu = gtk::gio::Menu::new();
     let play_section = gtk::gio::Menu::new();
     play_section.append_item(&playlist_item("Play", "win.playlist-play", playlist_id));
-    play_section.append_item(&playlist_item("Shuffle", "win.playlist-shuffle", playlist_id));
+    play_section.append_item(&playlist_item(
+        "Shuffle",
+        "win.playlist-shuffle",
+        playlist_id,
+    ));
     menu.append_section(None, &play_section);
     let manage_section = gtk::gio::Menu::new();
-    manage_section.append_item(&playlist_item("Rename…", "win.playlist-rename", playlist_id));
+    manage_section.append_item(&playlist_item(
+        "Rename…",
+        "win.playlist-rename",
+        playlist_id,
+    ));
     manage_section.append_item(&playlist_item("Delete", "win.playlist-delete", playlist_id));
     menu.append_section(None, &manage_section);
     menu
@@ -485,7 +515,11 @@ fn resolve_playlist_tracks(ui: &Rc<Ui>, playlist_id: i64) -> Vec<Track> {
         .db
         .playlist_tracks(playlist_id)
         .into_iter()
-        .filter_map(|row| by_rel_path.get(row.rel_path.as_str()).map(|track| (*track).clone()))
+        .filter_map(|row| {
+            by_rel_path
+                .get(row.rel_path.as_str())
+                .map(|track| (*track).clone())
+        })
         .collect()
 }
 
@@ -531,7 +565,10 @@ pub fn prompt_rename_playlist(ui: &Rc<Ui>, playlist_id: i64) {
         }
         match ui.core.db.rename_playlist(playlist_id, &name) {
             Ok(()) => {
-                crate::logger::info("database", &format!("renamed playlist {playlist_id} to '{name}'"));
+                crate::logger::info(
+                    "database",
+                    &format!("renamed playlist {playlist_id} to '{name}'"),
+                );
                 ui.core.hub.emit(&AppEvent::LibraryReloaded);
             }
             Err(err) => {
@@ -604,7 +641,9 @@ fn attach_reorder_dnd(
     playlist_id: i64,
     entries: &Rc<RefCell<Vec<(i64, Track)>>>,
 ) {
-    let drag = gtk::DragSource::builder().actions(gdk::DragAction::MOVE).build();
+    let drag = gtk::DragSource::builder()
+        .actions(gdk::DragAction::MOVE)
+        .build();
     {
         let row = row.clone();
         drag.connect_prepare(move |_, _, _| {
@@ -620,7 +659,9 @@ fn attach_reorder_dnd(
         let entries = Rc::clone(entries);
         let row = row.clone();
         drop.connect_drop(move |_, value, _, _| {
-            let Ok(source_index) = value.get::<i32>() else { return false };
+            let Ok(source_index) = value.get::<i32>() else {
+                return false;
+            };
             let target_index = row.index();
             if source_index == target_index || source_index < 0 || target_index < 0 {
                 return false;

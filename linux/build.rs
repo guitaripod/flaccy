@@ -59,7 +59,9 @@ fn read_key(path: &std::path::Path, name: &str) -> Option<String> {
     let contents = std::fs::read_to_string(path).ok()?;
     for line in contents.lines() {
         let line = line.trim().strip_prefix("export ").unwrap_or(line.trim());
-        let Some((key, value)) = line.split_once('=') else { continue };
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
         if key.trim() != name {
             continue;
         }

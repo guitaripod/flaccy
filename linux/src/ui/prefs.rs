@@ -2,17 +2,19 @@ use crate::config::{self, Session};
 use crate::events::AppEvent;
 use crate::lastfm::{self, LastFmClient};
 use crate::musicvideo;
-use crate::ui::Ui;
+use crate::ui::{ui_scale, Ui};
 use adw::prelude::*;
 use flaccy_shared::enrichment_job::{copy as job_copy, Activity, JobProgress, Scope};
 use flaccy_shared::library_debut::copy as debut_copy;
-use gtk::glib;
 use gtk::gio;
+use gtk::glib;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub fn present(ui: &Rc<Ui>) {
-    let dialog = adw::PreferencesDialog::builder().title("Preferences").build();
+    let dialog = adw::PreferencesDialog::builder()
+        .title("Preferences")
+        .build();
     let page = adw::PreferencesPage::builder()
         .title("General")
         .icon_name("emblem-system-symbolic")
@@ -100,7 +102,9 @@ fn build_hero(ui: &Rc<Ui>) -> gtk::Box {
         let library = hero_ui.core.library.borrow().clone();
         albums_value.set_label(&group_thousands(library.albums.len() as u64));
         tracks_value.set_label(&group_thousands(library.tracks.len() as u64));
-        plays_value.set_label(&group_thousands(hero_ui.core.db.scrobble_count().max(0) as u64));
+        plays_value.set_label(&group_thousands(
+            hero_ui.core.db.scrobble_count().max(0) as u64
+        ));
     });
 
     hero
@@ -198,6 +202,7 @@ fn appearance_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
     group.add(&row);
     group.add(&theme_row(ui));
+    group.add(&ui_scale_row(ui));
     group
 }
 
@@ -249,6 +254,30 @@ fn apply_swatch(swatch: &gtk::Box, theme: crate::theme::Theme) {
         swatch.remove_css_class(&format!("swatch-{}", other.id()));
     }
     swatch.add_css_class(&format!("swatch-{}", theme.id()));
+}
+
+/// Interface zoom in percent. Same config key as Ctrl+= / Ctrl+-, so the
+/// spinner and the shortcuts stay in step, and every window restyles live.
+fn ui_scale_row(ui: &Rc<Ui>) -> adw::SpinRow {
+    let row = adw::SpinRow::with_range(
+        ui_scale::percent(config::UI_SCALE_MIN) as f64,
+        ui_scale::percent(config::UI_SCALE_MAX) as f64,
+        ui_scale::percent(config::UI_SCALE_STEP) as f64,
+    );
+    row.set_title("Interface Scale");
+    row.set_subtitle("Zoom the whole app — Ctrl+= and Ctrl+- work anywhere");
+    row.set_value(ui_scale::percent(ui.core.config.borrow().ui_scale()) as f64);
+    {
+        let ui = Rc::clone(ui);
+        row.connect_value_notify(move |row| {
+            let scale = row.value().round() / 100.0;
+            if (ui.core.config.borrow().ui_scale() - scale).abs() < 0.001 {
+                return;
+            }
+            crate::ui::window::set_ui_scale(&ui, scale);
+        });
+    }
+    row
 }
 
 /// Lyrics typography. Applying is live — every open lyrics view (sidebar and
@@ -345,7 +374,8 @@ fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     group.add(&align);
 
     let models = musicvideo::llm::installed_models();
-    let chosen = musicvideo::llm::choose_model(&ui.core.config.borrow().music_video_llm_model, &models);
+    let chosen =
+        musicvideo::llm::choose_model(&ui.core.config.borrow().music_video_llm_model, &models);
     let judge = adw::SwitchRow::builder()
         .title("Let a Local Model Decide")
         .subtitle(match &chosen {
@@ -388,7 +418,8 @@ fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
             let cleared = ui.core.db.clear_music_videos();
             remembered.set_subtitle("Nothing matched yet");
             button.set_sensitive(false);
-            ui.core.toast(&format!("Forgot {cleared} music video matches"));
+            ui.core
+                .toast(&format!("Forgot {cleared} music video matches"));
             musicvideo::refresh(&ui.core);
         });
     }
@@ -446,28 +477,25 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
         let ui = Rc::clone(ui);
         let folder_row = folder_row.clone();
         choose.connect_clicked(move |_| {
-            let dialog = gtk::FileDialog::builder().title("Choose Music Folder").build();
+            let dialog = gtk::FileDialog::builder()
+                .title("Choose Music Folder")
+                .build();
             let ui = Rc::clone(&ui);
             let window = ui.window.clone();
             let folder_row = folder_row.clone();
-            dialog.select_folder(
-                Some(&window),
-                None::<&gio::Cancellable>,
-                move |result| {
-                    let Ok(folder) = result else { return };
-                    let Some(path) = folder.path() else { return };
-                    crate::logger::info(
-                        "library",
-                        &format!("music folder changed to {}", path.display()),
-                    );
-                    ui.core.config.borrow_mut().music_dir =
-                        Some(path.display().to_string());
-                    ui.core.save_config();
-                    ui.core.player.set_root(path.clone());
-                    folder_row.set_subtitle(&path.display().to_string());
-                    ui.core.rescan();
-                },
-            );
+            dialog.select_folder(Some(&window), None::<&gio::Cancellable>, move |result| {
+                let Ok(folder) = result else { return };
+                let Some(path) = folder.path() else { return };
+                crate::logger::info(
+                    "library",
+                    &format!("music folder changed to {}", path.display()),
+                );
+                ui.core.config.borrow_mut().music_dir = Some(path.display().to_string());
+                ui.core.save_config();
+                ui.core.player.set_root(path.clone());
+                folder_row.set_subtitle(&path.display().to_string());
+                ui.core.rescan();
+            });
         });
     }
     folder_row.add_suffix(&choose);
@@ -515,7 +543,12 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
         .subtitle("Diff the folder against the database")
         .build();
     let rescan = gtk::Button::builder()
-        .child(&adw::ButtonContent::builder().icon_name("view-refresh-symbolic").label("Rescan").build())
+        .child(
+            &adw::ButtonContent::builder()
+                .icon_name("view-refresh-symbolic")
+                .label("Rescan")
+                .build(),
+        )
         .valign(gtk::Align::Center)
         .build();
     {
@@ -530,7 +563,12 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
         .subtitle("Trash duplicate files and merge album editions")
         .build();
     let cleanup = gtk::Button::builder()
-        .child(&adw::ButtonContent::builder().icon_name("edit-clear-all-symbolic").label("Clean Up…").build())
+        .child(
+            &adw::ButtonContent::builder()
+                .icon_name("edit-clear-all-symbolic")
+                .label("Clean Up…")
+                .build(),
+        )
         .valign(gtk::Align::Center)
         .build();
     cleanup.add_css_class("destructive-action");
@@ -639,7 +677,11 @@ fn fill_gave_up(ui: &Rc<Ui>, row: &adw::ExpanderRow, listed: &RefCell<Vec<adw::A
     for record in records.iter().take(GAVE_UP_LIST_LIMIT) {
         let when = record
             .last_attempt_at
-            .map(|at| at.with_timezone(&chrono::Local).format("%-d %b").to_string())
+            .map(|at| {
+                at.with_timezone(&chrono::Local)
+                    .format("%-d %b")
+                    .to_string()
+            })
             .unwrap_or_default();
         let title = names
             .get(&record.key)
@@ -788,12 +830,10 @@ fn lastfm_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     group
 }
 
-fn begin_auth(
-    ui: &Rc<Ui>,
-    pending_token: &Rc<RefCell<Option<String>>>,
-    refresh: &Rc<dyn Fn()>,
-) {
-    let Some(client) = LastFmClient::new(None) else { return };
+fn begin_auth(ui: &Rc<Ui>, pending_token: &Rc<RefCell<Option<String>>>, refresh: &Rc<dyn Fn()>) {
+    let Some(client) = LastFmClient::new(None) else {
+        return;
+    };
     let (tx, rx) = async_channel::bounded::<Result<String, String>>(1);
     std::thread::spawn(move || {
         let _ = tx.send_blocking(client.get_token());
@@ -833,7 +873,9 @@ fn finish_auth(
     pending_token: &Rc<RefCell<Option<String>>>,
     refresh: &Rc<dyn Fn()>,
 ) {
-    let Some(client) = LastFmClient::new(None) else { return };
+    let Some(client) = LastFmClient::new(None) else {
+        return;
+    };
     let (tx, rx) = async_channel::bounded::<Result<(String, String), String>>(1);
     std::thread::spawn(move || {
         let _ = tx.send_blocking(client.get_session(&token));
