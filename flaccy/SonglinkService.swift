@@ -103,75 +103,119 @@ final class SonglinkService {
         return result
     }
 
+    /// Odesli retired its public API (every call now answers 401
+    /// `PUBLIC_API_ACCESS_DEPRECATED`), so the song.link page itself is the
+    /// source: `song.link/i/<iTunes id>` and `album.link/i/<collection id>`
+    /// resolve directly, and the page embeds its platform links as Next.js
+    /// data. A page that cannot be parsed still yields the universal link.
     nonisolated private func fetchSonglink(url: URL, title: String, artist: String) async -> SonglinkResult? {
-        guard let encodedURL = url.absoluteString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let requestURL = URL(string: "https://api.song.link/v1-alpha.1/links?url=\(encodedURL)&userCountry=US&songIfSingle=true")
-        else { return nil }
-
+        guard let pageURL = SonglinkPage.pageURL(forAppleMusic: url) else {
+            await AppLogger.warning("Songlink: no iTunes id in \(url.absoluteString)", category: .content)
+            return nil
+        }
+        var request = URLRequest(url: pageURL)
+        request.setValue("Mozilla/5.0 (compatible; Flaccy)", forHTTPHeaderField: "User-Agent")
         do {
-            let (data, response) = try await session.data(from: requestURL)
+            let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { return nil }
-
             if http.statusCode == 429 {
                 await AppLogger.warning("Songlink rate limited", category: .content)
                 return nil
             }
-
             guard http.statusCode == 200 else {
-                await AppLogger.warning("Songlink returned \(http.statusCode)", category: .content)
+                await AppLogger.warning("Songlink page returned \(http.statusCode)", category: .content)
                 return nil
             }
-
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let pageUrlString = json["pageUrl"] as? String,
-                  let pageURL = URL(string: pageUrlString),
-                  let linksByPlatform = json["linksByPlatform"] as? [String: [String: Any]]
-            else { return nil }
-
-            var platformLinks = [PlatformLink]()
-            for (key, platformData) in linksByPlatform {
-                guard let urlString = platformData["url"] as? String,
-                      let url = URL(string: urlString)
-                else { continue }
-
-                if let known = Self.knownPlatforms[key] {
-                    platformLinks.append(PlatformLink(
-                        key: key,
-                        displayName: known.displayName,
-                        url: url,
-                        iconName: known.iconName,
-                        tintColorHex: known.tintColorHex
-                    ))
-                } else {
-                    let displayName = key
-                        .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
-                        .localizedCapitalized
-                    platformLinks.append(PlatformLink(
-                        key: key,
-                        displayName: displayName,
-                        url: url,
-                        iconName: "link",
-                        tintColorHex: 0x8E8E93
-                    ))
+            let parsed = SonglinkPage.parse(html: String(decoding: data, as: UTF8.self))
+            let links = parsed.links.map { platformLink(key: $0.platform, url: $0.url) }
+                .sorted { a, b in
+                    (Self.knownPlatforms[a.key]?.order ?? 100) < (Self.knownPlatforms[b.key]?.order ?? 100)
                 }
-            }
-
-            platformLinks.sort { a, b in
-                let orderA = Self.knownPlatforms[a.key]?.order ?? 100
-                let orderB = Self.knownPlatforms[b.key]?.order ?? 100
-                return orderA < orderB
-            }
-
             return SonglinkResult(
-                pageURL: pageURL,
-                platformLinks: platformLinks,
-                title: title,
-                artist: artist
+                pageURL: parsed.pageURL ?? pageURL,
+                platformLinks: links,
+                title: parsed.title ?? title,
+                artist: parsed.artist ?? artist
             )
         } catch {
             await AppLogger.error("Songlink fetch failed: \(error.localizedDescription)", category: .content)
             return nil
         }
+    }
+
+    nonisolated private func platformLink(key: String, url: URL) -> PlatformLink {
+        if let known = Self.knownPlatforms[key] {
+            return PlatformLink(
+                key: key, displayName: known.displayName, url: url,
+                iconName: known.iconName, tintColorHex: known.tintColorHex
+            )
+        }
+        let displayName = key
+            .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
+            .localizedCapitalized
+        return PlatformLink(key: key, displayName: displayName, url: url, iconName: "link", tintColorHex: 0x8E8E93)
+    }
+}
+
+/// The song.link page contract, mirrored in Rust as `linux/src/songlink.rs`:
+/// the universal URL is derived from the iTunes id, and the platform links
+/// live in the page's `__NEXT_DATA__` under `pageData.sections[].links[]`.
+nonisolated enum SonglinkPage {
+
+    struct Link: Sendable, Equatable {
+        let platform: String
+        let url: URL
+    }
+
+    struct Parsed: Sendable {
+        let pageURL: URL?
+        let title: String?
+        let artist: String?
+        let links: [Link]
+    }
+
+    /// A song URL carries the track id as `?i=`; an album URL ends in the
+    /// collection id. Anything else has no song.link shortcut.
+    static func pageURL(forAppleMusic url: URL) -> URL? {
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        if let track = components?.queryItems?.first(where: { $0.name == "i" })?.value, isNumeric(track) {
+            return URL(string: "https://song.link/i/\(track)")
+        }
+        let collection = url.lastPathComponent
+        guard isNumeric(collection) else { return nil }
+        return URL(string: "https://album.link/i/\(collection)")
+    }
+
+    static func parse(html: String) -> Parsed {
+        let empty = Parsed(pageURL: nil, title: nil, artist: nil, links: [])
+        guard let open = html.range(of: "<script id=\"__NEXT_DATA__\" type=\"application/json\">"),
+              let close = html.range(of: "</script>", range: open.upperBound..<html.endIndex),
+              let json = try? JSONSerialization.jsonObject(with: Data(html[open.upperBound..<close.lowerBound].utf8)) as? [String: Any],
+              let pageData = ((json["props"] as? [String: Any])?["pageProps"] as? [String: Any])?["pageData"] as? [String: Any]
+        else { return empty }
+        let entity = pageData["entityData"] as? [String: Any]
+        var seen = Set<String>()
+        var links = [Link]()
+        for section in pageData["sections"] as? [[String: Any]] ?? [] {
+            for raw in section["links"] as? [[String: Any]] ?? [] {
+                guard let platform = raw["platform"] as? String,
+                      let urlString = raw["url"] as? String,
+                      let url = URL(string: urlString),
+                      seen.insert(platform).inserted
+                else { continue }
+                links.append(Link(platform: platform, url: url))
+            }
+        }
+        return Parsed(
+            pageURL: (pageData["pageUrl"] as? String).flatMap(URL.init(string:)),
+            title: entity?["title"] as? String,
+            artist: entity?["artistName"] as? String,
+            links: links
+        )
+    }
+
+    private static func isNumeric(_ value: String) -> Bool {
+        !value.isEmpty && value.allSatisfy(\.isNumber)
     }
 }
 

@@ -28,7 +28,8 @@ pub fn track_menu(rel_path: &str, loved: bool) -> gio::Menu {
     let love_label = if loved { "Unlove" } else { "Love on Last.fm" };
     actions_section.append_item(&item(love_label, "win.track-love", rel_path));
     actions_section.append_item(&item("Add to Playlist…", "win.playlist-choose", rel_path));
-    actions_section.append_item(&item("Copy song.link", "win.track-songlink", rel_path));
+    actions_section.append_item(&item("Share Songlink…", "win.track-share", rel_path));
+    actions_section.append_item(&item("Copy Songlink", "win.track-songlink", rel_path));
     actions_section.append_item(&item("Show in Files", "win.track-reveal", rel_path));
     menu.append_section(None, &actions_section);
 
@@ -53,7 +54,8 @@ pub fn album_menu(key: &str) -> gio::Menu {
     menu.append_section(None, &nav_section);
     let extra_section = gio::Menu::new();
     extra_section.append_item(&item("Start Station", "win.album-station", key));
-    extra_section.append_item(&item("Copy song.link", "win.album-songlink", key));
+    extra_section.append_item(&item("Share Songlink…", "win.album-share", key));
+    extra_section.append_item(&item("Copy Songlink", "win.album-songlink", key));
     extra_section.append_item(&item("Enrich Metadata", "win.album-enrich", key));
     extra_section.append_item(&item("Show in Files", "win.album-reveal", key));
     menu.append_section(None, &extra_section);

@@ -1002,6 +1002,18 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
             crate::songlink::copy_link(&ui.core, track.title.clone(), track.artist.clone(), false);
         }
     });
+    add_string_action(ui, "track-share", |ui, rel| {
+        let library = ui.core.library.borrow().clone();
+        if let Some(track) = library.track_by_rel_path(rel) {
+            ui::songlink_dialog::share(ui, track.title.clone(), track.artist.clone(), false);
+        }
+    });
+    add_string_action(ui, "album-share", |ui, key| {
+        let library = ui.core.library.borrow().clone();
+        if let Some(album) = library.album_by_key(key) {
+            ui::songlink_dialog::share(ui, album.title.clone(), album.artist.clone(), true);
+        }
+    });
     add_string_action(ui, "album-songlink", |ui, key| {
         let library = ui.core.library.borrow().clone();
         if let Some(album) = library.album_by_key(key) {
@@ -1597,6 +1609,13 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
             ui::prefs::present(&ui);
+        });
+    }
+    if let Some(spec) = std::env::var("FLACCY_DEMO_SHARE").ok() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            let (artist, title) = spec.split_once('|').unwrap_or(("Pantera", "Domination"));
+            ui::songlink_dialog::share(&ui, title.to_string(), artist.to_string(), false);
         });
     }
     if std::env::var_os("FLACCY_DEMO_ABOUT").is_some() {

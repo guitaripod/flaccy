@@ -14,6 +14,7 @@ pub mod now_playing;
 pub mod playlists;
 pub mod prefs;
 pub mod queue_panel;
+pub mod songlink_dialog;
 pub mod songs;
 pub mod stats;
 pub mod suggested_shelf;
