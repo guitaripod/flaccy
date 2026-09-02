@@ -6,6 +6,8 @@ import UIKit
 final class SettingsHeaderView: UIView {
 
     var onUnlockTapped: (() -> Void)?
+    var onRestoreTapped: (() -> Void)?
+    var onManageSubscriptionTapped: (() -> Void)?
 
     private let backdrop = AmbientPaletteBackdropView()
     private let contentStack = UIStackView()
@@ -15,6 +17,8 @@ final class SettingsHeaderView: UIView {
     private let playsColumn = StatColumn()
 
     private let statusControl = StatusPillControl()
+    private let restoreButton = UIButton(configuration: .plain())
+    private let manageSubscriptionButton = UIButton(configuration: .plain())
 
     private static let groupedNumber: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -67,6 +71,40 @@ final class SettingsHeaderView: UIView {
 
         statusControl.addTarget(self, action: #selector(statusTapped), for: .touchUpInside)
         contentStack.addArrangedSubview(statusControl)
+        contentStack.setCustomSpacing(6, after: statusControl)
+
+        configureFootnoteButton(restoreButton, title: String(localized: "Restore Purchases"), identifier: "settings.restorePurchases") { [weak self] in
+            self?.onRestoreTapped?()
+        }
+        configureFootnoteButton(manageSubscriptionButton, title: String(localized: "Manage Subscription"), identifier: "settings.manageSubscription") { [weak self] in
+            self?.onManageSubscriptionTapped?()
+        }
+        contentStack.addArrangedSubview(makeFootnoteRow())
+    }
+
+    /// The quiet actions under the status pill: a way back in for someone who
+    /// already paid, and the subscription's own management sheet when that is
+    /// what they have.
+    private func makeFootnoteRow() -> UIView {
+        let row = UIStackView(arrangedSubviews: [restoreButton, manageSubscriptionButton])
+        row.axis = .vertical
+        row.alignment = .center
+        row.spacing = 0
+        return row
+    }
+
+    private func configureFootnoteButton(_ button: UIButton, title: String, identifier: String, action: @escaping () -> Void) {
+        var config = UIButton.Configuration.plain()
+        config.attributedTitle = AttributedString(
+            title,
+            attributes: AttributeContainer([.font: UIFont.scaled(.footnote, size: 13, weight: .semibold, maxSize: 18)])
+        )
+        config.baseForegroundColor = UIColor.white.withAlphaComponent(0.72)
+        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
+        button.configuration = config
+        button.accessibilityIdentifier = identifier
+        button.isHidden = true
+        button.addAction(UIAction { _ in action() }, for: .touchUpInside)
     }
 
     private func makeIdentityRow() -> UIView {
@@ -140,7 +178,7 @@ final class SettingsHeaderView: UIView {
         return container
     }
 
-    func configure(state: EntitlementState, priceText: String?, albums: Int, tracks: Int, plays: Int?) {
+    func configure(state: EntitlementState, lifetimeOffer: PurchaseOffer?, albums: Int, tracks: Int, plays: Int?) {
         albumsColumn.setValue(Self.groupedNumber.string(from: NSNumber(value: albums)) ?? "\(albums)")
         tracksColumn.setValue(Self.groupedNumber.string(from: NSNumber(value: tracks)) ?? "\(tracks)")
         if let plays {
@@ -148,10 +186,12 @@ final class SettingsHeaderView: UIView {
         } else {
             playsColumn.setValue("—")
         }
-        configureStatus(state: state, priceText: priceText)
+        configureStatus(state: state, lifetimeOffer: lifetimeOffer)
+        restoreButton.isHidden = state.isPurchased
+        manageSubscriptionButton.isHidden = state != .purchased(.yearly)
     }
 
-    private func configureStatus(state: EntitlementState, priceText: String?) {
+    private func configureStatus(state: EntitlementState, lifetimeOffer: PurchaseOffer?) {
         switch state {
         case .purchased(.lifetime):
             statusControl.configure(
@@ -170,22 +210,18 @@ final class SettingsHeaderView: UIView {
                 interactive: false
             )
         case .trial(let daysRemaining):
-            let days = String(localized: "\(daysRemaining) days left")
-            let subtitle = priceText.map { String(localized: "\(days) · from \($0) a year") }
-                ?? String(localized: "\(days) in your free trial")
             statusControl.configure(
                 symbolName: "sparkles",
-                title: String(localized: "Unlock Flaccy Pro"),
-                subtitle: subtitle,
+                title: String(localized: "Flaccy Lifetime"),
+                subtitle: PaywallCopy.settingsSentence(state: state, lifetime: lifetimeOffer),
                 tint: daysRemaining <= 2 ? .systemOrange : QualityBadgeView.losslessTint,
                 interactive: true
             )
         case .expired:
-            let subtitle = priceText.map { String(localized: "Your trial ended · from \($0) a year") } ?? String(localized: "Your free trial has ended")
             statusControl.configure(
                 symbolName: "lock.fill",
-                title: String(localized: "Unlock Flaccy Pro"),
-                subtitle: subtitle,
+                title: String(localized: "Flaccy Lifetime"),
+                subtitle: PaywallCopy.settingsSentence(state: state, lifetime: lifetimeOffer),
                 tint: .systemRed,
                 interactive: true
             )

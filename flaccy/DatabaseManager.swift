@@ -1676,6 +1676,60 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    /// The paywall's proof of what the library holds, read in one statement
+    /// that touches no BLOB column. The codec predicate is `Track.isLossless`
+    /// rewritten as SQL over the same `Track.losslessCodecs`.
+    func libraryTotals() throws -> (tracks: Int, lossless: Int, seconds: Double) {
+        let codecs = Track.losslessCodecs.sorted()
+        let placeholders = codecs.map { _ in "?" }.joined(separator: ", ")
+        return try dbQueue.read { db in
+            guard let row = try Row.fetchOne(db, sql: """
+                SELECT COUNT(*) AS tracks,
+                       COALESCE(SUM(CASE WHEN UPPER(codec) IN (\(placeholders)) THEN 1 ELSE 0 END), 0) AS lossless,
+                       COALESCE(SUM(duration), 0) AS seconds
+                FROM tracks
+                """, arguments: StatementArguments(codecs)) else {
+                return (tracks: 0, lossless: 0, seconds: 0)
+            }
+            return (tracks: row["tracks"], lossless: row["lossless"], seconds: row["seconds"])
+        }
+    }
+
+    func scrobbleCount(submittedOnly: Bool) throws -> Int {
+        try dbQueue.read { db in
+            let scrobbles = submittedOnly ? ScrobbleRecord.filter(Column("submitted") == true) : ScrobbleRecord.all()
+            return try scrobbles.fetchCount(db)
+        }
+    }
+
+    func lyricsMatchedCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM lyrics WHERE syncedLyrics IS NOT NULL") ?? 0
+        }
+    }
+
+    /// Covers the library can still show: nothing deletes an `albumInfo` row
+    /// when its last track goes, so a found cover counts only while an album
+    /// with that title and artist still exists in `tracks`.
+    func coversResolvedCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: """
+                SELECT COUNT(*) FROM albumInfo
+                WHERE coverArtURL IS NOT NULL
+                  AND EXISTS (
+                      SELECT 1 FROM tracks t
+                      WHERE t.albumTitle = albumInfo.title AND t.artist = albumInfo.artist
+                  )
+                """) ?? 0
+        }
+    }
+
+    func aiReviewedTrackCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM tracks WHERE aiAnalyzed = 1") ?? 0
+        }
+    }
+
     func fetchLibraryArtists() throws -> Set<String> {
         try dbQueue.read { db in
             Set(try String.fetchAll(db, sql: "SELECT DISTINCT artist FROM tracks"))

@@ -5,7 +5,7 @@
   ],
   "products" : [
     {
-      "displayPrice" : "9.99",
+      "displayPrice" : "24.99",
       "familyShareable" : false,
       "internalID" : "F1ACC1E0-0000-4000-8000-000000000002",
       "localizations" : [
@@ -17,6 +17,21 @@
       ],
       "productID" : "com.midgarcorp.flaccy.lifetime",
       "referenceName" : "Lifetime",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "internalID" : "D722436D-3630-42C5-A45A-3D135B757059",
+      "localizations" : [
+        {
+          "description" : "Welcome-back price. Unlock Flaccy forever with one purchase.",
+          "displayName" : "Flaccy Lifetime · Welcome Back",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.midgarcorp.flaccy.lifetime.welcome",
+      "referenceName" : "Lifetime Welcome Back",
       "type" : "NonConsumable"
     }
   ],
@@ -32,7 +47,40 @@
     ]
   },
   "subscriptionGroups" : [
+    {
+      "id" : "FD7ED80E-E4DB-4ED7-BE57-A9BF2628A4C1",
+      "localizations" : [
 
+      ],
+      "name" : "Flaccy Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "7.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "16FDB631-94C2-428F-8C80-78B0DB56B8E1",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Everything in Flaccy, renews yearly",
+              "displayName" : "Flaccy Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.midgarcorp.flaccy.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Pro Yearly",
+          "subscriptionGroupID" : "FD7ED80E-E4DB-4ED7-BE57-A9BF2628A4C1",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
   ],
   "version" : {
     "major" : 4,

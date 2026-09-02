@@ -4,7 +4,9 @@ import UIKit
 /// Headless capture of the live paywall — real store prices, real device —
 /// for the App Store subscription review screenshot. Launch with
 /// `--shot-paywall`; the PNG lands in the app's Documents folder where
-/// `devicectl device copy from` can fetch it.
+/// `devicectl device copy from` can fetch it. Pair it with `--trial-day N`
+/// to capture any day of the runway — day 7 for the "less than a day left" status,
+/// day 9 for the expired, welcome-back state — without touching the Keychain.
 @MainActor
 enum PaywallShot {
 

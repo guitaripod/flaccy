@@ -17,23 +17,36 @@ SHARED_IOS_FILES = %w[
   ChartsViewModel.swift
   DatabaseManager.swift
   DetailEnrichment.swift
+  EnrichmentCoordinator.swift
+  EnrichmentJobCopy.swift
+  EnrichmentReportViewModel.swift
+  EnrichmentTasks.swift
   GroqService.swift
+  GroupAlbumEditionsSetting.swift
   ImageCache.swift
   ImportOutcomeCopy.swift
   LastFMService.swift
   LastFMStatsService.swift
   Library.swift
+  LibraryDebutCopy.swift
   LibraryFilter.swift
+  LibraryHygiene.swift
+  LibraryHygieneService.swift
   LibraryLayoutMode.swift
+  LibraryLoadPhaseCopy.swift
   LibraryPaths.swift
+  LibraryStartupProbe.swift
   LibraryViewModel.swift
   ListeningGuideContent.swift
+  Localizable.xcstrings
   LovedTracksService.swift
   LyricsService.swift
   MetadataEnrichmentService.swift
   MetadataService.swift
   MusicKitService.swift
   NowPlayingViewModel.swift
+  PaywallCopy.swift
+  PaywallShot.swift
   PlatformImage.swift
   PurchaseManager.swift
   RecapModels.swift
@@ -46,6 +59,7 @@ SHARED_IOS_FILES = %w[
   StationBuilder.swift
   SuggestedPlaylistService.swift
   Track.swift
+  TrialReminderScheduler.swift
   WantlistService.swift
   WantlistViewModel.swift
   YearInMusicModels.swift

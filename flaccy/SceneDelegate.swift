@@ -5,6 +5,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
     private let playerContainer = PlayerContainerViewController()
     private var navController: UINavigationController?
+    private var deferredPaywallObserver: NSObjectProtocol?
 
     func scene(
         _ scene: UIScene,
@@ -89,17 +90,47 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handlePaywallRequired), name: PurchaseManager.paywallRequired, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(customerInfoDidLoad), name: PurchaseManager.customerInfoDidLoad, object: nil
+        )
+        TrialReminderPrompt.observeOpportunities()
     }
 
+    /// The single place the paywall is presented from. A Debut on screen wins:
+    /// the request waits for it to leave and is then presented exactly once.
     @objc private func handlePaywallRequired() {
-        guard let root = window?.rootViewController else { return }
-        var top = root
-        while let presented = top.presentedViewController { top = presented }
+        guard let top = TrialRunwayPresenter.topmostViewController(in: window) else { return }
         guard !(top is PaywallViewController) else { return }
+        if let library = TrialRunwayPresenter.library(in: window), library.isShowingDebut {
+            deferPaywallUntilDebutDismisses()
+            return
+        }
         PaywallViewController.presentSheet(from: top)
     }
 
+    private func deferPaywallUntilDebutDismisses() {
+        guard deferredPaywallObserver == nil else { return }
+        AppLogger.info("Paywall deferred until the Debut dismisses", category: .purchases)
+        deferredPaywallObserver = NotificationCenter.default.addObserver(
+            forName: LibraryViewController.debutDidDismiss, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if let observer = self.deferredPaywallObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                    self.deferredPaywallObserver = nil
+                }
+                self.handlePaywallRequired()
+            }
+        }
+    }
+
+    @objc private func customerInfoDidLoad() {
+        TrialRunwayPresenter.refresh(in: window)
+    }
+
     func sceneDidBecomeActive(_ scene: UIScene) {
+        TrialRunwayPresenter.refresh(in: window)
         Task {
             await RecapNotificationScheduler.shared.refreshSchedule()
         }

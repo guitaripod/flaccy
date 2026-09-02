@@ -5,7 +5,7 @@
   ],
   "products" : [
     {
-      "displayPrice" : "9.99",
+      "displayPrice" : "24.99",
       "familyShareable" : false,
       "internalID" : "F1ACC7MA-0000-4000-8000-000000000002",
       "localizations" : [
@@ -17,6 +17,21 @@
       ],
       "productID" : "com.midgarcorp.flaccy.mac.lifetime",
       "referenceName" : "Flaccy Lifetime (Mac)",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "internalID" : "1D8EC52A-C9B5-42B2-81C2-E64AA8862A8C",
+      "localizations" : [
+        {
+          "description" : "Welcome-back price. Own Flaccy forever with a one-time purchase.",
+          "displayName" : "Flaccy Lifetime · Welcome Back",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.midgarcorp.flaccy.mac.lifetime.welcome",
+      "referenceName" : "Flaccy Lifetime Welcome Back (Mac)",
       "type" : "NonConsumable"
     }
   ],
@@ -32,7 +47,40 @@
     ]
   },
   "subscriptionGroups" : [
+    {
+      "id" : "E80B72DA-8746-4AD2-99AB-4C6832A08450",
+      "localizations" : [
 
+      ],
+      "name" : "Flaccy Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "7.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "4007F9A5-A9C3-4816-9F88-94293424FF86",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Everything in Flaccy, renews yearly",
+              "displayName" : "Flaccy Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.midgarcorp.flaccy.mac.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Pro Yearly",
+          "subscriptionGroupID" : "E80B72DA-8746-4AD2-99AB-4C6832A08450",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
   ],
   "version" : {
     "major" : 4,

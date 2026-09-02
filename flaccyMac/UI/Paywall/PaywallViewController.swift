@@ -1,15 +1,25 @@
 import AppKit
+import FlaccyCore
+import RevenueCat
 import StoreKit
 
-/// The Flaccy Pro paywall (yearly or lifetime), presented as a sheet on the main window: the
+/// The Flaccy Lifetime paywall, presented as a sheet on the main window: the
 /// iOS paywall's visual language over an ambient palette backdrop, with the
 /// Apple Watch bullet swapped for the desktop's menu-bar/folder-watch story.
+/// The price and the call to action are pinned in a footer under the scroll
+/// view so they are above the fold at every size the sheet can take.
 final class PaywallViewController: NSViewController {
 
     private struct Feature {
         let symbolName: String
         let title: String
         let detail: String
+    }
+
+    private enum Metrics {
+        static let width: CGFloat = 460
+        static let height: CGFloat = 780
+        static let inset: CGFloat = 30
     }
 
     private static let accent = NSColor(red: 0.45, green: 0.86, blue: 0.92, alpha: 1)
@@ -43,11 +53,17 @@ final class PaywallViewController: NSViewController {
     ]
 
     private let backdrop = AmbientBackdropView()
+    private let scrollView = NSScrollView()
     private let planPicker = MacPlanPickerView()
-    private let statusLabel = NSTextField(labelWithString: "")
-    private let purchaseButton = NSButton(title: String(localized: "Start Yearly"), target: nil, action: nil)
+    private let proofCard = MacPaywallProofCard()
+    private let yearlyFootnote = NSTextField(wrappingLabelWithString: "")
+    private let statusLabel = NSTextField(wrappingLabelWithString: "")
+    private let purchaseButton = NSButton(title: String(localized: "Get Lifetime"), target: nil, action: nil)
+    private let purchaseSubline = NSTextField(labelWithString: "")
     private let restoreButton = NSButton(title: String(localized: "Restore Purchases"), target: nil, action: nil)
     private let spinner = NSProgressIndicator()
+
+    private var hasCelebrated = false
 
     private var isTransacting = false {
         didSet {
@@ -68,15 +84,18 @@ final class PaywallViewController: NSViewController {
         let root = NSView()
         root.wantsLayer = true
         root.translatesAutoresizingMaskIntoConstraints = false
-        root.widthAnchor.constraint(equalToConstant: 460).isActive = true
-        root.heightAnchor.constraint(equalToConstant: 700).isActive = true
+        root.widthAnchor.constraint(equalToConstant: Metrics.width).isActive = true
+        root.heightAnchor.constraint(equalToConstant: Metrics.height).isActive = true
 
         backdrop.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(backdrop)
 
         let content = buildContent()
-        content.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(content)
+        configureScrollView(documentView: content)
+        root.addSubview(scrollView)
+
+        let footer = buildFooter()
+        root.addSubview(footer)
 
         let closeButton = NSButton(
             image: NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: String(localized: "Close")) ?? NSImage(),
@@ -92,10 +111,13 @@ final class PaywallViewController: NSViewController {
             backdrop.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             backdrop.trailingAnchor.constraint(equalTo: root.trailingAnchor),
             backdrop.bottomAnchor.constraint(equalTo: root.bottomAnchor),
-            content.topAnchor.constraint(equalTo: root.topAnchor, constant: 28),
-            content.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 30),
-            content.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -30),
-            content.bottomAnchor.constraint(lessThanOrEqualTo: root.bottomAnchor, constant: -20),
+            scrollView.topAnchor.constraint(equalTo: root.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: footer.topAnchor),
+            footer.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            footer.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            footer.bottomAnchor.constraint(equalTo: root.bottomAnchor),
             closeButton.topAnchor.constraint(equalTo: root.topAnchor, constant: 14),
             closeButton.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -14),
         ])
@@ -109,12 +131,19 @@ final class PaywallViewController: NSViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.stateDidChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.customerInfoDidLoad, object: nil
+        )
         updateStatusLine()
         updateOffers()
         planPicker.onSelectionChange = { [weak self] _ in self?.updatePurchaseButton() }
         Task { [weak self] in
-            await PurchaseManager.shared.loadOffersIfNeeded()
+            let manager = PurchaseManager.shared
+            async let proof = manager.loadProof()
+            await manager.loadOffersIfNeeded()
+            await manager.loadLapsedOfferIfNeeded()
             self?.updateOffers()
+            self?.proofCard.render(await proof, state: manager.state)
         }
         AppLogger.info("Paywall presented (state \(PurchaseManager.shared.state))", category: .purchases)
     }
@@ -126,6 +155,33 @@ final class PaywallViewController: NSViewController {
 
     override func cancelOperation(_ sender: Any?) {
         closeTapped()
+    }
+
+    /// The document view is pinned to the clip view's width so wrapping labels
+    /// measure against the sheet, and the content only ever scrolls vertically.
+    private func configureScrollView(documentView: NSView) {
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.drawsBackground = false
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.scrollerStyle = .overlay
+        scrollView.contentView.drawsBackground = false
+
+        let document = NSView()
+        document.translatesAutoresizingMaskIntoConstraints = false
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+        document.addSubview(documentView)
+        scrollView.documentView = document
+        NSLayoutConstraint.activate([
+            document.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
+            document.trailingAnchor.constraint(equalTo: scrollView.contentView.trailingAnchor),
+            document.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
+            documentView.topAnchor.constraint(equalTo: document.topAnchor, constant: 28),
+            documentView.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: Metrics.inset),
+            documentView.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -Metrics.inset),
+            documentView.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -16),
+        ])
     }
 
     private func buildContent() -> NSView {
@@ -149,7 +205,7 @@ final class PaywallViewController: NSViewController {
 
         let kicker = NSTextField(labelWithString: "")
         kicker.attributedStringValue = NSAttributedString(
-            string: String(localized: "FLACCY PRO"),
+            string: String(localized: "FLACCY LIFETIME"),
             attributes: [
                 .font: NSFont.systemFont(ofSize: 12, weight: .bold),
                 .foregroundColor: MacColors.secondaryLabel,
@@ -163,26 +219,12 @@ final class PaywallViewController: NSViewController {
 
         let featureCard = buildFeatureCard()
 
-        purchaseButton.bezelStyle = .rounded
-        purchaseButton.controlSize = .large
-        purchaseButton.keyEquivalent = "\r"
-        purchaseButton.target = self
-        purchaseButton.action = #selector(purchaseTapped)
-        purchaseButton.font = .systemFont(ofSize: 15, weight: .bold)
-
-        restoreButton.isBordered = false
-        restoreButton.contentTintColor = MacColors.secondaryLabel
-        restoreButton.font = .systemFont(ofSize: 12, weight: .medium)
-        restoreButton.target = self
-        restoreButton.action = #selector(restoreTapped)
+        yearlyFootnote.font = .systemFont(ofSize: 11)
+        yearlyFootnote.textColor = MacColors.tertiaryLabel
+        yearlyFootnote.isHidden = true
 
         statusLabel.font = .systemFont(ofSize: 11, weight: .medium)
         statusLabel.textColor = MacColors.secondaryLabel
-        statusLabel.alignment = .center
-
-        spinner.style = .spinning
-        spinner.controlSize = .small
-        spinner.isDisplayedWhenStopped = false
 
         let privacy = NSButton(title: String(localized: "Privacy Policy"), target: self, action: #selector(openPrivacy))
         privacy.isBordered = false
@@ -196,12 +238,11 @@ final class PaywallViewController: NSViewController {
         legalRow.orientation = .horizontal
         legalRow.spacing = 14
 
-        let buyRow = NSStackView(views: [purchaseButton, spinner])
-        buyRow.orientation = .horizontal
-        buyRow.spacing = 8
+        proofCard.isHidden = true
+        proofCard.alphaValue = 0
 
         let stack = NSStackView(views: [
-            tile, kicker, title, featureCard, planPicker, buyRow, restoreButton, statusLabel, legalRow,
+            tile, kicker, title, planPicker, proofCard, featureCard, yearlyFootnote, statusLabel, legalRow,
         ])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -209,14 +250,71 @@ final class PaywallViewController: NSViewController {
         stack.setCustomSpacing(16, after: tile)
         stack.setCustomSpacing(4, after: kicker)
         stack.setCustomSpacing(18, after: title)
-        stack.setCustomSpacing(18, after: featureCard)
-        stack.setCustomSpacing(12, after: planPicker)
-        planPicker.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        stack.setCustomSpacing(2, after: buyRow)
-        stack.setCustomSpacing(8, after: restoreButton)
-        featureCard.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        purchaseButton.widthAnchor.constraint(equalToConstant: 240).isActive = true
+        stack.setCustomSpacing(14, after: planPicker)
+        stack.setCustomSpacing(14, after: proofCard)
+        stack.setCustomSpacing(12, after: featureCard)
+        stack.setCustomSpacing(10, after: yearlyFootnote)
+        stack.setCustomSpacing(6, after: statusLabel)
+        for full in [planPicker, proofCard, featureCard, yearlyFootnote, statusLabel] {
+            full.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
         return stack
+    }
+
+    private func buildFooter() -> NSView {
+        purchaseButton.bezelStyle = .rounded
+        purchaseButton.controlSize = .large
+        purchaseButton.keyEquivalent = "\r"
+        purchaseButton.target = self
+        purchaseButton.action = #selector(purchaseTapped)
+        purchaseButton.font = .systemFont(ofSize: 15, weight: .bold)
+        purchaseButton.widthAnchor.constraint(equalToConstant: 260).isActive = true
+
+        spinner.style = .spinning
+        spinner.controlSize = .small
+        spinner.isDisplayedWhenStopped = false
+
+        purchaseSubline.font = .systemFont(ofSize: 11, weight: .medium)
+        purchaseSubline.textColor = MacColors.secondaryLabel
+
+        restoreButton.isBordered = false
+        restoreButton.contentTintColor = MacColors.secondaryLabel
+        restoreButton.font = .systemFont(ofSize: 12, weight: .medium)
+        restoreButton.target = self
+        restoreButton.action = #selector(restoreTapped)
+
+        let buyRow = NSStackView(views: [purchaseButton, spinner])
+        buyRow.orientation = .horizontal
+        buyRow.spacing = 8
+
+        let stack = NSStackView(views: [buyRow, purchaseSubline, restoreButton])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 4
+        stack.setCustomSpacing(8, after: purchaseSubline)
+        stack.edgeInsets = NSEdgeInsets(top: 14, left: Metrics.inset, bottom: 16, right: Metrics.inset)
+
+        let footer = NSView()
+        footer.wantsLayer = true
+        footer.translatesAutoresizingMaskIntoConstraints = false
+        let hairline = NSView()
+        hairline.wantsLayer = true
+        hairline.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.1).cgColor
+        hairline.translatesAutoresizingMaskIntoConstraints = false
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        footer.addSubview(hairline)
+        footer.addSubview(stack)
+        NSLayoutConstraint.activate([
+            hairline.topAnchor.constraint(equalTo: footer.topAnchor),
+            hairline.leadingAnchor.constraint(equalTo: footer.leadingAnchor),
+            hairline.trailingAnchor.constraint(equalTo: footer.trailingAnchor),
+            hairline.heightAnchor.constraint(equalToConstant: 1),
+            stack.topAnchor.constraint(equalTo: footer.topAnchor),
+            stack.leadingAnchor.constraint(equalTo: footer.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: footer.trailingAnchor),
+            stack.bottomAnchor.constraint(equalTo: footer.bottomAnchor),
+        ])
+        return footer
     }
 
     private func buildFeatureCard() -> NSView {
@@ -271,54 +369,69 @@ final class PaywallViewController: NSViewController {
     }
 
     private func updateOffers() {
-        planPicker.configure(offers: PurchaseManager.shared.offers)
+        let manager = PurchaseManager.shared
+        var welcomeBackEnds: Date?
+        if case .available(let endsAt) = manager.lapsedOfferState { welcomeBackEnds = endsAt }
+        planPicker.configure(offers: manager.offersToPresent, welcomeBackEnds: welcomeBackEnds)
+        updateYearlyFootnote(manager.yearlyOffer)
         updatePurchaseButton()
+    }
+
+    private func updateYearlyFootnote(_ yearly: PurchaseOffer?) {
+        guard let yearly, !PurchaseManager.shared.state.isPurchased else {
+            yearlyFootnote.isHidden = true
+            return
+        }
+        yearlyFootnote.stringValue = PaywallCopy.yearlyFootnote(yearly: yearly)
+        yearlyFootnote.isHidden = false
     }
 
     private func updatePurchaseButton() {
         let offer = planPicker.selectedOffer
+        let plan = planPicker.selectedPlan
         purchaseAvailable = offer != nil
-        switch planPicker.selectedPlan {
-        case .yearly:
-            purchaseButton.title = offer.map { String(localized: "Start Yearly · \($0.displayPrice)") }
-                ?? String(localized: "Start Yearly")
-        case .lifetime:
-            purchaseButton.title = offer.map { String(localized: "Unlock Lifetime · \($0.displayPrice)") }
-                ?? String(localized: "Unlock Lifetime")
-        }
+        purchaseButton.title = PaywallCopy.purchaseTitle(plan: plan, offer: offer)
+        purchaseSubline.stringValue = PaywallCopy.purchaseSubline(plan: plan)
+        purchaseButton.setAccessibilityHelp(PaywallCopy.purchaseHint(plan: plan))
         purchaseButton.isEnabled = purchaseAvailable && !isTransacting
     }
 
     private func updateStatusLine() {
-        switch PurchaseManager.shared.state {
-        case .trial(let daysRemaining):
-            statusLabel.stringValue = String(localized: "\(daysRemaining) days left in your trial")
-        case .expired:
-            statusLabel.stringValue = String(localized: "Your trial has ended")
-        case .purchased(.lifetime):
-            statusLabel.stringValue = String(localized: "Lifetime unlocked. Thank you.")
-        case .purchased(.yearly):
-            statusLabel.stringValue = String(localized: "Flaccy Pro is active. Thank you.")
-        }
+        statusLabel.stringValue = PaywallCopy.statusLine(for: PurchaseManager.shared.state)
     }
 
     @objc private func purchaseStateDidChange() {
         updateStatusLine()
+        updateOffers()
+        proofCard.retitle(for: PurchaseManager.shared.state)
         if PurchaseManager.shared.state.isPurchased, !isTransacting {
-            closeTapped()
+            finishOwned()
         }
     }
 
+    /// The moment the entitlement lands: the sheet goes away first, then the
+    /// thank-you toast lands on the window underneath it, and a lifetime unlock
+    /// tells the review prompt that the next completed play is the moment to ask.
+    private func finishOwned() {
+        let parent = view.window?.sheetParent
+        let isLifetime = PurchaseManager.shared.state == .purchased(.lifetime)
+        closeTapped()
+        guard isLifetime, !hasCelebrated else { return }
+        hasCelebrated = true
+        MacToast.show(String(localized: "You own Flaccy. Thank you."), style: .success, in: parent)
+        ReviewPrompt.recordLifetimePurchase()
+    }
+
     @objc private func purchaseTapped() {
-        guard !isTransacting else { return }
+        guard !isTransacting, let offer = planPicker.selectedOffer else { return }
         isTransacting = true
         Task { [weak self] in
             guard let self else { return }
             defer { self.isTransacting = false }
             do {
-                switch try await PurchaseManager.shared.purchase(self.planPicker.selectedPlan) {
+                switch try await PurchaseManager.shared.purchase(offer) {
                 case .purchased:
-                    self.closeTapped()
+                    self.finishOwned()
                 case .pending:
                     self.presentInfoAlert(
                         title: String(localized: "Purchase Pending"),
@@ -343,13 +456,24 @@ final class PaywallViewController: NSViewController {
         Task { [weak self] in
             guard let self else { return }
             defer { self.isTransacting = false }
-            let restored = await PurchaseManager.shared.restore()
-            if restored {
-                self.closeTapped()
-            } else {
+            switch await PurchaseManager.shared.restore() {
+            case .restored:
+                if PurchaseManager.shared.state == .purchased(.lifetime) {
+                    self.finishOwned()
+                } else {
+                    let parent = self.view.window?.sheetParent
+                    self.closeTapped()
+                    MacToast.show(String(localized: "Purchase restored"), style: .success, in: parent)
+                }
+            case .nothingToRestore:
                 self.presentInfoAlert(
                     title: String(localized: "Nothing to Restore"),
                     message: String(localized: "No previous purchase was found for this Apple Account.")
+                )
+            case .failed:
+                self.presentInfoAlert(
+                    title: String(localized: "Restore Failed"),
+                    message: String(localized: "Couldn't reach the App Store. Check your connection and try again.")
                 )
             }
         }
@@ -381,12 +505,13 @@ final class PaywallViewController: NSViewController {
     }
 }
 
-/// Two selectable plan rows, yearly and lifetime, mirroring the iOS
-/// `PlanPickerView`: a radio glyph, the plan's name and caption, and the
-/// store's localized price. Yearly is selected by default.
+/// Two selectable plan rows, lifetime first and preselected, mirroring the iOS
+/// `PlanPickerView`: a radio glyph, the plan's name, badge and caption, and the
+/// store's localized price. The lifetime row becomes the welcome-back card
+/// whenever the offer it is handed says so.
 final class MacPlanPickerView: NSView {
 
-    private(set) var selectedPlan: PurchasePlan = .yearly
+    private(set) var selectedPlan: PurchasePlan = .lifetime
     var onSelectionChange: ((PurchasePlan) -> Void)?
 
     var isEnabled = true {
@@ -413,21 +538,27 @@ final class MacPlanPickerView: NSView {
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
-        for plan in [PurchasePlan.yearly, .lifetime] {
+        for plan in [PurchasePlan.lifetime, .yearly] {
             let card = MacPlanCard(plan: plan) { [weak self] in self?.select(plan) }
             cards[plan] = card
             stack.addArrangedSubview(card)
             card.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
-        configure(offers: [])
+        configure(offers: [], welcomeBackEnds: nil)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func configure(offers: [PurchaseOffer]) {
+    func configure(offers: [PurchaseOffer], welcomeBackEnds: Date?) {
         self.offers = offers
+        let lifetime = offers.first { $0.plan == .lifetime }
+        let yearly = offers.first { $0.plan == .yearly }
+        cards[.lifetime]?.render(
+            offer: lifetime,
+            caption: PaywallCopy.lifetimeCaption(lifetime: lifetime, yearly: yearly, welcomeBackEnds: welcomeBackEnds)
+        )
+        cards[.yearly]?.render(offer: yearly, caption: PaywallCopy.yearlyCaption)
         for (plan, card) in cards {
-            card.setPrice(offers.first { $0.plan == plan }?.displayPrice)
             card.isSelectedPlan = plan == selectedPlan
         }
     }
@@ -449,7 +580,7 @@ private final class MacPlanCard: NSControl {
     private let plan: PurchasePlan
     private let onSelect: () -> Void
     private let radio = NSImageView()
-    private let titleLabel = NSTextField(labelWithString: "")
+    private let titleLabel = NSTextField(wrappingLabelWithString: "")
     private let captionLabel = NSTextField(wrappingLabelWithString: "")
     private let priceLabel = NSTextField(labelWithString: "")
     private let badge = NSTextField(labelWithString: "")
@@ -474,6 +605,7 @@ private final class MacPlanCard: NSControl {
 
         titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         titleLabel.textColor = MacColors.primaryLabel
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         captionLabel.font = .systemFont(ofSize: 11)
         captionLabel.textColor = MacColors.secondaryLabel
 
@@ -484,9 +616,12 @@ private final class MacPlanCard: NSControl {
         badge.layer?.cornerRadius = 6
         badge.layer?.cornerCurve = .continuous
         badge.alignment = .center
+        badge.setContentCompressionResistancePriority(.required, for: .horizontal)
+        badge.setContentHuggingPriority(.required, for: .horizontal)
 
         let titleRow = NSStackView(views: [titleLabel, badge])
         titleRow.orientation = .horizontal
+        titleRow.alignment = .centerY
         titleRow.spacing = 8
         let text = NSStackView(views: [titleRow, captionLabel])
         text.orientation = .vertical
@@ -517,28 +652,26 @@ private final class MacPlanCard: NSControl {
         switch plan {
         case .yearly:
             titleLabel.stringValue = String(localized: "Yearly")
-            captionLabel.stringValue = String(localized: "Everything, renews each year. Cancel anytime.")
-            badge.stringValue = "  \(String(localized: "MOST POPULAR"))  "
         case .lifetime:
             titleLabel.stringValue = String(localized: "Lifetime")
-            captionLabel.stringValue = String(localized: "Pay once, own it forever.")
-            badge.stringValue = "  \(String(localized: "PAY ONCE"))  "
         }
-        setPrice(nil)
+        render(offer: nil, caption: "")
         applySelection()
         addGestureRecognizer(NSClickGestureRecognizer(target: self, action: #selector(clicked)))
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func setPrice(_ price: String?) {
-        switch (plan, price) {
-        case (.yearly, let price?):
-            priceLabel.stringValue = String(localized: "\(price)/yr")
-        case (.lifetime, let price?):
-            priceLabel.stringValue = price
-        case (_, nil):
-            priceLabel.stringValue = "—"
+    func render(offer: PurchaseOffer?, caption: String) {
+        captionLabel.stringValue = caption
+        switch plan {
+        case .yearly:
+            badge.isHidden = true
+            priceLabel.stringValue = offer.map { String(localized: "\($0.displayPrice)/yr") } ?? "—"
+        case .lifetime:
+            badge.stringValue = "  \(PaywallCopy.lifetimeBadge(for: offer))  "
+            badge.isHidden = false
+            priceLabel.stringValue = offer?.displayPrice ?? "—"
         }
         setAccessibilityLabel("\(titleLabel.stringValue), \(priceLabel.stringValue), \(captionLabel.stringValue)")
     }
@@ -559,5 +692,80 @@ private final class MacPlanCard: NSControl {
     @objc private func clicked() {
         guard isEnabled else { return }
         onSelect()
+    }
+}
+
+/// What the reader has already set up, on the paywall above the feature list:
+/// up to three live counts from the library, faded in once they arrive and
+/// never rendered for an empty library.
+final class MacPaywallProofCard: NSView {
+
+    private static let accent = NSColor(red: 0.45, green: 0.86, blue: 0.92, alpha: 1)
+
+    private let titleLabel = NSTextField(labelWithString: "")
+    private let lines = NSStackView()
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.textColor = MacColors.primaryLabel
+        lines.orientation = .vertical
+        lines.alignment = .leading
+        lines.spacing = 6
+        let stack = NSStackView(views: [titleLabel, lines])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 10
+        stack.edgeInsets = NSEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
+        let card = RecapCard.host(stack, cornerRadius: 20)
+        card.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(card)
+        NSLayoutConstraint.activate([
+            card.topAnchor.constraint(equalTo: topAnchor),
+            card.leadingAnchor.constraint(equalTo: leadingAnchor),
+            card.trailingAnchor.constraint(equalTo: trailingAnchor),
+            card.bottomAnchor.constraint(equalTo: bottomAnchor),
+            stack.widthAnchor.constraint(equalTo: card.widthAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func render(_ proof: PaywallProof, state: EntitlementState) {
+        let rendered = proof.lines()
+        guard proof.hasLibrary, !rendered.isEmpty else {
+            isHidden = true
+            return
+        }
+        retitle(for: state)
+        lines.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for line in rendered {
+            lines.addArrangedSubview(makeRow(PaywallCopy.proofLine(line)))
+        }
+        guard isHidden else { return }
+        isHidden = false
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.35
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            animator().alphaValue = 1
+        }
+    }
+
+    func retitle(for state: EntitlementState) {
+        titleLabel.stringValue = PaywallCopy.proofTitle(for: state)
+    }
+
+    private func makeRow(_ text: String) -> NSView {
+        let check = NSImageView(image: NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: nil) ?? NSImage())
+        check.symbolConfiguration = .init(pointSize: 12, weight: .semibold)
+        check.contentTintColor = Self.accent
+        let label = NSTextField(wrappingLabelWithString: text)
+        label.font = .systemFont(ofSize: 12)
+        label.textColor = MacColors.secondaryLabel
+        let row = NSStackView(views: [check, label])
+        row.orientation = .horizontal
+        row.alignment = .firstBaseline
+        row.spacing = 8
+        return row
     }
 }

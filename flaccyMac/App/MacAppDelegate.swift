@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import UniformTypeIdentifiers
 import UserNotifications
 
@@ -13,6 +14,8 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     private let menuBarExtra = MenuBarExtraController()
     private let trialAccessory = TrialStatusAccessoryController()
     private let syncAccessory = SyncTitlebarAccessoryController()
+    private var deferredPaywall: AnyCancellable?
+    private var deferredPaywallSheetObserver: NSObjectProtocol?
 
     static func main() {
         let app = NSApplication.shared
@@ -56,6 +59,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         startLibraryPipeline()
         observeAppEvents()
         notifyLibraryRootFallbackIfNeeded()
+        MacTrialRunwayPresenter.refresh(in: windowController.window)
         #if DEBUG
         DebugDrive.runIfRequested(window: windowController.window)
         runStageBDriveIfRequested()
@@ -125,6 +129,9 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(appDidBecomeActive), name: NSApplication.didBecomeActiveNotification, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(customerInfoDidLoad), name: PurchaseManager.customerInfoDidLoad, object: nil
+        )
     }
 
     @objc private func appDidBecomeActive() {
@@ -132,6 +139,11 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await MacRecapNotificationScheduler.shared.refreshSchedule()
         }
+        MacTrialRunwayPresenter.refresh(in: mainWindowController?.window)
+    }
+
+    @objc private func customerInfoDidLoad() {
+        MacTrialRunwayPresenter.refresh(in: mainWindowController?.window)
     }
 
     @objc private func libraryRootChanged() {
@@ -171,14 +183,59 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         presentPaywall()
     }
 
-    private func presentPaywall() {
-        guard let host = mainWindowController?.contentViewController else { return }
-        mainWindowController?.showWindow(nil)
+    /// The single way the paywall appears. It never lands on the Debut — a
+    /// request made while the showpiece is up waits for the surface to leave
+    /// `.debut` and presents then — never stacks on itself, and waits for any
+    /// other sheet to end rather than dropping the request, so a notification
+    /// tap, the pill and a gated play all behave alike.
+    func presentPaywall() {
+        guard let windowController = mainWindowController,
+              let host = windowController.contentViewController,
+              let window = windowController.window
+        else { return }
+        windowController.showWindow(nil)
         NSApp.activate()
-        if host.presentedViewControllers?.contains(where: { $0 is PaywallViewController }) == true {
+        guard MacLibrarySurfaceModel.shared.state.value.surface != .debut else {
+            deferPaywallUntilDebutEnds()
+            return
+        }
+        guard host.presentedViewControllers?.contains(where: { $0 is PaywallViewController }) != true else { return }
+        guard window.sheets.isEmpty else {
+            deferPaywallUntilSheetEnds(on: window)
             return
         }
         host.presentAsSheet(PaywallViewController())
+    }
+
+    private func deferPaywallUntilSheetEnds(on window: NSWindow) {
+        guard deferredPaywallSheetObserver == nil else { return }
+        AppLogger.info("Paywall deferred until the current sheet ends", category: .purchases)
+        deferredPaywallSheetObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didEndSheetNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if let observer = self.deferredPaywallSheetObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                    self.deferredPaywallSheetObserver = nil
+                }
+                self.presentPaywall()
+            }
+        }
+    }
+
+    private func deferPaywallUntilDebutEnds() {
+        guard deferredPaywall == nil else { return }
+        AppLogger.info("Paywall deferred until the Debut ends", category: .purchases)
+        deferredPaywall = MacLibrarySurfaceModel.shared.state
+            .map(\.surface)
+            .filter { $0 != .debut }
+            .first()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.deferredPaywall = nil
+                self?.presentPaywall()
+            }
     }
 
     @objc func chooseMusicFolder(_ sender: Any?) {
@@ -330,15 +387,20 @@ extension MacAppDelegate: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse
     ) async {
         let userInfo = response.notification.request.content.userInfo
-        guard userInfo[MacRecapNotificationScheduler.destinationUserInfoKey] as? String
-            == MacRecapNotificationScheduler.yearInMusicDestination else { return }
-        mainWindowController?.showWindow(nil)
-        NSApp.activate()
-        NotificationCenter.default.post(
-            name: .flaccyShowSection, object: nil,
-            userInfo: [SectionNotificationKey.section: SidebarSection.yearInMusic.rawValue]
-        )
-        AppLogger.info("Recap notification opened Year in Music", category: .general)
+        if userInfo[MacRecapNotificationScheduler.destinationUserInfoKey] as? String
+            == MacRecapNotificationScheduler.yearInMusicDestination {
+            mainWindowController?.showWindow(nil)
+            NSApp.activate()
+            NotificationCenter.default.post(
+                name: .flaccyShowSection, object: nil,
+                userInfo: [SectionNotificationKey.section: SidebarSection.yearInMusic.rawValue]
+            )
+            AppLogger.info("Recap notification opened Year in Music", category: .general)
+        } else if userInfo[TrialReminderScheduler.destinationUserInfoKey] as? String
+            == TrialReminderScheduler.paywallDestination {
+            AppLogger.info("Trial reminder opened the paywall", category: .purchases)
+            PurchaseManager.shared.requestPaywall()
+        }
     }
 }
 

@@ -35,8 +35,10 @@
 		AD689F5274B6D57E849EACA7 /* EnrichmentJobCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD71D40AC9BB109B183D34C /* EnrichmentJobCopy.swift */; };
 		BDA8E96975D67E07388470AB /* WatchTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40B667816B6D153896B95D1B /* WatchTheme.swift */; };
 		C1185D254CAC934E54DE45D9 /* LibraryDebutCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39C8B273C541315A2FF721D4 /* LibraryDebutCopy.swift */; };
+		D5E05AF373E41E9E62817666 /* DatabaseManagerProofTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504DE21F35D3352D09C43CF5 /* DatabaseManagerProofTests.swift */; };
 		E147FD9FD9FA1D50E524DEFF /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF590C0BC12F8E6ECADE762 /* LibraryView.swift */; };
 		E30E940116467A4DAF2D35A6 /* WatchLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF6C4E43994C8FD2B9D1232 /* WatchLibraryStore.swift */; };
+		E50ED7BA62EA4E9CB9053CF3 /* TrialReminderSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B66FE1C9A1865777601941 /* TrialReminderSchedulerTests.swift */; };
 		E9970FA6D1EC49C0BCAF9677 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE89F29B26EC5F4E7FE691A5 /* Foundation.framework */; };
 		EBDAC9950D4E8507C67D4518 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1AB36944B652EA1E9E81BEA /* Cocoa.framework */; };
 /* End PBXBuildFile section */
@@ -104,6 +106,7 @@
 		39C8B273C541315A2FF721D4 /* LibraryDebutCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryDebutCopy.swift; path = flaccy/LibraryDebutCopy.swift; sourceTree = "<group>"; };
 		40B667816B6D153896B95D1B /* WatchTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTheme.swift; path = Support/WatchTheme.swift; sourceTree = "<group>"; };
 		483CF523EE5ED3E295BFF6B1 /* Flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		504DE21F35D3352D09C43CF5 /* DatabaseManagerProofTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DatabaseManagerProofTests.swift; sourceTree = "<group>"; };
 		5174AF607781A6F23E0F345D /* flaccyMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		619EA141A4B4BEFC29745792 /* DatabaseMigrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DatabaseMigrationTests.swift; sourceTree = "<group>"; };
 		642833E187788F2015F66ECA /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -127,6 +130,7 @@
 		D0117CDD1ECFB9C7D3C332A5 /* AlbumDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AlbumDetailView.swift; path = Views/AlbumDetailView.swift; sourceTree = "<group>"; };
 		D32EB40ABEF2CB5616D1E4B4 /* ScanProgressView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScanProgressView.swift; path = Views/ScanProgressView.swift; sourceTree = "<group>"; };
 		D8B5871FABA46552868150ED /* ArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ArtworkView.swift; path = Support/ArtworkView.swift; sourceTree = "<group>"; };
+		F0B66FE1C9A1865777601941 /* TrialReminderSchedulerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrialReminderSchedulerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -191,6 +195,9 @@
 				ToastView.swift,
 				TrackContextMenu.swift,
 				TrackGridCell.swift,
+				TrialReminderPrompt.swift,
+				TrialRunwayBannerView.swift,
+				TrialRunwayPresenter.swift,
 				WantlistViewController.swift,
 				WatchSyncService.swift,
 				WatchSyncViewController.swift,
@@ -304,6 +311,8 @@
 			children = (
 				ADAD3DBD7F3EF9060D9CB722 /* DatabaseManagerEnrichmentTests.swift */,
 				619EA141A4B4BEFC29745792 /* DatabaseMigrationTests.swift */,
+				504DE21F35D3352D09C43CF5 /* DatabaseManagerProofTests.swift */,
+				F0B66FE1C9A1865777601941 /* TrialReminderSchedulerTests.swift */,
 			);
 			name = flaccyTests;
 			path = flaccyTests;
@@ -649,6 +658,8 @@
 			files = (
 				116895A2A917B259B81DA330 /* DatabaseManagerEnrichmentTests.swift in Sources */,
 				53EF5930CEB68FBD982F5AB8 /* DatabaseMigrationTests.swift in Sources */,
+				D5E05AF373E41E9E62817666 /* DatabaseManagerProofTests.swift in Sources */,
+				E50ED7BA62EA4E9CB9053CF3 /* TrialReminderSchedulerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

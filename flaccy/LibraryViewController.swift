@@ -27,6 +27,27 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private var fedMosaicKeys = Set<String>()
     private let statusBanner = LibraryStatusBanner()
     private var statusBannerHeight: NSLayoutConstraint!
+    private let runwayBanner = TrialRunwayBannerView()
+    private var runwayBannerHeight: NSLayoutConstraint!
+    private var runwayBannerRequested = false
+
+    /// Posted once the Debut is over for good — its summary read and the view
+    /// retired, or the showpiece skipped — so anything that waited on it, the
+    /// paywall above all, can go ahead. A demotion to the banner is not the end:
+    /// the summary sheet still raises itself later, and a paywall presented in
+    /// between would block it.
+    static let debutDidDismiss = Notification.Name("LibraryDebutDidDismiss")
+
+    /// True while the Debut still has something to show: full-screen, as the
+    /// raised sheet, or demoted behind the banner with its summary pending.
+    var isShowingDebut: Bool {
+        debutView != nil
+    }
+
+    private var debutOwnsScreen: Bool {
+        if let debutView, debutView.superview === view { return true }
+        return presentedViewController is LibraryDebutSheetController
+    }
     private let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
     private let emptyStateLabel = UILabel()
     private var lastRenderedSegment: LibraryViewModel.Segment?
@@ -85,6 +106,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         setupSearchController()
         setupSegmentedControl()
         setupFilterChips()
+        setupRunwayBanner()
         setupStatusBanner()
         setupCollectionView()
         setupSectionIndex()
@@ -542,6 +564,51 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         ])
     }
 
+    /// The day-6 runway sits in its own slot between the chips and the status
+    /// banner, with its own height constraint, so the two never fight over one.
+    private func setupRunwayBanner() {
+        runwayBanner.onGetLifetime = {
+            PurchaseManager.shared.requestPaywall()
+        }
+        runwayBanner.onDismiss = { [weak self] in
+            PurchaseManager.shared.markRunwayPromptShown()
+            self?.setRunwayBanner(visible: false)
+            AppLogger.info("Runway banner dismissed", category: .purchases)
+        }
+        view.addSubview(runwayBanner)
+        runwayBannerHeight = runwayBanner.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            runwayBanner.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
+            runwayBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            runwayBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            runwayBannerHeight,
+        ])
+    }
+
+    func setRunwayBanner(visible: Bool) {
+        runwayBannerRequested = visible
+        applyRunwayBannerVisibility(animated: true)
+    }
+
+    private func applyRunwayBannerVisibility(animated: Bool) {
+        let show = runwayBannerRequested && !debutOwnsScreen
+        let target = show ? runwayBanner.expandedHeight(forWidth: view.bounds.width) : 0
+        guard runwayBannerHeight.constant != target else { return }
+        runwayBannerHeight.constant = target
+        runwayBanner.isAccessibilityElement = false
+        runwayBanner.accessibilityElementsHidden = !show
+        guard animated, !UIAccessibility.isReduceMotionEnabled, view.window != nil else {
+            view.layoutIfNeeded()
+            return
+        }
+        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
+            self.view.layoutIfNeeded()
+        }
+        if show {
+            AppLogger.info("Runway banner shown", category: .purchases)
+        }
+    }
+
     private func setupStatusBanner() {
         statusBanner.accessibilityIdentifier = "library.statusBanner"
         statusBanner.onTap = { [weak self] in
@@ -555,7 +622,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         view.addSubview(statusBanner)
         statusBannerHeight = statusBanner.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
-            statusBanner.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
+            statusBanner.topAnchor.constraint(equalTo: runwayBanner.bottomAnchor),
             statusBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             statusBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             statusBannerHeight,
@@ -575,6 +642,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         case .debut:
             guard debutView != nil else {
                 viewModel.dismissDebut()
+                noteDebutFinished()
                 return
             }
             showDebut()
@@ -586,6 +654,18 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             demoteDebutToSheet()
             setStatusBanner(visible: false, animated: animated)
         }
+        applyRunwayBannerVisibility(animated: animated)
+    }
+
+    /// The Debut has left the screen for now — demoted, or its sheet swiped
+    /// away — which frees the runway banner but ends nothing.
+    private func noteDebutLeftScreen() {
+        applyRunwayBannerVisibility(animated: true)
+    }
+
+    /// Everything that waited for the Debut to be over runs from here.
+    private func noteDebutFinished() {
+        NotificationCenter.default.post(name: Self.debutDidDismiss, object: self)
     }
 
     /// Takes the Debut off the screen the moment the library behind it is worth
@@ -597,12 +677,14 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         guard let debut = debutView, debut.superview === view else { return }
         debut.removeFromSuperview()
         navigationController?.setNavigationBarHidden(false, animated: true)
+        noteDebutLeftScreen()
     }
 
     /// Opens the Debut over whatever the reader is doing, on their say-so.
     private func presentDebutSheet() {
         guard let debut = debutView, presentedViewController == nil else { return }
         let sheet = LibraryDebutSheetController(debutView: debut)
+        sheet.presentationController?.delegate = self
         debutSheet = sheet
         present(sheet, animated: true)
     }
@@ -744,6 +826,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         renderedDebutAct = nil
         debutSummary = nil
         fedMosaicKeys.removeAll()
+        noteDebutLeftScreen()
+        noteDebutFinished()
     }
 
     private func showDebut() {
@@ -1479,6 +1563,13 @@ extension LibraryViewController: UICollectionViewDelegate {
         default:
             return nil
         }
+    }
+}
+
+extension LibraryViewController: UIAdaptivePresentationControllerDelegate {
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        guard presentationController.presentedViewController is LibraryDebutSheetController else { return }
+        noteDebutLeftScreen()
     }
 }
 

@@ -9,6 +9,15 @@ extension Notification.Name {
     static let flaccyMenuBarExtraSettingChanged = Notification.Name("flaccy.mac.menuBarExtraChanged")
 }
 
+/// The one deep link into System Settings the app ever needs: Flaccy's own
+/// notification switch, for the recap and the trial reminders alike.
+enum MacSystemSettings {
+    static func openNotifications() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") else { return }
+        NSWorkspace.shared.open(url)
+    }
+}
+
 enum MenuBarExtraSetting {
     static let key = "flaccy.mac.menuBarExtra"
 
@@ -26,13 +35,19 @@ enum MenuBarExtraSetting {
 /// preferences.
 final class GeneralSettingsPane: SettingsPane {
 
-    private let entitlementLabel = NSTextField(labelWithString: "")
-    private let unlockButton = NSButton(title: String(localized: "Unlock Lifetime…"), target: nil, action: nil)
+    private let entitlementLabel = NSTextField(wrappingLabelWithString: "")
+    private let unlockButton = NSButton(title: String(localized: "Get Lifetime…"), target: nil, action: nil)
+    private let restoreButton = NSButton(title: String(localized: "Restore Purchases"), target: nil, action: nil)
+    private let manageButton = NSButton(title: String(localized: "Manage Subscription…"), target: nil, action: nil)
+    private let restoreSpinner = NSProgressIndicator()
+    private let remindersCheckbox = NSButton(checkboxWithTitle: String(localized: "Trial reminders"), target: nil, action: nil)
+    private let remindersExplanation = NSTextField(wrappingLabelWithString: "")
     private let autoplayCheckbox = NSButton(checkboxWithTitle: String(localized: "Keep the music going when the queue ends"), target: nil, action: nil)
     private let loginCheckbox = NSButton(checkboxWithTitle: String(localized: "Open Flaccy at login"), target: nil, action: nil)
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Flaccy in the menu bar"), target: nil, action: nil)
     private let scaleStepper = NSStepper()
     private let scaleLabel = NSTextField(labelWithString: "")
+    private var isRestoring = false
 
     override func buildForm() {
         formStack.addArrangedSubview(sectionLabel(String(localized: "Appearance")))
@@ -51,10 +66,27 @@ final class GeneralSettingsPane: SettingsPane {
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "Flaccy Lifetime")))
         entitlementLabel.font = .systemFont(ofSize: 13)
+        addFullWidth(entitlementLabel)
         unlockButton.bezelStyle = .rounded
         unlockButton.target = self
         unlockButton.action = #selector(unlockTapped)
-        addRow([entitlementLabel, unlockButton], spacing: 12)
+        restoreButton.bezelStyle = .rounded
+        restoreButton.target = self
+        restoreButton.action = #selector(restoreTapped)
+        manageButton.bezelStyle = .rounded
+        manageButton.target = self
+        manageButton.action = #selector(manageTapped)
+        restoreSpinner.style = .spinning
+        restoreSpinner.controlSize = .small
+        restoreSpinner.isDisplayedWhenStopped = false
+        addRow([unlockButton, restoreButton, manageButton, restoreSpinner], spacing: 10)
+        remindersCheckbox.target = self
+        remindersCheckbox.action = #selector(remindersToggled)
+        formStack.addArrangedSubview(remindersCheckbox)
+        remindersExplanation.stringValue = String(localized: "Three reminders at most: two days before your trial ends, on the last day, and once if a welcome-back price becomes available.")
+        remindersExplanation.font = .systemFont(ofSize: 11)
+        remindersExplanation.textColor = .tertiaryLabelColor
+        addFullWidth(remindersExplanation)
         formStack.addArrangedSubview(separator())
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "Playback")))
@@ -88,6 +120,14 @@ final class GeneralSettingsPane: SettingsPane {
         NotificationCenter.default.addObserver(
             self, selector: #selector(entitlementChanged), name: PurchaseManager.stateDidChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(entitlementChanged), name: PurchaseManager.customerInfoDidLoad, object: nil
+        )
+        Task { [weak self] in
+            await PurchaseManager.shared.loadOffersIfNeeded()
+            await PurchaseManager.shared.loadLapsedOfferIfNeeded()
+            self?.refreshEntitlement()
+        }
     }
 
     override func viewWillDisappear() {
@@ -100,24 +140,105 @@ final class GeneralSettingsPane: SettingsPane {
     }
 
     private func refreshEntitlement() {
-        switch PurchaseManager.shared.state {
-        case .purchased(.lifetime):
-            entitlementLabel.stringValue = String(localized: "Lifetime unlocked. Thank you.")
-            unlockButton.isHidden = true
+        let manager = PurchaseManager.shared
+        let state = manager.state
+        entitlementLabel.stringValue = PaywallCopy.settingsSentence(state: state, lifetime: manager.lifetimeOfferToPresent)
+            ?? Self.purchasedSentence(state: state)
+        unlockButton.isHidden = state.isPurchased
+        restoreButton.isHidden = state.isPurchased
+        manageButton.isHidden = state != .purchased(.yearly)
+        refreshRemindersRow(state: state)
+    }
+
+    private static func purchasedSentence(state: EntitlementState) -> String {
+        switch state {
         case .purchased(.yearly):
-            entitlementLabel.stringValue = String(localized: "Flaccy Pro — yearly. Thank you.")
-            unlockButton.isHidden = true
-        case .trial(let daysRemaining):
-            entitlementLabel.stringValue = String(localized: "Trial — \(daysRemaining) days left")
-            unlockButton.isHidden = false
-        case .expired:
-            entitlementLabel.stringValue = String(localized: "Trial ended — playback is locked")
-            unlockButton.isHidden = false
+            return String(localized: "Flaccy Pro — yearly. Thank you.")
+        case .purchased(.lifetime), .trial, .expired:
+            return String(localized: "Lifetime unlocked. Thank you.")
         }
+    }
+
+    /// The reminders switch stays while a trial can still use it, and lingers
+    /// after a purchase only as long as a `trial.*` request is still pending,
+    /// so nothing can fire that the reader cannot see and turn off.
+    private func refreshRemindersRow(state: EntitlementState) {
+        let scheduler = TrialReminderScheduler.shared
+        remindersCheckbox.state = scheduler.isEnabled ? .on : .off
+        guard state.isPurchased else {
+            setRemindersRow(visible: true)
+            return
+        }
+        Task { [weak self] in
+            let pending = await scheduler.hasPendingRequests()
+            self?.setRemindersRow(visible: pending)
+        }
+    }
+
+    private func setRemindersRow(visible: Bool) {
+        remindersCheckbox.isHidden = !visible
+        remindersExplanation.isHidden = !visible
     }
 
     @objc private func unlockTapped() {
         PurchaseManager.shared.requestPaywall()
+    }
+
+    @objc private func restoreTapped() {
+        guard !isRestoring else { return }
+        isRestoring = true
+        restoreButton.isEnabled = false
+        restoreSpinner.startAnimation(nil)
+        Task { [weak self] in
+            let outcome = await PurchaseManager.shared.restore()
+            guard let self else { return }
+            self.isRestoring = false
+            self.restoreButton.isEnabled = true
+            self.restoreSpinner.stopAnimation(nil)
+            self.showRestoreOutcome(outcome)
+        }
+    }
+
+    private func showRestoreOutcome(_ outcome: PurchaseManager.RestoreOutcome) {
+        switch outcome {
+        case .restored:
+            let lifetime = PurchaseManager.shared.state == .purchased(.lifetime)
+            MacToast.show(
+                lifetime ? String(localized: "You own Flaccy. Thank you.") : String(localized: "Purchase restored"),
+                style: .success, in: view.window
+            )
+            if lifetime { ReviewPrompt.recordLifetimePurchase() }
+        case .nothingToRestore:
+            MacToast.show(String(localized: "No previous purchase was found for this Apple Account."), style: .info, in: view.window)
+        case .failed:
+            MacToast.show(String(localized: "Couldn't reach the App Store. Check your connection and try again."), style: .error, in: view.window)
+        }
+    }
+
+    @objc private func manageTapped() {
+        guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    /// A decision made here counts as the consent question answered, so the
+    /// completed-play alert never asks someone who already chose in Settings.
+    @objc private func remindersToggled() {
+        let scheduler = TrialReminderScheduler.shared
+        scheduler.markAsked()
+        guard remindersCheckbox.state == .on else {
+            scheduler.disable()
+            return
+        }
+        remindersCheckbox.isEnabled = false
+        Task { [weak self] in
+            let enabled = await scheduler.enable()
+            guard let self else { return }
+            self.remindersCheckbox.isEnabled = true
+            guard !enabled else { return }
+            self.remindersCheckbox.state = .off
+            MacToast.show(PaywallCopy.notificationsOffHint, style: .info, in: self.view.window)
+            MacSystemSettings.openNotifications()
+        }
     }
 
     private func renderScale() {
@@ -482,8 +603,7 @@ final class NotificationsSettingsPane: SettingsPane {
     }
 
     @objc private func openSystemSettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") else { return }
-        NSWorkspace.shared.open(url)
+        MacSystemSettings.openNotifications()
     }
 }
 

@@ -10,6 +10,7 @@ final class SettingsViewController: UITableViewController {
 
     nonisolated private enum Section: Int, CaseIterable, Hashable {
         case appearance
+        case trial
         case lastFM
         case recap
         case playback
@@ -22,6 +23,7 @@ final class SettingsViewController: UITableViewController {
         var header: String? {
             switch self {
             case .appearance: return String(localized: "Appearance")
+            case .trial: return String(localized: "Trial")
             case .lastFM: return "Last.fm"
             case .recap: return String(localized: "Year in Music")
             case .playback: return String(localized: "Playback")
@@ -36,6 +38,7 @@ final class SettingsViewController: UITableViewController {
         var footer: String? {
             switch self {
             case .appearance: return String(localized: "System follows your device's light and dark setting.")
+            case .trial: return String(localized: "Three reminders at most: two days before your trial ends, on the last day, and once if a welcome-back price becomes available.")
             case .lastFM: return nil
             case .recap: return String(localized: "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story.")
             case .playback: return String(localized: "Gapless plays consecutive album tracks without silence. Autoplay keeps a similar-music station going when the queue ends.")
@@ -58,6 +61,7 @@ final class SettingsViewController: UITableViewController {
 
     nonisolated private enum Row: Hashable {
         case appearance(AppAppearance)
+        case trialReminders(enabled: Bool)
         case lastFMAccount(username: String?)
         case pendingScrobbles(count: Int)
         case importLastFM
@@ -135,6 +139,8 @@ final class SettingsViewController: UITableViewController {
     private var isRescanning = false
     private let metadataViewModel = EnrichmentReportViewModel()
     private var libraryDebut: LibraryDebutSummary?
+    private var isTrialSectionVisible = false
+    private var isRestoring = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -155,12 +161,17 @@ final class SettingsViewController: UITableViewController {
         refreshStorageUsed()
         refreshPlaysCount()
         refreshLibraryDebut()
+        refreshTrialSectionVisibility()
         loadPriceIfNeeded()
         observeMetadata()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateChanged),
             name: PurchaseManager.stateDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(purchaseStateChanged),
+            name: PurchaseManager.customerInfoDidLoad, object: nil
         )
     }
 
@@ -188,6 +199,22 @@ final class SettingsViewController: UITableViewController {
     @objc private func purchaseStateChanged() {
         refreshHeader()
         applySnapshot(animated: true)
+        refreshTrialSectionVisibility()
+    }
+
+    /// The reminders row stays while the trial runs or has lapsed, and for as
+    /// long as any reminder is still pending — so a switch is never taken away
+    /// from someone who still has a notification queued.
+    private func refreshTrialSectionVisibility() {
+        Task { [weak self] in
+            var visible = !PurchaseManager.shared.state.isPurchased
+            if !visible {
+                visible = await TrialReminderScheduler.shared.hasPendingRequests()
+            }
+            guard let self, self.isTrialSectionVisible != visible else { return }
+            self.isTrialSectionVisible = visible
+            self.applySnapshot(animated: true)
+        }
     }
 
     private func makeDoneButton() -> UIBarButtonItem {
@@ -206,13 +233,54 @@ final class SettingsViewController: UITableViewController {
             self.impactMedium.impactOccurred()
             PaywallViewController.presentSheet(from: self)
         }
+        headerView.onRestoreTapped = { [weak self] in
+            self?.handleRestorePurchases()
+        }
+        headerView.onManageSubscriptionTapped = { [weak self] in
+            self?.handleManageSubscription()
+        }
         tableView.tableHeaderView = headerView
+    }
+
+    private func handleRestorePurchases() {
+        guard !isRestoring else { return }
+        impactLight.impactOccurred()
+        isRestoring = true
+        Task { [weak self] in
+            let outcome = await PurchaseManager.shared.restore()
+            guard let self else { return }
+            self.isRestoring = false
+            switch outcome {
+            case .restored:
+                self.notificationFeedback.notificationOccurred(.success)
+                ToastView.show(String(localized: "Purchase restored"), in: self.view, style: .success)
+            case .nothingToRestore:
+                self.notificationFeedback.notificationOccurred(.warning)
+                ToastView.show(String(localized: "No previous purchase was found for this Apple Account."), in: self.view, style: .info)
+            case .failed:
+                self.notificationFeedback.notificationOccurred(.error)
+                ToastView.show(String(localized: "Couldn't reach the App Store. Check your connection and try again."), in: self.view, style: .error)
+            }
+            self.refreshHeader()
+        }
+    }
+
+    private func handleManageSubscription() {
+        guard let scene = view.window?.windowScene else { return }
+        selectionFeedback.selectionChanged()
+        Task {
+            do {
+                try await AppStore.showManageSubscriptions(in: scene)
+            } catch {
+                AppLogger.error("Manage subscriptions sheet failed: \(error.localizedDescription)", category: .purchases)
+            }
+        }
     }
 
     private func refreshHeader() {
         headerView.configure(
             state: PurchaseManager.shared.state,
-            priceText: PurchaseManager.shared.yearlyOffer?.displayPrice,
+            lifetimeOffer: PurchaseManager.shared.lifetimeOfferToPresent,
             albums: Library.shared.albums.count,
             tracks: Library.shared.allTracks.count,
             plays: playsCount
@@ -254,8 +322,11 @@ final class SettingsViewController: UITableViewController {
 
     private func applySnapshot(animated: Bool) {
         var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
-        snapshot.appendSections(Section.allCases)
+        snapshot.appendSections(Section.allCases.filter { $0 != .trial || isTrialSectionVisible })
         snapshot.appendItems([.appearance(AppAppearance.current)], toSection: .appearance)
+        if isTrialSectionVisible {
+            snapshot.appendItems([.trialReminders(enabled: TrialReminderScheduler.shared.isEnabled)], toSection: .trial)
+        }
 
         let authenticated = LastFMService.shared.isAuthenticated
         var lastFMRows: [Row] = [.lastFMAccount(username: authenticated ? LastFMService.shared.username : nil)]
@@ -325,6 +396,15 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .appearance:
             break
+
+        case .trialReminders(let enabled):
+            content.image = RowIcon.image(systemName: "bell.badge.fill", tint: .systemOrange)
+            content.text = String(localized: "Trial reminders")
+            cell.selectionStyle = .none
+            cell.accessoryView = makeTrialRemindersSwitch(isEnabled: enabled)
+            cell.accessibilityTraits = []
+            cell.accessibilityLabel = String(localized: "Trial reminders")
+            cell.accessibilityIdentifier = "settings.row.trialReminders"
 
         case .lastFMAccount(let username):
             content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemRed)
@@ -632,6 +712,42 @@ final class SettingsViewController: UITableViewController {
         }
     }
 
+    /// Turning reminders on asks the system once; a refusal snaps the switch
+    /// back and points at the one place that can change the answer.
+    private func makeTrialRemindersSwitch(isEnabled: Bool) -> UISwitch {
+        let toggle = UISwitch()
+        toggle.isOn = isEnabled
+        toggle.accessibilityLabel = String(localized: "Trial reminders")
+        toggle.addAction(UIAction { [weak self] action in
+            guard let toggle = action.sender as? UISwitch else { return }
+            self?.selectionFeedback.selectionChanged()
+            self?.setTrialReminders(enabled: toggle.isOn, toggle: toggle)
+        }, for: .valueChanged)
+        return toggle
+    }
+
+    private func setTrialReminders(enabled: Bool, toggle: UISwitch) {
+        let scheduler = TrialReminderScheduler.shared
+        scheduler.markAsked()
+        guard enabled else {
+            scheduler.disable()
+            refreshTrialSectionVisibility()
+            return
+        }
+        toggle.isEnabled = false
+        Task { [weak self] in
+            let granted = await scheduler.enable()
+            toggle.isEnabled = true
+            toggle.setOn(granted, animated: true)
+            guard let self else { return }
+            if !granted {
+                self.notificationFeedback.notificationOccurred(.warning)
+                ToastView.show(String(localized: "Turn on notifications for Flaccy in Settings"), in: self.view, style: .info)
+            }
+            self.refreshTrialSectionVisibility()
+        }
+    }
+
     private func makeAutoplaySwitch() -> UISwitch {
         let toggle = UISwitch()
         toggle.isOn = AudioPlayer.shared.autoplaySimilarWhenQueueEnds
@@ -697,7 +813,7 @@ final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
         switch row {
-        case .appearance, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions,
+        case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary:
             return false
         case .importLastFM: return lastFMImportProgress == nil
@@ -724,7 +840,7 @@ final class SettingsViewController: UITableViewController {
         case .rescanLibrary: handleRescanTap()
         case .metadataReport: handleMetadataTap()
         case .findMissingArtwork: handleFindMissingArtworkTap()
-        case .appearance, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions,
+        case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary:
             break
         }
@@ -1000,9 +1116,9 @@ final class SettingsViewController: UITableViewController {
     }
 
     private func loadPriceIfNeeded() {
-        guard PurchaseManager.shared.offers.isEmpty else { return }
         Task { [weak self] in
             await PurchaseManager.shared.loadOffersIfNeeded()
+            await PurchaseManager.shared.loadLapsedOfferIfNeeded()
             self?.refreshHeader()
         }
     }

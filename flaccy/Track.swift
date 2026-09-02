@@ -19,9 +19,11 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
     var loved: Bool = false
     var playCount: Int = 0
 
+    static let losslessCodecs: Set<String> = ["FLAC", "ALAC", "WAV", "AIFF"]
+
     var isLossless: Bool {
         guard let codec else { return false }
-        return ["FLAC", "ALAC", "WAV", "AIFF"].contains(codec.uppercased())
+        return Self.losslessCodecs.contains(codec.uppercased())
     }
 
     var qualityBadge: String? {

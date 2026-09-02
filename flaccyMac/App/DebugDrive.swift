@@ -53,10 +53,12 @@ enum DebugDrive {
         case nowPlayingLyrics
         case queuePanel(deep: Bool)
         case settings(paneIndex: Int)
+        case paywall
     }
 
     private static func plannedShot() -> Shot? {
         if CommandLine.arguments.contains("--shot-onboarding") { return .onboarding }
+        if CommandLine.arguments.contains("--shot-paywall") { return .paywall }
         if CommandLine.arguments.contains("--shot-playlists") { return .section(.playlists) }
         if let name = value(after: "--shot-playlist") { return .playlistDetail(name) }
         if CommandLine.arguments.contains("--shot-nowplaying-lyrics") { return .nowPlayingLyrics }
@@ -193,6 +195,11 @@ enum DebugDrive {
             try? await Task.sleep(for: .seconds(3))
             capture(window: settingsWindow, name: "flaccy-shot-settings-\(paneIndex)")
             return
+        case .paywall:
+            (NSApp.delegate as? MacAppDelegate)?.presentPaywall()
+            try? await Task.sleep(for: .seconds(3))
+            captureSheet(of: window, name: "flaccy-shot-paywall")
+            return
         case .onboarding:
             return
         }
@@ -320,6 +327,29 @@ enum DebugDrive {
         let last = CommandLine.arguments.contains("--deep-last")
         AudioPlayer.shared.play(album.tracks, startingAt: last ? album.tracks.count - 1 : album.tracks.count / 2)
         AudioPlayer.shared.seek(to: 45)
+    }
+
+    /// Captures the window's first sheet — the paywall, pair it with
+    /// `--trial-day N` to render any day of the runway — through the same
+    /// cached-display path the Stage B drive uses for sheets.
+    private static func captureSheet(of window: NSWindow?, name: String) {
+        guard let sheet = window?.sheets.first else {
+            AppLogger.error("DebugDrive: no sheet to capture for \(name)", category: .general)
+            return
+        }
+        sheet.contentView?.layoutSubtreeIfNeeded()
+        sheet.displayIfNeeded()
+        guard let data = windowServerPNG(sheet) ?? cachedDisplayPNG(sheet) else {
+            AppLogger.error("DebugDrive: sheet capture failed for \(name)", category: .general)
+            return
+        }
+        let path = NSTemporaryDirectory() + name + ".png"
+        do {
+            try data.write(to: URL(fileURLWithPath: path))
+            AppLogger.info("DebugDrive: captured sheet to \(path)", category: .general)
+        } catch {
+            AppLogger.error("DebugDrive: sheet capture write failed: \(error.localizedDescription)", category: .general)
+        }
     }
 
     private static func capture(window: NSWindow?, name: String) {

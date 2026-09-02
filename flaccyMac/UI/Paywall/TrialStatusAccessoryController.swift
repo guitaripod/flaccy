@@ -1,10 +1,12 @@
 import AppKit
 
-/// Subtle titlebar pill showing remaining trial days; clicking it opens the
-/// paywall. Hidden entirely once the lifetime unlock lands.
+/// Subtle titlebar pill showing where the trial stands; clicking it opens the
+/// paywall. It turns orange for the last two days, names the welcome-back price
+/// while that window is open, and hides entirely once a purchase lands.
 final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
 
     private static let initialWidth: CGFloat = 110
+    private static let urgentAtDaysRemaining = 2
 
     private let pill = NSView()
     private let label = NSTextField(labelWithString: "")
@@ -13,13 +15,11 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
         layoutAttribute = .trailing
 
         pill.wantsLayer = true
-        pill.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.14).cgColor
         pill.layer?.cornerRadius = 10
         pill.layer?.cornerCurve = .continuous
         pill.translatesAutoresizingMaskIntoConstraints = false
 
         label.font = .systemFont(ofSize: 10.5, weight: .semibold)
-        label.textColor = .secondaryLabelColor
         label.translatesAutoresizingMaskIntoConstraints = false
         pill.addSubview(label)
 
@@ -38,13 +38,17 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
 
         let click = NSClickGestureRecognizer(target: self, action: #selector(openPaywall))
         pill.addGestureRecognizer(click)
-        pill.toolTip = String(localized: "Unlock Flaccy Pro")
+        pill.toolTip = String(localized: "Get Flaccy Lifetime")
+        applyTint(urgent: false)
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         NotificationCenter.default.addObserver(
             self, selector: #selector(stateChanged), name: PurchaseManager.stateDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(stateChanged), name: PurchaseManager.customerInfoDidLoad, object: nil
         )
         stateChanged()
     }
@@ -54,17 +58,26 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
     }
 
     @objc private func stateChanged() {
-        switch PurchaseManager.shared.state {
-        case .purchased:
+        let manager = PurchaseManager.shared
+        guard let line = PaywallCopy.pillLine(state: manager.state, lifetime: manager.lifetimeOfferToPresent) else {
             isHidden = true
-        case .trial(let daysRemaining):
-            isHidden = false
-            label.stringValue = String(localized: "Trial · \(daysRemaining) days left")
-        case .expired:
-            isHidden = false
-            label.stringValue = String(localized: "Trial ended")
+            return
         }
+        isHidden = false
+        label.stringValue = line
+        applyTint(urgent: Self.isUrgent(manager.state))
         sizeToPill()
+    }
+
+    private static func isUrgent(_ state: EntitlementState) -> Bool {
+        guard case .trial(let daysRemaining) = state else { return false }
+        return daysRemaining <= urgentAtDaysRemaining
+    }
+
+    private func applyTint(urgent: Bool) {
+        let tint: NSColor = urgent ? .systemOrange : .controlAccentColor
+        pill.layer?.backgroundColor = tint.withAlphaComponent(urgent ? 0.22 : 0.14).cgColor
+        label.textColor = urgent ? .systemOrange : .secondaryLabelColor
     }
 
     /// A titlebar accessory is laid out by its view's *frame*, not by the

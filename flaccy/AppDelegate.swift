@@ -41,9 +41,18 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse
     ) async {
         let userInfo = response.notification.request.content.userInfo
-        guard userInfo[RecapNotificationScheduler.destinationUserInfoKey] as? String
-            == RecapNotificationScheduler.yearInMusicDestination else { return }
-        presentYearInMusic()
+        switch (
+            userInfo[RecapNotificationScheduler.destinationUserInfoKey] as? String,
+            userInfo[TrialReminderScheduler.destinationUserInfoKey] as? String
+        ) {
+        case (RecapNotificationScheduler.yearInMusicDestination?, _):
+            presentYearInMusic()
+        case (_, TrialReminderScheduler.paywallDestination?):
+            AppLogger.info("Trial reminder tapped: \(response.notification.request.identifier)", category: .purchases)
+            PurchaseManager.shared.requestPaywall()
+        default:
+            break
+        }
     }
 
     private func presentYearInMusic() {
