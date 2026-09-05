@@ -55,10 +55,19 @@ enum PaywallCopy {
         LibraryLoadPhaseCopy.number(value)
     }
 
-    static func lifetimeBadge(for offer: PurchaseOffer?) -> String {
+    /// The plan card names the product exactly as App Store Connect does, so
+    /// the welcome-back unlock is never mistaken for the regular Lifetime at a
+    /// different price — by a reader, or by App Review.
+    static func lifetimeTitle(for offer: PurchaseOffer?) -> String {
         offer?.isWelcomeBack == true
-            ? String(localized: "WELCOME BACK")
-            : String(localized: "PAY ONCE")
+            ? String(localized: "Lifetime · Welcome Back")
+            : String(localized: "Lifetime")
+    }
+
+    /// The welcome-back title already carries the offer, so its card drops the
+    /// badge rather than wrapping the product name around one.
+    static func lifetimeBadge(for offer: PurchaseOffer?) -> String? {
+        offer?.isWelcomeBack == true ? nil : String(localized: "PAY ONCE")
     }
 
     /// The welcome-back window names its end date and, only when honest, the

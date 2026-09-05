@@ -864,7 +864,10 @@ private final class PlanCardControl: UIControl {
             priceLabel.text = "—"
         }
         if plan == .lifetime {
-            badge.text = "  \(PaywallCopy.lifetimeBadge(for: offer).uppercased())  "
+            titleLabel.text = PaywallCopy.lifetimeTitle(for: offer)
+            let badgeText = PaywallCopy.lifetimeBadge(for: offer)
+            badge.text = badgeText.map { "  \($0.uppercased())  " }
+            badge.isHidden = badgeText == nil
         }
         refreshAccessibility()
     }

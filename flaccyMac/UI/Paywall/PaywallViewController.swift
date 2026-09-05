@@ -670,8 +670,10 @@ private final class MacPlanCard: NSControl {
             badge.isHidden = true
             priceLabel.stringValue = offer.map { String(localized: "\($0.displayPrice)/yr") } ?? "—"
         case .lifetime:
-            badge.stringValue = "  \(PaywallCopy.lifetimeBadge(for: offer))  "
-            badge.isHidden = false
+            titleLabel.stringValue = PaywallCopy.lifetimeTitle(for: offer)
+            let badgeText = PaywallCopy.lifetimeBadge(for: offer)
+            badge.stringValue = badgeText.map { "  \($0)  " } ?? ""
+            badge.isHidden = badgeText == nil
             priceLabel.stringValue = offer?.displayPrice ?? "—"
         }
         setAccessibilityLabel("\(titleLabel.stringValue), \(priceLabel.stringValue), \(captionLabel.stringValue)")
