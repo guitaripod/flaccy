@@ -1,0 +1,9 @@
+Gapless, told straight and made better.
+
+The sleep timer's End of Track now stops at the end of the track. It used to let a moment of the next song through before pausing, and you woke up one song further along than you meant to.
+
+Editing the queue no longer costs you a seamless transition. Adding a song, reordering, or flipping shuffle just before a track change used to throw away the audio Flaccy had already decoded and prepared. Now it keeps it.
+
+Autoplay starts building its station a track earlier, so an album flows into the similar-music continuation instead of pausing at the end.
+
+Settings tells the truth about gapless. It is always on — there was a switch that did nothing, and it is gone. Track-to-track is exact on lossless files: FLAC, ALAC, WAV, AIFF. MP3 and AAC bake a fraction of a second of encoder padding into every file that iOS does not strip, which is why one album can click when the rest do not. The Listening Guide has a new card explaining it, and what to do about it.

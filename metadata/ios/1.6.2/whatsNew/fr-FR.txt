@@ -1,0 +1,9 @@
+La lecture sans coupure, dite franchement et améliorée.
+
+Fin du morceau s'arrête désormais vraiment à la fin du titre. La minuterie de veille laissait auparavant passer un instant du morceau suivant avant de mettre en pause, et vous vous réveilliez un morceau plus loin que prévu.
+
+Modifier la file d'attente ne vous coûte plus une transition parfaite. Ajouter un morceau, réorganiser la file ou activer la lecture aléatoire juste avant un changement de titre jetait auparavant l'audio que Flaccy avait déjà décodé et préparé. Désormais, il le conserve.
+
+La lecture automatique commence à préparer sa station un titre plus tôt, pour qu'un album s'enchaîne avec la suite de musiques similaires au lieu de marquer une pause à la fin.
+
+Réglages dit désormais la vérité sur la lecture sans coupure. Elle est toujours activée : il y avait un interrupteur qui ne servait à rien, et il a disparu. D'un titre à l'autre, elle est exacte sur les fichiers sans perte : FLAC, ALAC, WAV, AIFF. Le MP3 et l'AAC intègrent une fraction de seconde de remplissage d'encodeur dans chaque fichier, qu'iOS ne retire pas à la lecture, ce qui explique pourquoi un album peut cliquer quand les autres non. Le Guide d'écoute propose une nouvelle fiche qui l'explique, et ce qu'il faut faire.

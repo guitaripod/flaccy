@@ -1,0 +1,9 @@
+Reproducción sin cortes, contada tal cual y mejorada.
+
+Fin de la pista ahora se detiene de verdad al final de la pista. Antes, el temporizador de apagado dejaba pasar un instante de la siguiente canción antes de pausar, y te despertabas una canción más adelante de lo que querías.
+
+Editar la cola ya no te cuesta una transición perfecta. Añadir una canción, reordenar la cola o activar la reproducción aleatoria justo antes de un cambio de pista solía descartar el audio que Flaccy ya había decodificado y preparado. Ahora lo conserva.
+
+Reproducción automática empieza a preparar su estación una pista antes, de modo que un álbum fluye hacia la continuación de música similar en lugar de detenerse al final.
+
+Ajustes ahora dice la verdad sobre la reproducción sin cortes. Siempre está activada: había un interruptor que no hacía nada, y ha desaparecido. De pista a pista es exacta en archivos sin pérdida: FLAC, ALAC, WAV, AIFF. MP3 y AAC incrustan una fracción de segundo de relleno del codificador en cada archivo que iOS no elimina durante la reproducción, por lo que un álbum puede hacer clic mientras el resto no. La Guía de escucha tiene una nueva tarjeta que lo explica, y qué hacer al respecto.

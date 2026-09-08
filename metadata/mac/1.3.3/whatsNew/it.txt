@@ -1,0 +1,9 @@
+Riproduzione senza interruzioni, raccontata senza fronzoli e migliorata.
+
+Fine del brano ora si interrompe davvero a fine brano. Prima, il timer per lo spegnimento lasciava passare un istante del brano successivo prima di mettere in pausa, e ritrovavi la coda un brano più avanti di dove l'avevi lasciata.
+
+Modificare la coda non ti costa più una transizione impeccabile. Aggiungere un brano, riordinare la coda o attivare la riproduzione casuale appena prima di un cambio brano scartava l'audio che Flaccy aveva già decodificato e preparato. Ora lo conserva.
+
+La riproduzione automatica inizia a costruire la sua stazione un brano prima, così un album confluisce nella continuazione di musica simile invece di fermarsi alla fine.
+
+Impostazioni ora dice la verità sulla riproduzione senza interruzioni. Da un brano all'altro è esatta sui file senza perdita di qualità: FLAC, ALAC, WAV, AIFF. MP3 e AAC incorporano in ogni file una frazione di secondo di padding dell'encoder che macOS non rimuove in riproduzione, ed è per questo che un album può fare un clic mentre gli altri no. La Guida all'ascolto ha una nuova scheda che lo spiega, e cosa fare al riguardo.

@@ -1,0 +1,9 @@
+Lückenlose Wiedergabe, ehrlich erklärt und besser gemacht.
+
+Ende des Titels hält jetzt wirklich am Ende des Titels an. Der Sleep-Timer ließ früher einen Moment des nächsten Songs durchrutschen, bevor er pausierte – du bist also einen Song weiter aufgewacht, als beabsichtigt.
+
+Die Warteschlange zu bearbeiten kostet dich keinen nahtlosen Übergang mehr. Einen Song hinzuzufügen, die Reihenfolge zu ändern oder kurz vor einem Titelwechsel die Zufallswiedergabe umzuschalten, hat bisher das Audio verworfen, das Flaccy bereits dekodiert und vorbereitet hatte. Jetzt bleibt es erhalten.
+
+Autoplay baut seinen Sender jetzt einen Titel früher auf, sodass ein Album nahtlos in die Fortsetzung mit ähnlicher Musik übergeht, statt am Ende zu pausieren.
+
+Die Einstellungen sagen jetzt die Wahrheit über die lückenlose Wiedergabe. Sie ist immer aktiv – es gab einen Schalter, der nichts bewirkte, und der ist verschwunden. Von Titel zu Titel ist sie bei verlustfreien Dateien exakt: FLAC, ALAC, WAV, AIFF. MP3 und AAC backen einen Bruchteil einer Sekunde Encoder-Padding in jede Datei ein, das iOS bei der Wiedergabe nicht entfernt – deshalb kann es bei einem Album klicken, während es bei den anderen nicht passiert. Der Hörguide hat dazu eine neue Karte, die es erklärt und zeigt, was du dagegen tun kannst.

@@ -1,0 +1,9 @@
+Reprodução sem intervalos, explicada sem rodeios e melhorada.
+
+Fim da faixa agora realmente para no fim da faixa. Antes, o temporizador de repouso deixava passar um instante da próxima música antes de pausar, e você voltava a uma fila uma música mais adiante do que a havia deixado.
+
+Editar a fila não custa mais uma transição perfeita. Adicionar uma música, reordenar a fila ou ativar o modo aleatório pouco antes de uma troca de faixa costumava descartar o áudio que o Flaccy já havia decodificado e preparado. Agora ele é mantido.
+
+A reprodução automática começa a montar sua estação uma faixa antes, para que o álbum flua para a continuação de músicas semelhantes em vez de pausar no final.
+
+Os Ajustes agora dizem a verdade sobre a reprodução sem intervalos. De faixa para faixa, é exata em arquivos sem perdas: FLAC, ALAC, WAV, AIFF. MP3 e AAC embutem em cada arquivo uma fração de segundo de preenchimento do codificador que o macOS não remove na reprodução, e é por isso que um álbum pode ter um clique enquanto os outros não. O Guia de audição tem um novo cartão explicando isso e o que fazer a respeito.
