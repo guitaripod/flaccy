@@ -38,7 +38,7 @@ enum ListeningGuideContent {
 
     static let caption = String(localized: "Audio Quality")
     static let headline = String(localized: "Listening Guide")
-    static let intro = String(localized: "Five facts about Bluetooth, AAC, and what your files actually deliver to your ears.")
+    static let intro = String(localized: "Six facts about Bluetooth, AAC, and what your files actually deliver to your ears.")
 
     static let cards: [ListeningGuideCard] = [
         ListeningGuideCard(
@@ -69,6 +69,19 @@ enum ListeningGuideContent {
             title: String(localized: "When FLAC is worth it"),
             symbolName: "cable.connector",
             body: String(localized: "For true lossless on iPhone, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.")
+        ),
+        ListeningGuideCard(
+            title: String(localized: "Why some albums still click"),
+            symbolName: "infinity",
+            body: String(localized: "Gapless is always on in Flaccy — the next track is decoded and waiting before the current one ends, so a continuous album runs as one piece. What you hear at the seam depends on the file. Lossless formats store exactly the samples the master had, so there is nothing between tracks to remove. MP3 and AAC encode in fixed blocks and pad every file with a fraction of a second of silence at each end; that padding lives inside the file, and iOS does not strip it on playback."),
+            bulletsCaption: String(localized: "What this means for your library"),
+            bullets: [
+                String(localized: "FLAC, ALAC, WAV and AIFF albums are gapless with no caveat."),
+                String(localized: "MP3 and AAC rips of live albums, DJ mixes and segued records can click between tracks — the padding is baked in, not something a player setting can undo."),
+                String(localized: "Re-ripping the album to FLAC removes the seam for good."),
+            ],
+            takeawayCaption: String(localized: "Practical takeaway"),
+            takeaway: String(localized: "If one album gaps and the rest don't, check its format before blaming the player.")
         ),
         ListeningGuideCard(
             title: String(localized: "Can you hear the difference?"),

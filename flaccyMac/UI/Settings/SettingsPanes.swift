@@ -94,7 +94,8 @@ final class GeneralSettingsPane: SettingsPane {
         autoplayCheckbox.action = #selector(autoplayToggled)
         formStack.addArrangedSubview(autoplayCheckbox)
         addFullWidth(explanation(String(localized: "When your queue runs out, Flaccy builds a station of similar music from your library instead of stopping.")))
-        addFullWidth(explanation(String(localized: "Gapless playback is always on — FLAC albums flow track to track with zero silence.")))
+        addFullWidth(explanation(String(localized: "Gapless playback is always on — lossless albums flow track to track with zero silence.")))
+        addFullWidth(explanation(String(localized: "MP3 and AAC store a fraction of a second of encoder padding inside every file, which macOS does not strip, so those albums can still click between tracks. Re-rip to FLAC and the seam disappears.")))
         formStack.addArrangedSubview(separator())
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "System")))

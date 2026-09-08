@@ -97,6 +97,11 @@ final class AudioPlayer: AudioPlaying {
     private var stationSeedArtist: String?
     private var isBuildingStation = false
     private var autoplayContinuationInFlight = false
+    /// How many tracks from the end the similar-music continuation starts building.
+    /// A station pass scans the whole library and reads play counts, so on a large
+    /// library two tracks of runway can expire before the queue drains — and the
+    /// exhaustion fallback only runs once the audio has already stopped.
+    private static let autoplayContinuationLookahead = 3
     private var pendingQueueExhaustion = false
     /// Sticky cover for the current track so pause/progress Now Playing refreshes
     /// never publish a dictionary without artwork (NSCache eviction / brief load
@@ -174,6 +179,9 @@ final class AudioPlayer: AudioPlaying {
         #endif
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleItemFailedToPlayToEnd(_:)), name: .AVPlayerItemFailedToPlayToEndTime, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleItemDidPlayToEnd(_:)), name: .AVPlayerItemDidPlayToEndTime, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleLastFMAuthChange), name: LastFMService.authDidChange, object: nil
@@ -672,6 +680,7 @@ final class AudioPlayer: AudioPlaying {
     func setSleepTimerEndOfTrack() {
         cancelSleepTimer()
         sleepAtEndOfTrack = true
+        applyActionAtItemEnd()
         postOnMain(AudioPlayer.sleepTimerDidUpdate)
         feedback.light()
     }
@@ -681,13 +690,35 @@ final class AudioPlayer: AudioPlaying {
         sleepTimer = nil
         sleepTimerRemaining = nil
         sleepAtEndOfTrack = false
+        applyActionAtItemEnd()
         postOnMain(AudioPlayer.sleepTimerDidUpdate)
+    }
+
+    /// Holds the queue player on the finished item while a sleep-at-end-of-track
+    /// request stands. Pausing after the advance instead would play a moment of the
+    /// next song and leave the listener waking up one track further along.
+    private func applyActionAtItemEnd() {
+        player?.actionAtItemEnd = sleepAtEndOfTrack ? .pause : .advance
+    }
+
+    /// Completes a sleep-at-end-of-track stop. The next item stays queued and
+    /// `actionAtItemEnd` returns to `.advance`, so pressing play resumes on the
+    /// following track rather than replaying the one that just finished.
+    @objc private func handleItemDidPlayToEnd(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.sleepAtEndOfTrack else { return }
+            guard (notification.object as? AVPlayerItem) === self.playingItem else { return }
+            AppLogger.info("Sleep at end of track reached, stopping on \(self.currentTrack?.title ?? "unknown")", category: .playback)
+            self.cancelSleepTimer()
+            self.userPausedPlayback = true
+            self.applyPlaybackState(false)
+        }
     }
 
     private func makeConfiguredPlayer(with item: AVPlayerItem) -> AVQueuePlayer {
         let player = AVQueuePlayer(items: [item])
         player.automaticallyWaitsToMinimizeStalling = false
-        player.actionAtItemEnd = .advance
+        player.actionAtItemEnd = sleepAtEndOfTrack ? .pause : .advance
         #if os(macOS)
         player.volume = volume
         #endif
@@ -758,17 +789,10 @@ final class AudioPlayer: AudioPlaying {
         resyncPreloadedItems()
         scheduleAutoplayContinuationIfNeeded()
 
-        if sleepAtEndOfTrack {
-            cancelSleepTimer()
-            userPausedPlayback = true
-            player?.pause()
-            applyPlaybackState(false)
-        } else {
-            userPausedPlayback = false
-            activateSession()
-            player?.play()
-            isPlaying = true
-        }
+        userPausedPlayback = false
+        activateSession()
+        player?.play()
+        isPlaying = true
 
         updateNowPlayingInfo()
         ensureArtworkLoaded(for: track)
@@ -910,7 +934,9 @@ final class AudioPlayer: AudioPlaying {
         postOnMain(AudioPlayer.playbackStateDidChange)
     }
 
-    private func preloadNextItem(after index: Int) {
+    /// The queue position the player should be holding ready behind the current
+    /// one, honouring repeat-one restarts and repeat-all wrapping.
+    private func preloadTargetIndex(after index: Int) -> Int? {
         let nextIndex: Int
         if repeatMode == .one {
             nextIndex = index
@@ -919,9 +945,13 @@ final class AudioPlayer: AudioPlaying {
         } else if repeatMode == .all && !queue.isEmpty {
             nextIndex = 0
         } else {
-            return
+            return nil
         }
-        guard queue.indices.contains(nextIndex) else { return }
+        return queue.indices.contains(nextIndex) ? nextIndex : nil
+    }
+
+    private func preloadNextItem(after index: Int) {
+        guard let nextIndex = preloadTargetIndex(after: index) else { return }
         let nextItem = AVPlayerItem(url: queue[nextIndex].fileURL)
         if player?.canInsert(nextItem, after: player?.items().last) == true {
             player?.insert(nextItem, after: player?.items().last)
@@ -933,9 +963,24 @@ final class AudioPlayer: AudioPlaying {
         }
     }
 
-    /// Drops every preloaded item after the current one and preloads again, so queue, shuffle, and repeat mutations can never leave stale audio in the player.
+    /// True when the item already sitting behind the current one is still the right
+    /// one: same queue position, same file, and still the only item queued after it.
+    private func preloadedItemIsCurrent() -> Bool {
+        guard let player, let preloadedItem, let preloadedIndex else { return false }
+        guard preloadedIndex == preloadTargetIndex(after: currentIndex) else { return false }
+        guard (preloadedItem.asset as? AVURLAsset)?.url == queue[preloadedIndex].fileURL else { return false }
+        let queued = Array(player.items().dropFirst())
+        return queued.count == 1 && queued[0] === preloadedItem
+    }
+
+    /// Drops every preloaded item after the current one and preloads again, so queue,
+    /// shuffle, and repeat mutations can never leave stale audio in the player. A
+    /// mutation that leaves the next track unchanged returns early instead: rebuilding
+    /// a prerolled item throws away its buffered decoder, and an edit landing near a
+    /// track boundary would then hand the transition a cold item and an audible gap.
     private func resyncPreloadedItems() {
         guard let player, player.currentItem != nil else { return }
+        if preloadedItemIsCurrent() { return }
         for item in player.items().dropFirst() {
             player.remove(item)
         }
@@ -1563,7 +1608,7 @@ final class AudioPlayer: AudioPlaying {
     /// next item to preload, keeping continuation gapless.
     private func scheduleAutoplayContinuationIfNeeded() {
         guard autoplaySimilarWhenQueueEnds, !autoplayContinuationInFlight, repeatMode == .off else { return }
-        guard !queue.isEmpty, currentIndex >= queue.count - 2 else { return }
+        guard !queue.isEmpty, currentIndex >= queue.count - Self.autoplayContinuationLookahead else { return }
         buildAutoplayContinuation(then: nil)
     }
 
