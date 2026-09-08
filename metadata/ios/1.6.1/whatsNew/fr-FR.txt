@@ -1,3 +1,5 @@
+Flaccy ne demande une note qu'une fois que vous avez vraiment importé une bibliothèque digne d'être écoutée. Nouveauté aussi : une étagère « Plus d'apps », refaite pour que les pochettes soient décodées hors du thread principal, à la taille où elles s'affichent.
+
 La lecture sans coupure, dite franchement et améliorée.
 
 Fin du morceau s'arrête désormais vraiment à la fin du titre. La minuterie de veille laissait auparavant passer un instant du morceau suivant avant de mettre en pause, et vous vous réveilliez un morceau plus loin que prévu.

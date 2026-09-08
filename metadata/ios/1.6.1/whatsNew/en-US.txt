@@ -1,3 +1,5 @@
+Flaccy now asks for a rating only once you have actually imported a library worth listening to, and there is a new More Apps shelf, rebuilt so artwork decodes off the main thread at the size it is really drawn.
+
 Gapless, told straight and made better.
 
 The sleep timer's End of Track now stops at the end of the track. It used to let a moment of the next song through before pausing, and you woke up one song further along than you meant to.

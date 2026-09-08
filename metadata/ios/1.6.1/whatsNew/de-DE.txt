@@ -1,3 +1,5 @@
+Flaccy fragt jetzt erst nach einer Bewertung, wenn du wirklich eine hörenswerte Bibliothek importiert hast. Neu ist außerdem ein Regal mit weiteren Apps, so gebaut, dass Coverbilder abseits des Haupt-Threads und genau in der dargestellten Größe dekodiert werden.
+
 Lückenlose Wiedergabe, ehrlich erklärt und besser gemacht.
 
 Ende des Titels hält jetzt wirklich am Ende des Titels an. Der Sleep-Timer ließ früher einen Moment des nächsten Songs durchrutschen, bevor er pausierte – du bist also einen Song weiter aufgewacht, als beabsichtigt.

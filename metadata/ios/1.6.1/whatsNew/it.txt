@@ -1,3 +1,5 @@
+Flaccy chiede una valutazione solo dopo che hai davvero importato una libreria che vale la pena ascoltare. Arriva anche uno scaffale Altre app, ricostruito perché le copertine vengano decodificate fuori dal thread principale e alla dimensione in cui vengono disegnate.
+
 Riproduzione senza interruzioni, raccontata senza fronzoli e migliorata.
 
 Fine del brano ora si interrompe davvero a fine brano. Prima, il timer per lo spegnimento lasciava passare un istante del brano successivo prima di mettere in pausa, e ti risvegliavi un brano più avanti di quanto volessi.

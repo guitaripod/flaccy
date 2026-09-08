@@ -1,3 +1,5 @@
+Agora o Flaccy só pede uma avaliação depois que você realmente importou uma biblioteca que valha a pena ouvir. Ele também ganhou uma prateleira Mais Apps, refeita para que as capas sejam decodificadas fora da thread principal e no tamanho em que são desenhadas.
+
 Reprodução sem intervalos, explicada sem rodeios e melhorada.
 
 Fim da faixa agora realmente para no fim da faixa. Antes, o temporizador de repouso deixava passar um instante da próxima música antes de pausar, e você acordava uma música mais adiante do que pretendia.
