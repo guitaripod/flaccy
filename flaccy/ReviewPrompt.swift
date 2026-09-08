@@ -9,14 +9,16 @@ import AppKit
 /// at most once per app version.
 ///
 /// Rating count is both an App Store ranking input and the strongest conversion signal on a
-/// product page. Two independent gates open the prompt: cumulative tracks imported (someone who
-/// drags their whole collection in once has got the app's entire value) or tracks played through
-/// to the scrobble threshold across at least two different days (a listener who came back).
+/// product page. Two independent gates open the prompt: cumulative tracks imported (someone with
+/// a handful of their own files in the library has crossed this app's one real onboarding step)
+/// or tracks played through to the scrobble threshold (a listener who is actually listening).
+/// Both are deliberately shallow, because the deep thresholds they replaced were reached by
+/// almost nobody: the median install never returns for a second day.
 @MainActor
 enum ReviewPrompt {
-    private static let tracksBeforeAsking = 20
-    private static let playsBeforeAsking = 25
-    private static let listeningDaysBeforeAsking = 2
+    private static let tracksBeforeAsking = 5
+    private static let playsBeforeAsking = 8
+    private static let listeningDaysBeforeAsking = 1
 
     private static let importCountKey = "flaccy.review.importedTracks"
     private static let playCountKey = "flaccy.review.completedPlays"
@@ -24,11 +26,18 @@ enum ReviewPrompt {
     private static let versionKey = "flaccy.review.promptedVersion"
     private static let lifetimePurchasedKey = "flaccy.review.lifetimePurchased"
 
-    /// Call once a lifetime unlock has landed from a purchase or a restore: the
-    /// next completed play asks for a review, since someone who has just paid
-    /// once for good is the listener most likely to say why.
+    /// Call once a lifetime unlock has landed from a purchase or a restore: someone who has
+    /// just paid once for good is the listener most likely to say why. The paywall is still on
+    /// screen at this moment and the rating sheet will not stack on it, so the ask is retried
+    /// shortly after — and if that too is too early, the flag leaves the next completed play
+    /// to carry it.
     static func recordLifetimePurchase() {
         UserDefaults.standard.set(true, forKey: lifetimePurchasedKey)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            guard UserDefaults.standard.bool(forKey: lifetimePurchasedKey) else { return }
+            if askIfDue() { UserDefaults.standard.removeObject(forKey: lifetimePurchasedKey) }
+        }
     }
 
     /// Call when an import finishes, with the number of tracks it actually added.
