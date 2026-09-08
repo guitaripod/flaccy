@@ -822,6 +822,7 @@ impl AppCore {
 
     pub fn set_sleep_timer_minutes(self: &Rc<Self>, minutes: i64) {
         self.sleep_end_of_track.set(false);
+        self.player.set_stop_at_end_of_track(false);
         self.sleep_remaining.set(Some(minutes * 60));
         self.emit_sleep_state();
         crate::logger::info("playback", &format!("sleep timer set: {minutes} min"));
@@ -831,6 +832,7 @@ impl AppCore {
     pub fn set_sleep_timer_end_of_track(self: &Rc<Self>) {
         self.sleep_remaining.set(None);
         self.sleep_end_of_track.set(true);
+        self.player.set_stop_at_end_of_track(true);
         self.emit_sleep_state();
         crate::logger::info("playback", "sleep timer set: end of track");
     }
@@ -838,6 +840,7 @@ impl AppCore {
     pub fn cancel_sleep_timer(&self) {
         self.sleep_remaining.set(None);
         self.sleep_end_of_track.set(false);
+        self.player.set_stop_at_end_of_track(false);
         self.emit_sleep_state();
         crate::logger::info("playback", "sleep timer cancelled");
     }
@@ -1106,14 +1109,13 @@ impl AppCore {
             match event {
                 AppEvent::TrackChanged(track) => {
                     crate::scrobbler::on_track_started(&core, track.clone());
-                    if core.sleep_end_of_track.replace(false) && core.player.is_playing() {
-                        core.player.toggle_play_pause();
-                        core.emit_sleep_state();
-                        crate::logger::info("playback", "sleep timer (end of track) fired: paused");
-                    }
                 }
                 AppEvent::NaturalEnd(track) => {
                     crate::scrobbler::on_natural_end(&core, track);
+                    if core.sleep_end_of_track.replace(false) {
+                        core.emit_sleep_state();
+                        crate::logger::info("playback", "sleep timer (end of track) fired: stopped on the boundary");
+                    }
                 }
                 _ => {}
             }

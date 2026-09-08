@@ -85,6 +85,7 @@ struct Shared {
     /// the next track is queued can jump straight into it — so an item in this
     /// state is reopened rather than seeked.
     drained: bool,
+    stop_at_end_of_track: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -208,6 +209,7 @@ impl Player {
             history_weights: std::collections::HashMap::new(),
             scrubbing: false,
             drained: false,
+            stop_at_end_of_track: false,
         }));
 
         {
@@ -220,7 +222,7 @@ impl Player {
                     return None;
                 };
                 guard.drained = true;
-                if guard.scrubbing {
+                if guard.scrubbing || guard.stop_at_end_of_track {
                     return None;
                 }
                 if let Some(next) = gapless_next_index(&guard) {
@@ -365,20 +367,29 @@ impl Player {
         if let Some(track) = self.current_track() {
             self.hub.emit(&AppEvent::NaturalEnd(track));
         }
-        let next = {
+        let (next, stopped_for_sleep) = {
             let Ok(mut guard) = self.shared.lock() else {
                 return;
             };
             guard.pending_advance = None;
-            gapless_next_index(&guard)
+            if guard.stop_at_end_of_track {
+                guard.stop_at_end_of_track = false;
+                (None, true)
+            } else {
+                (gapless_next_index(&guard), false)
+            }
         };
         if let Some(index) = next {
             crate::logger::info("playback", "EOS with queued next; continuing");
             self.jump_to(index);
             return;
         }
-        crate::logger::info("playback", "queue exhausted (EOS)");
         self.clear_seeks();
+        if stopped_for_sleep {
+            crate::logger::info("playback", "sleep timer (end of track) reached; stopping on the boundary");
+        } else {
+            crate::logger::info("playback", "queue exhausted (EOS)");
+        }
         let _ = self.playbin.set_state(gst::State::Paused);
         let _ = self.playbin.seek_simple(
             gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT,
@@ -754,6 +765,16 @@ impl Player {
             guard.repeat
         };
         self.hub.emit(&AppEvent::RepeatChanged(mode));
+    }
+
+    /// Withholds the next URI from `about-to-finish` while a stop-at-end-of-track
+    /// request stands, so the stream ends on the boundary the listener asked for.
+    /// Pausing on `TrackChanged` instead plays a moment of the next song and leaves
+    /// the queue one track further along.
+    pub fn set_stop_at_end_of_track(&self, stop: bool) {
+        if let Ok(mut guard) = self.shared.lock() {
+            guard.stop_at_end_of_track = stop;
+        }
     }
 
     pub fn set_repeat(&self, mode: RepeatMode) {
