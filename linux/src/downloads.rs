@@ -106,6 +106,7 @@ enum WorkerEvent {
         album: String,
     },
     Toast(String),
+    Repaired(usize),
 }
 
 pub fn start(core: &Rc<AppCore>) {
@@ -148,6 +149,15 @@ pub fn start(core: &Rc<AppCore>) {
                     }
                 }
                 WorkerEvent::Toast(message) => core.toast(&message),
+                WorkerEvent::Repaired(count) => {
+                    core.hub.emit(&AppEvent::DownloadsChanged);
+                    core.toast(&repair_summary(count));
+                    if core.scanning.get() {
+                        core.downloads.rescan_pending.set(true);
+                    } else {
+                        core.rescan();
+                    }
+                }
             }
         }
     });
@@ -278,6 +288,7 @@ fn worker(
     current: Arc<CurrentJob>,
 ) {
     let Ok(db) = Db::open(db_path) else { return };
+    repair_unplayable(&db, &tx);
     while rx.recv_blocking().is_ok() {
         while rx.try_recv().is_ok() {}
         let mut just_downloaded = false;
@@ -437,6 +448,7 @@ fn download(
     let mut command = Command::new(yt_dlp);
     command
         .args(["-f", "bestaudio/best", "-x", "--audio-format", "best", "--audio-quality", "0"])
+        .args(["-S", "acodec:opus"])
         .args(["--embed-metadata", "--write-thumbnail", "--convert-thumbnails", "jpg"])
         .args(["--no-playlist", "--no-overwrites", "--newline", "--no-warnings"])
         .args(["--socket-timeout", "15", "--retries", "3"])
@@ -526,9 +538,9 @@ fn download(
         return;
     }
 
-    match &file_path {
+    match file_path.map(|path| ensure_playable(&path)) {
         Some(path) => {
-            let (title, artist, album) = finalize_tags(path, row);
+            let (title, artist, album) = finalize_tags(&path, row);
             db.set_download_file(row.id, &path.to_string_lossy());
             db.set_download_meta(row.id, KIND_TRACK, &title, &artist);
             db.set_download_status(row.id, STATUS_DONE, None);
@@ -589,6 +601,272 @@ fn run_captured(
 fn fail_unless_cancelled(db: &Db, id: i64, message: &str) {
     if db.download_status(id).as_deref() != Some(STATUS_CANCELLED) {
         db.set_download_status(id, STATUS_FAILED, Some(message));
+    }
+}
+
+const PROBE_TIMEOUT: gst::ClockTime = gst::ClockTime::from_seconds(20);
+const CONVERT_SUFFIX: &str = "flaccy-convert.flac";
+
+/// Re-checks finished downloads that are still sitting in a codec this machine
+/// turned out not to be able to decode, so a file that was already fetched
+/// before this pipeline learned to convert starts playing without the user
+/// hunting down a GStreamer plugin.
+fn repair_unplayable(db: &Db, tx: &async_channel::Sender<WorkerEvent>) {
+    let mut repaired = 0usize;
+    for (id, file) in db.unchecked_download_files() {
+        let path = PathBuf::from(&file);
+        if !path.is_file() {
+            continue;
+        }
+        if is_flac(&path) || is_decodable(&path) {
+            db.mark_download_codec_checked(id);
+            continue;
+        }
+        let Some(converted) = transcode_to_flac(&path) else {
+            continue;
+        };
+        db.set_download_file(id, &converted.to_string_lossy());
+        repaired += 1;
+    }
+    if repaired > 0 {
+        let _ = tx.send_blocking(WorkerEvent::Repaired(repaired));
+    }
+}
+
+/// The sentence shown once a launch has rescued files that were already on disk.
+fn repair_summary(count: usize) -> String {
+    if count == 1 {
+        "Converted 1 download to FLAC so it plays here".to_string()
+    } else {
+        format!("Converted {count} downloads to FLAC so they play here")
+    }
+}
+
+/// Guarantees the file handed to the library is one this machine can actually
+/// play: a site can serve perfectly valid AAC that needs gst-libav, which the
+/// base runtime deps don't pull in, and the failure would only surface as a
+/// missing-codec toast the first time the user pressed play.
+fn ensure_playable(path: &Path) -> PathBuf {
+    if is_flac(path) || is_decodable(path) {
+        return path.to_path_buf();
+    }
+    crate::logger::warn(
+        "downloads",
+        &format!(
+            "no local decoder for {}; converting to FLAC",
+            path.display()
+        ),
+    );
+    transcode_to_flac(path).unwrap_or_else(|| path.to_path_buf())
+}
+
+fn is_flac(path: &Path) -> bool {
+    path.extension()
+        .map(|ext| ext.eq_ignore_ascii_case("flac"))
+        .unwrap_or(false)
+}
+
+/// Asks the local GStreamer to preroll the file with everything decoded, which
+/// is the only check that sees a missing decoder before the user does. A probe
+/// that cannot even be set up answers "decodable" so a broken probe never
+/// triggers a pointless re-encode.
+fn is_decodable(path: &Path) -> bool {
+    use gst::prelude::*;
+    if gst::init().is_err() {
+        return true;
+    }
+    let Ok(uri) = glib::filename_to_uri(path, None) else {
+        return true;
+    };
+    let Ok(source) = gst::ElementFactory::make("uridecodebin")
+        .property("uri", uri.as_str())
+        .build()
+    else {
+        return true;
+    };
+    let pipeline = gst::Pipeline::new();
+    if pipeline.add(&source).is_err() {
+        return true;
+    }
+
+    let audio_pads = Arc::new(AtomicU32::new(0));
+    let weak_pipeline = pipeline.downgrade();
+    let seen = Arc::clone(&audio_pads);
+    source.connect_pad_added(move |_, pad| {
+        let Some(pipeline) = weak_pipeline.upgrade() else {
+            return;
+        };
+        let is_audio = pad
+            .current_caps()
+            .and_then(|caps| caps.structure(0).map(|s| s.name().starts_with("audio/")))
+            .unwrap_or(false);
+        let Ok(sink) = gst::ElementFactory::make("fakesink")
+            .property("sync", false)
+            .build()
+        else {
+            return;
+        };
+        if pipeline.add(&sink).is_err() || sink.sync_state_with_parent().is_err() {
+            return;
+        }
+        let Some(target) = sink.static_pad("sink") else {
+            return;
+        };
+        if pad.link(&target).is_ok() && is_audio {
+            seen.fetch_add(1, Ordering::SeqCst);
+        }
+    });
+
+    let decodable = preroll(&pipeline) && audio_pads.load(Ordering::SeqCst) > 0;
+    let _ = pipeline.set_state(gst::State::Null);
+    decodable
+}
+
+/// Drives the probe pipeline to PAUSED and reports whether it got there.
+fn preroll(pipeline: &gst::Pipeline) -> bool {
+    use gst::prelude::*;
+    if pipeline.set_state(gst::State::Paused).is_err() {
+        return false;
+    }
+    let Some(bus) = pipeline.bus() else {
+        return false;
+    };
+    let Some(message) = bus.timed_pop_filtered(
+        Some(PROBE_TIMEOUT),
+        &[
+            gst::MessageType::AsyncDone,
+            gst::MessageType::Error,
+            gst::MessageType::Eos,
+        ],
+    ) else {
+        return false;
+    };
+    match message.view() {
+        gst::MessageView::AsyncDone(_) => true,
+        gst::MessageView::Error(err) => {
+            crate::logger::info("downloads", &format!("probe rejected file: {}", err.error()));
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Re-encodes to FLAC, which every install that can run Flaccy at all can
+/// decode. The source is already lossy, so FLAC is what keeps the decoded
+/// signal intact — a second lossy pass would not. Cover art is carried across
+/// by hand because ffmpeg does not turn an MP4 cover atom into a Vorbis
+/// picture block.
+fn transcode_to_flac(path: &Path) -> Option<PathBuf> {
+    let ffmpeg = resolve_tool("ffmpeg")?;
+    let target = unique_flac_path(path);
+    let scratch = path.with_extension(CONVERT_SUFFIX);
+    let _ = std::fs::remove_file(&scratch);
+
+    let output = Command::new(ffmpeg)
+        .args(["-nostdin", "-v", "error", "-y", "-i"])
+        .arg(path)
+        .args([
+            "-map",
+            "0:a:0",
+            "-map_metadata",
+            "0",
+            "-c:a",
+            "flac",
+            "-compression_level",
+            "8",
+        ])
+        .arg(&scratch)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .output();
+    let succeeded = match &output {
+        Ok(output) => output.status.success(),
+        Err(_) => false,
+    };
+    if !succeeded || !scratch.is_file() {
+        let detail = output
+            .map(|out| String::from_utf8_lossy(&out.stderr).trim().to_string())
+            .unwrap_or_else(|err| err.to_string());
+        crate::logger::error(
+            "downloads",
+            &format!("could not convert {} to FLAC: {detail}", path.display()),
+        );
+        let _ = std::fs::remove_file(&scratch);
+        return None;
+    }
+
+    carry_pictures(path, &scratch);
+    if std::fs::remove_file(path).is_err() || std::fs::rename(&scratch, &target).is_err() {
+        crate::logger::error(
+            "downloads",
+            &format!("could not replace {} with its FLAC", path.display()),
+        );
+        let _ = std::fs::remove_file(&scratch);
+        return None;
+    }
+    crate::logger::info(
+        "downloads",
+        &format!("converted {} to {}", path.display(), target.display()),
+    );
+    Some(target)
+}
+
+/// The .flac name next to the original, stepped aside if something already
+/// owns it so a conversion never overwrites another track.
+fn unique_flac_path(path: &Path) -> PathBuf {
+    let target = path.with_extension("flac");
+    if !target.exists() {
+        return target;
+    }
+    let stem = path
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().to_string())
+        .unwrap_or_else(|| "track".to_string());
+    let parent = path.parent().unwrap_or(Path::new("."));
+    for index in 2..1000 {
+        let candidate = parent.join(format!("{stem} {index}.flac"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    target
+}
+
+/// Copies embedded cover art from the original file onto the converted one.
+fn carry_pictures(source: &Path, target: &Path) {
+    let pictures: Vec<Picture> = lofty::probe::Probe::open(source)
+        .ok()
+        .and_then(|probe| probe.read().ok())
+        .and_then(|tagged| tagged.primary_tag().or_else(|| tagged.first_tag()).cloned())
+        .map(|tag| tag.pictures().to_vec())
+        .unwrap_or_default();
+    if pictures.is_empty() {
+        return;
+    }
+    let Some(tagged) = lofty::probe::Probe::open(target)
+        .ok()
+        .and_then(|probe| probe.read().ok())
+    else {
+        return;
+    };
+    let tag_type = tagged.primary_tag_type();
+    let mut tag = tagged
+        .primary_tag()
+        .or_else(|| tagged.first_tag())
+        .cloned()
+        .unwrap_or_else(|| Tag::new(tag_type));
+    if !tag.pictures().is_empty() {
+        return;
+    }
+    for picture in pictures {
+        tag.push_picture(picture);
+    }
+    if let Err(err) = tag.save_to_path(target, WriteOptions::default()) {
+        crate::logger::warn(
+            "downloads",
+            &format!("cover carry failed for {}: {err}", target.display()),
+        );
     }
 }
 
@@ -814,6 +1092,55 @@ mod tests {
             "Video unavailable"
         );
         assert_eq!(friendly_error(""), "Download failed");
+    }
+
+    #[test]
+    fn unique_flac_path_steps_aside_from_an_existing_file() {
+        let dir = std::env::temp_dir().join(format!(
+            "flaccy-unique-{}",
+            std::process::id() as u64 + 1_000_000
+        ));
+        let _ = std::fs::create_dir_all(&dir);
+        let source = dir.join("Song [abc].m4a");
+        assert_eq!(unique_flac_path(&source), dir.join("Song [abc].flac"));
+        std::fs::write(dir.join("Song [abc].flac"), b"x").unwrap();
+        assert_eq!(unique_flac_path(&source), dir.join("Song [abc] 2.flac"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The whole point of the conversion: a file whose codec this machine has no
+    /// decoder for must come back as one it does, tags and all.
+    #[test]
+    fn converts_an_undecodable_file_into_a_playable_flac() {
+        let Some(ffmpeg) = resolve_tool("ffmpeg") else {
+            return;
+        };
+        let dir = std::env::temp_dir().join("flaccy-transcode-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let source = dir.join("Tone [xyz].m4a");
+        let built = Command::new(&ffmpeg)
+            .args([
+                "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i",
+                "sine=frequency=440:duration=1", "-c:a", "aac",
+            ])
+            .arg(&source)
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        if !built {
+            let _ = std::fs::remove_dir_all(&dir);
+            return;
+        }
+        if is_decodable(&source) {
+            let _ = std::fs::remove_dir_all(&dir);
+            return;
+        }
+        let converted = ensure_playable(&source);
+        assert_eq!(converted, dir.join("Tone [xyz].flac"));
+        assert!(!source.exists());
+        assert!(is_decodable(&converted));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

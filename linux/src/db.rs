@@ -432,6 +432,10 @@ impl Db {
         let _ = self
             .conn
             .execute("ALTER TABLE lyrics ADD COLUMN fetchedAt DATETIME", []);
+        let _ = self.conn.execute(
+            "ALTER TABLE downloads ADD COLUMN codecChecked INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
         Ok(())
     }
 
@@ -1885,11 +1889,41 @@ impl Db {
         );
     }
 
+    /// Records the file a download landed on. Every caller has already put the
+    /// file through the playability check, so this is also what marks the row
+    /// as checked.
     pub fn set_download_file(&self, id: i64, path: &str) {
         let _ = self.conn.execute(
-            "UPDATE downloads SET filePath = ?1 WHERE id = ?2",
+            "UPDATE downloads SET filePath = ?1, codecChecked = 1 WHERE id = ?2",
             params![path, id],
         );
+    }
+
+    pub fn mark_download_codec_checked(&self, id: i64) {
+        let _ = self.conn.execute(
+            "UPDATE downloads SET codecChecked = 1 WHERE id = ?1",
+            params![id],
+        );
+    }
+
+    /// Finished downloads whose file has never been checked against this
+    /// machine's decoders. `codecChecked` is what keeps the sweep to the
+    /// backlog a pre-conversion Flaccy left behind instead of re-prerolling the
+    /// whole download history on every launch.
+    pub fn unchecked_download_files(&self) -> Vec<(i64, String)> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT id, filePath FROM downloads
+             WHERE status = 'done' AND codecChecked = 0
+               AND filePath IS NOT NULL AND filePath <> ''
+             ORDER BY id",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)));
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
     }
 
     pub fn download_status(&self, id: i64) -> Option<String> {
