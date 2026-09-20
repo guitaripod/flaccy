@@ -138,9 +138,11 @@ pub fn goto_artist(ui: &Rc<Ui>, artist: &str) {
     let lead = crate::hygiene::primary_artist(artist);
     let known = {
         let library = ui.core.library.borrow();
-        library.albums.iter().any(|album| {
-            crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(&lead)
-        })
+        let key = crate::hygiene::artist_key(&lead);
+        library
+            .artists
+            .iter()
+            .any(|entry| crate::hygiene::artist_key(&entry.name) == key)
     };
     if !known {
         ui.core.toast(&format!("{lead} isn't in your library"));

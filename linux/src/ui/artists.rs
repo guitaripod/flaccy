@@ -94,13 +94,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             avatar.set_text(Some(&artist.name));
             name_label.set_label(&artist.name);
             name_label.set_tooltip_text(Some(&artist.name));
-            counts.set_label(&format!(
-                "{} album{} · {} track{}",
-                artist.album_count,
-                if artist.album_count == 1 { "" } else { "s" },
-                artist.track_count,
-                if artist.track_count == 1 { "" } else { "s" }
-            ));
+            counts.set_label(&artist_counts_label(&artist));
             let key = crate::hygiene::artist_key(&artist.name);
             if let Some((title, album_artist)) = covers.borrow().get(&key).cloned() {
                 let expected = key.clone();
@@ -308,17 +302,40 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 fn representative_covers(albums: &[Album]) -> HashMap<String, (String, String)> {
     let mut best: HashMap<String, &Album> = HashMap::new();
     for album in albums {
-        best.entry(crate::hygiene::artist_key(&album.artist))
-            .and_modify(|current| {
-                if album.tracks.len() > current.tracks.len() {
-                    *current = album;
-                }
-            })
-            .or_insert(album);
+        let credit_key = crate::hygiene::artist_key(&album.artist);
+        for key in std::iter::once(credit_key.clone()).chain(
+            album
+                .tracks
+                .iter()
+                .map(|track| crate::hygiene::artist_key(&track.artist)),
+        ) {
+            best.entry(key)
+                .and_modify(|current| {
+                    if album.tracks.len() > current.tracks.len() {
+                        *current = album;
+                    }
+                })
+                .or_insert(album);
+        }
     }
     best.into_iter()
         .map(|(artist, album)| (artist, (album.title.clone(), album.artist.clone())))
         .collect()
+}
+
+/// The line under an artist's name. An artist credited with no album of their
+/// own — a composer on a compilation, a guest — is described by what they
+/// actually appear on, so the cell never reads "0 albums".
+fn artist_counts_label(artist: &ArtistEntry) -> String {
+    fn plural(count: usize, noun: &str) -> String {
+        format!("{count} {noun}{}", if count == 1 { "" } else { "s" })
+    }
+    let lead = if artist.album_count > 0 {
+        plural(artist.album_count, "album")
+    } else {
+        format!("appears on {}", plural(artist.appearance_count, "album"))
+    };
+    format!("{lead} · {}", plural(artist.track_count, "track"))
 }
 
 fn sort_artists(artists: &mut [ArtistEntry], mode: ArtistSort) {
@@ -389,16 +406,33 @@ fn build_artist_cell() -> gtk::Box {
     cell
 }
 
+/// An artist's albums, split into the ones credited to them and the ones they
+/// merely play on.
+///
+/// A composer on a Various Artists soundtrack is credited with no album at all,
+/// so a page built from credits alone would be an empty page above a library
+/// holding thirty-one of their tracks.
+pub fn artist_albums(library: &crate::library::Library, artist: &str) -> (Vec<Album>, Vec<Album>) {
+    let key = crate::hygiene::artist_key(artist);
+    let mut credited = Vec::new();
+    let mut appears_on = Vec::new();
+    for album in &library.albums {
+        if crate::hygiene::artist_key(&album.artist) == key {
+            credited.push(album.clone());
+        } else if album
+            .tracks
+            .iter()
+            .any(|track| crate::hygiene::artist_key(&track.artist) == key)
+        {
+            appears_on.push(album.clone());
+        }
+    }
+    (credited, appears_on)
+}
+
 pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
     let library = ui.core.library.borrow().clone();
-    let albums: Vec<Album> = library
-        .albums
-        .iter()
-        .filter(|album| {
-            crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist)
-        })
-        .cloned()
-        .collect();
+    let (albums, appears_on) = artist_albums(&library, artist);
 
     let flow = gtk::FlowBox::builder()
         .selection_mode(gtk::SelectionMode::None)
@@ -481,7 +515,12 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         .margin_top(8)
         .build();
     content.append(&popular_box);
-    content.append(&flow);
+    if !albums.is_empty() {
+        content.append(&flow);
+    }
+    if !appears_on.is_empty() {
+        content.append(&appears_on_section(ui, &appears_on));
+    }
     let similar_box = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(8)
@@ -504,6 +543,48 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         .child(&scroll)
         .build();
     ui.nav.push(&page);
+}
+
+/// The albums an artist plays on without being their credit, rendered like the
+/// credited grid so a performer's page never bottoms out below the header.
+fn appears_on_section(ui: &Rc<Ui>, albums: &[Album]) -> gtk::Box {
+    let container = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(8)
+        .margin_start(24)
+        .margin_end(24)
+        .margin_top(8)
+        .build();
+    let heading = gtk::Label::builder().label("APPEARS ON").xalign(0.0).build();
+    heading.add_css_class("stat-caption");
+    container.append(&heading);
+
+    let flow = gtk::FlowBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .homogeneous(true)
+        .column_spacing(18)
+        .row_spacing(24)
+        .margin_top(8)
+        .margin_bottom(24)
+        .min_children_per_line(2)
+        .max_children_per_line(10)
+        .valign(gtk::Align::Start)
+        .activate_on_single_click(true)
+        .build();
+    for album in albums {
+        flow.append(&album_cell_for_artist(ui, album));
+    }
+    {
+        let ui = Rc::clone(ui);
+        let albums = albums.to_vec();
+        flow.connect_child_activated(move |_, child| {
+            if let Some(album) = albums.get(child.index().max(0) as usize) {
+                albums::push_album_detail(&ui, album);
+            }
+        });
+    }
+    container.append(&flow);
+    container
 }
 
 /// Last.fm's generic star placeholder, rejected by URL content hash exactly as
@@ -650,13 +731,7 @@ fn load_artist_extras(
 /// the library and in Last.fm's order — the list macOS and iOS lead their artist
 /// pages with. Nothing renders when the artist's popular songs aren't owned.
 fn fill_popular(ui: &Rc<Ui>, artist: &str, container: &gtk::Box, names: &[String]) {
-    let library = ui.core.library.borrow().clone();
-    let owned: Vec<crate::library::Track> = library
-        .albums
-        .iter()
-        .filter(|album| album.artist.eq_ignore_ascii_case(artist))
-        .flat_map(|album| album.tracks.iter().cloned())
-        .collect();
+    let owned: Vec<crate::library::Track> = ui.core.artist_tracks(artist);
     let matched: Vec<crate::library::Track> = names
         .iter()
         .filter_map(|name| {

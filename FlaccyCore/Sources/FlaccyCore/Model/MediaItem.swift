@@ -15,6 +15,10 @@ public struct MediaItem: Codable, Sendable, Hashable, Identifiable {
     public let title: String
     public let artist: String
     public let albumTitle: String
+    /// The release credit: the `ALBUMARTIST` tag, or the credit derived for the
+    /// whole release. Optional so a payload written before compilations existed
+    /// still decodes — an item without one is read as its own artist's.
+    public let albumArtist: String?
     public let trackNumber: Int
     public let duration: TimeInterval
     public let artworkData: Data?
@@ -24,6 +28,7 @@ public struct MediaItem: Codable, Sendable, Hashable, Identifiable {
         title: String,
         artist: String,
         albumTitle: String,
+        albumArtist: String? = nil,
         trackNumber: Int,
         duration: TimeInterval,
         artworkData: Data? = nil
@@ -32,6 +37,7 @@ public struct MediaItem: Codable, Sendable, Hashable, Identifiable {
         self.title = title
         self.artist = artist
         self.albumTitle = albumTitle
+        self.albumArtist = albumArtist
         self.trackNumber = trackNumber
         self.duration = duration
         self.artworkData = artworkData
@@ -72,5 +78,15 @@ public struct MediaAlbum: Identifiable, Sendable, Hashable {
 
     public var totalDuration: TimeInterval {
         items.reduce(0) { $0 + $1.duration }
+    }
+}
+
+extension MediaItem {
+
+    /// The release credit this item belongs to, falling back to its own artist
+    /// when nothing has settled one.
+    public var credit: String {
+        guard let albumArtist, !albumArtist.isEmpty else { return artist }
+        return albumArtist
     }
 }

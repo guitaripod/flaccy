@@ -15,8 +15,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-SWIFT_LOG="$(mktemp -t flaccy-swift-tests)"
-RUST_LOG="$(mktemp -t flaccy-rust-tests)"
+SWIFT_LOG="$(mktemp -t flaccy-swift-tests.XXXXXX)"
+RUST_LOG="$(mktemp -t flaccy-rust-tests.XXXXXX)"
 trap 'rm -f "$SWIFT_LOG" "$RUST_LOG"' EXIT
 
 SWIFT=(swift)

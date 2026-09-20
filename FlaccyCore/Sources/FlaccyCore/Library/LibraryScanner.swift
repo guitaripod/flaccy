@@ -82,6 +82,7 @@ public enum LibraryScanner {
             title: metadata.title ?? fallback.title,
             artist: metadata.artist ?? path.artist ?? "Unknown Artist",
             albumTitle: metadata.albumTitle ?? path.album ?? "Unknown Album",
+            albumArtist: metadata.albumArtist,
             trackNumber: metadata.trackNumber > 0 ? metadata.trackNumber : fallback.trackNumber,
             duration: metadata.duration,
             artworkData: metadata.artworkData
@@ -89,9 +90,53 @@ public enum LibraryScanner {
     }
     #endif
 
+    /// Restamps every item with the credit its release resolves to.
+    ///
+    /// The watch scans the files it holds rather than reading the phone's
+    /// database, so the derived half of a credit — the part that makes an
+    /// untagged compilation one album instead of seven — has to be recomputed
+    /// here or the wrist would disagree with the phone about what an album is.
+    /// Folding is deliberately light: the watch has no `LibraryHygiene`, and a
+    /// case-folded credit is enough to cluster a release whose files sit in one
+    /// folder.
+    public static func resolvingCredits(_ items: [MediaItem]) -> [MediaItem] {
+        let rows = items.map { item in
+            AlbumCredit.Row(
+                id: item.relativePath,
+                albumTitleKey: item.albumTitle.lowercased(),
+                relativePath: item.relativePath,
+                member: AlbumCredit.Member(
+                    albumArtistTag: item.albumArtist,
+                    artistDisplay: item.artist,
+                    artistKey: item.artist.lowercased()
+                )
+            )
+        }
+        let credits = AlbumCredit.resolve(rows)
+        return items.map { item in
+            guard let credit = credits[item.relativePath], credit != item.albumArtist else { return item }
+            return MediaItem(
+                relativePath: item.relativePath,
+                title: item.title,
+                artist: item.artist,
+                albumTitle: item.albumTitle,
+                albumArtist: credit,
+                trackNumber: item.trackNumber,
+                duration: item.duration,
+                artworkData: item.artworkData
+            )
+        }
+    }
+
     /// Groups items into albums sorted by artist/title, tracks sorted by number.
+    ///
+    /// Grouping runs on the release credit, not the performing artist, so a
+    /// compilation arrives on the watch as one album rather than one album per
+    /// performer. Items whose credit has not been settled — anything sent
+    /// before the phone resolved them — fall back to their own artist, which is
+    /// the grouping that predates compilations.
     public static func albums(from items: [MediaItem]) -> [MediaAlbum] {
-        let grouped = Dictionary(grouping: items) { "\($0.albumTitle)|\($0.artist)" }
+        let grouped = Dictionary(grouping: items) { "\($0.albumTitle)|\($0.credit)" }
         let albums: [MediaAlbum] = grouped.values.compactMap { group in
             guard let first = group.first else { return nil }
             let sorted = TrackOrdering.ordered(
@@ -100,7 +145,7 @@ public enum LibraryScanner {
                 path: { $0.relativePath },
                 title: { $0.title }
             )
-            return MediaAlbum(title: first.albumTitle, artist: first.artist, items: sorted)
+            return MediaAlbum(title: first.albumTitle, artist: first.credit, items: sorted)
         }
         return albums.sorted(by: Self.albumOrder)
     }

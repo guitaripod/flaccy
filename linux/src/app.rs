@@ -148,6 +148,7 @@ impl AppCore {
             .name("flaccy-reload".into())
             .spawn(move || {
                 let Ok(db) = Db::open(&db_path) else { return };
+                db.resolve_album_credits();
                 let library = library::load(&db, group_album_editions);
                 let now = chrono::Utc::now().timestamp();
                 let weights = db
@@ -492,17 +493,27 @@ impl AppCore {
         self.play_tracks(album.tracks.clone(), start);
     }
 
-    /// Every library track credited to `artist` (feat. credits collapse to the
-    /// lead artist), in album order.
+    /// Every library track `artist` is on (feat. credits collapse to the lead
+    /// artist), in album order: the albums credited to them in full, plus the
+    /// individual tracks they perform on somebody else's record.
+    ///
+    /// Taking only credited albums would hand a composer on a Various Artists
+    /// soundtrack an empty queue while the library holds thirty-one of their
+    /// tracks.
     pub fn artist_tracks(&self, artist: &str) -> Vec<Track> {
         let library = self.library.borrow();
+        let key = crate::hygiene::artist_key(artist);
         library
             .albums
             .iter()
-            .filter(|album| {
-                crate::hygiene::artist_key(&album.artist) == crate::hygiene::artist_key(artist)
+            .flat_map(|album| {
+                let credited = crate::hygiene::artist_key(&album.artist) == key;
+                let key = key.clone();
+                album.tracks.iter().filter(move |track| {
+                    credited || crate::hygiene::artist_key(&track.artist) == key
+                })
             })
-            .flat_map(|album| album.tracks.iter().cloned())
+            .cloned()
             .collect()
     }
 

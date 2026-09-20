@@ -78,6 +78,10 @@ nonisolated enum LibraryItem: Hashable, Sendable {
 nonisolated struct ArtistItem: Hashable, Sendable {
     let name: String
     let albumCount: Int
+    /// Albums this artist performs on without being the credit — a composer on
+    /// a Various Artists soundtrack, a guest on somebody else's record. Kept
+    /// apart from `albumCount` so a performer is never sold as an author.
+    let appearanceCount: Int
     let artwork: PlatformImage?
 
     nonisolated static func == (lhs: ArtistItem, rhs: ArtistItem) -> Bool {
@@ -413,13 +417,21 @@ final class LibraryViewModel {
 
     /// A representative album for the artist's avatar artwork, resolved through
     /// a lazily built index instead of a per-cell linear scan over all albums.
+    ///
+    /// Indexes performances as well as credits: a composer on a Various Artists
+    /// soundtrack is credited with no album, and an index of credits alone
+    /// would leave every such cell blank.
     func firstAlbum(forArtist name: String) -> Album? {
         if cachedFirstAlbumByArtist == nil {
-            cachedFirstAlbumByArtist = Dictionary(
-                library.albums.map { ($0.artist, $0) }, uniquingKeysWith: { first, _ in first }
-            )
+            var index = [String: Album]()
+            for album in library.albums {
+                var keys = [artistMatchKey(album.artist)]
+                keys += album.tracks.map { artistMatchKey($0.artist) }
+                for key in keys where index[key] == nil { index[key] = album }
+            }
+            cachedFirstAlbumByArtist = index
         }
-        return cachedFirstAlbumByArtist?[name]
+        return cachedFirstAlbumByArtist?[artistMatchKey(name)]
     }
 
     private var cachedAlbumAdded: [String: Date]?
@@ -737,23 +749,50 @@ final class LibraryViewModel {
         #endif
     }
 
+    /// The Artists tab, built from what people are credited with **and** what
+    /// they perform.
+    ///
+    /// Deriving it from album credits alone was fine while every album was one
+    /// artist's, and became a disappearing act the moment compilations could
+    /// exist: the seven composers of a Various Artists soundtrack own no album,
+    /// so an index of credits alone would erase all seven from the library that
+    /// holds thirty-one of their tracks. Performances therefore count too,
+    /// tracked separately so the tab can still say which albums are actually
+    /// theirs. Mirrors `build_artists` in the Linux client.
     var artists: [ArtistItem] {
         var seen = [String: ArtistItem]()
+
+        func touch(_ credit: String, artwork: PlatformImage?, credited: Bool) {
+            let key = artistMatchKey(credit)
+            guard var existing = seen[key] else {
+                seen[key] = ArtistItem(
+                    name: artistGroupKey(credit),
+                    albumCount: credited ? 1 : 0,
+                    appearanceCount: credited ? 0 : 1,
+                    artwork: artwork
+                )
+                return
+            }
+            existing = ArtistItem(
+                name: existing.name,
+                albumCount: existing.albumCount + (credited ? 1 : 0),
+                appearanceCount: existing.appearanceCount + (credited ? 0 : 1),
+                artwork: existing.artwork ?? artwork
+            )
+            seen[key] = existing
+        }
+
         for album in library.albums {
-            let display = artistGroupKey(album.artist)
-            let key = artistMatchKey(album.artist)
-            if let existing = seen[key] {
-                seen[key] = ArtistItem(
-                    name: existing.name,
-                    albumCount: existing.albumCount + 1,
-                    artwork: existing.artwork ?? album.artwork
-                )
-            } else {
-                seen[key] = ArtistItem(
-                    name: display,
-                    albumCount: 1,
-                    artwork: album.artwork
-                )
+            let creditKey = artistMatchKey(album.artist)
+            touch(album.artist, artwork: album.artwork, credited: true)
+            var performers: [String: String] = [:]
+            for track in album.tracks {
+                let key = artistMatchKey(track.artist)
+                guard key != creditKey else { continue }
+                performers[key] = track.artist
+            }
+            for credit in performers.values {
+                touch(credit, artwork: album.artwork, credited: false)
             }
         }
         return seen.values.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -1191,8 +1230,25 @@ final class LibraryViewModel {
         warmScrobbleCountsIfNeeded()
     }
 
-    func albumsForArtist(_ name: String) -> [Album] {
-        library.albums.filter { $0.artist == name }
+    /// An artist's albums, split into the ones credited to them and the ones
+    /// they merely play on.
+    ///
+    /// A composer on a Various Artists soundtrack is credited with no album at
+    /// all, so a page built from credits alone would be an empty page above a
+    /// library holding thirty-one of their tracks. Mirrors `artist_albums` in
+    /// the Linux client.
+    func albumsForArtist(_ name: String) -> (credited: [Album], appearsOn: [Album]) {
+        let key = artistMatchKey(name)
+        var credited: [Album] = []
+        var appearsOn: [Album] = []
+        for album in library.albums {
+            if artistMatchKey(album.artist) == key {
+                credited.append(album)
+            } else if album.tracks.contains(where: { artistMatchKey($0.artist) == key }) {
+                appearsOn.append(album)
+            }
+        }
+        return (credited, appearsOn)
     }
 
     func refreshPlaylists() {

@@ -20,8 +20,12 @@ final class ArtistDetailViewController: NSViewController {
     private let popularSection = NSStackView()
     private let popularTitle = NSTextField(labelWithString: String(localized: "Popular"))
     private let albumsShelf = AlbumShelfView()
+    private let appearsOnShelf = AlbumShelfView()
     private let similarRow = SimilarArtistsRowView()
     private var albums: [Album] = []
+    /// Albums the artist plays on without being their credit, so a composer on
+    /// a Various Artists soundtrack has a page with their work on it.
+    private var appearsOn: [Album] = []
     private var popularRows: [(row: DetailTrackRowView, track: Track)] = []
     private var popularPlayingURL: URL?
 
@@ -84,6 +88,9 @@ final class ArtistDetailViewController: NSViewController {
         albumsShelf.translatesAutoresizingMaskIntoConstraints = false
         albumsShelf.onOpenAlbum = { [weak self] album in self?.onOpenAlbum?(album) }
 
+        appearsOnShelf.translatesAutoresizingMaskIntoConstraints = false
+        appearsOnShelf.onOpenAlbum = { [weak self] album in self?.onOpenAlbum?(album) }
+
         similarRow.translatesAutoresizingMaskIntoConstraints = false
         similarRow.onSelectArtist = { [weak self] name in self?.onSelectArtist?(name) }
 
@@ -91,6 +98,7 @@ final class ArtistDetailViewController: NSViewController {
         document.addSubview(headerText)
         document.addSubview(popularSection)
         document.addSubview(albumsShelf)
+        document.addSubview(appearsOnShelf)
         document.addSubview(similarRow)
 
         scrollView.documentView = document
@@ -130,7 +138,11 @@ final class ArtistDetailViewController: NSViewController {
             albumsShelf.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 34),
             albumsShelf.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -24),
 
-            similarRow.topAnchor.constraint(equalTo: albumsShelf.bottomAnchor, constant: 32),
+            appearsOnShelf.topAnchor.constraint(equalTo: albumsShelf.bottomAnchor, constant: 32),
+            appearsOnShelf.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 34),
+            appearsOnShelf.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -24),
+
+            similarRow.topAnchor.constraint(equalTo: appearsOnShelf.bottomAnchor, constant: 32),
             similarRow.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 34),
             similarRow.trailingAnchor.constraint(lessThanOrEqualTo: document.trailingAnchor, constant: -32),
             similarRow.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -32),
@@ -182,12 +194,42 @@ final class ArtistDetailViewController: NSViewController {
     }
 
     @objc private func refresh() {
-        albums = Library.shared.albums.filter { LibraryHygiene.artistKey($0.artist) == LibraryHygiene.artistKey(artistName) }
-        let trackCount = albums.reduce(0) { $0 + $1.tracks.count }
+        let key = LibraryHygiene.artistKey(artistName)
+        albums = []
+        appearsOn = []
+        for album in Library.shared.albums {
+            if LibraryHygiene.artistKey(album.artist) == key {
+                albums.append(album)
+            } else if album.tracks.contains(where: { LibraryHygiene.artistKey($0.artist) == key }) {
+                appearsOn.append(album)
+            }
+        }
+        let trackCount = ownedTracks().count
         statsLabel.stringValue =
-            String(localized: "\(albums.count) albums · \(trackCount) songs in your library")
+            String(localized: "\(albums.count + appearsOn.count) albums · \(trackCount) songs in your library")
         albumsShelf.configure(title: String(localized: "Albums"), albums: albums)
+        appearsOnShelf.configure(title: String(localized: "Appears On"), albums: appearsOn)
         rebuildPopular()
+    }
+
+    /// Every library track this artist is on: the albums credited to them in
+    /// full, plus the individual tracks they perform on somebody else's record.
+    ///
+    /// Taking only credited albums would hand a composer on a compilation an
+    /// empty queue while the library holds thirty-one of their tracks. Mirrors
+    /// `Core::artist_tracks` in the Linux client.
+    private func ownedTracks() -> [Track] {
+        let key = LibraryHygiene.artistKey(artistName)
+        let ordered = { (tracks: [Track]) in
+            TrackOrdering.ordered(
+                tracks,
+                number: { $0.trackNumber },
+                path: { $0.fileURL.path },
+                title: { $0.title }
+            )
+        }
+        return albums.flatMap { ordered($0.tracks) }
+            + appearsOn.flatMap { ordered($0.tracks.filter { LibraryHygiene.artistKey($0.artist) == key }) }
     }
 
     private var popularNames: [(name: String, playCount: Int, rank: Int)] = []
@@ -195,7 +237,7 @@ final class ArtistDetailViewController: NSViewController {
     private func rebuildPopular() {
         popularSection.arrangedSubviews.forEach { $0.removeFromSuperview() }
         popularRows = []
-        let libraryTracks = albums.flatMap(\.tracks)
+        let libraryTracks = ownedTracks()
         let matched: [(track: Track, rank: Int)] = popularNames.compactMap { popular in
             guard let track = libraryTracks.first(where: {
                 $0.title.compare(popular.name, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
@@ -296,14 +338,7 @@ final class ArtistDetailViewController: NSViewController {
     }
 
     private func playAll(shuffled: Bool) {
-        let tracks = albums.flatMap { album in
-            TrackOrdering.ordered(
-                album.tracks,
-                number: { $0.trackNumber },
-                path: { $0.fileURL.path },
-                title: { $0.title }
-            )
-        }
+        let tracks = ownedTracks()
         guard !tracks.isEmpty else { return }
         AppLogger.info("Playing all by \(artistName) (shuffled: \(shuffled))", category: .playback)
         AudioPlayer.shared.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0)

@@ -1,5 +1,5 @@
 use crate::db::Db;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug)]
@@ -10,6 +10,10 @@ pub struct TrackRow {
     pub title: String,
     pub artist: String,
     pub album: String,
+    /// The release this track belongs to, credited: the `ALBUMARTIST` tag when
+    /// the file carried one, otherwise the credit `Db::resolve_album_credits`
+    /// derived from the whole release. None only until that pass has run.
+    pub album_artist: Option<String>,
     pub track_number: i32,
     pub duration: f64,
     pub codec: Option<String>,
@@ -25,6 +29,15 @@ pub struct TrackRow {
 pub type Track = TrackRow;
 
 impl TrackRow {
+    /// The credit its release is filed under, falling back to the performing
+    /// artist for a row `Db::resolve_album_credits` has not settled yet.
+    pub fn credit(&self) -> &str {
+        self.album_artist
+            .as_deref()
+            .filter(|credit| !credit.is_empty())
+            .unwrap_or(&self.artist)
+    }
+
     pub fn quality_badge(&self) -> Option<String> {
         let codec = self.codec.as_deref()?;
         let detail = match (self.bit_depth, self.sample_rate) {
@@ -94,6 +107,10 @@ impl Album {
 pub struct ArtistEntry {
     pub name: String,
     pub album_count: usize,
+    /// Albums this artist performs on without being the credit — a composer on
+    /// a Various Artists soundtrack, a guest on somebody else's record. Kept
+    /// apart from `album_count` so a performer is never sold as an author.
+    pub appearance_count: usize,
     pub track_count: usize,
     pub play_count: i64,
     pub last_played: Option<i64>,
@@ -292,14 +309,18 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     let tracks = db.fetch_all_tracks();
     let meta = db.album_meta();
 
-    // Group by edition-free album title + lead artist so per-track featuring
-    // credits ("50 Cent Feat. Eminem") do not each spawn a one-song album.
+    // Group by edition-free album title + the release credit, so per-track
+    // featuring credits ("50 Cent Feat. Eminem") do not each spawn a one-song
+    // album and a compilation's performers do not each spawn a fragment of one.
+    // `albumArtist` is settled for the whole library by
+    // `Db::resolve_album_credits`; the fall back to the performing artist is
+    // what a database that has not been through that pass yet gets.
     let mut grouped: HashMap<String, Vec<Track>> = HashMap::new();
     for track in &tracks {
         let key = format!(
             "{}\u{0}{}",
             crate::wantlist::normalize(&track.album),
-            crate::hygiene::artist_key(&track.artist)
+            crate::hygiene::artist_key(track.credit())
         );
         grouped.entry(key).or_default().push(track.clone());
     }
@@ -308,21 +329,10 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
         .into_values()
         .filter_map(|mut group| {
             let title = majority_value(group.iter().map(|t| t.album.as_str()));
-            let artist = majority_value(
-                group
-                    .iter()
-                    .map(|t| crate::hygiene::primary_artist(&t.artist)),
-            );
+            let artist =
+                majority_value(group.iter().map(|t| crate::hygiene::primary_artist(t.credit())));
             sort_album_tracks(&mut group);
-            let (year, genre) = meta
-                .get(&(title.clone(), artist.clone()))
-                .cloned()
-                .or_else(|| {
-                    group
-                        .iter()
-                        .find_map(|t| meta.get(&(t.album.clone(), t.artist.clone())).cloned())
-                })
-                .unwrap_or((None, None));
+            let (year, genre) = album_meta_for(&meta, &title, &artist, &group);
             Some(Album {
                 title,
                 artist,
@@ -355,40 +365,107 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     };
 
     let last_played = db.track_sort_keys();
-    let mut artist_map: HashMap<String, (String, usize, usize, i64, Option<i64>)> = HashMap::new();
-    for album in &albums {
-        let primary = crate::hygiene::primary_artist(&album.artist);
-        let entry = artist_map
-            .entry(crate::hygiene::artist_key(&album.artist))
-            .or_insert_with(|| (primary.clone(), 0, 0, 0, None));
-        entry.1 += 1;
-        entry.2 += album.tracks.len();
-        for track in &album.tracks {
-            entry.3 += track.play_count;
-            if let Some(played) = last_played.get(&track.rel_path).copied().flatten() {
-                entry.4 = Some(entry.4.map_or(played, |current| current.max(played)));
-            }
-        }
-    }
-    let mut artists: Vec<ArtistEntry> = artist_map
-        .into_values()
-        .map(
-            |(name, album_count, track_count, play_count, last_played)| ArtistEntry {
-                name,
-                album_count,
-                track_count,
-                play_count,
-                last_played,
-            },
-        )
-        .collect();
-    artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    let artists = build_artists(&albums, &last_played);
 
     Library {
         tracks,
         albums,
         artists,
     }
+}
+
+/// An album's year and genre, resolved field by field rather than row by row.
+///
+/// A compilation is credited to someone no metadata provider has ever heard of
+/// ("Various Artists"), so enrichment keeps asking under the performing artists
+/// and the answers land on *their* rows. The credited release still gets a row
+/// of its own — it is where the adopted cover lives — and taking that row whole
+/// would hand the album a NULL year while the real one sits one row over, which
+/// is exactly how a soundtrack lost its 2007 the moment it gained its cover.
+fn album_meta_for(
+    meta: &HashMap<(String, String), (Option<String>, Option<String>)>,
+    title: &str,
+    artist: &str,
+    group: &[Track],
+) -> (Option<String>, Option<String>) {
+    let mut year = None;
+    let mut genre = None;
+    let rows = std::iter::once((title.to_string(), artist.to_string()))
+        .chain(group.iter().map(|t| (t.album.clone(), t.artist.clone())));
+    for key in rows {
+        let Some((row_year, row_genre)) = meta.get(&key) else {
+            continue;
+        };
+        if year.is_none() {
+            year = row_year.clone();
+        }
+        if genre.is_none() {
+            genre = row_genre.clone();
+        }
+        if year.is_some() && genre.is_some() {
+            break;
+        }
+    }
+    (year, genre)
+}
+
+/// The Artists tab, built from what people are credited with **and** what they
+/// perform.
+///
+/// Deriving it from album credits alone was fine while every album was one
+/// artist's, and became a disappearing act the moment compilations could
+/// exist: the seven composers of a Various Artists soundtrack own no album, so
+/// an index of credits alone would erase all seven from the library that holds
+/// thirty-one of their tracks. Performances therefore count too, tracked
+/// separately so the tab can still say which albums are actually theirs.
+fn build_artists(
+    albums: &[Album],
+    last_played: &HashMap<String, Option<i64>>,
+) -> Vec<ArtistEntry> {
+    let mut map: HashMap<String, ArtistEntry> = HashMap::new();
+
+    let touch = |map: &mut HashMap<String, ArtistEntry>, credit: &str, track: &Track| {
+        let entry = map
+            .entry(crate::hygiene::artist_key(credit))
+            .or_insert_with(|| ArtistEntry {
+                name: crate::hygiene::primary_artist(credit),
+                album_count: 0,
+                appearance_count: 0,
+                track_count: 0,
+                play_count: 0,
+                last_played: None,
+            });
+        entry.track_count += 1;
+        entry.play_count += track.play_count;
+        if let Some(played) = last_played.get(&track.rel_path).copied().flatten() {
+            entry.last_played = Some(entry.last_played.map_or(played, |cur| cur.max(played)));
+        }
+    };
+
+    for album in albums {
+        let credit_key = crate::hygiene::artist_key(&album.artist);
+        let mut appeared: HashSet<String> = HashSet::new();
+        for track in &album.tracks {
+            touch(&mut map, &album.artist, track);
+            let performer_key = crate::hygiene::artist_key(&track.artist);
+            if performer_key != credit_key {
+                touch(&mut map, &track.artist, track);
+                appeared.insert(performer_key);
+            }
+        }
+        if let Some(entry) = map.get_mut(&credit_key) {
+            entry.album_count += 1;
+        }
+        for key in appeared {
+            if let Some(entry) = map.get_mut(&key) {
+                entry.appearance_count += 1;
+            }
+        }
+    }
+
+    let mut artists: Vec<ArtistEntry> = map.into_values().collect();
+    artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    artists
 }
 
 fn majority_value<I, S>(values: I) -> String
@@ -414,6 +491,68 @@ where
 }
 
 #[cfg(test)]
+mod meta_tests {
+    use super::*;
+
+    fn track(album: &str, artist: &str) -> Track {
+        TrackRow {
+            id: 0,
+            rel_path: format!("{album}/{artist}.flac"),
+            title: "t".into(),
+            artist: artist.into(),
+            album: album.into(),
+            album_artist: Some("Various Artists".into()),
+            track_number: 1,
+            duration: 100.0,
+            codec: None,
+            bit_depth: None,
+            sample_rate: None,
+            channels: None,
+            loved: false,
+            play_count: 0,
+            date_added: 0,
+            last_played: None,
+        }
+    }
+
+    #[test]
+    fn a_credited_row_without_a_year_does_not_hide_a_members_year() {
+        let mut meta = HashMap::new();
+        meta.insert(
+            ("Score".to_string(), "Various Artists".to_string()),
+            (None, None),
+        );
+        meta.insert(
+            ("Score".to_string(), "Composer A".to_string()),
+            (Some("2007".to_string()), Some("score".to_string())),
+        );
+        let group = vec![track("Score", "Composer A")];
+
+        let (year, genre) = album_meta_for(&meta, "Score", "Various Artists", &group);
+        assert_eq!(year.as_deref(), Some("2007"));
+        assert_eq!(genre.as_deref(), Some("score"));
+    }
+
+    #[test]
+    fn the_credited_row_still_wins_where_it_has_an_answer() {
+        let mut meta = HashMap::new();
+        meta.insert(
+            ("Score".to_string(), "Various Artists".to_string()),
+            (Some("2009".to_string()), None),
+        );
+        meta.insert(
+            ("Score".to_string(), "Composer A".to_string()),
+            (Some("2007".to_string()), Some("score".to_string())),
+        );
+        let group = vec![track("Score", "Composer A")];
+
+        let (year, genre) = album_meta_for(&meta, "Score", "Various Artists", &group);
+        assert_eq!(year.as_deref(), Some("2009"));
+        assert_eq!(genre.as_deref(), Some("score"));
+    }
+}
+
+#[cfg(test)]
 mod sort_tests {
     use super::*;
 
@@ -426,6 +565,7 @@ mod sort_tests {
                 title: "Intro".into(),
                 artist: "50 Cent".into(),
                 album: "Get Rich Or Die Tryin'".into(),
+                album_artist: None,
                 track_number: 1,
                 duration: 60.0,
                 codec: Some("FLAC".into()),
@@ -443,6 +583,7 @@ mod sort_tests {
                 title: "Patiently Waiting".into(),
                 artist: "50 Cent Feat. Eminem".into(),
                 album: "Get Rich Or Die Tryin'".into(),
+                album_artist: None,
                 track_number: 3,
                 duration: 200.0,
                 codec: Some("FLAC".into()),
@@ -460,6 +601,7 @@ mod sort_tests {
                 title: "21 Questions".into(),
                 artist: "50 Cent Feat. Nate Dogg".into(),
                 album: "Get Rich Or Die Tryin'".into(),
+                album_artist: None,
                 track_number: 14,
                 duration: 220.0,
                 codec: Some("FLAC".into()),
@@ -503,6 +645,7 @@ mod sort_tests {
             title: title.to_string(),
             artist: "A".to_string(),
             album: "Alb".to_string(),
+            album_artist: None,
             track_number,
             duration: 1.0,
             codec: None,

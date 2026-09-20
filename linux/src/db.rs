@@ -1,11 +1,35 @@
 use crate::library::TrackRow;
 use chrono::{DateTime, NaiveDateTime, Utc};
+use flaccy_shared::album_credit;
 use flaccy_shared::enrichment_job::{self as job, EnrichmentRecord, Fields, Scope, Status};
 use flaccy_shared::library_debut::DebutSummary;
 use rusqlite::functions::FunctionFlags;
 use rusqlite::{named_params, params, Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+
+/// Gives a credited release its own `albumInfo` row, seeded with the cover a
+/// member track already hoisted.
+///
+/// Covers are hoisted per track as the scan commits, long before anything knows
+/// the release is a compilation, so they land under the performing artist. The
+/// album surface asks by *credit*, and a soundtrack credited to Various Artists
+/// would otherwise show a blank tile above thirty-one tracks whose art is
+/// already on disk. Year and genre need no equivalent: `library::load` already
+/// falls back to a member's metadata row, and enrichment deliberately keeps
+/// asking Last.fm under the performing artist, which is the name it can answer.
+const ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL: &str = "
+    INSERT INTO albumInfo (title, artist, coverArtData)
+    SELECT t.albumTitle, t.albumArtist, MIN(ai.coverArtData)
+    FROM tracks t
+    JOIN albumInfo ai ON ai.title = t.albumTitle AND ai.artist = t.artist
+    WHERE t.albumArtist IS NOT NULL
+      AND t.albumArtist <> ''
+      AND t.albumArtist <> t.artist
+      AND ai.coverArtData IS NOT NULL
+    GROUP BY t.albumTitle, t.albumArtist
+    ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
+    WHERE albumInfo.coverArtData IS NULL";
 
 pub struct Db {
     conn: Connection,
@@ -16,6 +40,11 @@ pub struct NewTrack {
     pub title: String,
     pub artist: String,
     pub album: String,
+    /// The `ALBUMARTIST` tag when the file carries one. Rows without it are
+    /// filled in by `Db::resolve_album_credits` once the whole release is
+    /// visible, which is the only point at which a compilation can be
+    /// recognised at all.
+    pub album_artist: Option<String>,
     pub track_number: i32,
     pub duration: f64,
     pub codec: Option<String>,
@@ -266,6 +295,7 @@ impl Db {
                 title TEXT NOT NULL,
                 artist TEXT NOT NULL,
                 albumTitle TEXT NOT NULL,
+                albumArtist TEXT,
                 trackNumber INTEGER NOT NULL,
                 duration DOUBLE NOT NULL,
                 artworkData BLOB,
@@ -436,6 +466,12 @@ impl Db {
             "ALTER TABLE downloads ADD COLUMN codecChecked INTEGER NOT NULL DEFAULT 0",
             [],
         );
+        // The resolved release credit, added after 1.13.1. Left NULL on an
+        // already-indexed library; the first `resolve_album_credits` after
+        // launch fills it without a rescan.
+        let _ = self
+            .conn
+            .execute("ALTER TABLE tracks ADD COLUMN albumArtist TEXT", []);
         Ok(())
     }
 
@@ -456,14 +492,15 @@ impl Db {
     pub fn insert_track(&self, track: &NewTrack) -> Result<(), rusqlite::Error> {
         self.conn.execute(
             "INSERT OR REPLACE INTO tracks
-             (fileURL, title, artist, albumTitle, trackNumber, duration, dateAdded,
-              codec, bitDepth, sampleRate, channels)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+             (fileURL, title, artist, albumTitle, albumArtist, trackNumber, duration,
+              dateAdded, codec, bitDepth, sampleRate, channels)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 track.rel_path,
                 track.title,
                 track.artist,
                 track.album,
+                track.album_artist,
                 track.track_number,
                 track.duration,
                 now_string(),
@@ -493,6 +530,93 @@ impl Db {
             params![title, artist, data],
         )?;
         Ok(())
+    }
+
+    /// Settles `tracks.albumArtist` for every release in the library, which is
+    /// the step that lets a compilation exist at all.
+    ///
+    /// A credit cannot be decided one file at a time — "eleven of thirty-one
+    /// tracks" is only a fact about a whole release — so the scanner stores the
+    /// `ALBUMARTIST` tag and nothing else, and this pass fills in the rest once
+    /// every track is on the table. Releases are clustered by normalized album
+    /// title within their containing folder, so `Album/CD1` and `Album/CD2`
+    /// resolve separately and then group back together under one credit, while
+    /// two unrelated "Greatest Hits" sitting loose at the library root stay
+    /// apart (`album_credit::release_scope` returns None there and the
+    /// performing artist scopes the cluster instead, which is the behavior that
+    /// predates this pass).
+    ///
+    /// Returns how many rows changed credit. Idempotent: a second run over an
+    /// unchanged library writes nothing.
+    pub fn resolve_album_credits(&self) -> usize {
+        let Ok(mut stmt) = self
+            .conn
+            .prepare("SELECT fileURL, albumTitle, artist, albumArtist FROM tracks")
+        else {
+            return 0;
+        };
+        let Ok(rows) = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Option<String>>(3)?,
+            ))
+        }) else {
+            return 0;
+        };
+
+        let mut clusters: HashMap<String, Vec<(String, String, Option<String>)>> = HashMap::new();
+        for (rel_path, album, artist, stored) in rows.flatten() {
+            let scope = match album_credit::release_scope(&rel_path) {
+                Some(folder) => folder.to_string(),
+                None => format!("\x01{}", crate::hygiene::artist_key(&artist)),
+            };
+            let key = format!("{}\x00{}", crate::wantlist::normalize(&album), scope);
+            clusters
+                .entry(key)
+                .or_default()
+                .push((rel_path, artist, stored));
+        }
+
+        let mut updates: Vec<(String, String)> = Vec::new();
+        for members in clusters.into_values() {
+            let credit = album_credit::credit(
+                &members
+                    .iter()
+                    .map(|(_, artist, stored)| {
+                        album_credit::Member::new(
+                            stored.as_deref(),
+                            artist,
+                            &crate::hygiene::artist_key(artist),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            );
+            for (rel_path, _, stored) in members {
+                if stored.as_deref() != Some(credit.as_str()) {
+                    updates.push((rel_path, credit.clone()));
+                }
+            }
+        }
+        let Ok(tx) = self.conn.unchecked_transaction() else {
+            return 0;
+        };
+        let mut changed = 0;
+        for (rel_path, credit) in &updates {
+            changed += tx
+                .execute(
+                    "UPDATE tracks SET albumArtist = ?1 WHERE fileURL = ?2",
+                    params![credit, rel_path],
+                )
+                .unwrap_or(0);
+        }
+        // Unconditional, not gated on `changed`: a release's credit settles on
+        // the first pass, while the cover it adopts may only be fetched by
+        // enrichment several reloads later.
+        let _ = tx.execute(ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL, []);
+        let _ = tx.commit();
+        changed
     }
 
     /// Revives every entity that burned all its attempts, so a user asking for
@@ -545,7 +669,7 @@ impl Db {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT id, fileURL, title, artist, albumTitle, trackNumber, duration,
                     codec, bitDepth, sampleRate, channels, loved, playCount,
-                    dateAdded, lastPlayed
+                    dateAdded, lastPlayed, albumArtist
              FROM tracks ORDER BY albumTitle, trackNumber, title",
         ) else {
             return Vec::new();
@@ -569,6 +693,7 @@ impl Db {
                 last_played: row
                     .get::<_, Option<String>>(14)?
                     .map(|text| unix_from_string(&text)),
+                album_artist: row.get::<_, Option<String>>(15)?.filter(|s| !s.is_empty()),
             })
         });
         match rows {
@@ -2058,6 +2183,7 @@ mod cleanup_tests {
             title: title.to_string(),
             artist: artist.to_string(),
             album: album.to_string(),
+            album_artist: None,
             track_number,
             duration,
             codec: Some(codec.to_string()),
@@ -2067,6 +2193,171 @@ mod cleanup_tests {
             artwork: None,
         })
         .expect("insert track");
+    }
+
+    fn insert_credited(db: &Db, rel_path: &str, artist: &str, album: &str, tag: Option<&str>) {
+        db.insert_track(&NewTrack {
+            rel_path: rel_path.to_string(),
+            title: rel_path.to_string(),
+            artist: artist.to_string(),
+            album: album.to_string(),
+            album_artist: tag.map(str::to_string),
+            track_number: 1,
+            duration: 100.0,
+            codec: Some("FLAC".to_string()),
+            bit_depth: Some(16),
+            sample_rate: Some(44100),
+            channels: Some(2),
+            artwork: None,
+        })
+        .expect("insert track");
+    }
+
+    fn credits(db: &Db) -> HashMap<String, Option<String>> {
+        db.fetch_all_tracks()
+            .into_iter()
+            .map(|track| (track.rel_path, track.album_artist))
+            .collect()
+    }
+
+    #[test]
+    fn a_folder_of_one_album_by_many_artists_resolves_to_various_artists() {
+        let temp = TempDb::open();
+        let composers = [
+            "Gerard K. Marino",
+            "Mike Reagan",
+            "Cris Velasco",
+            "Ron Fish",
+            "Junkie XL",
+        ];
+        for (index, artist) in composers.iter().cycle().take(20).enumerate() {
+            insert_credited(
+                &temp.db,
+                &format!("God of War II/{index:02}.track.flac"),
+                artist,
+                "God Of War II",
+                None,
+            );
+        }
+
+        assert_eq!(temp.db.resolve_album_credits(), 20);
+        let resolved = credits(&temp.db);
+        assert_eq!(resolved.len(), 20);
+        for credit in resolved.values() {
+            assert_eq!(credit.as_deref(), Some(album_credit::VARIOUS_ARTISTS));
+        }
+        assert_eq!(temp.db.resolve_album_credits(), 0);
+    }
+
+    #[test]
+    fn discs_in_separate_folders_resolve_to_the_same_credit() {
+        let temp = TempDb::open();
+        for disc in 1..=2 {
+            for index in 0..6 {
+                insert_credited(
+                    &temp.db,
+                    &format!("Anthology/CD{disc}/{index:02}.flac"),
+                    if index % 2 == 0 { "Artist A" } else { "Artist B" },
+                    "Anthology",
+                    None,
+                );
+            }
+        }
+
+        temp.db.resolve_album_credits();
+        let resolved = credits(&temp.db);
+        for credit in resolved.values() {
+            assert_eq!(credit.as_deref(), Some(album_credit::VARIOUS_ARTISTS));
+        }
+    }
+
+    #[test]
+    fn loose_files_at_the_root_are_scoped_by_artist_not_by_folder() {
+        let temp = TempDb::open();
+        insert_credited(&temp.db, "a.flac", "Artist A", "Greatest Hits", None);
+        insert_credited(&temp.db, "b.flac", "Artist B", "Greatest Hits", None);
+
+        temp.db.resolve_album_credits();
+        let resolved = credits(&temp.db);
+        assert_eq!(resolved["a.flac"].as_deref(), Some("Artist A"));
+        assert_eq!(resolved["b.flac"].as_deref(), Some("Artist B"));
+    }
+
+    #[test]
+    fn an_album_artist_tag_beats_the_derived_credit() {
+        let temp = TempDb::open();
+        for index in 0..4 {
+            insert_credited(
+                &temp.db,
+                &format!("Split/{index}.flac"),
+                if index < 2 { "Artist A" } else { "Artist B" },
+                "Split",
+                Some("The Duo"),
+            );
+        }
+
+        temp.db.resolve_album_credits();
+        for credit in credits(&temp.db).values() {
+            assert_eq!(credit.as_deref(), Some("The Duo"));
+        }
+    }
+
+    #[test]
+    fn a_credited_release_adopts_the_cover_its_tracks_hoisted() {
+        let temp = TempDb::open();
+        for (index, artist) in ["Composer A", "Composer B", "Composer C", "Composer D"]
+            .iter()
+            .enumerate()
+        {
+            insert_credited(
+                &temp.db,
+                &format!("Score/{index}.flac"),
+                artist,
+                "Score",
+                None,
+            );
+        }
+        temp.db
+            .save_album_cover_if_missing("Score", "Composer B", &[1, 2, 3])
+            .expect("hoist cover");
+        assert!(temp.db.fetch_album_artwork("Score", "Various Artists").is_none());
+
+        temp.db.resolve_album_credits();
+
+        assert_eq!(
+            temp.db.fetch_album_artwork("Score", album_credit::VARIOUS_ARTISTS),
+            Some(vec![1, 2, 3])
+        );
+    }
+
+    /// A cover enrichment fetches after the credits have already settled is
+    /// still adopted: the pass that would carry it across writes no credit that
+    /// run, and gating the adoption on that count left compilations permanently
+    /// blank.
+    #[test]
+    fn a_cover_that_arrives_after_the_credits_is_still_adopted() {
+        let temp = TempDb::open();
+        for (index, artist) in ["Composer A", "Composer B"].iter().enumerate() {
+            insert_credited(
+                &temp.db,
+                &format!("Late/{index}.flac"),
+                artist,
+                "Late",
+                None,
+            );
+        }
+        assert_eq!(temp.db.resolve_album_credits(), 2);
+        assert_eq!(temp.db.resolve_album_credits(), 0);
+
+        temp.db
+            .save_album_cover_if_missing("Late", "Composer A", &[9, 9])
+            .expect("late cover");
+        assert_eq!(temp.db.resolve_album_credits(), 0);
+
+        assert_eq!(
+            temp.db.fetch_album_artwork("Late", album_credit::VARIOUS_ARTISTS),
+            Some(vec![9, 9])
+        );
     }
 
     fn plan_vectors(

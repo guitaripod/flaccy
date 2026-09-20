@@ -26,6 +26,7 @@ enum MetadataService {
             title: title,
             artist: artist,
             albumTitle: albumTitle,
+            albumArtist: result.albumArtist,
             trackNumber: trackNumber,
             duration: result.duration,
             artwork: artwork,

@@ -788,6 +788,7 @@ mod tests {
             title: title.to_string(),
             artist: artist.to_string(),
             album: album.to_string(),
+            album_artist: None,
             track_number: number,
             duration: 200.0,
             codec: Some(codec.to_string()),

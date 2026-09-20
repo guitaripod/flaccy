@@ -10,6 +10,7 @@ public enum AudioMetadataReader {
         public let title: String?
         public let artist: String?
         public let albumTitle: String?
+        public let albumArtist: String?
         public let trackNumber: Int
         public let duration: TimeInterval
         public let artworkData: Data?
@@ -22,6 +23,7 @@ public enum AudioMetadataReader {
             title: String?,
             artist: String?,
             albumTitle: String?,
+            albumArtist: String? = nil,
             trackNumber: Int,
             duration: TimeInterval,
             artworkData: Data?,
@@ -33,6 +35,7 @@ public enum AudioMetadataReader {
             self.title = title
             self.artist = artist
             self.albumTitle = albumTitle
+            self.albumArtist = albumArtist
             self.trackNumber = trackNumber
             self.duration = duration
             self.artworkData = artworkData
@@ -61,12 +64,13 @@ public enum AudioMetadataReader {
             metadata = loaded.1
         } catch {
             AppLogger.error("Metadata load failed for \(url.lastPathComponent): \(error.localizedDescription)", category: .content)
-            return Result(title: nil, artist: nil, albumTitle: nil, trackNumber: 0, duration: 0, artworkData: nil)
+            return Result(title: nil, artist: nil, albumTitle: nil, albumArtist: nil, trackNumber: 0, duration: 0, artworkData: nil)
         }
 
         async let titleTask = stringValue(for: .commonIdentifierTitle, in: metadata)
         async let artistTask = stringValue(for: .commonIdentifierArtist, in: metadata)
         async let albumTask = stringValue(for: .commonIdentifierAlbumName, in: metadata)
+        async let albumArtistTask = albumArtistValue(from: metadata)
         async let trackTask = trackNumberValue(from: metadata)
         async let artworkTask = artworkData(from: metadata)
 
@@ -76,6 +80,7 @@ public enum AudioMetadataReader {
             title: await titleTask,
             artist: await artistTask,
             albumTitle: await albumTask,
+            albumArtist: await albumArtistTask,
             trackNumber: await trackTask,
             duration: duration.isNaN ? 0 : duration,
             artworkData: await artworkTask,
@@ -165,6 +170,34 @@ public enum AudioMetadataReader {
         guard let item = items.first else { return nil }
         let value = try? await item.load(.stringValue)
         return value?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The `ALBUMARTIST` tag under every spelling AVFoundation exposes it.
+    ///
+    /// There is no common identifier for it, and Vorbis comments surface as raw
+    /// string keys the way `TRACKNUMBER` does, so the raw keys are read first
+    /// and the container-specific identifiers (`aART` on MP4, `TPE2` on ID3)
+    /// stand in for the formats that do carry one. An album with no tag at all
+    /// is not a failure — `AlbumCredit` derives a credit from the release
+    /// instead, which is the case most rips in the wild land in.
+    private static func albumArtistValue(from metadata: [AVMetadataItem]) async -> String? {
+        let keys: Set<String> = ["ALBUMARTIST", "ALBUM ARTIST", "ALBUM_ARTIST", "BAND"]
+        for item in metadata {
+            guard let key = item.key as? String, keys.contains(key.uppercased()) else { continue }
+            if let value = try? await item.load(.stringValue),
+               case let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines),
+               !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+
+        let identifiers: [AVMetadataIdentifier] = [.iTunesMetadataAlbumArtist, .id3MetadataBand]
+        for identifier in identifiers {
+            if let value = await stringValue(for: identifier, in: metadata), !value.isEmpty {
+                return value
+            }
+        }
+        return nil
     }
 
     private static func trackNumberValue(from metadata: [AVMetadataItem]) async -> Int {

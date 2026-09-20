@@ -391,6 +391,7 @@ final class Library: LibraryProviding {
                         title: metadata.title,
                         artist: metadata.artist,
                         albumTitle: metadata.albumTitle,
+                        albumArtist: metadata.albumArtist,
                         trackNumber: metadata.trackNumber,
                         duration: metadata.duration,
                         artworkData: metadata.artwork?.jpegData(compressionQuality: 0.8),
@@ -474,7 +475,7 @@ final class Library: LibraryProviding {
         var seen = Set<String>()
         var covers: [HoistedAlbumCover] = []
         for record in records where record.artworkData != nil && !record.albumTitle.isEmpty {
-            let tileKey = "\(record.albumTitle)|\(LibraryHygiene.primaryArtist(record.artist))"
+            let tileKey = "\(record.albumTitle)|\(LibraryHygiene.primaryArtist(record.credit))"
             guard seen.insert(tileKey).inserted else { continue }
             covers.append(HoistedAlbumCover(
                 albumTitle: record.albumTitle, artist: record.artist, tileKey: tileKey
@@ -557,6 +558,7 @@ final class Library: LibraryProviding {
     /// `AlbumArtworkCache` eviction, and every reader already handles nil.
     @concurrent
     nonisolated private func fetchAlbumsFromDatabase() async throws -> [Album] {
+        try db.resolveAlbumCredits()
         let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight()
 
         var loadedAlbums: [Album] = []

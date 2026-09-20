@@ -1009,7 +1009,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let artistRegistration = UICollectionView.CellRegistration<ListArtworkCell, ArtistItem> { [weak self] cell, _, artist in
             var content = UIListContentConfiguration.subtitleCell()
             content.text = artist.name
-            content.secondaryText = String(localized: "\(artist.albumCount) albums")
+            content.secondaryText = artist.albumCount > 0
+                ? String(localized: "\(artist.albumCount) albums")
+                : String(localized: "Appears on \(artist.appearanceCount) albums")
             content.secondaryTextProperties.color = .secondaryLabel
             content.imageProperties.cornerRadius = 22
             content.imageProperties.maximumSize = CGSize(width: 44, height: 44)
@@ -1480,7 +1482,9 @@ extension LibraryViewController: UICollectionViewDelegate {
             AudioPlayer.shared.play(queue, startingAt: queue.firstIndex(of: track) ?? 0)
         case .artist(let artist):
             let albums = viewModel.albumsForArtist(artist.name)
-            let vc = ArtistDetailViewController(artistName: artist.name, albums: albums)
+            let vc = ArtistDetailViewController(
+                artistName: artist.name, albums: albums.credited, appearsOn: albums.appearsOn
+            )
             navigationController?.pushViewController(vc, animated: true)
         case .playlist(let playlist):
             let vc = PlaylistDetailViewController(playlistId: playlist.id, playlistName: playlist.name)

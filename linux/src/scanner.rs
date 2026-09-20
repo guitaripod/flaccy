@@ -2,6 +2,7 @@ use crate::db::{Db, NewTrack};
 use crate::load_progress::{LoadPhase, LoadProgress};
 use lofty::file::{AudioFile, FileType, TaggedFile, TaggedFileExt};
 use lofty::prelude::*;
+use lofty::tag::ItemKey;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
@@ -196,6 +197,9 @@ fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
         .filter(|s| !s.is_empty())
         .or(path_album)
         .unwrap_or_else(|| "Unknown Album".to_string());
+    let album_artist = tag
+        .and_then(|t| t.get_string(&ItemKey::AlbumArtist).map(|s| s.trim().to_string()))
+        .filter(|s| !s.is_empty());
     let tag_track = tag.and_then(|t| t.track()).unwrap_or(0) as i32;
     let track_number = if tag_track > 0 {
         tag_track
@@ -216,6 +220,7 @@ fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
         title,
         artist,
         album,
+        album_artist,
         track_number,
         duration,
         codec: detect_codec(&tagged, path),

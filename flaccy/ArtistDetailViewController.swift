@@ -5,6 +5,7 @@ nonisolated enum ArtistDetailSection: Int, CaseIterable, Sendable {
     case similarArtists
     case popularTracks
     case albums
+    case appearsOn
 
     var title: String? {
         switch self {
@@ -12,6 +13,7 @@ nonisolated enum ArtistDetailSection: Int, CaseIterable, Sendable {
         case .similarArtists: String(localized: "Similar Artists in Your Library")
         case .popularTracks: String(localized: "Popular Tracks")
         case .albums: String(localized: "Albums")
+        case .appearsOn: String(localized: "Appears On")
         }
     }
 }
@@ -93,6 +95,9 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
     private let artistName: String
     private var albums: [Album]
+    /// Albums the artist plays on without being their credit, so a composer on
+    /// a Various Artists soundtrack has a page with their work on it.
+    private var appearsOn: [Album]
     private var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "artistDetailAlbumSort") ?? "") ?? .title
     private var bio: String?
     private var artistPhoto: UIImage?
@@ -110,9 +115,10 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
     private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
-    init(artistName: String, albums: [Album]) {
+    init(artistName: String, albums: [Album], appearsOn: [Album] = []) {
         self.artistName = artistName
         self.albums = albums
+        self.appearsOn = appearsOn
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -180,9 +186,21 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
+    /// Every library track this artist is on: the albums credited to them in
+    /// full, plus the individual tracks they perform on somebody else's record.
+    ///
+    /// Taking only credited albums would hand a composer on a compilation an
+    /// empty queue while the library holds thirty-one of their tracks. Mirrors
+    /// `Core::artist_tracks` in the Linux client.
+    private func ownedTracks() -> [Track] {
+        let key = LibraryHygiene.artistKey(artistName)
+        return albums.flatMap(\.tracks)
+            + appearsOn.flatMap { $0.tracks.filter { LibraryHygiene.artistKey($0.artist) == key } }
+    }
+
     private func ownedTracksByTitle() -> [String: Track] {
         var map: [String: Track] = [:]
-        for track in albums.flatMap(\.tracks) {
+        for track in ownedTracks() {
             let key = track.title.lowercased()
             if map[key] == nil { map[key] = track }
         }
@@ -329,8 +347,8 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     }
 
     private func createLayout() -> UICollectionViewCompositionalLayout {
-        UICollectionViewCompositionalLayout { sectionIndex, _ in
-            guard let section = ArtistDetailSection(rawValue: sectionIndex) else { return nil }
+        UICollectionViewCompositionalLayout { [weak self] sectionIndex, _ in
+            guard let section = self?.section(at: sectionIndex) else { return nil }
 
             switch section {
             case .header:
@@ -375,7 +393,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
                 layoutSection.boundarySupplementaryItems = [Self.sectionHeaderItem()]
                 return layoutSection
 
-            case .albums:
+            case .albums, .appearsOn:
                 let itemSize = NSCollectionLayoutSize(
                     widthDimension: .fractionalWidth(0.5),
                     heightDimension: .estimated(240)
@@ -447,9 +465,9 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
         let sectionHeaderRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewCell>(
             elementKind: UICollectionView.elementKindSectionHeader
-        ) { supplementaryView, _, indexPath in
+        ) { [weak self] supplementaryView, _, indexPath in
             var config = UIListContentConfiguration.plainHeader()
-            config.text = ArtistDetailSection(rawValue: indexPath.section)?.title
+            config.text = self?.section(at: indexPath.section)?.title
             config.textProperties.font = .scaled(.title3, size: 20, weight: .bold)
             config.textProperties.color = .white
             supplementaryView.contentConfiguration = config
@@ -472,19 +490,19 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
             }
         }
 
-        dataSource.supplementaryViewProvider = { collectionView, _, indexPath in
-            guard let section = ArtistDetailSection(rawValue: indexPath.section), section.title != nil else { return nil }
+        dataSource.supplementaryViewProvider = { [weak self] collectionView, _, indexPath in
+            guard let section = self?.section(at: indexPath.section), section.title != nil else { return nil }
             return collectionView.dequeueConfiguredReusableSupplementary(using: sectionHeaderRegistration, for: indexPath)
         }
     }
 
     private func applySnapshot(animatingDifferences: Bool = false) {
         var snapshot = NSDiffableDataSourceSnapshot<ArtistDetailSection, ArtistDetailItem>()
-        snapshot.appendSections(ArtistDetailSection.allCases)
+        snapshot.appendSections(visibleSections())
 
-        let totalTracks = albums.reduce(0) { $0 + $1.tracks.count }
-        let genre = albums.compactMap(\.genre).first
-        let firstAlbum = albums.first
+        let totalTracks = ownedTracks().count
+        let genre = (albums + appearsOn).compactMap(\.genre).first
+        let firstAlbum = albums.first ?? appearsOn.first
         let artwork = firstAlbum.flatMap { album in
             album.artwork ?? AlbumArtworkCache.shared.thumbnail(forAlbum: album.title, artist: album.artist)
         }
@@ -502,8 +520,34 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         snapshot.appendItems([.header(headerInfo)], toSection: .header)
         snapshot.appendItems(similarSectionItems(), toSection: .similarArtists)
         snapshot.appendItems(popularSectionItems(), toSection: .popularTracks)
-        snapshot.appendItems(albums.map { .album($0) }, toSection: .albums)
+        if !albums.isEmpty {
+            snapshot.appendItems(albums.map { .album($0) }, toSection: .albums)
+        }
+        if !appearsOn.isEmpty {
+            snapshot.appendItems(appearsOn.map { .album($0) }, toSection: .appearsOn)
+        }
         dataSource.apply(snapshot, animatingDifferences: animatingDifferences)
+    }
+
+    /// The sections this artist actually has. An album grid is dropped rather
+    /// than shown empty under its heading: a composer credited with no album of
+    /// their own has only an Appears On shelf, and a solo artist has only the
+    /// Albums one.
+    private func visibleSections() -> [ArtistDetailSection] {
+        ArtistDetailSection.allCases.filter { section in
+            switch section {
+            case .albums: !albums.isEmpty
+            case .appearsOn: !appearsOn.isEmpty
+            case .header, .similarArtists, .popularTracks: true
+            }
+        }
+    }
+
+    /// The section shown at `index`, read from the snapshot rather than from
+    /// the raw value — sections are dropped when empty, so position and case
+    /// order no longer agree.
+    private func section(at index: Int) -> ArtistDetailSection? {
+        dataSource?.sectionIdentifier(for: index) ?? ArtistDetailSection(rawValue: index)
     }
 
     private func similarSectionItems() -> [ArtistDetailItem] {
@@ -527,7 +571,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     }
 
     private func playAll(shuffled: Bool) {
-        var tracks = albums.flatMap(\.tracks)
+        var tracks = ownedTracks()
         guard !tracks.isEmpty else { return }
         if shuffled {
             tracks.shuffle()

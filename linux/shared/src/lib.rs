@@ -7,6 +7,7 @@
 //! tests on any machine, including the Mac that owns the Apple clients and has
 //! no GStreamer for the `flaccy` binary crate.
 
+pub mod album_credit;
 pub mod enrichment_job;
 pub mod library_debut;
 pub mod library_surface;

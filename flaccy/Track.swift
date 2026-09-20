@@ -8,6 +8,10 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
     let title: String
     let artist: String
     let albumTitle: String
+    /// The release credit, settled by `DatabaseManager.resolveAlbumCredits()`;
+    /// nil for a track read straight off disk whose file carried no
+    /// `ALBUMARTIST` tag.
+    let albumArtist: String?
     let trackNumber: Int
     let duration: TimeInterval
     let artwork: PlatformImage?
@@ -20,6 +24,13 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
     var playCount: Int = 0
 
     static let losslessCodecs: Set<String> = ["FLAC", "ALAC", "WAV", "AIFF"]
+
+    /// The release this track is filed under, falling back to its performing
+    /// artist for a track no credit pass has reached.
+    var credit: String {
+        guard let albumArtist, !albumArtist.isEmpty else { return artist }
+        return albumArtist
+    }
 
     var isLossless: Bool {
         guard let codec else { return false }
@@ -61,6 +72,7 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
             title: record.title,
             artist: record.artist,
             albumTitle: record.albumTitle,
+            albumArtist: record.albumArtist,
             trackNumber: record.trackNumber,
             duration: record.duration,
             artwork: artwork,
@@ -81,6 +93,7 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
             title: record.title,
             artist: record.artist,
             albumTitle: record.albumTitle,
+            albumArtist: record.albumArtist,
             trackNumber: record.trackNumber,
             duration: record.duration,
             artwork: artwork,
@@ -101,6 +114,7 @@ nonisolated struct Track: Sendable, Hashable, Identifiable {
             title: title,
             artist: artist,
             albumTitle: albumTitle,
+            albumArtist: albumArtist,
             trackNumber: trackNumber,
             duration: duration,
             artwork: artwork,

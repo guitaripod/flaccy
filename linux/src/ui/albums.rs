@@ -1036,6 +1036,7 @@ mod sort_tests {
                 title: "Song".to_string(),
                 artist: "Artist".to_string(),
                 album: title.to_string(),
+                album_artist: None,
                 track_number: 1,
                 duration: 100.0,
                 codec: None,

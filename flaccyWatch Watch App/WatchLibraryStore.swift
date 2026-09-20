@@ -68,10 +68,11 @@ final class WatchLibraryStore {
         await delivery.value
 
         guard gen == generation, !Task.isCancelled else { return }
-        allTracks = items.sorted { lhs, rhs in
+        let credited = LibraryScanner.resolvingCredits(items)
+        allTracks = credited.sorted { lhs, rhs in
             lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
         }
-        albums = LibraryScanner.albums(from: items)
+        albums = LibraryScanner.albums(from: credited)
         isLoading = false
         loadFraction = tracker.displayFraction
         loadProgress = tracker.finish()

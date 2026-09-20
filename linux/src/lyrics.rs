@@ -535,6 +535,7 @@ mod tests {
             title: "Song".into(),
             artist: "Artist".into(),
             album: "Album".into(),
+            album_artist: None,
             track_number: 1,
             duration,
             codec: None,

@@ -276,6 +276,7 @@ enum ScreenshotSeeder {
                     title: track.title,
                     artist: album.artist,
                     albumTitle: album.title,
+                    albumArtist: album.artist,
                     trackNumber: track.number,
                     duration: track.duration,
                     artworkData: nil,

@@ -21,11 +21,17 @@ final class ArtistsViewController: NSViewController {
     /// Albums for an artist, resolved through a lazily built key→albums index
     /// (rebuilt on library changes) instead of a per-cell linear scan over the
     /// whole library. Preserves the library's album ordering within each artist.
+    ///
+    /// Indexes performances as well as credits: a composer on a Various Artists
+    /// soundtrack is credited with no album at all, and an index of credits
+    /// alone would give their cell no artwork and their bulk menu no tracks.
     private func albums(forArtist name: String) -> [Album] {
         if albumsByArtistKey == nil {
             var index = [String: [Album]]()
             for album in Library.shared.albums {
-                index[LibraryHygiene.artistKey(album.artist), default: []].append(album)
+                var keys = Set([LibraryHygiene.artistKey(album.artist)])
+                for track in album.tracks { keys.insert(LibraryHygiene.artistKey(track.artist)) }
+                for key in keys { index[key, default: []].append(album) }
             }
             albumsByArtistKey = index
         }
