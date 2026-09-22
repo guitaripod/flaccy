@@ -168,6 +168,7 @@ final class PurchaseManager {
         #endif
         setState(trialState(from: trialStart))
         configureRevenueCat()
+        publishFunnelEntitlement()
         listenForCustomerInfo()
         Task {
             await refresh()
@@ -184,9 +185,21 @@ final class PurchaseManager {
         guard !trialStartIsSettled else { return }
         trialStart = TrialClock.ensureStartDate()
         trialStartIsSettled = TrialClock.date(for: .trialStart) != nil
-        if !trialStartIsSettled {
+        if trialStartIsSettled {
+            publishFunnelEntitlement()
+        } else {
             AppLogger.warning("Trial start not readable from the Keychain yet; will retry", category: .purchases)
         }
+    }
+
+    private func publishFunnelEntitlement() {
+        PurchaseFunnel.noteEntitlement(state, trialStart: trialStart, trialStartIsSettled: trialStartIsSettled)
+    }
+
+    /// Called by both paywalls once their offers have loaded, so the price
+    /// recorded is the one the person was actually shown.
+    func notePaywallShown() {
+        PurchaseFunnel.notePaywallShown(offer: lifetimeOfferToPresent, state: state)
     }
 
     /// Re-derives the trial day from the stored start, for a process that has
@@ -345,6 +358,18 @@ final class PurchaseManager {
     }
 
     func purchase(_ offer: PurchaseOffer) async throws -> PurchaseOutcome {
+        PurchaseFunnel.noteCheckoutStarted(offer)
+        do {
+            let outcome = try await performPurchase(offer)
+            PurchaseFunnel.noteCheckoutFinished(Self.funnelOutcome(outcome))
+            return outcome
+        } catch {
+            PurchaseFunnel.noteCheckoutFinished(.failed)
+            throw error
+        }
+    }
+
+    private func performPurchase(_ offer: PurchaseOffer) async throws -> PurchaseOutcome {
         do {
             let result = try await Purchases.shared.purchase(package: offer.package)
             if result.userCancelled {
@@ -363,6 +388,14 @@ final class PurchaseManager {
         } catch let error as ErrorCode where error == .purchaseCancelledError {
             AppLogger.info("Purchase cancelled by user", category: .purchases)
             return .cancelled
+        }
+    }
+
+    private static func funnelOutcome(_ outcome: PurchaseOutcome) -> PurchaseFunnel.CheckoutOutcome {
+        switch outcome {
+        case .purchased: .purchased
+        case .pending: .pending
+        case .cancelled: .cancelled
         }
     }
 
@@ -465,6 +498,7 @@ final class PurchaseManager {
         guard newState != state else { return }
         AppLogger.info("Entitlement state \(state) -> \(newState)", category: .purchases)
         state = newState
+        publishFunnelEntitlement()
         if newState.isPurchased {
             TrialReminderScheduler.shared.cancelAll()
         }

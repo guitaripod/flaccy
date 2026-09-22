@@ -110,6 +110,7 @@ final class PaywallViewController: UIViewController {
             await manager.loadOffersIfNeeded()
             await manager.loadLapsedOfferIfNeeded()
             updateOffers()
+            manager.notePaywallShown()
             showProof(await proof)
         }
         AppLogger.info("Paywall presented (state \(PurchaseManager.shared.state))", category: .purchases)

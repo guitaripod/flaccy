@@ -48,6 +48,7 @@ SHARED_IOS_FILES = %w[
   PaywallCopy.swift
   PaywallShot.swift
   PlatformImage.swift
+  PurchaseFunnel.swift
   PurchaseManager.swift
   RecapModels.swift
   ReviewPrompt.swift
