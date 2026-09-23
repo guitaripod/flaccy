@@ -5,6 +5,8 @@
 # the FlaccyCore/flaccy-shared parity proof must never reach a device build.
 # The Mac keeps its own gitignored flaccy/Secrets.swift, so the sync must never
 # delete it; everything else mirrors this tree exactly, uncommitted work included.
+# After an iOS or macOS build, scripts/check-strings.py names every compiled
+# string the catalog lacks or has not translated — a report, never a failure.
 #
 #   scripts/build-mac.sh            # build iOS + macOS + watchOS
 #   scripts/build-mac.sh ios        # one platform only: ios | mac | watch
@@ -58,4 +60,8 @@ case "$ONLY" in
         ;;
     *) echo "unknown platform: $ONLY (use ios|mac|watch)"; exit 2 ;;
 esac
+
+if [[ "$ONLY" != watch ]]; then
+    python3 scripts/check-strings.py build/dd-ios build/dd-mac || true
+fi
 REMOTE
