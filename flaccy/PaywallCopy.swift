@@ -125,6 +125,8 @@ enum PaywallCopy {
     /// promises "tomorrow" — it says what is true for all twenty-four hours.
     static func statusLine(for state: EntitlementState) -> String {
         switch state {
+        case .trialNotStarted:
+            return trialStartsLine
         case .trial(let daysRemaining) where daysRemaining <= TrialRunway.runwayBannerAtDaysRemaining:
             return lastDayLine
         case .trial(let daysRemaining):
@@ -136,6 +138,12 @@ enum PaywallCopy {
         case .purchased(.yearly):
             return String(localized: "Flaccy Pro is active. Thank you.")
         }
+    }
+
+    /// The trial only counts from the first song of the person's own, which is
+    /// worth saying wherever the trial comes up before that song has played.
+    static var trialStartsLine: String {
+        String(localized: "Your \(TrialRunway.lengthDays)-day free trial starts the first time you play your own music.")
     }
 
     static var lastDayLine: String {
@@ -155,6 +163,11 @@ enum PaywallCopy {
         switch state {
         case .purchased:
             return nil
+        case .trialNotStarted:
+            guard let price = lifetime?.displayPrice else {
+                return String(localized: "Your \(TrialRunway.lengthDays)-day free trial starts with your first song")
+            }
+            return String(localized: "Trial starts with your first song · \(price), one payment")
         case .trial(let daysRemaining):
             guard let price = lifetime?.displayPrice else {
                 return String(localized: "\(daysRemaining) days left in your free trial")
@@ -172,10 +185,12 @@ enum PaywallCopy {
         }
     }
 
-    /// The titlebar pill's short form of the same state; nil once purchased.
+    /// The titlebar pill's short form of the same state; nil once purchased,
+    /// and nil before the trial starts, because a nudge to buy has no place
+    /// before a single song of the person's own has played.
     static func pillLine(state: EntitlementState, lifetime: PurchaseOffer?) -> String? {
         switch state {
-        case .purchased:
+        case .purchased, .trialNotStarted:
             return nil
         case .trial(let daysRemaining) where daysRemaining <= TrialRunway.runwayBannerAtDaysRemaining:
             return String(localized: "Under a day left · Get Lifetime")

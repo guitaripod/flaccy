@@ -8,6 +8,7 @@ use crate::scanner::{self, ScanEvent};
 use crate::ui;
 use adw::prelude::*;
 use flaccy_shared::enrichment_job::{Activity, JobProgress, Scope};
+use flaccy_shared::import_plan;
 use flaccy_shared::library_debut::DebutSummary;
 use gtk::glib;
 use std::cell::{Cell, RefCell};
@@ -945,44 +946,43 @@ impl AppCore {
         });
     }
 
-    /// Copies dropped audio files/folders into the library root and rescans.
+    /// Copies dropped audio files and folders into the library's `Imported`
+    /// folder and rescans. A dropped folder keeps its own tree, a file already
+    /// there is skipped rather than duplicated, and the result reads exactly
+    /// like the Apple clients' import sentence.
     pub fn import_dropped_paths(self: &Rc<Self>, paths: Vec<std::path::PathBuf>) {
         let root = self.music_root();
-        let (tx, rx) = async_channel::bounded::<(usize, usize)>(1);
+        let (tx, rx) = async_channel::unbounded::<DropImport>();
         std::thread::Builder::new()
             .name("flaccy-dnd".into())
-            .spawn(move || {
-                let mut copied = 0;
-                let mut skipped = 0;
-                for path in paths {
-                    copy_into_library(&path, &root, &mut copied, &mut skipped);
-                }
-                let _ = tx.send_blocking((copied, skipped));
-            })
+            .spawn(move || run_drop_import(&paths, &root, &tx))
             .ok();
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
-            let Ok((copied, skipped)) = rx.recv().await else {
-                return;
-            };
-            let Some(core) = weak.upgrade() else { return };
-            crate::logger::info(
-                "library",
-                &format!("drag-drop import: {copied} copied, {skipped} skipped"),
-            );
-            if copied > 0 {
-                core.toast(&format!(
-                    "Imported {copied} file{}{}",
-                    if copied == 1 { "" } else { "s" },
-                    if skipped > 0 {
-                        format!(" · {skipped} skipped")
-                    } else {
-                        String::new()
+            while let Ok(event) = rx.recv().await {
+                let Some(core) = weak.upgrade() else { return };
+                match event {
+                    DropImport::Scanning => core.toast("Looking for music…"),
+                    DropImport::Copying { done, total } => core.toast(&format!(
+                        "Copying {} of {}…",
+                        crate::load_progress::group_digits(done),
+                        crate::load_progress::group_digits(total)
+                    )),
+                    DropImport::Finished(outcome) => {
+                        crate::logger::info(
+                            "library",
+                            &format!(
+                                "drag-drop import: {} imported, {} skipped, {} failed",
+                                outcome.imported, outcome.skipped, outcome.failed
+                            ),
+                        );
+                        core.toast(&import_plan::report(&outcome).0);
+                        if outcome.imported > 0 {
+                            core.rescan();
+                        }
+                        return;
                     }
-                ));
-                core.rescan();
-            } else {
-                core.toast("Nothing to import — drop audio files or folders");
+                }
             }
         });
     }
@@ -1068,62 +1068,93 @@ impl Library {
     }
 }
 
-const IMPORT_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
+enum DropImport {
+    Scanning,
+    Copying { done: usize, total: usize },
+    Finished(import_plan::Outcome),
+}
 
-fn copy_into_library(
-    source: &std::path::Path,
+/// Plans the drop with the shared rules, then copies each file through a
+/// hidden `.part` beside its destination so an interrupted copy never leaves a
+/// truncated song under the real name for the next import to mistake for a
+/// different file.
+fn run_drop_import(
+    paths: &[PathBuf],
     root: &std::path::Path,
-    copied: &mut usize,
-    skipped: &mut usize,
+    tx: &async_channel::Sender<DropImport>,
 ) {
-    if source.is_dir() {
-        let Ok(entries) = std::fs::read_dir(source) else {
-            *skipped += 1;
-            return;
-        };
-        for entry in entries.flatten() {
-            copy_into_library(&entry.path(), root, copied, skipped);
-        }
-        return;
-    }
-    let extension = source
-        .extension()
-        .map(|e| e.to_string_lossy().to_lowercase())
-        .unwrap_or_default();
-    if !IMPORT_EXTENSIONS.contains(&extension.as_str()) {
-        *skipped += 1;
-        return;
-    }
-    if source.starts_with(root) {
-        *skipped += 1;
-        return;
-    }
-    let Some(name) = source.file_name() else {
-        *skipped += 1;
-        return;
+    let _ = tx.send_blocking(DropImport::Scanning);
+    let plan = import_plan::plan(paths, root, &scanner::SUPPORTED_EXTENSIONS);
+    let import_root = root.join("Imported");
+    let placed = import_plan::placements(&plan, &import_root);
+    let is_audio = |p: &&import_plan::Placed| p.item.kind == import_plan::Kind::Audio;
+    let total = placed
+        .iter()
+        .filter(is_audio)
+        .filter(|p| matches!(p.placement, import_plan::Placement::Copy(_)))
+        .count();
+    let mut outcome = import_plan::Outcome {
+        skipped: plan.already_in_library
+            + placed
+                .iter()
+                .filter(is_audio)
+                .filter(|p| p.placement == import_plan::Placement::AlreadyPresent)
+                .count(),
+        ..Default::default()
     };
-    let target_dir = root.join("Imported");
-    if std::fs::create_dir_all(&target_dir).is_err() {
-        *skipped += 1;
-        return;
-    }
-    let mut destination = target_dir.join(name);
-    let mut counter = 1;
-    while destination.exists() {
-        let stem = source.file_stem().unwrap_or_default().to_string_lossy();
-        destination = target_dir.join(format!("{stem} ({counter}).{extension}"));
-        counter += 1;
-    }
-    match std::fs::copy(source, &destination) {
-        Ok(_) => *copied += 1,
-        Err(err) => {
+    let mut last_report: Option<std::time::Instant> = None;
+    for entry in &placed {
+        let import_plan::Placement::Copy(destination) = &entry.placement else {
+            continue;
+        };
+        let result = copy_without_clobbering(&entry.item.source, &import_root.join(destination));
+        if let Err(err) = &result {
             crate::logger::error(
                 "library",
-                &format!("import copy failed for {}: {err}", source.display()),
+                &format!("import copy failed for {}: {err}", entry.item.source.display()),
             );
-            *skipped += 1;
+        }
+        if entry.item.kind != import_plan::Kind::Audio {
+            continue;
+        }
+        if result.is_ok() {
+            outcome.imported += 1;
+        } else {
+            outcome.failed += 1;
+        }
+        let done = outcome.imported + outcome.failed;
+        let due = last_report.is_none_or(|at| at.elapsed() >= Duration::from_millis(150));
+        if due || done == total {
+            last_report = Some(std::time::Instant::now());
+            let _ = tx.send_blocking(DropImport::Copying { done, total });
         }
     }
+    let _ = tx.send_blocking(DropImport::Finished(outcome));
+}
+
+fn copy_without_clobbering(source: &std::path::Path, target: &std::path::Path) -> std::io::Result<()> {
+    let parent = target.parent().unwrap_or(target);
+    std::fs::create_dir_all(parent)?;
+    let name = target
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let staging = parent.join(format!(".{name}.flaccy-part"));
+    let _ = std::fs::remove_file(&staging);
+    let staged = std::fs::copy(source, &staging).and_then(|_| {
+        if target.exists() {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                "destination appeared during the copy",
+            ))
+        } else {
+            std::fs::rename(&staging, target)
+        }
+    });
+    if staged.is_err() {
+        let _ = std::fs::remove_file(&staging);
+    }
+    staged
 }
 
 pub fn activate(app: &adw::Application, smoke: bool) {
@@ -1139,27 +1170,44 @@ pub fn activate(app: &adw::Application, smoke: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::copy_into_library;
+    use super::{run_drop_import, DropImport};
+
+    fn drain(rx: &async_channel::Receiver<DropImport>) -> flaccy_shared::import_plan::Outcome {
+        let mut finished = None;
+        while let Ok(event) = rx.try_recv() {
+            if let DropImport::Finished(outcome) = event {
+                finished = Some(outcome);
+            }
+        }
+        finished.expect("the import reports its outcome")
+    }
 
     #[test]
-    fn copies_audio_skips_other_and_duplicates() {
+    fn a_dropped_folder_keeps_its_tree_and_a_second_drop_copies_nothing() {
         let temp = std::env::temp_dir().join(format!("flaccy-dnd-test-{}", std::process::id()));
-        let source = temp.join("src");
+        let source = temp.join("src/Album");
         let root = temp.join("root");
-        std::fs::create_dir_all(source.join("nested")).expect("mkdir");
+        std::fs::create_dir_all(source.join("CD2")).expect("mkdir");
         std::fs::create_dir_all(&root).expect("mkdir root");
-        std::fs::write(source.join("song.flac"), b"x").expect("write");
-        std::fs::write(source.join("nested/deep.mp3"), b"y").expect("write");
+        std::fs::write(source.join("01.flac"), b"x").expect("write");
+        std::fs::write(source.join("01.lrc"), b"[00:01]x").expect("write");
+        std::fs::write(source.join("CD2/01.mp3"), b"y").expect("write");
         std::fs::write(source.join("notes.txt"), b"z").expect("write");
-        let mut copied = 0;
-        let mut skipped = 0;
-        copy_into_library(&source, &root, &mut copied, &mut skipped);
-        assert_eq!(copied, 2);
-        assert_eq!(skipped, 1);
-        assert!(root.join("Imported/song.flac").exists());
-        assert!(root.join("Imported/deep.mp3").exists());
-        copy_into_library(&source.join("song.flac"), &root, &mut copied, &mut skipped);
-        assert!(root.join("Imported/song (1).flac").exists());
+
+        let (tx, rx) = async_channel::unbounded();
+        run_drop_import(std::slice::from_ref(&source), &root, &tx);
+        let first = drain(&rx);
+        assert_eq!((first.imported, first.skipped, first.failed), (2, 0, 0));
+        assert!(root.join("Imported/Album/01.flac").exists());
+        assert!(root.join("Imported/Album/01.lrc").exists());
+        assert!(root.join("Imported/Album/CD2/01.mp3").exists());
+        assert!(!root.join("Imported/Album/notes.txt").exists());
+        assert!(!root.join("Imported/Album/.01.flac.flaccy-part").exists());
+
+        run_drop_import(&[source], &root, &tx);
+        let second = drain(&rx);
+        assert_eq!((second.imported, second.skipped, second.failed), (0, 2, 0));
+        assert!(!root.join("Imported/Album/01_1.flac").exists());
         let _ = std::fs::remove_dir_all(&temp);
     }
 }

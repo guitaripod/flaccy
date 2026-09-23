@@ -154,7 +154,7 @@ final class GeneralSettingsPane: SettingsPane {
         switch state {
         case .purchased(.yearly):
             return String(localized: "Flaccy Pro — yearly. Thank you.")
-        case .purchased(.lifetime), .trial, .expired:
+        case .purchased(.lifetime), .trialNotStarted, .trial, .expired:
             return String(localized: "Lifetime unlocked. Thank you.")
         }
     }

@@ -6,7 +6,7 @@ use lofty::tag::ItemKey;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
+pub(crate) const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
 
 pub enum ScanEvent {
     Progress(LoadProgress),

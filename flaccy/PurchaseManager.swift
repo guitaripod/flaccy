@@ -8,6 +8,8 @@ nonisolated enum PurchasePlan: String, Equatable, Hashable, Sendable {
 }
 
 nonisolated enum EntitlementState: Equatable, Hashable {
+    /// Nothing of the person's own has played yet, so the trial is not counting.
+    case trialNotStarted
     case trial(daysRemaining: Int)
     case expired
     case purchased(PurchasePlan)
@@ -42,7 +44,8 @@ struct PurchaseOffer: Equatable {
 ///
 /// RevenueCat owns receipts, restores, renewals and cross-device state; the
 /// seven-day trial stays local because it starts before any purchase exists and
-/// must survive a reinstall, which the Keychain gives us for free. The `pro`
+/// must survive a reinstall, which the Keychain gives us for free; it starts at
+/// the first play of the person's own music, not at install. The `pro`
 /// entitlement is attached to both the yearly subscription and the lifetime
 /// unlock, so one boolean answers "may this person play music". Everything the
 /// runway needs — which day it is, whether the banner is due, whether the
@@ -60,10 +63,10 @@ final class PurchaseManager {
     static let lapsedOfferingID = "lapsed"
     static let trialLengthDays = TrialRunway.lengthDays
 
-    private(set) var state: EntitlementState = .trial(daysRemaining: trialLengthDays)
+    private(set) var state: EntitlementState = .trialNotStarted
     private(set) var offers: [PurchaseOffer] = []
     private(set) var trialStart = Date()
-    private(set) var trialStartIsSettled = false
+    private(set) var trialHasStarted = false
     private(set) var hasReceivedCustomerInfo = false
     private var lapsedOfferingSeenThisSession = false
     private var lapsedPackage: Package?
@@ -162,13 +165,14 @@ final class PurchaseManager {
     }
 
     func start() {
-        settleTrialStartIfNeeded()
+        readTrialStartIfNeeded()
         #if DEBUG
         applyTrialDayOverride()
         #endif
-        setState(trialState(from: trialStart))
+        setState(trialState())
         configureRevenueCat()
         publishFunnelEntitlement()
+        PurchaseFunnel.observeLibrary()
         listenForCustomerInfo()
         Task {
             await refresh()
@@ -177,23 +181,49 @@ final class PurchaseManager {
         Task { await migrateStoreKitPurchasesIfNeeded() }
     }
 
-    /// Reads the stored start date until it has actually been read back. A
-    /// launch before first unlock fails both the read and the add-only stamp
-    /// (errSecInteractionNotAllowed), leaving `trialStart` at "now" — so the
-    /// read is retried at every later chance and the state re-derived from it.
-    private func settleTrialStartIfNeeded() {
-        guard !trialStartIsSettled else { return }
-        trialStart = TrialClock.ensureStartDate()
-        trialStartIsSettled = TrialClock.date(for: .trialStart) != nil
-        if trialStartIsSettled {
+    /// The trial starts at the first play of the person's own music, never at
+    /// install, so a launch only ever reads the stored start. A launch before
+    /// first unlock cannot read it (errSecInteractionNotAllowed), so the read is
+    /// retried at every later chance and the state re-derived from it.
+    private func readTrialStartIfNeeded() {
+        guard !trialHasStarted else { return }
+        switch TrialClock.lookup(.trialStart) {
+        case .found(let start):
+            trialStart = start
+            trialHasStarted = true
             publishFunnelEntitlement()
-        } else {
-            AppLogger.warning("Trial start not readable from the Keychain yet; will retry", category: .purchases)
+        case .absent:
+            break
+        case .unreadable(let status):
+            AppLogger.warning("Trial start not readable from the Keychain yet (status \(status)); will retry", category: .purchases)
         }
     }
 
+    /// Starts the trial the first time the person's own music plays — not at
+    /// install, and not for the sample album — so the days it takes to get a
+    /// library onto the device are never spent from it. The stamp is add-only
+    /// like every trial date, so it can never move once written, and it is
+    /// written even after a purchase so a lapsed subscription still has a start.
+    func noteTrackStarted(_ track: Track) {
+        guard !trialHasStarted, !trialClockIsOverridden else { return }
+        guard !SampleMusicService.isSample(track.fileURL) else {
+            PurchaseFunnel.noteSamplePlayed()
+            return
+        }
+        guard case .absent = TrialClock.lookup(.trialStart) else {
+            refreshTrialPhase()
+            return
+        }
+        TrialClock.stampIfAbsent(Date(), for: .trialStart)
+        readTrialStartIfNeeded()
+        guard trialHasStarted else { return }
+        AppLogger.info("Trial started at the first play of the library's own music", category: .purchases)
+        refreshTrialPhase()
+        Task { await TrialReminderScheduler.shared.refresh() }
+    }
+
     private func publishFunnelEntitlement() {
-        PurchaseFunnel.noteEntitlement(state, trialStart: trialStart, trialStartIsSettled: trialStartIsSettled)
+        PurchaseFunnel.noteEntitlement(state, trialStart: trialHasStarted ? trialStart : nil)
     }
 
     /// Called by both paywalls once their offers have loaded, so the price
@@ -206,8 +236,8 @@ final class PurchaseManager {
     /// lived across midnight; a purchase is never touched.
     func refreshTrialPhase() {
         guard !state.isPurchased else { return }
-        settleTrialStartIfNeeded()
-        setState(trialState(from: trialStart))
+        readTrialStartIfNeeded()
+        setState(trialState())
     }
 
     #if DEBUG
@@ -223,7 +253,7 @@ final class PurchaseManager {
               (1...40).contains(day)
         else { return }
         trialStart = Date().addingTimeInterval(-TimeInterval(day - 1) * TrialRunway.day)
-        trialStartIsSettled = true
+        trialHasStarted = true
         trialDayOverrideActive = true
         AppLogger.info("Trial clock overridden: day \(day) (elapsed \(day - 1) d)", category: .purchases)
     }
@@ -463,11 +493,11 @@ final class PurchaseManager {
     }
 
     private func apply(_ info: CustomerInfo) {
-        settleTrialStartIfNeeded()
+        readTrialStartIfNeeded()
         if let entitlement = info.entitlements[Self.entitlementID], entitlement.isActive {
             setState(.purchased(Self.plan(for: entitlement)))
         } else {
-            setState(trialState(from: trialStart))
+            setState(trialState())
         }
         noteCustomerInfoLoaded()
     }
@@ -487,8 +517,9 @@ final class PurchaseManager {
         entitlement.expirationDate == nil ? .lifetime : .yearly
     }
 
-    private func trialState(from start: Date) -> EntitlementState {
-        switch TrialRunway.phase(start: start, now: Date()) {
+    private func trialState() -> EntitlementState {
+        guard trialHasStarted else { return .trialNotStarted }
+        switch TrialRunway.phase(start: trialStart, now: Date()) {
         case .trial(let daysRemaining): return .trial(daysRemaining: daysRemaining)
         case .expired: return .expired
         }
@@ -522,23 +553,26 @@ private enum TrialClock {
         case runwayPromptShown
     }
 
+    /// Absent and unreadable are different answers: before first unlock the
+    /// Keychain refuses every read, and that must never pass for "no trial yet".
+    enum Lookup {
+        case found(Date)
+        case absent
+        case unreadable(OSStatus)
+    }
+
     #if os(macOS)
     private static let service = "com.midgarcorp.flaccy.mac"
     #else
     private static let service = "com.midgarcorp.flaccy.trial"
     #endif
 
-    static func ensureStartDate() -> Date {
-        if let existing = date(for: .trialStart) {
-            return existing
-        }
-        let now = Date()
-        stampIfAbsent(now, for: .trialStart)
-        AppLogger.info("Trial started, stamped start date in Keychain", category: .purchases)
-        return now
+    static func date(for account: Account) -> Date? {
+        guard case .found(let date) = lookup(account) else { return nil }
+        return date
     }
 
-    static func date(for account: Account) -> Date? {
+    static func lookup(_ account: Account) -> Lookup {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -547,11 +581,14 @@ private enum TrialClock {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data,
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess else {
+            return status == errSecItemNotFound ? .absent : .unreadable(status)
+        }
+        guard let data = item as? Data,
               let interval = TimeInterval(String(decoding: data, as: UTF8.self))
-        else { return nil }
-        return Date(timeIntervalSinceReferenceDate: interval)
+        else { return .unreadable(status) }
+        return .found(Date(timeIntervalSinceReferenceDate: interval))
     }
 
     static func stampIfAbsent(_ date: Date, for account: Account) {

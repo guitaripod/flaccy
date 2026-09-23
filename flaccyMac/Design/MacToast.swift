@@ -29,13 +29,93 @@ enum MacToast {
 
     private static var currentToast: NSView?
 
-    static func showImportOutcome(_ outcome: LibraryImportOutcome, in window: NSWindow?) {
-        let report = ImportOutcomeCopy.report(outcome)
-        show(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success), in: window)
+    /// The import's running count, retitled in place until the shared
+    /// sentence reports how it ended.
+    static func showImport(in window: NSWindow?) -> Live {
+        showLive(ImportOutcomeCopy.scanning, in: window)
     }
 
     static func show(_ message: String, style: Style = .info, in window: NSWindow?) {
-        guard let contentView = window?.contentView else { return }
+        guard let toast = makeToast(message, style: style, in: window)?.toast else { return }
+        present(toast)
+
+        Task { [weak toast] in
+            try? await Task.sleep(for: .seconds(2.4))
+            guard let toast, toast === currentToast else { return }
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.3
+                toast.animator().alphaValue = 0
+            }, completionHandler: {
+                toast.removeFromSuperview()
+                if currentToast === toast { currentToast = nil }
+            })
+        }
+    }
+
+    /// A toast that stays up while work runs and is retitled in place — its
+    /// digits monospaced so a running count does not jitter the pill — until
+    /// `finish` hands over to the ordinary toast that reports the result. Any
+    /// other toast shown meanwhile simply replaces it.
+    static func showLive(_ message: String, in window: NSWindow?) -> Live {
+        let made = makeToast(message, style: .info, in: window)
+        if let made {
+            made.label.font = .monospacedDigitSystemFont(ofSize: 13, weight: .medium)
+            present(made.toast)
+        }
+        return Live(toast: made?.toast, label: made?.label, window: window)
+    }
+
+    final class Live {
+        private weak var toast: NSView?
+        private weak var label: NSTextField?
+        private weak var window: NSWindow?
+        private var isFinished = false
+
+        fileprivate init(toast: NSView?, label: NSTextField?, window: NSWindow?) {
+            self.toast = toast
+            self.label = label
+            self.window = window
+        }
+
+        func update(_ message: String) {
+            guard !isFinished else { return }
+            label?.stringValue = message
+        }
+
+        func update(_ progress: LibraryImportProgress) {
+            update(ImportOutcomeCopy.progress(progress))
+        }
+
+        func finish(reporting outcome: LibraryImportOutcome) {
+            let report = ImportOutcomeCopy.report(outcome)
+            finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
+        }
+
+        func finish(_ message: String, style: Style) {
+            guard !isFinished else { return }
+            isFinished = true
+            if let toast, toast === MacToast.currentToast {
+                toast.removeFromSuperview()
+                MacToast.currentToast = nil
+            }
+            MacToast.show(message, style: style, in: window)
+        }
+    }
+
+    private static func present(_ toast: NSView) {
+        currentToast = toast
+        toast.alphaValue = 0
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.22
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            toast.animator().alphaValue = 1
+        }
+    }
+
+    private static func makeToast(
+        _ message: String, style: Style, in window: NSWindow?
+    ) -> (toast: NSView, label: NSTextField)? {
+        guard let contentView = window?.contentView else { return nil }
         currentToast?.removeFromSuperview()
 
         let icon = NSImageView(image: NSImage(
@@ -69,25 +149,6 @@ enum MacToast {
             toast.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor, constant: 12),
             toast.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, constant: -48),
         ])
-        currentToast = toast
-
-        toast.alphaValue = 0
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.22
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            toast.animator().alphaValue = 1
-        }
-
-        Task { [weak toast] in
-            try? await Task.sleep(for: .seconds(2.4))
-            guard let toast, toast === currentToast else { return }
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.3
-                toast.animator().alphaValue = 0
-            }, completionHandler: {
-                toast.removeFromSuperview()
-                if currentToast === toast { currentToast = nil }
-            })
-        }
+        return (toast, label)
     }
 }

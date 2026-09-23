@@ -270,9 +270,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, !panel.urls.isEmpty else { return }
             let urls = panel.urls
+            let toast = MacToast.showImport(in: window)
             Task {
-                let outcome = await Library.shared.importFiles(from: urls)
-                MacToast.showImportOutcome(outcome, in: window)
+                let outcome = await Library.shared.importFiles(from: urls) { toast.update($0) }
+                toast.finish(reporting: outcome)
                 ReviewPrompt.recordImportedTracks(outcome.imported)
             }
         }

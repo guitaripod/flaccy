@@ -31,6 +31,11 @@ enum DebugDrive {
                 await exerciseLibrary(window: window)
             }
         }
+        if CommandLine.arguments.contains("--exercise-import") {
+            Task {
+                await exerciseFolderImport()
+            }
+        }
         if CommandLine.arguments.contains("--exercise-stack") {
             Task {
                 await exerciseStack(window: window)
@@ -485,7 +490,7 @@ enum DebugDrive {
                 try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
                 try FileManager.default.copyItem(at: sourceTrack.fileURL, to: stagedFile)
                 let before = Library.shared.allTracks.count
-                await Library.shared.importFiles(from: [stagedFile])
+                await Library.shared.importFiles(from: [stagedFile]) { _ in }
                 let after = Library.shared.allTracks.count
                 AppLogger.info("DebugDrive: drop import — tracks \(before) → \(after)", category: .general)
                 try? FileManager.default.removeItem(at: staging)
@@ -494,6 +499,68 @@ enum DebugDrive {
             }
         }
         AppLogger.info("DebugDrive: library exercise complete", category: .general)
+    }
+
+    /// Imports a staged compilation folder twice through the real importer and
+    /// checks the tree it leaves: the folder keeps its name and both discs,
+    /// lyrics travel, artwork and hidden files do not, no `.part` survives, and
+    /// the second run copies nothing. The folder is removed again afterwards.
+    private static func exerciseFolderImport() async {
+        var attempts = 0
+        while Library.shared.allTracks.count < 2, attempts < 40 {
+            try? await Task.sleep(for: .milliseconds(500))
+            attempts += 1
+        }
+        let tracks = Library.shared.allTracks.filter { $0.fileURL.pathExtension.lowercased() == "flac" }
+        guard tracks.count >= 2 else {
+            AppLogger.error("DebugDrive: import exercise needs two FLAC tracks", category: .general)
+            return
+        }
+        let fileManager = FileManager.default
+        let staging = fileManager.temporaryDirectory.appendingPathComponent("DebugDriveFolder", isDirectory: true)
+        let folderName = "Debug Drive Compilation"
+        let folder = staging.appendingPathComponent(folderName, isDirectory: true)
+        let imported = LibraryPaths.root.appendingPathComponent(folderName, isDirectory: true)
+        do {
+            try? fileManager.removeItem(at: staging)
+            try? fileManager.removeItem(at: imported)
+            try fileManager.createDirectory(at: folder.appendingPathComponent("CD1"), withIntermediateDirectories: true)
+            try fileManager.createDirectory(at: folder.appendingPathComponent("CD2"), withIntermediateDirectories: true)
+            try fileManager.copyItem(at: tracks[0].fileURL, to: folder.appendingPathComponent("CD1/01.flac"))
+            try fileManager.copyItem(at: tracks[1].fileURL, to: folder.appendingPathComponent("CD2/01.flac"))
+            try Data("[00:01.00]debug".utf8).write(to: folder.appendingPathComponent("CD1/01.lrc"))
+            try Data([0xFF, 0xD8]).write(to: folder.appendingPathComponent("cover.jpg"))
+            try Data([0]).write(to: folder.appendingPathComponent(".hidden.flac"))
+        } catch {
+            AppLogger.error("DebugDrive: import staging failed: \(error.localizedDescription)", category: .general)
+            return
+        }
+
+        let first = await Library.shared.importFiles(from: [folder]) { progress in
+            AppLogger.info("DebugDrive: import progress \(progress)", category: .general)
+        }
+        let second = await Library.shared.importFiles(from: [folder]) { _ in }
+        let expectations: [(String, Bool)] = [
+            ("first run imported 2, skipped 0, failed 0", first == LibraryImportOutcome(imported: 2, skipped: 0, failed: 0)),
+            ("second run imported 0, skipped 2, failed 0", second == LibraryImportOutcome(imported: 0, skipped: 2, failed: 0)),
+            ("CD1/01.flac kept its disc", fileManager.fileExists(atPath: imported.appendingPathComponent("CD1/01.flac").path)),
+            ("CD2/01.flac kept its disc", fileManager.fileExists(atPath: imported.appendingPathComponent("CD2/01.flac").path)),
+            ("lyrics travelled", fileManager.fileExists(atPath: imported.appendingPathComponent("CD1/01.lrc").path)),
+            ("artwork stayed behind", !fileManager.fileExists(atPath: imported.appendingPathComponent("cover.jpg").path)),
+            ("hidden file stayed behind", !fileManager.fileExists(atPath: imported.appendingPathComponent(".hidden.flac").path)),
+            ("no second copy", !fileManager.fileExists(atPath: imported.appendingPathComponent("CD1/01_1.flac").path)),
+            ("no staging left", !fileManager.fileExists(atPath: imported.appendingPathComponent("CD1/.01.flac.flaccy-part").path)),
+            ("library indexed both", Library.shared.allTracks.filter { $0.fileURL.path.contains(folderName) }.count == 2),
+        ]
+        for (name, passed) in expectations {
+            AppLogger.info("DebugDrive: import \(passed ? "PASS" : "FAIL") — \(name)", category: .general)
+        }
+        AppLogger.info("DebugDrive: import outcomes \(first) then \(second)", category: .general)
+        try? fileManager.removeItem(at: imported)
+        try? fileManager.removeItem(at: staging)
+        await Library.shared.reload()
+        let verdict = expectations.allSatisfy(\.1) ? "PASSED" : "FAILED"
+        AppLogger.info("DebugDrive: import exercise \(verdict)", category: .general)
     }
 
     private static func exercise(window: NSWindow?) async {

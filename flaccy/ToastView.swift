@@ -16,6 +16,51 @@ extension UIFont {
 final class ToastView {
 
     static func show(_ message: String, in view: UIView, style: Style = .info) {
+        let (toast, _) = makeToast(message, in: view, style: style)
+        animateIn(toast)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            animateOut(toast)
+        }
+    }
+
+    /// A toast that stays up while work runs and is retitled in place — its
+    /// digits monospaced so a running count does not jitter the pill — until
+    /// `finish` hands over to the ordinary toast that reports the result.
+    static func showLive(_ message: String, in view: UIView) -> Live {
+        let (toast, label) = makeToast(message, in: view, style: .info)
+        label.font = UIFontMetrics(forTextStyle: .footnote)
+            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 14, weight: .medium))
+        animateIn(toast)
+        return Live(toast: toast, label: label, host: view)
+    }
+
+    final class Live {
+        private let toast: UIView
+        private let label: UILabel
+        private weak var host: UIView?
+        private var isFinished = false
+
+        fileprivate init(toast: UIView, label: UILabel, host: UIView) {
+            self.toast = toast
+            self.label = label
+            self.host = host
+        }
+
+        func update(_ message: String) {
+            guard !isFinished else { return }
+            label.text = message
+        }
+
+        func finish(_ message: String, style: Style) {
+            guard !isFinished else { return }
+            isFinished = true
+            ToastView.animateOut(toast)
+            guard let host else { return }
+            ToastView.show(message, in: host, style: style)
+        }
+    }
+
+    private static func makeToast(_ message: String, in view: UIView, style: Style) -> (UIView, UILabel) {
         let toast = UIView()
         toast.layer.cornerRadius = 14
         toast.layer.cornerCurve = .continuous
@@ -57,11 +102,7 @@ final class ToastView {
             toast.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             toast.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
         ])
-
-        animateIn(toast)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            animateOut(toast)
-        }
+        return (toast, label)
     }
 
     /// Installs a Liquid Glass backing inside the toast (solid fill under

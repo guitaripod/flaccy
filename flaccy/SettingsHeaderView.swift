@@ -209,6 +209,14 @@ final class SettingsHeaderView: UIView {
                 tint: .systemYellow,
                 interactive: false
             )
+        case .trialNotStarted:
+            statusControl.configure(
+                symbolName: "sparkles",
+                title: String(localized: "Flaccy Lifetime"),
+                subtitle: PaywallCopy.settingsSentence(state: state, lifetime: lifetimeOffer),
+                tint: QualityBadgeView.losslessTint,
+                interactive: true
+            )
         case .trial(let daysRemaining):
             statusControl.configure(
                 symbolName: "sparkles",

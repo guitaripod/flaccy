@@ -62,7 +62,8 @@ final class TrialReminderScheduler {
 
     /// Rebuilds the pending reminders from the current trial phase: all three
     /// while the trial runs, only the welcome-back one once it has expired, and
-    /// none at all after a purchase or when reminders are off.
+    /// none at all before the trial starts, after a purchase or when reminders
+    /// are off.
     func refresh() async {
         guard isEnabled else {
             cancelAll()
@@ -70,6 +71,10 @@ final class TrialReminderScheduler {
         }
         let manager = PurchaseManager.shared
         guard !manager.state.isPurchased else {
+            cancelAll()
+            return
+        }
+        guard manager.state != .trialNotStarted else {
             cancelAll()
             return
         }

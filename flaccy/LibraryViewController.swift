@@ -50,9 +50,20 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
     private let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
     private let emptyStateLabel = UILabel()
+    private let trialStartsLabel = UILabel()
     private var lastRenderedSegment: LibraryViewModel.Segment?
-    private lazy var sampleMusicButton: UIButton = {
+    private lazy var addMusicButton: UIButton = {
         var config = UIButton.Configuration.borderedProminent()
+        config.title = String(localized: "Add Music")
+        config.image = UIImage(systemName: "plus")
+        config.imagePadding = 8
+        config.cornerStyle = .large
+        return UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.importTapped()
+        })
+    }()
+    private lazy var sampleMusicButton: UIButton = {
+        var config = UIButton.Configuration.bordered()
         config.title = String(localized: "Add Sample Music")
         config.subtitle = String(localized: "Bach, lossless, free")
         config.image = UIImage(systemName: "arrow.down.circle")
@@ -72,22 +83,39 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         imageView.contentMode = .scaleAspectFit
 
         let label = emptyStateLabel
-        label.text = String(localized: "Import files from Settings")
         label.textColor = .secondaryLabel
         label.font = .preferredFont(forTextStyle: .body)
         label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
         label.textAlignment = .center
 
-        let stack = UIStackView(arrangedSubviews: [imageView, label, sampleMusicButton])
+        let buttons = UIStackView(arrangedSubviews: [addMusicButton, sampleMusicButton])
+        buttons.axis = .vertical
+        buttons.spacing = 10
+        buttons.alignment = .fill
+        let preferredButtonWidth = buttons.widthAnchor.constraint(equalToConstant: 300)
+        preferredButtonWidth.priority = .defaultHigh
+
+        let footnote = trialStartsLabel
+        footnote.text = PaywallCopy.trialStartsLine
+        footnote.textColor = .tertiaryLabel
+        footnote.font = .preferredFont(forTextStyle: .footnote)
+        footnote.adjustsFontForContentSizeCategory = true
+        footnote.numberOfLines = 0
+        footnote.textAlignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [imageView, label, buttons, footnote])
         stack.axis = .vertical
         stack.spacing = 12
         stack.alignment = .center
         stack.setCustomSpacing(24, after: label)
+        stack.setCustomSpacing(18, after: buttons)
         stack.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(stack)
 
         NSLayoutConstraint.activate([
+            preferredButtonWidth,
+            buttons.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
             stack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: container.centerYAnchor, constant: -40),
             stack.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
@@ -138,6 +166,13 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(
             self, selector: #selector(wantlistDidResolve(_:)), name: WantlistService.didResolveItems, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(entitlementDidChange), name: PurchaseManager.stateDidChange, object: nil
+        )
+    }
+
+    @objc private func entitlementDidChange() {
+        updateEmptyState()
     }
 
     @objc private func wantlistDidChange() {
@@ -472,13 +507,17 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             collectionView.backgroundView = nil
         case .noLibrary:
             emptyStateIconView.image = UIImage(systemName: "music.note.list")
-            emptyStateLabel.text = String(localized: "Import files from Settings,\nor start with a free lossless album")
+            emptyStateLabel.text = String(localized: "Add songs or whole folders from iCloud Drive, a USB drive, or a network share you've connected in the Files app.")
+            addMusicButton.isHidden = false
             sampleMusicButton.isHidden = false
+            trialStartsLabel.isHidden = PurchaseManager.shared.state != .trialNotStarted
             collectionView.backgroundView = emptyStateView
         case .noSearchResults(let query):
             emptyStateIconView.image = UIImage(systemName: "magnifyingglass")
             emptyStateLabel.text = String(localized: "No results for \u{201C}\(query)\u{201D}")
+            addMusicButton.isHidden = true
             sampleMusicButton.isHidden = true
+            trialStartsLabel.isHidden = true
             collectionView.backgroundView = emptyStateView
         }
     }
@@ -1400,7 +1439,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
     private func importTapped() {
         impactLight.impactOccurred()
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio])
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio, .folder])
         picker.allowsMultipleSelection = true
         picker.delegate = self
         present(picker, animated: true)
@@ -1608,12 +1647,12 @@ extension LibraryViewController: UIDocumentPickerDelegate {
 
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         guard !urls.isEmpty else { return }
-        ToastView.show(ImportOutcomeCopy.importing(count: urls.count), in: view, style: .info)
+        let toast = ToastView.showLive(ImportOutcomeCopy.scanning, in: view)
         Task {
-            let outcome = await viewModel.importFiles(from: urls)
+            let outcome = await viewModel.importFiles(from: urls) { toast.update(ImportOutcomeCopy.progress($0)) }
             let report = ImportOutcomeCopy.report(outcome)
             UINotificationFeedbackGenerator().notificationOccurred(report.isFailure ? .error : (report.isNoOp ? .warning : .success))
-            ToastView.show(report.message, in: view, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
+            toast.finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
         }
     }
 }

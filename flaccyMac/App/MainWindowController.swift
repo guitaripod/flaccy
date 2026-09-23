@@ -327,21 +327,15 @@ final class AudioDropView: NSView {
         }
         isImporting = true
         AppLogger.info("Importing \(urls.count) dropped item(s)", category: .content)
-        MacToast.show(
-            String(localized: "Importing \(urls.count) items…"), style: .info, in: window
-        )
+        let toast = MacToast.showImport(in: window)
         Task { [weak self] in
-            let outcome = await Library.shared.importFiles(from: urls)
+            let outcome = await Library.shared.importFiles(from: urls) { toast.update($0) }
             self?.isImporting = false
-            MacToast.showImportOutcome(outcome, in: self?.window)
+            toast.finish(reporting: outcome)
             ReviewPrompt.recordImportedTracks(outcome.imported)
         }
         return true
     }
-
-    private static let audioExtensions: Set<String> = [
-        "flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf",
-    ]
 
     private func droppableURLs(from info: NSDraggingInfo) -> [URL] {
         let urls = info.draggingPasteboard.readObjects(
@@ -354,7 +348,7 @@ final class AudioDropView: NSView {
                 return false
             }
             return isDirectory.boolValue
-                || Self.audioExtensions.contains(url.pathExtension.lowercased())
+                || Library.audioExtensions.contains(url.pathExtension.lowercased())
         }
     }
 }

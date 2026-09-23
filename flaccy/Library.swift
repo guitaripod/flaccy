@@ -11,8 +11,23 @@ nonisolated struct LibraryImportOutcome: Sendable, Equatable {
     let imported: Int
     let skipped: Int
     let failed: Int
+    var shortfall: StorageShortfall? = nil
 
     static let empty = LibraryImportOutcome(imported: 0, skipped: 0, failed: 0)
+}
+
+/// An import refused before a byte moved, because what it would copy does not
+/// fit in the space the device is willing to give it.
+nonisolated struct StorageShortfall: Sendable, Equatable {
+    let needed: Int64
+    let available: Int64
+}
+
+/// Where a running import is, counted in songs: the walk over the picked
+/// folders first, then each file copied. Lyrics sidecars ride along uncounted.
+nonisolated enum LibraryImportProgress: Sendable, Equatable {
+    case scanning
+    case copying(done: Int, total: Int)
 }
 
 /// One album cover the scan has just moved out of a file and into the database,
@@ -39,13 +54,22 @@ protocol LibraryProviding: AnyObject {
     func reloadFromDatabase() async
     func debutSummary() async -> LibraryDebutSummary
     @discardableResult
-    func importFiles(from urls: [URL]) async -> LibraryImportOutcome
+    func importFiles(
+        from urls: [URL],
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
+    ) async -> LibraryImportOutcome
     func deleteTracks(_ tracks: [Track]) async
 }
 
 final class Library: LibraryProviding {
 
     static let shared: LibraryProviding = Library()
+
+    /// Every format the Apple clients index and import; the Mac's drop target
+    /// filters on the same set.
+    nonisolated static let audioExtensions: Set<String> = [
+        "flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf",
+    ]
     static let didUpdateNotification = Notification.Name("LibraryDidUpdate")
     static let loadingStateChanged = Notification.Name("LibraryLoadingStateChanged")
     static let progressDidChange = Notification.Name("LibraryLoadProgressChanged")
@@ -231,8 +255,11 @@ final class Library: LibraryProviding {
     }
 
     @discardableResult
-    func importFiles(from urls: [URL]) async -> LibraryImportOutcome {
-        let outcome = await Self.copyPickedFiles(urls, into: documentsDirectory)
+    func importFiles(
+        from urls: [URL],
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
+    ) async -> LibraryImportOutcome {
+        let outcome = await Self.copyPickedFiles(urls, into: documentsDirectory, progress: progress)
         await reload()
         return outcome
     }
@@ -240,35 +267,98 @@ final class Library: LibraryProviding {
     /// Copying runs off the main actor because a document picked from a network
     /// location (Files app over SMB/SSH) streams the whole file inside
     /// `FileManager.copyItem` — main-thread work here freezes the UI for the
-    /// length of every transfer.
+    /// length of every transfer. `ImportPlan` decides every destination up front,
+    /// so a folder keeps its tree, a file already there is skipped, and an
+    /// import cut short resumes by simply being run again.
     private nonisolated static func copyPickedFiles(
-        _ urls: [URL], into directory: URL
+        _ urls: [URL],
+        into directory: URL,
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
     ) async -> LibraryImportOutcome {
         await Task.detached(priority: .userInitiated) {
-            var imported = 0
-            var skipped = 0
-            var failed = 0
-            for url in urls {
-                let accessing = url.startAccessingSecurityScopedResource()
-                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+            let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
+            defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
+            let reporter = ImportProgressReporter(deliver: progress)
+            reporter.report(.scanning, force: true)
 
-                if alreadyInLibrary(url, in: directory) {
-                    skipped += 1
-                    AppLogger.info("Import skipped, already in library: \(url.lastPathComponent)", category: .content)
-                    continue
-                }
-                let destination = uniqueDestination(for: url, in: directory)
-                do {
-                    try FileManager.default.copyItem(at: url, to: destination)
-                    imported += 1
-                    AppLogger.info("Imported: \(url.lastPathComponent)", category: .content)
-                } catch {
-                    failed += 1
-                    AppLogger.error("Import failed: \(error.localizedDescription)", category: .content)
-                }
+            let plan = ImportPlan.plan(picked: urls, libraryRoot: directory, audioExtensions: audioExtensions)
+            let placed = ImportPlan.placements(for: plan, in: directory)
+            let copies = placed.compactMap { entry -> (item: ImportPlan.Item, destination: String)? in
+                guard case .copy(let destination) = entry.placement else { return nil }
+                return (entry.item, destination)
             }
+            let skipped = plan.alreadyInLibrary
+                + placed.filter { $0.item.kind == .audio && $0.placement == .alreadyPresent }.count
+            if let shortfall = shortfall(for: copies.map(\.item), at: directory) {
+                AppLogger.warning(
+                    "Import refused: needs \(shortfall.needed) bytes, \(shortfall.available) available",
+                    category: .content
+                )
+                return LibraryImportOutcome(imported: 0, skipped: skipped, failed: 0, shortfall: shortfall)
+            }
+
+            let total = copies.filter { $0.item.kind == .audio }.count
+            var imported = 0
+            var failed = 0
+            for copy in copies {
+                let target = directory.appendingPathComponent(copy.destination)
+                do {
+                    try copyWithoutClobbering(copy.item.source, to: target)
+                    guard copy.item.kind == .audio else { continue }
+                    imported += 1
+                    AppLogger.info("Imported: \(copy.destination)", category: .content)
+                } catch {
+                    AppLogger.error("Import failed for \(copy.destination): \(error.localizedDescription)", category: .content)
+                    guard copy.item.kind == .audio else { continue }
+                    failed += 1
+                }
+                reporter.report(.copying(done: imported + failed, total: total), force: imported + failed == total)
+            }
+            AppLogger.info("Import finished: \(imported) imported, \(skipped) skipped, \(failed) failed", category: .content)
             return LibraryImportOutcome(imported: imported, skipped: skipped, failed: failed)
         }.value
+    }
+
+    /// Copies through a hidden `.part` beside the destination and only then
+    /// takes the real name, which `moveItem` refuses to overwrite: an import
+    /// interrupted mid-song leaves no truncated file under the song's name for
+    /// the next run to mistake for a different recording. The read is
+    /// coordinated so a file provider (iCloud Drive, a network share) can
+    /// fetch the bytes first.
+    private nonisolated static func copyWithoutClobbering(_ source: URL, to target: URL) throws {
+        let fileManager = FileManager.default
+        let parent = target.deletingLastPathComponent()
+        try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
+        let staging = parent.appendingPathComponent(".\(target.lastPathComponent).flaccy-part")
+        try? fileManager.removeItem(at: staging)
+        var coordinationError: NSError?
+        var copyError: Error?
+        NSFileCoordinator().coordinate(readingItemAt: source, options: [], error: &coordinationError) { readable in
+            do {
+                try fileManager.copyItem(at: readable, to: staging)
+                try fileManager.moveItem(at: staging, to: target)
+            } catch {
+                copyError = error
+            }
+        }
+        if let error = coordinationError ?? copyError {
+            try? fileManager.removeItem(at: staging)
+            throw error
+        }
+    }
+
+    /// Nil when the copies fit or the volume will not say; a cloud placeholder
+    /// of unknown size counts as nothing, and its copy fails on its own if the
+    /// space runs out after all.
+    private nonisolated static func shortfall(for items: [ImportPlan.Item], at directory: URL) -> StorageShortfall? {
+        let needed = items.reduce(Int64(0)) { $0 + ($1.size ?? 0) }
+        guard needed > 0,
+              let available = try? directory.resourceValues(
+                forKeys: [.volumeAvailableCapacityForImportantUsageKey]
+              ).volumeAvailableCapacityForImportantUsage,
+              needed > available
+        else { return nil }
+        return StorageShortfall(needed: needed, available: available)
     }
 
     /// Deleting the files is the single source of truth — the reload's file
@@ -304,12 +394,11 @@ final class Library: LibraryProviding {
             at: documentsDirectory, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]
         ) else { return false }
 
-        let supportedExtensions: Set<String> = ["flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf"]
         var diskPaths = Set<String>()
         var diskFilesByPath = [String: URL]()
 
         for case let fileURL as URL in enumerator {
-            guard supportedExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
+            guard Self.audioExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
             let relPath = relativePath(for: fileURL)
             diskPaths.insert(relPath)
             diskFilesByPath[relPath] = fileURL
@@ -618,33 +707,26 @@ final class Library: LibraryProviding {
         return relative
         #endif
     }
+}
 
-    /// A file with the same name and byte size as one already at the library
-    /// root is the same file picked twice; importing it again would only create
-    /// a `name 2.flac` duplicate the person then has to clean up.
-    private nonisolated static func alreadyInLibrary(_ sourceURL: URL, in directory: URL) -> Bool {
-        let existing = directory.appendingPathComponent(sourceURL.lastPathComponent)
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: existing.path),
-              let sourceSize = try? fm.attributesOfItem(atPath: sourceURL.path)[.size] as? NSNumber,
-              let existingSize = try? fm.attributesOfItem(atPath: existing.path)[.size] as? NSNumber
-        else { return false }
-        return sourceSize == existingSize
+/// Hands import progress to the main actor at most every 150 ms, plus the
+/// moments that must never be dropped, so a folder of small files copied from
+/// a fast disk cannot flood the main queue with label updates.
+private nonisolated final class ImportProgressReporter: @unchecked Sendable {
+    private let deliver: @MainActor @Sendable (LibraryImportProgress) -> Void
+    private var lastDelivery: ContinuousClock.Instant?
+
+    init(deliver: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void) {
+        self.deliver = deliver
     }
 
-    private nonisolated static func uniqueDestination(for sourceURL: URL, in directory: URL) -> URL {
-        let destination = directory.appendingPathComponent(sourceURL.lastPathComponent)
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: destination.path) else { return destination }
-
-        let name = sourceURL.deletingPathExtension().lastPathComponent
-        let ext = sourceURL.pathExtension
-        var counter = 1
-        var newDest = destination
-        while fm.fileExists(atPath: newDest.path) {
-            newDest = directory.appendingPathComponent("\(name)_\(counter).\(ext)")
-            counter += 1
+    func report(_ progress: LibraryImportProgress, force: Bool) {
+        let now = ContinuousClock.now
+        if !force, let lastDelivery, now - lastDelivery < .milliseconds(150) { return }
+        lastDelivery = now
+        let deliver = deliver
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated { deliver(progress) }
         }
-        return newDest
     }
 }

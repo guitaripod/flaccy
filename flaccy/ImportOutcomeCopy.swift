@@ -10,11 +10,28 @@ enum ImportOutcomeCopy {
         let isNoOp: Bool
     }
 
-    static func importing(count: Int) -> String {
-        String(localized: "Importing \(count) items…")
+    static var scanning: String {
+        String(localized: "Looking for music…")
+    }
+
+    static func progress(_ progress: LibraryImportProgress) -> String {
+        switch progress {
+        case .scanning:
+            return scanning
+        case .copying(let done, let total):
+            return String(localized: "Copying \(LibraryLoadPhaseCopy.number(done)) of \(LibraryLoadPhaseCopy.number(total))…")
+        }
     }
 
     static func report(_ outcome: LibraryImportOutcome) -> Report {
+        if let shortfall = outcome.shortfall {
+            let needed = ByteCountFormatter.string(fromByteCount: shortfall.needed, countStyle: .file)
+            let available = ByteCountFormatter.string(fromByteCount: shortfall.available, countStyle: .file)
+            return Report(
+                message: String(localized: "Not enough space — this import needs \(needed), only \(available) is free."),
+                isFailure: true, isNoOp: false
+            )
+        }
         switch (outcome.imported, outcome.skipped, outcome.failed) {
         case (0, 0, 0):
             return Report(message: String(localized: "Nothing to import."), isFailure: false, isNoOp: true)

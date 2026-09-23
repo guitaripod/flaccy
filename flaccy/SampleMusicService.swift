@@ -14,6 +14,18 @@ final class SampleMusicService {
     private(set) var attribution: String?
 
     private static let baseURL = URL(string: "https://flaccy-api.midgarcorp.cc/v1/samples")!
+    private static let fileNamesKey = "flaccy.samples.fileNames"
+
+    /// The sample album's files, remembered as they are downloaded so the trial
+    /// and the funnel can tell the free album from the person's own music.
+    static var sampleFileNames: Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: fileNamesKey) ?? [])
+    }
+
+    static func isSample(_ url: URL, among names: Set<String> = sampleFileNames) -> Bool {
+        guard names.contains(url.lastPathComponent) else { return false }
+        return url.deletingLastPathComponent().standardizedFileURL.path == LibraryPaths.root.standardizedFileURL.path
+    }
 
     private struct Manifest: Decodable {
         struct SampleTrack: Decodable {
@@ -40,6 +52,7 @@ final class SampleMusicService {
             let manifest = try JSONDecoder().decode(Manifest.self, from: data)
             attribution = manifest.attribution
             let documents = LibraryPaths.root
+            UserDefaults.standard.set(manifest.tracks.map(\.file), forKey: Self.fileNamesKey)
 
             for (index, track) in manifest.tracks.enumerated() {
                 let destination = documents.appendingPathComponent(track.file)

@@ -992,8 +992,11 @@ final class LibraryViewModel {
     }
 
     @discardableResult
-    func importFiles(from urls: [URL]) async -> LibraryImportOutcome {
-        let outcome = await library.importFiles(from: urls)
+    func importFiles(
+        from urls: [URL],
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
+    ) async -> LibraryImportOutcome {
+        let outcome = await library.importFiles(from: urls, progress: progress)
         ReviewPrompt.recordImportedTracks(outcome.imported)
         return outcome
     }

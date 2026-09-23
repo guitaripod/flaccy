@@ -8,9 +8,13 @@ week and per lifetime price shown, so a price change is judged by paywall
 views and checkouts rather than by a handful of sales.
 
 Customers from builds before the funnel shipped carry no attributes, so their
-paywall columns read "-"; retention (came back after a day, still around when
-the seven-day trial ended) comes from RevenueCat's own first/last-seen stamps
-and covers everyone. Debug builds are excluded.
+funnel columns read "-"; retention (came back after a day, still around a week
+later) comes from RevenueCat's own first/last-seen stamps and covers everyone.
+For tracked customers the table also says whether any music of their own ever
+reached the library, whether they tried the sample album, and whether their
+trial started — which, for installs made since the trial began starting at the
+first play of their own music, is the same as having played it; older installs
+were stamped at launch. Debug builds are excluded.
 
 Usage: source ~/.config/midgar/credentials.env && python3 scripts/rc-funnel.py ios|mac [--since YYYY-MM-DD]
 """
@@ -92,6 +96,9 @@ def summarize(rows):
         c["paid"] += paid
         if instrumented:
             c["instrumented"] += 1
+            c["music"] += attributes.get("library_tracks", "0") != "0"
+            c["sample"] += attributes.get("played_sample") == "true"
+            c["trial"] += "trial_started_at" in attributes
             c["saw_paywall"] += viewed
             c["checkout"] += checkouts > 0
             c["cancelled"] += int_attribute(attributes, "checkouts_cancelled") > 0
@@ -122,10 +129,12 @@ def main():
         return c[name] if c["instrumented"] else "-"
 
     table(
-        ["week", "new", "back>1d", "past trial", "tracked", "paywall", "checkout", "cancelled", "paid"],
+        ["week", "new", "back>1d", "back>7d", "tracked", "music", "sample", "trial", "paywall", "checkout",
+         "cancelled", "paid"],
         [
             [week, c["customers"], c["returned"], c["outlasted_trial"], c["instrumented"],
-             funnel(c, "saw_paywall"), funnel(c, "checkout"), funnel(c, "cancelled"), c["paid"]]
+             funnel(c, "music"), funnel(c, "sample"), funnel(c, "trial"), funnel(c, "saw_paywall"),
+             funnel(c, "checkout"), funnel(c, "cancelled"), c["paid"]]
             for week, c in sorted(cohorts.items())
         ],
     )

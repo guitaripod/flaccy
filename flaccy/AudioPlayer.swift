@@ -773,6 +773,7 @@ final class AudioPlayer: AudioPlaying {
         updateNowPlayingInfo()
         ensureArtworkLoaded(for: track)
         sendNowPlayingToLastFM(track: track)
+        PurchaseManager.shared.noteTrackStarted(track)
 
 
         postOnMain(AudioPlayer.trackDidChange)
@@ -902,6 +903,7 @@ final class AudioPlayer: AudioPlaying {
         updateNowPlayingInfo()
         ensureArtworkLoaded(for: track)
         sendNowPlayingToLastFM(track: track)
+        PurchaseManager.shared.noteTrackStarted(track)
 
 
         postOnMain(AudioPlayer.trackDidChange)

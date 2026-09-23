@@ -32,12 +32,13 @@ final class OnboardingPanelView: NSView {
     private let progressLabel = NSTextField(labelWithString: "")
     private let spinner = NSProgressIndicator()
     private let sampleButton = GlassCapsuleButton(title: String(localized: "Download Sample Album"), symbolName: "arrow.down.circle")
+    private let trialStartsLabel = NSTextField(wrappingLabelWithString: PaywallCopy.trialStartsLine)
     private var isDownloading = false
 
     private let scrim = NSView()
     private let host = NSView()
     private lazy var welcomeContent: NSStackView = Self.makeWelcomeContent(
-        spinner: spinner, progressLabel: progressLabel, sampleButton: sampleButton
+        spinner: spinner, progressLabel: progressLabel, sampleButton: sampleButton, trialStartsLabel: trialStartsLabel
     )
     private let debutView = MacLibraryDebutView()
     private var summaryCard: MacDebutSummaryCard?
@@ -122,6 +123,25 @@ final class OnboardingPanelView: NSView {
             self, selector: #selector(progressChanged),
             name: SampleMusicService.progressDidChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(entitlementChanged),
+            name: PurchaseManager.stateDidChange, object: nil
+        )
+        refreshTrialStartsLabel()
+    }
+
+    @objc private func entitlementChanged() {
+        refreshTrialStartsLabel()
+    }
+
+    /// The line only belongs before the trial has started, and the welcome
+    /// panel is sized to its content, so the host follows when it comes or goes.
+    private func refreshTrialStartsLabel() {
+        let hidden = PurchaseManager.shared.state != .trialNotStarted
+        guard trialStartsLabel.isHidden != hidden else { return }
+        trialStartsLabel.isHidden = hidden
+        guard presentation == .welcome else { return }
+        hostHeight.constant = welcomeContent.fittingSize.height
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -233,7 +253,10 @@ final class OnboardingPanelView: NSView {
     }
 
     private static func makeWelcomeContent(
-        spinner: NSProgressIndicator, progressLabel: NSTextField, sampleButton: GlassCapsuleButton
+        spinner: NSProgressIndicator,
+        progressLabel: NSTextField,
+        sampleButton: GlassCapsuleButton,
+        trialStartsLabel: NSTextField
     ) -> NSStackView {
         let icon = NSImageView(image: NSApp.applicationIconImage ?? NSImage())
         icon.translatesAutoresizingMaskIntoConstraints = false
@@ -285,7 +308,12 @@ final class OnboardingPanelView: NSView {
         hint.orientation = .horizontal
         hint.spacing = 6
 
-        let content = NSStackView(views: [icon, title, subtitle, buttons, progressRow, hint])
+        trialStartsLabel.font = .systemFont(ofSize: 11)
+        trialStartsLabel.textColor = MacColors.tertiaryLabel
+        trialStartsLabel.alignment = .center
+        trialStartsLabel.preferredMaxLayoutWidth = 380
+
+        let content = NSStackView(views: [icon, title, subtitle, buttons, progressRow, hint, trialStartsLabel])
         content.orientation = .vertical
         content.alignment = .centerX
         content.spacing = 14
