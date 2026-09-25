@@ -3979,7 +3979,7 @@
                   "other": {
                     "stringUnit": {
                       "state": "translated",
-                      "value": "%arg procent"
+                      "value": "%arg procenta"
                     }
                   }
                 }
@@ -4077,7 +4077,7 @@
                   "other": {
                     "stringUnit": {
                       "state": "translated",
-                      "value": "%arg procent"
+                      "value": "%arg procenta"
                     }
                   }
                 }
@@ -7220,10 +7220,10 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$#@arg1@ · %2$@, jednorazowa płatność"
+            "value": "%1$#@days@ · %2$@, jednorazowa płatność"
           },
           "substitutions": {
-            "arg1": {
+            "days": {
               "argNum": 1,
               "formatSpecifier": "lld",
               "variations": {
@@ -13388,7 +13388,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI potrzebuje Flaccy Lifetime"
+            "value": "Czyszczenie przez AI wymaga Flaccy Lifetime"
           }
         },
         "pt-BR": {
@@ -16299,7 +16299,7 @@
                   "many": {
                     "stringUnit": {
                       "state": "translated",
-                      "value": "Wszystkie %arg utworów zostanie usuniętych z tego urządzenia."
+                      "value": "Wszystkie %arg utworów zostanie usunięte z tego urządzenia."
                     }
                   },
                   "one": {
@@ -18152,7 +18152,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uzupełnij statystyki wszystkim, co scrobblowałeś przed instalacją."
+            "value": "Uzupełnij statystyki o wszystko, co scrobblowano przed instalacją."
           }
         },
         "pt-BR": {
@@ -26986,7 +26986,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wszystko, co skonfigurowałeś, wciąż tu jest."
+            "value": "Wszystko, co skonfigurowano, wciąż tu jest."
           }
         },
         "pt-BR": {
@@ -27050,7 +27050,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wszystko, co skonfigurowałeś, zostaje"
+            "value": "Wszystko, co skonfigurowano, zostaje"
           }
         },
         "pt-BR": {
@@ -28074,7 +28074,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ulubione, których nie słyszałeś od miesięcy"
+            "value": "Ulubione nieodtwarzane od miesięcy"
           }
         },
         "pt-BR": {
@@ -33756,7 +33756,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Importuje pełną historię scrobbli z Last.fm do lokalnej bazy danych, dzięki czemu Podsumowanie i Rok w muzyce obejmują wszystko, co kiedykolwiek odtworzyłeś."
+            "value": "Importuje pełną historię scrobbli z Last.fm do lokalnej bazy danych, dzięki czemu Podsumowanie i Rok w muzyce obejmują wszystko, co kiedykolwiek odtworzono."
           }
         },
         "pt-BR": {
@@ -37168,7 +37168,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokochaj"
+            "value": "Polub"
           }
         },
         "pt-BR": {
@@ -37360,7 +37360,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokochane na Last.fm"
+            "value": "Polub na Last.fm"
           }
         },
         "pt-BR": {
@@ -37552,7 +37552,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pokochane na Last.fm"
+            "value": "Polubione na Last.fm"
           }
         },
         "pt-BR": {
@@ -42948,7 +42948,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie ulubiony"
+            "value": "Nie ulubione"
           }
         },
         "pt-BR": {
@@ -45146,7 +45146,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Otwórz Flaccy, aby zachować wszystko, co skonfigurowałeś."
+            "value": "Otwórz Flaccy, aby zachować wszystko, co skonfigurowano."
           }
         },
         "pt-BR": {
@@ -46298,7 +46298,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "PŁAĆ RAZ"
+            "value": "JEDNORAZOWA PŁATNOŚĆ"
           }
         },
         "pt-BR": {
@@ -46962,10 +46962,10 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$#@arg1@"
+            "value": "%1$#@years@"
           },
           "substitutions": {
-            "arg1": {
+            "years": {
               "argNum": 1,
               "formatSpecifier": "lld",
               "variations": {
@@ -60102,7 +60102,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zacznij roczną"
+            "value": "Subskrybuj rocznie"
           }
         },
         "pt-BR": {
@@ -60166,7 +60166,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zacznij roczną · %@"
+            "value": "Subskrybuj rocznie · %@"
           }
         },
         "pt-BR": {
@@ -67024,7 +67024,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nie kochaj"
+            "value": "Usuń z ulubionych"
           }
         },
         "pt-BR": {
@@ -69078,7 +69078,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "To, co skonfigurowałeś do tej pory"
+            "value": "To, co skonfigurowano do tej pory"
           }
         },
         "pt-BR": {
@@ -72432,7 +72432,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Twój okres próbny się skończył. Wszystko, co skonfigurowałeś, wciąż tu jest."
+            "value": "Twój okres próbny się skończył. Wszystko, co skonfigurowano, wciąż tu jest."
           }
         },
         "pt-BR": {
@@ -73078,7 +73078,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "iOS miksuje cały dźwięk — twoją muzykę oraz dźwięki systemowe — w jeden strumień i koduje go ponownie do AAC dla Bluetooth, więc nawet plik AAC 256 kbps jest dekodowany i kodowany ponownie w drodze do twoich AirPods. Tak działa potok audio: konsensus inżynierski, ponieważ Apple nie dokumentuje przekazywania bezpośredniego. Jedna dodatkowa generacja wysokobitrate’owego AAC jest praktycznie niesłyszalna — strata jest realna na papierze, znikoma w praktyce."
+            "value": "iOS miksuje cały dźwięk — twoją muzykę oraz dźwięki systemowe — w jeden strumień i koduje go ponownie do AAC dla Bluetooth, więc nawet plik AAC 256 kbps jest dekodowany i kodowany ponownie w drodze do twoich AirPods. Tak działa potok audio: konsensus inżynierski, ponieważ Apple nie dokumentuje przekazywania bezpośredniego. Jedna dodatkowa generacja AAC o wysokiej przepływności jest praktycznie niesłyszalna — strata jest realna na papierze, znikoma w praktyce."
           }
         },
         "pt-BR": {

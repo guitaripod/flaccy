@@ -1095,7 +1095,7 @@
                   "other": {
                     "stringUnit": {
                       "state": "translated",
-                      "value": "%arg procent"
+                      "value": "%arg procenta"
                     }
                   }
                 }
@@ -1193,7 +1193,7 @@
                   "other": {
                     "stringUnit": {
                       "state": "translated",
-                      "value": "%arg procent"
+                      "value": "%arg procenta"
                     }
                   }
                 }
@@ -1906,7 +1906,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI potrzebuje Flaccy Lifetime"
+            "value": "Czyszczenie przez AI wymaga Flaccy Lifetime"
           }
         },
         "pt-BR": {
