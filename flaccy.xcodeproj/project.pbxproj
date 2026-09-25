@@ -42,6 +42,7 @@
 		E9970FA6D1EC49C0BCAF9677 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE89F29B26EC5F4E7FE691A5 /* Foundation.framework */; };
 		EBDAC9950D4E8507C67D4518 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1AB36944B652EA1E9E81BEA /* Cocoa.framework */; };
 		F6574F5D7E66B703B8AA03F4 /* DatabaseMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45E5ABAD09CC766800B1572E /* DatabaseMigrationTests.swift */; };
+		5C4611A4BB2E4F218A208F0D /* ReviewPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B5CA27979D48018AE84109 /* ReviewPromptTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,6 +109,7 @@
 		39C8B273C541315A2FF721D4 /* LibraryDebutCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryDebutCopy.swift; path = flaccy/LibraryDebutCopy.swift; sourceTree = "<group>"; };
 		40B667816B6D153896B95D1B /* WatchTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTheme.swift; path = Support/WatchTheme.swift; sourceTree = "<group>"; };
 		45E5ABAD09CC766800B1572E /* DatabaseMigrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DatabaseMigrationTests.swift; sourceTree = "<group>"; };
+		69B5CA27979D48018AE84109 /* ReviewPromptTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReviewPromptTests.swift; sourceTree = "<group>"; };
 		483CF523EE5ED3E295BFF6B1 /* Flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5174AF607781A6F23E0F345D /* flaccyMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		642833E187788F2015F66ECA /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -376,6 +378,7 @@
 				CE2699EDFE516D3B5BBD2DBA /* DatabaseManagerProofTests.swift */,
 				45E5ABAD09CC766800B1572E /* DatabaseMigrationTests.swift */,
 				DA60E7FC6BCDEF10CBFDC99F /* TrialReminderSchedulerTests.swift */,
+				69B5CA27979D48018AE84109 /* ReviewPromptTests.swift */,
 			);
 			name = flaccyTests;
 			path = flaccyTests;
@@ -665,6 +668,7 @@
 				C65C4DA6C5252BBEFBC32C33 /* DatabaseManagerProofTests.swift in Sources */,
 				F6574F5D7E66B703B8AA03F4 /* DatabaseMigrationTests.swift in Sources */,
 				35D1F1A5118F09ED1EC55619 /* TrialReminderSchedulerTests.swift in Sources */,
+				5C4611A4BB2E4F218A208F0D /* ReviewPromptTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

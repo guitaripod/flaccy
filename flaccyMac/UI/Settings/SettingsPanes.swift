@@ -207,7 +207,6 @@ final class GeneralSettingsPane: SettingsPane {
                 lifetime ? String(localized: "You own Flaccy. Thank you.") : String(localized: "Purchase restored"),
                 style: .success, in: view.window
             )
-            if lifetime { ReviewPrompt.recordLifetimePurchase() }
         case .nothingToRestore:
             MacToast.show(String(localized: "No previous purchase was found for this Apple Account."), style: .info, in: view.window)
         case .failed:

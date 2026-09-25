@@ -742,6 +742,7 @@ final class AudioPlayer: AudioPlaying {
             return
         }
         scrobbleAtNaturalEndIfEligible()
+        ReviewPrompt.recordSuccess()
 
         let previousIndex = currentIndex
         currentIndex = nextIndex
@@ -783,6 +784,7 @@ final class AudioPlayer: AudioPlaying {
     private func handleQueueExhausted() {
         guard playingItem != nil else { return }
         scrobbleAtNaturalEndIfEligible()
+        ReviewPrompt.recordSuccess()
         playingItem = nil
         preloadedItem = nil
         preloadedIndex = nil
@@ -992,7 +994,6 @@ final class AudioPlayer: AudioPlaying {
         hasScrobbled = true
         Task { @MainActor in
             NotificationCenter.default.post(name: TrialReminderScheduler.optInOpportunity, object: nil)
-            ReviewPrompt.recordCompletedPlay()
         }
         let startTime = trackStartTime ?? Date()
         let trackDuration = Int(track.duration)
