@@ -123,6 +123,11 @@ struct Inner {
     drag: gtk::GestureDrag,
     metrics: SliderMetrics,
     value: Cell<f64>,
+    /// The value the last paint put on screen. A playing track moves a
+    /// fraction of a pixel per frame, so every change is measured against what
+    /// is actually showing — never against the previous frame's value, which
+    /// would never add up to a repaint.
+    painted: Cell<f64>,
     held: Cell<Option<Hold>>,
     hover_x: Cell<Option<f64>>,
     revealed: Cell<bool>,
@@ -190,6 +195,7 @@ impl Slider {
             drag,
             metrics,
             value: Cell::new(0.0),
+            painted: Cell::new(0.0),
             held: Cell::new(None),
             hover_x: Cell::new(None),
             revealed: Cell::new(false),
@@ -230,8 +236,8 @@ impl Slider {
         } else {
             0.0
         };
-        let previous = inner.value.replace(fraction);
-        if (fraction - previous).abs() * inner.geometry().span >= REPAINT_THRESHOLD {
+        inner.value.set(fraction);
+        if repaint_due(inner.painted.get(), fraction, inner.geometry().span) {
             inner.area.queue_draw();
             if inner.revealed.get() {
                 inner.place_bubble();
@@ -502,6 +508,7 @@ impl Inner {
         let enabled = self.enabled.get();
         let held = self.held.get();
         let fraction = held.map(|hold| hold.fraction).unwrap_or(self.value.get());
+        self.painted.set(fraction);
         let head = geometry.x_at(fraction);
 
         cr.set_source_rgba(fr, fgreen, fb, metrics.track_alpha);
@@ -813,6 +820,10 @@ fn capsule(cr: &cairo::Context, from: f64, to: f64, middle: f64, thickness: f64)
     cr.close_path();
 }
 
+fn repaint_due(painted: f64, value: f64, span: f64) -> bool {
+    (value - painted).abs() * span >= REPAINT_THRESHOLD
+}
+
 fn ease(t: f64) -> f64 {
     let t = t.clamp(0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
@@ -858,6 +869,24 @@ mod tests {
         let geometry = Geometry::new(8.0, 11.0);
         assert!(geometry.span >= 1.0);
         assert!((0.0..=1.0).contains(&geometry.fraction_at(4.0)));
+    }
+
+    #[test]
+    fn a_slow_playhead_still_repaints() {
+        let span = 1700.0;
+        let per_frame = 1.0 / (240.0 * 165.0);
+        let mut painted = 0.0;
+        let mut value = 0.0;
+        let mut repaints = 0;
+        for _ in 0..165 {
+            value += per_frame;
+            if repaint_due(painted, value, span) {
+                painted = value;
+                repaints += 1;
+            }
+        }
+        assert!(repaints >= 20, "a four-minute track moved only {repaints} times in a second");
+        assert!((value - painted) * span < REPAINT_THRESHOLD);
     }
 
     #[test]
