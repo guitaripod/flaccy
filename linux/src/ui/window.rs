@@ -384,9 +384,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                     }
                     // Warm the lyrics cache while the song plays, so opening the
                     // panel on the current track never spins.
-                    AppEvent::TrackChanged(Some(track)) => {
-                        crate::lyrics::prefetch(&core.db_path, &core.music_root(), track)
-                    }
+                    AppEvent::TrackChanged(Some(track)) => core.prefetch_lyric_lines(track),
                     _ => {}
                 }
             });
@@ -430,15 +428,17 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
             }
         });
 
+    let bubble_host = gtk::Overlay::new();
     let toolbar_view = adw::ToolbarView::new();
     toolbar_view.add_top_bar(&header);
     toolbar_view.set_content(Some(&toast_overlay));
-    toolbar_view.add_bottom_bar(&ui::transport::build(&ui));
+    toolbar_view.add_bottom_bar(&ui::transport::build(&ui, &bubble_host));
+    bubble_host.set_child(Some(&toolbar_view));
 
     let shell_root = adw::NavigationPage::builder()
         .title("Flaccy")
         .tag("shell")
-        .child(&toolbar_view)
+        .child(&bubble_host)
         .build();
     shell.add(&shell_root);
     shell.set_pop_on_escape(true);
@@ -458,6 +458,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         app.set_accels_for_action("app.downloads", &["<Control>d"]);
     }
     attach_space_handler(&ui);
+    attach_playback_keys(&ui);
     attach_list_navigation(&ui);
     attach_search_reset(&ui, &search);
     attach_file_drop(&ui, &toast_overlay);
@@ -1211,21 +1212,25 @@ fn present_about(window: &adw::ApplicationWindow) {
         .license_type(gtk::License::Gpl30)
         .release_notes_version(env!("CARGO_PKG_VERSION"))
         .release_notes(
-            "<p>Volume in the full player, movable panels, and labels that \
-             take you places.</p>\
+            "<p>A seek bar that never stops the music, and shows where a click \
+             will land.</p>\
              <ul>\
-             <li>The full-window player gains a volume slider, in sync with \
-             the bottom bar, MPRIS, and scroll-wheel steps — and the speaker \
-             icon now tracks the level everywhere.</li>\
-             <li>Swap which sides Lyrics and Up Next sit on, right from the \
-             player header. Your choice is remembered.</li>\
-             <li>Artist and album names are now links: click them in the \
-             full player, the bottom bar, an album page, or Stats' top \
-             artists to jump straight there.</li>\
-             <li>Right-click menus do more: Go to Album and Go to Artist on \
-             songs, Go to Artist on albums, Play Next and Add to Queue on \
-             artists, and Show in Files to reveal the audio on disk.</li>\
-             <li>Queue rows now carry the full song right-click menu.</li>\
+             <li>Dragging the seek bar could freeze playback outright. Seeks \
+             are now paced so the audio stream keeps up, and a stream that \
+             ever stalls is reopened where it stopped.</li>\
+             <li>Hover the seek bar to see the time a click would jump to — \
+             and the lyric line sung there, when the song has synced \
+             lyrics.</li>\
+             <li>The seek and volume sliders were redrawn: a slim bar that \
+             thickens and grows a knob under the pointer, a readout while \
+             you drag, and the time remaining on the right, as on iPhone and \
+             Mac.</li>\
+             <li>Now Playing gains back and forward 15 seconds buttons; \
+             Shift+← and Shift+→ do the same anywhere, and Ctrl+↑ and Ctrl+↓ \
+             set the volume.</li>\
+             <li>Click the speaker to mute and unmute. A focused slider \
+             answers the arrow keys, Page Up and Down, Home, End and the \
+             scroll wheel.</li>\
              </ul>",
         )
         .build();
@@ -1315,6 +1320,10 @@ fn present_shortcuts(window: &adw::ApplicationWindow) {
                 ("Space", "Play / Pause"),
                 ("Ctrl+→", "Next track"),
                 ("Ctrl+←", "Previous track"),
+                ("Shift+→", "Forward 15 seconds"),
+                ("Shift+←", "Back 15 seconds"),
+                ("Ctrl+↑", "Volume up"),
+                ("Ctrl+↓", "Volume down"),
                 ("Ctrl+L", "Love current track"),
             ],
         ),
@@ -1429,13 +1438,7 @@ fn attach_list_navigation(ui: &Rc<Ui>) {
         {
             return glib::Propagation::Proceed;
         }
-        if key_ui.window.visible_dialog().is_some() {
-            return glib::Propagation::Proceed;
-        }
-        let editing = gtk::prelude::GtkWindowExt::focus(&key_ui.window)
-            .map(|widget| widget.is::<gtk::Text>() || widget.is::<gtk::Entry>())
-            .unwrap_or(false);
-        if editing {
+        if key_ui.window.visible_dialog().is_some() || is_editing(&key_ui) {
             return glib::Propagation::Proceed;
         }
         if modifiers.intersects(
@@ -1504,16 +1507,76 @@ fn attach_space_handler(ui: &Rc<Ui>) {
     let controller = gtk::EventControllerKey::new();
     let ui_ref = Rc::clone(ui);
     controller.connect_key_pressed(move |_, key, _, _| {
-        if key == gdk::Key::space {
-            let editing = gtk::prelude::GtkWindowExt::focus(&ui_ref.window)
-                .map(|widget| widget.is::<gtk::Text>() || widget.is::<gtk::Entry>())
-                .unwrap_or(false);
-            if !editing {
-                ui_ref.core.toggle_play_pause();
-                return glib::Propagation::Stop;
-            }
+        if key == gdk::Key::space && !is_editing(&ui_ref) {
+            ui_ref.core.toggle_play_pause();
+            return glib::Propagation::Stop;
         }
         glib::Propagation::Proceed
+    });
+    ui.window.add_controller(controller);
+}
+
+/// Whether the keyboard is typing into a text field, where every key belongs
+/// to the text rather than to playback or navigation.
+fn is_editing(ui: &Ui) -> bool {
+    gtk::prelude::GtkWindowExt::focus(&ui.window)
+        .map(|widget| widget.is::<gtk::Text>() || widget.is::<gtk::Entry>())
+        .unwrap_or(false)
+}
+
+/// Ctrl+↑/↓ move the volume by a sixteenth, as ⌘↑/↓ do on the Mac.
+const VOLUME_KEY_STEP: f64 = 1.0 / 16.0;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum PlaybackKey {
+    Skip(f64),
+    Volume(f64),
+}
+
+fn playback_key(key: gdk::Key, modifiers: gdk::ModifierType) -> Option<PlaybackKey> {
+    let held = modifiers
+        & (gdk::ModifierType::SHIFT_MASK
+            | gdk::ModifierType::CONTROL_MASK
+            | gdk::ModifierType::ALT_MASK
+            | gdk::ModifierType::SUPER_MASK);
+    let skip = ui::now_playing::SKIP_SECONDS;
+    match key {
+        gdk::Key::Left | gdk::Key::KP_Left if held == gdk::ModifierType::SHIFT_MASK => {
+            Some(PlaybackKey::Skip(-skip))
+        }
+        gdk::Key::Right | gdk::Key::KP_Right if held == gdk::ModifierType::SHIFT_MASK => {
+            Some(PlaybackKey::Skip(skip))
+        }
+        gdk::Key::Up | gdk::Key::KP_Up if held == gdk::ModifierType::CONTROL_MASK => {
+            Some(PlaybackKey::Volume(VOLUME_KEY_STEP))
+        }
+        gdk::Key::Down | gdk::Key::KP_Down if held == gdk::ModifierType::CONTROL_MASK => {
+            Some(PlaybackKey::Volume(-VOLUME_KEY_STEP))
+        }
+        _ => None,
+    }
+}
+
+/// Shift+←/→ skip 15 seconds and Ctrl+↑/↓ step the volume from anywhere in
+/// the window, Now Playing included. Caught in the capture phase so a focused
+/// list can't swallow them, and left alone while a text field is being edited
+/// or a dialog is open.
+fn attach_playback_keys(ui: &Rc<Ui>) {
+    let controller = gtk::EventControllerKey::new();
+    controller.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let key_ui = Rc::clone(ui);
+    controller.connect_key_pressed(move |_, key, _, modifiers| {
+        let Some(action) = playback_key(key, modifiers) else {
+            return glib::Propagation::Proceed;
+        };
+        if key_ui.window.visible_dialog().is_some() || is_editing(&key_ui) {
+            return glib::Propagation::Proceed;
+        }
+        match action {
+            PlaybackKey::Skip(seconds) => key_ui.core.skip_by(seconds),
+            PlaybackKey::Volume(delta) => key_ui.core.nudge_volume(delta),
+        }
+        glib::Propagation::Stop
     });
     ui.window.add_controller(controller);
 }
@@ -1646,6 +1709,19 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
                 let current = ui.core.config.borrow().ui_scale();
                 set_ui_scale(&ui, current + config::UI_SCALE_STEP);
             }
+        });
+    }
+    if std::env::var_os("FLACCY_DEMO_SCRUB_DRILL").is_some() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
+            if ui.core.player.current_track().is_none() {
+                return glib::ControlFlow::Continue;
+            }
+            let core = Rc::clone(&ui.core);
+            glib::timeout_add_local_once(std::time::Duration::from_millis(1500), move || {
+                crate::scrub_drill::run(&core);
+            });
+            glib::ControlFlow::Break
         });
     }
     if std::env::var_os("FLACCY_DEMO_ABOUT").is_some() {

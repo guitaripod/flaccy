@@ -1,10 +1,11 @@
 use crate::events::AppEvent;
-use crate::library::format_time;
 use crate::ui::controls::{
     apply_repeat, attach_label_nav, build_volume_control, set_love_appearance,
 };
 use crate::ui::lyrics_panel::{self, LyricsOptions};
 use crate::ui::queue_panel::{self, QueueOptions};
+use crate::ui::seek_bar;
+use crate::ui::slider::SliderMetrics;
 use crate::ui::video_view;
 use crate::ui::Ui;
 use adw::prelude::*;
@@ -12,7 +13,13 @@ use gtk::glib;
 use gtk::pango;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::time::Instant;
+
+/// The skip buttons either side of previous/next, matching the ±15 s the
+/// iPhone and Mac players offer, and the Shift+←/→ shortcuts.
+pub const SKIP_SECONDS: f64 = 15.0;
+/// The dock's side padding plus some slack: an optional control only comes
+/// back once it fits with room to spare, so the dock never flickers at the edge.
+const DOCK_CHROME: i32 = 64;
 
 /// Full-window "focus" player pushed onto the outer nav (ui.shell). A blurred,
 /// accent-washed cover fills the page; the hero artwork sits centered with
@@ -61,7 +68,7 @@ pub fn present(ui: &Rc<Ui>) {
         }
     });
 
-    let seek_row = SeekRow::new(ui);
+    let seek = seek_bar::build(ui, SliderMetrics::HERO);
     let transport = TransportControls::new(ui);
     let volume = build_volume_control(ui);
 
@@ -201,13 +208,20 @@ pub fn present(ui: &Rc<Ui>) {
         queue_toggle.set_active(show_queue);
         video_toggle.set_active(show_video && crate::musicvideo::available());
     }
+    let dock = DockFit {
+        transport: transport.container.clone(),
+        skips: transport.skips.to_vec(),
+        volume: volume.container.clone(),
+        skip_width: Cell::new(0),
+        volume_width: Cell::new(0),
+    };
     // Below this width, keep at most one side panel open so art stays readable.
     install_now_playing_width_adaptation(
         ui,
         &content,
         &lyrics_toggle,
         &queue_toggle,
-        &volume.container,
+        dock,
         &syncing,
     );
 
@@ -262,7 +276,7 @@ pub fn present(ui: &Rc<Ui>) {
 
     let np_transport = gtk::Box::new(gtk::Orientation::Vertical, 10);
     np_transport.add_css_class("np-transport");
-    np_transport.append(&seek_row.container);
+    np_transport.append(&seek.container);
     np_transport.append(&controls_row);
 
     let header = adw::HeaderBar::builder()
@@ -283,6 +297,8 @@ pub fn present(ui: &Rc<Ui>) {
     overlay.set_child(Some(&backdrop));
     overlay.add_overlay(&scrim);
     overlay.add_overlay(&toolbar);
+    overlay.add_overlay(&seek.bubble);
+    overlay.add_overlay(&volume.bubble);
 
     let update = build_updater(
         ui,
@@ -298,23 +314,9 @@ pub fn present(ui: &Rc<Ui>) {
     update();
 
     transport.sync_initial(ui);
-    if let Some(track) = ui.core.player.current_track() {
-        seek_row.seek.set_range(0.0, track.duration.max(1.0));
-        seek_row
-            .duration_label
-            .set_label(&format_time(track.duration));
-    }
     update_up_next_label(ui, &queue_label);
 
-    wire_events(
-        ui,
-        &overlay,
-        &seek_row,
-        &transport,
-        &current_rel,
-        &queue_label,
-        update,
-    );
+    wire_events(ui, &overlay, &transport, &current_rel, &queue_label, update);
 
     if crate::config::demo_mode() {
         if let Ok(which) = std::env::var("FLACCY_DEMO_NP_PANELS") {
@@ -432,28 +434,72 @@ fn build_art_lens() -> (
     (scroll.upcast(), art, title, artist, meta, quality)
 }
 
+/// Decides which optional dock controls fit a width, from what they actually
+/// measure — the interface zoom changes every one of them. A widget measures
+/// zero while hidden, so each is remembered from the last time it was shown.
+struct DockFit {
+    transport: gtk::Box,
+    skips: Vec<gtk::Button>,
+    volume: gtk::Box,
+    skip_width: Cell<i32>,
+    volume_width: Cell<i32>,
+}
+
+impl DockFit {
+    /// Shows the skip buttons, then the volume cluster, only while they fit.
+    /// Whatever is showing always fits the width it was decided for, so a
+    /// window being narrowed is never held open by a control that should
+    /// already have folded away.
+    fn apply(&self, width: i32) {
+        let horizontal = gtk::Orientation::Horizontal;
+        let skips_shown = self.skips.iter().all(|skip| skip.is_visible());
+        if skips_shown {
+            let spacing = self.transport.spacing();
+            let skips = self
+                .skips
+                .iter()
+                .map(|skip| skip.measure(horizontal, -1).0 + spacing)
+                .sum();
+            self.skip_width.set(skips);
+        }
+        if self.volume.is_visible() {
+            self.volume_width.set(self.volume.measure(horizontal, -1).0);
+        }
+        let shown = if skips_shown { self.skip_width.get() } else { 0 };
+        let core = self.transport.measure(horizontal, -1).0 - shown;
+        let with_skips = core + self.skip_width.get() + DOCK_CHROME;
+        let show_skips = width >= with_skips;
+        let show_volume = show_skips && width >= with_skips + self.volume_width.get();
+        for skip in &self.skips {
+            skip.set_visible(show_skips);
+        }
+        self.volume.set_visible(show_volume);
+    }
+}
+
 /// When Now Playing is squeezed, auto-collapse side panels so the hero art is
-/// never crushed between two full columns on a narrow window, and drop the
-/// volume cluster so the transport buttons keep their centerline.
+/// never crushed between two full columns on a narrow window, and fold away
+/// the volume cluster, then the skip buttons, so the transport buttons keep
+/// their centerline.
 fn install_now_playing_width_adaptation(
     ui: &Rc<Ui>,
     content: &gtk::Box,
     lyrics_toggle: &gtk::ToggleButton,
     queue_toggle: &gtk::ToggleButton,
-    volume: &gtk::Box,
+    dock: DockFit,
     syncing: &Rc<Cell<bool>>,
 ) {
     let last_width = Rc::new(Cell::new(0i32));
     let ui = Rc::clone(ui);
     let lyrics_toggle = lyrics_toggle.clone();
     let queue_toggle = queue_toggle.clone();
-    let volume = volume.clone();
+    let dock = Rc::new(dock);
     let syncing = Rc::clone(syncing);
     content.connect_realize(move |widget| {
         let ui = Rc::clone(&ui);
         let lyrics_toggle = lyrics_toggle.clone();
         let queue_toggle = queue_toggle.clone();
-        let volume = volume.clone();
+        let dock = Rc::clone(&dock);
         let last_width = Rc::clone(&last_width);
         let syncing = Rc::clone(&syncing);
         widget.add_tick_callback(move |widget, _| {
@@ -476,7 +522,7 @@ fn install_now_playing_width_adaptation(
                     syncing.set(false);
                 }
             }
-            volume.set_visible(width >= 560);
+            dock.apply(width);
             glib::ControlFlow::Continue
         });
     });
@@ -511,58 +557,15 @@ fn toggle_button(icon: &str, text: &str) -> (gtk::ToggleButton, gtk::Label) {
     (button, label)
 }
 
-/// The persistent seek scrubber + time labels shared across the view.
-struct SeekRow {
-    container: gtk::Box,
-    seek: gtk::Scale,
-    position_label: gtk::Label,
-    duration_label: gtk::Label,
-    last_user_seek: Rc<Cell<Option<Instant>>>,
-}
-
-impl SeekRow {
-    fn new(ui: &Rc<Ui>) -> Self {
-        let position_label = gtk::Label::new(Some("0:00"));
-        position_label.add_css_class("time-label");
-        let duration_label = gtk::Label::new(Some("0:00"));
-        duration_label.add_css_class("time-label");
-        let seek = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 1.0);
-        seek.set_hexpand(true);
-        seek.set_draw_value(false);
-        seek.add_css_class("np-seek");
-        let last_user_seek: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
-        {
-            let ui = Rc::clone(ui);
-            let last_user_seek = Rc::clone(&last_user_seek);
-            let position_label = position_label.clone();
-            seek.connect_change_value(move |_, _, value| {
-                last_user_seek.set(Some(Instant::now()));
-                position_label.set_label(&format_time(value));
-                ui.core.player.seek(value);
-                glib::Propagation::Proceed
-            });
-        }
-        let container = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-        container.append(&position_label);
-        container.append(&seek);
-        container.append(&duration_label);
-        Self {
-            container,
-            seek,
-            position_label,
-            duration_label,
-            last_user_seek,
-        }
-    }
-}
-
-/// The persistent transport row: shuffle, prev, play/pause, next, repeat, love.
+/// The persistent transport row: shuffle, back 15 s, prev, play/pause, next,
+/// forward 15 s, repeat, love.
 struct TransportControls {
     container: gtk::Box,
     play: gtk::Button,
     shuffle: gtk::ToggleButton,
     repeat: gtk::Button,
     love: gtk::Button,
+    skips: [gtk::Button; 2],
 }
 
 impl TransportControls {
@@ -580,6 +583,13 @@ impl TransportControls {
                 }
             });
         }
+        let back = skip_button(
+            ui,
+            "flaccy-skip-back-15-symbolic",
+            -SKIP_SECONDS,
+            "Back 15 seconds",
+            "Shift+←",
+        );
         let previous = icon_button("media-skip-backward-symbolic", "Previous");
         {
             let ui = Rc::clone(ui);
@@ -599,6 +609,13 @@ impl TransportControls {
             let ui = Rc::clone(ui);
             next.connect_clicked(move |_| ui.core.next());
         }
+        let forward = skip_button(
+            ui,
+            "flaccy-skip-forward-15-symbolic",
+            SKIP_SECONDS,
+            "Forward 15 seconds",
+            "Shift+→",
+        );
         let repeat = gtk::Button::from_icon_name("media-playlist-repeat-symbolic");
         repeat.add_css_class("flat");
         repeat.set_opacity(0.5);
@@ -617,9 +634,11 @@ impl TransportControls {
             .halign(gtk::Align::Center)
             .build();
         container.append(&shuffle);
+        container.append(&back);
         container.append(&previous);
         container.append(&play);
         container.append(&next);
+        container.append(&forward);
         container.append(&repeat);
         container.append(&love);
         Self {
@@ -628,6 +647,7 @@ impl TransportControls {
             shuffle,
             repeat,
             love,
+            skips: [back, forward],
         }
     }
 
@@ -647,6 +667,17 @@ fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {
     button.add_css_class("flat");
     button.add_css_class("np-skip");
     button.set_tooltip_text(Some(tooltip));
+    button
+}
+
+fn skip_button(ui: &Rc<Ui>, icon: &str, seconds: f64, name: &str, shortcut: &str) -> gtk::Button {
+    let button = gtk::Button::from_icon_name(icon);
+    button.add_css_class("flat");
+    button.add_css_class("np-skip-seconds");
+    button.set_tooltip_text(Some(&format!("{name} ({shortcut})")));
+    button.update_property(&[gtk::accessible::Property::Label(name)]);
+    let ui = Rc::clone(ui);
+    button.connect_clicked(move |_| ui.core.skip_by(seconds));
     button
 }
 
@@ -731,11 +762,9 @@ fn build_updater(
     })
 }
 
-#[allow(clippy::too_many_arguments)]
 fn wire_events(
     ui: &Rc<Ui>,
     host: &gtk::Overlay,
-    seek_row: &SeekRow,
     transport: &TransportControls,
     current_rel: &Rc<RefCell<Option<String>>>,
     queue_label: &gtk::Label,
@@ -747,21 +776,11 @@ fn wire_events(
     let shuffle = transport.shuffle.clone();
     let repeat = transport.repeat.clone();
     let love = transport.love.clone();
-    let seek = seek_row.seek.clone();
-    let position_label = seek_row.position_label.clone();
-    let duration_label = seek_row.duration_label.clone();
-    let last_user_seek = Rc::clone(&seek_row.last_user_seek);
     let current_rel = Rc::clone(current_rel);
     let queue_label = queue_label.clone();
     hub.subscribe_widget(host, move |_, event| match event {
-        AppEvent::TrackChanged(track) => {
+        AppEvent::TrackChanged(_) => {
             update();
-            if let Some(track) = track {
-                seek.set_range(0.0, track.duration.max(1.0));
-                seek.set_value(0.0);
-                position_label.set_label("0:00");
-                duration_label.set_label(&format_time(track.duration));
-            }
             update_up_next_label(&ui, &queue_label);
         }
         AppEvent::QueueChanged => update_up_next_label(&ui, &queue_label),
@@ -771,24 +790,6 @@ fn wire_events(
             } else {
                 "media-playback-start-symbolic"
             });
-        }
-        AppEvent::Tick { position, duration } => {
-            let recent = last_user_seek
-                .get()
-                .map(|t| t.elapsed().as_millis() < 600)
-                .unwrap_or(false);
-            if !recent {
-                if *duration > 0.0 {
-                    seek.set_range(0.0, *duration);
-                    duration_label.set_label(&format_time(*duration));
-                }
-                seek.set_value(*position);
-                position_label.set_label(&format_time(*position));
-            }
-        }
-        AppEvent::Seeked(position) => {
-            seek.set_value(*position);
-            position_label.set_label(&format_time(*position));
         }
         AppEvent::ShuffleChanged(enabled) => shuffle.set_active(*enabled),
         AppEvent::RepeatChanged(mode) => apply_repeat(&repeat, *mode),

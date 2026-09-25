@@ -24,6 +24,7 @@ mod render;
 mod samples;
 mod scanner;
 mod scrobbler;
+mod scrub_drill;
 mod songlink;
 mod station;
 mod suggested;

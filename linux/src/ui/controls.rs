@@ -1,5 +1,6 @@
 use crate::events::AppEvent;
 use crate::player::RepeatMode;
+use crate::ui::slider::{Slider, SliderMetrics, Step};
 use crate::ui::Ui;
 use gtk::glib;
 use gtk::prelude::*;
@@ -92,67 +93,101 @@ pub fn volume_icon_name(volume: f64) -> &'static str {
     }
 }
 
+/// How far an arrow key or wheel notch moves the volume; Page Up/Down move
+/// four times as far.
+const VOLUME_STEP: f64 = 0.05;
+
 pub struct VolumeControl {
     pub container: gtk::Box,
+    /// The slider's percentage readout, for the host to float in an overlay.
+    pub bubble: gtk::Label,
 }
 
-/// Icon + slider volume cluster shared by the bottom transport and the
-/// full-window player: drags and scroll steps drive the player volume, the
-/// icon tracks the level, and every instance stays in sync through
-/// VolumeChanged (external writes like MPRIS included).
+/// Mute button + capsule slider shared by the bottom transport and the
+/// full-window player: the speaker mutes and restores, drags and steps set
+/// the level live, and every instance stays in sync through VolumeChanged
+/// (external writes like MPRIS and the keyboard shortcuts included).
 pub fn build_volume_control(ui: &Rc<Ui>) -> VolumeControl {
     let initial = ui.core.config.borrow().volume;
-    let icon = gtk::Image::from_icon_name(volume_icon_name(initial));
-    icon.add_css_class("dim");
-    icon.add_css_class("transport-volume-icon");
-    let scale = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 0.02);
-    scale.set_tooltip_text(Some("Volume (scroll to adjust)"));
-    scale.set_width_request(88);
-    scale.set_draw_value(false);
-    scale.add_css_class("transport-volume");
-    scale.set_value(initial);
-
-    let syncing = Rc::new(Cell::new(false));
+    let mute = gtk::Button::from_icon_name(volume_icon_name(initial));
+    mute.add_css_class("flat");
+    mute.add_css_class("volume-mute");
+    mute.set_valign(gtk::Align::Center);
+    mute.set_tooltip_text(Some(mute_tooltip(initial)));
     {
         let ui = Rc::clone(ui);
-        let syncing = Rc::clone(&syncing);
-        let icon = icon.clone();
-        scale.connect_value_changed(move |scale| {
-            icon.set_icon_name(Some(volume_icon_name(scale.value())));
-            if !syncing.get() {
-                ui.core.set_volume(scale.value());
-            }
-        });
-    }
-    {
-        let scroll = gtk::EventControllerScroll::new(
-            gtk::EventControllerScrollFlags::VERTICAL | gtk::EventControllerScrollFlags::DISCRETE,
-        );
-        let scale_ref = scale.clone();
-        scroll.connect_scroll(move |_, _, dy| {
-            let next = (scale_ref.value() - dy * 0.05).clamp(0.0, 1.0);
-            scale_ref.set_value(next);
-            glib::Propagation::Stop
-        });
-        scale.add_controller(scroll);
+        mute.connect_clicked(move |_| ui.core.toggle_mute());
     }
 
-    let container = gtk::Box::new(gtk::Orientation::Horizontal, 4);
-    container.append(&icon);
-    container.append(&scale);
+    let slider = Slider::new(SliderMetrics::VOLUME, "Volume");
+    slider.area().set_width_request(96);
+    slider.set_value(initial);
+    slider.set_caption(|fraction| format!("<b>{}</b>", volume_percent(fraction)));
+    describe_volume(&slider, initial);
+    let apply: Rc<dyn Fn(f64)> = {
+        let ui = Rc::clone(ui);
+        Rc::new(move |fraction| ui.core.set_volume(whole_percent(fraction)))
+    };
+    slider.connect_hold({
+        let apply = Rc::clone(&apply);
+        move |fraction| apply(fraction)
+    });
+    slider.connect_move({
+        let apply = Rc::clone(&apply);
+        move |fraction| apply(fraction)
+    });
+    slider.connect_release(move |fraction| apply(fraction));
     {
-        let scale = scale.clone();
-        ui.core.hub.subscribe_widget(&container, move |_, event| {
-            if let AppEvent::VolumeChanged(value) = event {
-                if (scale.value() - value).abs() > 0.001 {
-                    syncing.set(true);
-                    scale.set_value(*value);
-                    syncing.set(false);
-                }
-            }
+        let ui = Rc::clone(ui);
+        slider.connect_step(move |step| {
+            let current = ui.core.config.borrow().volume;
+            let target = match step {
+                Step::Fine(steps) => current + steps as f64 * VOLUME_STEP,
+                Step::Coarse(steps) => current + steps as f64 * VOLUME_STEP * 4.0,
+                Step::To(fraction) => fraction,
+            };
+            ui.core.set_volume(target);
         });
     }
-    VolumeControl { container }
+
+    let container = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    container.add_css_class("volume-control");
+    container.append(&mute);
+    container.append(slider.area());
+    let bubble = slider.bubble().clone();
+    ui.core.hub.subscribe_widget(&container, move |_, event| {
+        if let AppEvent::VolumeChanged(value) = event {
+            if !slider.is_held() {
+                slider.set_value(*value);
+            }
+            mute.set_icon_name(volume_icon_name(*value));
+            mute.set_tooltip_text(Some(mute_tooltip(*value)));
+            describe_volume(&slider, *value);
+        }
+    });
+    VolumeControl { container, bubble }
+}
+
+/// A pointer lands between pixels; the level it sets is kept to the whole
+/// percent the bubble showed.
+fn whole_percent(fraction: f64) -> f64 {
+    (fraction.clamp(0.0, 1.0) * 100.0).round() / 100.0
+}
+
+fn volume_percent(fraction: f64) -> String {
+    format!("{}%", (fraction.clamp(0.0, 1.0) * 100.0).round() as i32)
+}
+
+fn mute_tooltip(volume: f64) -> &'static str {
+    if volume <= 0.001 {
+        "Unmute"
+    } else {
+        "Mute"
+    }
+}
+
+fn describe_volume(slider: &Slider, volume: f64) {
+    slider.set_accessible_value(1.0, volume, &volume_percent(volume));
 }
 
 /// The leading cell of a track row: the track number, which gives way to a

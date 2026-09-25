@@ -47,24 +47,19 @@ fn user_agent() -> String {
     )
 }
 
-/// Warms the cache for a track without rendering anything, so opening the
-/// lyrics panel on the song already playing is instant.
-pub fn prefetch(db_path: &Path, music_root: &Path, track: &Track) {
-    let db_path = db_path.to_path_buf();
-    let music_root = music_root.to_path_buf();
-    let track = track.clone();
-    std::thread::Builder::new()
-        .name("flaccy-lyrics-prefetch".into())
-        .spawn(move || {
-            let cached = Db::open(&db_path)
-                .ok()
-                .and_then(|db| db.fetch_lyrics(&track.title, &track.artist));
-            if cached.is_some_and(|row| !is_stale_miss(&row)) {
-                return;
-            }
-            let _ = fetch_blocking(&db_path, &music_root, &track);
-        })
-        .ok();
+/// How long after a line starts it still names that moment of the song. LRC
+/// lines carry no end time, so past this an instrumental break has taken over.
+const LINE_HOLD: f64 = 10.0;
+
+/// The line being sung `seconds` into a track: the last one to have started,
+/// unless it is blank or started so long ago that the music has moved on.
+pub fn line_at(lines: &[(f64, String)], seconds: f64) -> Option<&str> {
+    let index = lines
+        .partition_point(|(start, _)| *start <= seconds)
+        .checked_sub(1)?;
+    let (start, text) = &lines[index];
+    let text = text.trim();
+    (!text.is_empty() && seconds - start <= LINE_HOLD).then_some(text)
 }
 
 fn is_stale_miss(row: &crate::db::LyricsRow) -> bool {
@@ -471,6 +466,19 @@ fn url_encode(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn names_the_line_sung_at_a_moment() {
+        let lines = parse_lrc("[00:05.00]First\n[00:09.00]\n[00:12.00]Second\n[00:40.00]Last");
+        assert_eq!(line_at(&lines, 4.9), None);
+        assert_eq!(line_at(&lines, 5.0), Some("First"));
+        assert_eq!(line_at(&lines, 8.9), Some("First"));
+        assert_eq!(line_at(&lines, 10.0), None);
+        assert_eq!(line_at(&lines, 21.5), Some("Second"));
+        assert_eq!(line_at(&lines, 23.0), None);
+        assert_eq!(line_at(&lines, 45.0), Some("Last"));
+        assert_eq!(line_at(&[], 3.0), None);
+    }
 
     #[test]
     fn parses_every_timestamp_shape() {

@@ -65,14 +65,20 @@ pub fn start(core: &Rc<AppCore>) {
         {
             let core = Rc::clone(&core);
             player.connect_seek(move |_, offset| {
-                let position = core.player.position().unwrap_or(0.0);
-                core.player.seek(position + offset.as_secs() as f64);
+                core.skip_by(offset.as_micros() as f64 / 1_000_000.0);
             });
         }
         {
             let core = Rc::clone(&core);
-            player.connect_set_position(move |_, _, position| {
-                core.player.seek(position.as_millis() as f64 / 1000.0);
+            player.connect_set_position(move |_, track_id, position| {
+                let Some(track) = core.player.current_track() else {
+                    return;
+                };
+                let seconds = position.as_micros() as f64 / 1_000_000.0;
+                if track_id.as_str() == track_path(&track) && accepts_position(seconds, track.duration)
+                {
+                    core.player.seek(seconds);
+                }
             });
         }
         {
@@ -184,7 +190,7 @@ fn metadata_for(core: &Rc<AppCore>, track: Option<&Track>) -> Metadata {
         .artist([track.artist.clone()])
         .album(track.album.clone())
         .length(Time::from_millis((track.duration * 1000.0) as i64));
-    if let Ok(path) = ObjectPath::try_from(format!("/cc/midgarcorp/Flaccy/Track/{}", track.id)) {
+    if let Ok(path) = ObjectPath::try_from(track_path(track)) {
         builder = builder.trackid(path);
     }
     if let Some(art) = export_artwork(core, track) {
@@ -193,6 +199,18 @@ fn metadata_for(core: &Rc<AppCore>, track: Option<&Track>) -> Metadata {
         }
     }
     builder.build()
+}
+
+fn track_path(track: &Track) -> String {
+    format!("/cc/midgarcorp/Flaccy/Track/{}", track.id)
+}
+
+/// MPRIS says a `SetPosition` past the end of the track, or before its start,
+/// is to be ignored. A request for a track that is no longer playing is dropped
+/// by the caller: a desktop widget dragging its slider across a track change
+/// would otherwise seek the next song.
+fn accepts_position(seconds: f64, duration: f64) -> bool {
+    seconds >= 0.0 && (duration <= 0.0 || seconds <= duration)
 }
 
 fn export_artwork(core: &Rc<AppCore>, track: &Track) -> Option<PathBuf> {
@@ -206,4 +224,18 @@ fn export_artwork(core: &Rc<AppCore>, track: &Track) -> Option<PathBuf> {
     let data = core.db.fetch_album_artwork(&track.album, &track.artist)?;
     std::fs::write(&path, &data).ok()?;
     Some(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::accepts_position;
+
+    #[test]
+    fn set_position_stays_inside_the_track() {
+        assert!(accepts_position(0.0, 200.0));
+        assert!(accepts_position(200.0, 200.0));
+        assert!(!accepts_position(200.5, 200.0));
+        assert!(!accepts_position(-1.0, 200.0));
+        assert!(accepts_position(999.0, 0.0));
+    }
 }

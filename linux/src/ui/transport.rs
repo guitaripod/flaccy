@@ -3,6 +3,8 @@ use crate::library::format_time;
 use crate::ui::controls::{
     apply_repeat, attach_label_nav, build_volume_control, set_adaptive_accent, set_love_appearance,
 };
+use crate::ui::seek_bar;
+use crate::ui::slider::SliderMetrics;
 use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::gio;
@@ -10,13 +12,14 @@ use gtk::glib;
 use gtk::pango;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::time::Instant;
 
 /// Bottom transport: a `gtk::CenterBox` strip (meta | controls | extras) with a
-/// full-width seek row underneath. The center child sits on the window's true
+/// full-width seek bar underneath. The center child sits on the window's true
 /// centerline while each wing uses its own flank, so the play cluster stays put
-/// as width tiers hide extras from the edges.
-pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
+/// as width tiers hide extras from the edges. The seek and volume readouts go
+/// into `bubble_host`, an overlay over the whole page, so they can float above
+/// the strip's top edge instead of being clipped by it.
+pub fn build(ui: &Rc<Ui>, bubble_host: &gtk::Overlay) -> gtk::Widget {
     let root = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(4)
@@ -185,36 +188,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     buttons.append(&next);
     buttons.append(&repeat);
 
-    let position_label = gtk::Label::new(Some("0:00"));
-    position_label.add_css_class("time-label");
-    let duration_label = gtk::Label::new(Some("0:00"));
-    duration_label.add_css_class("time-label");
-
-    let seek = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 1.0);
-    seek.set_hexpand(true);
-    seek.set_draw_value(false);
-    let last_user_seek: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
-    {
-        let ui = Rc::clone(ui);
-        let last_user_seek = Rc::clone(&last_user_seek);
-        let position_label = position_label.clone();
-        seek.connect_change_value(move |_, _, value| {
-            last_user_seek.set(Some(Instant::now()));
-            position_label.set_label(&format_time(value));
-            ui.core.player.seek(value);
-            glib::Propagation::Proceed
-        });
-    }
-
-    let seek_row = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .spacing(8)
-        .hexpand(true)
-        .build();
-    seek_row.add_css_class("transport-seek");
-    seek_row.append(&position_label);
-    seek_row.append(&seek);
-    seek_row.append(&duration_label);
+    let seek = seek_bar::build(ui, SliderMetrics::TRANSPORT);
+    seek.container.set_hexpand(true);
+    seek.container.add_css_class("transport-seek");
 
     let quality = gtk::Label::new(None);
     quality.add_css_class("quality-badge");
@@ -299,7 +275,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     top.set_end_widget(Some(&right));
 
     root.append(&top);
-    root.append(&seek_row);
+    root.append(&seek.container);
 
     install_width_adaptation(
         &root,
@@ -328,9 +304,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let quality = quality.clone();
         let love = love.clone();
         let play = play.clone();
-        let seek = seek.clone();
-        let position_label = position_label.clone();
-        let duration_label = duration_label.clone();
         let shuffle = shuffle.clone();
         let repeat = repeat.clone();
         let sleep_label = sleep_label.clone();
@@ -338,7 +311,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let queue_toggle = queue_toggle.clone();
         let lyrics_toggle = lyrics_toggle.clone();
         let current_rel = Rc::clone(&current_rel);
-        let last_user_seek = Rc::clone(&last_user_seek);
         ui.core
             .hub
             .subscribe_widget(&root, move |_, event| match event {
@@ -362,10 +334,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                         love.set_sensitive(true);
                         set_love_appearance(&love, track.loved);
                         *current_rel.borrow_mut() = Some(track.rel_path.clone());
-                        seek.set_range(0.0, track.duration.max(1.0));
-                        seek.set_value(0.0);
-                        position_label.set_label("0:00");
-                        duration_label.set_label(&format_time(track.duration));
                         art_overlay.set_visible(true);
                         artwork.set_paintable(Some(
                             &ui_ref
@@ -421,24 +389,6 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                         equalizer.set_visible(false);
                     }
                 }
-                AppEvent::Tick { position, duration } => {
-                    let user_recent = last_user_seek
-                        .get()
-                        .map(|t| t.elapsed().as_millis() < 600)
-                        .unwrap_or(false);
-                    if !user_recent {
-                        if *duration > 0.0 {
-                            seek.set_range(0.0, *duration);
-                            duration_label.set_label(&format_time(*duration));
-                        }
-                        seek.set_value(*position);
-                        position_label.set_label(&format_time(*position));
-                    }
-                }
-                AppEvent::Seeked(position) => {
-                    seek.set_value(*position);
-                    position_label.set_label(&format_time(*position));
-                }
                 AppEvent::ShuffleChanged(enabled) => {
                     shuffle.set_active(*enabled);
                 }
@@ -489,6 +439,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             });
     }
 
+    bubble_host.add_overlay(&seek.bubble);
+    bubble_host.add_overlay(&volume.bubble);
     root.upcast()
 }
 

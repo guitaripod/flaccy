@@ -63,7 +63,21 @@ pub struct AppCore {
     reload_in_flight: Cell<bool>,
     reload_pending: Cell<bool>,
     job: RefCell<JobProgress>,
+    /// The playing track's synced lyrics, so the seek bar can name the line
+    /// under the pointer. Cleared the moment the track changes.
+    lyric_lines: RefCell<Vec<(f64, String)>>,
+    /// The level unmuting returns to.
+    restore_volume: Cell<f64>,
+    config_save_queued: Cell<bool>,
 }
+
+/// Below this the volume counts as muted.
+const MUTE_FLOOR: f64 = 0.005;
+/// Where unmuting lands when there is no earlier level to return to.
+const UNMUTE_DEFAULT: f64 = 0.6;
+/// How long a settled change waits before it is written to the config file, so
+/// a drag across the volume slider saves once rather than on every frame.
+const CONFIG_SAVE_DELAY: Duration = Duration::from_millis(400);
 
 impl AppCore {
     pub fn new(smoke: bool) -> Rc<Self> {
@@ -85,6 +99,11 @@ impl AppCore {
             );
         }
         let artwork = ui::artwork::ArtworkCache::new(db_path.clone());
+        let restore_volume = if config.volume > MUTE_FLOOR {
+            config.volume
+        } else {
+            UNMUTE_DEFAULT
+        };
 
         let core = Rc::new(Self {
             db,
@@ -117,6 +136,9 @@ impl AppCore {
             reload_in_flight: Cell::new(false),
             reload_pending: Cell::new(false),
             job: RefCell::new(JobProgress::idle()),
+            lyric_lines: RefCell::new(Vec::new()),
+            restore_volume: Cell::new(restore_volume),
+            config_save_queued: Cell::new(false),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
@@ -408,6 +430,7 @@ impl AppCore {
         let core = Rc::clone(self);
         glib::timeout_add_local(Duration::from_millis(250), move || {
             if core.player.is_playing() {
+                core.player.check_progress();
                 let position = core.player.position().unwrap_or(0.0);
                 let duration = core.player.duration().unwrap_or(0.0);
                 core.hub.emit(&AppEvent::Tick { position, duration });
@@ -551,11 +574,98 @@ impl AppCore {
         self.player.toggle_play_pause();
     }
 
-    pub fn set_volume(&self, volume: f64) {
+    /// Applies a volume at once and persists it a moment later, so a drag
+    /// across the slider writes the config file once instead of per frame.
+    pub fn set_volume(self: &Rc<Self>, volume: f64) {
+        let volume = volume.clamp(0.0, 1.0);
         self.player.set_volume(volume);
         self.config.borrow_mut().volume = volume;
-        self.save_config();
+        self.save_config_soon();
         self.hub.emit(&AppEvent::VolumeChanged(volume));
+    }
+
+    pub fn nudge_volume(self: &Rc<Self>, delta: f64) {
+        let current = self.config.borrow().volume;
+        self.set_volume(current + delta);
+    }
+
+    /// Mutes, or brings the level back to where muting found it.
+    pub fn toggle_mute(self: &Rc<Self>) {
+        let current = self.config.borrow().volume;
+        if current > MUTE_FLOOR {
+            self.restore_volume.set(current);
+            self.set_volume(0.0);
+        } else {
+            self.set_volume(self.restore_volume.get());
+        }
+    }
+
+    /// Seeks relative to where playback is — or is about to be, when a seek is
+    /// still landing — so repeated presses add up instead of racing.
+    pub fn skip_by(&self, seconds: f64) {
+        if let Some(position) = self.player.position() {
+            self.player.seek(position + seconds);
+        }
+    }
+
+    fn save_config_soon(self: &Rc<Self>) {
+        if self.config_save_queued.replace(true) {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(CONFIG_SAVE_DELAY, move || {
+            if let Some(core) = weak.upgrade() {
+                core.config_save_queued.set(false);
+                core.save_config();
+            }
+        });
+    }
+
+    /// Resolves the new track's synced lyrics off the main thread — database
+    /// cache, then the file's own lyrics, then lrclib — which also warms the
+    /// cache the lyrics panel reads, so opening it on this song is instant.
+    pub fn prefetch_lyric_lines(self: &Rc<Self>, track: &Track) {
+        self.lyric_lines.borrow_mut().clear();
+        let (tx, rx) = async_channel::bounded::<Vec<(f64, String)>>(1);
+        let db_path = self.db_path.clone();
+        let music_root = self.music_root();
+        let for_thread = track.clone();
+        let spawned = std::thread::Builder::new()
+            .name("flaccy-lyrics-prefetch".into())
+            .spawn(move || {
+                let lines = match crate::lyrics::fetch_blocking(&db_path, &music_root, &for_thread)
+                {
+                    crate::lyrics::LyricsResult::Found(lyrics) => lyrics.synced,
+                    _ => Vec::new(),
+                };
+                let _ = tx.send_blocking(lines);
+            });
+        if spawned.is_err() {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        let rel_path = track.rel_path.clone();
+        glib::spawn_future_local(async move {
+            let Ok(lines) = rx.recv().await else {
+                return;
+            };
+            let Some(core) = weak.upgrade() else {
+                return;
+            };
+            let still_playing = core
+                .player
+                .current_track()
+                .is_some_and(|track| track.rel_path == rel_path);
+            if still_playing {
+                *core.lyric_lines.borrow_mut() = lines;
+            }
+        });
+    }
+
+    /// The lyric line sung `seconds` into the playing track, when it has
+    /// synced lyrics.
+    pub fn lyric_line_at(&self, seconds: f64) -> Option<String> {
+        crate::lyrics::line_at(&self.lyric_lines.borrow(), seconds).map(str::to_string)
     }
 
     /// Mirrors the transport modes the player owns back into the config file so

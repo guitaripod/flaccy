@@ -261,30 +261,45 @@
   50%      { box-shadow: 0 5px 24px alpha(@accent_bg_color, 0.78); }
 }
 
-/* Accent-filled seek + volume sliders with a soft glow on the filled portion. */
-.transport scale > trough {
-  min-height: 5px;
+/* Seek and volume sliders are drawn in code (ui/slider.rs); the stylesheet
+   only owns their focus ring and the readout that floats above them. */
+.slider {
   border-radius: 9999px;
-  background-color: alpha(@window_fg_color, 0.14);
 }
 
-.transport scale > trough > highlight {
-  border-radius: 9999px;
-  background-image: linear-gradient(90deg, alpha(@accent_bg_color, 0.85), @accent_bg_color);
-  box-shadow: 0 0 10px alpha(@accent_bg_color, 0.5);
+.slider:focus-visible {
+  outline: 2px solid alpha(@accent_color, 0.6);
+  outline-offset: -1px;
 }
 
-.transport scale > trough > slider {
-  min-width: 13px;
-  min-height: 13px;
-  border-radius: 9999px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 4px alpha(#000, 0.4), 0 0 0 1px alpha(@accent_bg_color, 0.3);
-  transition: transform 120ms ease;
+.slider-bubble {
+  background-color: alpha(@window_fg_color, 0.92);
+  color: @window_bg_color;
+  border-radius: 9px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 18px alpha(#000, 0.28), 0 1px 3px alpha(#000, 0.22);
 }
 
-.transport scale:hover > trough > slider {
-  transform: scale(1.12);
+/* While the knob is held the readout takes the accent, so a drag reads as
+   moving the playhead rather than pointing at a spot. */
+.slider-bubble.held {
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
+  box-shadow: 0 6px 18px alpha(@accent_bg_color, 0.45), 0 1px 3px alpha(#000, 0.22);
+}
+
+.volume-mute {
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  opacity: 0.72;
+  transition: opacity 150ms ease;
+}
+
+.volume-mute:hover {
+  opacity: 1;
 }
 
 /* Now-playing equalizer overlaid on the mini artwork. */
@@ -677,24 +692,13 @@ button.pill.suggested-action:active {
   -gtk-icon-size: 22px;
 }
 
-.np-seek > trough {
-  min-height: 6px;
-  border-radius: 9999px;
-  background-color: alpha(@window_fg_color, 0.18);
+.np-skip-seconds {
+  min-width: 40px;
+  min-height: 40px;
 }
 
-.np-seek > trough > highlight {
-  border-radius: 9999px;
-  background-image: linear-gradient(90deg, alpha(@accent_bg_color, 0.85), @accent_bg_color);
-  box-shadow: 0 0 12px alpha(@accent_bg_color, 0.55);
-}
-
-.np-seek > trough > slider {
-  min-width: 15px;
-  min-height: 15px;
-  border-radius: 9999px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 5px alpha(#000, 0.45), 0 0 0 1px alpha(@accent_bg_color, 0.35);
+.np-skip-seconds image {
+  -gtk-icon-size: 20px;
 }
 
 /* ---- now playing: in-view lenses (Player / Lyrics / Up Next) ------------ */
