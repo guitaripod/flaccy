@@ -742,7 +742,7 @@ final class AudioPlayer: AudioPlaying {
             return
         }
         scrobbleAtNaturalEndIfEligible()
-        ReviewPrompt.recordSuccess()
+        recordReviewSuccessUnlessSample()
 
         let previousIndex = currentIndex
         currentIndex = nextIndex
@@ -784,7 +784,7 @@ final class AudioPlayer: AudioPlaying {
     private func handleQueueExhausted() {
         guard playingItem != nil else { return }
         scrobbleAtNaturalEndIfEligible()
-        ReviewPrompt.recordSuccess()
+        recordReviewSuccessUnlessSample()
         playingItem = nil
         preloadedItem = nil
         preloadedIndex = nil
@@ -984,6 +984,14 @@ final class AudioPlayer: AudioPlaying {
         let eligibleForLastFM = track.duration > 0
             && meetsScrobbleCriteria(elapsed: track.duration, trackDuration: track.duration)
         performScrobble(submitToLastFM: eligibleForLastFM)
+    }
+
+    /// The sample album is free, bundled-in trial content, not the person's own
+    /// library, so a natural-end play of it is not a success worth asking about
+    /// (mirrors `PurchaseManager.noteTrackStarted`'s trial-start exclusion).
+    private func recordReviewSuccessUnlessSample() {
+        guard let track = currentTrack, !SampleMusicService.isSample(track.fileURL) else { return }
+        ReviewPrompt.recordSuccess()
     }
 
     /// Write-ahead persists the scrobble, then flushes through the pending
