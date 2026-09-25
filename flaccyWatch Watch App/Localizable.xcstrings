@@ -2418,7 +2418,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Szukanie wykonawców w twojej bibliotece…"
+            "value": "Znajdź brakujące okładki"
           }
         },
         "pt-BR": {
@@ -2482,7 +2482,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Szukanie okładki"
+            "value": "Szukanie wykonawców"
           }
         },
         "pt-BR": {
@@ -2546,7 +2546,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Szukanie twoich okładek"
+            "value": "Szukanie okładki"
           }
         },
         "pt-BR": {
@@ -2610,7 +2610,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kończenie"
+            "value": "Szukanie twoich okładek"
           }
         },
         "pt-BR": {
@@ -2674,7 +2674,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy indeksuje folder w miejscu — nic nie jest kopiowane ani przenoszone. Pliki dodane do folderu pojawiają się automatycznie."
+            "value": "Flaccy zrezygnował z %@ albumów — żadne źródło ich nie ma."
           }
         },
         "pt-BR": {
@@ -2738,7 +2738,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dla prawdziwego bezstratnego dźwięku na iPhonie wybierz kabel: adapter słuchawkowy Apple dostarcza do 24-bitowego/48 kHz, a zewnętrzny DAC USB-C odblokowuje bezstratny dźwięk hi-res do 24-bitowego/192 kHz. FLAC błyszczy też na domowym zestawie lub komputerze z podłączonym DAC-iem."
+            "value": "AI Flaccy zamienia poplątane nazwy plików w prawdziwe tytuły, wykonawców i albumy."
           }
         },
         "pt-BR": {

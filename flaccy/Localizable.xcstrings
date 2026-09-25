@@ -28202,7 +28202,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wypełnianie luk w tagach"
+            "value": "Plik"
           }
         },
         "pt-BR": {
@@ -28266,7 +28266,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filtr: %@"
+            "value": "Pliki"
           }
         },
         "pt-BR": {
@@ -28330,7 +28330,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Znajdź"
+            "value": "Wypełnianie luk w tagach"
           }
         },
         "pt-BR": {
@@ -28394,7 +28394,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Znajdź brakujące okładki"
+            "value": "Filtr: %@"
           }
         },
         "pt-BR": {
@@ -28458,7 +28458,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Szukanie wykonawców"
+            "value": "Znajdź"
           }
         },
         "pt-BR": {
@@ -28522,7 +28522,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Szukanie wykonawców w twojej bibliotece…"
+            "value": "Znajdź brakujące okładki"
           }
         },
         "pt-BR": {
@@ -28586,7 +28586,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Szukanie okładki"
+            "value": "Szukanie wykonawców"
           }
         },
         "pt-BR": {
@@ -28650,7 +28650,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Szukanie linków…"
+            "value": "Szukanie wykonawców w twojej bibliotece…"
           }
         },
         "pt-BR": {
@@ -28714,7 +28714,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Szukanie twoich okładek"
+            "value": "Szukanie okładki"
           }
         },
         "pt-BR": {
@@ -28778,7 +28778,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Znajduje zduplikowane utwory i scala edycje albumów. Zobaczysz dokładnie, co się zmieni, zanim cokolwiek się stanie; usunięte duplikaty trafiają do Kosza."
+            "value": "Szukanie linków…"
           }
         },
         "pt-BR": {
@@ -28842,7 +28842,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kończenie"
+            "value": "Szukanie twoich okładek"
           }
         },
         "pt-BR": {
@@ -28906,7 +28906,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pięć faktów o Bluetooth, AAC i o tym, co twoje pliki naprawdę dostarczają twoim uszom."
+            "value": "Znajduje zduplikowane utwory i scala edycje albumów. Zobaczysz dokładnie, co się zmieni, zanim cokolwiek się stanie; usunięte duplikaty trafiają do Kosza."
           }
         },
         "pt-BR": {
@@ -28970,7 +28970,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pomoc Flaccy"
+            "value": "Kończenie"
           }
         },
         "pt-BR": {
@@ -29034,7 +29034,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Lifetime"
+            "value": "Pięć faktów o Bluetooth, AAC i o tym, co twoje pliki naprawdę dostarczają twoim uszom."
           }
         },
         "pt-BR": {
@@ -29098,7 +29098,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Pro"
+            "value": "Pomoc Flaccy"
           }
         },
         "pt-BR": {
@@ -29162,7 +29162,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Pro jest aktywny. Dziękujemy."
+            "value": "Flaccy Lifetime"
           }
         },
         "pt-BR": {
@@ -29226,7 +29226,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy Pro — rocznie. Dziękujemy."
+            "value": "Flaccy Pro"
           }
         },
         "pt-BR": {
@@ -29290,7 +29290,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy pyta Apple Music o okładki, których nie może znaleźć nigdzie indziej. Włączenie tego poprosi o zgodę jednorazowo."
+            "value": "Flaccy Pro jest aktywny. Dziękujemy."
           }
         },
         "pt-BR": {
@@ -29354,7 +29354,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy może wysłać trzy powiadomienia: dwa dni przed końcem okresu próbnego, w ostatnim dniu i raz, gdy pojawi się cena powitalna na dostęp dożywotni. Nic więcej. Możesz je wyłączyć w każdej chwili w Ustawieniach."
+            "value": "Flaccy Pro — rocznie. Dziękujemy."
           }
         },
         "pt-BR": {
@@ -29418,7 +29418,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy zrezygnował z %@ albumów — żadne źródło ich nie ma."
+            "value": "Flaccy pyta Apple Music o okładki, których nie może znaleźć nigdzie indziej. Włączenie tego poprosi o zgodę jednorazowo."
           }
         },
         "pt-BR": {
@@ -29482,7 +29482,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy indeksuje folder w miejscu — nic nie jest kopiowane ani przenoszone."
+            "value": "Flaccy może wysłać trzy powiadomienia: dwa dni przed końcem okresu próbnego, w ostatnim dniu i raz, gdy pojawi się cena powitalna na dostęp dożywotni. Nic więcej. Możesz je wyłączyć w każdej chwili w Ustawieniach."
           }
         },
         "pt-BR": {
@@ -29546,7 +29546,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy indeksuje folder w miejscu — nic nie jest kopiowane ani przenoszone. Pliki dodane do folderu pojawiają się automatycznie."
+            "value": "Flaccy zrezygnował z %@ albumów — żadne źródło ich nie ma."
           }
         },
         "pt-BR": {
@@ -29610,7 +29610,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy indeksuje twój folder z muzyką w miejscu, więc usunięcie z biblioteki przenosi oryginalny plik do Kosza."
+            "value": "Flaccy indeksuje folder w miejscu — nic nie jest kopiowane ani przenoszone."
           }
         },
         "pt-BR": {
@@ -29674,7 +29674,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy indeksuje twój folder z muzyką w miejscu, więc usunięcie z biblioteki przenosi oryginalne pliki do Kosza."
+            "value": "Flaccy indeksuje folder w miejscu — nic nie jest kopiowane ani przenoszone. Pliki dodane do folderu pojawiają się automatycznie."
           }
         },
         "pt-BR": {
@@ -29738,7 +29738,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy potrzebuje dostępu do Apple Music, aby korzystać z jego okładek."
+            "value": "Flaccy indeksuje twój folder z muzyką w miejscu, więc usunięcie z biblioteki przenosi oryginalny plik do Kosza."
           }
         },
         "pt-BR": {
@@ -29802,7 +29802,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI Flaccy zamienia poplątane nazwy plików w prawdziwe tytuły, wykonawców i albumy."
+            "value": "Flaccy indeksuje twój folder z muzyką w miejscu, więc usunięcie z biblioteki przenosi oryginalne pliki do Kosza."
           }
         },
         "pt-BR": {
@@ -29866,7 +29866,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Łączy warianty deluxe, remaster i explicit w jeden album"
+            "value": "Flaccy potrzebuje dostępu do Apple Music, aby korzystać z jego okładek."
           }
         },
         "pt-BR": {
@@ -29930,7 +29930,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dla prawdziwego bezstratnego dźwięku na iPhonie wybierz kabel: adapter słuchawkowy Apple dostarcza do 24-bitowego/48 kHz, a zewnętrzny DAC USB-C odblokowuje bezstratny dźwięk hi-res do 24-bitowego/192 kHz. FLAC błyszczy też na domowym zestawie lub komputerze z podłączonym DAC-iem."
+            "value": "AI Flaccy zamienia poplątane nazwy plików w prawdziwe tytuły, wykonawców i albumy."
           }
         },
         "pt-BR": {
@@ -29994,7 +29994,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Do przodu o 15 sekund"
+            "value": "Łączy warianty deluxe, remaster i explicit w jeden album"
           }
         },
         "pt-BR": {
@@ -30058,7 +30058,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Częstotliwość"
+            "value": "Dla prawdziwego bezstratnego dźwięku na iPhonie wybierz kabel: adapter słuchawkowy Apple dostarcza do 24-bitowego/48 kHz, a zewnętrzny DAC USB-C odblokowuje bezstratny dźwięk hi-res do 24-bitowego/192 kHz. FLAC błyszczy też na domowym zestawie lub komputerze z podłączonym DAC-iem."
           }
         },
         "pt-BR": {
@@ -30122,7 +30122,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wieczór z całym albumem"
+            "value": "Do przodu o 15 sekund"
           }
         },
         "pt-BR": {
@@ -30186,7 +30186,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cały album · %@"
+            "value": "Częstotliwość"
           }
         },
         "pt-BR": {
@@ -30250,7 +30250,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odtwarzanie bez przerw"
+            "value": "Wieczór z całym albumem"
           }
         },
         "pt-BR": {
@@ -30314,7 +30314,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bezstratne odtwarzanie bez przerw"
+            "value": "Cały album · %@"
           }
         },
         "pt-BR": {
@@ -30378,7 +30378,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odtwarzanie bez przerw jest zawsze włączone — albumy FLAC płyną z utworu na utwór bez cienia ciszy."
+            "value": "Odtwarzanie bez przerw"
           }
         },
         "pt-BR": {
@@ -30442,7 +30442,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odtwarzanie bez przerw gra kolejne utwory albumu bez ciszy. Autoodtwarzanie podobnych utrzymuje podobną stację muzyczną, gdy kolejka się skończy."
+            "value": "Bezstratne odtwarzanie bez przerw"
           }
         },
         "pt-BR": {
