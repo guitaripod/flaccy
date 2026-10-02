@@ -1,0 +1,5 @@
+• L'album d'échantillon gratuit démarre dès que son premier morceau arrive : vous entendez Flaccy en quelques secondes au lieu d'attendre tout le téléchargement, et celui-ci indique où il en est.
+• L'option Fin du morceau de la minuterie de veille s'arrête désormais pile à la fin du titre, et non un instant après le début du suivant.
+• Modifier la file d'attente près de la fin d'un morceau ne vous coûte plus la transition sans coupure vers le suivant.
+• La lecture automatique prépare sa station de musiques similaires un titre plus tôt, pour qu'un album s'y enchaîne directement au lieu de marquer une pause à la fin.
+• La lecture sans coupure est toujours activée : l'interrupteur des Réglages qui laissait croire le contraire a disparu. Une nouvelle fiche du Guide d'écoute explique pourquoi certains albums MP3 et AAC craquent encore entre les morceaux, et comment y remédier.

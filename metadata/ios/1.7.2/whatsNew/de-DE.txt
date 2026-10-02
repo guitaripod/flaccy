@@ -1,0 +1,5 @@
+• Das kostenlose Beispielalbum startet jetzt, sobald der erste Titel da ist. So hörst du Flaccy innerhalb von Sekunden, statt auf den ganzen Download zu warten, und der Download zeigt dir seinen Fortschritt.
+• Bei „Ende des Titels“ stoppt der Sleep-Timer jetzt genau am Ende des Songs, nicht erst einen Moment im nächsten.
+• Wenn du die Warteschlange kurz vor Ende eines Songs bearbeitest, geht der nahtlose Übergang zum nächsten Titel nicht mehr verloren.
+• Autoplay baut seinen Sender für ähnliche Musik jetzt einen Titel früher auf, sodass ein Album direkt in ihn übergeht, statt am Ende zu pausieren.
+• Die lückenlose Wiedergabe ist immer aktiv, daher ist der Schalter in den Einstellungen, der etwas anderes nahelegte, verschwunden. Eine neue Karte im Hörguide erklärt, warum manche MP3- und AAC-Alben zwischen den Titeln trotzdem klicken und was du dagegen tun kannst.

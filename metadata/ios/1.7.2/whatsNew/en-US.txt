@@ -1,0 +1,5 @@
+• The free sample album now starts playing as soon as its first track arrives, so you hear Flaccy within seconds instead of waiting for the whole download, and the download shows how far along it is.
+• The sleep timer's End of Track option now stops right when the song ends, not a moment into the next one.
+• Editing the queue near the end of a song no longer costs you the gapless transition into the next track.
+• Autoplay now lines up its similar-music station a track earlier, so an album flows straight into it instead of pausing at the end.
+• Gapless playback is always on, so the Settings switch that suggested otherwise is gone. A new Listening Guide card explains why some MP3 and AAC albums still click between tracks, and how to fix it.

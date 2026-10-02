@@ -16723,6 +16723,70 @@
         }
       }
     },
+    "Always on": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immer an"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siempre activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toujours actif"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sempre attivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常にオン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항상 켜짐"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zawsze włączone"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sempre ativo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "始终开启"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一律開啟"
+          }
+        }
+      }
+    },
     "Appearance": {
       "localizations": {
         "de": {
@@ -17851,6 +17915,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動播放相似音樂"
+          }
+        }
+      }
+    },
+    "Autoplay keeps a similar-music station going when the queue ends.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autoplay hält am Ende der Warteschlange einen Sender mit ähnlicher Musik am Laufen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reproducción automática mantiene una emisora de música similar cuando la cola termina."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La lecture auto lance une radio de musique similaire quand la file se termine."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La riproduzione automatica avvia una stazione di musica simile quando la coda finisce."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動再生はキューが尽きたときに似た曲のステーションを続けます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 재생은 대기열이 끝나면 비슷한 음악 스테이션을 이어 갑니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autoodtwarzanie utrzymuje podobną stację muzyczną, gdy kolejka się skończy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A reprodução automática mantém uma estação de música parecida quando a fila acaba."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动播放会在队列结束时接上一个相似音乐电台。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動播放則會在待播清單結束時，接上一個相似音樂電台。"
           }
         }
       }
@@ -27713,6 +27841,70 @@
         }
       }
     },
+    "FLAC, ALAC, WAV and AIFF albums are gapless with no caveat.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alben in FLAC, ALAC, WAV und AIFF laufen lückenlos – ohne Einschränkung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los álbumes FLAC, ALAC, WAV y AIFF se reproducen sin pausas, sin ninguna salvedad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les albums FLAC, ALAC, WAV et AIFF s'enchaînent sans blanc, sans aucune réserve."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli album FLAC, ALAC, WAV e AIFF sono senza pause, senza alcuna riserva."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC、ALAC、WAV、AIFFのアルバムは、例外なくギャップレスで再生されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF 앨범은 예외 없이 갭리스로 재생됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albumy FLAC, ALAC, WAV i AIFF odtwarzane są bez przerw i bez żadnych zastrzeżeń."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Álbuns em FLAC, ALAC, WAV e AIFF tocam sem pausas, sem ressalvas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC、ALAC、WAV 和 AIFF 专辑可无缝播放，没有任何例外。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC、ALAC、WAV 和 AIFF 專輯可無縫播放，沒有任何例外。"
+          }
+        }
+      }
+    },
     "FLACCY LIFETIME": {
       "localizations": {
         "de": {
@@ -30465,6 +30657,134 @@
         }
       }
     },
+    "Gapless is always on in Flaccy — the next track is decoded and waiting before the current one ends, so a continuous album runs as one piece. What you hear at the seam depends on the file. Lossless formats store exactly the samples the master had, so there is nothing between tracks to remove. MP3 and AAC encode in fixed blocks and pad every file with a fraction of a second of silence at each end; that padding lives inside the file, and iOS does not strip it on playback.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lückenlose Wiedergabe ist in Flaccy immer aktiv – der nächste Titel ist bereits dekodiert und wartet, bevor der aktuelle endet, sodass ein durchgehendes Album wie aus einem Guss läuft. Was du an der Nahtstelle hörst, hängt von der Datei ab. Verlustfreie Formate speichern genau die Samples des Masters, also gibt es zwischen den Titeln nichts zu entfernen. MP3 und AAC kodieren in festen Blöcken und füllen jede Datei an beiden Enden mit einem Bruchteil einer Sekunde Stille auf; dieses Padding steckt in der Datei, und iOS entfernt es bei der Wiedergabe nicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reproducción sin pausas está siempre activa en Flaccy: la pista siguiente ya está decodificada y esperando antes de que termine la actual, así que un álbum continuo suena como una sola pieza. Lo que oyes en la unión depende del archivo. Los formatos lossless guardan exactamente las muestras del máster, así que entre pistas no hay nada que eliminar. MP3 y AAC codifican en bloques fijos y rellenan cada archivo con una fracción de segundo de silencio en cada extremo; ese relleno vive dentro del archivo y iOS no lo elimina al reproducir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La lecture sans blanc est toujours active dans Flaccy : le morceau suivant est déjà décodé et attend avant la fin du morceau en cours, si bien qu'un album continu se déroule d'une seule pièce. Ce que vous entendez à la jonction dépend du fichier. Les formats lossless conservent exactement les échantillons du master, il n'y a donc rien à retirer entre les morceaux. Le MP3 et l'AAC encodent par blocs de taille fixe et ajoutent à chaque extrémité de chaque fichier une fraction de seconde de silence ; ce remplissage est inclus dans le fichier, et iOS ne le supprime pas à la lecture."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La riproduzione senza pause è sempre attiva in Flaccy: il brano successivo è già decodificato e in attesa prima che finisca quello in corso, così un album continuo scorre come un unico pezzo. Ciò che senti nel punto di giunzione dipende dal file. I formati lossless conservano esattamente i campioni del master, quindi tra un brano e l'altro non c'è nulla da rimuovere. MP3 e AAC codificano a blocchi fissi e aggiungono a ogni file una frazione di secondo di silenzio a ciascuna estremità; quel padding sta dentro il file e iOS non lo elimina durante la riproduzione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccyではギャップレス再生は常にオンです。現在の曲が終わる前に次の曲がデコードされて待機しているため、続けて収録されたアルバムは一つの作品としてつながります。つなぎ目で聞こえる音はファイルによって変わります。ロスレス形式はマスターのサンプルをそのまま保存しているので、曲間に取り除くべきものはありません。MP3とAACは固定長のブロックでエンコードされ、すべてのファイルの両端に1秒未満の無音が加えられます。このパディングはファイル内部にあり、iOSは再生時に取り除きません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy에서 갭리스 재생은 항상 켜져 있습니다. 현재 곡이 끝나기 전에 다음 곡이 이미 디코딩되어 대기하므로, 이어지는 앨범이 하나의 작품처럼 흘러갑니다. 이음매에서 들리는 소리는 파일에 따라 달라집니다. 무손실 형식은 마스터의 샘플을 그대로 저장하므로 곡 사이에 제거할 것이 없습니다. MP3와 AAC는 고정 크기 블록으로 인코딩되며 모든 파일의 양쪽 끝에 1초 미만의 무음을 덧붙입니다. 이 패딩은 파일 안에 들어 있고, iOS는 재생할 때 이를 제거하지 않습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W Flaccy odtwarzanie bez przerw jest zawsze włączone — następny utwór jest już zdekodowany i czeka, zanim skończy się bieżący, więc ciągły album płynie jak jedna całość. To, co słychać na styku, zależy od pliku. Formaty bezstratne przechowują dokładnie te próbki, które miał master, więc między utworami nie ma niczego do usunięcia. MP3 i AAC kodują w blokach o stałym rozmiarze i dodają na obu końcach każdego pliku ułamek sekundy ciszy; to wypełnienie jest częścią pliku, a iOS nie usuwa go podczas odtwarzania."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A reprodução sem pausas está sempre ativa no Flaccy — a próxima faixa já está decodificada e esperando antes de a atual terminar, então um álbum contínuo toca como uma peça só. O que você ouve na emenda depende do arquivo. Formatos lossless guardam exatamente as amostras do master, então não há nada a remover entre as faixas. MP3 e AAC codificam em blocos fixos e preenchem cada arquivo com uma fração de segundo de silêncio em cada ponta; esse preenchimento fica dentro do arquivo, e o iOS não o remove na reprodução."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Flaccy 中，无缝播放始终开启——当前曲目结束之前，下一首已经解码完毕、随时待命，所以连续的专辑会像一个整体一样播放。衔接处听到什么，取决于文件本身。无损格式完整保存了母带的采样，曲目之间没有任何需要去除的东西。MP3 和 AAC 按固定块编码，并在每个文件两端补上不到一秒的静音；这段填充就在文件内部，iOS 播放时不会将其去除。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Flaccy 中，無縫播放一律開啟——目前曲目結束之前，下一首已經解碼完畢、隨時待命，所以連續的專輯會像一個整體一樣播放。銜接處聽到什麼，取決於檔案本身。無損格式完整保存了母帶的取樣，曲目之間沒有任何需要移除的東西。MP3 和 AAC 以固定區塊編碼，並在每個檔案兩端補上不到一秒的靜音；這段填充就在檔案內部，iOS 播放時不會將其移除。"
+          }
+        }
+      }
+    },
+    "Gapless is always on. Consecutive album tracks play with no silence between them — no setting to turn on, nothing to configure.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lückenlose Wiedergabe ist immer aktiv. Aufeinanderfolgende Albumtitel spielen ohne Stille dazwischen – keine Einstellung zum Einschalten, nichts zu konfigurieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reproducción sin pausas está siempre activa. Las pistas consecutivas de un álbum suenan sin silencio entre ellas: no hay ningún ajuste que activar ni nada que configurar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La lecture sans blanc est toujours active. Les morceaux consécutifs d'un album s'enchaînent sans silence entre eux : aucun réglage à activer, rien à configurer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La riproduzione senza pause è sempre attiva. I brani consecutivi di un album suonano senza silenzio tra l'uno e l'altro: nessuna impostazione da attivare, niente da configurare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ギャップレス再生は常にオンです。アルバムの連続する曲は曲間の無音なしで再生されます。オンにする設定も、調整する項目もありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "갭리스 재생은 항상 켜져 있습니다. 앨범의 연속된 트랙은 사이에 정적 없이 재생되며, 켜야 할 설정도 따로 구성할 것도 없습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzanie bez przerw jest zawsze włączone. Kolejne utwory albumu grają bez ciszy między nimi — nie trzeba niczego włączać ani konfigurować."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A reprodução sem pausas está sempre ativa. As faixas consecutivas de um álbum tocam sem silêncio entre elas — não há nenhuma configuração para ligar nem nada para ajustar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无缝播放始终开启。专辑中连续的曲目之间没有静音——无需开启任何设置，也无需任何配置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無縫播放一律開啟。專輯中連續的曲目之間沒有空白——無需開啟任何設定，也無需任何調整。"
+          }
+        }
+      }
+    },
     "Gapless lossless playback": {
       "localizations": {
         "de": {
@@ -30589,6 +30909,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "無縫播放一律開啟——FLAC 專輯一曲接一曲，中間沒有一秒空白。"
+          }
+        }
+      }
+    },
+    "Gapless playback is always on — lossless albums flow track to track with zero silence.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lückenlose Wiedergabe ist immer aktiv – verlustfreie Alben laufen ohne Stille von Titel zu Titel."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reproducción sin pausas está siempre activa: los álbumes lossless fluyen de pista a pista sin silencios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La lecture sans blanc est toujours active — les albums lossless s'enchaînent sans une seconde de silence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La riproduzione senza pause è sempre attiva: gli album lossless scorrono da un brano all'altro senza silenzi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ギャップレス再生は常にオン — ロスレスのアルバムは無音を挟まず曲から曲へ流れます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "갭리스 재생은 항상 켜져 있습니다 — 무손실 앨범은 정적 없이 곡에서 곡으로 이어집니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzanie bez przerw jest zawsze włączone — albumy bezstratne płyną z utworu na utwór bez cienia ciszy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A reprodução sem pausas está sempre ativa — álbuns lossless fluem de faixa em faixa sem um segundo de silêncio."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无缝播放始终开启——无损专辑一曲接一曲，中间没有一秒静音。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無縫播放一律開啟——無損專輯一曲接一曲，中間沒有一秒空白。"
           }
         }
       }
@@ -32253,6 +32637,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在辨識專輯"
+          }
+        }
+      }
+    },
+    "If one album gaps and the rest don't, check its format before blaming the player.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn ein Album Lücken hat und die anderen nicht, prüfe zuerst sein Format, bevor du dem Player die Schuld gibst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si un álbum tiene pausas y los demás no, comprueba su formato antes de culpar al reproductor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si un album présente des blancs et pas les autres, vérifiez son format avant d'accuser le lecteur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se un album ha delle pause e gli altri no, controlla il suo formato prima di dare la colpa al player."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あるアルバムだけ曲間が途切れるなら、プレーヤーを疑う前にそのフォーマットを確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 앨범에서만 끊김이 생기고 나머지는 괜찮다면, 플레이어를 탓하기 전에 해당 앨범의 형식부터 확인하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeśli jeden album ma przerwy, a pozostałe nie, sprawdź jego format, zanim obwinisz odtwarzacz."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se um álbum tem pausas e os outros não, confira o formato dele antes de culpar o player."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果只有某张专辑出现间隙，其他专辑都正常，请先检查它的格式，再怪播放器。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果只有某張專輯出現間隙，其他專輯都正常，請先檢查它的格式，再怪播放器。"
           }
         }
       }
@@ -34607,6 +35055,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last.fm 傳回的回應無效"
+          }
+        }
+      }
+    },
+    "It is exact for lossless files: FLAC, ALAC, WAV, AIFF. MP3 and AAC store a fraction of a second of encoder padding inside every file, which iOS does not strip, so those albums can still click between tracks. Re-rip the album to FLAC and the seam disappears.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei verlustfreien Dateien ist sie exakt: FLAC, ALAC, WAV, AIFF. MP3 und AAC speichern in jeder Datei einen Bruchteil einer Sekunde Encoder-Padding, das iOS nicht entfernt – deshalb können solche Alben zwischen den Titeln weiterhin knacken. Rippe das Album erneut als FLAC, und die Nahtstelle verschwindet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es exacta con archivos lossless: FLAC, ALAC, WAV, AIFF. MP3 y AAC guardan en cada archivo una fracción de segundo de relleno del codificador, que iOS no elimina, así que esos álbumes aún pueden hacer clic entre pistas. Vuelve a extraer el álbum en FLAC y la unión desaparece."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elle est exacte avec les fichiers lossless : FLAC, ALAC, WAV, AIFF. Le MP3 et l'AAC stockent dans chaque fichier une fraction de seconde de remplissage de l'encodeur, qu'iOS ne supprime pas ; ces albums peuvent donc encore produire un clic entre les morceaux. Réextrayez l'album en FLAC et la jonction disparaît."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È esatta con i file lossless: FLAC, ALAC, WAV, AIFF. MP3 e AAC conservano in ogni file una frazione di secondo di padding del codificatore, che iOS non elimina, quindi quegli album possono ancora fare clic tra un brano e l'altro. Rippa di nuovo l'album in FLAC e la giunzione scompare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロスレスファイル(FLAC、ALAC、WAV、AIFF)なら正確につながります。MP3とAACはすべてのファイルにエンコーダーによる1秒未満のパディングを含んでおり、iOSはこれを取り除かないため、そうしたアルバムでは曲間でクリック音が入ることがあります。アルバムをFLACで再リッピングすれば、つなぎ目は消えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무손실 파일(FLAC, ALAC, WAV, AIFF)에서는 정확하게 이어집니다. MP3와 AAC는 모든 파일 안에 1초 미만의 인코더 패딩을 담고 있고 iOS는 이를 제거하지 않으므로, 이런 앨범은 곡 사이에서 딱 소리가 날 수 있습니다. 앨범을 FLAC로 다시 리핑하면 이음매가 사라집니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W plikach bezstratnych jest dokładne: FLAC, ALAC, WAV, AIFF. MP3 i AAC przechowują w każdym pliku ułamek sekundy wypełnienia enkodera, którego iOS nie usuwa, więc takie albumy nadal mogą trzaskać między utworami. Zripuj album ponownie do FLAC, a szew zniknie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É exata com arquivos lossless: FLAC, ALAC, WAV, AIFF. MP3 e AAC guardam em cada arquivo uma fração de segundo de preenchimento do codificador, que o iOS não remove, então esses álbuns ainda podem estalar entre as faixas. Reripe o álbum em FLAC e a emenda desaparece."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对无损文件（FLAC、ALAC、WAV、AIFF）来说，衔接是精确的。MP3 和 AAC 在每个文件内部都带有不到一秒的编码器填充，而 iOS 不会去除它，所以这类专辑在曲目之间仍可能出现“咔”的一声。把专辑重新抓取为 FLAC，衔接处的杂音就会消失。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "對無損檔案（FLAC、ALAC、WAV、AIFF）來說，銜接是精確的。MP3 和 AAC 在每個檔案內部都帶有不到一秒的編碼器填充，而 iOS 不會移除它，所以這類專輯在曲目之間仍可能出現「喀」的一聲。把專輯重新擷取為 FLAC，銜接處的雜音就會消失。"
           }
         }
       }
@@ -38019,6 +38531,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "最受歡迎"
+          }
+        }
+      }
+    },
+    "MP3 and AAC rips of live albums, DJ mixes and segued records can click between tracks — the padding is baked in, not something a player setting can undo.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3- und AAC-Rips von Live-Alben, DJ-Mixen und nahtlos ineinander übergehenden Platten können zwischen den Titeln knacken – das Padding ist fest eingebaut und lässt sich per Player-Einstellung nicht rückgängig machen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los rips en MP3 y AAC de álbumes en directo, mezclas de DJ y discos con temas enlazados pueden hacer clic entre pistas: el relleno viene incorporado y ningún ajuste del reproductor puede deshacerlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les rips en MP3 et AAC d'albums live, de mixes de DJ et de disques aux morceaux enchaînés peuvent produire un clic entre les morceaux : le remplissage est intégré au fichier, et aucun réglage du lecteur ne peut l'annuler."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I rip in MP3 e AAC di album dal vivo, DJ mix e dischi con brani in segue possono fare clic tra un brano e l'altro: il padding è incorporato e nessuna impostazione del player può annullarlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブアルバム、DJミックス、曲間が続けて収録されたレコードをMP3やAACでリッピングすると、曲間でクリック音が入ることがあります。パディングはファイルに組み込まれており、プレーヤーの設定では取り除けません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이브 앨범, DJ 믹스, 곡이 끊김 없이 이어지는 음반을 MP3나 AAC로 리핑하면 곡 사이에서 딱 소리가 날 수 있습니다. 패딩은 파일에 내장되어 있어 플레이어 설정으로 되돌릴 수 없습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripy albumów koncertowych, miksów didżejskich i płyt z płynnymi przejściami w MP3 i AAC mogą trzaskać między utworami — wypełnienie jest wpisane w plik i żadne ustawienie odtwarzacza tego nie cofnie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rips em MP3 e AAC de álbuns ao vivo, mixes de DJ e discos com faixas emendadas podem estalar entre as faixas — o preenchimento já vem embutido e nenhuma configuração do player consegue desfazê-lo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现场专辑、DJ 混音以及曲目首尾相连的唱片，如果抓轨成 MP3 或 AAC，曲目之间可能会出现“咔”声——填充已经固化在文件里，播放器设置无法撤销。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現場專輯、DJ 混音以及曲目首尾相連的唱片，如果擷取成 MP3 或 AAC，曲目之間可能會出現「喀」聲——填充已經固化在檔案裡，播放器設定無法復原。"
+          }
+        }
+      }
+    },
+    "MP3 and AAC store a fraction of a second of encoder padding inside every file, which macOS does not strip, so those albums can still click between tracks. Re-rip to FLAC and the seam disappears.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3 und AAC speichern in jeder Datei einen Bruchteil einer Sekunde Encoder-Padding, das macOS nicht entfernt – deshalb können solche Alben zwischen den Titeln weiterhin knacken. Rippe erneut als FLAC, und die Nahtstelle verschwindet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3 y AAC guardan en cada archivo una fracción de segundo de relleno del codificador, que macOS no elimina, así que esos álbumes aún pueden hacer clic entre pistas. Vuelve a extraer en FLAC y la unión desaparece."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le MP3 et l'AAC stockent dans chaque fichier une fraction de seconde de remplissage de l'encodeur, que macOS ne supprime pas ; ces albums peuvent donc encore produire un clic entre les morceaux. Réextrayez en FLAC et la jonction disparaît."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3 e AAC conservano in ogni file una frazione di secondo di padding del codificatore, che macOS non elimina, quindi quegli album possono ancora fare clic tra un brano e l'altro. Rippa di nuovo in FLAC e la giunzione scompare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3とAACはすべてのファイルにエンコーダーによる1秒未満のパディングを含んでおり、macOSはこれを取り除かないため、そうしたアルバムでは曲間でクリック音が入ることがあります。FLACで再リッピングすれば、つなぎ目は消えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3와 AAC는 모든 파일 안에 1초 미만의 인코더 패딩을 담고 있고 macOS는 이를 제거하지 않으므로, 이런 앨범은 곡 사이에서 딱 소리가 날 수 있습니다. FLAC로 다시 리핑하면 이음매가 사라집니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3 i AAC przechowują w każdym pliku ułamek sekundy wypełnienia enkodera, którego macOS nie usuwa, więc takie albumy nadal mogą trzaskać między utworami. Zripuj ponownie do FLAC, a szew zniknie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3 e AAC guardam em cada arquivo uma fração de segundo de preenchimento do codificador, que o macOS não remove, então esses álbuns ainda podem estalar entre as faixas. Reripe em FLAC e a emenda desaparece."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3 和 AAC 在每个文件内部都带有不到一秒的编码器填充，而 macOS 不会去除它，所以这类专辑在曲目之间仍可能出现“咔”的一声。重新抓取为 FLAC，衔接处的杂音就会消失。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MP3 和 AAC 在每個檔案內部都帶有不到一秒的編碼器填充，而 macOS 不會移除它，所以這類專輯在曲目之間仍可能出現「喀」的一聲。重新擷取為 FLAC，銜接處的雜音就會消失。"
           }
         }
       }
@@ -51761,6 +52401,70 @@
         }
       }
     },
+    "Re-ripping the album to FLAC removes the seam for good.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn du das Album erneut als FLAC rippst, verschwindet die Nahtstelle für immer."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver a extraer el álbum en FLAC elimina la unión para siempre."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réextraire l'album en FLAC supprime définitivement la jonction."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rippare di nuovo l'album in FLAC elimina la giunzione una volta per tutte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アルバムをFLACで再リッピングすれば、つなぎ目は完全に解消されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앨범을 FLAC로 다시 리핑하면 이음매가 완전히 사라집니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ponowne zripowanie albumu do FLAC usuwa szew raz na zawsze."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reripar o álbum em FLAC elimina a emenda de vez."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把专辑重新抓取为 FLAC，就能彻底消除衔接处的杂音。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把專輯重新擷取為 FLAC，就能徹底消除銜接處的雜音。"
+          }
+        }
+      }
+    },
     "Read less": {
       "localizations": {
         "de": {
@@ -58763,6 +59467,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "資料庫中的相似演出者"
+          }
+        }
+      }
+    },
+    "Six facts about Bluetooth, AAC, and what your files actually deliver to your ears.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sechs Fakten über Bluetooth, AAC und das, was deine Dateien wirklich an dein Ohr liefern."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seis datos sobre el Bluetooth, el AAC y lo que tus archivos entregan de verdad a tus oídos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Six faits sur le Bluetooth, l'AAC et ce que vos fichiers délivrent vraiment à vos oreilles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sei fatti su Bluetooth, AAC e ciò che i tuoi file consegnano davvero alle tue orecchie."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth、AAC、そしてファイルが実際に耳へ届けるものについての6つの事実。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "블루투스와 AAC, 그리고 당신의 파일이 실제로 귀에 전달하는 것에 관한 여섯 가지 사실."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sześć faktów o Bluetooth, AAC i o tym, co twoje pliki naprawdę dostarczają twoim uszom."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seis fatos sobre Bluetooth, AAC e o que seus arquivos realmente entregam aos seus ouvidos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于蓝牙、AAC，以及你的文件究竟把什么送到耳朵里的六个事实。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於藍牙、AAC，以及你的檔案究竟把什麼送進耳裡的六個事實。"
           }
         }
       }
@@ -69101,6 +69869,70 @@
         }
       }
     },
+    "What this means for your library": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was das für deine Mediathek bedeutet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué significa esto para tu biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que cela signifie pour votre bibliothèque"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosa significa per la tua libreria"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリにとっての意味"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 라이브러리에 어떤 의미가 있을까"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co to oznacza dla twojej biblioteki"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O que isso significa para a sua biblioteca"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这对你的音乐库意味着什么"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這對你的音樂庫意味著什麼"
+          }
+        }
+      }
+    },
     "What you've set up so far": {
       "localizations": {
         "de": {
@@ -69353,6 +70185,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "為什麼無損到不了 AirPods"
+          }
+        }
+      }
+    },
+    "Why some albums still click": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warum manche Alben trotzdem knacken"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por qué algunos álbumes aún hacen clic"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pourquoi certains albums font encore des clics"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perché alcuni album fanno ancora clic"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一部のアルバムでクリック音が残る理由"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일부 앨범에서 여전히 딱 소리가 나는 이유"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dlaczego niektóre albumy wciąż trzaskają"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por que alguns álbuns ainda estalam"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为什么有些专辑仍然会有“咔”声"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為什麼有些專輯仍然會有「喀」聲"
           }
         }
       }

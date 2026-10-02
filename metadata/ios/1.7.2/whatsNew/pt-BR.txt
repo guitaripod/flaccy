@@ -1,0 +1,5 @@
+• O álbum de amostra gratuito começa a tocar assim que sua primeira faixa chega, então você ouve o Flaccy em segundos em vez de esperar o download inteiro, e o download mostra o progresso.
+• A opção Fim da faixa do timer de repouso agora para exatamente quando a música termina, e não um instante depois de a próxima começar.
+• Editar a fila perto do fim de uma música não faz mais você perder a transição sem intervalos para a próxima faixa.
+• A reprodução automática começa a montar sua estação de músicas semelhantes uma faixa antes, para que o álbum flua direto para ela em vez de pausar no final.
+• A reprodução sem intervalos está sempre ativada, então o botão nos Ajustes que sugeria o contrário sumiu. Um novo cartão no Guia de audição explica por que alguns álbuns MP3 e AAC ainda estalam entre as faixas e como resolver isso.

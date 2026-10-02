@@ -1,0 +1,5 @@
+• Bezpłatny przykładowy album zaczyna grać, gdy tylko dotrze pierwszy utwór, więc Flaccy słyszysz po kilku sekundach zamiast czekać na całe pobieranie, a pobieranie pokazuje swój postęp.
+• Opcja Koniec utworu w wyłączniku czasowym zatrzymuje teraz muzykę dokładnie po zakończeniu piosenki, a nie chwilę po starcie następnej.
+• Edycja kolejki tuż przed końcem utworu nie psuje już płynnego przejścia do następnego.
+• Autoodtwarzanie podobnych przygotowuje stację z podobną muzyką o jeden utwór wcześniej, dzięki czemu album płynnie w nią przechodzi zamiast zatrzymywać się na końcu.
+• Odtwarzanie bez przerw jest zawsze włączone, więc przełącznik w Ustawieniach sugerujący coś innego zniknął. Nowa karta w Przewodniku po odsłuchach wyjaśnia, dlaczego niektóre albumy MP3 i AAC nadal trzaskają między utworami i jak temu zaradzić.

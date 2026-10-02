@@ -1,0 +1,5 @@
+• L'album di esempio gratuito parte appena arriva la prima traccia, così senti Flaccy in pochi secondi invece di aspettare l'intero download, e il download mostra a che punto è.
+• L'opzione Fine del brano del timer di stop ora si ferma esattamente alla fine della canzone, non un attimo dopo l'inizio della successiva.
+• Modificare la coda vicino alla fine di un brano non ti fa più perdere la transizione senza interruzioni verso il brano successivo.
+• La riproduzione automatica prepara la sua stazione di musica simile un brano prima, così un album vi confluisce direttamente invece di fermarsi alla fine.
+• La riproduzione senza interruzioni è sempre attiva, quindi l'interruttore nelle Impostazioni che suggeriva il contrario è sparito. Una nuova scheda della Guida all'ascolto spiega perché alcuni album MP3 e AAC fanno ancora clic tra un brano e l'altro, e come rimediare.

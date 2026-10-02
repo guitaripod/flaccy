@@ -1,0 +1,6 @@
+• Flaccy ahora habla polaco: toda la interfaz se ha traducido.
+• El álbum de muestra gratuito empieza a sonar en cuanto llega su primera pista, así que oyes Flaccy en segundos en lugar de esperar a toda la descarga, y la descarga muestra cuánto lleva.
+• La opción Fin de la pista del temporizador ahora se detiene justo cuando acaba la canción, no un instante después de empezar la siguiente.
+• Editar la cola cerca del final de una canción ya no te hace perder la transición sin cortes a la siguiente pista.
+• Reproducción automática prepara su estación de música similar una pista antes, de modo que un álbum fluye directamente hacia ella en lugar de detenerse al final.
+• Ajustes ahora dice claramente que la reproducción sin cortes está siempre activada, y una nueva tarjeta de la Guía de escucha explica por qué algunos álbumes MP3 y AAC siguen haciendo clic entre pistas y cómo solucionarlo.
