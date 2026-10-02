@@ -246,10 +246,15 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.allowsMultipleSelection = false
         panel.prompt = String(localized: "Use This Folder")
         panel.message = String(localized: "Flaccy indexes the folder in place — nothing is copied or moved.")
+        PurchaseFunnel.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
-            guard response == .OK, let url = panel.url else { return }
+            guard response == .OK, let url = panel.url else {
+                PurchaseFunnel.noteImportCancelled()
+                return
+            }
             do {
                 try LibraryRoot.shared.chooseFolder(url)
+                PurchaseFunnel.noteFolderChosen()
             } catch {
                 AppLogger.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
                 MacToast.show(String(localized: "Couldn't access that folder."), style: .error, in: window)
@@ -267,8 +272,12 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.allowedContentTypes = [.audio, .folder]
         panel.prompt = String(localized: "Import")
         panel.message = String(localized: "Copies files into Flaccy's library folder, preserving folder structure.")
+        PurchaseFunnel.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
-            guard response == .OK, !panel.urls.isEmpty else { return }
+            guard response == .OK, !panel.urls.isEmpty else {
+                PurchaseFunnel.noteImportCancelled()
+                return
+            }
             let urls = panel.urls
             let toast = MacToast.showImport(in: window)
             Task {

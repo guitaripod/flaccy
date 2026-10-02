@@ -1,5 +1,8 @@
 import Foundation
 import RevenueCat
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Mirrors each person's walk towards a purchase into RevenueCat subscriber
 /// attributes. The trial lives in the Keychain and both paywalls are our own
@@ -29,6 +32,16 @@ enum PurchaseFunnel {
         case libraryTracks = "library_tracks"
         case libraryFilledAt = "library_filled_at"
         case playedSample = "played_sample"
+        case sampleDownload = "sample_download"
+        case addMusicOpened = "add_music_opened"
+        case importLastOutcome = "import_last_outcome"
+    }
+
+    enum SampleDownloadStep: String {
+        case started
+        case playing
+        case finished
+        case failed
     }
 
     enum CheckoutOutcome: String {
@@ -69,6 +82,7 @@ enum PurchaseFunnel {
             forName: Library.didUpdateNotification, object: nil, queue: .main
         ) { _ in
             MainActor.assumeIsolated {
+                guard libraryIsReadable else { return }
                 let sampleNames = SampleMusicService.sampleFileNames
                 let own = Library.shared.allTracks.lazy
                     .filter { !SampleMusicService.isSample($0.fileURL, among: sampleNames) }
@@ -76,6 +90,17 @@ enum PurchaseFunnel {
                 noteLibrary(ownTracks: own)
             }
         }
+    }
+
+    /// A launch before first unlock reads an empty library, because the
+    /// database and the files are still protected; reporting that would
+    /// overwrite a real bucket with "0" for someone whose music is all there.
+    private static var libraryIsReadable: Bool {
+        #if canImport(UIKit)
+        UIApplication.shared.isProtectedDataAvailable
+        #else
+        true
+        #endif
     }
 
     static func noteLibrary(ownTracks: Int) {
@@ -92,6 +117,32 @@ enum PurchaseFunnel {
         guard canSend, !UserDefaults.standard.bool(forKey: playedSampleKey) else { return }
         UserDefaults.standard.set(true, forKey: playedSampleKey)
         send([.playedSample: "true"])
+    }
+
+    /// Last step wins, so "started" left standing means the download was
+    /// abandoned or the app was closed before the first track landed.
+    static func noteSampleDownload(_ step: SampleDownloadStep) {
+        send([.sampleDownload: step.rawValue])
+    }
+
+    /// Counts every time the import picker opens, so an empty library can be
+    /// told apart: never tried, tried and cancelled, or tried and failed.
+    static func noteAddMusicOpened() {
+        send([.addMusicOpened: String(increment(.addMusicOpened))])
+    }
+
+    static func noteImportCancelled() {
+        send([.importLastOutcome: "cancelled"])
+    }
+
+    /// The Mac can index a folder in place instead of importing; the library
+    /// bucket then says what it held.
+    static func noteFolderChosen() {
+        send([.importLastOutcome: "folder_chosen"])
+    }
+
+    static func noteImport(_ outcome: LibraryImportOutcome) {
+        send([.importLastOutcome: importLabel(for: outcome)])
     }
 
     static func notePaywallShown(offer: PurchaseOffer?, state: EntitlementState) {
@@ -158,6 +209,17 @@ enum PurchaseFunnel {
         case ..<500: "50-499"
         case ..<5000: "500-4999"
         default: "5000+"
+        }
+    }
+
+    private static func importLabel(for outcome: LibraryImportOutcome) -> String {
+        if outcome.shortfall != nil { return "no_space" }
+        switch (outcome.imported, outcome.skipped, outcome.failed) {
+        case (0, 0, 0): return "nothing_found"
+        case (0, _, 0): return "already_present"
+        case (0, _, _): return "failed"
+        case (_, _, 0): return "imported"
+        default: return "partial"
         }
     }
 

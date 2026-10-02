@@ -76,6 +76,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window = window
         #if DEBUG
         PaywallShot.runIfRequested(in: window)
+        SampleExercise.runIfRequested()
         #endif
 
         NotificationCenter.default.addObserver(

@@ -10,8 +10,9 @@ views and checkouts rather than by a handful of sales.
 Customers from builds before the funnel shipped carry no attributes, so their
 funnel columns read "-"; retention (came back after a day, still around a week
 later) comes from RevenueCat's own first/last-seen stamps and covers everyone.
-For tracked customers the table also says whether any music of their own ever
-reached the library, whether they tried the sample album, and whether their
+For tracked customers the table also says whether they ever opened the import
+picker, whether any music of their own ever reached the library, whether they
+started the sample album's download and played it, and whether their
 trial started — which, for installs made since the trial began starting at the
 first play of their own music, is the same as having played it; older installs
 were stamped at launch. Debug builds are excluded.
@@ -82,6 +83,7 @@ def int_attribute(attributes, name):
 def summarize(rows):
     cohorts = collections.defaultdict(collections.Counter)
     prices = collections.defaultdict(collections.Counter)
+    outcomes = collections.Counter()
     for customer, first_seen, attributes, entitlements in rows:
         week = (first_seen.date() - dt.timedelta(days=first_seen.weekday())).isoformat()
         span = customer["last_seen_at"] - customer["first_seen_at"]
@@ -97,17 +99,21 @@ def summarize(rows):
         if instrumented:
             c["instrumented"] += 1
             c["music"] += attributes.get("library_tracks", "0") != "0"
+            c["picker"] += int_attribute(attributes, "add_music_opened") > 0
+            c["sample_dl"] += "sample_download" in attributes
             c["sample"] += attributes.get("played_sample") == "true"
             c["trial"] += "trial_started_at" in attributes
             c["saw_paywall"] += viewed
             c["checkout"] += checkouts > 0
             c["cancelled"] += int_attribute(attributes, "checkouts_cancelled") > 0
+            if "import_last_outcome" in attributes:
+                outcomes[attributes["import_last_outcome"]] += 1
         if viewed:
             p = prices[attributes.get("paywall_last_price", "?")]
             p["viewers"] += 1
             p["checkout"] += checkouts > 0
             p["paid"] += paid
-    return cohorts, prices
+    return cohorts, prices, outcomes
 
 
 def table(headers, rows):
@@ -123,21 +129,25 @@ def main():
         sys.exit(f"RC_SECRET_FLACCY_{args.platform.upper()} is not set; source ~/.config/midgar/credentials.env")
     session = requests.Session()
     session.headers["Authorization"] = f"Bearer {key}"
-    cohorts, prices = summarize(load_customers(session, PROJECTS[args.platform], args.since))
+    cohorts, prices, outcomes = summarize(load_customers(session, PROJECTS[args.platform], args.since))
 
     def funnel(c, name):
         return c[name] if c["instrumented"] else "-"
 
     table(
-        ["week", "new", "back>1d", "back>7d", "tracked", "music", "sample", "trial", "paywall", "checkout",
-         "cancelled", "paid"],
+        ["week", "new", "back>1d", "back>7d", "tracked", "picker", "music", "sample dl", "sample", "trial",
+         "paywall", "checkout", "cancelled", "paid"],
         [
             [week, c["customers"], c["returned"], c["outlasted_trial"], c["instrumented"],
-             funnel(c, "music"), funnel(c, "sample"), funnel(c, "trial"), funnel(c, "saw_paywall"),
+             funnel(c, "picker"), funnel(c, "music"), funnel(c, "sample_dl"), funnel(c, "sample"),
+             funnel(c, "trial"), funnel(c, "saw_paywall"),
              funnel(c, "checkout"), funnel(c, "cancelled"), c["paid"]]
             for week, c in sorted(cohorts.items())
         ],
     )
+    if outcomes:
+        print()
+        table(["last import outcome", "customers"], sorted(outcomes.items(), key=lambda kv: -kv[1]))
     if prices:
         print()
         table(

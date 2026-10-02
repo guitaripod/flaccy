@@ -67,6 +67,7 @@ final class PurchaseManager {
     private(set) var offers: [PurchaseOffer] = []
     private(set) var trialStart = Date()
     private(set) var trialHasStarted = false
+    private var trialStartIsUnreadable = false
     private(set) var hasReceivedCustomerInfo = false
     private var lapsedOfferingSeenThisSession = false
     private var lapsedPackage: Package?
@@ -191,10 +192,12 @@ final class PurchaseManager {
         case .found(let start):
             trialStart = start
             trialHasStarted = true
+            trialStartIsUnreadable = false
             publishFunnelEntitlement()
         case .absent:
-            break
+            trialStartIsUnreadable = false
         case .unreadable(let status):
+            trialStartIsUnreadable = true
             AppLogger.warning("Trial start not readable from the Keychain yet (status \(status)); will retry", category: .purchases)
         }
     }
@@ -222,7 +225,10 @@ final class PurchaseManager {
         Task { await TrialReminderScheduler.shared.refresh() }
     }
 
+    /// A state derived while the start is unreadable says "not started" for
+    /// someone whose trial may be long over, so it is never reported.
     private func publishFunnelEntitlement() {
+        guard !trialStartIsUnreadable else { return }
         PurchaseFunnel.noteEntitlement(state, trialStart: trialHasStarted ? trialStart : nil)
     }
 

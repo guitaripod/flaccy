@@ -1443,6 +1443,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         picker.allowsMultipleSelection = true
         picker.delegate = self
         present(picker, animated: true)
+        PurchaseFunnel.noteAddMusicOpened()
     }
 
     private func buildSongContextMenu(for track: Track) -> UIMenu {
@@ -1654,6 +1655,10 @@ extension LibraryViewController: UIDocumentPickerDelegate {
             UINotificationFeedbackGenerator().notificationOccurred(report.isFailure ? .error : (report.isNoOp ? .warning : .success))
             toast.finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
         }
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        PurchaseFunnel.noteImportCancelled()
     }
 }
 

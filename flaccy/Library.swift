@@ -260,6 +260,7 @@ final class Library: LibraryProviding {
         progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
     ) async -> LibraryImportOutcome {
         let outcome = await Self.copyPickedFiles(urls, into: documentsDirectory, progress: progress)
+        PurchaseFunnel.noteImport(outcome)
         await reload()
         return outcome
     }

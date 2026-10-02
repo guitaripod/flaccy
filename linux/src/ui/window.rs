@@ -1702,6 +1702,12 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
             ui::songlink_dialog::share(&ui, title.to_string(), artist.to_string(), false);
         });
     }
+    if std::env::var_os("FLACCY_DEMO_SAMPLE").is_some() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            crate::samples::download(&ui.core);
+        });
+    }
     if std::env::var_os("FLACCY_DEMO_ZOOM_BURST").is_some() {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
