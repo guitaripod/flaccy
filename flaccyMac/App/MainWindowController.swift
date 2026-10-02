@@ -332,7 +332,6 @@ final class AudioDropView: NSView {
             let outcome = await Library.shared.importFiles(from: urls) { toast.update($0) }
             self?.isImporting = false
             toast.finish(reporting: outcome)
-            ReviewPrompt.recordImportedTracks(outcome.imported)
         }
         return true
     }

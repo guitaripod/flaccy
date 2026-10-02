@@ -39,6 +39,12 @@
             "value": "앨범 %@장"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ albumów"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -95,6 +101,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@개 앨범에 아직 아트워크가 없습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ albumom wciąż brakuje okładki."
           }
         },
         "pt-BR": {
@@ -155,6 +167,12 @@
             "value": "커버 %1$@개 확인 · 발매 연도 %2$@개 앨범"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ okładek znalezionych · %2$@ albumów z datą"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -211,6 +229,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "파일 %@개 찾음"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Znaleziono %@ plików"
           }
         },
         "pt-BR": {
@@ -271,6 +295,12 @@
             "value": "폴더 %@개"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ folderów"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -327,6 +357,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@개 남음"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jeszcze %@"
           }
         },
         "pt-BR": {
@@ -387,6 +423,12 @@
             "value": "%2$@장 중 %1$@장"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ z %2$@ albumów"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -443,6 +485,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%2$@개 중 %1$@개 파일"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ z %2$@ plików"
           }
         },
         "pt-BR": {
@@ -503,6 +551,12 @@
             "value": "%2$@개 중 %1$@개 폴더"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ z %2$@ folderów"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -559,6 +613,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%2$@곡 중 %1$@곡"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ z %2$@ utworów"
           }
         },
         "pt-BR": {
@@ -619,6 +679,12 @@
             "value": "트랙 %@개"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ utworów"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -675,6 +741,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy AI가 트랙 %@개를 정리했습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ utworów uporządkowanych przez AI Flaccy"
           }
         },
         "pt-BR": {
@@ -735,6 +807,12 @@
             "value": "손목에 트랙 %1$@개 · 앨범 %2$@개"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ utworów · %2$@ albumów na twoim nadgarstku"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -788,6 +866,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        },
+        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · %2$@"
@@ -851,6 +935,12 @@
             "value": "무손실 %1$@%% · 평균 %2$@ kbps"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %% bezstratnie · średnio %2$@ kbps"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -907,6 +997,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, 앨범 %2$@개 남음"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, jeszcze %2$@ albumów"
           }
         },
         "pt-BR": {
@@ -967,6 +1063,46 @@
             "value": "%1$@, %2$lld 퍼센트"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$#@arg2@"
+          },
+          "substitutions": {
+            "arg2": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "few": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg procenty"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg procent"
+                    }
+                  },
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg procent"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg procenta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1023,6 +1159,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, %2$lld 퍼센트, %3$@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$#@arg2@, %3$@"
+          },
+          "substitutions": {
+            "arg2": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "few": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg procenty"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg procent"
+                    }
+                  },
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg procent"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg procenta"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "pt-BR": {
@@ -1083,6 +1259,12 @@
             "value": "%@, 연결을 기다리는 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, oczekiwanie na połączenie"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1139,6 +1321,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "파일 %lld개 찾음"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Znaleziono %1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "few": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg pliki"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg plików"
+                    }
+                  },
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg plik"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg pliku"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "pt-BR": {
@@ -1199,6 +1421,12 @@
             "value": "%2$lld개 중 %1$lld개"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld z %2$lld"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1255,6 +1483,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "트랙 %lld개"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "few": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg utwory"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg utworów"
+                    }
+                  },
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg utwór"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg utworu"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "pt-BR": {
@@ -1315,6 +1583,12 @@
             "value": "앨범 1장"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 album"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1371,6 +1645,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "파일 1개 찾음"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Znaleziono 1 plik"
           }
         },
         "pt-BR": {
@@ -1431,6 +1711,12 @@
             "value": "폴더 1개"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 folder"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1487,6 +1773,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "1개 남음"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jeszcze 1"
           }
         },
         "pt-BR": {
@@ -1547,6 +1839,12 @@
             "value": "트랙 1개"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 utwór"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1603,6 +1901,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI 정리에는 Flaccy 평생 이용이 필요합니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czyszczenie przez AI wymaga Flaccy Lifetime"
           }
         },
         "pt-BR": {
@@ -1663,6 +1967,12 @@
             "value": "AI · 7일 체험에 포함"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI · w cenie 7-dniowego okresu próbnego"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1719,6 +2029,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "앨범"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albumy"
           }
         },
         "pt-BR": {
@@ -1779,6 +2095,12 @@
             "value": "아티스트"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykonawcy"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1835,6 +2157,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "서가 정리 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budowanie twoich półek"
           }
         },
         "pt-BR": {
@@ -1895,6 +2223,12 @@
             "value": "태그를 정리하는 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czyszczenie twoich tagów"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -1951,6 +2285,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "완료 %1$@ · 진행 중 %2$@ · 포기 %3$@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ukończone %@ · W toku %@ · Zaniechane %@"
           }
         },
         "pt-BR": {
@@ -2011,6 +2351,12 @@
             "value": "아트워크 가져오는 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobieranie okładki"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2067,6 +2413,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "없는 아트워크 찾기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Znajdź brakujące okładki"
           }
         },
         "pt-BR": {
@@ -2127,6 +2479,12 @@
             "value": "아티스트 찾는 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukanie wykonawców"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2183,6 +2541,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아트워크 찾는 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukanie okładki"
           }
         },
         "pt-BR": {
@@ -2243,6 +2607,12 @@
             "value": "커버를 찾는 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukanie twoich okładek"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2299,6 +2669,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@개 앨범은 포기했습니다. 어떤 출처에도 없습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy zrezygnował z %@ albumów — żadne źródło ich nie ma."
           }
         },
         "pt-BR": {
@@ -2359,6 +2735,12 @@
             "value": "Flaccy의 AI가 뒤죽박죽인 파일 이름을 진짜 제목, 아티스트, 앨범으로 바꿉니다."
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI Flaccy zamienia poplątane nazwy plików w prawdziwe tytuły, wykonawców i albumy."
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2415,6 +2797,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "트랙을 앨범과 아티스트로 묶고 있습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupowanie utworów w albumy i wykonawców."
           }
         },
         "pt-BR": {
@@ -2475,6 +2863,12 @@
             "value": "앨범 식별 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rozpoznawanie albumów"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2531,6 +2925,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@에 보관함 생성 · 트랙 %2$@개 · %3$@개 AI 정리"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biblioteka zbudowana %1$@ · %2$@ utworów · %3$@ uporządkowanych przez AI"
           }
         },
         "pt-BR": {
@@ -2591,6 +2991,12 @@
             "value": "음악 찾는 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukanie muzyki"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2647,6 +3053,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "모든 앨범의 아트워크, 발매 연도, 장르를 찾고 있습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyszukiwanie okładek, lat i gatunków dla każdego albumu."
           }
         },
         "pt-BR": {
@@ -2707,6 +3119,12 @@
             "value": "아직 음악이 없습니다"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeszcze brak muzyki"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2763,6 +3181,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아티스트 사진을 찾지 못함 · %1$@회 시도 · %2$@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie znaleziono zdjęcia wykonawcy · %1$@ prób · %2$@"
           }
         },
         "pt-BR": {
@@ -2823,6 +3247,12 @@
             "value": "커버를 찾지 못함 · %1$@회 시도 · %2$@"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie znaleziono okładki · %1$@ prób · %2$@"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2879,6 +3309,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "발매일을 찾지 못함 · %1$@회 시도 · %2$@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie znaleziono daty wydania · %1$@ prób · %2$@"
           }
         },
         "pt-BR": {
@@ -2939,6 +3375,12 @@
             "value": "재생 중인 항목 없음"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nic nie jest odtwarzane"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -2995,6 +3437,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아무것도 복사하거나 옮기지 않습니다. Flaccy는 파일을 있는 자리에서 읽습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nic nie jest kopiowane ani przenoszone — Flaccy czyta twoje pliki tam, gdzie są."
           }
         },
         "pt-BR": {
@@ -3055,6 +3503,12 @@
             "value": "재생 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teraz odtwarzane"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -3111,6 +3565,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "음악 길이"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muzyki"
           }
         },
         "pt-BR": {
@@ -3171,6 +3631,12 @@
             "value": "보관함 설정 열기"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz ustawienia biblioteki"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -3227,6 +3693,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "라이브러리 여는 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwieranie biblioteki"
           }
         },
         "pt-BR": {
@@ -3287,6 +3759,12 @@
             "value": "앨범을 골라 시작하세요."
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz album, aby zacząć."
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -3343,6 +3821,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "재생"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwórz"
           }
         },
         "pt-BR": {
@@ -3403,6 +3887,12 @@
             "value": "모든 파일 읽는 중"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odczytywanie każdego pliku"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -3459,6 +3949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "태그 읽는 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odczytywanie tagów"
           }
         },
         "pt-BR": {
@@ -3519,6 +4015,12 @@
             "value": "이미 있는 항목을 확인하고 있습니다."
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdzanie, co już masz."
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -3575,6 +4077,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "준비 완료"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gotowe"
           }
         },
         "pt-BR": {
@@ -3635,6 +4143,12 @@
             "value": "준비 완료."
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gotowe."
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -3691,6 +4205,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "iPhone에서 받는 중…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odbieranie z iPhone’a…"
           }
         },
         "pt-BR": {
@@ -3751,6 +4271,12 @@
             "value": "검색 중…"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukanie…"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -3807,6 +4333,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "포함 내용 보기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobacz, co zawiera"
           }
         },
         "pt-BR": {
@@ -3867,6 +4399,12 @@
             "value": "모두 셔플"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzaj losowo wszystko"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -3923,6 +4461,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "iPhone의 Flaccy에서 곡을 동기화하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronizuj utwory z Flaccy na iPhonie."
           }
         },
         "pt-BR": {
@@ -3983,6 +4527,12 @@
             "value": "태그 정리는 Flaccy AI가 담당합니다 — Flaccy 평생 이용에 포함됩니다."
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czyszczenie tagów działa dzięki AI Flaccy — w cenie Flaccy Lifetime."
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -4039,6 +4589,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "태그 정리를 건너뜀 — 체험이 종료되었습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czyszczenie tagów pominięte — twój okres próbny się skończył"
           }
         },
         "pt-BR": {
@@ -4099,6 +4655,12 @@
             "value": "내 음악으로 가기"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zabierz mnie do mojej muzyki"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -4155,6 +4717,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 설정 요약은 이 보관함의 기록입니다. 재설치하거나 초기화하면 새 보관함이 만들어집니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podsumowanie konfiguracji należy do tej biblioteki. Ponowna instalacja lub reset tworzy nowe."
           }
         },
         "pt-BR": {
@@ -4215,6 +4783,12 @@
             "value": "각 트랙의 제목, 아티스트, 그리고 정확한 비트 심도와 샘플레이트."
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tytuły, wykonawcy oraz dokładna głębia bitowa i częstotliwość próbkowania każdego utworu."
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -4271,6 +4845,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "트랙"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory"
           }
         },
         "pt-BR": {
@@ -4331,6 +4911,12 @@
             "value": "다시 시도"
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spróbuj ponownie"
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -4387,6 +4973,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI 정리 켜기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz czyszczenie tagów przez AI"
           }
         },
         "pt-BR": {
@@ -4447,6 +5039,12 @@
             "value": "모두 최신입니다. 모든 앨범에 아트워크와 발매 연도가 있습니다."
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualne — każdy album ma okładkę i rok."
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -4503,6 +5101,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "연결을 기다리는 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oczekiwanie na połączenie"
           }
         },
         "pt-BR": {
@@ -4563,6 +5167,12 @@
             "value": "보관함이 준비되었습니다."
           }
         },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Twoja biblioteka jest gotowa."
+          }
+        },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
@@ -4619,6 +5229,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "음악을 백그라운드에서 전송하고 있습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Twoja muzyka przesyła się w tle."
           }
         },
         "pt-BR": {

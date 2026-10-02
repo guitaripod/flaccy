@@ -411,8 +411,7 @@ final class PaywallViewController: NSViewController {
     }
 
     /// The moment the entitlement lands: the sheet goes away first, then the
-    /// thank-you toast lands on the window underneath it, and a lifetime unlock
-    /// tells the review prompt that the next completed play is the moment to ask.
+    /// thank-you toast lands on the window underneath it.
     private func finishOwned() {
         let parent = view.window?.sheetParent
         let isLifetime = PurchaseManager.shared.state == .purchased(.lifetime)
@@ -420,7 +419,6 @@ final class PaywallViewController: NSViewController {
         guard isLifetime, !hasCelebrated else { return }
         hasCelebrated = true
         MacToast.show(String(localized: "You own Flaccy. Thank you."), style: .success, in: parent)
-        ReviewPrompt.recordLifetimePurchase()
     }
 
     @objc private func purchaseTapped() {

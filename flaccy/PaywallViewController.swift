@@ -541,7 +541,7 @@ final class PaywallViewController: UIViewController {
 
     /// Closes the sheet once the entitlement is active. A lifetime unlock gets
     /// the moment it deserves — a thank-you toast over whatever presented the
-    /// paywall, and the next completed play asks for a review.
+    /// paywall.
     private func finishAfterPurchase() {
         guard !hasCelebrated else { return }
         hasCelebrated = true
@@ -549,9 +549,7 @@ final class PaywallViewController: UIViewController {
         let isLifetime = PurchaseManager.shared.state == .purchased(.lifetime)
         let host = presentingViewController?.view
         dismiss(animated: true) {
-            guard isLifetime else { return }
-            ReviewPrompt.recordLifetimePurchase()
-            guard let host else { return }
+            guard isLifetime, let host else { return }
             ToastView.show(String(localized: "You own Flaccy. Thank you."), in: host, style: .success)
         }
     }

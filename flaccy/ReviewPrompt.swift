@@ -5,82 +5,100 @@ import UIKit
 import AppKit
 #endif
 
-/// Asks for an App Store rating once the person has demonstrably got value out of Flaccy, and
-/// at most once per app version.
+/// Asks for an App Store rating once the person has demonstrably got value out
+/// of Flaccy, and again later if the first ask went nowhere.
 ///
-/// Rating count is both an App Store ranking input and the strongest conversion signal on a
-/// product page. Two independent gates open the prompt: cumulative tracks imported (someone with
-/// a handful of their own files in the library has crossed this app's one real onboarding step)
-/// or tracks played through to the scrobble threshold (a listener who is actually listening).
-/// Both are deliberately shallow, because the deep thresholds they replaced were reached by
-/// almost nobody: the median install never returns for a second day.
+/// A "success" is a song played through to its natural end. The eligibility
+/// decision itself (`isEligible`) is a pure function of the stored counters
+/// and ask history, so it can be tested without UserDefaults or the StoreKit
+/// sheet; only `recordSuccess` and `attemptAsk` touch either.
 @MainActor
 enum ReviewPrompt {
-    private static let tracksBeforeAsking = 5
-    private static let playsBeforeAsking = 8
-    private static let listeningDaysBeforeAsking = 1
 
-    private static let importCountKey = "flaccy.review.importedTracks"
-    private static let playCountKey = "flaccy.review.completedPlays"
-    private static let playDaysKey = "flaccy.review.listeningDays"
-    private static let versionKey = "flaccy.review.promptedVersion"
-    private static let lifetimePurchasedKey = "flaccy.review.lifetimePurchased"
+    private static let successesBeforeFirstAsk = 2
+    private static let minimumDaysBetweenAsks = 14.0
+    private static let minimumNewSuccessesBetweenAsks = 3
+    private static let maximumAsksPerRollingYear = 3
+    private static let rollingYear: TimeInterval = 365 * 86_400
+    private static let askDelayAfterSuccess: TimeInterval = 1.5
 
-    /// Call once a lifetime unlock has landed from a purchase or a restore: someone who has
-    /// just paid once for good is the listener most likely to say why. The paywall is still on
-    /// screen at this moment and the rating sheet will not stack on it, so the ask is retried
-    /// shortly after — and if that too is too early, the flag leaves the next completed play
-    /// to carry it.
-    static func recordLifetimePurchase() {
-        UserDefaults.standard.set(true, forKey: lifetimePurchasedKey)
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(3))
-            guard UserDefaults.standard.bool(forKey: lifetimePurchasedKey) else { return }
-            if askIfDue() { UserDefaults.standard.removeObject(forKey: lifetimePurchasedKey) }
+    private static let successCountKey = "flaccy.review.successCount"
+    private static let askDatesKey = "flaccy.review.askDates"
+    private static let successCountAtLastAskKey = "flaccy.review.successCountAtLastAsk"
+    private static let legacyStateClearedKey = "flaccy.review.legacyStateCleared"
+
+    /// Call when a track plays through to its natural end (including a
+    /// repeat-one loop; not a manual skip).
+    static func recordSuccess() {
+        clearLegacyStateIfNeeded()
+        let defaults = UserDefaults.standard
+        let count = defaults.integer(forKey: successCountKey) + 1
+        defaults.set(count, forKey: successCountKey)
+
+        guard isEligible(
+            successCount: count,
+            askDates: storedAskDates(),
+            successCountAtLastAsk: defaults.integer(forKey: successCountAtLastAskKey),
+            now: Date()
+        ) else {
+            AppLogger.info("Review prompt skipped at success #\(count) (not eligible)", category: .ui)
+            return
+        }
+
+        Task {
+            try? await Task.sleep(for: .seconds(askDelayAfterSuccess))
+            attemptAsk(successCount: count)
         }
     }
 
-    /// Call when an import finishes, with the number of tracks it actually added.
-    static func recordImportedTracks(_ imported: Int) {
-        guard imported > 0 else { return }
-        let defaults = UserDefaults.standard
-        let total = defaults.integer(forKey: importCountKey) + imported
-        defaults.set(total, forKey: importCountKey)
-        guard total >= tracksBeforeAsking else { return }
-        askIfDue()
+    /// Whether an ask is due right now, given nothing but the stored history.
+    /// The first ask needs only two successes; every ask after that needs
+    /// both 14 days and 3 fresh successes since the previous one, and no ask
+    /// at all is due once 3 asks already fall inside the trailing 365 days.
+    static func isEligible(
+        successCount: Int, askDates: [Date], successCountAtLastAsk: Int, now: Date
+    ) -> Bool {
+        guard successCount >= successesBeforeFirstAsk else { return false }
+        let askDatesInRollingYear = askDates.filter { now.timeIntervalSince($0) < rollingYear }
+        guard askDatesInRollingYear.count < maximumAsksPerRollingYear else { return false }
+        guard let mostRecentAsk = askDates.max() else { return true }
+        let daysSinceLastAsk = now.timeIntervalSince(mostRecentAsk) / 86_400
+        let newSuccessesSinceLastAsk = successCount - successCountAtLastAsk
+        return daysSinceLastAsk >= minimumDaysBetweenAsks
+            && newSuccessesSinceLastAsk >= minimumNewSuccessesBetweenAsks
     }
 
-    /// Call when a track has played far enough to count as a listen.
-    static func recordCompletedPlay() {
+    private static func attemptAsk(successCount: Int) {
+        guard requestReview() else {
+            AppLogger.info("Review prompt deferred at success #\(successCount) (no eligible window)", category: .ui)
+            return
+        }
         let defaults = UserDefaults.standard
-        let plays = defaults.integer(forKey: playCountKey) + 1
-        defaults.set(plays, forKey: playCountKey)
-
-        let today = Calendar.current.startOfDay(for: Date()).timeIntervalSinceReferenceDate
-        var days = defaults.array(forKey: playDaysKey) as? [Double] ?? []
-        if days.last != today {
-            days.append(today)
-            defaults.set(days, forKey: playDaysKey)
-        }
-        let earnedByListening = plays >= playsBeforeAsking && days.count >= listeningDaysBeforeAsking
-        let earnedByPurchase = defaults.bool(forKey: lifetimePurchasedKey)
-        guard earnedByListening || earnedByPurchase else { return }
-        if askIfDue(), earnedByPurchase {
-            defaults.removeObject(forKey: lifetimePurchasedKey)
-        }
+        let dates = storedAskDates() + [Date()]
+        defaults.set(dates, forKey: askDatesKey)
+        defaults.set(successCount, forKey: successCountAtLastAskKey)
+        AppLogger.info("Requested App Store review (ask #\(dates.count), success #\(successCount))", category: .ui)
     }
 
-    /// Asks unless this version already has, and reports whether the matter is
-    /// settled — asked now, or asked before — so a one-shot trigger knows
-    /// whether to keep waiting for a moment when the sheet can be shown.
-    @discardableResult
-    private static func askIfDue() -> Bool {
+    private static func storedAskDates() -> [Date] {
+        UserDefaults.standard.array(forKey: askDatesKey) as? [Date] ?? []
+    }
+
+    /// The old mechanism (20 imports, or 25 scrobble-threshold plays across 2
+    /// days, or a lifetime purchase, asked once per version) kept only the
+    /// last-prompted version string, never a date — so there is no ask history
+    /// to carry into `askDates`. This just stops the old keys from being read.
+    private static func clearLegacyStateIfNeeded() {
         let defaults = UserDefaults.standard
-        guard defaults.string(forKey: versionKey) != currentVersion else { return true }
-        guard requestReview() else { return false }
-        defaults.set(currentVersion, forKey: versionKey)
-        AppLogger.info("Requested App Store review for \(currentVersion)", category: .ui)
-        return true
+        guard !defaults.bool(forKey: legacyStateClearedKey) else { return }
+        for key in [
+            "flaccy.review.importedTracks", "flaccy.review.completedPlays",
+            "flaccy.review.listeningDays", "flaccy.review.promptedVersion",
+            "flaccy.review.lifetimePurchased",
+        ] {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.set(true, forKey: legacyStateClearedKey)
     }
 
     /// Presents the system rating sheet, reporting whether it could actually be
@@ -92,8 +110,12 @@ enum ReviewPrompt {
         AppStore.requestReview(in: scene)
         return true
         #else
-        guard NSApp.isActive else { return false }
-        SKStoreReviewController.requestReview()
+        guard NSApp.isActive,
+              let window = NSApp.mainWindow,
+              window.attachedSheet == nil,
+              let controller = window.contentViewController
+        else { return false }
+        AppStore.requestReview(in: controller)
         return true
         #endif
     }
@@ -109,8 +131,4 @@ enum ReviewPrompt {
         scene.keyWindow?.rootViewController?.presentedViewController != nil
     }
     #endif
-
-    private static var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-    }
 }

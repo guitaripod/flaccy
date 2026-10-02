@@ -773,6 +773,7 @@ final class AudioPlayer: AudioPlaying {
             return
         }
         scrobbleAtNaturalEndIfEligible()
+        recordReviewSuccessUnlessSample()
 
         let previousIndex = currentIndex
         currentIndex = nextIndex
@@ -807,6 +808,7 @@ final class AudioPlayer: AudioPlaying {
     private func handleQueueExhausted() {
         guard playingItem != nil else { return }
         scrobbleAtNaturalEndIfEligible()
+        recordReviewSuccessUnlessSample()
         playingItem = nil
         preloadedItem = nil
         preloadedIndex = nil
@@ -1029,6 +1031,14 @@ final class AudioPlayer: AudioPlaying {
         performScrobble(submitToLastFM: eligibleForLastFM)
     }
 
+    /// The sample album is free, bundled-in trial content, not the person's own
+    /// library, so a natural-end play of it is not a success worth asking about
+    /// (mirrors `PurchaseManager.noteTrackStarted`'s trial-start exclusion).
+    private func recordReviewSuccessUnlessSample() {
+        guard let track = currentTrack, !SampleMusicService.isSample(track.fileURL) else { return }
+        ReviewPrompt.recordSuccess()
+    }
+
     /// Write-ahead persists the scrobble, then flushes through the pending
     /// queue as the single Last.fm submission path, so a foreground or
     /// network-restore retry can never double-submit an in-flight scrobble.
@@ -1037,7 +1047,6 @@ final class AudioPlayer: AudioPlaying {
         hasScrobbled = true
         Task { @MainActor in
             NotificationCenter.default.post(name: TrialReminderScheduler.optInOpportunity, object: nil)
-            ReviewPrompt.recordCompletedPlay()
         }
         let startTime = trackStartTime ?? Date()
         let trackDuration = Int(track.duration)

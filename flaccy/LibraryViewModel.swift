@@ -997,7 +997,6 @@ final class LibraryViewModel {
         progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
     ) async -> LibraryImportOutcome {
         let outcome = await library.importFiles(from: urls, progress: progress)
-        ReviewPrompt.recordImportedTracks(outcome.imported)
         return outcome
     }
 
