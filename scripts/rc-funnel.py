@@ -61,7 +61,7 @@ def paged(session, url):
 
 def load_customers(session, project, since):
     for customer in paged(session, f"/projects/{project}/customers?limit=1000"):
-        first_seen = dt.datetime.fromtimestamp(customer["first_seen_at"] / 1000, dt.UTC)
+        first_seen = dt.datetime.fromtimestamp(customer["first_seen_at"] / 1000, dt.timezone.utc)
         if since and first_seen.date() < since:
             continue
         base = f"/projects/{project}/customers/{urllib.parse.quote(customer['id'], safe='')}"
