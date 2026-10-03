@@ -65,14 +65,29 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     private lazy var sampleMusicButton: UIButton = {
         var config = UIButton.Configuration.bordered()
         config.title = String(localized: "Add Sample Music")
-        config.subtitle = String(localized: "Bach, lossless, free")
+        config.subtitle = String(localized: "Bach, lossless, free · 130 MB")
         config.image = UIImage(systemName: "arrow.down.circle")
         config.imagePadding = 8
+        config.titleAlignment = .center
         config.cornerStyle = .large
         let button = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
-            self?.downloadSampleMusic()
+            self?.sampleMusicTapped()
         })
         return button
+    }()
+    private lazy var computerGuideButton: UIButton = {
+        var config = UIButton.Configuration.plain()
+        config.title = String(localized: "Moving music from a computer")
+        config.image = UIImage(systemName: "laptopcomputer.and.iphone")
+        config.imagePadding = 6
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+            var attributes = attributes
+            attributes.font = .preferredFont(forTextStyle: .subheadline)
+            return attributes
+        }
+        return UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.presentComputerTransferGuide()
+        })
     }()
     private lazy var emptyStateView: UIView = {
         let container = UIView()
@@ -104,22 +119,46 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         footnote.numberOfLines = 0
         footnote.textAlignment = .center
 
-        let stack = UIStackView(arrangedSubviews: [imageView, label, buttons, footnote])
+        let stack = UIStackView(arrangedSubviews: [imageView, label, buttons, computerGuideButton, footnote])
         stack.axis = .vertical
         stack.spacing = 12
         stack.alignment = .center
         stack.setCustomSpacing(24, after: label)
-        stack.setCustomSpacing(18, after: buttons)
+        stack.setCustomSpacing(6, after: buttons)
+        stack.setCustomSpacing(14, after: computerGuideButton)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(stack)
 
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.contentInsetAdjustmentBehavior = .never
+        scrollView.showsVerticalScrollIndicator = false
+        let page = UIView()
+        page.translatesAutoresizingMaskIntoConstraints = false
+        page.addSubview(stack)
+        scrollView.addSubview(page)
+        container.addSubview(scrollView)
+
+        let centered = stack.centerYAnchor.constraint(equalTo: page.centerYAnchor, constant: -40)
+        centered.priority = .defaultHigh
         NSLayoutConstraint.activate([
             preferredButtonWidth,
             buttons.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
-            stack.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: container.centerYAnchor, constant: -40),
-            stack.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -32),
+            scrollView.topAnchor.constraint(equalTo: container.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            page.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            page.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            page.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            page.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            page.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+            page.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.frameLayoutGuide.heightAnchor),
+            stack.centerXAnchor.constraint(equalTo: page.centerXAnchor),
+            centered,
+            stack.topAnchor.constraint(greaterThanOrEqualTo: page.topAnchor, constant: 24),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: page.bottomAnchor, constant: -24),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: page.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: page.trailingAnchor, constant: -32),
         ])
 
         return container
@@ -143,6 +182,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         bindViewModel()
         updateRightBarButton(for: .albums)
         updateChips(for: .albums)
+        #if DEBUG
+        driveSampleFlowIfRequested()
+        #endif
 
         let settingsItem = UIBarButtonItem(
             image: UIImage(systemName: "gearshape"),
@@ -510,6 +552,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             emptyStateLabel.text = String(localized: "Add songs or whole folders from iCloud Drive, a USB drive, or a network share you've connected in the Files app.")
             addMusicButton.isHidden = false
             sampleMusicButton.isHidden = false
+            computerGuideButton.isHidden = false
+            applySampleButtonState()
             trialStartsLabel.isHidden = PurchaseManager.shared.state != .trialNotStarted
             collectionView.backgroundView = emptyStateView
         case .noSearchResults(let query):
@@ -517,46 +561,150 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             emptyStateLabel.text = String(localized: "No results for \u{201C}\(query)\u{201D}")
             addMusicButton.isHidden = true
             sampleMusicButton.isHidden = true
+            computerGuideButton.isHidden = true
             trialStartsLabel.isHidden = true
             collectionView.backgroundView = emptyStateView
+        }
+    }
+
+    #if DEBUG
+    private func driveSampleFlowIfRequested() {
+        guard let step = SampleDebugHooks.drive else { return }
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            switch step {
+            case "guide": self?.presentComputerTransferGuide()
+            case "sample": self?.sampleMusicTapped()
+            case "sample-retry":
+                self?.sampleMusicTapped()
+                try? await Task.sleep(for: .seconds(SampleDebugHooks.retryDelay))
+                self?.sampleMusicTapped()
+            default: break
+            }
+        }
+    }
+    #endif
+
+    private func presentComputerTransferGuide() {
+        impactLight.impactOccurred()
+        let guide = UINavigationController(rootViewController: ComputerTransferGuideViewController())
+        guide.modalPresentationStyle = .pageSheet
+        guide.sheetPresentationController?.detents = [.medium(), .large()]
+        guide.sheetPresentationController?.prefersGrabberVisible = true
+        present(guide, animated: true)
+    }
+
+    /// The button is the one place the sample's state lives: idle states the
+    /// size up front, a running download shows its progress, and an
+    /// interrupted one offers to continue rather than silently starting over.
+    private func applySampleButtonState() {
+        let service = SampleMusicService.shared
+        var config = sampleMusicButton.configuration
+        config?.showsActivityIndicator = service.isDownloading
+        sampleMusicButton.isEnabled = !service.isDownloading
+        if service.isDownloading {
+            config?.title = service.progressText.isEmpty ? String(localized: "Downloading…") : service.progressText
+            config?.subtitle = String(localized: "About 130 MB of 24-bit FLAC")
+            config?.image = UIImage(systemName: "arrow.down.circle")
+        } else {
+            switch service.interruption {
+            case .resumable:
+                config?.title = String(localized: "Resume Download")
+                config?.subtitle = String(localized: "Interrupted — picks up where it stopped")
+                config?.image = UIImage(systemName: "arrow.clockwise.circle")
+            case .unreachable:
+                config?.title = String(localized: "Try Again")
+                config?.subtitle = String(localized: "Couldn't reach the server — check your connection")
+                config?.image = UIImage(systemName: "arrow.clockwise.circle")
+            case nil:
+                config?.title = String(localized: "Add Sample Music")
+                config?.subtitle = String(localized: "Bach, lossless, free · 130 MB")
+                config?.image = UIImage(systemName: "arrow.down.circle")
+            }
+        }
+        sampleMusicButton.configuration = config
+    }
+
+    private func sampleMusicTapped() {
+        guard !SampleMusicService.shared.isDownloading else { return }
+        impactLight.impactOccurred()
+        Task { [weak self] in
+            let confirmation = await SampleDownloadPolicy.currentConfirmation()
+            guard let self, !SampleMusicService.shared.isDownloading else { return }
+            guard let confirmation else {
+                self.downloadSampleMusic()
+                return
+            }
+            AppLogger.info("Sample download asks first: \(confirmation)", category: .content)
+            self.presentSampleConfirmation(confirmation)
+        }
+    }
+
+    private func presentSampleConfirmation(_ confirmation: SampleDownloadPolicy.Confirmation) {
+        let alert = UIAlertController(
+            title: sampleConfirmationTitle(confirmation),
+            message: sampleConfirmationMessage(confirmation),
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: String(localized: "Not Now"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Download"), style: .default) { [weak self] _ in
+            self?.downloadSampleMusic()
+        })
+        present(alert, animated: true)
+    }
+
+    private func sampleConfirmationTitle(_ confirmation: SampleDownloadPolicy.Confirmation) -> String {
+        switch confirmation {
+        case .cellular: String(localized: "Download over cellular?")
+        case .lowDataMode: String(localized: "Download in Low Data Mode?")
+        }
+    }
+
+    private func sampleConfirmationMessage(_ confirmation: SampleDownloadPolicy.Confirmation) -> String {
+        switch confirmation {
+        case .cellular: String(localized: "The sample album is about 130 MB and this connection may be metered. Wi-Fi is the better way to get it.")
+        case .lowDataMode: String(localized: "The sample album is about 130 MB, and Low Data Mode asks apps to use less data.")
         }
     }
 
     private func downloadSampleMusic() {
         guard !SampleMusicService.shared.isDownloading else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        var config = sampleMusicButton.configuration
-        config?.showsActivityIndicator = true
-        config?.title = String(localized: "Downloading…")
-        config?.subtitle = String(localized: "About 130 MB of 24-bit FLAC")
-        sampleMusicButton.configuration = config
-        sampleMusicButton.isEnabled = false
 
         let progressObserver = NotificationCenter.default.addObserver(
             forName: SampleMusicService.progressDidChange, object: nil, queue: .main
         ) { [weak self] _ in
-            let text = SampleMusicService.shared.progressText
-            guard !text.isEmpty else { return }
-            var config = self?.sampleMusicButton.configuration
-            config?.title = text
-            self?.sampleMusicButton.configuration = config
+            self?.applySampleButtonState()
         }
 
         Task { [weak self] in
             let success = await SampleMusicService.shared.downloadSamples()
             NotificationCenter.default.removeObserver(progressObserver)
             guard let self else { return }
-            self.sampleMusicButton.isEnabled = true
-            var config = self.sampleMusicButton.configuration
-            config?.showsActivityIndicator = false
-            config?.title = String(localized: "Add Sample Music")
-            config?.subtitle = String(localized: "Bach, lossless, free")
-            self.sampleMusicButton.configuration = config
+            self.applySampleButtonState()
             if success {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 ToastView.show(String(localized: "Sample album added — Open Goldberg Variations (CC0)"), in: self.view, style: .success)
             } else {
-                ToastView.show(String(localized: "Sample download failed — check your connection"), in: self.view, style: .error)
+                self.reportSampleFailure()
+            }
+        }
+    }
+
+    /// With the empty library still showing, the button itself became Retry;
+    /// once the first songs landed the empty state is gone, so the failure
+    /// carries its own Retry instead of leaving the album half there.
+    private func reportSampleFailure() {
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+        if case .noLibrary = viewModel.emptyState {
+            ToastView.show(String(localized: "Sample download failed — check your connection"), in: view, style: .error)
+        } else {
+            ToastView.showAction(
+                String(localized: "Sample download interrupted"),
+                actionTitle: String(localized: "Try Again"),
+                in: view
+            ) { [weak self] in
+                self?.sampleMusicTapped()
             }
         }
     }

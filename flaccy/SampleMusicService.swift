@@ -17,8 +17,27 @@ final class SampleMusicService {
     private(set) var isDownloading = false
     private(set) var progressText = ""
     private(set) var attribution: String?
+    private(set) var interruption: Interruption?
 
-    private static let baseURL = URL(string: "https://flaccy-api.midgarcorp.cc/v1/samples")!
+    /// How the last attempt ended when it did not finish. `resumable` means
+    /// part of the album is already on disk and another attempt only fetches
+    /// what is missing; `unreachable` means nothing landed at all.
+    enum Interruption: Equatable {
+        case resumable
+        case unreachable
+    }
+
+    private var resumeData: [String: Data] = [:]
+    private var hasStartedPlayback = false
+
+    private static let productionBaseURL = URL(string: "https://flaccy-api.midgarcorp.cc/v1/samples")!
+    private static var baseURL: URL {
+        #if DEBUG
+        SampleDebugHooks.baseURL ?? productionBaseURL
+        #else
+        productionBaseURL
+        #endif
+    }
     private static let fileNamesKey = "flaccy.samples.fileNames"
 
     /// The sample album's files, remembered as they are downloaded so the trial
@@ -55,6 +74,8 @@ final class SampleMusicService {
     func downloadSamples() async -> Bool {
         guard !isDownloading else { return false }
         isDownloading = true
+        interruption = nil
+        postProgress("")
         PurchaseFunnel.noteSampleDownload(.started)
         defer {
             isDownloading = false
@@ -70,8 +91,10 @@ final class SampleMusicService {
             let files = await plannedFiles(albumOrder)
             let totalBytes = max(files.reduce(0) { $0 + $1.bytes }, 1)
             var landedBytes: Int64 = 0
-            var startedPlayback = false
             for file in files {
+                #if DEBUG
+                try SampleDebugHooks.failOnceIfRequested(landedFiles: landedSampleFileCount())
+                #endif
                 if !FileManager.default.fileExists(atPath: file.destination.path) {
                     let baseline = landedBytes
                     try await download(file) { [weak self] received in
@@ -82,20 +105,29 @@ final class SampleMusicService {
                 landedBytes += file.bytes
                 postDownloadProgress(Double(landedBytes) / Double(totalBytes))
                 await Library.shared.reload()
-                if startedPlayback {
+                if hasStartedPlayback {
                     appendArrivalsToQueue(albumOrder: albumOrder)
                 } else {
-                    startedPlayback = playSampleAlbum(albumOrder: albumOrder)
+                    hasStartedPlayback = playSampleAlbum(albumOrder: albumOrder)
                 }
             }
+            hasStartedPlayback = false
+            resumeData.removeAll()
             AppLogger.info("Sample music installed (\(manifest.tracks.count) tracks)", category: .content)
             PurchaseFunnel.noteSampleDownload(.finished)
             return true
         } catch {
-            AppLogger.error("Sample download failed: \(error.localizedDescription)", category: .content)
+            interruption = landedSampleFileCount() > 0 ? .resumable : .unreachable
+            AppLogger.error("Sample download failed (\(interruption == .resumable ? "resumable" : "nothing landed"), \(resumeData.count) partial): \(error.localizedDescription)", category: .content)
             PurchaseFunnel.noteSampleDownload(.failed)
             return false
         }
+    }
+
+    private func landedSampleFileCount() -> Int {
+        Self.sampleFileNames.filter {
+            FileManager.default.fileExists(atPath: LibraryPaths.root.appendingPathComponent($0).path)
+        }.count
     }
 
     /// Smallest file first, so the first sound arrives after about 20 MB
@@ -138,11 +170,34 @@ final class SampleMusicService {
             }
         }
         defer { ticker.cancel() }
-        let (temp, response) = try await URLSession.shared.download(from: file.url, delegate: capture)
+        let (temp, response) = try await fetch(file, capture: capture)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
             throw URLError(.badServerResponse)
         }
         try FileManager.default.moveItem(at: temp, to: file.destination)
+    }
+
+    /// Continues from the bytes a dropped transfer left behind when the server
+    /// handed back resume data, and starts the file over when it did not or
+    /// when the leftovers are no longer accepted. Whatever a failed transfer
+    /// can still be resumed from is kept for the next attempt.
+    private func fetch(_ file: PlannedFile, capture: DownloadTaskCapture) async throws -> (URL, URLResponse) {
+        if let saved = resumeData.removeValue(forKey: file.name) {
+            do {
+                AppLogger.info("Sample resuming: \(file.name)", category: .content)
+                return try await URLSession.shared.download(resumeFrom: saved, delegate: capture)
+            } catch {
+                AppLogger.info("Sample resume refused, restarting \(file.name): \(error.localizedDescription)", category: .content)
+            }
+        }
+        do {
+            return try await URLSession.shared.download(from: file.url, delegate: capture)
+        } catch {
+            if let leftovers = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+                resumeData[file.name] = leftovers
+            }
+            throw error
+        }
     }
 
     private func sampleTracks(albumOrder: [String]) -> [Track] {

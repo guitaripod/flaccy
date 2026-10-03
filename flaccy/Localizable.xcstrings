@@ -15439,6 +15439,134 @@
         }
       }
     },
+    "AirDrop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirDrop"
+          }
+        }
+      }
+    },
+    "AirDrop the files to your iPhone and save them to Files. Then tap Add Music and choose them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sende die Dateien per AirDrop an dein iPhone und sichere sie in „Dateien“. Tippe dann auf „Musik hinzufügen“ und wähle sie aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía los archivos a tu iPhone con AirDrop y guárdalos en Archivos. Después toca Añadir música y selecciónalos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyez les fichiers à votre iPhone par AirDrop et enregistrez-les dans Fichiers. Touchez ensuite Ajouter de la musique et choisissez-les."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia i file all'iPhone con AirDrop e salvali in File. Poi tocca Aggiungi musica e selezionali."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルをAirDropでiPhoneに送り、ファイルAppに保存します。そのあと「音楽を追加」をタップして選択します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일을 AirDrop으로 iPhone에 보내 파일 앱에 저장하세요. 그런 다음 음악 추가를 탭하고 선택하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij pliki przez AirDrop na iPhone’a i zapisz je w aplikacji Pliki. Potem dotknij Dodaj muzykę i wybierz je."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envie os arquivos para o iPhone por AirDrop e salve-os no app Arquivos. Depois toque em Adicionar música e escolha-os."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 AirDrop 将文件发送到 iPhone，并存储到“文件”App。然后点按“添加音乐”并选取。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 AirDrop 將檔案傳送到 iPhone，並儲存到「檔案」App。然後點一下「加入音樂」並選取。"
+          }
+        }
+      }
+    },
     "AirPods Max (USB-C) support 24-bit/48 kHz lossless over a USB-C cable, added by a firmware update in March 2025.": {
       "localizations": {
         "de": {
@@ -18047,66 +18175,66 @@
         }
       }
     },
-    "Bach, lossless, free": {
+    "Bach, lossless, free · 130 MB": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bach, verlustfrei, gratis"
+            "value": "Bach, verlustfrei, gratis · 130 MB"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bach, lossless, gratis"
+            "value": "Bach, lossless, gratis · 130 MB"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bach, lossless, gratuit"
+            "value": "Bach, lossless, gratuit · 130 Mo"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bach, lossless, gratis"
+            "value": "Bach, lossless, gratis · 130 MB"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バッハ、ロスレス、無料"
+            "value": "バッハ、ロスレス、無料 · 130 MB"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "바흐, 무손실, 무료"
+            "value": "바흐, 무손실, 무료 · 130 MB"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bach, bezstratnie, za darmo"
+            "value": "Bach, bezstratnie, za darmo · 130 MB"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bach, lossless, grátis"
+            "value": "Bach, lossless, grátis · 130 MB"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "巴赫，无损，免费"
+            "value": "巴赫，无损，免费 · 130 MB"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "巴哈，無損，免費"
+            "value": "巴哈，無損，免費 · 130 MB"
           }
         }
       }
@@ -21133,6 +21261,70 @@
         }
       }
     },
+    "Connect your iPhone to a Mac, select it in the Finder sidebar, open the Files tab and drag songs or folders onto Flaccy.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde dein iPhone mit einem Mac, wähle es in der Finder-Seitenleiste aus, öffne den Tab „Dateien“ und ziehe Titel oder Ordner auf Flaccy."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta tu iPhone a un Mac, selecciónalo en la barra lateral del Finder, abre la pestaña Archivos y arrastra canciones o carpetas a Flaccy."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Branchez votre iPhone à un Mac, sélectionnez-le dans la barre latérale du Finder, ouvrez l'onglet Fichiers et faites glisser des morceaux ou des dossiers sur Flaccy."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega l'iPhone a un Mac, selezionalo nella barra laterale del Finder, apri la scheda File e trascina brani o cartelle su Flaccy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhoneをMacに接続し、Finderのサイドバーで選択して「ファイル」タブを開き、曲やフォルダをFlaccyにドラッグします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone을 Mac에 연결하고 Finder 사이드바에서 선택한 다음 파일 탭을 열어 곡이나 폴더를 Flaccy로 드래그하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podłącz iPhone’a do Maca, wybierz go na pasku bocznym Findera, otwórz kartę Pliki i przeciągnij utwory lub foldery na Flaccy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte o iPhone a um Mac, selecione-o na barra lateral do Finder, abra a aba Arquivos e arraste músicas ou pastas para o Flaccy."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用数据线将 iPhone 连接到 Mac，在访达边栏中选择它，打开“文件”标签页，然后将歌曲或文件夹拖到 Flaccy 上。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用傳輸線將 iPhone 連接到 Mac，在 Finder 側邊欄中選取它，打開「檔案」標籤頁，然後將歌曲或資料夾拖到 Flaccy 上。"
+          }
+        }
+      }
+    },
     "Connected": {
       "localizations": {
         "de": {
@@ -23305,6 +23497,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法連線到 App Store。請檢查網路連線後再試一次。"
+          }
+        }
+      }
+    },
+    "Couldn't reach the server — check your connection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server nicht erreichbar – prüfe deine Verbindung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo conectar con el servidor: revisa tu conexión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serveur injoignable — vérifiez votre connexion"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile raggiungere il server: controlla la connessione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバに接続できません — 接続を確認してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버에 연결할 수 없음 — 연결 상태를 확인하세요"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie można połączyć z serwerem — sprawdź połączenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível acessar o servidor — verifique sua conexão"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法连接服务器——请检查网络连接"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法連接伺服器——請檢查網路連線"
           }
         }
       }
@@ -26363,6 +26619,70 @@
         }
       }
     },
+    "Download": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Télécharger"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scarica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobierz"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載"
+          }
+        }
+      }
+    },
     "Download Sample Album": {
       "localizations": {
         "de": {
@@ -26423,6 +26743,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載範例專輯"
+          }
+        }
+      }
+    },
+    "Download in Low Data Mode?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Datensparmodus laden?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Descargar en modo de datos reducidos?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Télécharger en mode économie de données ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaricare in modalità Dati ridotti?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低データモードでダウンロードしますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저데이터 모드에서 다운로드할까요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobrać w trybie niskiego transferu danych?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixar no Modo de Dados Reduzidos?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要在低数据模式下下载吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要在「低數據模式」下下載嗎？"
+          }
+        }
+      }
+    },
+    "Download over cellular?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über Mobilfunk laden?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Descargar con datos móviles?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Télécharger en cellulaire ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaricare con la rete cellulare?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モバイルデータ通信でダウンロードしますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "셀룰러로 다운로드할까요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobrać przez sieć komórkową?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixar com dados móveis?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要使用蜂窝网络下载吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要使用行動網路下載嗎？"
           }
         }
       }
@@ -28797,6 +29245,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "尋找缺少的封面"
+          }
+        }
+      }
+    },
+    "Finder, with a cable": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder, per Kabel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder, con un cable"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder, avec un câble"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder, con un cavo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder、ケーブル接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder, 케이블 연결"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder, przez kabel"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder, com um cabo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 Finder 和数据线"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 Finder 和傳輸線"
           }
         }
       }
@@ -34867,6 +35379,70 @@
         }
       }
     },
+    "Interrupted — picks up where it stopped": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterbrochen – geht dort weiter, wo es aufgehört hat"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrumpida: continúa donde se quedó"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrompu – reprend là où il s'est arrêté"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrotto: riprende da dove si era fermato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中断されました — 続きから再開します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중단됨 — 멈춘 곳부터 이어받습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przerwano — wznowi od miejsca zatrzymania"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrompido — continua de onde parou"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已中断——将从中断处继续"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已中斷——將從中斷處繼續"
+          }
+        }
+      }
+    },
     "Invalid Last.fm API URL": {
       "localizations": {
         "de": {
@@ -40181,6 +40757,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "已移到垃圾桶"
+          }
+        }
+      }
+    },
+    "Moving music from a computer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik vom Computer übertragen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasar música desde un ordenador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transférer de la musique depuis un ordinateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trasferire musica da un computer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータから音楽を移す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터에서 음악 옮기기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przenoszenie muzyki z komputera"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passar música de um computador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从电脑传输音乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從電腦傳輸音樂"
           }
         }
       }
@@ -51633,6 +52273,70 @@
         }
       }
     },
+    "Put your music in iCloud Drive, or connect to a server in the Files app. Then tap Add Music and pick it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lege deine Musik in iCloud Drive ab oder verbinde dich in der App „Dateien“ mit einem Server. Tippe dann auf „Musik hinzufügen“ und wähle sie aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guarda tu música en iCloud Drive o conéctate a un servidor en la app Archivos. Después toca Añadir música y selecciónala."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Placez votre musique dans iCloud Drive ou connectez-vous à un serveur dans l'app Fichiers. Touchez ensuite Ajouter de la musique et choisissez-la."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metti la tua musica in iCloud Drive oppure collegati a un server nell'app File. Poi tocca Aggiungi musica e selezionala."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽をiCloud Driveに置くか、ファイルAppでサーバに接続します。そのあと「音楽を追加」をタップして選択します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악을 iCloud Drive에 넣거나 파일 앱에서 서버에 연결하세요. 그런 다음 음악 추가를 탭하고 선택하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umieść muzykę w iCloud Drive albo połącz się z serwerem w aplikacji Pliki. Potem dotknij Dodaj muzykę i wybierz pliki."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coloque suas músicas no iCloud Drive ou conecte-se a um servidor no app Arquivos. Depois toque em Adicionar música e escolha-as."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把音乐放进 iCloud Drive，或在“文件”App 中连接服务器。然后点按“添加音乐”并选取。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把音樂放進 iCloud Drive，或在「檔案」App 中連接伺服器。然後點一下「加入音樂」並選取。"
+          }
+        }
+      }
+    },
     "Quality": {
       "localizations": {
         "de": {
@@ -55631,6 +56335,70 @@
         }
       }
     },
+    "Resume Download": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download fortsetzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reanudar descarga"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reprendre le téléchargement"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprendi il download"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードを再開"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드 이어받기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wznów pobieranie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retomar download"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繼續下載"
+          }
+        }
+      }
+    },
     "Retry Now": {
       "localizations": {
         "de": {
@@ -56139,6 +56907,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "範例下載失敗——請檢查網路連線"
+          }
+        }
+      }
+    },
+    "Sample download interrupted": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download des Beispiels unterbrochen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se interrumpió la descarga de la muestra"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement de l'exemple interrompu"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download dell'esempio interrotto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプルのダウンロードが中断されました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "샘플 다운로드가 중단됨"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobieranie przykładu zostało przerwane"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download do exemplo interrompido"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "示例下载已中断"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範例下載已中斷"
           }
         }
       }
@@ -60509,6 +61341,70 @@
         }
       }
     },
+    "Songs copied in with Finder or the Files app (On My iPhone › Flaccy) appear the next time Flaccy launches.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel, die du per Finder oder in der App „Dateien“ (Auf meinem iPhone › Flaccy) kopierst, erscheinen beim nächsten Start von Flaccy."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las canciones copiadas con el Finder o la app Archivos (En mi iPhone › Flaccy) aparecen la próxima vez que se abra Flaccy."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les morceaux copiés avec le Finder ou l'app Fichiers (Sur mon iPhone › Flaccy) apparaissent au prochain lancement de Flaccy."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I brani copiati con il Finder o l'app File (Su iPhone › Flaccy) compaiono al prossimo avvio di Flaccy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finderまたはファイルアプリ（このiPhone内 › Flaccy）でコピーした曲は、次にFlaccyを起動したときに表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder나 파일 앱(나의 iPhone › Flaccy)으로 복사한 곡은 다음에 Flaccy를 실행할 때 나타납니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory skopiowane przez Findera lub aplikację Pliki (Na moim iPhonie › Flaccy) pojawią się przy następnym uruchomieniu Flaccy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As músicas copiadas pelo Finder ou pelo app Arquivos (No iPhone › Flaccy) aparecem na próxima vez que o Flaccy for aberto."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过访达或“文件”App（我的 iPhone › Flaccy）拷入的歌曲，会在下次启动 Flaccy 时出现。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 Finder 或「檔案」App（我的 iPhone › Flaccy）拷入的歌曲，會在下次啟動 Flaccy 時出現。"
+          }
+        }
+      }
+    },
     "Songs to Get": {
       "localizations": {
         "de": {
@@ -64523,6 +65419,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法完成購買。請檢查網路連線後再試一次。"
+          }
+        }
+      }
+    },
+    "The sample album is about 130 MB and this connection may be metered. Wi-Fi is the better way to get it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Beispielalbum ist etwa 130 MB groß und diese Verbindung könnte volumenbegrenzt sein. Am besten lädst du es über WLAN."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El álbum de muestra ocupa unos 130 MB y esta conexión podría tener límite de datos. Es mejor descargarlo con Wi-Fi."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'album d'exemple pèse environ 130 Mo et cette connexion est peut-être limitée. Il vaut mieux le télécharger en Wi-Fi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'album di esempio pesa circa 130 MB e questa connessione potrebbe essere a consumo. Meglio scaricarlo con il Wi-Fi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプルアルバムは約130 MBで、この接続は従量制の可能性があります。Wi-Fiでのダウンロードをおすすめします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "샘플 앨범은 약 130 MB이며 이 연결은 데이터 사용량이 제한될 수 있습니다. Wi-Fi로 받는 것이 좋습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przykładowy album ma około 130 MB, a to połączenie może mieć limit danych. Lepiej pobrać go przez Wi-Fi."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O álbum de exemplo tem cerca de 130 MB e esta conexão pode ter limite de dados. O ideal é baixar com Wi-Fi."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "示例专辑约 130 MB，当前网络可能按流量计费。建议通过 Wi-Fi 下载。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範例專輯約 130 MB，目前的網路可能按流量計費。建議使用 Wi-Fi 下載。"
+          }
+        }
+      }
+    },
+    "The sample album is about 130 MB, and Low Data Mode asks apps to use less data.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Beispielalbum ist etwa 130 MB groß, und der Datensparmodus bittet Apps, weniger Daten zu verbrauchen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El álbum de muestra ocupa unos 130 MB y el modo de datos reducidos pide a las apps que usen menos datos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'album d'exemple pèse environ 130 Mo, et le mode économie de données demande aux apps de consommer moins de données."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'album di esempio pesa circa 130 MB e la modalità Dati ridotti chiede alle app di usare meno dati."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプルアルバムは約130 MBで、低データモードではAppにデータ使用量の抑制が求められます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "샘플 앨범은 약 130 MB이며, 저데이터 모드에서는 앱이 데이터를 덜 사용하도록 요청합니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przykładowy album ma około 130 MB, a tryb niskiego transferu danych prosi aplikacje o mniejsze zużycie danych."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O álbum de exemplo tem cerca de 130 MB, e o Modo de Dados Reduzidos pede que os apps usem menos dados."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "示例专辑约 130 MB，而低数据模式会要求 App 减少数据用量。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範例專輯約 130 MB，而「低數據模式」會要求 App 減少數據用量。"
           }
         }
       }
@@ -73993,6 +75017,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "flaccy，你的無損資料庫"
+          }
+        }
+      }
+    },
+    "iCloud Drive or a network share": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive oder Netzwerkfreigabe"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive o un recurso compartido de red"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive ou un partage réseau"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive o una condivisione di rete"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Driveまたはネットワーク共有"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive 또는 네트워크 공유"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive lub udział sieciowy"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive ou um compartilhamento de rede"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive 或网络共享"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud Drive 或網路共享"
           }
         }
       }

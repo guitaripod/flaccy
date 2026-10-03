@@ -23,6 +23,24 @@ final class ToastView {
         }
     }
 
+    /// An error toast that stays up long enough to act on and carries one
+    /// button; tapping it dismisses the toast and runs `handler`.
+    static func showAction(
+        _ message: String, actionTitle: String, in view: UIView, style: Style = .error, handler: @escaping () -> Void
+    ) {
+        var toastRef: UIView?
+        let action = UIAction { _ in
+            if let toastRef { animateOut(toastRef) }
+            handler()
+        }
+        let (toast, _) = makeToast(message, in: view, style: style, action: (actionTitle, action))
+        toastRef = toast
+        animateIn(toast)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            animateOut(toast)
+        }
+    }
+
     /// A toast that stays up while work runs and is retitled in place — its
     /// digits monospaced so a running count does not jitter the pill — until
     /// `finish` hands over to the ordinary toast that reports the result.
@@ -60,7 +78,9 @@ final class ToastView {
         }
     }
 
-    private static func makeToast(_ message: String, in view: UIView, style: Style) -> (UIView, UILabel) {
+    private static func makeToast(
+        _ message: String, in view: UIView, style: Style, action: (title: String, action: UIAction)? = nil
+    ) -> (UIView, UILabel) {
         let toast = UIView()
         toast.layer.cornerRadius = 14
         toast.layer.cornerCurve = .continuous
@@ -85,6 +105,9 @@ final class ToastView {
         label.numberOfLines = 2
 
         let stack = UIStackView(arrangedSubviews: [icon, label])
+        if let action {
+            stack.addArrangedSubview(actionButton(title: action.title, action: action.action))
+        }
         stack.spacing = 8
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -101,8 +124,28 @@ final class ToastView {
             toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             toast.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             toast.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
+            toast.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20),
         ])
+        if action != nil {
+            toast.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20).isActive = true
+        }
         return (toast, label)
+    }
+
+    private static func actionButton(title: String, action: UIAction) -> UIButton {
+        var config = UIButton.Configuration.plain()
+        config.title = title
+        config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 10, bottom: 4, trailing: 4)
+        config.baseForegroundColor = .label
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+            var attributes = attributes
+            attributes.font = .scaled(.footnote, size: 14, weight: .bold)
+            return attributes
+        }
+        let button = UIButton(configuration: config, primaryAction: action)
+        button.setContentCompressionResistancePriority(.required, for: .horizontal)
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        return button
     }
 
     /// Installs a Liquid Glass backing inside the toast (solid fill under

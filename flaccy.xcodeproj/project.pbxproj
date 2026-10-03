@@ -21,6 +21,7 @@
 		47C108E909F602CC3BC5C55E /* WatchAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A48061B3D4D070C0DFBDD081 /* WatchAudioPlayer.swift */; };
 		50BEB44FADCAA9D797A91704 /* WatchDebutSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F6FCCE5EDC0CE6A41801DC /* WatchDebutSummaryView.swift */; };
 		58E7B926A17BE908BB392DDD /* flaccyWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5C4611A4BB2E4F218A208F0D /* ReviewPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B5CA27979D48018AE84109 /* ReviewPromptTests.swift */; };
 		66E8007B95001E0EBAB6D876 /* SampleContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A51FE50A884D69FBEEC0A996 /* SampleContent.swift */; };
 		6AC913C894CE426D210EF5E3 /* DatabaseManagerEnrichmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079370CB3D455188B3A4E0F3 /* DatabaseManagerEnrichmentTests.swift */; };
 		6B11D6E785D7FFB52F8910CF /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B62B9D1AD5B3CD7254426219 /* NowPlayingView.swift */; };
@@ -34,6 +35,7 @@
 		A1D00E014A13D8A615E7C46D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1AB36944B652EA1E9E81BEA /* Cocoa.framework */; };
 		AD689F5274B6D57E849EACA7 /* EnrichmentJobCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD71D40AC9BB109B183D34C /* EnrichmentJobCopy.swift */; };
 		AF45481BA71BBDDD1EE2D2C6 /* DatabaseManagerCreditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9828DED6428F4980686FD24 /* DatabaseManagerCreditTests.swift */; };
+		B5A42E8B5509D181EEA6BC18 /* SampleDownloadPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44AF0DC6C23B5843658D5FB4 /* SampleDownloadPolicyTests.swift */; };
 		BDA8E96975D67E07388470AB /* WatchTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40B667816B6D153896B95D1B /* WatchTheme.swift */; };
 		C1185D254CAC934E54DE45D9 /* LibraryDebutCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39C8B273C541315A2FF721D4 /* LibraryDebutCopy.swift */; };
 		C65C4DA6C5252BBEFBC32C33 /* DatabaseManagerProofTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE2699EDFE516D3B5BBD2DBA /* DatabaseManagerProofTests.swift */; };
@@ -42,7 +44,6 @@
 		E9970FA6D1EC49C0BCAF9677 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE89F29B26EC5F4E7FE691A5 /* Foundation.framework */; };
 		EBDAC9950D4E8507C67D4518 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1AB36944B652EA1E9E81BEA /* Cocoa.framework */; };
 		F6574F5D7E66B703B8AA03F4 /* DatabaseMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45E5ABAD09CC766800B1572E /* DatabaseMigrationTests.swift */; };
-		5C4611A4BB2E4F218A208F0D /* ReviewPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B5CA27979D48018AE84109 /* ReviewPromptTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,11 +109,12 @@
 		2F54FEC40BC514CE9408F611 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		39C8B273C541315A2FF721D4 /* LibraryDebutCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryDebutCopy.swift; path = flaccy/LibraryDebutCopy.swift; sourceTree = "<group>"; };
 		40B667816B6D153896B95D1B /* WatchTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTheme.swift; path = Support/WatchTheme.swift; sourceTree = "<group>"; };
+		44AF0DC6C23B5843658D5FB4 /* SampleDownloadPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SampleDownloadPolicyTests.swift; sourceTree = "<group>"; };
 		45E5ABAD09CC766800B1572E /* DatabaseMigrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DatabaseMigrationTests.swift; sourceTree = "<group>"; };
-		69B5CA27979D48018AE84109 /* ReviewPromptTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReviewPromptTests.swift; sourceTree = "<group>"; };
 		483CF523EE5ED3E295BFF6B1 /* Flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5174AF607781A6F23E0F345D /* flaccyMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = flaccyMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		642833E187788F2015F66ECA /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		69B5CA27979D48018AE84109 /* ReviewPromptTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReviewPromptTests.swift; sourceTree = "<group>"; };
 		6BD76EED031794D71672EFF7 /* RootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RootView.swift; path = Views/RootView.swift; sourceTree = "<group>"; };
 		714CC32EDD5BF636A0B806F2 /* flaccyWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "flaccyWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		72D1C98EC8C5F80101664ACB /* LibraryLoadPhaseCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LibraryLoadPhaseCopy.swift; path = flaccy/LibraryLoadPhaseCopy.swift; sourceTree = "<group>"; };
@@ -157,6 +159,7 @@
 				ArtistImageService.swift,
 				Assets.xcassets,
 				ChartsViewController.swift,
+				ComputerTransferGuideViewController.swift,
 				EnrichmentReportViewController.swift,
 				FilterChipsView.swift,
 				HeatmapView.swift,
@@ -379,6 +382,7 @@
 				45E5ABAD09CC766800B1572E /* DatabaseMigrationTests.swift */,
 				DA60E7FC6BCDEF10CBFDC99F /* TrialReminderSchedulerTests.swift */,
 				69B5CA27979D48018AE84109 /* ReviewPromptTests.swift */,
+				44AF0DC6C23B5843658D5FB4 /* SampleDownloadPolicyTests.swift */,
 			);
 			name = flaccyTests;
 			path = flaccyTests;
@@ -669,6 +673,7 @@
 				F6574F5D7E66B703B8AA03F4 /* DatabaseMigrationTests.swift in Sources */,
 				35D1F1A5118F09ED1EC55619 /* TrialReminderSchedulerTests.swift in Sources */,
 				5C4611A4BB2E4F218A208F0D /* ReviewPromptTests.swift in Sources */,
+				B5A42E8B5509D181EEA6BC18 /* SampleDownloadPolicyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
