@@ -152,7 +152,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         tableView.tableHeaderView = nil
         mosaicView.removeFromSuperview()
         buttonStack.removeFromSuperview()
-        buttonStack.axis = style == .banner ? .vertical : .horizontal
+        buttonStack.axis = style == .stacked ? .horizontal : .vertical
 
         switch style {
         case .stacked: installStackedHeader()
@@ -219,6 +219,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         headerColumn.translatesAutoresizingMaskIntoConstraints = false
         headerColumn.showsVerticalScrollIndicator = false
         headerColumn.alwaysBounceVertical = false
+        headerColumn.contentInsetAdjustmentBehavior = .always
         view.addSubview(headerColumn)
         let mainStack = UIStackView(arrangedSubviews: [mosaicView, buttonStack])
         mainStack.axis = .vertical

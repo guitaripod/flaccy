@@ -481,6 +481,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         headerColumn.translatesAutoresizingMaskIntoConstraints = false
         headerColumn.showsVerticalScrollIndicator = false
         headerColumn.alwaysBounceVertical = false
+        headerColumn.contentInsetAdjustmentBehavior = .always
         view.addSubview(headerColumn)
         let mainStack = UIStackView(arrangedSubviews: [artworkCard, infoStack, actionRow])
         mainStack.axis = .vertical
@@ -582,15 +583,15 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         let shuffle = LiquidGlass.actionCapsule(title: String(localized: "Shuffle"), systemImage: "shuffle") { [weak self] in
             self?.shuffleTapped()
         }
-        let queue = LiquidGlass.iconCapsule(systemImage: "text.append", accessibilityLabel: String(localized: "Add album to queue")) { [weak self] in
+        let queue = LiquidGlass.iconCapsule(systemImage: "text.append", accessibilityLabel: String(localized: "Add album to queue"), width: 44) { [weak self] in
             self?.addAlbumToQueue()
         }
-        let share = LiquidGlass.iconCapsule(systemImage: "square.and.arrow.up", accessibilityLabel: String(localized: "Share album")) { [weak self] in
+        let share = LiquidGlass.iconCapsule(systemImage: "square.and.arrow.up", accessibilityLabel: String(localized: "Share album"), width: 44) { [weak self] in
             guard let self else { return }
             self.shareAlbumViaSonglink(title: self.album.title, artist: self.album.artist, from: self.view)
         }
         let row = UIStackView(arrangedSubviews: [play, shuffle, queue, share])
-        row.spacing = 10
+        row.spacing = 8
         play.widthAnchor.constraint(equalTo: shuffle.widthAnchor).isActive = true
         return LiquidGlass.grouping(row)
     }

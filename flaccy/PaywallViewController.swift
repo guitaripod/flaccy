@@ -74,6 +74,9 @@ final class PaywallViewController: UIViewController {
     private let notificationFeedback = UINotificationFeedbackGenerator()
 
     private var hasCelebrated = false
+    private var barStack = UIStackView()
+    private var barPlacementConstraints: [NSLayoutConstraint] = []
+    private var isBarBeside: Bool?
 
     private var isTransacting = false {
         didSet { updateControlsForTransactionState() }
@@ -96,6 +99,7 @@ final class PaywallViewController: UIViewController {
         setupBottomBar()
         setupScrollView()
         buildContent()
+        updateBarPlacement()
         updateStatusLine()
         updateOffers()
         NotificationCenter.default.addObserver(
@@ -114,6 +118,11 @@ final class PaywallViewController: UIViewController {
             showProof(await proof)
         }
         AppLogger.info("Paywall presented (state \(PurchaseManager.shared.state))", category: .purchases)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updateBarPlacement()
     }
 
     @objc private func purchaseStateDidChange() {
@@ -164,20 +173,57 @@ final class PaywallViewController: UIViewController {
         bottomBar.contentView.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            bottomBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            bottomBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            bottomBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-
             hairline.topAnchor.constraint(equalTo: bottomBar.contentView.topAnchor),
             hairline.leadingAnchor.constraint(equalTo: bottomBar.contentView.leadingAnchor),
             hairline.trailingAnchor.constraint(equalTo: bottomBar.contentView.trailingAnchor),
             hairline.heightAnchor.constraint(equalToConstant: 0.5),
-
-            stack.topAnchor.constraint(equalTo: bottomBar.contentView.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: bottomBar.contentView.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: bottomBar.contentView.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
         ])
+        barStack = stack
+    }
+
+    /// Tall, the price and button sit in a bar under the story. Short and
+    /// wide there is no height to spare for a bar, so the same bar becomes a
+    /// column beside the story and the plans keep the full height.
+    private func updateBarPlacement() {
+        let wide = view.bounds.width > view.bounds.height * 1.2
+        guard wide != isBarBeside else { return }
+        isBarBeside = wide
+        NSLayoutConstraint.deactivate(barPlacementConstraints)
+        let safe = view.safeAreaLayoutGuide
+        if wide {
+            barPlacementConstraints = [
+                bottomBar.topAnchor.constraint(equalTo: view.topAnchor),
+                bottomBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                bottomBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                bottomBar.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.38),
+                scrollTrailing(equalTo: bottomBar.leadingAnchor),
+                scrollBottom(equalTo: view.bottomAnchor),
+                barStack.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
+                barStack.leadingAnchor.constraint(equalTo: bottomBar.contentView.leadingAnchor),
+                barStack.trailingAnchor.constraint(equalTo: safe.trailingAnchor),
+            ]
+        } else {
+            barPlacementConstraints = [
+                bottomBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                bottomBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                bottomBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                scrollTrailing(equalTo: view.trailingAnchor),
+                scrollBottom(equalTo: bottomBar.topAnchor),
+                barStack.topAnchor.constraint(equalTo: bottomBar.contentView.topAnchor),
+                barStack.leadingAnchor.constraint(equalTo: bottomBar.contentView.leadingAnchor),
+                barStack.trailingAnchor.constraint(equalTo: bottomBar.contentView.trailingAnchor),
+                barStack.bottomAnchor.constraint(equalTo: safe.bottomAnchor),
+            ]
+        }
+        NSLayoutConstraint.activate(barPlacementConstraints)
+    }
+
+    private func scrollTrailing(equalTo anchor: NSLayoutXAxisAnchor) -> NSLayoutConstraint {
+        scrollView.trailingAnchor.constraint(equalTo: anchor)
+    }
+
+    private func scrollBottom(equalTo anchor: NSLayoutYAxisAnchor) -> NSLayoutConstraint {
+        scrollView.bottomAnchor.constraint(equalTo: anchor)
     }
 
     private func setupScrollView() {
@@ -195,8 +241,6 @@ final class PaywallViewController: UIViewController {
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: bottomBar.topAnchor),
 
             contentStack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
             contentStack.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),

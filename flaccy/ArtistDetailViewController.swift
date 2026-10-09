@@ -644,6 +644,10 @@ final class ArtistHeaderCell: UICollectionViewCell {
     private let statsLabel = UILabel()
     private let bioLabel = UILabel()
     private let readMoreButton = UIButton(type: .system)
+    private let detailsStack = UIStackView()
+    private let heroStack = UIStackView()
+    private var stackedDetailsWidth: NSLayoutConstraint?
+    private var isWideHeader = false
     private var bioExpanded = false
     private var showsFallbackImage = false
     private var genreChipsShown = false
@@ -691,41 +695,80 @@ final class ArtistHeaderCell: UICollectionViewCell {
         let stationRow = buildStationRow()
         genreChipsHolder.isHidden = true
 
-        let mainStack = UIStackView(arrangedSubviews: [photoContainer, nameLabel, genreLabel, statsLabel, genreChipsHolder, actionRow, stationRow, bioStack])
+        detailsStack.addArrangedSubview(nameLabel)
+        detailsStack.addArrangedSubview(genreLabel)
+        detailsStack.addArrangedSubview(statsLabel)
+        detailsStack.addArrangedSubview(genreChipsHolder)
+        detailsStack.addArrangedSubview(actionRow)
+        detailsStack.addArrangedSubview(stationRow)
+        detailsStack.axis = .vertical
+        detailsStack.spacing = 8
+        detailsStack.setCustomSpacing(4, after: nameLabel)
+        detailsStack.setCustomSpacing(4, after: genreLabel)
+        detailsStack.setCustomSpacing(14, after: statsLabel)
+        detailsStack.setCustomSpacing(16, after: genreChipsHolder)
+        detailsStack.setCustomSpacing(10, after: actionRow)
+        detailsStack.alignment = .center
+
+        heroStack.addArrangedSubview(photoContainer)
+        heroStack.addArrangedSubview(detailsStack)
+        heroStack.axis = .vertical
+        heroStack.spacing = 16
+        heroStack.alignment = .center
+
+        let mainStack = UIStackView(arrangedSubviews: [heroStack, bioStack])
         mainStack.axis = .vertical
-        mainStack.spacing = 8
-        mainStack.setCustomSpacing(16, after: photoContainer)
-        mainStack.setCustomSpacing(4, after: nameLabel)
-        mainStack.setCustomSpacing(4, after: genreLabel)
-        mainStack.setCustomSpacing(14, after: statsLabel)
-        mainStack.setCustomSpacing(16, after: genreChipsHolder)
-        mainStack.setCustomSpacing(10, after: actionRow)
-        mainStack.setCustomSpacing(20, after: stationRow)
+        mainStack.spacing = 20
         mainStack.alignment = .center
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(mainStack)
 
         let bioStackWidth = bioStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        bioStackWidth.priority = .defaultHigh
-        let actionRowWidth = actionRow.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        actionRowWidth.priority = .defaultHigh
-        let stationRowWidth = stationRow.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        stationRowWidth.priority = .defaultHigh
-        let chipsWidth = genreChipsHolder.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        chipsWidth.priority = .defaultHigh
+        let heroWidth = heroStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
+        let actionRowWidth = actionRow.widthAnchor.constraint(equalTo: detailsStack.widthAnchor)
+        let stationRowWidth = stationRow.widthAnchor.constraint(equalTo: detailsStack.widthAnchor)
+        let chipsWidth = genreChipsHolder.widthAnchor.constraint(equalTo: detailsStack.widthAnchor)
+        stackedDetailsWidth = detailsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
+        for constraint in [bioStackWidth, heroWidth, actionRowWidth, stationRowWidth, chipsWidth, stackedDetailsWidth!] {
+            constraint.priority = .defaultHigh
+        }
 
         NSLayoutConstraint.activate([
             photoContainer.widthAnchor.constraint(equalToConstant: Self.imageSize),
             photoContainer.heightAnchor.constraint(equalToConstant: Self.imageSize),
             bioStackWidth,
+            heroWidth,
             actionRowWidth,
             stationRowWidth,
             chipsWidth,
+            stackedDetailsWidth!,
             mainStack.topAnchor.constraint(equalTo: contentView.topAnchor),
             mainStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             mainStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             mainStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
         ])
+    }
+
+    /// Wide cells put the portrait beside the name, stats and buttons, with
+    /// the text leading-aligned; narrow ones keep the centred column. Decided
+    /// from the width the layout proposes, before the cell is measured.
+    private func applyHeaderLayout(forWidth width: CGFloat) {
+        let wide = width >= 500
+        guard wide != isWideHeader else { return }
+        isWideHeader = wide
+        heroStack.axis = wide ? .horizontal : .vertical
+        heroStack.spacing = wide ? 28 : 16
+        detailsStack.alignment = wide ? .leading : .center
+        stackedDetailsWidth?.isActive = !wide
+        let alignment: NSTextAlignment = wide ? .natural : .center
+        for label in [nameLabel, genreLabel, statsLabel] { label.textAlignment = alignment }
+    }
+
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
+        applyHeaderLayout(forWidth: layoutAttributes.size.width)
+        return super.preferredLayoutAttributesFitting(layoutAttributes)
     }
 
     @available(*, unavailable)
@@ -754,6 +797,7 @@ final class ArtistHeaderCell: UICollectionViewCell {
     }
 
     override func layoutSubviews() {
+        applyHeaderLayout(forWidth: bounds.width)
         super.layoutSubviews()
         photoContainer.layer.shadowPath = UIBezierPath(ovalIn: photoContainer.bounds).cgPath
     }

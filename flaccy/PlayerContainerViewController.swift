@@ -224,13 +224,13 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     /// Turns the player into a permanent pane (the library sits beside it) or
     /// back into the dock that morphs to full screen. In the pane it is always
     /// at its full state, has no dock, no grabber and no drag-to-collapse.
-    func setPaneMode(_ enabled: Bool) {
+    func setPaneMode(_ enabled: Bool, keepsExpanded: Bool = false) {
         guard enabled != isPaneMode else { return }
         stopDisplayLink()
         onSettleToDock = nil
         isPaneMode = enabled
+        applyTerminalState(enabled || keepsExpanded ? .full : .dock)
         npc.setPaneMode(enabled)
-        applyTerminalState(enabled ? .full : .dock)
         proxyView.isHidden = true
         npc.setArtworkHiddenForMorph(false)
         miniPlayer.setMorphArtworkHidden(false)

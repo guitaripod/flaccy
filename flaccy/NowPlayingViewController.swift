@@ -65,6 +65,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     private var centerState: CenterState = .artwork
     private var bottomControls = UIStackView()
+    private let infoBlock = UIStackView()
+    private var volumeRowView = UIView()
     private var layoutMode: AdaptiveLayout.PlayerLayout = .portrait
     private var modeConstraints: [NSLayoutConstraint] = []
     private var laptopFoldTopConstraint: NSLayoutConstraint?
@@ -215,7 +217,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         setupScrubber()
         setupTransport()
 
-        let infoStack = UIStackView(arrangedSubviews: [makeTitleRow(), makeArtistAlbumRow(), playingFromLabel])
+        let infoStack = infoBlock
+        for row in [makeTitleRow(), makeArtistAlbumRow(), playingFromLabel] { infoStack.addArrangedSubview(row) }
         infoStack.axis = .vertical
         infoStack.spacing = 4
 
@@ -230,6 +233,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         transportStack.alignment = .center
 
         let volumeRow = makeVolumeRow()
+        volumeRowView = volumeRow
         let bottomStack = UIStackView(arrangedSubviews: [
             sliderStack, transportStack, volumeRow, makeActionRow(),
         ])
@@ -292,6 +296,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         laptopFoldTopConstraint = nil
         laptopFoldBottomConstraint = nil
         artworkGroupTrailing.isActive = true
+        placeInfoBlock(inControls: mode == .landscape)
         switch mode {
         case .portrait:
             constraints = [
@@ -313,12 +318,12 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
                 centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 12),
                 centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
                 centerContainer.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -12),
-                centerContainer.widthAnchor.constraint(equalTo: safe.widthAnchor, multiplier: 0.5),
+                centerContainer.widthAnchor.constraint(equalTo: safe.widthAnchor, multiplier: 0.42),
                 bottomControls.leadingAnchor.constraint(equalTo: centerContainer.trailingAnchor, constant: 28),
                 bottomControls.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
                 bottomControls.centerYAnchor.constraint(equalTo: safe.centerYAnchor),
                 bottomControls.topAnchor.constraint(greaterThanOrEqualTo: safe.topAnchor, constant: 12),
-                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.5),
+                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.72),
                 stateContentContainer.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
                 stateContentContainer.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
                 stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),
@@ -386,6 +391,21 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         refreshCenterVisibility()
     }
 
+    /// Landscape gives the artwork a column to itself, so the title block moves
+    /// to the top of the controls column; every other pose keeps it under the
+    /// artwork.
+    private func placeInfoBlock(inControls: Bool) {
+        let inControlsNow = infoBlock.superview === bottomControls
+        guard inControls != inControlsNow else { return }
+        infoBlock.removeFromSuperview()
+        if inControls {
+            bottomControls.insertArrangedSubview(infoBlock, at: 0)
+            bottomControls.setCustomSpacing(14, after: infoBlock)
+        } else {
+            artworkGroup.insertArrangedSubview(infoBlock, at: 1)
+        }
+    }
+
     private func isFocusMode(_ mode: AdaptiveLayout.PlayerLayout) -> Bool {
         if case .focus = mode { return true }
         return false
@@ -419,7 +439,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private func applyControlSpacing(compact: Bool) {
         bottomControls.spacing = compact ? 12 : 22
         bottomControls.setCustomSpacing(compact ? 14 : 28, after: transportStack)
-        bottomControls.setCustomSpacing(compact ? 18 : 34, after: bottomControls.arrangedSubviews[2])
+        bottomControls.setCustomSpacing(compact ? 18 : 34, after: volumeRowView)
     }
 
     private var isLaptopLayout: Bool {
@@ -1646,7 +1666,11 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     func setPaneMode(_ enabled: Bool) {
         isPaneMode = enabled
         grabberControl.isHidden = enabled
-        if !enabled { setFocused(false) }
+        if enabled {
+            onFocusRequest?(centerState != .artwork)
+        } else {
+            setFocused(false)
+        }
     }
 
     /// Asked for by the container once the window gives the player the whole

@@ -105,12 +105,13 @@ extension LiquidGlass {
         systemImage: String,
         accessibilityLabel: String,
         height: CGFloat = 48,
+        width: CGFloat? = nil,
         action: @escaping () -> Void
     ) -> UIView {
         let button = makeActionButton(systemImage: systemImage, action: action)
         button.accessibilityLabel = accessibilityLabel
         let capsule = capsule(hosting: button, height: height)
-        capsule.widthAnchor.constraint(equalToConstant: height + 10).isActive = true
+        capsule.widthAnchor.constraint(equalToConstant: width ?? height + 10).isActive = true
         return capsule
     }
 

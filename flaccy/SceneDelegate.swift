@@ -260,11 +260,12 @@ final class RootContainerViewController: UIViewController {
         navigationWidth.isActive = false
         navigationTrailing.isActive = true
         playerLeading.constant = 0
+        let keepsExpanded = isPlayerFocused
         isPlayerFocused = false
         navigation.view.isHidden = false
         player.setFocused(false)
         dimmingView.isHidden = false
         updateDockInset()
-        player.setPaneMode(false)
+        player.setPaneMode(false, keepsExpanded: keepsExpanded)
     }
 }
