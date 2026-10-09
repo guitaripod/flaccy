@@ -274,6 +274,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             : nil
         let desired = AdaptiveLayout.playerLayout(size: size, horizontalFold: view.activeHorizontalFold, focus: focus)
         if desired != layoutMode {
+            AppLogger.debug("Now Playing layout \(desired) for \(size), fold \(String(describing: view.activeHorizontalFold))", category: .ui)
             layoutMode = desired
             switch desired {
             case .laptop(let top, let bottom): activateLayoutMode(desired, foldTop: top, foldBottom: bottom)
@@ -318,7 +319,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
                 centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 12),
                 centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
                 centerContainer.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -12),
-                centerContainer.widthAnchor.constraint(equalTo: safe.widthAnchor, multiplier: 0.42),
+                centerContainer.widthAnchor.constraint(equalTo: safe.widthAnchor, multiplier: centerState == .artwork ? 0.36 : 0.5),
                 bottomControls.leadingAnchor.constraint(equalTo: centerContainer.trailingAnchor, constant: 28),
                 bottomControls.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
                 bottomControls.centerYAnchor.constraint(equalTo: safe.centerYAnchor),
@@ -1416,6 +1417,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         }
         updateStateCapsules()
         animateCenterTransition(from: previous, to: target)
+        if layoutMode == .landscape { activateLayoutMode(.landscape, foldTop: nil, foldBottom: nil) }
         syncLaptopCompanions()
         if isPaneMode { onFocusRequest?(target != .artwork) }
         setupAccessibilityOrder()

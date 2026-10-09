@@ -835,6 +835,7 @@ private final class PlanCardControl: UIControl {
         titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.textColor = .white
         titleLabel.numberOfLines = 0
+        titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         captionLabel.font = .scaled(.footnote, size: 13, weight: .regular)
         captionLabel.adjustsFontForContentSizeCategory = true

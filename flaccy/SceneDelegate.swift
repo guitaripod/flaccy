@@ -243,6 +243,11 @@ final class RootContainerViewController: UIViewController {
     }
 
     private func applySplitLayout(_ geometry: AdaptiveLayout.SplitGeometry) {
+        AppLogger.debug(
+            "Split layout: window \(view.bounds.size), division \(String(describing: view.divisionRegionFrame)), "
+                + "primary \(geometry.primaryWidth), secondary at \(geometry.secondaryLeading)",
+            category: .ui
+        )
         isSplit = true
         appliedGeometry = geometry
         navigationTrailing.isActive = false
