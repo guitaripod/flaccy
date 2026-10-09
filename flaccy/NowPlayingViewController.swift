@@ -50,6 +50,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     private let transportStack = UIStackView()
 
     var isMorphEmbedded = false
+    private(set) var isPaneMode = false
+    private(set) var isFocused = false
+    var onFocusRequest: ((Bool) -> Void)?
     weak var morphContainer: PlayerMorphContaining?
     private var morphBackdropActive = false
     private let grabberControl = UIControl()
@@ -61,6 +64,18 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private var centerState: CenterState = .artwork
+    private var bottomControls = UIStackView()
+    private var layoutMode: AdaptiveLayout.PlayerLayout = .portrait
+    private var modeConstraints: [NSLayoutConstraint] = []
+    private var laptopFoldTopConstraint: NSLayoutConstraint?
+    private var laptopFoldBottomConstraint: NSLayoutConstraint?
+    private var artworkGroupTrailing: NSLayoutConstraint!
+    private let focusLeftColumn = UILayoutGuide()
+    private let focusRightColumn = UILayoutGuide()
+    private let laptopLyricsHost = UIView()
+    private let laptopQueueHost = UIView()
+    private var laptopLyricsChild: LyricsViewController?
+    private var laptopQueueChild: QueueViewController?
     private var stateChildController: UIViewController?
     private let centerContainer = UIView()
     private let artworkGroup = UIStackView()
@@ -168,6 +183,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        updateLayoutModeIfNeeded()
         backdropView.frame = view.bounds
         scrimLayer.frame = view.bounds
         artworkContainer.layer.shadowPath = UIBezierPath(
@@ -227,19 +243,239 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         setupCenterContainer(infoStack: infoStack)
         setupScrubBubble()
 
-        let artworkMaxHeight = artworkContainer.heightAnchor.constraint(
-            lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42
+        bottomControls = bottomStack
+        setupLaptopCompanions()
+        activateLayoutMode(.portrait, foldTop: nil, foldBottom: nil)
+    }
+
+    private func setupLaptopCompanions() {
+        view.addLayoutGuide(focusLeftColumn)
+        view.addLayoutGuide(focusRightColumn)
+        for host in [laptopLyricsHost, laptopQueueHost] {
+            host.translatesAutoresizingMaskIntoConstraints = false
+            host.isHidden = true
+            host.clipsToBounds = true
+            view.addSubview(host)
+        }
+        view.bringSubviewToFront(scrubBubble)
+    }
+
+    /// Picks the arrangement for the room this view has and for the fold, if
+    /// one runs across it, then re-applies it only when something changed.
+    private func updateLayoutModeIfNeeded() {
+        let size = view.bounds.size
+        guard size.width > 1, size.height > 1 else { return }
+        let focus = isFocused
+            ? AdaptiveLayout.splitGeometry(width: size.width, division: view.divisionRegionFrame)
+            : nil
+        let desired = AdaptiveLayout.playerLayout(size: size, horizontalFold: view.activeHorizontalFold, focus: focus)
+        if desired != layoutMode {
+            layoutMode = desired
+            switch desired {
+            case .laptop(let top, let bottom): activateLayoutMode(desired, foldTop: top, foldBottom: bottom)
+            default: activateLayoutMode(desired, foldTop: nil, foldBottom: nil)
+            }
+            view.setNeedsLayout()
+        }
+        syncLaptopCompanions()
+    }
+
+    /// Portrait is the single column. Landscape puts the artwork and title in
+    /// a left column and every control in a right column. Laptop keeps the
+    /// column but ends the media region at the fold and starts the controls
+    /// below it, with lyrics beside the artwork and the queue above the
+    /// controls: the same controls in every pose, arranged around the hinge.
+    private func activateLayoutMode(_ mode: AdaptiveLayout.PlayerLayout, foldTop: CGFloat?, foldBottom: CGFloat?) {
+        NSLayoutConstraint.deactivate(modeConstraints)
+        let safe = view.safeAreaLayoutGuide
+        var constraints: [NSLayoutConstraint] = []
+        laptopFoldTopConstraint = nil
+        laptopFoldBottomConstraint = nil
+        artworkGroupTrailing.isActive = true
+        switch mode {
+        case .portrait:
+            constraints = [
+                centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 24),
+                centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
+                centerContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                centerContainer.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -14),
+                bottomControls.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
+                bottomControls.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                bottomControls.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -16),
+                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42),
+                stateContentContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor),
+                stateContentContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor),
+                stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),
+                stateContentContainer.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor),
+            ]
+        case .landscape:
+            constraints = [
+                centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 12),
+                centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
+                centerContainer.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -12),
+                centerContainer.widthAnchor.constraint(equalTo: safe.widthAnchor, multiplier: 0.5),
+                bottomControls.leadingAnchor.constraint(equalTo: centerContainer.trailingAnchor, constant: 28),
+                bottomControls.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                bottomControls.centerYAnchor.constraint(equalTo: safe.centerYAnchor),
+                bottomControls.topAnchor.constraint(greaterThanOrEqualTo: safe.topAnchor, constant: 12),
+                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.5),
+                stateContentContainer.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
+                stateContentContainer.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
+                stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),
+                stateContentContainer.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor),
+            ]
+        case .laptop:
+            let mediaBottom = centerContainer.bottomAnchor.constraint(equalTo: view.topAnchor, constant: (foldTop ?? 0) - 12)
+            let queueTop = laptopQueueHost.topAnchor.constraint(equalTo: view.topAnchor, constant: (foldBottom ?? 0) + 10)
+            queueTop.priority = .defaultHigh
+            laptopFoldTopConstraint = mediaBottom
+            laptopFoldBottomConstraint = queueTop
+            artworkGroupTrailing.isActive = false
+            constraints = [
+                centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 16),
+                centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
+                centerContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                mediaBottom,
+                artworkGroup.trailingAnchor.constraint(equalTo: centerContainer.centerXAnchor, constant: -10),
+                bottomControls.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
+                bottomControls.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                bottomControls.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -8),
+                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: centerContainer.heightAnchor, constant: -120),
+                stateContentContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor),
+                stateContentContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor),
+                stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),
+                stateContentContainer.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor),
+                laptopLyricsHost.topAnchor.constraint(equalTo: centerContainer.topAnchor),
+                laptopLyricsHost.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor),
+                laptopLyricsHost.leadingAnchor.constraint(equalTo: centerContainer.centerXAnchor, constant: 10),
+                laptopLyricsHost.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
+                laptopQueueHost.leadingAnchor.constraint(equalTo: bottomControls.leadingAnchor),
+                laptopQueueHost.trailingAnchor.constraint(equalTo: bottomControls.trailingAnchor),
+                laptopQueueHost.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -10),
+                laptopQueueHost.heightAnchor.constraint(greaterThanOrEqualToConstant: 0),
+                queueTop,
+            ]
+        case .focus(let geometry):
+            let columnGap = geometry.secondaryLeading - geometry.primaryWidth + 12
+            constraints = [
+                focusLeftColumn.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                focusLeftColumn.widthAnchor.constraint(equalToConstant: geometry.primaryWidth - 12),
+                focusLeftColumn.topAnchor.constraint(equalTo: view.topAnchor),
+                focusLeftColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                focusRightColumn.leadingAnchor.constraint(equalTo: focusLeftColumn.trailingAnchor, constant: columnGap),
+                focusRightColumn.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -24),
+                focusRightColumn.topAnchor.constraint(equalTo: view.topAnchor),
+                focusRightColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 24),
+                centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
+                centerContainer.trailingAnchor.constraint(equalTo: focusLeftColumn.trailingAnchor),
+                centerContainer.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -24),
+                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: centerContainer.heightAnchor, constant: -120),
+                bottomControls.leadingAnchor.constraint(equalTo: focusRightColumn.leadingAnchor),
+                bottomControls.trailingAnchor.constraint(equalTo: focusRightColumn.trailingAnchor),
+                bottomControls.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -16),
+                stateContentContainer.leadingAnchor.constraint(equalTo: focusRightColumn.leadingAnchor),
+                stateContentContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor),
+                stateContentContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 16),
+                stateContentContainer.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -12),
+            ]
+        }
+        applyControlSpacing(compact: isLaptop(mode) || isFocusMode(mode))
+        NSLayoutConstraint.activate(constraints)
+        modeConstraints = constraints
+        refreshCenterVisibility()
+    }
+
+    private func isFocusMode(_ mode: AdaptiveLayout.PlayerLayout) -> Bool {
+        if case .focus = mode { return true }
+        return false
+    }
+
+    private var isFocusLayout: Bool { isFocusMode(layoutMode) }
+
+    /// Re-applies which center pieces show for the current state and pose
+    /// without animating: in focus the artwork stays on the left whatever the
+    /// state, and lyrics or the queue fill the right half.
+    private func refreshCenterVisibility() {
+        let showsArtwork = centerState == .artwork
+        let keepsArtwork = showsArtwork || isFocusLayout
+        artworkGroup.alpha = keepsArtwork ? 1 : 0
+        artworkGroup.transform = .identity
+        compactHeader.alpha = keepsArtwork ? 0 : 1
+        stateContentContainer.alpha = showsArtwork ? 0 : 1
+        stateContentContainer.transform = .identity
+        artworkGroup.isUserInteractionEnabled = keepsArtwork
+        compactHeader.isUserInteractionEnabled = !keepsArtwork
+        stateContentContainer.isUserInteractionEnabled = !showsArtwork
+    }
+
+    private func isLaptop(_ mode: AdaptiveLayout.PlayerLayout) -> Bool {
+        if case .laptop = mode { return true }
+        return false
+    }
+
+    /// Tightens the control column in the laptop pose so the queue fits above
+    /// it, and restores the roomier spacing everywhere else.
+    private func applyControlSpacing(compact: Bool) {
+        bottomControls.spacing = compact ? 12 : 22
+        bottomControls.setCustomSpacing(compact ? 14 : 28, after: transportStack)
+        bottomControls.setCustomSpacing(compact ? 18 : 34, after: bottomControls.arrangedSubviews[2])
+    }
+
+    private var isLaptopLayout: Bool {
+        if case .laptop = layoutMode { return true }
+        return false
+    }
+
+    /// Shows the companions the laptop pose adds to the artwork state (lyrics
+    /// beside the cover, the queue above the controls) and tears them down in
+    /// every other pose so nothing observes the player for no reason.
+    private func syncLaptopCompanions() {
+        let queueRoom = bottomControls.frame.minY - 10 - (laptopQueueHost.frame.minY)
+        let showsLyrics = isLaptopLayout && centerState == .artwork && AudioPlayer.shared.currentTrack != nil
+        let showsQueue = isLaptopLayout && centerState != .queue && queueRoom >= 96
+        setCompanion(
+            laptopLyricsHost, visible: showsLyrics, current: laptopLyricsChild,
+            make: {
+                guard let track = AudioPlayer.shared.currentTrack else { return nil }
+                return LyricsViewController(track: track.title, artist: track.artist, album: track.albumTitle)
+            },
+            store: { [weak self] in self?.laptopLyricsChild = $0 as? LyricsViewController }
         )
-        NSLayoutConstraint.activate([
-            centerContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
-            centerContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
-            centerContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
-            centerContainer.bottomAnchor.constraint(equalTo: bottomStack.topAnchor, constant: -14),
-            bottomStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
-            bottomStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
-            bottomStack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-            artworkMaxHeight,
-        ])
+        setCompanion(
+            laptopQueueHost, visible: showsQueue, current: laptopQueueChild,
+            make: { [weak self] in
+                let controller = QueueViewController()
+                controller.onPushRequest = { viewController in self?.dismissAndPush(viewController) }
+                return controller
+            },
+            store: { [weak self] in self?.laptopQueueChild = $0 as? QueueViewController }
+        )
+    }
+
+    private func setCompanion(
+        _ host: UIView, visible: Bool, current: UIViewController?,
+        make: () -> UIViewController?, store: (UIViewController?) -> Void
+    ) {
+        host.isHidden = !visible
+        if visible, current == nil, let child = make() {
+            addChild(child)
+            child.view.translatesAutoresizingMaskIntoConstraints = false
+            host.addSubview(child.view)
+            NSLayoutConstraint.activate([
+                child.view.topAnchor.constraint(equalTo: host.topAnchor),
+                child.view.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+                child.view.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+                child.view.bottomAnchor.constraint(equalTo: host.bottomAnchor),
+            ])
+            child.didMove(toParent: self)
+            store(child)
+        } else if !visible, let current {
+            current.willMove(toParent: nil)
+            current.view.removeFromSuperview()
+            current.removeFromParent()
+            store(nil)
+        }
     }
 
     /// Hosts the three exclusive center states: the artwork column (default),
@@ -267,16 +503,13 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         NSLayoutConstraint.activate([
             artworkGroup.topAnchor.constraint(equalTo: centerContainer.topAnchor),
             artworkGroup.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
-            artworkGroup.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
             artworkGroup.bottomAnchor.constraint(lessThanOrEqualTo: centerContainer.bottomAnchor),
             compactHeader.topAnchor.constraint(equalTo: centerContainer.topAnchor),
             compactHeader.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
             compactHeader.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
-            stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),
-            stateContentContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            stateContentContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            stateContentContainer.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor),
         ])
+        artworkGroupTrailing = artworkGroup.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor)
+        artworkGroupTrailing.isActive = true
     }
 
     private func setupCompactHeader() {
@@ -1163,6 +1396,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         }
         updateStateCapsules()
         animateCenterTransition(from: previous, to: target)
+        syncLaptopCompanions()
+        if isPaneMode { onFocusRequest?(target != .artwork) }
         setupAccessibilityOrder()
         UIAccessibility.post(notification: .layoutChanged, argument: target == .artwork ? artworkContainer : compactHeader)
         AppLogger.info("Now Playing center state -> \(target)", category: .ui)
@@ -1219,17 +1454,18 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     /// header + child content; alpha-only under Reduce Motion.
     private func animateCenterTransition(from previous: CenterState, to target: CenterState) {
         let showsArtwork = target == .artwork
-        artworkGroup.isUserInteractionEnabled = showsArtwork
-        compactHeader.isUserInteractionEnabled = !showsArtwork
+        let keepsArtwork = showsArtwork || isFocusLayout
+        artworkGroup.isUserInteractionEnabled = keepsArtwork
+        compactHeader.isUserInteractionEnabled = !keepsArtwork
         stateContentContainer.isUserInteractionEnabled = !showsArtwork
 
         let reduceMotion = UIAccessibility.isReduceMotionEnabled
         let apply = { [self] in
-            artworkGroup.alpha = showsArtwork ? 1 : 0
-            compactHeader.alpha = showsArtwork ? 0 : 1
+            artworkGroup.alpha = keepsArtwork ? 1 : 0
+            compactHeader.alpha = keepsArtwork ? 0 : 1
             stateContentContainer.alpha = showsArtwork ? 0 : 1
             if !reduceMotion {
-                artworkGroup.transform = showsArtwork ? .identity : CGAffineTransform(scaleX: 0.94, y: 0.94)
+                artworkGroup.transform = keepsArtwork ? .identity : CGAffineTransform(scaleX: 0.94, y: 0.94)
                 stateContentContainer.transform = showsArtwork
                     ? CGAffineTransform(translationX: 0, y: 12)
                     : .identity
@@ -1407,8 +1643,26 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         }
     }
 
+    func setPaneMode(_ enabled: Bool) {
+        isPaneMode = enabled
+        grabberControl.isHidden = enabled
+        if !enabled { setFocused(false) }
+    }
+
+    /// Asked for by the container once the window gives the player the whole
+    /// width, or taken back when the library returns beside it.
+    func setFocused(_ focused: Bool) {
+        guard focused != isFocused else { return }
+        isFocused = focused
+        view.setNeedsLayout()
+    }
+
     func showQueueCenterState() {
         setCenterState(.queue)
+    }
+
+    func showLyricsCenterState() {
+        setCenterState(.lyrics)
     }
 
     /// Whether a downward drag at the given point should collapse the player

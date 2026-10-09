@@ -83,12 +83,14 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     private var isLinearSettle = false
 
     private var dockVisible = false
+    private(set) var isPaneMode = false
     private var isApplyingLayout = false
     private var onSettleToDock: (() -> Void)?
     private var fullArtCornerRadius: CGFloat = MorphTuning.proxyFullCorner
 
     var onRequestPush: ((UIViewController) -> Void)?
     var onMorphProgress: ((CGFloat) -> Void)?
+    var onFocusChange: ((Bool) -> Void)?
 
     private var statusBarLight = false {
         didSet {
@@ -140,6 +142,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
 
         npc.isMorphEmbedded = true
         npc.morphContainer = self
+        npc.onFocusRequest = { [weak self] focused in self?.onFocusChange?(focused) }
         addChild(npc)
         npc.view.translatesAutoresizingMaskIntoConstraints = false
         npc.view.alpha = 0
@@ -214,6 +217,25 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         }
     }
 
+    func setFocused(_ focused: Bool) {
+        npc.setFocused(focused)
+    }
+
+    /// Turns the player into a permanent pane (the library sits beside it) or
+    /// back into the dock that morphs to full screen. In the pane it is always
+    /// at its full state, has no dock, no grabber and no drag-to-collapse.
+    func setPaneMode(_ enabled: Bool) {
+        guard enabled != isPaneMode else { return }
+        stopDisplayLink()
+        onSettleToDock = nil
+        isPaneMode = enabled
+        npc.setPaneMode(enabled)
+        applyTerminalState(enabled ? .full : .dock)
+        proxyView.isHidden = true
+        npc.setArtworkHiddenForMorph(false)
+        miniPlayer.setMorphArtworkHidden(false)
+    }
+
     private func showDock() {
         guard !dockVisible else { return }
         dockVisible = true
@@ -237,13 +259,13 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     }
 
     func expand() {
-        guard state == .dock else { return }
+        guard state == .dock, !isPaneMode else { return }
         beginMorphSession(from: .dock)
         startSpring(to: 1, initialPointVelocity: 0)
     }
 
     func collapse() {
-        guard state == .full else { return }
+        guard state == .full, !isPaneMode else { return }
         beginMorphSession(from: .full)
         startSpring(to: 0, initialPointVelocity: 0)
     }
@@ -257,8 +279,13 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         expand()
     }
 
+    func expandShowingLyrics() {
+        npc.showLyricsCenterState()
+        expand()
+    }
+
     func collapseAndPush(_ viewController: UIViewController) {
-        guard state != .dock else {
+        guard state != .dock, !isPaneMode else {
             onRequestPush?(viewController)
             return
         }
@@ -420,8 +447,8 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
 
     private func updateOverlayCapture() {
         guard let overlay = view as? OverlayView else { return }
-        overlay.capturesEverything = state != .dock
-        overlay.dockRect = dockVisible ? cardView.frame : .zero
+        overlay.capturesEverything = state != .dock && !isPaneMode
+        overlay.dockRect = (dockVisible || isPaneMode) ? cardView.frame : .zero
     }
 
     @objc private func handleMorphPan(_ gesture: UIPanGestureRecognizer) {
@@ -565,6 +592,7 @@ extension PlayerContainerViewController: UIGestureRecognizerDelegate {
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+        guard !isPaneMode else { return false }
         switch state {
         case .dragging, .settling:
             return true

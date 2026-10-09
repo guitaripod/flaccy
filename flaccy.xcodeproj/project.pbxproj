@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1D0A7A10000000000000002 /* AdaptiveLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D0A7A10000000000000001 /* AdaptiveLayoutTests.swift */; };
 		0BB345FBD38D4072779FC1A1 /* FlaccyCore in Frameworks */ = {isa = PBXBuildFile; productRef = D2E21F4867B0D1251124B5D3 /* FlaccyCore */; };
 		0E019E4A04D24A7985D3812A /* flaccyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2D0876F3B4438FC6B9D645 /* flaccyWatchApp.swift */; };
 		0F611CB29B05953C0BFA964A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD76EED031794D71672EFF7 /* RootView.swift */; };
@@ -102,6 +103,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1D0A7A10000000000000001 /* AdaptiveLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdaptiveLayoutTests.swift; sourceTree = "<group>"; };
 		079370CB3D455188B3A4E0F3 /* DatabaseManagerEnrichmentTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DatabaseManagerEnrichmentTests.swift; sourceTree = "<group>"; };
 		0B2D0876F3B4438FC6B9D645 /* flaccyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = flaccyWatchApp.swift; sourceTree = "<group>"; };
 		2C2776CA2F7D0282007FF196 /* flaccy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = flaccy.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -150,6 +152,7 @@
 		59C11B5B941635272E990A36 /* Exceptions for "flaccy" folder in "flaccyMac" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				AdaptiveLayout.swift,
 				AlbumCell.swift,
 				AlbumDetailViewController.swift,
 				AmbientPaletteBackdropView.swift,
@@ -376,6 +379,7 @@
 		396001E96643F86565EF24CE /* flaccyTests */ = {
 			isa = PBXGroup;
 			children = (
+				A1D0A7A10000000000000001 /* AdaptiveLayoutTests.swift */,
 				B9828DED6428F4980686FD24 /* DatabaseManagerCreditTests.swift */,
 				079370CB3D455188B3A4E0F3 /* DatabaseManagerEnrichmentTests.swift */,
 				CE2699EDFE516D3B5BBD2DBA /* DatabaseManagerProofTests.swift */,
@@ -672,6 +676,7 @@
 				C65C4DA6C5252BBEFBC32C33 /* DatabaseManagerProofTests.swift in Sources */,
 				F6574F5D7E66B703B8AA03F4 /* DatabaseMigrationTests.swift in Sources */,
 				35D1F1A5118F09ED1EC55619 /* TrialReminderSchedulerTests.swift in Sources */,
+				A1D0A7A10000000000000002 /* AdaptiveLayoutTests.swift in Sources */,
 				5C4611A4BB2E4F218A208F0D /* ReviewPromptTests.swift in Sources */,
 				B5A42E8B5509D181EEA6BC18 /* SampleDownloadPolicyTests.swift in Sources */,
 			);
@@ -817,7 +822,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -856,7 +861,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (

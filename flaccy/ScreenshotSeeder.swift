@@ -1,4 +1,4 @@
-#if targetEnvironment(simulator) || (os(macOS) && DEBUG)
+#if DEBUG && (targetEnvironment(simulator) || os(macOS))
 import CoreGraphics
 import FlaccyCore
 import Foundation
@@ -26,7 +26,8 @@ enum ScreenshotSeeder {
     static let debutArgument = "--debut"
 
     static var isDebutRoute: Bool {
-        CommandLine.arguments.contains(launchArgument) && CommandLine.arguments.contains(debutArgument)
+        CommandLine.arguments.contains(launchArgument)
+            && (CommandLine.arguments.contains(debutArgument) || ProcessInfo.processInfo.environment["FLACCY_DEBUT"] == "1")
     }
 
     static func seedIfRequested() {
@@ -100,6 +101,13 @@ enum ScreenshotSeeder {
 
     private static func seed() {
         let db = DatabaseManager.shared
+        #if os(iOS)
+        DemoMode.eraseIfStale(db)
+        defer {
+            DemoMode.applyPlaybackState()
+            DemoMode.primeCaches()
+        }
+        #endif
         guard (try? db.fetchAllTrackRelativePaths())?.isEmpty ?? true else { return }
 
         let documents = LibraryPaths.root
@@ -108,6 +116,9 @@ enum ScreenshotSeeder {
         insertAlbumInfo(for: catalog, db: db)
         insertScrobbles(for: catalog, db: db)
         insertLyrics(db: db)
+        #if os(iOS)
+        DemoMode.seedSupplements(db: db)
+        #endif
         AppLogger.info("Screenshot seed complete: \(catalog.count) albums", category: .content)
     }
 
@@ -130,6 +141,7 @@ enum ScreenshotSeeder {
         let accent: CGColor
         let motif: Int
         let tracks: [DemoTrack]
+        var codec: String = "FLAC"
     }
 
     static func rgb(_ hex: UInt32) -> CGColor {
@@ -211,7 +223,7 @@ enum ScreenshotSeeder {
                   bitDepth: 24, sampleRate: 96000, top: rgb(0x0C333A), bottom: rgb(0x041114), accent: rgb(0x63E0D0), motif: 8,
                   tracks: [track(1, "Tidal Glass", 356, loved: true), track(2, "Neap", 278), track(3, "Springtide", 341),
                            track(4, "Estuary", 299), track(5, "Slack Water", 264)]),
-        DemoAlbum(artist: "Corvid & Crane", title: "Ledger of Small Hours", year: "2022", genre: "Folk",
+        DemoAlbum(artist: "Corvid and Crane", title: "Ledger of Small Hours", year: "2022", genre: "Folk",
                   bitDepth: 16, sampleRate: 44100, top: rgb(0x352A16), bottom: rgb(0x100C06), accent: rgb(0xDDBE76), motif: 7,
                   tracks: [track(1, "Ledger", 232), track(2, "Magpie Song", 258, loved: true), track(3, "Rooksmoor", 214),
                            track(4, "Tallow Light", 271)]),
@@ -243,9 +255,22 @@ enum ScreenshotSeeder {
                   bitDepth: 24, sampleRate: 48000, top: rgb(0x123640), bottom: rgb(0x050F14), accent: rgb(0x7FD6C4), motif: 4,
                   tracks: [track(1, "Longshore Drift", 269, loved: true), track(2, "Sealskin", 244), track(3, "Foreshore", 288),
                            track(4, "Grey Seal", 231)]),
+        DemoAlbum(artist: "Orchestra of the Nine Lanterns", title: "Études for Rain, Wire and Distant Trains (Expanded Edition)",
+                  year: "2022", genre: "Classical", bitDepth: 24, sampleRate: 96000, top: rgb(0x2A2A2E), bottom: rgb(0x0A0A0C),
+                  accent: rgb(0xD9D2C0), motif: 9,
+                  tracks: [track(1, "Étude No. 1 for Rain on Zinc", 412, loved: true), track(2, "Étude No. 2 for Telegraph Wire", 366),
+                           track(3, "Étude No. 3 for Distant Trains", 497), track(4, "Interlude, Station Clock", 128)]),
+        DemoAlbum(artist: "Novaeu", title: "Tin Rooftops EP", year: "2022", genre: "Indie", bitDepth: 16, sampleRate: 44100,
+                  top: rgb(0x40320F), bottom: rgb(0x140F05), accent: rgb(0xF2C25A), motif: 1,
+                  tracks: [track(1, "Tin Rooftops", 198), track(2, "Neon Rain (Demo)", 205), track(3, "Low Tide (Demo)", 233)],
+                  codec: "MP3"),
+        DemoAlbum(artist: "Marisol Vane", title: "Slow Burn Sessions", year: "2019", genre: "Soul", bitDepth: 16, sampleRate: 44100,
+                  top: rgb(0x45162A), bottom: rgb(0x14060C), accent: rgb(0xFF8FA3), motif: 5,
+                  tracks: [track(1, "Slow Burn (Session)", 281), track(2, "Copper Light (Session)", 236), track(3, "Ash (Session)", 259)],
+                  codec: "AAC"),
     ]
 
-    private static func relativePath(album: DemoAlbum, track: DemoTrack) -> String {
+    static func relativePath(album: DemoAlbum, track: DemoTrack) -> String {
         let name = String(format: "%02d - %@", track.number, track.title)
         return "\(album.artist)/\(album.title)/\(name).wav"
     }
@@ -288,7 +313,7 @@ enum ScreenshotSeeder {
                     playCount: plays,
                     aiAnalyzed: true,
                     analysisAttemptedAt: now,
-                    codec: "FLAC",
+                    codec: album.codec,
                     bitDepth: album.bitDepth,
                     sampleRate: album.sampleRate,
                     channels: 2,
@@ -319,7 +344,7 @@ enum ScreenshotSeeder {
 
     /// Deterministic per-track play weight so top lists and the persona read as a
     /// real listening year without any randomness (unavailable on a fresh sim run).
-    private static func playCount(album: DemoAlbum, track: DemoTrack) -> Int {
+    static func playCount(album: DemoAlbum, track: DemoTrack) -> Int {
         var weight = (abs(track.title.hashValue) % 9) + 1
         if album.artist == heroArtist { weight += 14 }
         if track.title == heroTrack { weight += 22 }
@@ -385,7 +410,7 @@ enum ScreenshotSeeder {
         try? db.saveLyrics(record)
     }
 
-    private static func makeWAV(frequency: Double, seconds: Double, sampleRate: Double = 8_000) -> Data {
+    private static func makeWAV(frequency: Double, seconds: Double, sampleRate: Double = 1_000) -> Data {
         let frameCount = Int(seconds * sampleRate)
         var samples = [Int16](repeating: 0, count: frameCount)
         let amplitude = 0.2 * Double(Int16.max)
@@ -412,7 +437,7 @@ enum ScreenshotSeeder {
 
 /// Renders original, abstract album covers from a palette + motif index. Nothing
 /// here reproduces or references any real-world artwork.
-private enum CoverArtRenderer {
+enum CoverArtRenderer {
 
     static func render(_ album: ScreenshotSeeder.DemoAlbum) -> Data? {
         let size = 1000

@@ -76,9 +76,7 @@ final class AlbumCell: UICollectionViewCell {
             stack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor),
         ])
 
-        if traitCollection.userInterfaceIdiom == .pad || ProcessInfo.processInfo.isiOSAppOnMac {
-            addInteraction(UIPointerInteraction(delegate: nil))
-        }
+        addInteraction(UIPointerInteraction(delegate: nil))
     }
 
     @available(*, unavailable)

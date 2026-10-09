@@ -127,7 +127,7 @@ final class ToastView {
             toast.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20),
         ])
         if action != nil {
-            toast.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20).isActive = true
+            toast.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20).isActive = true
         }
         return (toast, label)
     }

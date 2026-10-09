@@ -156,6 +156,21 @@ actor DetailEnrichmentCache {
         return tracks
     }
 
+    #if DEBUG
+    func seedDemo(
+        tags: [String: [String]],
+        popular: [String: [(name: String, playCount: Int, rank: Int)]],
+        similar: [String: [Album]]
+    ) {
+        for (key, value) in tags {
+            artistTags[key] = value
+            sync.setTags(value, forArtist: key)
+        }
+        popularTracks.merge(popular) { _, new in new }
+        similarAlbums.merge(similar) { _, new in new }
+    }
+    #endif
+
     func similarInLibrary(artist: String) async -> [Album] {
         let key = artist.lowercased()
         if let cached = similarAlbums[key] { return cached }

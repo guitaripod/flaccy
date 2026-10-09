@@ -1194,6 +1194,23 @@ nonisolated final class DatabaseManager: Sendable {
         }
     }
 
+    #if DEBUG
+    /// Empties every table the screenshot demo fills, in one transaction, so a
+    /// relaunch can reseed from nothing without a half-wiped store ever being
+    /// visible. Reachable only from the DEBUG simulator demo.
+    func eraseDemoContent() throws {
+        let tables = [
+            "playlistTracks", "playlists", "lyrics", "scrobbles", "wantlist", "newReleaseCache",
+            "enrichmentState", "weeklyChartCache", "similarArtistCache", "albumInfo", "artists", "tracks",
+        ]
+        try dbQueue.write { db in
+            for table in tables {
+                try db.execute(sql: "DELETE FROM \(table)")
+            }
+        }
+    }
+    #endif
+
     private static func debutEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

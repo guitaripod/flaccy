@@ -347,7 +347,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     }
 
     private func createLayout() -> UICollectionViewCompositionalLayout {
-        UICollectionViewCompositionalLayout { [weak self] sectionIndex, _ in
+        UICollectionViewCompositionalLayout { [weak self] sectionIndex, environment in
             guard let section = self?.section(at: sectionIndex) else { return nil }
 
             switch section {
@@ -363,6 +363,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
                 )
                 let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
                 let layoutSection = NSCollectionLayoutSection(group: group)
+                layoutSection.contentInsetsReference = .safeArea
                 layoutSection.contentInsets = NSDirectionalEdgeInsets(top: 16, leading: 24, bottom: 8, trailing: 24)
                 return layoutSection
 
@@ -376,6 +377,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
                 let layoutSection = NSCollectionLayoutSection(group: group)
                 layoutSection.orthogonalScrollingBehavior = .continuous
                 layoutSection.interGroupSpacing = 12
+                layoutSection.contentInsetsReference = .safeArea
                 layoutSection.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 24, bottom: 12, trailing: 24)
                 layoutSection.boundarySupplementaryItems = [Self.sectionHeaderItem()]
                 return layoutSection
@@ -389,13 +391,15 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
                 let group = NSCollectionLayoutGroup.vertical(layoutSize: itemSize, subitems: [item])
                 let layoutSection = NSCollectionLayoutSection(group: group)
                 layoutSection.interGroupSpacing = 2
+                layoutSection.contentInsetsReference = .safeArea
                 layoutSection.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 20, bottom: 12, trailing: 20)
                 layoutSection.boundarySupplementaryItems = [Self.sectionHeaderItem()]
                 return layoutSection
 
             case .albums, .appearsOn:
+                let columns = AdaptiveLayout.shelfColumns(forWidth: environment.container.effectiveContentSize.width)
                 let itemSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(0.5),
+                    widthDimension: .fractionalWidth(1.0 / CGFloat(columns)),
                     heightDimension: .estimated(240)
                 )
                 let item = NSCollectionLayoutItem(layoutSize: itemSize)
@@ -403,10 +407,11 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
                     widthDimension: .fractionalWidth(1.0),
                     heightDimension: .estimated(240)
                 )
-                let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item, item])
+                let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, repeatingSubitem: item, count: columns)
                 group.interItemSpacing = .fixed(12)
                 let layoutSection = NSCollectionLayoutSection(group: group)
                 layoutSection.interGroupSpacing = 16
+                layoutSection.contentInsetsReference = .safeArea
                 layoutSection.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 16, trailing: 16)
 
                 let headerSize = NSCollectionLayoutSize(

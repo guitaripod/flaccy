@@ -90,6 +90,7 @@ extension LiquidGlass {
         let button = makeActionButton(systemImage: systemImage, action: action)
         button.configuration?.title = title
         button.configuration?.imagePadding = 6
+        button.configuration?.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8)
         button.configuration?.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
             outgoing.font = .scaled(.subheadline, size: 15, weight: .semibold)

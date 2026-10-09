@@ -14,6 +14,12 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
     private var tracks: [Track] = []
     private var playlistTrackRecords: [PlaylistTrackRecord] = []
     private let mosaicView = StackedArtworkMosaicView()
+    private let buttonStack = UIStackView()
+    private let headerColumn = UIScrollView()
+    private var headerLayoutConstraints: [NSLayoutConstraint] = []
+    private var appliedHeaderStyle: AdaptiveLayout.DetailHeaderStyle?
+    private var tableLeading: NSLayoutConstraint!
+    private var tableColumnLeading: NSLayoutConstraint!
     private var hasAnimatedAppearance = false
     private var hasLoadedOnce = false
     private var mosaicGeneration = 0
@@ -75,12 +81,14 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         tableView.separatorStyle = .none
         tableView.backgroundColor = .clear
         tableView.register(PlaylistTrackCell.self, forCellReuseIdentifier: PlaylistTrackCell.reuseID)
-        tableView.tableHeaderView = buildHeaderView()
+        buildHeaderComponents()
         view.addSubview(tableView)
 
+        tableLeading = tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
+        tableColumnLeading = tableView.leadingAnchor.constraint(equalTo: headerColumn.trailingAnchor)
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableLeading,
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
@@ -88,6 +96,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        applyHeaderStyle()
         guard let header = tableView.tableHeaderView else { return }
         let targetSize = CGSize(
             width: tableView.bounds.width,
@@ -104,9 +113,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func buildHeaderView() -> UIView {
-        let container = UIView()
-
+    private func buildHeaderComponents() {
         mosaicView.translatesAutoresizingMaskIntoConstraints = false
         mosaicView.isAccessibilityElement = true
         mosaicView.accessibilityLabel = String(localized: "Playlist artwork")
@@ -123,40 +130,116 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
             accessibilityLabel: String(localized: "Shuffle playlist")
         ) { [weak self] in self?.shuffleTapped() }
 
-        let buttonStack = UIStackView(arrangedSubviews: [
-            GlassCapsule(hosting: playButton, height: 48),
-            GlassCapsule(hosting: shuffleButton, height: 48),
-        ])
-        buttonStack.axis = .horizontal
+        for capsule in [GlassCapsule(hosting: playButton, height: 48), GlassCapsule(hosting: shuffleButton, height: 48)] {
+            buttonStack.addArrangedSubview(capsule)
+        }
         buttonStack.spacing = 12
         buttonStack.distribution = .fillEqually
+    }
 
+    /// Stacked is the phone column. The banner sets a modest cover beside the
+    /// play buttons so rows start high on a wider page. Side by side pins the
+    /// cover and buttons in a column and gives the other half to the tracks.
+    private func applyHeaderStyle() {
+        let usable = view.safeAreaLayoutGuide.layoutFrame.size
+        guard usable.width > 1 else { return }
+        let style = AdaptiveLayout.detailHeaderStyle(forSize: usable)
+        guard style != appliedHeaderStyle else { return }
+        appliedHeaderStyle = style
+        NSLayoutConstraint.deactivate(headerLayoutConstraints)
+        headerLayoutConstraints = []
+        headerColumn.removeFromSuperview()
+        tableView.tableHeaderView = nil
+        mosaicView.removeFromSuperview()
+        buttonStack.removeFromSuperview()
+        buttonStack.axis = style == .banner ? .vertical : .horizontal
+
+        switch style {
+        case .stacked: installStackedHeader()
+        case .banner: installBannerHeader(width: usable.width)
+        case .sideBySide: installColumnHeader(size: usable)
+        }
+        tableLeading.isActive = style != .sideBySide
+        tableColumnLeading.isActive = style == .sideBySide
+        view.setNeedsLayout()
+    }
+
+    private func installStackedHeader() {
+        let container = UIView()
         let mainStack = UIStackView(arrangedSubviews: [mosaicView, buttonStack])
         mainStack.axis = .vertical
         mainStack.spacing = 24
         mainStack.alignment = .center
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(mainStack)
-
-        let leading = mainStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 32)
-        let trailing = mainStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -32)
+        let guide = container.safeAreaLayoutGuide
+        let leading = mainStack.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 32)
+        let trailing = mainStack.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -32)
         let bottom = mainStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -24)
-        leading.priority = .defaultHigh
-        trailing.priority = .defaultHigh
-        bottom.priority = .defaultHigh
-
         let buttonWidth = buttonStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        buttonWidth.priority = .defaultHigh
-
-        NSLayoutConstraint.activate([
+        let mosaicWidth = mosaicView.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.62)
+        for constraint in [leading, trailing, bottom, buttonWidth, mosaicWidth] { constraint.priority = .defaultHigh }
+        let constraints = [
             mainStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 24),
-            leading, trailing, bottom,
-            buttonWidth,
-            mosaicView.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.62),
+            leading, trailing, bottom, buttonWidth, mosaicWidth,
+            mosaicView.widthAnchor.constraint(lessThanOrEqualToConstant: 300),
             mosaicView.heightAnchor.constraint(equalTo: mosaicView.widthAnchor),
-        ])
+        ]
+        NSLayoutConstraint.activate(constraints)
+        headerLayoutConstraints = constraints
+        tableView.tableHeaderView = container
+    }
 
-        return container
+    private func installBannerHeader(width: CGFloat) {
+        let container = UIView()
+        let side = min(max(width * 0.3, 120), 200)
+        let row = UIStackView(arrangedSubviews: [mosaicView, buttonStack])
+        row.axis = .horizontal
+        row.spacing = 24
+        row.alignment = .center
+        row.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(row)
+        let guide = container.safeAreaLayoutGuide
+        let constraints = [
+            row.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
+            row.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 24),
+            row.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -24),
+            row.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16),
+            mosaicView.widthAnchor.constraint(equalToConstant: side),
+            mosaicView.heightAnchor.constraint(equalTo: mosaicView.widthAnchor),
+        ]
+        NSLayoutConstraint.activate(constraints)
+        headerLayoutConstraints = constraints
+        tableView.tableHeaderView = container
+    }
+
+    private func installColumnHeader(size: CGSize) {
+        let side = min(max(size.width * 0.4, 240) - 40, size.height * 0.5, 320)
+        let columnWidth = max(side + 40, 260)
+        headerColumn.translatesAutoresizingMaskIntoConstraints = false
+        headerColumn.showsVerticalScrollIndicator = false
+        headerColumn.alwaysBounceVertical = false
+        view.addSubview(headerColumn)
+        let mainStack = UIStackView(arrangedSubviews: [mosaicView, buttonStack])
+        mainStack.axis = .vertical
+        mainStack.spacing = 20
+        mainStack.alignment = .fill
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        headerColumn.addSubview(mainStack)
+        let guide = view.safeAreaLayoutGuide
+        let constraints = [
+            headerColumn.topAnchor.constraint(equalTo: view.topAnchor),
+            headerColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            headerColumn.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
+            headerColumn.widthAnchor.constraint(equalToConstant: columnWidth),
+            mainStack.topAnchor.constraint(equalTo: headerColumn.contentLayoutGuide.topAnchor, constant: 16),
+            mainStack.bottomAnchor.constraint(equalTo: headerColumn.contentLayoutGuide.bottomAnchor, constant: -24),
+            mainStack.leadingAnchor.constraint(equalTo: headerColumn.frameLayoutGuide.leadingAnchor, constant: 24),
+            mainStack.trailingAnchor.constraint(equalTo: headerColumn.frameLayoutGuide.trailingAnchor, constant: -16),
+            mosaicView.heightAnchor.constraint(equalTo: mosaicView.widthAnchor),
+        ]
+        NSLayoutConstraint.activate(constraints)
+        headerLayoutConstraints = constraints
     }
 
     private func makeHeaderButton(

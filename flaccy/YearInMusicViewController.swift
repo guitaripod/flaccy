@@ -24,6 +24,9 @@ final class YearInMusicViewController: UIViewController {
     private let yearButton = UIButton(configuration: .plain())
     private let emptyStack = UIStackView()
     private let actionsRow = UIStackView()
+    private var controlsStack = UIStackView()
+    private var layoutConstraints: [NSLayoutConstraint] = []
+    private var isWideLayout: Bool?
 
     private let selectionFeedback = UISelectionFeedbackGenerator()
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
@@ -52,7 +55,47 @@ final class YearInMusicViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        updateLayoutMode()
         applyPageTransforms()
+    }
+
+    /// The story card is 9:16. Tall, it sits above its controls and takes its
+    /// height from its width. Wide, there is no height to spare, so the card
+    /// takes its width from the height and the controls move beside it.
+    private func updateLayoutMode() {
+        let wide = view.bounds.width > view.bounds.height * 1.05
+        guard wide != isWideLayout else { return }
+        isWideLayout = wide
+        pagesScrollView.clipsToBounds = wide
+        NSLayoutConstraint.deactivate(layoutConstraints)
+        let safe = view.safeAreaLayoutGuide
+        if wide {
+            layoutConstraints = [
+                pagesScrollView.topAnchor.constraint(equalTo: safe.topAnchor, constant: 52),
+                pagesScrollView.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -16),
+                pagesScrollView.widthAnchor.constraint(equalTo: pagesScrollView.heightAnchor, multiplier: 9.0 / 16.0),
+                pagesScrollView.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 48),
+                controlsStack.leadingAnchor.constraint(equalTo: pagesScrollView.trailingAnchor, constant: 36),
+                controlsStack.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -24),
+                controlsStack.centerYAnchor.constraint(equalTo: pagesScrollView.centerYAnchor),
+            ]
+        } else {
+            let tallest = pagesScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 4000)
+            tallest.priority = UILayoutPriority(250)
+            layoutConstraints = [
+                pagesScrollView.topAnchor.constraint(equalTo: safe.topAnchor, constant: 56),
+                pagesScrollView.centerXAnchor.constraint(equalTo: safe.centerXAnchor),
+                pagesScrollView.widthAnchor.constraint(lessThanOrEqualTo: safe.widthAnchor, constant: -88),
+                pagesScrollView.widthAnchor.constraint(equalTo: pagesScrollView.heightAnchor, multiplier: 9.0 / 16.0),
+                pagesScrollView.bottomAnchor.constraint(lessThanOrEqualTo: controlsStack.topAnchor, constant: -8),
+                tallest,
+                controlsStack.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 24),
+                controlsStack.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -24),
+                controlsStack.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -12),
+            ]
+        }
+        NSLayoutConstraint.activate(layoutConstraints)
+        view.setNeedsLayout()
     }
 
     private func setupTopBar() {
@@ -85,8 +128,8 @@ final class YearInMusicViewController: UIViewController {
         view.addSubview(topBar)
         NSLayoutConstraint.activate([
             topBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            topBar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            topBar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            topBar.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+            topBar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             closeButton.widthAnchor.constraint(equalToConstant: 34),
             closeButton.heightAnchor.constraint(equalToConstant: 34),
         ])
@@ -110,17 +153,11 @@ final class YearInMusicViewController: UIViewController {
         setupEmptyState()
 
         NSLayoutConstraint.activate([
-            pagesScrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 56),
-            pagesScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 44),
-            pagesScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -44),
-
             pagesStack.topAnchor.constraint(equalTo: pagesScrollView.contentLayoutGuide.topAnchor),
             pagesStack.bottomAnchor.constraint(equalTo: pagesScrollView.contentLayoutGuide.bottomAnchor),
             pagesStack.leadingAnchor.constraint(equalTo: pagesScrollView.contentLayoutGuide.leadingAnchor),
             pagesStack.trailingAnchor.constraint(equalTo: pagesScrollView.contentLayoutGuide.trailingAnchor),
             pagesStack.heightAnchor.constraint(equalTo: pagesScrollView.frameLayoutGuide.heightAnchor),
-
-            pagesScrollView.heightAnchor.constraint(equalTo: pagesScrollView.widthAnchor, multiplier: 16.0 / 9.0),
 
             emptyStack.centerXAnchor.constraint(equalTo: pagesScrollView.centerXAnchor),
             emptyStack.centerYAnchor.constraint(equalTo: pagesScrollView.centerYAnchor),
@@ -190,12 +227,9 @@ final class YearInMusicViewController: UIViewController {
         controls.setCustomSpacing(14, after: themeRow)
         controls.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(controls)
+        controlsStack = controls
 
         NSLayoutConstraint.activate([
-            controls.topAnchor.constraint(greaterThanOrEqualTo: pagesScrollView.bottomAnchor, constant: 8),
-            controls.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            controls.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            controls.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
             actionsRow.widthAnchor.constraint(equalTo: controls.widthAnchor),
             actionsRow.heightAnchor.constraint(equalToConstant: 50),
         ])

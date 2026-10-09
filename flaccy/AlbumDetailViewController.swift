@@ -15,6 +15,13 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     private var appearanceElements: [UIView] = []
     private var hasAnimatedAppearance = false
     private let genreChipsHolder = UIView()
+    private let infoStack = UIStackView()
+    private var actionRow = UIView()
+    private let headerColumn = UIScrollView()
+    private var headerLayoutConstraints: [NSLayoutConstraint] = []
+    private var appliedHeaderStyle: AdaptiveLayout.DetailHeaderStyle?
+    private var tableLeading: NSLayoutConstraint!
+    private var tableColumnLeading: NSLayoutConstraint!
     private let playCountLabel = UILabel()
     private let metaLabel = UILabel()
     private var enrichmentTask: Task<Void, Never>?
@@ -265,13 +272,15 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         tableView.backgroundColor = .clear
         tableView.indicatorStyle = .white
         tableView.register(AlbumTrackCell.self, forCellReuseIdentifier: AlbumTrackCell.reuseID)
-        tableView.tableHeaderView = buildHeaderView()
+        buildHeaderComponents()
         tableView.tableFooterView = buildFooterView()
         view.addSubview(tableView)
 
+        tableLeading = tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
+        tableColumnLeading = tableView.leadingAnchor.constraint(equalTo: headerColumn.trailingAnchor)
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableLeading,
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
@@ -310,6 +319,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         artworkCard.layer.shadowPath = UIBezierPath(
             roundedRect: artworkCard.bounds, cornerRadius: 16
         ).cgPath
+        applyHeaderStyle()
         sizeHeaderToFit()
     }
 
@@ -332,9 +342,9 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func buildHeaderView() -> UIView {
-        let container = UIView()
-
+    /// Builds the three header pieces once; `applyHeaderStyle()` decides where
+    /// they live (above the rows, as a banner, or as a column beside them).
+    private func buildHeaderComponents() {
         setupArtworkCard()
 
         titleMarquee.text = album.title
@@ -365,7 +375,10 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
         let qualityBadgeRow = buildQualityBadgeRow()
 
-        let infoStack = UIStackView(arrangedSubviews: [titleMarquee, artistButton, metaLabel, playCountLabel])
+        infoStack.addArrangedSubview(titleMarquee)
+        infoStack.addArrangedSubview(artistButton)
+        infoStack.addArrangedSubview(metaLabel)
+        infoStack.addArrangedSubview(playCountLabel)
         infoStack.axis = .vertical
         infoStack.spacing = 2
         infoStack.alignment = .leading
@@ -378,31 +391,117 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         genreChipsHolder.widthAnchor.constraint(equalTo: infoStack.widthAnchor).isActive = true
         titleMarquee.widthAnchor.constraint(equalTo: infoStack.widthAnchor).isActive = true
 
-        let actionRow = buildActionRow()
+        actionRow = buildActionRow()
         appearanceElements = [artworkCard, infoStack, actionRow]
+    }
 
+    /// Arranges the header for the room this page was given. Stacked is the
+    /// phone column; the banner puts a modest cover beside the title so rows
+    /// start high on a wider page; side by side pins the cover and details in
+    /// a column and gives the whole other half to the tracks.
+    private func applyHeaderStyle() {
+        let usable = view.safeAreaLayoutGuide.layoutFrame.size
+        guard usable.width > 1 else { return }
+        let style = AdaptiveLayout.detailHeaderStyle(forSize: usable)
+        guard style != appliedHeaderStyle else { return }
+        appliedHeaderStyle = style
+        NSLayoutConstraint.deactivate(headerLayoutConstraints)
+        headerLayoutConstraints = []
+        headerColumn.removeFromSuperview()
+        tableView.tableHeaderView = nil
+        for piece in [artworkCard, infoStack, actionRow] { piece.removeFromSuperview() }
+
+        switch style {
+        case .stacked: installStackedHeader()
+        case .banner: installBannerHeader()
+        case .sideBySide: installColumnHeader()
+        }
+        tableLeading.isActive = style != .sideBySide
+        tableColumnLeading.isActive = style == .sideBySide
+        view.setNeedsLayout()
+    }
+
+    private func installStackedHeader() {
+        let container = UIView()
         let mainStack = UIStackView(arrangedSubviews: [artworkCard, infoStack, actionRow])
         mainStack.axis = .vertical
         mainStack.spacing = 18
         mainStack.setCustomSpacing(22, after: artworkCard)
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(mainStack)
-
-        let leading = mainStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24)
-        let trailing = mainStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
+        let guide = container.safeAreaLayoutGuide
+        let leading = mainStack.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 24)
+        let trailing = mainStack.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -24)
         let bottom = mainStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -20)
-        for constraint in [leading, trailing, bottom] {
-            constraint.priority = .defaultHigh
-        }
+        for constraint in [leading, trailing, bottom] { constraint.priority = .defaultHigh }
         let cardWidth = artworkCard.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.8)
         cardWidth.priority = .defaultHigh
-
-        NSLayoutConstraint.activate([
+        let cardCap = artworkCard.widthAnchor.constraint(lessThanOrEqualToConstant: 340)
+        let constraints = [
             mainStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
             artworkCard.centerXAnchor.constraint(equalTo: mainStack.centerXAnchor),
-            leading, trailing, bottom, cardWidth,
-        ])
-        return container
+            leading, trailing, bottom, cardWidth, cardCap,
+        ]
+        NSLayoutConstraint.activate(constraints)
+        headerLayoutConstraints = constraints
+        tableView.tableHeaderView = container
+    }
+
+    private func installBannerHeader() {
+        let container = UIView()
+        let artworkSide = min(max(view.safeAreaLayoutGuide.layoutFrame.width * 0.36, 120), 260)
+        let topRow = UIStackView(arrangedSubviews: [artworkCard, infoStack])
+        topRow.axis = .horizontal
+        topRow.spacing = 18
+        topRow.alignment = .center
+        let mainStack = UIStackView(arrangedSubviews: [topRow, actionRow])
+        mainStack.axis = .vertical
+        mainStack.spacing = 16
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(mainStack)
+        let guide = container.safeAreaLayoutGuide
+        let leading = mainStack.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 24)
+        let trailing = mainStack.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -24)
+        let bottom = mainStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16)
+        for constraint in [leading, trailing, bottom] { constraint.priority = .defaultHigh }
+        let constraints = [
+            mainStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            artworkCard.widthAnchor.constraint(equalToConstant: artworkSide),
+            leading, trailing, bottom,
+        ]
+        NSLayoutConstraint.activate(constraints)
+        headerLayoutConstraints = constraints
+        tableView.tableHeaderView = container
+    }
+
+    private func installColumnHeader() {
+        let usable = view.safeAreaLayoutGuide.layoutFrame.size
+        let artworkSide = min(max(usable.width * 0.4, 240) - 40, usable.height * 0.42, 340)
+        let columnWidth = max(artworkSide + 40, 280)
+        headerColumn.translatesAutoresizingMaskIntoConstraints = false
+        headerColumn.showsVerticalScrollIndicator = false
+        headerColumn.alwaysBounceVertical = false
+        view.addSubview(headerColumn)
+        let mainStack = UIStackView(arrangedSubviews: [artworkCard, infoStack, actionRow])
+        mainStack.axis = .vertical
+        mainStack.spacing = 16
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        headerColumn.addSubview(mainStack)
+        let guide = view.safeAreaLayoutGuide
+        var constraints = [
+            headerColumn.topAnchor.constraint(equalTo: view.topAnchor),
+            headerColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            headerColumn.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
+            headerColumn.widthAnchor.constraint(equalToConstant: columnWidth),
+            mainStack.topAnchor.constraint(equalTo: headerColumn.contentLayoutGuide.topAnchor, constant: 12),
+            mainStack.bottomAnchor.constraint(equalTo: headerColumn.contentLayoutGuide.bottomAnchor, constant: -24),
+            mainStack.leadingAnchor.constraint(equalTo: headerColumn.frameLayoutGuide.leadingAnchor, constant: 24),
+            mainStack.trailingAnchor.constraint(equalTo: headerColumn.frameLayoutGuide.trailingAnchor, constant: -16),
+            artworkCard.widthAnchor.constraint(equalToConstant: artworkSide),
+        ]
+        constraints.last?.priority = .defaultHigh
+        NSLayoutConstraint.activate(constraints)
+        headerLayoutConstraints = constraints
     }
 
     private func setupArtworkCard() {
@@ -601,7 +700,8 @@ extension AlbumDetailViewController: UITableViewDelegate {
     /// Stretchy hero: pulling past the top scales the artwork card up around
     /// its center so the overscroll feels physical.
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
+        guard hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled,
+              appliedHeaderStyle != .sideBySide else { return }
         let pull = -(scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
         if pull > 0 {
             let scale = 1 + min(pull / 500, 0.18)
@@ -681,6 +781,7 @@ private final class AlbumTrackCell: UITableViewCell {
     static let reuseID = "AlbumTrackCell"
 
     var onToggleLove: (() -> Void)?
+    private var hasQualityBadge = false
 
     private let numberLabel = UILabel()
     private let barsView = NowPlayingBarsView()
@@ -688,6 +789,12 @@ private final class AlbumTrackCell: UITableViewCell {
     private let qualityLabel = UILabel()
     private let lovedButton = UIButton(type: .system)
     private let durationLabel = UILabel()
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let hidden = !hasQualityBadge || contentView.bounds.width < 400
+        if qualityLabel.isHidden != hidden { qualityLabel.isHidden = hidden }
+    }
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -773,13 +880,9 @@ private final class AlbumTrackCell: UITableViewCell {
         let seconds = Int(track.duration) % 60
         durationLabel.text = String(format: "%d:%02d", minutes, seconds)
 
-        if let badge = track.qualityBadge {
-            qualityLabel.text = badge
-            qualityLabel.isHidden = false
-        } else {
-            qualityLabel.text = nil
-            qualityLabel.isHidden = true
-        }
+        hasQualityBadge = track.qualityBadge != nil
+        qualityLabel.text = track.qualityBadge
+        qualityLabel.isHidden = !hasQualityBadge || contentView.bounds.width < 400
 
         let heart = UIImage(
             systemName: loved ? "heart.fill" : "heart",

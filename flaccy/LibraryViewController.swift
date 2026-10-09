@@ -130,7 +130,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
 
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.contentInsetAdjustmentBehavior = .never
+        scrollView.contentInsetAdjustmentBehavior = .automatic
         scrollView.showsVerticalScrollIndicator = false
         let page = UIView()
         page.translatesAutoresizingMaskIntoConstraints = false
@@ -201,6 +201,13 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         observeWantlist()
     }
 
+    #if DEBUG
+    func demoSelect(segment: LibraryViewModel.Segment) {
+        segmentedControl.selectedSegmentIndex = segment.rawValue
+        segmentedControl.sendActions(for: .valueChanged)
+    }
+    #endif
+
     private func observeWantlist() {
         NotificationCenter.default.addObserver(
             self, selector: #selector(wantlistDidChange), name: WantlistService.didChange, object: nil
@@ -269,8 +276,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         view.addSubview(segmentedControl)
         NSLayoutConstraint.activate([
             segmentedControl.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            segmentedControl.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            segmentedControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            segmentedControl.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            segmentedControl.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
         ])
     }
 
@@ -489,8 +496,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         chipsHeightConstraint = filterChipsView.heightAnchor.constraint(equalToConstant: 46)
         NSLayoutConstraint.activate([
             filterChipsView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 8),
-            filterChipsView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            filterChipsView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            filterChipsView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            filterChipsView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             chipsHeightConstraint,
         ])
     }
@@ -525,7 +532,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         view.addSubview(sectionIndexView)
 
         NSLayoutConstraint.activate([
-            sectionIndexView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+            sectionIndexView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 2),
             sectionIndexView.topAnchor.constraint(equalTo: statusBanner.bottomAnchor, constant: 8),
             sectionIndexView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             sectionIndexView.widthAnchor.constraint(equalToConstant: 16),
@@ -1471,7 +1478,10 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     /// A cover-wall section of square art tiles at the given column count.
-    private func gridSection(columns: Int, topInset: CGFloat) -> NSCollectionLayoutSection {
+    private func gridSection(
+        environment: NSCollectionLayoutEnvironment, topInset: CGFloat
+    ) -> NSCollectionLayoutSection {
+        let columns = AdaptiveLayout.gridColumns(forWidth: environment.container.effectiveContentSize.width)
         let itemSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1.0 / CGFloat(columns)),
             heightDimension: .estimated(180)
@@ -1482,6 +1492,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         group.interItemSpacing = .fixed(10)
         let section = NSCollectionLayoutSection(group: group)
         section.interGroupSpacing = 12
+        section.contentInsetsReference = .safeArea
         section.contentInsets = NSDirectionalEdgeInsets(top: topInset, leading: 20, bottom: 24, trailing: 12)
         return section
     }
@@ -1497,6 +1508,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         }
         return UICollectionViewCompositionalLayout { _, environment in
             let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: environment)
+            section.contentInsetsReference = .safeArea
             section.contentInsets.leading = leadingInset
             return section
         }
@@ -1507,7 +1519,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         case .albums:
             switch viewModel.layoutMode {
             case .grid:
-                return UICollectionViewCompositionalLayout { [weak self] sectionIndex, _ in
+                return UICollectionViewCompositionalLayout { [weak self] sectionIndex, environment in
                     guard let self else { return nil }
                     let hasRecent = self.dataSource.snapshot().numberOfSections > 1
                     if sectionIndex == 0 && hasRecent {
@@ -1517,6 +1529,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                         let section = NSCollectionLayoutSection(group: group)
                         section.orthogonalScrollingBehavior = .continuous
                         section.interGroupSpacing = 10
+                        section.contentInsetsReference = .safeArea
                         section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
                         let headerSize = NSCollectionLayoutSize(
                             widthDimension: .fractionalWidth(1.0), heightDimension: .estimated(32)
@@ -1530,7 +1543,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                         ]
                         return section
                     }
-                    return self.gridSection(columns: 3, topInset: 12)
+                    return self.gridSection(environment: environment, topInset: 12)
                 }
             case .list:
                 return listLayout(leadingInset: 20, leadingSwipeLove: false)
@@ -1540,8 +1553,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         case .songs:
             switch viewModel.layoutMode {
             case .grid:
-                return UICollectionViewCompositionalLayout { [weak self] _, _ in
-                    self?.gridSection(columns: 3, topInset: 12)
+                return UICollectionViewCompositionalLayout { [weak self] _, environment in
+                    self?.gridSection(environment: environment, topInset: 12)
                 }
             case .list, .compact:
                 return listLayout(leadingInset: 20, leadingSwipeLove: true)
@@ -1570,7 +1583,11 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 }
                 return UISwipeActionsConfiguration(actions: [deleteAction])
             }
-            return UICollectionViewCompositionalLayout.list(using: config)
+            return UICollectionViewCompositionalLayout { _, environment in
+                let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: environment)
+                section.contentInsetsReference = .safeArea
+                return section
+            }
         }
     }
 

@@ -159,8 +159,8 @@ final class WantlistViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             chipBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 6),
-            chipBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            chipBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            chipBar.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            chipBar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             chipBar.heightAnchor.constraint(equalToConstant: 40),
             chipStack.topAnchor.constraint(equalTo: chipBar.contentLayoutGuide.topAnchor),
             chipStack.bottomAnchor.constraint(equalTo: chipBar.contentLayoutGuide.bottomAnchor),
@@ -249,21 +249,22 @@ final class WantlistViewController: UIViewController {
     }
 
     private func makeLayout() -> UICollectionViewCompositionalLayout {
-        UICollectionViewCompositionalLayout { [weak self] index, _ in
+        UICollectionViewCompositionalLayout { [weak self] index, environment in
             guard let self, let section = self.dataSource.sectionIdentifier(for: index) else { return nil }
-            return self.layoutSection(for: section)
+            return self.layoutSection(for: section, environment: environment)
         }
     }
 
-    private func layoutSection(for section: WantlistSection) -> NSCollectionLayoutSection {
+    private func layoutSection(for section: WantlistSection, environment: NSCollectionLayoutEnvironment) -> NSCollectionLayoutSection {
         let result: NSCollectionLayoutSection
         switch section {
         case .newReleases, .albums, .discoverAlbums:
-            let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0 / 3.0), heightDimension: .estimated(150))
+            let columns = AdaptiveLayout.gridColumns(forWidth: environment.container.effectiveContentSize.width)
+            let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0 / CGFloat(columns)), heightDimension: .estimated(150))
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
             item.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 5, bottom: 12, trailing: 5)
             let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(150))
-            let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item, item, item])
+            let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, repeatingSubitem: item, count: columns)
             result = NSCollectionLayoutSection(group: group)
         case .tracks, .gaps, .upgrades:
             let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(60))
