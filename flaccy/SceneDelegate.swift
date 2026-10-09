@@ -142,6 +142,13 @@ final class RootContainerViewController: UIViewController {
 
     override var childForStatusBarStyle: UIViewController? { statusBarSource }
 
+    #if canImport(UIKit, _version: 9127.0.85)
+    @available(iOS 27.1, *)
+    override var preferredVerticalBarBehavior: UIVerticalBarBehavior {
+        isSplit ? .disabled : .automatic
+    }
+    #endif
+
     init(navigation: UINavigationController, player: PlayerContainerViewController) {
         self.navigation = navigation
         self.player = player
@@ -250,6 +257,7 @@ final class RootContainerViewController: UIViewController {
         )
         isSplit = true
         appliedGeometry = geometry
+        refreshVerticalBarConfiguration()
         navigationTrailing.isActive = false
         navigationWidth.constant = geometry.primaryWidth
         navigationWidth.isActive = true
@@ -259,8 +267,15 @@ final class RootContainerViewController: UIViewController {
         player.setPaneMode(true)
     }
 
+    private func refreshVerticalBarConfiguration() {
+        #if canImport(UIKit, _version: 9127.0.85)
+        if #available(iOS 27.1, *) { setNeedsUpdateOfVerticalBarConfiguration() }
+        #endif
+    }
+
     private func applyCompactLayout() {
         isSplit = false
+        refreshVerticalBarConfiguration()
         appliedGeometry = nil
         navigationWidth.isActive = false
         navigationTrailing.isActive = true

@@ -298,6 +298,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         laptopFoldBottomConstraint = nil
         artworkGroupTrailing.isActive = true
         placeInfoBlock(inControls: mode == .landscape)
+        infoBlock.isHidden = mode == .landscape && centerState != .artwork
         switch mode {
         case .portrait:
             constraints = [
