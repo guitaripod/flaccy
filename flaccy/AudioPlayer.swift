@@ -55,12 +55,12 @@ final class AudioPlayer: AudioPlaying {
 
     static let shared: AudioPlaying = AudioPlayer()
 
-    static let playbackStateDidChange = Notification.Name("PlaybackStateDidChange")
-    static let trackDidChange = Notification.Name("TrackDidChange")
-    static let playbackProgressDidChange = Notification.Name("PlaybackProgressDidChange")
-    static let shuffleRepeatDidChange = Notification.Name("ShuffleRepeatDidChange")
-    static let queueDidChange = Notification.Name("QueueDidChange")
-    static let sleepTimerDidUpdate = Notification.Name("SleepTimerDidUpdate")
+    static let playbackStateDidChange = Notification.Name("com.midgarcorp.flaccy.PlaybackStateDidChange")
+    static let trackDidChange = Notification.Name("com.midgarcorp.flaccy.TrackDidChange")
+    static let playbackProgressDidChange = Notification.Name("com.midgarcorp.flaccy.PlaybackProgressDidChange")
+    static let shuffleRepeatDidChange = Notification.Name("com.midgarcorp.flaccy.ShuffleRepeatDidChange")
+    static let queueDidChange = Notification.Name("com.midgarcorp.flaccy.QueueDidChange")
+    static let sleepTimerDidUpdate = Notification.Name("com.midgarcorp.flaccy.SleepTimerDidUpdate")
 
     private var player: AVQueuePlayer?
     private var timeObserver: Any?
