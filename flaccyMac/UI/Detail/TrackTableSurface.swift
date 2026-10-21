@@ -308,6 +308,7 @@ final class TrackTableCell: NSTableCellView {
     private let bars = PlayingBarsView()
     private let heart = NSImageView()
     private let column: TrackTableSurface.Column
+    private var isPlaying = false
 
     init(identifier: NSUserInterfaceItemIdentifier, column: TrackTableSurface.Column) {
         self.column = column
@@ -325,7 +326,7 @@ final class TrackTableCell: NSTableCellView {
 
         heart.image = NSImage(systemSymbolName: "heart.fill", accessibilityDescription: String(localized: "Loved"))
         heart.symbolConfiguration = .init(pointSize: 9, weight: .semibold)
-        heart.contentTintColor = NSColor(red: 1, green: 0.28, blue: 0.42, alpha: 1)
+        heart.contentTintColor = Self.loveInk
         heart.isHidden = true
         heart.translatesAutoresizingMaskIntoConstraints = false
 
@@ -364,11 +365,14 @@ final class TrackTableCell: NSTableCellView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet { applyColors() }
+    }
+
     func configure(text: String, isPlaying: Bool, animatesBars: Bool, loved: Bool) {
         label.stringValue = text
         label.toolTip = column == .number ? nil : text
-        let dimmed = column != .title && column != .artist && column != .album
-        label.textColor = isPlaying ? .controlAccentColor : (dimmed ? .secondaryLabelColor : .labelColor)
+        self.isPlaying = isPlaying
         let weight: NSFont.Weight = isPlaying && column == .title ? .semibold : .regular
         label.font = column.isTrailing
             ? .monospacedDigitSystemFont(ofSize: 12, weight: weight)
@@ -378,6 +382,18 @@ final class TrackTableCell: NSTableCellView {
             bars.isHidden = !isPlaying
             bars.setPlaying(isPlaying && animatesBars)
         }
+        applyColors()
         heart.isHidden = !loved
     }
+
+    private func applyColors() {
+        let emphasized = backgroundStyle == .emphasized
+        let dimmed = column != .title && column != .artist && column != .album
+        let playingInk: NSColor = emphasized ? .alternateSelectedControlTextColor : .controlAccentColor
+        label.textColor = isPlaying ? playingInk : (dimmed ? .secondaryLabelColor : .labelColor)
+        bars.tint = playingInk
+        heart.contentTintColor = emphasized ? .alternateSelectedControlTextColor : Self.loveInk
+    }
+
+    private static let loveInk = NSColor(red: 1, green: 0.28, blue: 0.42, alpha: 1)
 }

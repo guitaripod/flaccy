@@ -568,12 +568,23 @@ final class PlayingTitleCellView: NSTableCellView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet { applyTint() }
+    }
+
     func configure(title: String, isPlaying: Bool) {
         label.stringValue = title
         label.toolTip = title
         label.font = .systemFont(ofSize: 12, weight: isPlaying ? .semibold : .regular)
         speaker.isHidden = !isPlaying
         speakerWidth?.constant = isPlaying ? 14 : 0
+        applyTint()
+    }
+
+    private func applyTint() {
+        let emphasized = backgroundStyle == .emphasized
+        speaker.contentTintColor = emphasized ? .alternateSelectedControlTextColor : .controlAccentColor
+        label.textColor = emphasized ? .alternateSelectedControlTextColor : .labelColor
     }
 }
 
