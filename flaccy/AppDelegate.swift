@@ -12,6 +12,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     ) -> Bool {
         FlaccyMidgar.configureLogging()
         FlaccyMidgar.shared.start()
+        ReviewPrompt.beginSession()
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         } catch {

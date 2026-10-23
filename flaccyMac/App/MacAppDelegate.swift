@@ -28,6 +28,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         FlaccyMidgar.configureLogging()
         FlaccyMidgar.shared.start()
+        ReviewPrompt.beginSession()
         MidgarLog.info("Flaccy for Mac launched (root: \(LibraryRoot.current.path))", category: .general)
         #if DEBUG
         ScreenshotSeeder.seedIfRequested()
