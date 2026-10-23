@@ -41,11 +41,7 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
 
     static let shared = LastFMStatsService()
 
-    /// Rows stamped before this instant are "undated": an old scrobbler bug left
-    /// imported histories with plays at 1970-01-01. They still count toward
-    /// totals and top lists, but placing them on a calendar, a clock or a
-    /// streak would stretch every one of those across fifty years of nothing.
-    static let firstDatedScrobble = Date(timeIntervalSince1970: 1_009_843_200)
+    static let firstDatedScrobble = DatabaseManager.firstDatedScrobble
 
     /// The heatmap always shows at least this many Sunday-aligned columns.
     static let calendarHeatmapWeeks = 53

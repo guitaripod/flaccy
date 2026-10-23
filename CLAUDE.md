@@ -4,7 +4,7 @@ Music player for FLAC and other local libraries, one product on four clients: iO
 
 ## Layout
 - `flaccy/` iOS, `flaccyMac/` macOS, `flaccyWatch Watch App/` watchOS, `linux/` Rust client with `linux/shared/` (Rust mirror of FlaccyCore, builds without GStreamer).
-- `FlaccyCore/` shared Swift (nonisolated, Swift 6). `flaccyTests/`, `flaccyUITests/`, `flaccyMacUITests/`, `scripts/`, `project.yml`, `store/`, `metadata/`.
+- `FlaccyCore/` shared Swift (nonisolated, Swift 6). Its second product `FlaccyEngine` (depends on GRDB, so the watch never links it) holds `DatabaseManager` with its records, `Track` and `PlaybackEngine`; `AudioPlayer` in `flaccy/` is the system glue (Now Playing, remote commands, scrobbling, stations) that the engine reaches through `PlaybackEngineHost`. `flaccyTests/`, `flaccyUITests/`, `flaccyMacUITests/`, `scripts/`, `project.yml`, `store/`, `metadata/`.
 - `flaccyMac/App/DebugDrive.swift` is the DEBUG-only window self-capture.
 
 ## Setup, build, test

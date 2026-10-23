@@ -18,59 +18,6 @@ nonisolated enum ArtistDetailSection: Int, CaseIterable, Sendable {
     }
 }
 
-nonisolated enum ArtistDetailItem: Hashable, Sendable {
-    case header(ArtistHeaderInfo)
-    case similarAlbum(SimilarAlbumItem)
-    case popularTrack(PopularTrackItem)
-    case album(Album)
-    case message(DetailMessageItem)
-}
-
-nonisolated struct SimilarAlbumItem: Hashable, Sendable {
-    let album: Album
-}
-
-nonisolated struct PopularTrackItem: Hashable, Sendable {
-    let name: String
-    let playCount: Int
-    let rank: Int
-    let ownedTrack: Track?
-
-    nonisolated static func == (lhs: PopularTrackItem, rhs: PopularTrackItem) -> Bool {
-        lhs.rank == rhs.rank && lhs.name == rhs.name
-    }
-
-    nonisolated func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
-        hasher.combine(rank)
-    }
-}
-
-nonisolated struct DetailMessageItem: Hashable, Sendable {
-    let id: String
-    let text: String
-    let isLoading: Bool
-}
-
-nonisolated struct ArtistHeaderInfo: Hashable, Sendable {
-    let name: String
-    let bio: String?
-    let genre: String?
-    let albumCount: Int
-    let trackCount: Int
-    let artwork: UIImage?
-    let firstAlbumTitle: String?
-    var genres: [String] = []
-
-    nonisolated static func == (lhs: ArtistHeaderInfo, rhs: ArtistHeaderInfo) -> Bool {
-        lhs.name == rhs.name && lhs.genres == rhs.genres
-    }
-
-    nonisolated func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
-    }
-}
-
 final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
     enum AlbumSort: String, CaseIterable {
@@ -93,27 +40,27 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private let artistName: String
-    private var albums: [Album]
+    let artistName: String
+    var albums: [Album]
     /// Albums the artist plays on without being their credit, so a composer on
     /// a Various Artists soundtrack has a page with their work on it.
-    private var appearsOn: [Album]
-    private var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "artistDetailAlbumSort") ?? "") ?? .title
-    private var bio: String?
-    private var artistPhoto: UIImage?
-    private var artistPhotoTask: Task<Void, Never>?
-    private var similarAlbums: [Album] = []
-    private var similarLoaded = false
-    private var popularTracks: [PopularTrackItem] = []
-    private var popularLoaded = false
-    private var genres: [String] = []
-    private var enrichmentTask: Task<Void, Never>?
-    private var collectionView: UICollectionView!
-    private var dataSource: UICollectionViewDiffableDataSource<ArtistDetailSection, ArtistDetailItem>!
-    private let backdropView = AmbientPaletteBackdropView()
-    private var hasAnimatedAppearance = false
-    private let impactLight = UIImpactFeedbackGenerator(style: .light)
-    private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
+    var appearsOn: [Album]
+    var albumSort: AlbumSort = AlbumSort(rawValue: UserDefaults.standard.string(forKey: "artistDetailAlbumSort") ?? "") ?? .title
+    var bio: String?
+    var artistPhoto: UIImage?
+    var artistPhotoTask: Task<Void, Never>?
+    var similarAlbums: [Album] = []
+    var similarLoaded = false
+    var popularTracks: [PopularTrackItem] = []
+    var popularLoaded = false
+    var genres: [String] = []
+    var enrichmentTask: Task<Void, Never>?
+    var collectionView: UICollectionView!
+    var dataSource: UICollectionViewDiffableDataSource<ArtistDetailSection, ArtistDetailItem>!
+    let backdropView = AmbientPaletteBackdropView()
+    var hasAnimatedAppearance = false
+    let impactLight = UIImpactFeedbackGenerator(style: .light)
+    let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
     init(artistName: String, albums: [Album], appearsOn: [Album] = []) {
         self.artistName = artistName
@@ -152,7 +99,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
     /// Fetches similar-library artists, Last.fm popular tracks, and genre tags
     /// off-main, caching each, then folds them into their sections as they land.
-    private func loadEnrichment() {
+    func loadEnrichment() {
         let artist = artistName
         let ownedByTitle = ownedTracksByTitle()
         enrichmentTask = Task { [weak self] in
@@ -195,20 +142,20 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     /// Taking only credited albums would hand a composer on a compilation an
     /// empty queue while the library holds thirty-one of their tracks. Mirrors
     /// `Core::artist_tracks` in the Linux client.
-    @objc private func artworkChanged() {
+    @objc func artworkChanged() {
         var snapshot = dataSource.snapshot()
         snapshot.reconfigureItems(snapshot.itemIdentifiers)
         dataSource.apply(snapshot, animatingDifferences: false)
     }
 
-    private func ownedTracks() -> [Track] {
+    func ownedTracks() -> [Track] {
         let key = LibraryHygiene.artistKey(artistName)
         let tracks = albums.flatMap(\.tracks)
             + appearsOn.flatMap { $0.tracks.filter { LibraryHygiene.artistKey($0.artist) == key } }
         return HideDuplicateSongsSetting.uniquePool(tracks)
     }
 
-    private func ownedTracksByTitle() -> [String: Track] {
+    func ownedTracksByTitle() -> [String: Track] {
         var map: [String: Track] = [:]
         for track in ownedTracks() {
             let key = track.title.lowercased()
@@ -217,7 +164,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         return map
     }
 
-    private func startStation() {
+    func startStation() {
         impactMedium.impactOccurred()
         AudioPlayer.shared.startStation(seedArtist: artistName)
     }
@@ -247,18 +194,18 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         backdropView.frame = view.bounds
     }
 
-    private func setupBackdrop() {
+    func setupBackdrop() {
         backdropView.frame = view.bounds
         view.addSubview(backdropView)
         applyPalette(from: initialArtwork(), animated: false)
     }
 
-    private func initialArtwork() -> UIImage? {
+    func initialArtwork() -> UIImage? {
         guard let album = albums.first else { return nil }
         return album.artwork ?? AlbumArtworkCache.shared.thumbnail(forAlbum: album.title, artist: album.artist)
     }
 
-    private func applyPalette(from image: UIImage?, animated: Bool) {
+    func applyPalette(from image: UIImage?, animated: Bool) {
         ArtworkPaletteExtractor.palette(
             for: image,
             cacheKey: "artist\0\(artistName.lowercased())",
@@ -270,7 +217,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
 
     /// Resolves the artist photo through the caching service, then swaps it into
     /// the hero and re-derives the ambient palette from the photo itself.
-    private func fetchArtistPhoto() {
+    func fetchArtistPhoto() {
         artistPhotoTask = Task { [weak self] in
             guard let self else { return }
             let image = await ArtistImageService.shared.image(for: self.artistName)
@@ -290,14 +237,14 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func setupSortMenu() {
+    func setupSortMenu() {
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             image: UIImage(systemName: "arrow.up.arrow.down"),
             menu: buildSortMenu()
         )
     }
 
-    private func buildSortMenu() -> UIMenu {
+    func buildSortMenu() -> UIMenu {
         let actions = AlbumSort.allCases.map { sort in
             UIAction(
                 title: sort.displayName,
@@ -316,7 +263,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         return UIMenu(title: String(localized: "Sort By"), children: actions)
     }
 
-    private func sortAlbums() {
+    func sortAlbums() {
         switch albumSort {
         case .title:
             albums.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
@@ -331,7 +278,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func fetchArtistInfo() {
+    func fetchArtistInfo() {
         guard let artist = try? DatabaseManager.shared.fetchArtist(name: artistName) else { return }
         if let rawBio = artist.bio, !rawBio.isEmpty {
             bio = rawBio
@@ -340,7 +287,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func setupCollectionView() {
+    func setupCollectionView() {
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: createLayout())
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.delegate = self
@@ -356,7 +303,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         ])
     }
 
-    private func createLayout() -> UICollectionViewCompositionalLayout {
+    func createLayout() -> UICollectionViewCompositionalLayout {
         UICollectionViewCompositionalLayout { [weak self] sectionIndex, environment in
             guard let section = self?.section(at: sectionIndex) else { return nil }
 
@@ -439,7 +386,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private static func sectionHeaderItem() -> NSCollectionLayoutBoundarySupplementaryItem {
+    static func sectionHeaderItem() -> NSCollectionLayoutBoundarySupplementaryItem {
         let headerSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1.0),
             heightDimension: .estimated(32)
@@ -451,7 +398,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         )
     }
 
-    private func configureDataSource() {
+    func configureDataSource() {
         let headerCellRegistration = UICollectionView.CellRegistration<ArtistHeaderCell, ArtistHeaderInfo> { [weak self] cell, _, info in
             cell.configure(with: info, artistPhoto: self?.artistPhoto)
             cell.onBioToggle = {
@@ -511,7 +458,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func applySnapshot(animatingDifferences: Bool = false) {
+    func applySnapshot(animatingDifferences: Bool = false) {
         var snapshot = NSDiffableDataSourceSnapshot<ArtistDetailSection, ArtistDetailItem>()
         snapshot.appendSections(visibleSections())
 
@@ -548,7 +495,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     /// than shown empty under its heading: a composer credited with no album of
     /// their own has only an Appears On shelf, and a solo artist has only the
     /// Albums one.
-    private func visibleSections() -> [ArtistDetailSection] {
+    func visibleSections() -> [ArtistDetailSection] {
         ArtistDetailSection.allCases.filter { section in
             switch section {
             case .albums: !albums.isEmpty
@@ -561,11 +508,11 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     /// The section shown at `index`, read from the snapshot rather than from
     /// the raw value — sections are dropped when empty, so position and case
     /// order no longer agree.
-    private func section(at index: Int) -> ArtistDetailSection? {
+    func section(at index: Int) -> ArtistDetailSection? {
         dataSource?.sectionIdentifier(for: index) ?? ArtistDetailSection(rawValue: index)
     }
 
-    private func similarSectionItems() -> [ArtistDetailItem] {
+    func similarSectionItems() -> [ArtistDetailItem] {
         guard similarLoaded else {
             return [.message(DetailMessageItem(id: "similar.loading", text: String(localized: "Finding artists in your library\u{2026}"), isLoading: true))]
         }
@@ -575,7 +522,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         return similarAlbums.map { .similarAlbum(SimilarAlbumItem(album: $0)) }
     }
 
-    private func popularSectionItems() -> [ArtistDetailItem] {
+    func popularSectionItems() -> [ArtistDetailItem] {
         guard popularLoaded else {
             return [.message(DetailMessageItem(id: "popular.loading", text: String(localized: "Loading popular tracks\u{2026}"), isLoading: true))]
         }
@@ -585,7 +532,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         return popularTracks.map { .popularTrack($0) }
     }
 
-    private func playAll(shuffled: Bool) {
+    func playAll(shuffled: Bool) {
         var tracks = ownedTracks()
         guard !tracks.isEmpty else { return }
         if shuffled {
@@ -636,439 +583,5 @@ extension ArtistDetailViewController: UICollectionViewDelegate {
                 context: TrackContextMenu.Context(hideGoToArtist: true)
             )
         }
-    }
-}
-
-final class ArtistHeaderCell: UICollectionViewCell {
-
-    var onBioToggle: (() -> Void)?
-    var onPlayAll: (() -> Void)?
-    var onShuffleAll: (() -> Void)?
-    var onStartStation: (() -> Void)?
-
-    private let genreChipsHolder = UIView()
-    private let photoContainer = UIView()
-    private let artistImageView = UIImageView()
-    private let nameLabel = UILabel()
-    private let genreLabel = UILabel()
-    private let statsLabel = UILabel()
-    private let bioLabel = UILabel()
-    private let readMoreButton = UIButton(type: .system)
-    private let detailsStack = UIStackView()
-    private let heroStack = UIStackView()
-    private var stackedDetailsWidth: NSLayoutConstraint?
-    private var isWideHeader = false
-    private var bioExpanded = false
-    private var showsFallbackImage = false
-    private var genreChipsShown = false
-
-    private static let imageSize: CGFloat = 132
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupPhotoHero()
-
-        nameLabel.font = .scaled(.title1, size: 28, weight: .bold)
-        nameLabel.adjustsFontForContentSizeCategory = true
-        nameLabel.textColor = .white
-        nameLabel.numberOfLines = 2
-        nameLabel.textAlignment = .center
-
-        genreLabel.font = .scaled(.subheadline, size: 15, weight: .medium)
-        genreLabel.adjustsFontForContentSizeCategory = true
-        genreLabel.textColor = .white.withAlphaComponent(0.7)
-        genreLabel.textAlignment = .center
-
-        statsLabel.font = .scaled(.footnote, size: 13, weight: .regular)
-        statsLabel.adjustsFontForContentSizeCategory = true
-        statsLabel.textColor = .white.withAlphaComponent(0.5)
-        statsLabel.textAlignment = .center
-
-        bioLabel.font = .scaled(.subheadline, size: 15, weight: .regular)
-        bioLabel.adjustsFontForContentSizeCategory = true
-        bioLabel.textColor = .white.withAlphaComponent(0.7)
-        bioLabel.numberOfLines = 4
-
-        readMoreButton.setTitle(String(localized: "Read more"), for: .normal)
-        readMoreButton.titleLabel?.font = .scaled(.footnote, size: 13, weight: .semibold)
-        readMoreButton.titleLabel?.adjustsFontForContentSizeCategory = true
-        readMoreButton.setTitleColor(.white, for: .normal)
-        readMoreButton.contentHorizontalAlignment = .leading
-        readMoreButton.accessibilityHint = String(localized: "Expands the artist biography")
-        readMoreButton.addAction(UIAction { [weak self] _ in self?.toggleBio() }, for: .touchUpInside)
-
-        let bioStack = UIStackView(arrangedSubviews: [bioLabel, readMoreButton])
-        bioStack.axis = .vertical
-        bioStack.spacing = 4
-
-        let actionRow = buildActionRow()
-        let stationRow = buildStationRow()
-        genreChipsHolder.isHidden = true
-
-        detailsStack.addArrangedSubview(nameLabel)
-        detailsStack.addArrangedSubview(genreLabel)
-        detailsStack.addArrangedSubview(statsLabel)
-        detailsStack.addArrangedSubview(genreChipsHolder)
-        detailsStack.addArrangedSubview(actionRow)
-        detailsStack.addArrangedSubview(stationRow)
-        detailsStack.axis = .vertical
-        detailsStack.spacing = 8
-        detailsStack.setCustomSpacing(4, after: nameLabel)
-        detailsStack.setCustomSpacing(4, after: genreLabel)
-        detailsStack.setCustomSpacing(14, after: statsLabel)
-        detailsStack.setCustomSpacing(16, after: genreChipsHolder)
-        detailsStack.setCustomSpacing(10, after: actionRow)
-        detailsStack.alignment = .center
-
-        heroStack.addArrangedSubview(photoContainer)
-        heroStack.addArrangedSubview(detailsStack)
-        heroStack.axis = .vertical
-        heroStack.spacing = 16
-        heroStack.alignment = .center
-
-        let mainStack = UIStackView(arrangedSubviews: [heroStack, bioStack])
-        mainStack.axis = .vertical
-        mainStack.spacing = 20
-        mainStack.alignment = .center
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(mainStack)
-
-        let bioStackWidth = bioStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        let heroWidth = heroStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        let actionRowWidth = actionRow.widthAnchor.constraint(equalTo: detailsStack.widthAnchor)
-        let stationRowWidth = stationRow.widthAnchor.constraint(equalTo: detailsStack.widthAnchor)
-        let chipsWidth = genreChipsHolder.widthAnchor.constraint(equalTo: detailsStack.widthAnchor)
-        stackedDetailsWidth = detailsStack.widthAnchor.constraint(equalTo: mainStack.widthAnchor)
-        for constraint in [bioStackWidth, heroWidth, actionRowWidth, stationRowWidth, chipsWidth, stackedDetailsWidth!] {
-            constraint.priority = .defaultHigh
-        }
-
-        NSLayoutConstraint.activate([
-            photoContainer.widthAnchor.constraint(equalToConstant: Self.imageSize),
-            photoContainer.heightAnchor.constraint(equalToConstant: Self.imageSize),
-            bioStackWidth,
-            heroWidth,
-            actionRowWidth,
-            stationRowWidth,
-            chipsWidth,
-            stackedDetailsWidth!,
-            mainStack.topAnchor.constraint(equalTo: contentView.topAnchor),
-            mainStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            mainStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            mainStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-        ])
-    }
-
-    /// Wide cells put the portrait beside the name, stats and buttons, with
-    /// the text leading-aligned; narrow ones keep the centred column. Decided
-    /// from the width the layout proposes, before the cell is measured.
-    private func applyHeaderLayout(forWidth width: CGFloat) {
-        let wide = width >= 500
-        guard wide != isWideHeader else { return }
-        isWideHeader = wide
-        heroStack.axis = wide ? .horizontal : .vertical
-        heroStack.spacing = wide ? 28 : 16
-        detailsStack.alignment = wide ? .leading : .center
-        stackedDetailsWidth?.isActive = !wide
-        let alignment: NSTextAlignment = wide ? .natural : .center
-        for label in [nameLabel, genreLabel, statsLabel] { label.textAlignment = alignment }
-    }
-
-    override func preferredLayoutAttributesFitting(
-        _ layoutAttributes: UICollectionViewLayoutAttributes
-    ) -> UICollectionViewLayoutAttributes {
-        applyHeaderLayout(forWidth: layoutAttributes.size.width)
-        return super.preferredLayoutAttributesFitting(layoutAttributes)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    private func setupPhotoHero() {
-        photoContainer.layer.shadowColor = UIColor.black.cgColor
-        photoContainer.layer.shadowOpacity = 0.45
-        photoContainer.layer.shadowOffset = CGSize(width: 0, height: 10)
-        photoContainer.layer.shadowRadius = 22
-
-        artistImageView.contentMode = .scaleAspectFill
-        artistImageView.clipsToBounds = true
-        artistImageView.layer.cornerRadius = Self.imageSize / 2
-        artistImageView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        artistImageView.tintColor = UIColor.white.withAlphaComponent(0.35)
-        artistImageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 44, weight: .ultraLight)
-        artistImageView.translatesAutoresizingMaskIntoConstraints = false
-        photoContainer.addSubview(artistImageView)
-        NSLayoutConstraint.activate([
-            artistImageView.topAnchor.constraint(equalTo: photoContainer.topAnchor),
-            artistImageView.leadingAnchor.constraint(equalTo: photoContainer.leadingAnchor),
-            artistImageView.trailingAnchor.constraint(equalTo: photoContainer.trailingAnchor),
-            artistImageView.bottomAnchor.constraint(equalTo: photoContainer.bottomAnchor),
-        ])
-    }
-
-    override func layoutSubviews() {
-        applyHeaderLayout(forWidth: bounds.width)
-        super.layoutSubviews()
-        photoContainer.layer.shadowPath = UIBezierPath(ovalIn: photoContainer.bounds).cgPath
-    }
-
-    private func buildActionRow() -> UIView {
-        let play = LiquidGlass.actionCapsule(title: String(localized: "Play All"), systemImage: "play.fill") { [weak self] in
-            self?.onPlayAll?()
-        }
-        let shuffle = LiquidGlass.actionCapsule(title: String(localized: "Shuffle All"), systemImage: "shuffle") { [weak self] in
-            self?.onShuffleAll?()
-        }
-        let row = UIStackView(arrangedSubviews: [play, shuffle])
-        row.spacing = 10
-        row.distribution = .fillEqually
-        return LiquidGlass.grouping(row)
-    }
-
-    /// A full-width glass capsule seeding a library radio station from this
-    /// artist, the signature local-discovery entry point.
-    private func buildStationRow() -> UIView {
-        let station = LiquidGlass.actionCapsule(title: String(localized: "Start Station"), systemImage: "dot.radiowaves.left.and.right") { [weak self] in
-            self?.onStartStation?()
-        }
-        station.accessibilityHint = String(localized: "Plays a station of similar music from your library")
-        let row = UIStackView(arrangedSubviews: [station])
-        row.axis = .horizontal
-        row.distribution = .fill
-        return LiquidGlass.grouping(row)
-    }
-
-    private func applyGenreChips(_ genres: [String]) {
-        genreChipsHolder.subviews.forEach { $0.removeFromSuperview() }
-        guard !genres.isEmpty else {
-            genreChipsHolder.isHidden = true
-            genreChipsShown = false
-            return
-        }
-        let row = DetailChip.chipsRow(genres)
-        row.translatesAutoresizingMaskIntoConstraints = false
-        genreChipsHolder.addSubview(row)
-        NSLayoutConstraint.activate([
-            row.topAnchor.constraint(equalTo: genreChipsHolder.topAnchor),
-            row.bottomAnchor.constraint(equalTo: genreChipsHolder.bottomAnchor),
-            row.leadingAnchor.constraint(equalTo: genreChipsHolder.leadingAnchor),
-            row.trailingAnchor.constraint(equalTo: genreChipsHolder.trailingAnchor),
-        ])
-        genreChipsHolder.isHidden = false
-
-        let shouldFade = !genreChipsShown && !UIAccessibility.isReduceMotionEnabled
-        genreChipsShown = true
-        guard shouldFade else { return }
-        row.alpha = 0
-        UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseInOut]) {
-            row.alpha = 1
-        }
-    }
-
-    private func toggleBio() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        bioExpanded.toggle()
-        bioLabel.numberOfLines = bioExpanded ? 0 : 4
-        readMoreButton.setTitle(bioExpanded ? String(localized: "Read less") : String(localized: "Read more"), for: .normal)
-        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.86, initialSpringVelocity: 0.6) {
-            self.onBioToggle?()
-        }
-    }
-
-    func configure(with info: ArtistHeaderInfo, artistPhoto: UIImage?) {
-        nameLabel.text = info.name
-        photoContainer.isAccessibilityElement = true
-        photoContainer.accessibilityLabel = String(localized: "Photo of \(info.name)")
-        setHeroImage(artistPhoto ?? info.artwork, isArtistPhoto: artistPhoto != nil, info: info)
-
-        if let genre = info.genre, !genre.isEmpty {
-            genreLabel.text = genre
-            genreLabel.isHidden = false
-        } else {
-            genreLabel.isHidden = true
-        }
-
-        statsLabel.text = String(localized: "\(info.albumCount) albums \u{00B7} \(info.trackCount) tracks")
-
-        applyGenreChips(info.genres)
-
-        if let bio = info.bio, !bio.isEmpty {
-            bioLabel.text = bio
-            bioLabel.isHidden = false
-            readMoreButton.isHidden = false
-        } else {
-            bioLabel.isHidden = true
-            readMoreButton.isHidden = true
-        }
-    }
-
-    /// Applies the hero image, crossfading when a real artist photo replaces
-    /// the album-artwork placeholder; falls back to a symbol and a lazy
-    /// artwork load when nothing is available yet.
-    private func setHeroImage(_ image: UIImage?, isArtistPhoto: Bool, info: ArtistHeaderInfo) {
-        if let image {
-            let apply = {
-                self.artistImageView.contentMode = .scaleAspectFill
-                self.artistImageView.image = image
-            }
-            if isArtistPhoto, artistImageView.image != nil, !showsFallbackImage, !UIAccessibility.isReduceMotionEnabled {
-                UIView.transition(with: artistImageView, duration: 0.3, options: [.transitionCrossDissolve], animations: apply)
-            } else {
-                apply()
-            }
-            showsFallbackImage = false
-            return
-        }
-        showsFallbackImage = true
-        artistImageView.contentMode = .center
-        artistImageView.image = UIImage(systemName: "person.crop.circle.fill")
-        guard let albumTitle = info.firstAlbumTitle else { return }
-        AlbumArtworkCache.shared.loadThumbnail(forAlbum: albumTitle, artist: info.name) { [weak self] image in
-            guard let self, let image, self.showsFallbackImage else { return }
-            self.artistImageView.contentMode = .scaleAspectFill
-            self.artistImageView.image = image
-        }
-    }
-}
-
-/// A Last.fm popular-track row showing global rank, title, an owned checkmark
-/// when the track exists in the local library, and its scrobble count.
-final class PopularTrackCell: UICollectionViewCell {
-
-    private let rankLabel = UILabel()
-    private let ownedBadge = UIImageView()
-    private let titleLabel = UILabel()
-    private let playCountLabel = UILabel()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-
-        rankLabel.font = UIFontMetrics(forTextStyle: .subheadline)
-            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 15, weight: .regular), maximumPointSize: 24)
-        rankLabel.adjustsFontForContentSizeCategory = true
-        rankLabel.textColor = .white.withAlphaComponent(0.45)
-        rankLabel.textAlignment = .center
-        rankLabel.setContentHuggingPriority(.required, for: .horizontal)
-
-        ownedBadge.image = UIImage(
-            systemName: "checkmark.circle.fill",
-            withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
-        )
-        ownedBadge.tintColor = .systemGreen
-        ownedBadge.contentMode = .center
-        ownedBadge.setContentHuggingPriority(.required, for: .horizontal)
-        ownedBadge.isAccessibilityElement = false
-
-        titleLabel.font = .scaled(.body, size: 16, weight: .regular)
-        titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.textColor = .white
-        titleLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        playCountLabel.font = UIFontMetrics(forTextStyle: .footnote)
-            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 13, weight: .regular), maximumPointSize: 22)
-        playCountLabel.adjustsFontForContentSizeCategory = true
-        playCountLabel.textColor = .white.withAlphaComponent(0.4)
-        playCountLabel.textAlignment = .right
-        playCountLabel.setContentHuggingPriority(.required, for: .horizontal)
-
-        let stack = UIStackView(arrangedSubviews: [rankLabel, ownedBadge, titleLabel, playCountLabel])
-        stack.spacing = 10
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            rankLabel.widthAnchor.constraint(equalToConstant: 24),
-            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-        ])
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    func configure(with item: PopularTrackItem) {
-        rankLabel.text = item.rank > 0 ? "\(item.rank)" : "\u{2013}"
-        titleLabel.text = item.name
-        let owned = item.ownedTrack != nil
-        ownedBadge.isHidden = !owned
-        titleLabel.textColor = owned ? .white : .white.withAlphaComponent(0.75)
-
-        if item.playCount > 0 {
-            playCountLabel.text = Self.abbreviated(item.playCount)
-            playCountLabel.isHidden = false
-        } else {
-            playCountLabel.isHidden = true
-        }
-
-        isAccessibilityElement = true
-        accessibilityLabel = item.name
-        accessibilityValue = owned
-            ? String(localized: "In your library. Double tap to play from here through the rest of popular tracks.")
-            : String(localized: "Not in your library")
-        accessibilityTraits = owned ? .button : .staticText
-    }
-
-    private static func abbreviated(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: String(localized: "%.1fM plays"), Double(count) / 1_000_000)
-        }
-        if count >= 1_000 {
-            return String(format: String(localized: "%.0fK plays"), Double(count) / 1_000)
-        }
-        return String(localized: "\(count) plays")
-    }
-}
-
-/// A loading or empty-state cell for the enrichment sections, with a spinner
-/// while data is in flight and a dimmed message once it settles.
-final class DetailMessageCell: UICollectionViewCell {
-
-    private let spinner = UIActivityIndicatorView(style: .medium)
-    private let label = UILabel()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-
-        spinner.color = .white.withAlphaComponent(0.6)
-        spinner.hidesWhenStopped = true
-
-        label.font = .scaled(.subheadline, size: 14, weight: .regular)
-        label.adjustsFontForContentSizeCategory = true
-        label.textColor = .white.withAlphaComponent(0.5)
-        label.numberOfLines = 0
-        label.textAlignment = .center
-
-        let stack = UIStackView(arrangedSubviews: [spinner, label])
-        stack.axis = .vertical
-        stack.spacing = 8
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -8),
-            stack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-        ])
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    func configure(with item: DetailMessageItem) {
-        label.text = item.text
-        if item.isLoading {
-            spinner.startAnimating()
-        } else {
-            spinner.stopAnimating()
-        }
-        isAccessibilityElement = true
-        accessibilityLabel = item.text
     }
 }

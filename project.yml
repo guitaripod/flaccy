@@ -57,6 +57,8 @@ targets:
           - Secrets.swift.example
     dependencies:
       - package: FlaccyCore
+      - package: FlaccyCore
+        product: FlaccyEngine
       - package: GRDB
       - package: RevenueCat
       - package: MidgarKit
@@ -132,10 +134,18 @@ targets:
           - AdaptiveLayout.swift
           - AlbumCell.swift
           - AlbumDetailViewController.swift
+          - NowPlayingBarsView.swift
+          - AlbumTrackCell.swift
+          - AlbumDetailViewController+Delegates.swift
+          - AlbumDetailViewController+Enrichment.swift
+          - AlbumDetailViewController+Header.swift
           - AmbientPaletteBackdropView.swift
           - AppAppearance.swift
           - AppDelegate.swift
           - ArtistDetailViewController.swift
+          - ArtistListCells.swift
+          - ArtistHeaderCell.swift
+          - ArtistDetailModels.swift
           - ArtistImageService.swift
           - ArtworkCropView.swift
           - ArtworkEditorViewController.swift
@@ -149,6 +159,11 @@ targets:
           - EqualizerImportViewController.swift
           - EqualizerPresetsViewController.swift
           - EqualizerViewController.swift
+          - EqualizerViewController+CurveDelegate.swift
+          - EqualizerViewController+Actions.swift
+          - EqualizerViewController+Advanced.swift
+          - EqualizerViewController+Presets.swift
+          - EqualizerViewController+Layout.swift
           - FilterChipsView.swift
           - HeatmapView.swift
           - IdentifiedSegmentedControl.swift
@@ -158,15 +173,40 @@ targets:
           - LibraryMosaicView.swift
           - LibraryStatusBanner.swift
           - LibraryViewController.swift
+          - LibraryViewController+Binding.swift
+          - PlaylistListCells.swift
+          - LibraryViewController+Delegates.swift
+          - LibraryViewController+ContextMenus.swift
+          - LibraryViewController+Layout.swift
+          - LibraryViewController+DataSource.swift
+          - LibraryViewController+Sorting.swift
+          - LibraryViewController+Sample.swift
+          - LibraryViewController+Banners.swift
+          - LibraryViewController+Debut.swift
           - LiquidGlass.swift
           - ListeningClockView.swift
           - ListeningGuideViewController.swift
           - LoveButton.swift
           - LyricsViewController.swift
+          - TimingNoteViews.swift
+          - LyricCells.swift
+          - LyricWipeView.swift
+          - LyricsViewController+Delegates.swift
+          - LyricsViewController+Timing.swift
           - MarqueeLabel.swift
           - MiniPlayerView.swift
           - NowPlayingBackdropView.swift
           - NowPlayingViewController.swift
+          - NowPlayingViewController+Delegates.swift
+          - NowPlayingViewController+Appearance.swift
+          - NowPlayingViewController+TrackPan.swift
+          - NowPlayingViewController+Morph.swift
+          - NowPlayingViewController+Scrubbing.swift
+          - NowPlayingViewController+CenterState.swift
+          - NowPlayingViewController+State.swift
+          - NowPlayingViewController+Controls.swift
+          - NowPlayingViewController+Views.swift
+          - NowPlayingViewController+Layout.swift
           - PaywallViewController.swift
           - PlayerContainerViewController.swift
           - PlaylistDetailViewController.swift
@@ -174,6 +214,11 @@ targets:
           - QualityBadgeView.swift
           - QueueViewController.swift
           - RecapCells.swift
+          - RecapSkeletonView.swift
+          - RecapInsightCells.swift
+          - RecapListCells.swift
+          - RecapProfileCells.swift
+          - AsyncImageView.swift
           - RecapNotificationScheduler.swift
           - RecapNotificationsViewController.swift
           - RecapShareCardView.swift
@@ -182,6 +227,11 @@ targets:
           - SectionIndexView.swift
           - SettingsHeaderView.swift
           - SettingsViewController.swift
+          - SettingsCells.swift
+          - SettingsViewController+Actions.swift
+          - SettingsViewController+Controls.swift
+          - SettingsViewController+Cells.swift
+          - SettingsViewController+Model.swift
           - SonglinkShareable.swift
           - StreamingLinksViewController.swift
           - SystemVolumeSlider.swift
@@ -210,6 +260,8 @@ targets:
           - YearInMusicViewController.swift
     dependencies:
       - package: FlaccyCore
+      - package: FlaccyCore
+        product: FlaccyEngine
       - package: GRDB
       - package: RevenueCat
       - package: MidgarKit

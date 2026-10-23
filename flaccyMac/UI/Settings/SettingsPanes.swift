@@ -37,19 +37,19 @@ enum MenuBarExtraSetting {
 /// preferences.
 final class GeneralSettingsPane: SettingsPane {
 
-    private let entitlementLabel = NSTextField(wrappingLabelWithString: "")
-    private let unlockButton = NSButton(title: String(localized: "Get Lifetime…"), target: nil, action: nil)
-    private let restoreButton = NSButton(title: String(localized: "Restore Purchases"), target: nil, action: nil)
-    private let manageButton = NSButton(title: String(localized: "Manage Subscription…"), target: nil, action: nil)
-    private let restoreSpinner = NSProgressIndicator()
-    private let remindersCheckbox = NSButton(checkboxWithTitle: String(localized: "Trial reminders"), target: nil, action: nil)
-    private let remindersExplanation = NSTextField(wrappingLabelWithString: "")
-    private let autoplayCheckbox = NSButton(checkboxWithTitle: String(localized: "Keep the music going when the queue ends"), target: nil, action: nil)
-    private let loginCheckbox = NSButton(checkboxWithTitle: String(localized: "Open Flaccy at login"), target: nil, action: nil)
-    private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Flaccy in the menu bar"), target: nil, action: nil)
-    private let scaleStepper = NSStepper()
-    private let scaleLabel = NSTextField(labelWithString: "")
-    private var isRestoring = false
+    let entitlementLabel = NSTextField(wrappingLabelWithString: "")
+    let unlockButton = NSButton(title: String(localized: "Get Lifetime…"), target: nil, action: nil)
+    let restoreButton = NSButton(title: String(localized: "Restore Purchases"), target: nil, action: nil)
+    let manageButton = NSButton(title: String(localized: "Manage Subscription…"), target: nil, action: nil)
+    let restoreSpinner = NSProgressIndicator()
+    let remindersCheckbox = NSButton(checkboxWithTitle: String(localized: "Trial reminders"), target: nil, action: nil)
+    let remindersExplanation = NSTextField(wrappingLabelWithString: "")
+    let autoplayCheckbox = NSButton(checkboxWithTitle: String(localized: "Keep the music going when the queue ends"), target: nil, action: nil)
+    let loginCheckbox = NSButton(checkboxWithTitle: String(localized: "Open Flaccy at login"), target: nil, action: nil)
+    let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Flaccy in the menu bar"), target: nil, action: nil)
+    let scaleStepper = NSStepper()
+    let scaleLabel = NSTextField(labelWithString: "")
+    var isRestoring = false
 
     override func buildForm() {
         addMidgarEntry()
@@ -114,7 +114,7 @@ final class GeneralSettingsPane: SettingsPane {
     /// The Midgar portal doorway sits above everything else in Settings, at the
     /// card's own fixed height, followed by the same rule that divides every
     /// other section.
-    private func addMidgarEntry() {
+    func addMidgarEntry() {
         let entry = MidgarEntryView(config: FlaccyMidgar.shared.portalConfig)
         addFullWidth(entry)
         entry.heightAnchor.constraint(equalToConstant: MidgarEntryView.preferredHeight).isActive = true
@@ -149,11 +149,11 @@ final class GeneralSettingsPane: SettingsPane {
         NotificationCenter.default.removeObserver(self)
     }
 
-    @objc private func entitlementChanged() {
+    @objc func entitlementChanged() {
         refreshEntitlement()
     }
 
-    private func refreshEntitlement() {
+    func refreshEntitlement() {
         let manager = PurchaseManager.shared
         let state = manager.state
         entitlementLabel.stringValue = PaywallCopy.settingsSentence(state: state, lifetime: manager.lifetimeOfferToPresent)
@@ -164,7 +164,7 @@ final class GeneralSettingsPane: SettingsPane {
         refreshRemindersRow(state: state)
     }
 
-    private static func purchasedSentence(state: EntitlementState) -> String {
+    static func purchasedSentence(state: EntitlementState) -> String {
         switch state {
         case .purchased(.yearly):
             return String(localized: "Flaccy Pro — yearly. Thank you.")
@@ -176,7 +176,7 @@ final class GeneralSettingsPane: SettingsPane {
     /// The reminders switch stays while a trial can still use it, and lingers
     /// after a purchase only as long as a `trial.*` request is still pending,
     /// so nothing can fire that the reader cannot see and turn off.
-    private func refreshRemindersRow(state: EntitlementState) {
+    func refreshRemindersRow(state: EntitlementState) {
         let scheduler = TrialReminderScheduler.shared
         remindersCheckbox.state = scheduler.isEnabled ? .on : .off
         guard state.isPurchased else {
@@ -189,16 +189,16 @@ final class GeneralSettingsPane: SettingsPane {
         }
     }
 
-    private func setRemindersRow(visible: Bool) {
+    func setRemindersRow(visible: Bool) {
         remindersCheckbox.isHidden = !visible
         remindersExplanation.isHidden = !visible
     }
 
-    @objc private func unlockTapped() {
+    @objc func unlockTapped() {
         PurchaseManager.shared.requestPaywall()
     }
 
-    @objc private func restoreTapped() {
+    @objc func restoreTapped() {
         guard !isRestoring else { return }
         isRestoring = true
         restoreButton.isEnabled = false
@@ -213,7 +213,7 @@ final class GeneralSettingsPane: SettingsPane {
         }
     }
 
-    private func showRestoreOutcome(_ outcome: PurchaseManager.RestoreOutcome) {
+    func showRestoreOutcome(_ outcome: PurchaseManager.RestoreOutcome) {
         switch outcome {
         case .restored:
             let lifetime = PurchaseManager.shared.state == .purchased(.lifetime)
@@ -230,14 +230,14 @@ final class GeneralSettingsPane: SettingsPane {
         }
     }
 
-    @objc private func manageTapped() {
+    @objc func manageTapped() {
         guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
         NSWorkspace.shared.open(url)
     }
 
     /// A decision made here counts as the consent question answered, so the
     /// completed-play alert never asks someone who already chose in Settings.
-    @objc private func remindersToggled() {
+    @objc func remindersToggled() {
         let scheduler = TrialReminderScheduler.shared
         scheduler.markAsked()
         guard remindersCheckbox.state == .on else {
@@ -256,24 +256,24 @@ final class GeneralSettingsPane: SettingsPane {
         }
     }
 
-    private func renderScale() {
+    func renderScale() {
         scaleLabel.stringValue = "\(MacInterfaceScale.percent)%"
         scaleStepper.doubleValue = Double(MacInterfaceScale.percent)
     }
 
-    @objc private func scaleChanged() {
+    @objc func scaleChanged() {
         renderScale()
     }
 
-    @objc private func scaleStepped() {
+    @objc func scaleStepped() {
         MacInterfaceScale.set(CGFloat(scaleStepper.doubleValue) / 100)
     }
 
-    @objc private func autoplayToggled() {
+    @objc func autoplayToggled() {
         AudioPlayer.shared.autoplaySimilarWhenQueueEnds = autoplayCheckbox.state == .on
     }
 
-    @objc private func loginToggled() {
+    @objc func loginToggled() {
         do {
             if loginCheckbox.state == .on {
                 try SMAppService.mainApp.register()
@@ -286,834 +286,7 @@ final class GeneralSettingsPane: SettingsPane {
         }
     }
 
-    @objc private func menuBarToggled() {
+    @objc func menuBarToggled() {
         MenuBarExtraSetting.set(menuBarCheckbox.state == .on)
-    }
-}
-
-/// Last.fm: connect/disconnect, profile, pending scrobbles, history import.
-final class LastFMSettingsPane: SettingsPane {
-
-    private let statusLabel = NSTextField(labelWithString: "")
-    private let connectButton = NSButton(title: String(localized: "Connect Last.fm…"), target: nil, action: nil)
-    private let profileButton = NSButton(title: String(localized: "View Profile"), target: nil, action: nil)
-    private let disconnectButton = NSButton(title: String(localized: "Disconnect"), target: nil, action: nil)
-    private let pendingLabel = NSTextField(labelWithString: "")
-    private let retryButton = NSButton(title: String(localized: "Retry Now"), target: nil, action: nil)
-    private let importButton = NSButton(title: String(localized: "Import History"), target: nil, action: nil)
-    private let importStatusLabel = NSTextField(labelWithString: "")
-    private let importSpinner = NSProgressIndicator()
-    private let viewModel = ChartsViewModel()
-    private var importObserver: AnyCancellable?
-
-    override func buildForm() {
-        formStack.addArrangedSubview(sectionLabel(String(localized: "Account")))
-        statusLabel.font = .systemFont(ofSize: 13)
-        connectButton.bezelStyle = .rounded
-        connectButton.target = self
-        connectButton.action = #selector(connectTapped)
-        profileButton.bezelStyle = .rounded
-        profileButton.target = self
-        profileButton.action = #selector(profileTapped)
-        disconnectButton.bezelStyle = .rounded
-        disconnectButton.target = self
-        disconnectButton.action = #selector(disconnectTapped)
-        addRow([statusLabel, connectButton, profileButton, disconnectButton], spacing: 10)
-        addFullWidth(explanation(String(localized: "Scrobbles every play, keeps an offline queue, and powers the Recap, Wantlist, and loved tracks.")))
-        formStack.addArrangedSubview(separator())
-
-        formStack.addArrangedSubview(sectionLabel(String(localized: "Scrobbles")))
-        pendingLabel.font = .systemFont(ofSize: 13)
-        retryButton.bezelStyle = .rounded
-        retryButton.controlSize = .small
-        retryButton.target = self
-        retryButton.action = #selector(retryTapped)
-        addRow([pendingLabel, retryButton], spacing: 10)
-        formStack.addArrangedSubview(separator())
-
-        formStack.addArrangedSubview(sectionLabel(String(localized: "History")))
-        importButton.bezelStyle = .rounded
-        importButton.target = self
-        importButton.action = #selector(importTapped)
-        importSpinner.style = .spinning
-        importSpinner.controlSize = .small
-        importSpinner.isDisplayedWhenStopped = false
-        importStatusLabel.font = .systemFont(ofSize: 12)
-        importStatusLabel.textColor = .secondaryLabelColor
-        addRow([importButton, importSpinner, importStatusLabel], spacing: 10)
-        addFullWidth(explanation(String(localized: "Imports your full Last.fm scrobble history into the local database so the Recap and Year in Music cover everything you've ever played.")))
-    }
-
-    override func viewWillAppear() {
-        super.viewWillAppear()
-        refresh()
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(authChanged), name: LastFMService.authDidChange, object: nil
-        )
-        importObserver = viewModel.importStatePublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
-                self?.renderImportState(state)
-            }
-    }
-
-    override func viewWillDisappear() {
-        super.viewWillDisappear()
-        NotificationCenter.default.removeObserver(self)
-        importObserver = nil
-    }
-
-    @objc private func authChanged() {
-        refresh()
-    }
-
-    private func refresh() {
-        let service = LastFMService.shared
-        let authenticated = service.isAuthenticated
-        statusLabel.stringValue = authenticated
-            ? String(localized: "Connected as \(service.username ?? String(localized: "unknown"))")
-            : String(localized: "Not connected")
-        connectButton.isHidden = authenticated
-        profileButton.isHidden = !authenticated
-        disconnectButton.isHidden = !authenticated
-        importButton.isEnabled = authenticated
-
-        let pending = (try? DatabaseManager.shared.fetchPendingScrobbles().count) ?? 0
-        pendingLabel.stringValue = pending == 0
-            ? String(localized: "No pending scrobbles")
-            : String(localized: "\(pending) scrobbles waiting to submit")
-        retryButton.isHidden = pending == 0
-    }
-
-    private func renderImportState(_ state: RecapImportState) {
-        switch state {
-        case .importing(let imported):
-            importSpinner.startAnimation(nil)
-            importButton.isEnabled = false
-            importStatusLabel.stringValue = imported > 0
-                ? String(localized: "Importing… \(RecapFormat.count(imported)) scrobbles")
-                : String(localized: "Importing…")
-        case .done(let imported):
-            importSpinner.stopAnimation(nil)
-            importButton.isEnabled = LastFMService.shared.isAuthenticated
-            importStatusLabel.stringValue = imported > 0
-                ? String(localized: "Imported \(RecapFormat.count(imported)) scrobbles")
-                : String(localized: "History already imported")
-        case .available:
-            importSpinner.stopAnimation(nil)
-            importButton.isEnabled = LastFMService.shared.isAuthenticated
-            importStatusLabel.stringValue = ""
-        case .unavailable:
-            importSpinner.stopAnimation(nil)
-            importButton.isEnabled = false
-            importStatusLabel.stringValue = String(localized: "Connect Last.fm first")
-        }
-    }
-
-    @objc private func connectTapped() {
-        guard let window = view.window ?? NSApp.keyWindow ?? NSApp.windows.first else {
-            MidgarLog.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
-            return
-        }
-        Task { [weak self] in
-            do {
-                try await LastFMService.shared.authenticate(from: window)
-                MacToast.show(String(localized: "Connected to Last.fm"), style: .success, in: self?.view.window)
-            } catch {
-                if let authError = error as? ASWebAuthenticationSessionError,
-                   authError.code == .canceledLogin {
-                    return
-                }
-                MidgarLog.error("Last.fm authentication failed: \(error.localizedDescription)", category: .auth)
-                let message = (error as? LastFMError)?.errorDescription
-                    ?? String(localized: "Couldn't connect to Last.fm: \(error.localizedDescription)")
-                MacToast.show(message, style: .error, in: self?.view.window)
-            }
-        }
-    }
-
-    @objc private func profileTapped() {
-        guard let username = LastFMService.shared.username,
-              let url = URL(string: "https://www.last.fm/user/\(username)") else { return }
-        NSWorkspace.shared.open(url)
-    }
-
-    @objc private func disconnectTapped() {
-        LastFMService.shared.logout()
-    }
-
-    @objc private func retryTapped() {
-        Task { [weak self] in
-            await AudioPlayer.shared.retryPendingScrobbles()
-            self?.refresh()
-        }
-    }
-
-    @objc private func importTapped() {
-        viewModel.importHistory()
-    }
-}
-
-/// Recap & Notifications: cadence, delivery time, and the permission banner.
-final class NotificationsSettingsPane: SettingsPane {
-
-    private let frequencyPopUp = NSPopUpButton()
-    private let timePicker = NSDatePicker()
-    private let weekdayPopUp = NSPopUpButton()
-    private let monthDayPopUp = NSPopUpButton()
-    private let weekdayRow = NSStackView()
-    private let monthDayRow = NSStackView()
-    private let nextDeliveryLabel = NSTextField(labelWithString: "")
-    private let deniedBanner = NSStackView()
-    private let scheduler = MacRecapNotificationScheduler.shared
-
-    override func buildForm() {
-        buildDeniedBanner()
-        formStack.addArrangedSubview(deniedBanner)
-        deniedBanner.isHidden = true
-
-        formStack.addArrangedSubview(sectionLabel(String(localized: "Recap Notifications")))
-        for frequency in RecapNotificationFrequency.allCases {
-            frequencyPopUp.addItem(withTitle: frequency.displayName)
-        }
-        frequencyPopUp.target = self
-        frequencyPopUp.action = #selector(frequencyChanged)
-        addRow([label(String(localized: "Frequency")), frequencyPopUp])
-
-        timePicker.datePickerStyle = .textFieldAndStepper
-        timePicker.datePickerElements = .hourMinute
-        timePicker.target = self
-        timePicker.action = #selector(timeChanged)
-        addRow([label(String(localized: "Deliver at")), timePicker])
-
-        let weekdays = Calendar.current.standaloneWeekdaySymbols
-        for name in weekdays {
-            weekdayPopUp.addItem(withTitle: name)
-        }
-        weekdayPopUp.target = self
-        weekdayPopUp.action = #selector(weekdayChanged)
-        weekdayRow.orientation = .horizontal
-        weekdayRow.spacing = 8
-        weekdayRow.addArrangedSubview(label(String(localized: "On")))
-        weekdayRow.addArrangedSubview(weekdayPopUp)
-        formStack.addArrangedSubview(weekdayRow)
-
-        for day in 1...28 {
-            monthDayPopUp.addItem(withTitle: String(localized: "Day \(day)"))
-        }
-        monthDayPopUp.target = self
-        monthDayPopUp.action = #selector(monthDayChanged)
-        monthDayRow.orientation = .horizontal
-        monthDayRow.spacing = 8
-        monthDayRow.addArrangedSubview(label(String(localized: "On")))
-        monthDayRow.addArrangedSubview(monthDayPopUp)
-        formStack.addArrangedSubview(monthDayRow)
-
-        nextDeliveryLabel.font = .systemFont(ofSize: 11)
-        nextDeliveryLabel.textColor = .secondaryLabelColor
-        formStack.addArrangedSubview(nextDeliveryLabel)
-        formStack.addArrangedSubview(separator())
-        addFullWidth(explanation(String(localized: "A yearly Year in Music drop is always scheduled for December 1st while notifications are on.")))
-    }
-
-    private func buildDeniedBanner() {
-        deniedBanner.orientation = .horizontal
-        deniedBanner.alignment = .centerY
-        deniedBanner.spacing = 10
-        deniedBanner.wantsLayer = true
-        deniedBanner.layer?.backgroundColor = NSColor.systemRed.withAlphaComponent(0.15).cgColor
-        deniedBanner.layer?.cornerRadius = 10
-        deniedBanner.edgeInsets = NSEdgeInsets(top: 10, left: 12, bottom: 10, right: 12)
-        let icon = NSImageView(image: NSImage(
-            systemSymbolName: "bell.slash.fill", accessibilityDescription: nil
-        ) ?? NSImage())
-        icon.contentTintColor = .systemRed
-        let text = NSTextField(wrappingLabelWithString: String(localized: "Notifications are turned off for Flaccy in System Settings."))
-        text.font = .systemFont(ofSize: 12)
-        let openButton = NSButton(title: String(localized: "Open System Settings"), target: self, action: #selector(openSystemSettings))
-        openButton.bezelStyle = .rounded
-        openButton.controlSize = .small
-        deniedBanner.addArrangedSubview(icon)
-        deniedBanner.addArrangedSubview(text)
-        deniedBanner.addArrangedSubview(openButton)
-    }
-
-    private func label(_ text: String) -> NSTextField {
-        let label = NSTextField(labelWithString: text)
-        label.font = .systemFont(ofSize: 13)
-        return label
-    }
-
-    override func viewWillAppear() {
-        super.viewWillAppear()
-        refresh()
-    }
-
-    private func refresh() {
-        let frequency = scheduler.frequency
-        frequencyPopUp.selectItem(at: RecapNotificationFrequency.allCases.firstIndex(of: frequency) ?? 0)
-        var components = DateComponents()
-        components.hour = scheduler.deliveryHour
-        components.minute = scheduler.deliveryMinute
-        timePicker.dateValue = Calendar.current.date(from: components) ?? Date()
-        weekdayPopUp.selectItem(at: scheduler.weeklyWeekday - 1)
-        monthDayPopUp.selectItem(at: scheduler.monthlyDay - 1)
-
-        weekdayRow.isHidden = frequency != .weekly
-        monthDayRow.isHidden = frequency != .monthly
-        timePicker.isEnabled = frequency != .off
-        renderNextDelivery()
-        Task { [weak self] in
-            let status = await MacRecapNotificationScheduler.shared.authorizationStatus()
-            self?.deniedBanner.isHidden = status != .denied
-        }
-    }
-
-    private func renderNextDelivery() {
-        if let next = scheduler.nextDeliveryDate() {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .medium
-            formatter.timeStyle = .short
-            nextDeliveryLabel.stringValue = String(localized: "Next recap: \(formatter.string(from: next))")
-        } else {
-            nextDeliveryLabel.stringValue = ""
-        }
-    }
-
-    @objc private func frequencyChanged() {
-        let index = frequencyPopUp.indexOfSelectedItem
-        guard index >= 0, index < RecapNotificationFrequency.allCases.count else { return }
-        let frequency = RecapNotificationFrequency.allCases[index]
-        Task { [weak self] in
-            let granted = await MacRecapNotificationScheduler.shared.setFrequency(frequency)
-            if !granted {
-                self?.deniedBanner.isHidden = false
-            }
-            self?.refresh()
-        }
-    }
-
-    @objc private func timeChanged() {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: timePicker.dateValue)
-        scheduler.deliveryHour = components.hour ?? 19
-        scheduler.deliveryMinute = components.minute ?? 0
-        reschedule()
-    }
-
-    @objc private func weekdayChanged() {
-        scheduler.weeklyWeekday = weekdayPopUp.indexOfSelectedItem + 1
-        reschedule()
-    }
-
-    @objc private func monthDayChanged() {
-        scheduler.monthlyDay = monthDayPopUp.indexOfSelectedItem + 1
-        reschedule()
-    }
-
-    private func reschedule() {
-        Task { [weak self] in
-            await MacRecapNotificationScheduler.shared.refreshSchedule(force: true)
-            self?.renderNextDelivery()
-        }
-    }
-
-    @objc private func openSystemSettings() {
-        MacSystemSettings.openNotifications()
-    }
-}
-
-/// Library: root folder, storage usage, rescan and AI re-analysis, the live
-/// metadata job, and reveals.
-final class LibrarySettingsPane: SettingsPane {
-
-    private let rootLabel = NSTextField(labelWithString: "")
-    private let statsLabel = NSTextField(labelWithString: "")
-    private let storageLabel = NSTextField(labelWithString: String(localized: "Storage: …"))
-    private let rescanButton = NSButton(title: String(localized: "Rescan Library"), target: nil, action: nil)
-    private let analyzeButton = NSButton(title: String(localized: "Re-analyze with AI…"), target: nil, action: nil)
-    private let hideDuplicatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Hide duplicate songs"), target: nil, action: nil)
-    private let groupEditionsCheckbox = NSButton(checkboxWithTitle: String(localized: "Group album editions (Deluxe, Remaster…) as one album"), target: nil, action: nil)
-    private let cleanUpButton = NSButton(title: String(localized: "Clean Up Library…"), target: nil, action: nil)
-    private let activitySpinner = NSProgressIndicator()
-    private let activityLabel = NSTextField(labelWithString: "")
-    private let activityDetail = NSTextField(labelWithString: "")
-    private let activityBar = NSProgressIndicator()
-    private let metadataCountsLabel = NSTextField(labelWithString: "")
-    private let metadataStatusLabel = NSTextField(labelWithString: "")
-    private let tryAgainButton = NSButton(title: EnrichmentJobCopy.tryAgain, target: nil, action: nil)
-    private let appleMusicCheckbox = NSButton(checkboxWithTitle: String(localized: "Use Apple Music artwork"), target: nil, action: nil)
-    private let debutLabel = NSTextField(labelWithString: "")
-    private lazy var debutCaveat = explanation(LibraryDebutCopy.settingsCaveat)
-    private var isWorking = false
-    private var restingActivity = ""
-    private var wasJobActive = false
-    private var knownAlbumCount = 0
-
-    override func buildForm() {
-        formStack.addArrangedSubview(sectionLabel(String(localized: "Music Folder")))
-        rootLabel.font = .systemFont(ofSize: 12)
-        rootLabel.lineBreakMode = .byTruncatingMiddle
-        let changeButton = NSButton(title: String(localized: "Change…"), target: self, action: #selector(changeFolder))
-        changeButton.bezelStyle = .rounded
-        changeButton.controlSize = .small
-        let resetButton = NSButton(title: String(localized: "Use Default"), target: self, action: #selector(resetFolder))
-        resetButton.bezelStyle = .rounded
-        resetButton.controlSize = .small
-        addRow([rootLabel, changeButton, resetButton], spacing: 10)
-        rootLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 300).isActive = true
-        addFullWidth(explanation(String(localized: "Flaccy indexes the folder in place — nothing is copied or moved. Files added to the folder appear automatically.")))
-        formStack.addArrangedSubview(separator())
-
-        formStack.addArrangedSubview(sectionLabel(String(localized: "Library")))
-        statsLabel.font = .systemFont(ofSize: 13)
-        storageLabel.font = .systemFont(ofSize: 13)
-        formStack.addArrangedSubview(statsLabel)
-        formStack.addArrangedSubview(storageLabel)
-
-        rescanButton.bezelStyle = .rounded
-        rescanButton.target = self
-        rescanButton.action = #selector(rescanTapped)
-        analyzeButton.bezelStyle = .rounded
-        analyzeButton.target = self
-        analyzeButton.action = #selector(analyzeTapped)
-        buildActivityRow()
-        addFullWidth(explanation(String(localized: "Re-analyze sends track filenames through Flaccy's AI to clean up titles, artists, and album grouping. It can take a few minutes for large libraries.")))
-        formStack.addArrangedSubview(separator())
-
-        buildMetadataGroup()
-
-        formStack.addArrangedSubview(sectionLabel(String(localized: "Tidy Up")))
-        groupEditionsCheckbox.target = self
-        groupEditionsCheckbox.action = #selector(groupEditionsToggled)
-        formStack.addArrangedSubview(groupEditionsCheckbox)
-        addFullWidth(explanation(String(localized: "Collapses \u{201C}Album\u{201D}, \u{201C}Album (Deluxe)\u{201D} and \u{201C}Album (Remastered)\u{201D} into one card and keeps a single best-quality copy of each shared song so Albums and Songs stay free of near-duplicates.")))
-        hideDuplicatesCheckbox.target = self
-        hideDuplicatesCheckbox.action = #selector(hideDuplicatesToggled)
-        formStack.addArrangedSubview(hideDuplicatesCheckbox)
-        addFullWidth(explanation(String(localized: "Lists a song once when it sits on several albums, such as a single and the album it came from. Your files stay untouched.")))
-        cleanUpButton.bezelStyle = .rounded
-        cleanUpButton.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
-        cleanUpButton.imagePosition = .imageLeading
-        cleanUpButton.target = self
-        cleanUpButton.action = #selector(cleanUpTapped)
-        addRow([cleanUpButton], spacing: 12)
-        addFullWidth(explanation(String(localized: "Finds duplicate tracks and merges album editions. You\u{2019}ll see exactly what changes before anything happens; removed duplicates go to the Trash.")))
-        formStack.addArrangedSubview(separator())
-
-        formStack.addArrangedSubview(sectionLabel(String(localized: "Reveal")))
-        let revealLibrary = NSButton(title: String(localized: "Show Library in Finder"), target: self, action: #selector(revealLibrary))
-        revealLibrary.bezelStyle = .rounded
-        let revealLogs = NSButton(title: String(localized: "Show Logs in Finder"), target: self, action: #selector(revealLogs))
-        revealLogs.bezelStyle = .rounded
-        addRow([revealLibrary, revealLogs], spacing: 10)
-    }
-
-    /// One row for whatever the library is doing right now: a determinate bar
-    /// for the bounded disk work of a scan, and a spinner beside a countdown for
-    /// the unbounded metadata job, which has no fraction to draw.
-    private func buildActivityRow() {
-        activitySpinner.style = .spinning
-        activitySpinner.controlSize = .small
-        activitySpinner.isDisplayedWhenStopped = true
-        activityLabel.font = .systemFont(ofSize: 12)
-        activityLabel.textColor = .secondaryLabelColor
-        activityDetail.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
-        activityDetail.textColor = .tertiaryLabelColor
-        activityBar.isIndeterminate = false
-        activityBar.minValue = 0
-        activityBar.maxValue = 1
-        activityBar.controlSize = .small
-        activityBar.setAccessibilityRole(.progressIndicator)
-        activitySpinner.setAccessibilityRole(.progressIndicator)
-        addRow([rescanButton, analyzeButton, activitySpinner, activityLabel, activityDetail], spacing: 10)
-        addFullWidth(activityBar)
-    }
-
-    private func buildMetadataGroup() {
-        formStack.addArrangedSubview(sectionLabel(String(localized: "Metadata")))
-        metadataCountsLabel.font = .systemFont(ofSize: 13)
-        metadataStatusLabel.font = .systemFont(ofSize: 12)
-        metadataStatusLabel.textColor = .secondaryLabelColor
-        tryAgainButton.bezelStyle = .rounded
-        tryAgainButton.controlSize = .small
-        tryAgainButton.target = self
-        tryAgainButton.action = #selector(tryAgainTapped)
-        tryAgainButton.isEnabled = false
-        addRow([metadataCountsLabel, tryAgainButton], spacing: 12)
-        formStack.addArrangedSubview(metadataStatusLabel)
-        addFullWidth(explanation(String(localized: "Re-fetch artwork and release dates for albums Flaccy gave up on.")))
-
-        appleMusicCheckbox.target = self
-        appleMusicCheckbox.action = #selector(appleMusicArtworkToggled)
-        formStack.addArrangedSubview(appleMusicCheckbox)
-        addFullWidth(explanation(String(localized: "Flaccy asks Apple Music for covers it can't find anywhere else. Turning this on asks for permission once.")))
-
-        debutLabel.font = .systemFont(ofSize: 12)
-        debutLabel.textColor = .secondaryLabelColor
-        debutLabel.isHidden = true
-        debutCaveat.isHidden = true
-        formStack.addArrangedSubview(debutLabel)
-        addFullWidth(debutCaveat)
-        formStack.addArrangedSubview(separator())
-    }
-
-    override func viewWillAppear() {
-        super.viewWillAppear()
-        refresh()
-        refreshMetadata()
-        renderActivity()
-        groupEditionsCheckbox.state = GroupAlbumEditionsSetting.isEnabled ? .on : .off
-        hideDuplicatesCheckbox.state = HideDuplicateSongsSetting.isEnabled ? .on : .off
-        appleMusicCheckbox.state = AppleMusicArtworkSetting.isEnabled ? .on : .off
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(libraryChanged), name: Library.didUpdateNotification, object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(libraryChanged), name: LibraryRoot.didChange, object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(activityChanged), name: Library.progressDidChange, object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(activityChanged), name: EnrichmentCoordinator.progressDidChange, object: nil
-        )
-    }
-
-    @objc private func hideDuplicatesToggled() {
-        HideDuplicateSongsSetting.set(hideDuplicatesCheckbox.state == .on)
-    }
-
-    @objc private func groupEditionsToggled() {
-        GroupAlbumEditionsSetting.set(groupEditionsCheckbox.state == .on)
-    }
-
-    @objc private func cleanUpTapped() {
-        LibraryCleanup.run(in: view.window)
-    }
-
-    override func viewWillDisappear() {
-        super.viewWillDisappear()
-        NotificationCenter.default.removeObserver(self)
-    }
-
-    @objc private func libraryChanged() {
-        refresh()
-        refreshMetadata()
-    }
-
-    /// Both streams are re-read from their live sources rather than from the
-    /// notification, so a delivery that arrives out of order can only ever
-    /// repaint newer state.
-    @objc private func activityChanged() {
-        renderActivity()
-        let job = EnrichmentCoordinator.shared.progress
-        if job.scope == .album, job.isActive {
-            applyMetadataCounts(inProgress: job.remaining, gaveUp: job.exhausted)
-        }
-        if wasJobActive, !job.isActive {
-            refreshMetadata()
-        }
-        wasJobActive = job.isActive
-    }
-
-    private func refresh() {
-        rootLabel.stringValue = LibraryRoot.current.path
-        rootLabel.toolTip = LibraryRoot.current.path
-        let albums = Library.shared.albums.count
-        let tracks = Library.shared.allTracks.count
-        statsLabel.stringValue = String(localized: "\(albums) albums · \(tracks) tracks")
-        refreshStorage()
-    }
-
-    private func renderActivity() {
-        let load = Library.shared.loadProgress
-        guard !load.isActive else {
-            renderLoadActivity(load, fraction: Library.shared.loadFraction)
-            return
-        }
-        let job = EnrichmentCoordinator.shared.progress
-        guard job.isActive else {
-            renderRestingActivity()
-            return
-        }
-        renderJobActivity(job)
-    }
-
-    private func renderLoadActivity(_ load: LibraryLoadProgress, fraction: Double) {
-        activitySpinner.stopAnimation(nil)
-        activitySpinner.isHidden = true
-        activityLabel.stringValue = LibraryLoadPhaseCopy.headline(for: load.phase)
-        activityDetail.stringValue = LibraryLoadPhaseCopy.detail(for: load)
-        activityBar.isHidden = false
-        activityBar.isIndeterminate = !load.isDeterminate
-        if load.isDeterminate {
-            activityBar.stopAnimation(nil)
-            activityBar.doubleValue = min(1, max(0, fraction))
-        } else {
-            activityBar.startAnimation(nil)
-        }
-        activityBar.setAccessibilityValueDescription(
-            LibraryLoadPhaseCopy.accessibilityValue(for: load, fraction: fraction)
-        )
-    }
-
-    /// The job is counted, never measured: a spinner and a countdown, because
-    /// the work behind it is unbounded and any bar drawn for it would be a lie.
-    private func renderJobActivity(_ job: EnrichmentJobProgress) {
-        activityBar.stopAnimation(nil)
-        activityBar.isHidden = true
-        activitySpinner.isHidden = false
-        switch job.activity {
-        case .running:
-            activitySpinner.startAnimation(nil)
-            activityLabel.stringValue = EnrichmentJobCopy.headline(for: job.scope)
-            activityDetail.stringValue = EnrichmentJobCopy.detail(remaining: job.remaining)
-        case .waitingForNetwork, .dailyLimit, .serviceUnavailable:
-            activitySpinner.stopAnimation(nil)
-            let pause = EnrichmentJobCopy.pause(for: job)
-            activityLabel.stringValue = pause.headline
-            activityDetail.stringValue = pause.detail
-        case .needsEntitlement:
-            activitySpinner.stopAnimation(nil)
-            activityLabel.stringValue = EnrichmentJobCopy.needsEntitlement
-            activityDetail.stringValue = ""
-        case .idle:
-            renderRestingActivity()
-            return
-        }
-        activitySpinner.setAccessibilityValueDescription(EnrichmentJobCopy.accessibilityValue(for: job))
-    }
-
-    private func renderRestingActivity() {
-        activitySpinner.stopAnimation(nil)
-        activitySpinner.isHidden = true
-        activityBar.stopAnimation(nil)
-        activityBar.isHidden = true
-        activityLabel.stringValue = restingActivity
-        activityDetail.stringValue = ""
-    }
-
-    /// Reads the counts the job publishes from the database, for the launches
-    /// where the job never runs at all — the tenth-launch case, where nothing is
-    /// due and the pane still owes the reader an answer.
-    private func refreshMetadata() {
-        let albumCount = Library.shared.albums.count
-        Task.detached(priority: .utility) { [weak self] in
-            let db = DatabaseManager.shared
-            let scope = EnrichmentScope.album
-            let inProgress = (try? db.countDue(scope: scope, version: scope.currentVersion, now: Date())) ?? 0
-            let gaveUp = (try? db.countExhausted(scope: scope)) ?? 0
-            let debut = try? db.libraryDebut()
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.knownAlbumCount = albumCount
-                self.applyMetadataCounts(inProgress: inProgress, gaveUp: gaveUp)
-                self.applyDebutSummary(debut)
-            }
-        }
-    }
-
-    private func applyMetadataCounts(inProgress: Int, gaveUp: Int) {
-        let complete = max(0, knownAlbumCount - inProgress - gaveUp)
-        metadataCountsLabel.stringValue = EnrichmentJobCopy.reportCounts(
-            complete: complete, inProgress: inProgress, gaveUp: gaveUp
-        )
-        metadataStatusLabel.stringValue = EnrichmentJobCopy.settled(remaining: inProgress, gaveUp: gaveUp)
-        tryAgainButton.isEnabled = gaveUp > 0
-    }
-
-    private func applyDebutSummary(_ summary: LibraryDebutSummary?) {
-        guard let summary else {
-            debutLabel.isHidden = true
-            debutCaveat.isHidden = true
-            return
-        }
-        debutLabel.stringValue = LibraryDebutCopy.settingsSummary(
-            builtOn: summary.completedAt,
-            trackCount: summary.trackCount,
-            aiCleanedTracks: summary.aiCleanedTracks
-        )
-        debutLabel.isHidden = false
-        debutCaveat.isHidden = false
-    }
-
-    @objc private func tryAgainTapped() {
-        tryAgainButton.isEnabled = false
-        Task { [weak self] in
-            await EnrichmentCoordinator.shared.retryExhausted(scope: .album)
-            self?.refreshMetadata()
-        }
-    }
-
-    /// Turning the source on asks for permission the one time it is flipped;
-    /// the checkbox reflects what was actually granted, not what was clicked.
-    @objc private func appleMusicArtworkToggled() {
-        guard appleMusicCheckbox.state == .on else {
-            AppleMusicArtworkSetting.set(false)
-            return
-        }
-        appleMusicCheckbox.isEnabled = false
-        Task { [weak self] in
-            let granted = await MusicKitService.shared.enableArtworkSource()
-            guard let self else { return }
-            self.appleMusicCheckbox.isEnabled = true
-            self.appleMusicCheckbox.state = granted ? .on : .off
-            guard !granted else { return }
-            MidgarLog.info("Apple Music artwork source declined", category: .content)
-            MacToast.show(
-                String(localized: "Flaccy needs Apple Music access to use its artwork."),
-                style: .error, in: self.view.window
-            )
-        }
-    }
-
-    private func refreshStorage() {
-        let root = LibraryRoot.current
-        Task.detached(priority: .utility) { [weak self] in
-            let size = Self.folderSize(root)
-            await MainActor.run { [weak self] in
-                self?.storageLabel.stringValue = String(localized: "Storage: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
-            }
-        }
-    }
-
-    private nonisolated static func folderSize(_ root: URL) -> Int64 {
-        var total: Int64 = 0
-        guard let enumerator = FileManager.default.enumerator(
-            at: root, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]
-        ) else { return 0 }
-        for case let fileURL as URL in enumerator {
-            if let size = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
-                total += Int64(size)
-            }
-        }
-        return total
-    }
-
-    @objc private func changeFolder() {
-        guard let window = view.window else { return }
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.prompt = String(localized: "Use This Folder")
-        panel.beginSheetModal(for: window) { [weak self] response in
-            guard response == .OK, let url = panel.url else { return }
-            do {
-                try LibraryRoot.shared.chooseFolder(url)
-                self?.refresh()
-            } catch {
-                MidgarLog.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
-                MacToast.show(String(localized: "Couldn't use \u{201C}\(url.lastPathComponent)\u{201D} as your music folder — macOS wouldn't grant Flaccy lasting access: \(error.localizedDescription)"), style: .error, in: self?.view.window)
-            }
-        }
-    }
-
-    @objc private func resetFolder() {
-        LibraryRoot.shared.resetToDefault()
-        refresh()
-    }
-
-    @objc private func rescanTapped() {
-        guard !isWorking else { return }
-        runWork(label: String(localized: "Rescanning…")) {
-            await Library.shared.reload()
-        }
-    }
-
-    @objc private func analyzeTapped() {
-        guard !isWorking, let window = view.window else { return }
-        let alert = NSAlert()
-        alert.messageText = String(localized: "Re-analyze Library with AI")
-        alert.informativeText = String(localized: "This re-analyzes every track's metadata with AI and rewrites titles, artists, and album grouping in the database. It may take a few minutes for large libraries.")
-        alert.addButton(withTitle: String(localized: "Re-analyze"))
-        alert.addButton(withTitle: String(localized: "Cancel"))
-        alert.beginSheetModal(for: window) { [weak self] response in
-            guard response == .alertFirstButtonReturn else { return }
-            self?.runWork(label: String(localized: "Re-analyzing with AI…")) {
-                await Library.shared.resetAndReload()
-            }
-        }
-    }
-
-    /// Names the action until the first progress snapshot arrives; from then on
-    /// the live row narrates the phases and counts instead of one fixed word.
-    private func runWork(label: String, _ work: @escaping () async -> Void) {
-        isWorking = true
-        rescanButton.isEnabled = false
-        analyzeButton.isEnabled = false
-        restingActivity = label
-        renderActivity()
-        Task { [weak self] in
-            await work()
-            guard let self else { return }
-            self.isWorking = false
-            self.rescanButton.isEnabled = true
-            self.analyzeButton.isEnabled = true
-            self.restingActivity = String(localized: "Done")
-            self.renderActivity()
-            self.refresh()
-            self.refreshMetadata()
-        }
-    }
-
-    @objc private func revealLibrary() {
-        NSWorkspace.shared.activateFileViewerSelecting([LibraryRoot.current])
-    }
-
-    @objc private func revealLogs() {
-        let logs = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Logs", isDirectory: true)
-        NSWorkspace.shared.activateFileViewerSelecting([logs])
-    }
-}
-
-/// About: version, licenses, legal links.
-final class AboutSettingsPane: SettingsPane {
-
-    override func buildForm() {
-        let icon = NSImageView(image: NSApp.applicationIconImage ?? NSImage())
-        icon.translatesAutoresizingMaskIntoConstraints = false
-        icon.widthAnchor.constraint(equalToConstant: 64).isActive = true
-        icon.heightAnchor.constraint(equalToConstant: 64).isActive = true
-
-        let name = NSTextField(labelWithString: "Flaccy")
-        name.font = .systemFont(ofSize: 22, weight: .bold)
-
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        let versionLabel = NSTextField(labelWithString: String(localized: "Version \(version) (\(build))"))
-        versionLabel.font = .systemFont(ofSize: 12)
-        versionLabel.textColor = .secondaryLabelColor
-
-        let tagline = NSTextField(labelWithString: String(localized: "Own your music. Forever."))
-        tagline.font = .systemFont(ofSize: 13)
-
-        let header = NSStackView(views: [icon, name, versionLabel, tagline])
-        header.orientation = .vertical
-        header.alignment = .centerX
-        header.spacing = 6
-        formStack.addArrangedSubview(header)
-        header.widthAnchor.constraint(equalTo: formStack.widthAnchor, constant: -56).isActive = true
-
-        formStack.addArrangedSubview(separator())
-        addFullWidth(explanation(String(localized: "Built with GRDB (SQLite), lyrics from lrclib.net, universal links by Songlink/Odesli, and scrobbling via the Last.fm API.")))
-
-        let privacy = NSButton(title: String(localized: "Privacy Policy"), target: self, action: #selector(openPrivacy))
-        privacy.bezelStyle = .rounded
-        let terms = NSButton(title: String(localized: "Terms of Use"), target: self, action: #selector(openTerms))
-        terms.bezelStyle = .rounded
-        addRow([privacy, terms], spacing: 10)
-
-        let copyright = explanation("© 2026 Midgar Oy")
-        formStack.addArrangedSubview(copyright)
-    }
-
-    @objc private func openPrivacy() {
-        NSWorkspace.shared.open(LegalLinks.privacyURL)
-    }
-
-    @objc private func openTerms() {
-        NSWorkspace.shared.open(LegalLinks.termsURL)
     }
 }

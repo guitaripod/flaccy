@@ -1,25 +1,6 @@
 import Foundation
 import MidgarCore
 
-nonisolated struct AlbumRetitle: Sendable {
-    let fromTitle: String
-    let fromArtist: String
-    let toTitle: String
-    let toArtist: String
-}
-
-nonisolated struct KeeperUpdate: Sendable {
-    let relativePath: String
-    let loved: Bool
-    let playCount: Int
-}
-
-nonisolated struct AlbumInfoMerge: Sendable {
-    let canonicalTitle: String
-    let canonicalArtist: String
-    let variants: [LibraryHygiene.AlbumVariant]
-}
-
 nonisolated struct HygienePlan: Sendable {
     let duplicateGroups: [LibraryHygiene.DuplicateGroup]
     let consolidationGroups: [LibraryHygiene.ConsolidationGroup]

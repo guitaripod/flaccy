@@ -2,18 +2,6 @@ import AVFoundation
 import MidgarCore
 import Foundation
 
-nonisolated enum WantlistState: String, Sendable {
-    case wanted, dismissed, acquired
-}
-
-nonisolated enum WantlistKind: String, Sendable {
-    case album, track, artist
-}
-
-nonisolated enum WantlistSource: String, Sendable {
-    case history, loved, discovery, gap, upgrade, manual
-}
-
 /// Owns the persistent wantlist: merges freshly computed suggestions into the
 /// store without resurrecting dismissed or acquired rows, resolves wanted rows
 /// against the library after every sync, and caches the new-release watch.

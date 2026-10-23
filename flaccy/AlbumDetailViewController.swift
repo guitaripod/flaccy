@@ -3,31 +3,31 @@ import UIKit
 
 final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
-    private let album: Album
-    private let audioPlayer: AudioPlaying
-    private var tableView: UITableView!
-    private var dataSource: UITableViewDiffableDataSource<Int, Track>!
-    private let backdropView = AmbientPaletteBackdropView()
-    private let artworkCard = UIView()
-    private let artworkView = UIImageView()
-    private let titleMarquee = MarqueeLabel()
-    private var accentColor: UIColor = .white
-    private var appearanceElements: [UIView] = []
-    private var hasAnimatedAppearance = false
-    private let genreChipsHolder = UIView()
-    private let infoStack = UIStackView()
-    private var actionRow = UIView()
-    private let headerColumn = UIScrollView()
-    private var headerLayoutConstraints: [NSLayoutConstraint] = []
-    private var appliedHeaderStyle: AdaptiveLayout.DetailHeaderStyle?
-    private var tableLeading: NSLayoutConstraint!
-    private var tableColumnLeading: NSLayoutConstraint!
-    private let playCountLabel = UILabel()
-    private let metaLabel = UILabel()
-    private var enrichmentTask: Task<Void, Never>?
-    private var metadataTask: Task<Void, Never>?
-    private let impactLight = UIImpactFeedbackGenerator(style: .light)
-    private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
+    let album: Album
+    let audioPlayer: AudioPlaying
+    var tableView: UITableView!
+    var dataSource: UITableViewDiffableDataSource<Int, Track>!
+    let backdropView = AmbientPaletteBackdropView()
+    let artworkCard = UIView()
+    let artworkView = UIImageView()
+    let titleMarquee = MarqueeLabel()
+    var accentColor: UIColor = .white
+    var appearanceElements: [UIView] = []
+    var hasAnimatedAppearance = false
+    let genreChipsHolder = UIView()
+    let infoStack = UIStackView()
+    var actionRow = UIView()
+    let headerColumn = UIScrollView()
+    var headerLayoutConstraints: [NSLayoutConstraint] = []
+    var appliedHeaderStyle: AdaptiveLayout.DetailHeaderStyle?
+    var tableLeading: NSLayoutConstraint!
+    var tableColumnLeading: NSLayoutConstraint!
+    let playCountLabel = UILabel()
+    let metaLabel = UILabel()
+    var enrichmentTask: Task<Void, Never>?
+    var metadataTask: Task<Void, Never>?
+    let impactLight = UIImpactFeedbackGenerator(style: .light)
+    let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
     init(album: Album, audioPlayer: AudioPlaying = AudioPlayer.shared) {
         self.album = album
@@ -73,48 +73,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.removeObserver(self)
     }
 
-    /// Repairs the album the reader is actually looking at, the way the Mac's
-    /// detail page does. The request is not forced: an album the ladder has
-    /// already settled — or given up on — costs zero network calls to open, so
-    /// browsing can never burn the four-attempt ladder.
-    private func repairMetadataIfNeeded() {
-        guard album.year == nil || album.genre == nil else { return }
-        let title = album.title
-        let artist = album.artist
-        guard isEnrichmentDue(title: title, artist: artist) else { return }
-        metadataTask = Task { [weak self] in
-            let changed = await EnrichmentCoordinator.shared.requestNow(title: title, artist: artist)
-            guard changed, !Task.isCancelled else { return }
-            self?.applyStoredMetadata(title: title, artist: artist)
-        }
-    }
-
-    /// The presentation half of the ladder. The authoritative gate is the one
-    /// inside the task itself; this only keeps the page from asking for work
-    /// the durable queue has already answered.
-    private func isEnrichmentDue(title: String, artist: String) -> Bool {
-        let record = (try? DatabaseManager.shared.fetchEnrichmentRecord(
-            scope: .album, key: EnrichmentKey.album(title: title, artist: artist)
-        )) ?? nil
-        return EnrichmentPolicy.isDue(record, scope: .album, now: Date())
-    }
-
-    private func applyStoredMetadata(title: String, artist: String) {
-        let status = try? DatabaseManager.shared.fetchAlbumInfoStatus(title: title, artist: artist)
-        renderMetaLine(year: status?.year, genre: status?.genre)
-    }
-
-    /// The year and genre under the artist name, hidden entirely when neither
-    /// is known rather than left as an empty line.
-    private func renderMetaLine(year: String?, genre: String?) {
-        var parts: [String] = []
-        if let year, !year.isEmpty { parts.append(year) }
-        if let genre, !genre.isEmpty { parts.append(genre) }
-        metaLabel.text = parts.joined(separator: " \u{00B7} ")
-        metaLabel.isHidden = parts.isEmpty
-    }
-
-    private func setupOverflowMenu() {
+    func setupOverflowMenu() {
         let album = self.album
         let delete = UIAction(title: String(localized: "Delete from Library"), image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
             guard let self else { return }
@@ -139,13 +98,13 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         )
     }
 
-    private func editArtworkAction() -> UIAction {
+    func editArtworkAction() -> UIAction {
         UIAction(title: String(localized: "Edit Artwork"), image: UIImage(systemName: "photo.badge.pencil")) { [weak self] _ in
             self?.presentArtworkEditor()
         }
     }
 
-    private func presentArtworkEditor() {
+    func presentArtworkEditor() {
         impactLight.impactOccurred()
         ArtworkEditorViewController.present(for: album, from: self) { [weak self] in
             guard let self else { return }
@@ -153,7 +112,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    @objc private func artworkChanged() {
+    @objc func artworkChanged() {
         AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { [weak self] image in
             guard let self else { return }
             guard let image else {
@@ -170,112 +129,32 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    @objc private func playbackChanged() {
+    @objc func playbackChanged() {
         reconfigureAllRows()
     }
 
-    @objc private func lovedChanged() {
+    @objc func lovedChanged() {
         reconfigureAllRows()
     }
 
-    private func reconfigureAllRows() {
+    func reconfigureAllRows() {
         guard let dataSource else { return }
         var snapshot = dataSource.snapshot()
         snapshot.reconfigureItems(snapshot.itemIdentifiers)
         dataSource.apply(snapshot, animatingDifferences: false)
     }
 
-    /// Fetches Last.fm genre tags and the personal album play count off-main,
-    /// caching results, then folds them into the header without blocking UI.
-    private func loadEnrichment() {
-        let artist = album.artist
-        let title = album.title
-        let authenticated = LastFMService.shared.isAuthenticated
-
-        let cachedTags = DetailEnrichmentCache.shared.cachedTopTags(artist: artist)
-        if let cachedTags { applyGenreChips(cachedTags, animated: false) }
-        let cachedPlays = authenticated
-            ? DetailEnrichmentCache.shared.cachedAlbumPlayCount(artist: artist, album: title)
-            : nil
-        if let cachedPlays, cachedPlays > 0 { applyPlayCount(cachedPlays, animated: false) }
-
-        let tagsResolved = cachedTags != nil
-        let playsResolved = !authenticated || cachedPlays != nil
-        guard !tagsResolved || !playsResolved else { return }
-
-        enrichmentTask = Task { [weak self] in
-            if !tagsResolved {
-                let tags = await DetailEnrichmentCache.shared.topTags(artist: artist)
-                if !Task.isCancelled { self?.applyGenreChips(tags, animated: true) }
-            }
-            guard authenticated, !playsResolved else { return }
-            let plays = await DetailEnrichmentCache.shared.albumPlayCount(artist: artist, album: title)
-            if !Task.isCancelled, plays > 0 { self?.applyPlayCount(plays, animated: true) }
-        }
-    }
-
-    private func applyGenreChips(_ tags: [String], animated: Bool) {
-        genreChipsHolder.subviews.forEach { $0.removeFromSuperview() }
-        guard !tags.isEmpty else {
-            genreChipsHolder.isHidden = true
-            sizeHeaderToFit()
-            return
-        }
-        let row = DetailChip.chipsRow(tags)
-        row.translatesAutoresizingMaskIntoConstraints = false
-        genreChipsHolder.addSubview(row)
-        NSLayoutConstraint.activate([
-            row.topAnchor.constraint(equalTo: genreChipsHolder.topAnchor),
-            row.bottomAnchor.constraint(equalTo: genreChipsHolder.bottomAnchor),
-            row.leadingAnchor.constraint(equalTo: genreChipsHolder.leadingAnchor),
-            row.trailingAnchor.constraint(equalTo: genreChipsHolder.trailingAnchor),
-        ])
-        genreChipsHolder.isHidden = false
-        reveal(row, animated: animated)
-    }
-
-    private func applyPlayCount(_ count: Int, animated: Bool) {
-        playCountLabel.text = String(localized: "You've played this album \(count) times")
-        playCountLabel.textColor = accentColor
-        playCountLabel.isHidden = false
-        reveal(playCountLabel, animated: animated)
-    }
-
-    private func reveal(_ view: UIView, animated: Bool) {
-        if animated {
-            animateHeaderReveal(fading: view)
-        } else {
-            view.alpha = 1
-            sizeHeaderToFit()
-        }
-    }
-
-    /// Fades a newly-revealed header element in while smoothly resizing the
-    /// table header so the track rows slide down instead of jumping; applies
-    /// instantly under Reduce Motion.
-    private func animateHeaderReveal(fading view: UIView) {
-        sizeHeaderToFit()
-        guard !UIAccessibility.isReduceMotionEnabled else {
-            view.alpha = 1
-            return
-        }
-        view.alpha = 0
-        UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseInOut]) {
-            view.alpha = 1
-        }
-    }
-
-    private func setupBackdrop() {
+    func setupBackdrop() {
         backdropView.frame = view.bounds
         view.addSubview(backdropView)
         applyPalette(from: resolvedArtwork(), animated: false)
     }
 
-    private func resolvedArtwork() -> UIImage? {
+    func resolvedArtwork() -> UIImage? {
         album.artwork ?? AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist)
     }
 
-    private func applyPalette(from artwork: UIImage?, animated: Bool) {
+    func applyPalette(from artwork: UIImage?, animated: Bool) {
         let cacheKey = "\(album.title)\0\(album.artist)"
         ArtworkPaletteExtractor.palette(for: artwork, cacheKey: cacheKey, fallbackSeed: album.id) { [weak self] palette in
             guard let self else { return }
@@ -287,7 +166,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
     /// Lifts the dominant palette color to a bright, low-saturation tint so
     /// now-playing rows stay legible against the dark backdrop.
-    private static func readableAccent(from palette: ArtworkPalette) -> UIColor {
+    static func readableAccent(from palette: ArtworkPalette) -> UIColor {
         var hue: CGFloat = 0
         var saturation: CGFloat = 0
         var brightness: CGFloat = 0
@@ -296,7 +175,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         return UIColor(hue: hue, saturation: min(saturation, 0.5), brightness: max(brightness, 0.9), alpha: 1)
     }
 
-    private func setupTableView() {
+    func setupTableView() {
         tableView = UITableView(frame: .zero, style: .plain)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.delegate = self
@@ -318,7 +197,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         ])
     }
 
-    private func configureDataSource() {
+    func configureDataSource() {
         dataSource = UITableViewDiffableDataSource<Int, Track>(tableView: tableView) {
             [weak self] tableView, indexPath, track in
             let cell = tableView.dequeueReusableCell(withIdentifier: AlbumTrackCell.reuseID, for: indexPath) as! AlbumTrackCell
@@ -338,7 +217,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         dataSource.defaultRowAnimation = .fade
     }
 
-    private func applySnapshot() {
+    func applySnapshot() {
         var snapshot = NSDiffableDataSourceSnapshot<Int, Track>()
         snapshot.appendSections([0])
         snapshot.appendItems(album.tracks)
@@ -355,321 +234,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         sizeHeaderToFit()
     }
 
-    private func sizeHeaderToFit() {
-        for wrapper in [tableView.tableHeaderView, tableView.tableFooterView] {
-            guard let wrapper else { continue }
-            let size = wrapper.systemLayoutSizeFitting(
-                CGSize(width: tableView.bounds.width, height: UIView.layoutFittingCompressedSize.height),
-                withHorizontalFittingPriority: .required,
-                verticalFittingPriority: .fittingSizeLevel
-            )
-            if wrapper.frame.size.height != size.height {
-                wrapper.frame.size.height = size.height
-                if wrapper === tableView.tableHeaderView {
-                    tableView.tableHeaderView = wrapper
-                } else {
-                    tableView.tableFooterView = wrapper
-                }
-            }
-        }
-    }
-
-    /// Builds the three header pieces once; `applyHeaderStyle()` decides where
-    /// they live (above the rows, as a banner, or as a column beside them).
-    private func buildHeaderComponents() {
-        setupArtworkCard()
-
-        titleMarquee.text = album.title
-        titleMarquee.font = .scaled(.title2, size: 24, weight: .bold)
-        titleMarquee.textColor = .white
-
-        let artistButton = UIButton(type: .system)
-        artistButton.setTitle(album.artist, for: .normal)
-        artistButton.titleLabel?.font = .scaled(.callout, size: 16, weight: .semibold)
-        artistButton.titleLabel?.adjustsFontForContentSizeCategory = true
-        artistButton.setTitleColor(.white.withAlphaComponent(0.85), for: .normal)
-        artistButton.contentHorizontalAlignment = .leading
-        artistButton.accessibilityHint = String(localized: "Shows the artist's albums")
-        artistButton.addAction(UIAction { [weak self] _ in self?.artistTapped() }, for: .touchUpInside)
-
-        metaLabel.font = .scaled(.footnote, size: 13, weight: .regular)
-        metaLabel.adjustsFontForContentSizeCategory = true
-        metaLabel.textColor = .white.withAlphaComponent(0.55)
-        renderMetaLine(year: album.year, genre: album.genre)
-
-        playCountLabel.font = .scaled(.footnote, size: 13, weight: .semibold)
-        playCountLabel.adjustsFontForContentSizeCategory = true
-        playCountLabel.textColor = accentColor
-        playCountLabel.numberOfLines = 0
-        playCountLabel.isHidden = true
-
-        genreChipsHolder.isHidden = true
-
-        let qualityBadgeRow = buildQualityBadgeRow()
-
-        infoStack.addArrangedSubview(titleMarquee)
-        infoStack.addArrangedSubview(artistButton)
-        infoStack.addArrangedSubview(metaLabel)
-        infoStack.addArrangedSubview(playCountLabel)
-        infoStack.axis = .vertical
-        infoStack.spacing = 2
-        infoStack.alignment = .leading
-        if let qualityBadgeRow {
-            infoStack.addArrangedSubview(qualityBadgeRow)
-            infoStack.setCustomSpacing(10, after: metaLabel)
-        }
-        infoStack.addArrangedSubview(genreChipsHolder)
-        infoStack.setCustomSpacing(10, after: qualityBadgeRow ?? metaLabel)
-        genreChipsHolder.widthAnchor.constraint(equalTo: infoStack.widthAnchor).isActive = true
-        titleMarquee.widthAnchor.constraint(equalTo: infoStack.widthAnchor).isActive = true
-
-        actionRow = buildActionRow()
-        appearanceElements = [artworkCard, infoStack, actionRow]
-    }
-
-    /// Arranges the header for the room this page was given. Stacked is the
-    /// phone column; the banner puts a modest cover beside the title so rows
-    /// start high on a wider page; side by side pins the cover and details in
-    /// a column and gives the whole other half to the tracks.
-    private func applyHeaderStyle() {
-        let usable = view.safeAreaLayoutGuide.layoutFrame.size
-        guard usable.width > 1 else { return }
-        let style = AdaptiveLayout.detailHeaderStyle(forSize: usable)
-        guard style != appliedHeaderStyle else { return }
-        appliedHeaderStyle = style
-        NSLayoutConstraint.deactivate(headerLayoutConstraints)
-        headerLayoutConstraints = []
-        headerColumn.removeFromSuperview()
-        tableView.tableHeaderView = nil
-        for piece in [artworkCard, infoStack, actionRow] { piece.removeFromSuperview() }
-
-        switch style {
-        case .stacked: installStackedHeader()
-        case .banner: installBannerHeader()
-        case .sideBySide: installColumnHeader()
-        }
-        tableLeading.isActive = style != .sideBySide
-        tableColumnLeading.isActive = style == .sideBySide
-        view.setNeedsLayout()
-    }
-
-    private func installStackedHeader() {
-        let container = UIView()
-        let mainStack = UIStackView(arrangedSubviews: [artworkCard, infoStack, actionRow])
-        mainStack.axis = .vertical
-        mainStack.spacing = 18
-        mainStack.setCustomSpacing(22, after: artworkCard)
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(mainStack)
-        let guide = container.safeAreaLayoutGuide
-        let leading = mainStack.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 24)
-        let trailing = mainStack.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -24)
-        let bottom = mainStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -20)
-        for constraint in [leading, trailing, bottom] { constraint.priority = .defaultHigh }
-        let cardWidth = artworkCard.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.8)
-        cardWidth.priority = .defaultHigh
-        let cardCap = artworkCard.widthAnchor.constraint(lessThanOrEqualToConstant: 340)
-        let constraints = [
-            mainStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
-            artworkCard.centerXAnchor.constraint(equalTo: mainStack.centerXAnchor),
-            leading, trailing, bottom, cardWidth, cardCap,
-        ]
-        NSLayoutConstraint.activate(constraints)
-        headerLayoutConstraints = constraints
-        tableView.tableHeaderView = container
-    }
-
-    private func installBannerHeader() {
-        let container = UIView()
-        let artworkSide = min(max(view.safeAreaLayoutGuide.layoutFrame.width * 0.36, 120), 260)
-        let topRow = UIStackView(arrangedSubviews: [artworkCard, infoStack])
-        topRow.axis = .horizontal
-        topRow.spacing = 18
-        topRow.alignment = .center
-        let mainStack = UIStackView(arrangedSubviews: [topRow, actionRow])
-        mainStack.axis = .vertical
-        mainStack.spacing = 16
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(mainStack)
-        let guide = container.safeAreaLayoutGuide
-        let leading = mainStack.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 24)
-        let trailing = mainStack.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -24)
-        let bottom = mainStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16)
-        for constraint in [leading, trailing, bottom] { constraint.priority = .defaultHigh }
-        let constraints = [
-            mainStack.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
-            artworkCard.widthAnchor.constraint(equalToConstant: artworkSide),
-            leading, trailing, bottom,
-        ]
-        NSLayoutConstraint.activate(constraints)
-        headerLayoutConstraints = constraints
-        tableView.tableHeaderView = container
-    }
-
-    private func installColumnHeader() {
-        let usable = view.safeAreaLayoutGuide.layoutFrame.size
-        let artworkSide = min(max(usable.width * 0.4, 240) - 40, usable.height * 0.42, 340)
-        let columnWidth = max(artworkSide + 40, 280)
-        headerColumn.translatesAutoresizingMaskIntoConstraints = false
-        headerColumn.showsVerticalScrollIndicator = false
-        headerColumn.alwaysBounceVertical = false
-        headerColumn.contentInsetAdjustmentBehavior = .always
-        view.addSubview(headerColumn)
-        let mainStack = UIStackView(arrangedSubviews: [artworkCard, infoStack, actionRow])
-        mainStack.axis = .vertical
-        mainStack.spacing = 16
-        mainStack.translatesAutoresizingMaskIntoConstraints = false
-        headerColumn.addSubview(mainStack)
-        let guide = view.safeAreaLayoutGuide
-        let constraints = [
-            headerColumn.topAnchor.constraint(equalTo: view.topAnchor),
-            headerColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            headerColumn.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
-            headerColumn.widthAnchor.constraint(equalToConstant: columnWidth),
-            mainStack.topAnchor.constraint(equalTo: headerColumn.contentLayoutGuide.topAnchor, constant: 12),
-            mainStack.bottomAnchor.constraint(equalTo: headerColumn.contentLayoutGuide.bottomAnchor, constant: -24),
-            mainStack.leadingAnchor.constraint(equalTo: headerColumn.frameLayoutGuide.leadingAnchor, constant: 24),
-            mainStack.trailingAnchor.constraint(equalTo: headerColumn.frameLayoutGuide.trailingAnchor, constant: -16),
-            artworkCard.widthAnchor.constraint(equalToConstant: artworkSide),
-        ]
-        constraints.last?.priority = .defaultHigh
-        NSLayoutConstraint.activate(constraints)
-        headerLayoutConstraints = constraints
-    }
-
-    private func setupArtworkCard() {
-        artworkCard.layer.shadowColor = UIColor.black.cgColor
-        artworkCard.layer.shadowOpacity = 0.45
-        artworkCard.layer.shadowOffset = CGSize(width: 0, height: 12)
-        artworkCard.layer.shadowRadius = 28
-        addMotionParallax(to: artworkCard)
-
-        artworkView.contentMode = .scaleAspectFill
-        artworkView.clipsToBounds = true
-        artworkView.layer.cornerRadius = 16
-        artworkView.layer.cornerCurve = .continuous
-        artworkView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        artworkView.tintColor = UIColor.white.withAlphaComponent(0.35)
-        artworkView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 56, weight: .ultraLight)
-        artworkView.isAccessibilityElement = true
-        artworkView.accessibilityLabel = String(localized: "Album artwork for \(album.title)")
-        artworkView.isUserInteractionEnabled = true
-        artworkView.addInteraction(UIContextMenuInteraction(delegate: self))
-        artworkView.accessibilityCustomActions = [
-            UIAccessibilityCustomAction(name: String(localized: "Edit Artwork")) { [weak self] _ in
-                self?.presentArtworkEditor()
-                return true
-            },
-        ]
-
-        if let artwork = resolvedArtwork() {
-            artworkView.image = artwork
-        } else {
-            artworkView.contentMode = .center
-            artworkView.image = UIImage(systemName: "music.note")
-            AlbumArtworkCache.shared.loadArtwork(forAlbum: album.title, artist: album.artist) { [weak self] image in
-                guard let self, let image else { return }
-                self.artworkView.contentMode = .scaleAspectFill
-                self.artworkView.image = image
-                self.applyPalette(from: image, animated: true)
-            }
-        }
-
-        artworkView.translatesAutoresizingMaskIntoConstraints = false
-        for axis in [NSLayoutConstraint.Axis.horizontal, .vertical] {
-            artworkView.setContentCompressionResistancePriority(.defaultLow, for: axis)
-            artworkView.setContentHuggingPriority(.defaultLow, for: axis)
-        }
-        artworkCard.addSubview(artworkView)
-        NSLayoutConstraint.activate([
-            artworkView.topAnchor.constraint(equalTo: artworkCard.topAnchor),
-            artworkView.leadingAnchor.constraint(equalTo: artworkCard.leadingAnchor),
-            artworkView.trailingAnchor.constraint(equalTo: artworkCard.trailingAnchor),
-            artworkView.bottomAnchor.constraint(equalTo: artworkCard.bottomAnchor),
-            artworkView.heightAnchor.constraint(equalTo: artworkView.widthAnchor),
-        ])
-    }
-
-    /// Device-tilt parallax matching the Now Playing artwork card; skipped
-    /// under Reduce Motion.
-    private func addMotionParallax(to card: UIView) {
-        guard !UIAccessibility.isReduceMotionEnabled else { return }
-        let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
-        horizontal.minimumRelativeValue = -14
-        horizontal.maximumRelativeValue = 14
-        let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
-        vertical.minimumRelativeValue = -10
-        vertical.maximumRelativeValue = 10
-        let group = UIMotionEffectGroup()
-        group.motionEffects = [horizontal, vertical]
-        card.addMotionEffect(group)
-    }
-
-    /// A left-aligned glass pill summarizing the album's peak audio quality,
-    /// or nil when no track carries codec/quality metadata.
-    private func buildQualityBadgeRow() -> UIView? {
-        guard let summary = DetailChip.albumQualitySummary(tracks: album.tracks) else { return nil }
-        let pill = DetailChip.pill(text: summary, systemImage: "waveform", accessibilityPrefix: String(localized: "Audio quality"))
-        let row = UIStackView(arrangedSubviews: [pill, UIView()])
-        row.axis = .horizontal
-        row.alignment = .center
-        return row
-    }
-
-    private func buildActionRow() -> UIView {
-        let play = LiquidGlass.actionCapsule(title: String(localized: "Play"), systemImage: "play.fill") { [weak self] in
-            self?.playTapped()
-        }
-        let shuffle = LiquidGlass.actionCapsule(title: String(localized: "Shuffle"), systemImage: "shuffle") { [weak self] in
-            self?.shuffleTapped()
-        }
-        let queue = LiquidGlass.iconCapsule(systemImage: "text.append", accessibilityLabel: String(localized: "Add album to queue"), width: 44) { [weak self] in
-            self?.addAlbumToQueue()
-        }
-        let share = LiquidGlass.iconCapsule(systemImage: "square.and.arrow.up", accessibilityLabel: String(localized: "Share album"), width: 44) { [weak self] in
-            guard let self else { return }
-            self.shareAlbumViaSonglink(title: self.album.title, artist: self.album.artist, from: self.view)
-        }
-        let row = UIStackView(arrangedSubviews: [play, shuffle, queue, share])
-        row.spacing = 8
-        play.widthAnchor.constraint(equalTo: shuffle.widthAnchor).isActive = true
-        return LiquidGlass.grouping(row)
-    }
-
-    private func buildFooterView() -> UIView {
-        let container = UIView()
-        let label = UILabel()
-        label.font = .scaled(.footnote, size: 13, weight: .regular)
-        label.adjustsFontForContentSizeCategory = true
-        label.textColor = .white.withAlphaComponent(0.45)
-        label.textAlignment = .center
-        label.numberOfLines = 0
-        label.text = footerText()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 16),
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -32),
-        ])
-        let trailing = label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
-        trailing.priority = .defaultHigh
-        trailing.isActive = true
-        return container
-    }
-
-    private func footerText() -> String {
-        let count = album.tracks.count
-        let totalSeconds = album.tracks.reduce(0) { $0 + Int($1.duration) }
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let duration = hours > 0
-            ? String(localized: "\(hours) hr \(minutes) min")
-            : String(localized: "\(minutes) min")
-        return String(localized: "\(count) tracks \u{00B7} \(duration)")
-    }
-
-    private func prepareAppearanceAnimationIfNeeded() {
+    func prepareAppearanceAnimationIfNeeded() {
         guard !hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled else { return }
         tableView.alpha = 0
         for element in appearanceElements {
@@ -678,7 +243,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func runAppearanceAnimationIfNeeded() {
+    func runAppearanceAnimationIfNeeded() {
         guard !hasAnimatedAppearance else { return }
         hasAnimatedAppearance = true
         guard !UIAccessibility.isReduceMotionEnabled else {
@@ -697,19 +262,19 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         }
     }
 
-    private func playTapped() {
+    func playTapped() {
         impactMedium.impactOccurred()
         audioPlayer.play(album.tracks, startingAt: 0)
     }
 
-    private func shuffleTapped() {
+    func shuffleTapped() {
         impactMedium.impactOccurred()
         var shuffled = album.tracks
         shuffled.shuffle()
         audioPlayer.play(shuffled, startingAt: 0)
     }
 
-    private func addAlbumToQueue() {
+    func addAlbumToQueue() {
         for track in album.tracks {
             AudioPlayer.shared.addToQueue(track)
         }
@@ -717,327 +282,15 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         ToastView.show(String(localized: "Added \(album.tracks.count) tracks to queue"), in: view, style: .info)
     }
 
-    private func toggleLove(_ track: Track) {
+    func toggleLove(_ track: Track) {
         impactLight.impactOccurred()
         Task { _ = await LovedTracksService.shared.toggleLove(track: track) }
     }
 
-    private func artistTapped() {
+    func artistTapped() {
         impactLight.impactOccurred()
         let artistAlbums = Library.shared.albums.filter { $0.artist == album.artist }
         let vc = ArtistDetailViewController(artistName: album.artist, albums: artistAlbums)
         navigationController?.pushViewController(vc, animated: true)
-    }
-}
-
-extension AlbumDetailViewController: UITableViewDelegate {
-
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-        impactLight.impactOccurred()
-        audioPlayer.play(album.tracks, startingAt: indexPath.row)
-    }
-
-    /// Stretchy hero: pulling past the top scales the artwork card up around
-    /// its center so the overscroll feels physical.
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard hasAnimatedAppearance, !UIAccessibility.isReduceMotionEnabled,
-              appliedHeaderStyle != .sideBySide else { return }
-        let pull = -(scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
-        if pull > 0 {
-            let scale = 1 + min(pull / 500, 0.18)
-            artworkCard.transform = CGAffineTransform(translationX: 0, y: -pull * 0.15).scaledBy(x: scale, y: scale)
-        } else {
-            artworkCard.transform = .identity
-        }
-    }
-
-    func tableView(
-        _ tableView: UITableView,
-        leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
-    ) -> UISwipeActionsConfiguration? {
-        guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
-        let isLoved = LovedTracksService.shared.isLoved(track: track)
-        let love = UIContextualAction(style: .normal, title: isLoved ? String(localized: "Unlove") : String(localized: "Love")) { [weak self] _, _, completion in
-            guard let self else { return completion(false) }
-            self.toggleLove(track)
-            completion(true)
-        }
-        love.image = UIImage(systemName: isLoved ? "heart.slash.fill" : "heart.fill")
-        love.backgroundColor = .systemPink
-        let playNext = UIContextualAction(style: .normal, title: String(localized: "Play Next")) { [weak self] _, _, completion in
-            guard let self else { return completion(false) }
-            AudioPlayer.shared.insertNext(track)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show(String(localized: "Playing next"), in: self.view, style: .info)
-            completion(true)
-        }
-        playNext.image = UIImage(systemName: "text.line.first.and.arrowtriangle.forward")
-        playNext.backgroundColor = .systemIndigo
-        return UISwipeActionsConfiguration(actions: [love, playNext])
-    }
-
-    func tableView(
-        _ tableView: UITableView,
-        trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
-    ) -> UISwipeActionsConfiguration? {
-        guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
-        let addToQueue = UIContextualAction(style: .normal, title: String(localized: "Queue")) { [weak self] _, _, completion in
-            guard let self else { return completion(false) }
-            AudioPlayer.shared.addToQueue(track)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show(String(localized: "Added to queue"), in: self.view, style: .info)
-            completion(true)
-        }
-        addToQueue.image = UIImage(systemName: "text.append")
-        addToQueue.backgroundColor = .systemTeal
-        return UISwipeActionsConfiguration(actions: [addToQueue])
-    }
-
-    func tableView(
-        _ tableView: UITableView,
-        contextMenuConfigurationForRowAt indexPath: IndexPath,
-        point: CGPoint
-    ) -> UIContextMenuConfiguration? {
-        guard let track = dataSource.itemIdentifier(for: indexPath) else { return nil }
-        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            self?.buildTrackContextMenu(for: track)
-        }
-    }
-
-    private func buildTrackContextMenu(for track: Track) -> UIMenu {
-        TrackContextMenu.build(
-            for: track,
-            in: self,
-            push: { [weak self] viewController in
-                self?.navigationController?.pushViewController(viewController, animated: true)
-            },
-            context: TrackContextMenu.Context(hideGoToAlbum: true)
-        )
-    }
-}
-
-private final class AlbumTrackCell: UITableViewCell {
-
-    static let reuseID = "AlbumTrackCell"
-
-    var onToggleLove: (() -> Void)?
-    private var hasQualityBadge = false
-
-    private let numberLabel = UILabel()
-    private let barsView = NowPlayingBarsView()
-    private let trackTitleLabel = UILabel()
-    private let qualityLabel = UILabel()
-    private let lovedButton = UIButton(type: .system)
-    private let durationLabel = UILabel()
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let hidden = !hasQualityBadge || contentView.bounds.width < 400
-        if qualityLabel.isHidden != hidden { qualityLabel.isHidden = hidden }
-    }
-
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        backgroundColor = .clear
-        let selection = UIView()
-        selection.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        selectedBackgroundView = selection
-
-        numberLabel.font = UIFontMetrics(forTextStyle: .subheadline)
-            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 15, weight: .regular), maximumPointSize: 24)
-        numberLabel.adjustsFontForContentSizeCategory = true
-        numberLabel.textColor = .white.withAlphaComponent(0.45)
-        numberLabel.textAlignment = .center
-
-        barsView.isHidden = true
-
-        trackTitleLabel.font = .scaled(.body, size: 16, weight: .regular)
-        trackTitleLabel.adjustsFontForContentSizeCategory = true
-        trackTitleLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        trackTitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        qualityLabel.font = UIFontMetrics(forTextStyle: .caption2)
-            .scaledFont(for: .monospacedSystemFont(ofSize: 10, weight: .semibold), maximumPointSize: 16)
-        qualityLabel.adjustsFontForContentSizeCategory = true
-        qualityLabel.textColor = .white.withAlphaComponent(0.6)
-        qualityLabel.setContentHuggingPriority(.required, for: .horizontal)
-        qualityLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
-
-        lovedButton.setContentHuggingPriority(.required, for: .horizontal)
-        lovedButton.setContentCompressionResistancePriority(.required, for: .horizontal)
-        lovedButton.tintColor = .systemPink
-        lovedButton.addAction(UIAction { [weak self] _ in self?.onToggleLove?() }, for: .touchUpInside)
-        lovedButton.widthAnchor.constraint(equalToConstant: 30).isActive = true
-
-        durationLabel.font = UIFontMetrics(forTextStyle: .footnote)
-            .scaledFont(for: .monospacedDigitSystemFont(ofSize: 13, weight: .regular), maximumPointSize: 22)
-        durationLabel.adjustsFontForContentSizeCategory = true
-        durationLabel.textColor = .white.withAlphaComponent(0.45)
-        durationLabel.textAlignment = .right
-
-        let numberContainer = UIView()
-        numberContainer.translatesAutoresizingMaskIntoConstraints = false
-        numberLabel.translatesAutoresizingMaskIntoConstraints = false
-        barsView.translatesAutoresizingMaskIntoConstraints = false
-        numberContainer.addSubview(numberLabel)
-        numberContainer.addSubview(barsView)
-
-        NSLayoutConstraint.activate([
-            numberLabel.topAnchor.constraint(equalTo: numberContainer.topAnchor),
-            numberLabel.bottomAnchor.constraint(equalTo: numberContainer.bottomAnchor),
-            numberLabel.leadingAnchor.constraint(equalTo: numberContainer.leadingAnchor),
-            numberLabel.trailingAnchor.constraint(equalTo: numberContainer.trailingAnchor),
-            barsView.centerXAnchor.constraint(equalTo: numberContainer.centerXAnchor),
-            barsView.centerYAnchor.constraint(equalTo: numberContainer.centerYAnchor),
-            barsView.widthAnchor.constraint(equalToConstant: 16),
-            barsView.heightAnchor.constraint(equalToConstant: 14),
-        ])
-
-        let stack = UIStackView(arrangedSubviews: [numberContainer, trackTitleLabel, qualityLabel, lovedButton, durationLabel])
-        stack.spacing = 10
-        stack.alignment = .center
-        stack.setCustomSpacing(4, after: lovedButton)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            numberContainer.widthAnchor.constraint(equalToConstant: 28),
-            durationLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 48),
-            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-        ])
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    func configure(with track: Track, index: Int, isCurrent: Bool, isPlaying: Bool, loved: Bool, accent: UIColor) {
-        numberLabel.text = track.trackNumber > 0 ? "\(track.trackNumber)" : "\(index + 1)"
-        trackTitleLabel.text = track.title
-        let minutes = Int(track.duration) / 60
-        let seconds = Int(track.duration) % 60
-        durationLabel.text = String(format: "%d:%02d", minutes, seconds)
-
-        hasQualityBadge = track.qualityBadge != nil
-        qualityLabel.text = track.qualityBadge
-        qualityLabel.isHidden = !hasQualityBadge || contentView.bounds.width < 400
-
-        let heart = UIImage(
-            systemName: loved ? "heart.fill" : "heart",
-            withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
-        )
-        lovedButton.setImage(heart, for: .normal)
-        lovedButton.tintColor = loved ? .systemPink : .white.withAlphaComponent(0.5)
-        lovedButton.accessibilityLabel = loved ? String(localized: "Loved") : String(localized: "Not loved")
-        lovedButton.accessibilityHint = loved
-            ? String(localized: "Double tap to unlove this track")
-            : String(localized: "Double tap to love this track")
-
-        numberLabel.isHidden = isCurrent
-        barsView.isHidden = !isCurrent
-        barsView.tintColor = accent
-        barsView.setAnimating(isPlaying)
-        trackTitleLabel.textColor = isCurrent ? accent : .white
-        trackTitleLabel.font = .scaled(.body, size: 16, weight: isCurrent ? .semibold : .regular)
-        accessibilityValue = isCurrent ? (isPlaying ? String(localized: "Now playing") : String(localized: "Paused")) : nil
-    }
-
-    override func prepareForReuse() {
-        super.prepareForReuse()
-        onToggleLove = nil
-    }
-}
-
-/// Three vertical bars that bounce while the track is playing and freeze at
-/// staggered heights when paused; Reduce Motion keeps them static.
-/// Three animated bars that stand in for the track number on the row the
-/// player is on. Shared by album detail and playlist detail.
-final class NowPlayingBarsView: UIView {
-
-    private let barLayers: [CALayer] = (0..<3).map { _ in CALayer() }
-    private var isAnimating = false
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        for bar in barLayers {
-            bar.cornerRadius = 1.25
-            layer.addSublayer(bar)
-        }
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(restartIfNeeded),
-            name: UIApplication.willEnterForegroundNotification, object: nil
-        )
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    override func tintColorDidChange() {
-        super.tintColorDidChange()
-        for bar in barLayers {
-            bar.backgroundColor = tintColor.cgColor
-        }
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let barWidth: CGFloat = 2.5
-        let spacing = (bounds.width - barWidth * 3) / 2
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        for (index, bar) in barLayers.enumerated() {
-            let x = CGFloat(index) * (barWidth + spacing)
-            bar.frame = CGRect(x: x, y: 0, width: barWidth, height: bounds.height)
-            bar.anchorPoint = CGPoint(x: 0.5, y: 1)
-            bar.position = CGPoint(x: x + barWidth / 2, y: bounds.height)
-            bar.backgroundColor = tintColor.cgColor
-        }
-        CATransaction.commit()
-        applyBarState()
-    }
-
-    func setAnimating(_ animating: Bool) {
-        isAnimating = animating
-        applyBarState()
-    }
-
-    @objc private func restartIfNeeded() {
-        applyBarState()
-    }
-
-    private func applyBarState() {
-        let restScales: [CGFloat] = [0.45, 0.8, 0.6]
-        guard isAnimating, !UIAccessibility.isReduceMotionEnabled, window != nil || superview != nil else {
-            for (index, bar) in barLayers.enumerated() {
-                bar.removeAnimation(forKey: "bounce")
-                bar.transform = CATransform3DMakeScale(1, restScales[index], 1)
-            }
-            return
-        }
-        for (index, bar) in barLayers.enumerated() {
-            guard bar.animation(forKey: "bounce") == nil else { continue }
-            let animation = CABasicAnimation(keyPath: "transform.scale.y")
-            animation.fromValue = restScales[index]
-            animation.toValue = 1.0
-            animation.duration = 0.36 + Double(index) * 0.08
-            animation.autoreverses = true
-            animation.repeatCount = .infinity
-            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            bar.add(animation, forKey: "bounce")
-        }
-    }
-}
-
-extension AlbumDetailViewController: UIContextMenuInteractionDelegate {
-
-    func contextMenuInteraction(
-        _ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint
-    ) -> UIContextMenuConfiguration? {
-        UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            guard let self else { return nil }
-            return UIMenu(children: [self.editArtworkAction()])
-        }
     }
 }

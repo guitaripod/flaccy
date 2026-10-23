@@ -18,329 +18,70 @@ final class NowPlayingViewController: NSViewController {
 
     var onClose: (() -> Void)?
 
-    private let viewModel = NowPlayingViewModel()
-    private let player: AudioPlaying = AudioPlayer.shared
+    let viewModel = NowPlayingViewModel()
+    let player: AudioPlaying = AudioPlayer.shared
 
-    private let backdrop = BackdropView()
-    private let scrim = CAGradientLayer()
+    let backdrop = BackdropView()
+    let scrim = CAGradientLayer()
 
-    private let artworkContainer = NSView()
-    private let artworkView = NSImageView()
-    private let artworkPlaceholder = CAGradientLayer()
+    let artworkContainer = NSView()
+    let artworkView = NSImageView()
+    let artworkPlaceholder = CAGradientLayer()
 
-    private let titleLabel = MacMarqueeLabel()
-    private let artistButton = HoverUnderlineButton()
-    private let albumLabel = NSTextField(labelWithString: "")
-    private let badgeLabel = NSTextField(labelWithString: "")
-    private let badgeContainer = NSView()
-    private var loveButton: TransportButton!
+    let titleLabel = MacMarqueeLabel()
+    let artistButton = HoverUnderlineButton()
+    let albumLabel = NSTextField(labelWithString: "")
+    let badgeLabel = NSTextField(labelWithString: "")
+    let badgeContainer = NSView()
+    var loveButton: TransportButton!
 
-    private var shuffleButton: TransportButton!
-    private var backFifteenButton: TransportButton!
-    private var previousButton: TransportButton!
-    private var playPauseButton: TransportButton!
-    private var nextButton: TransportButton!
-    private var forwardFifteenButton: TransportButton!
-    private var repeatButton: TransportButton!
+    var shuffleButton: TransportButton!
+    var backFifteenButton: TransportButton!
+    var previousButton: TransportButton!
+    var playPauseButton: TransportButton!
+    var nextButton: TransportButton!
+    var forwardFifteenButton: TransportButton!
+    var repeatButton: TransportButton!
 
-    private let scrubber = MacScrubberView()
-    private let elapsedLabel = NSTextField(labelWithString: "0:00")
-    private let remainingLabel = NSTextField(labelWithString: "-0:00")
-    private var volumeButton: TransportButton!
-    private let volumeSlider = VolumeSlider()
-    private let volumeLabel = NSTextField(labelWithString: "")
-    private var volumeBeforeMute: Float?
-    private var equalizerButton: TransportButton!
-    private var equalizerPopover: NSPopover?
+    let scrubber = MacScrubberView()
+    let elapsedLabel = NSTextField(labelWithString: "0:00")
+    let remainingLabel = NSTextField(labelWithString: "-0:00")
+    var volumeButton: TransportButton!
+    let volumeSlider = VolumeSlider()
+    let volumeLabel = NSTextField(labelWithString: "")
+    var volumeBeforeMute: Float?
+    var equalizerButton: TransportButton!
+    var equalizerPopover: NSPopover?
 
-    private var sleepCapsule: CapsuleButton!
-    private var shareCapsule: CapsuleButton!
-    private var lyricsCapsule: CapsuleButton!
-    private var queueCapsule: CapsuleButton!
-    private let routePicker = AVRoutePickerView()
+    var sleepCapsule: CapsuleButton!
+    var shareCapsule: CapsuleButton!
+    var lyricsCapsule: CapsuleButton!
+    var queueCapsule: CapsuleButton!
+    let routePicker = AVRoutePickerView()
 
-    private let lyricsColumn = NSView()
-    private let queueColumn = NSView()
-    private let lyricsPanel = LyricsPanelViewController()
-    private let queuePanel = QueuePanelViewController()
-    private var lyricsShown = NowPlayingLayout.lyricsShown
-    private var queueShown = NowPlayingLayout.queueShown
-    private var swapSides = NowPlayingLayout.swapSides
-    private var body: NSStackView!
-    private var swapCapsule: TransportButton!
-    private var lyricsWidthConstraint: NSLayoutConstraint?
-    private var queueWidthConstraint: NSLayoutConstraint?
+    let lyricsColumn = NSView()
+    let queueColumn = NSView()
+    let lyricsPanel = LyricsPanelViewController()
+    let queuePanel = QueuePanelViewController()
+    var lyricsShown = NowPlayingLayout.lyricsShown
+    var queueShown = NowPlayingLayout.queueShown
+    var swapSides = NowPlayingLayout.swapSides
+    var body: NSStackView!
+    var swapCapsule: TransportButton!
+    var lyricsWidthConstraint: NSLayoutConstraint?
+    var queueWidthConstraint: NSLayoutConstraint?
 
-    private var stateCancellable: AnyCancellable?
-    private var progressCancellable: AnyCancellable?
-    private var chaseInFlight = false
-    private var pendingChaseTime: TimeInterval?
-    private var chaseGeneration = 0
-    private var currentPaletteKey: String?
-    private weak var paletteArtwork: NSImage?
-    private var currentTrackKey: String?
-    private var isBreathing = false
+    var stateCancellable: AnyCancellable?
+    var progressCancellable: AnyCancellable?
+    var chaseInFlight = false
+    var pendingChaseTime: TimeInterval?
+    var chaseGeneration = 0
+    var currentPaletteKey: String?
+    weak var paletteArtwork: NSImage?
+    var currentTrackKey: String?
+    var isBreathing = false
 
-    override func loadView() {
-        let root = AppearanceReactiveView()
-        root.wantsLayer = true
-        root.layer?.backgroundColor = NSColor.black.cgColor
-
-        backdrop.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(backdrop)
-
-        scrim.locations = [0, 0.5, 1]
-        let scrimView = NSView()
-        scrimView.wantsLayer = true
-        scrimView.layer?.addSublayer(scrim)
-        scrimView.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(scrimView)
-        root.onAppearanceChange = { [weak self] in self?.applyBackdropTone() }
-
-        let center = buildCenterColumn()
-        buildColumn(lyricsColumn, hosting: lyricsPanel, title: String(localized: "Lyrics"))
-        buildColumn(queueColumn, hosting: queuePanel, title: String(localized: "Up Next"))
-        lyricsColumn.isHidden = !lyricsShown
-        queueColumn.isHidden = !queueShown
-
-        let body = NSStackView(views: [lyricsColumn, center, queueColumn])
-        self.body = body
-        body.orientation = .horizontal
-        body.distribution = .fill
-        body.spacing = 16
-        body.alignment = .centerY
-        body.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(body)
-        center.setContentHuggingPriority(.init(1), for: .horizontal)
-        body.setHuggingPriority(.init(1), for: .vertical)
-        body.setContentHuggingPriority(.init(1), for: .vertical)
-        body.setContentCompressionResistancePriority(.init(1), for: .vertical)
-        lyricsWidthConstraint = lyricsColumn.widthAnchor.constraint(equalTo: center.widthAnchor)
-        queueWidthConstraint = queueColumn.widthAnchor.constraint(equalTo: center.widthAnchor)
-        lyricsWidthConstraint?.isActive = lyricsShown
-        queueWidthConstraint?.isActive = queueShown
-        applyColumnOrder()
-        for column in [lyricsColumn, center, queueColumn] {
-            NSLayoutConstraint.activate([
-                column.topAnchor.constraint(equalTo: body.topAnchor),
-                column.bottomAnchor.constraint(equalTo: body.bottomAnchor),
-            ])
-        }
-
-        let header = buildHeader()
-        header.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(header)
-
-        let dock = buildTransportDock()
-        dock.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(dock)
-
-        NSLayoutConstraint.activate([
-            backdrop.topAnchor.constraint(equalTo: root.topAnchor),
-            backdrop.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            backdrop.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            backdrop.bottomAnchor.constraint(equalTo: root.bottomAnchor),
-            scrimView.topAnchor.constraint(equalTo: root.topAnchor),
-            scrimView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            scrimView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            scrimView.bottomAnchor.constraint(equalTo: root.bottomAnchor),
-
-            header.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
-            header.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 24),
-            header.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -24),
-            header.heightAnchor.constraint(equalToConstant: 36),
-
-            body.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 14),
-            body.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 32),
-            body.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -32),
-            body.bottomAnchor.constraint(equalTo: dock.topAnchor, constant: -18),
-
-            dock.centerXAnchor.constraint(equalTo: root.centerXAnchor),
-            dock.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -20),
-            dock.widthAnchor.constraint(lessThanOrEqualTo: root.widthAnchor, constant: -64),
-            dock.widthAnchor.constraint(lessThanOrEqualToConstant: 920),
-            dock.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -64).with(priority: .defaultHigh),
-        ])
-
-        view = root
-        scrimViewRef = scrimView
-        applyBackdropTone()
-    }
-
-    /// The immersive readability scrim over the album-art field: a black veil in
-    /// dark mode, a light veil in light mode so the whole surface follows the
-    /// system appearance (mirrors the Linux Now Playing).
-    private func applyBackdropTone() {
-        let dark = view.effectiveAppearance.isDark
-        let base: NSColor = dark ? .black : .white
-        let alphas: [CGFloat] = dark ? [0.62, 0.34, 0.68] : [0.74, 0.6, 0.78]
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        scrim.colors = alphas.map { base.withAlphaComponent($0).cgColor }
-        CATransaction.commit()
-    }
-
-    private func buildHeader() -> NSView {
-        let container = NSView()
-
-        let closeButton = TransportButton(
-            symbolName: "chevron.down", pointSize: 14, accessibilityLabel: String(localized: "Close Now Playing"),
-            target: self, action: #selector(closeTapped)
-        )
-        closeButton.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(closeButton)
-
-        lyricsCapsule = CapsuleButton(symbolName: "quote.bubble", title: String(localized: "Lyrics")) { [weak self] _ in
-            self?.togglePanel(.lyrics)
-        }
-        queueCapsule = CapsuleButton(symbolName: "list.bullet", title: String(localized: "Up Next")) { [weak self] _ in
-            self?.togglePanel(.queue)
-        }
-        swapCapsule = TransportButton(
-            symbolName: "arrow.left.arrow.right", pointSize: 12,
-            accessibilityLabel: String(localized: "Swap panel sides"),
-            target: self, action: #selector(swapPanelSides)
-        )
-        swapCapsule.isHidden = !(lyricsShown && queueShown)
-
-        let toggles = NSStackView(views: [lyricsCapsule, queueCapsule, swapCapsule])
-        toggles.orientation = .horizontal
-        toggles.spacing = 8
-        toggles.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(toggles)
-
-        let aux = buildActionCapsules()
-        aux.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(aux)
-
-        NSLayoutConstraint.activate([
-            closeButton.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 60),
-            closeButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            toggles.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            toggles.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            toggles.topAnchor.constraint(equalTo: container.topAnchor),
-            toggles.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            aux.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            aux.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-        ])
-        return container
-    }
-
-    private func buildTransportDock() -> NSView {
-        buildTransportButtons()
-        configureScrubber()
-        scrubber.style = .prominent
-
-        let timeline = NSStackView(views: [elapsedLabel, scrubber, remainingLabel])
-        timeline.orientation = .horizontal
-        timeline.spacing = 14
-        timeline.alignment = .centerY
-        timeline.distribution = .fill
-
-        let transportRow = NSStackView(views: [
-            shuffleButton, backFifteenButton, previousButton, playPauseButton,
-            nextButton, forwardFifteenButton, repeatButton,
-        ])
-        transportRow.orientation = .horizontal
-        transportRow.spacing = 14
-        transportRow.alignment = .centerY
-        transportRow.setCustomSpacing(28, after: shuffleButton)
-        transportRow.setCustomSpacing(28, after: forwardFifteenButton)
-
-        let transportContainer = centeredRow(transportRow)
-        let volumeContainer = centeredRow(buildVolumeRow())
-
-        let stack = NSStackView(views: [timeline, transportContainer, volumeContainer])
-        stack.orientation = .vertical
-        stack.alignment = .centerX
-        stack.spacing = 12
-        stack.setHuggingPriority(.defaultLow, for: .horizontal)
-        let stackHeight = stack.fittingSize.height
-        let padding = NSEdgeInsets(top: 18, left: 28, bottom: 18, right: 28)
-
-        let pad = NSView()
-        pad.translatesAutoresizingMaskIntoConstraints = false
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        pad.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: pad.topAnchor, constant: padding.top),
-            stack.leadingAnchor.constraint(equalTo: pad.leadingAnchor, constant: padding.left),
-            stack.trailingAnchor.constraint(equalTo: pad.trailingAnchor, constant: -padding.right),
-            stack.bottomAnchor.constraint(equalTo: pad.bottomAnchor, constant: -padding.bottom),
-            timeline.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            transportContainer.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            volumeContainer.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            scrubber.widthAnchor.constraint(greaterThanOrEqualToConstant: 280),
-            scrubber.heightAnchor.constraint(equalToConstant: 26),
-        ])
-
-        let glass = MacLiquidGlass.surface(hosting: pad, cornerRadius: 26)
-        glass.translatesAutoresizingMaskIntoConstraints = false
-
-        let dock = NSView()
-        dock.translatesAutoresizingMaskIntoConstraints = false
-        dock.addSubview(glass)
-        NSLayoutConstraint.activate([
-            glass.topAnchor.constraint(equalTo: dock.topAnchor),
-            glass.leadingAnchor.constraint(equalTo: dock.leadingAnchor),
-            glass.trailingAnchor.constraint(equalTo: dock.trailingAnchor),
-            glass.bottomAnchor.constraint(equalTo: dock.bottomAnchor),
-            dock.heightAnchor.constraint(equalToConstant: stackHeight + padding.top + padding.bottom),
-        ])
-        return dock
-    }
-
-    private func centeredRow(_ content: NSView) -> NSView {
-        let container = NSView()
-        content.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(content)
-        NSLayoutConstraint.activate([
-            content.topAnchor.constraint(equalTo: container.topAnchor),
-            content.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            content.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            content.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor),
-            content.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor),
-        ])
-        return container
-    }
-
-    private func buildVolumeRow() -> NSView {
-        volumeButton = TransportButton(
-            symbolName: "speaker.wave.2.fill", pointSize: 13,
-            accessibilityLabel: String(localized: "Mute"), target: self, action: #selector(toggleMute)
-        )
-        volumeButton.widthAnchor.constraint(equalToConstant: 30).isActive = true
-        volumeButton.heightAnchor.constraint(equalToConstant: 30).isActive = true
-
-        volumeSlider.minValue = 0
-        volumeSlider.maxValue = 1
-        volumeSlider.controlSize = .large
-        volumeSlider.trackFillColor = .labelColor
-        volumeSlider.isContinuous = true
-        volumeSlider.target = self
-        volumeSlider.action = #selector(volumeChanged)
-        volumeSlider.toolTip = String(localized: "Volume")
-        volumeSlider.setAccessibilityLabel(String(localized: "Volume"))
-        volumeSlider.translatesAutoresizingMaskIntoConstraints = false
-        volumeSlider.widthAnchor.constraint(equalToConstant: 190).isActive = true
-        volumeSlider.heightAnchor.constraint(equalToConstant: 30).isActive = true
-
-        volumeLabel.font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .medium)
-        volumeLabel.textColor = MacColors.tertiaryLabel
-        volumeLabel.alignment = .right
-        volumeLabel.setContentHuggingPriority(.required, for: .horizontal)
-        volumeLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
-        volumeLabel.widthAnchor.constraint(equalToConstant: 34).isActive = true
-
-        let row = NSStackView(views: [volumeButton, volumeSlider, volumeLabel])
-        row.orientation = .horizontal
-        row.spacing = 8
-        row.alignment = .centerY
-        refreshVolume()
-        return row
-    }
-
-    private weak var scrimViewRef: NSView?
+    weak var scrimViewRef: NSView?
 
     override func viewDidLayout() {
         super.viewDidLayout()
@@ -394,7 +135,7 @@ final class NowPlayingViewController: NSViewController {
         prefetchLyrics()
     }
 
-    @objc private func trackChangedForCount() { queueChanged() }
+    @objc func trackChangedForCount() { queueChanged() }
 
     override func viewDidAppear() {
         super.viewDidAppear()
@@ -419,382 +160,7 @@ final class NowPlayingViewController: NSViewController {
         closeTapped()
     }
 
-    /// Lyrics (left) and queue (right) are independent columns that show or hide
-    /// on their own; any combination — art alone, art + one, or all three — is
-    /// valid, and the equal-fill body redistributes the visible columns.
-    func togglePanel(_ panel: Panel) {
-        switch panel {
-        case .lyrics:
-            lyricsShown.toggle()
-            setColumn(lyricsColumn, visible: lyricsShown)
-            lyricsPanel.setActive(lyricsShown)
-            NowPlayingLayout.lyricsShown = lyricsShown
-        case .queue:
-            queueShown.toggle()
-            setColumn(queueColumn, visible: queueShown)
-            queuePanel.setActive(queueShown)
-            NowPlayingLayout.queueShown = queueShown
-        }
-        refreshCapsuleToggles()
-    }
-
-    /// Which side each panel occupies is the reader's choice and is remembered,
-    /// the way it is on Linux — some people want the lyrics under their eye on
-    /// the left, some on the right.
-    @objc func swapPanelSides() {
-        swapSides.toggle()
-        NowPlayingLayout.swapSides = swapSides
-        applyColumnOrder()
-        refreshCapsuleToggles()
-    }
-
-    private func applyColumnOrder() {
-        guard let body, let center = body.arrangedSubviews.first(where: {
-            $0 !== lyricsColumn && $0 !== queueColumn
-        }) else { return }
-        let ordered = swapSides
-            ? [queueColumn, center, lyricsColumn]
-            : [lyricsColumn, center, queueColumn]
-        guard body.arrangedSubviews != ordered else { return }
-        for column in ordered {
-            body.removeArrangedSubview(column)
-            body.addArrangedSubview(column)
-        }
-    }
-
-    /// Shows or hides one side column, fading it in while the columns beside it
-    /// slide to their new widths. A glass surface that is resized under implicit
-    /// animation keeps the frame it had, and so does everything inside it, so a
-    /// panel would stay at its old width and clip its trailing controls;
-    /// `settleVisibleColumns` re-lays the visible columns out without animation
-    /// right after the group to put them at the width the constraints ask for.
-    private func setColumn(_ column: NSView, visible: Bool) {
-        guard column.isHidden == visible else { return }
-        let widthConstraint = column === lyricsColumn ? lyricsWidthConstraint : queueWidthConstraint
-        widthConstraint?.isActive = visible
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            column.isHidden = !visible
-            column.alphaValue = visible ? 1 : 0
-            return
-        }
-        if visible {
-            column.alphaValue = 0
-            column.isHidden = false
-        }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.26
-            context.allowsImplicitAnimation = true
-            column.animator().alphaValue = visible ? 1 : 0
-            column.isHidden = !visible
-            self.view.layoutSubtreeIfNeeded()
-        }
-        settleVisibleColumns()
-    }
-
-    private func settleVisibleColumns() {
-        NSAnimationContext.runAnimationGroup { context in
-            context.allowsImplicitAnimation = false
-            for column in [lyricsColumn, queueColumn] where !column.isHidden {
-                invalidateLayout(of: column)
-                column.layoutSubtreeIfNeeded()
-            }
-        }
-    }
-
-    private func invalidateLayout(of target: NSView) {
-        target.needsLayout = true
-        target.subviews.forEach(invalidateLayout(of:))
-    }
-
-    private func refreshCapsuleToggles() {
-        lyricsCapsule.isActiveToggle = lyricsShown
-        queueCapsule.isActiveToggle = queueShown
-        swapCapsule?.isHidden = !(lyricsShown && queueShown)
-    }
-
-    @objc private func queueChanged() {
-        let upNext = max(0, player.queue.count - player.currentIndex - 1)
-        queueCapsule.title = upNext > 0 ? String(localized: "Up Next · \(upNext)") : String(localized: "Up Next")
-    }
-
-    private func buildCenterColumn() -> NSView {
-        configureArtwork()
-        configureLabels()
-
-        let titleRow = NSStackView(views: [titleLabel, badgeContainer, loveButton])
-        titleRow.orientation = .horizontal
-        titleRow.spacing = 10
-        titleRow.alignment = .centerY
-
-        let content = NSStackView(views: [artworkContainer, titleRow, artistButton, albumLabel])
-        content.orientation = .vertical
-        content.alignment = .centerX
-        content.spacing = 10
-        content.setCustomSpacing(24, after: artworkContainer)
-        content.setCustomSpacing(4, after: titleRow)
-        content.setCustomSpacing(2, after: artistButton)
-        content.translatesAutoresizingMaskIntoConstraints = false
-
-        let slot = NSView()
-        slot.addSubview(content)
-        let artwork = artworkContainer.widthAnchor.constraint(equalToConstant: 380)
-        artwork.priority = .defaultHigh
-        NSLayoutConstraint.activate([
-            content.centerXAnchor.constraint(equalTo: slot.centerXAnchor),
-            content.centerYAnchor.constraint(equalTo: slot.centerYAnchor),
-            content.topAnchor.constraint(greaterThanOrEqualTo: slot.topAnchor),
-            content.bottomAnchor.constraint(lessThanOrEqualTo: slot.bottomAnchor),
-            content.widthAnchor.constraint(lessThanOrEqualToConstant: 600),
-            content.widthAnchor.constraint(lessThanOrEqualTo: slot.widthAnchor),
-            artwork,
-            artworkContainer.widthAnchor.constraint(lessThanOrEqualToConstant: 430),
-            artworkContainer.widthAnchor.constraint(greaterThanOrEqualToConstant: 170),
-            artworkContainer.widthAnchor.constraint(lessThanOrEqualTo: content.widthAnchor),
-            artworkContainer.heightAnchor.constraint(equalTo: artworkContainer.widthAnchor),
-            titleLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 460),
-        ])
-        return slot
-    }
-
-    /// A glass side column hosting a lyrics or queue panel; both are permanently
-    /// installed as children so a hidden column keeps its state, and each is
-    /// suspended via `setActive` when not visible.
-    private func buildColumn(_ column: NSView, hosting panel: NSViewController, title: String) {
-        addChild(panel)
-
-        let titleLabel = NSTextField(labelWithString: title)
-        titleLabel.font = .systemFont(ofSize: 14, weight: .bold)
-        titleLabel.textColor = MacColors.primaryLabel
-
-        let header = NSStackView(views: [titleLabel])
-        header.orientation = .horizontal
-        header.edgeInsets = NSEdgeInsets(top: 14, left: 16, bottom: 4, right: 16)
-
-        panel.view.translatesAutoresizingMaskIntoConstraints = false
-        let stack = NSStackView(views: [header, panel.view])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 0
-        panel.view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-
-        let glass = MacLiquidGlass.surface(hosting: stack, cornerRadius: 20)
-        glass.translatesAutoresizingMaskIntoConstraints = false
-        column.addSubview(glass)
-        column.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            glass.topAnchor.constraint(equalTo: column.topAnchor, constant: 4),
-            glass.leadingAnchor.constraint(equalTo: column.leadingAnchor),
-            glass.trailingAnchor.constraint(equalTo: column.trailingAnchor),
-            glass.bottomAnchor.constraint(equalTo: column.bottomAnchor, constant: -4),
-        ])
-    }
-
-    private func configureArtwork() {
-        artworkContainer.wantsLayer = true
-        artworkContainer.layer?.cornerRadius = 14
-        artworkContainer.layer?.cornerCurve = .continuous
-        artworkContainer.layer?.masksToBounds = true
-        artworkContainer.layer?.addSublayer(artworkPlaceholder)
-        artworkContainer.translatesAutoresizingMaskIntoConstraints = false
-        artworkView.imageScaling = .scaleProportionallyUpOrDown
-        artworkView.translatesAutoresizingMaskIntoConstraints = false
-        artworkContainer.addSubview(artworkView)
-        NSLayoutConstraint.activate([
-            artworkView.topAnchor.constraint(equalTo: artworkContainer.topAnchor),
-            artworkView.leadingAnchor.constraint(equalTo: artworkContainer.leadingAnchor),
-            artworkView.trailingAnchor.constraint(equalTo: artworkContainer.trailingAnchor),
-            artworkView.bottomAnchor.constraint(equalTo: artworkContainer.bottomAnchor),
-        ])
-        let click = NSClickGestureRecognizer(target: self, action: #selector(togglePlayPause))
-        artworkContainer.addGestureRecognizer(click)
-    }
-
-    private func configureLabels() {
-        titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
-        titleLabel.textColor = MacColors.primaryLabel
-        titleLabel.alignment = .center
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.heightAnchor.constraint(equalToConstant: 28).isActive = true
-        titleLabel.setContentCompressionResistancePriority(.required, for: .vertical)
-
-        artistButton.font = .systemFont(ofSize: 15, weight: .medium)
-        artistButton.contentTintColor = MacColors.primaryLabel
-        artistButton.target = self
-        artistButton.action = #selector(artistTapped)
-        artistButton.setContentCompressionResistancePriority(.required, for: .vertical)
-
-        albumLabel.font = .systemFont(ofSize: 12)
-        albumLabel.textColor = MacColors.tertiaryLabel
-        albumLabel.lineBreakMode = .byTruncatingTail
-        albumLabel.alignment = .center
-        albumLabel.setContentCompressionResistancePriority(.required, for: .vertical)
-
-        badgeLabel.font = .systemFont(ofSize: 10, weight: .semibold)
-        badgeLabel.textColor = NSColor(red: 0.45, green: 0.86, blue: 0.92, alpha: 1)
-        badgeContainer.wantsLayer = true
-        badgeContainer.layer?.borderColor = NSColor(red: 0.45, green: 0.86, blue: 0.92, alpha: 0.6).cgColor
-        badgeContainer.layer?.borderWidth = 1
-        badgeContainer.layer?.cornerRadius = 7
-        badgeContainer.translatesAutoresizingMaskIntoConstraints = false
-        badgeLabel.translatesAutoresizingMaskIntoConstraints = false
-        badgeContainer.addSubview(badgeLabel)
-        NSLayoutConstraint.activate([
-            badgeLabel.leadingAnchor.constraint(equalTo: badgeContainer.leadingAnchor, constant: 6),
-            badgeLabel.trailingAnchor.constraint(equalTo: badgeContainer.trailingAnchor, constant: -6),
-            badgeLabel.topAnchor.constraint(equalTo: badgeContainer.topAnchor, constant: 3),
-            badgeLabel.bottomAnchor.constraint(equalTo: badgeContainer.bottomAnchor, constant: -3),
-        ])
-
-        loveButton = TransportButton(
-            symbolName: "heart", pointSize: 16, accessibilityLabel: String(localized: "Love on Last.fm"),
-            target: self, action: #selector(toggleLove)
-        )
-
-        for label in [elapsedLabel, remainingLabel] {
-            label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-            label.textColor = MacColors.secondaryLabel
-            label.alignment = label === elapsedLabel ? .right : .left
-            label.setContentHuggingPriority(.required, for: .horizontal)
-            label.setContentCompressionResistancePriority(.required, for: .horizontal)
-            label.widthAnchor.constraint(equalToConstant: 52).isActive = true
-        }
-    }
-
-    private func buildTransportButtons() {
-        shuffleButton = TransportButton(
-            symbolName: "shuffle", pointSize: 15, accessibilityLabel: String(localized: "Shuffle"),
-            target: self, action: #selector(toggleShuffle)
-        )
-        backFifteenButton = TransportButton(
-            symbolName: "gobackward.15", pointSize: 16, accessibilityLabel: String(localized: "Back 15 seconds"),
-            target: self, action: #selector(skipBackFifteen)
-        )
-        previousButton = TransportButton(
-            symbolName: "backward.fill", pointSize: 20, accessibilityLabel: String(localized: "Previous"),
-            target: self, action: #selector(previousTrack)
-        )
-        playPauseButton = TransportButton(
-            symbolName: "play.fill", pointSize: 34, accessibilityLabel: String(localized: "Play or pause"),
-            target: self, action: #selector(togglePlayPause)
-        )
-        playPauseButton.isProminent = true
-        playPauseButton.widthAnchor.constraint(equalToConstant: 72).isActive = true
-        playPauseButton.heightAnchor.constraint(equalToConstant: 72).isActive = true
-        nextButton = TransportButton(
-            symbolName: "forward.fill", pointSize: 20, accessibilityLabel: String(localized: "Next"),
-            target: self, action: #selector(nextTrack)
-        )
-        forwardFifteenButton = TransportButton(
-            symbolName: "goforward.15", pointSize: 16, accessibilityLabel: String(localized: "Forward 15 seconds"),
-            target: self, action: #selector(skipForwardFifteen)
-        )
-        repeatButton = TransportButton(
-            symbolName: "repeat", pointSize: 15, accessibilityLabel: String(localized: "Repeat"),
-            target: self, action: #selector(cycleRepeat)
-        )
-        let secondaryButtons: [TransportButton] = [
-            shuffleButton, backFifteenButton, previousButton, nextButton, forwardFifteenButton, repeatButton
-        ]
-        for button in secondaryButtons {
-            button.widthAnchor.constraint(equalToConstant: 40).isActive = true
-            button.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        }
-    }
-
-    @objc private func volumeChanged() {
-        player.volume = Float(volumeSlider.doubleValue)
-        refreshVolume()
-    }
-
-    @objc private func volumeDidChangeExternally() {
-        refreshVolume()
-    }
-
-    @objc private func toggleMute() {
-        if player.volume > 0 {
-            volumeBeforeMute = player.volume
-            player.volume = 0
-        } else {
-            player.volume = volumeBeforeMute ?? 0.8
-            volumeBeforeMute = nil
-        }
-        refreshVolume()
-    }
-
-    @objc private func equalizerChanged() {
-        equalizerButton.isActiveToggle = EqualizerEngine.shared.isRunning
-    }
-
-    @objc private func showEqualizerPanel() {
-        if let popover = equalizerPopover, popover.isShown {
-            popover.close()
-            return
-        }
-        let popover = NSPopover()
-        popover.behavior = .transient
-        popover.contentViewController = MacEqualizerQuickPanel()
-        popover.show(relativeTo: equalizerButton.bounds, of: equalizerButton, preferredEdge: .maxY)
-        equalizerPopover = popover
-    }
-
-    private func refreshVolume() {
-        let volume = player.volume
-        volumeSlider.doubleValue = Double(volume)
-        volumeLabel.stringValue = "\(Int((volume * 100).rounded()))%"
-        let symbol: String
-        if volume == 0 {
-            symbol = "speaker.slash.fill"
-        } else if volume < 0.34 {
-            symbol = "speaker.wave.1.fill"
-        } else if volume < 0.67 {
-            symbol = "speaker.wave.2.fill"
-        } else {
-            symbol = "speaker.wave.3.fill"
-        }
-        volumeButton.setSymbol(symbol, pointSize: 13)
-        volumeButton.isActiveToggle = volume == 0
-        volumeButton.setAccessibilityLabel(
-            volume == 0 ? String(localized: "Unmute") : String(localized: "Mute")
-        )
-    }
-
-    private func configureScrubber() {
-        scrubber.onScrub = { [weak self] time in
-            self?.chaseSeek(to: time)
-        }
-        scrubber.onCommit = { [weak self] time in
-            self?.player.seek(to: time)
-        }
-    }
-
-    private func buildActionCapsules() -> NSView {
-        sleepCapsule = CapsuleButton(symbolName: "moon.zzz", title: String(localized: "Sleep")) { [weak self] button in
-            self?.showSleepMenu(from: button)
-        }
-        shareCapsule = CapsuleButton(symbolName: "square.and.arrow.up", title: String(localized: "Share")) { [weak self] button in
-            self?.shareCurrentTrack(from: button)
-        }
-
-        equalizerButton = TransportButton(
-            symbolName: "slider.vertical.3", pointSize: 13,
-            accessibilityLabel: EqualizerCopy.title, target: self, action: #selector(showEqualizerPanel)
-        )
-        equalizerButton.widthAnchor.constraint(equalToConstant: 30).isActive = true
-        equalizerButton.heightAnchor.constraint(equalToConstant: 26).isActive = true
-        equalizerButton.isActiveToggle = EqualizerEngine.shared.isRunning
-
-        routePicker.translatesAutoresizingMaskIntoConstraints = false
-        routePicker.widthAnchor.constraint(equalToConstant: 34).isActive = true
-        routePicker.heightAnchor.constraint(equalToConstant: 26).isActive = true
-
-        let row = NSStackView(views: [sleepCapsule, shareCapsule, equalizerButton, routePicker])
-        row.orientation = .horizontal
-        row.spacing = 10
-        row.alignment = .centerY
-        return row
-    }
-
-    private func apply(_ state: NowPlayingViewModel.State) {
+    func apply(_ state: NowPlayingViewModel.State) {
         let trackKey = "\(state.title)\u{0}\(state.artist)\u{0}\(state.albumTitle)"
         let trackChanged = trackKey != currentTrackKey
         if trackChanged {
@@ -833,13 +199,13 @@ final class NowPlayingViewController: NSViewController {
         remainingLabel.stringValue = state.remainingTimeFormatted
     }
 
-    private func applyProgress(_ progress: NowPlayingViewModel.Progress) {
+    func applyProgress(_ progress: NowPlayingViewModel.Progress) {
         scrubber.setProgress(current: progress.currentTime, duration: progress.duration)
         elapsedLabel.stringValue = progress.currentTimeFormatted
         remainingLabel.stringValue = progress.remainingTimeFormatted
     }
 
-    private func updatePalette(state: NowPlayingViewModel.State, animated: Bool) {
+    func updatePalette(state: NowPlayingViewModel.State, animated: Bool) {
         let key = "\(state.albumTitle)\u{0}\(state.artist)"
         guard key != currentPaletteKey || (state.artwork != nil && state.artwork !== paletteArtwork) else { return }
         currentPaletteKey = key
@@ -854,7 +220,7 @@ final class NowPlayingViewController: NSViewController {
         }
     }
 
-    private func updateBreathing(paused: Bool) {
+    func updateBreathing(paused: Bool) {
         guard paused != isBreathing else { return }
         isBreathing = paused
         artworkContainer.wantsLayer = true
@@ -890,7 +256,7 @@ final class NowPlayingViewController: NSViewController {
         }
     }
 
-    private func applyArtworkPlaceholder(seed: String) {
+    func applyArtworkPlaceholder(seed: String) {
         artworkView.image = nil
         artworkPlaceholder.isHidden = false
         let (base, second) = PlaceholderGradient.colors(seed: seed)
@@ -903,354 +269,4 @@ final class NowPlayingViewController: NSViewController {
         CATransaction.commit()
     }
 
-    private func prefetchLyrics() {
-        guard let track = player.currentTrack else { return }
-        LyricsService.shared.prefetch(
-            track: track.title, artist: track.artist, album: track.albumTitle,
-            fileURL: track.fileURL, duration: track.duration
-        )
-    }
-
-    private func chaseSeek(to time: TimeInterval) {
-        guard !chaseInFlight else {
-            pendingChaseTime = time
-            return
-        }
-        chaseInFlight = true
-        let generation = chaseGeneration
-        let target = CMTime(seconds: time, preferredTimescale: 600)
-        let tolerance = CMTime(seconds: 0.12, preferredTimescale: 600)
-        player.seekSmooth(to: target, tolerance: tolerance) { [weak self] in
-            guard let self else { return }
-            self.chaseInFlight = false
-            guard generation == self.chaseGeneration, let pending = self.pendingChaseTime else { return }
-            self.pendingChaseTime = nil
-            self.chaseSeek(to: pending)
-        }
-    }
-
-    private func showSleepMenu(from button: NSView) {
-        let menu = SleepTimerMenuBuilder.build()
-        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
-    }
-
-    private func shareCurrentTrack(from button: NSView) {
-        guard let track = player.currentTrack else { return }
-        let menu = NSMenu()
-        let share = menu.addItem(withTitle: String(localized: "Share via Songlink…"), action: #selector(shareSonglink(_:)), keyEquivalent: "")
-        share.target = self
-        share.representedObject = button
-        let copy = menu.addItem(withTitle: String(localized: "Copy Songlink URL"), action: #selector(copySonglink(_:)), keyEquivalent: "")
-        copy.target = self
-        menu.addItem(.separator())
-        let info = menu.addItem(withTitle: "\(track.title) — \(track.artist)", action: nil, keyEquivalent: "")
-        info.isEnabled = false
-        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
-    }
-
-    @objc private func shareSonglink(_ sender: NSMenuItem) {
-        guard let track = player.currentTrack else { return }
-        let anchor = (sender.representedObject as? NSView) ?? shareCapsule
-        Task { [weak self] in
-            let outcome = await SonglinkService.shared.lookup(title: track.title, artist: track.artist)
-            guard let result = outcome.result else {
-                if let message = outcome.failureMessage(title: track.title) {
-                    MacToast.show(message, style: .error, in: self?.view.window)
-                }
-                return
-            }
-            guard self != nil, let anchor else { return }
-            let picker = NSSharingServicePicker(items: [
-                String(localized: "\(result.title) by \(result.artist)"), result.pageURL,
-            ])
-            picker.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
-        }
-    }
-
-    @objc private func copySonglink(_ sender: NSMenuItem) {
-        guard let track = player.currentTrack else { return }
-        Task { [weak self] in
-            let outcome = await SonglinkService.shared.lookup(title: track.title, artist: track.artist)
-            guard let result = outcome.result else {
-                if let message = outcome.failureMessage(title: track.title) {
-                    MacToast.show(message, style: .error, in: self?.view.window)
-                }
-                return
-            }
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(result.pageURL.absoluteString, forType: .string)
-            MacToast.show(String(localized: "Songlink copied"), style: .success, in: self?.view.window)
-        }
-    }
-
-    @objc private func artistTapped() {
-        guard let track = player.currentTrack else { return }
-        LibraryNavigator.revealArtist(LibraryHygiene.primaryArtist(track.artist))
-        closeTapped()
-    }
-
-    @objc private func closeTapped() {
-        onClose?()
-    }
-
-    @objc private func togglePlayPause() { player.togglePlayPause() }
-    @objc private func nextTrack() { player.nextTrack() }
-    @objc private func previousTrack() { player.previousTrack() }
-    @objc private func toggleShuffle() { player.toggleShuffle() }
-    @objc private func cycleRepeat() { player.cycleRepeatMode() }
-
-    @objc private func skipBackFifteen() {
-        player.seek(to: max(0, player.currentTime - 15))
-    }
-
-    @objc private func skipForwardFifteen() {
-        player.seek(to: min(player.duration, player.currentTime + 15))
-    }
-
-    @objc private func toggleLove() {
-        guard let track = player.currentTrack else { return }
-        Task { _ = await LovedTracksService.shared.toggleLove(track: track) }
-    }
-
-    @objc private func modesChanged() {
-        shuffleButton.isActiveToggle = player.shuffleEnabled
-        repeatButton.isActiveToggle = player.repeatMode != .off
-        repeatButton.setSymbol(player.repeatMode == .one ? "repeat.1" : "repeat", pointSize: 15)
-    }
-
-    @objc private func lovedChanged() {
-        guard let track = player.currentTrack else {
-            loveButton.setSymbol("heart", pointSize: 16)
-            return
-        }
-        let loved = LovedTracksService.shared.isLoved(track: track)
-        loveButton.setSymbol(loved ? "heart.fill" : "heart", pointSize: 16)
-        loveButton.contentTintColor = loved
-            ? NSColor(red: 1.0, green: 0.28, blue: 0.42, alpha: 1)
-            : .secondaryLabelColor
-    }
-
-    @objc private func sleepTimerChanged() {
-        if let remaining = player.sleepTimerRemaining {
-            let total = Int(remaining)
-            sleepCapsule.title = String(format: "%d:%02d", total / 60, total % 60)
-            sleepCapsule.isActiveToggle = true
-        } else if player.sleepAtEndOfTrack {
-            sleepCapsule.title = String(localized: "End of track")
-            sleepCapsule.isActiveToggle = true
-        } else {
-            sleepCapsule.title = String(localized: "Sleep")
-            sleepCapsule.isActiveToggle = false
-        }
-    }
-}
-
-/// Shared sleep-timer menu used by the immersive view, the transport bar, and
-/// the menu bar extra; items dispatch straight to the player.
-@MainActor
-enum SleepTimerMenuBuilder {
-
-    static func build() -> NSMenu {
-        let menu = NSMenu()
-        for minutes in [15, 30, 45, 60, 90] {
-            let item = menu.addItem(
-                withTitle: String(localized: "\(minutes) minutes"), action: #selector(SleepTimerMenuTarget.setMinutes(_:)), keyEquivalent: ""
-            )
-            item.tag = minutes
-            item.target = SleepTimerMenuTarget.shared
-        }
-        menu.addItem(.separator())
-        let endOfTrack = menu.addItem(
-            withTitle: String(localized: "End of Track"), action: #selector(SleepTimerMenuTarget.endOfTrack(_:)), keyEquivalent: ""
-        )
-        endOfTrack.target = SleepTimerMenuTarget.shared
-        endOfTrack.state = AudioPlayer.shared.sleepAtEndOfTrack ? .on : .off
-        let active = AudioPlayer.shared.sleepTimerRemaining != nil || AudioPlayer.shared.sleepAtEndOfTrack
-        if active {
-            menu.addItem(.separator())
-            let cancel = menu.addItem(
-                withTitle: String(localized: "Cancel Timer"), action: #selector(SleepTimerMenuTarget.cancel(_:)), keyEquivalent: ""
-            )
-            cancel.target = SleepTimerMenuTarget.shared
-        }
-        return menu
-    }
-}
-
-final class SleepTimerMenuTarget: NSObject {
-
-    @MainActor static let shared = SleepTimerMenuTarget()
-
-    @MainActor @objc func setMinutes(_ sender: NSMenuItem) {
-        AudioPlayer.shared.setSleepTimer(minutes: sender.tag)
-        MidgarLog.info("Sleep timer set: \(sender.tag) minutes", category: .playback)
-    }
-
-    @MainActor @objc func endOfTrack(_ sender: NSMenuItem) {
-        AudioPlayer.shared.setSleepTimerEndOfTrack()
-        MidgarLog.info("Sleep timer set: end of track", category: .playback)
-    }
-
-    @MainActor @objc func cancel(_ sender: NSMenuItem) {
-        AudioPlayer.shared.cancelSleepTimer()
-        MidgarLog.info("Sleep timer cancelled", category: .playback)
-    }
-}
-
-/// Glass action capsule with an SF Symbol and a short title; highlights while
-/// toggled active.
-final class CapsuleButton: NSControl {
-
-    var onTap: ((CapsuleButton) -> Void)?
-
-    var title: String {
-        get { label.stringValue }
-        set { label.stringValue = newValue }
-    }
-
-    var isActiveToggle = false {
-        didSet { refreshBackground() }
-    }
-
-    private let icon = NSImageView()
-    private let label = NSTextField(labelWithString: "")
-    private let background = NSView()
-    private var isHovered = false
-
-    init(symbolName: String, title: String, onTap: @escaping (CapsuleButton) -> Void) {
-        self.onTap = onTap
-        super.init(frame: .zero)
-        wantsLayer = true
-
-        background.wantsLayer = true
-        background.layer?.cornerRadius = 15
-        background.layer?.cornerCurve = .continuous
-        background.layer?.backgroundColor = MacColors.fill(0.1).cgColor
-        background.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(background)
-
-        icon.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: title)
-        icon.symbolConfiguration = .init(pointSize: 11, weight: .semibold)
-        icon.contentTintColor = .labelColor
-        label.stringValue = title
-        label.font = .systemFont(ofSize: 11, weight: .semibold)
-        label.textColor = .labelColor
-
-        let stack = NSStackView(views: [icon, label])
-        stack.orientation = .horizontal
-        stack.spacing = 5
-        stack.edgeInsets = NSEdgeInsets(top: 7, left: 12, bottom: 7, right: 12)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            background.topAnchor.constraint(equalTo: topAnchor),
-            background.leadingAnchor.constraint(equalTo: leadingAnchor),
-            background.trailingAnchor.constraint(equalTo: trailingAnchor),
-            background.bottomAnchor.constraint(equalTo: bottomAnchor),
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-        setAccessibilityRole(.button)
-        setAccessibilityLabel(title)
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(
-            rect: bounds, options: [.mouseEnteredAndExited, .activeInKeyWindow], owner: self, userInfo: nil
-        ))
-    }
-
-    override func mouseEntered(with event: NSEvent) {
-        isHovered = true
-        refreshBackground()
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        isHovered = false
-        refreshBackground()
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        onTap?(self)
-    }
-
-    override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .pointingHand)
-    }
-
-    private func refreshBackground() {
-        let alpha: CGFloat = isActiveToggle ? 0.28 : (isHovered ? 0.18 : 0.1)
-        background.layer?.backgroundColor = MacColors.fill(alpha).cgColor
-    }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        refreshBackground()
-    }
-}
-
-/// A container that runs a callback whenever the effective appearance flips, so
-/// layer-backed colors (which don't auto-resolve) can be recomputed.
-final class AppearanceReactiveView: NSView {
-    var onAppearanceChange: (() -> Void)?
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        onAppearanceChange?()
-    }
-}
-
-/// Borderless text button that underlines on hover, used for the artist name.
-final class HoverUnderlineButton: NSButton {
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        isBordered = false
-        setButtonType(.momentaryChange)
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(
-            rect: bounds, options: [.mouseEnteredAndExited, .activeInKeyWindow], owner: self, userInfo: nil
-        ))
-    }
-
-    override func mouseEntered(with event: NSEvent) {
-        applyUnderline(true)
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        applyUnderline(false)
-    }
-
-    override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .pointingHand)
-    }
-
-    private func applyUnderline(_ underlined: Bool) {
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font ?? .systemFont(ofSize: 15),
-            .foregroundColor: contentTintColor ?? .labelColor,
-            .underlineStyle: underlined ? NSUnderlineStyle.single.rawValue : 0,
-        ]
-        attributedTitle = NSAttributedString(string: title, attributes: attributes)
-    }
-}
-
-private extension NSLayoutConstraint {
-    func with(priority: NSLayoutConstraint.Priority) -> NSLayoutConstraint {
-        self.priority = priority
-        return self
-    }
 }

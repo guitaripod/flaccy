@@ -9,157 +9,23 @@ final class SettingsViewController: UITableViewController {
 
     var onImportFiles: (() -> Void)?
 
-    nonisolated private enum Section: Int, CaseIterable, Hashable {
-        case midgar
-        case appearance
-        case trial
-        case lastFM
-        case recap
-        case playback
-        case guide
-        case watch
-        case library
-        case setup
-        case about
+    static let cellReuseIdentifier = "SettingsCell"
 
-        var header: String? {
-            switch self {
-            case .midgar: return nil
-            case .appearance: return String(localized: "Appearance")
-            case .trial: return String(localized: "Trial")
-            case .lastFM: return "Last.fm"
-            case .recap: return String(localized: "Year in Music")
-            case .playback: return String(localized: "Playback")
-            case .guide: return nil
-            case .watch: return String(localized: "Apple Watch")
-            case .library: return String(localized: "Library")
-            case .setup: return nil
-            case .about: return String(localized: "About")
-            }
-        }
+    let selectionFeedback = UISelectionFeedbackGenerator()
+    let impactLight = UIImpactFeedbackGenerator(style: .light)
+    let impactMedium = UIImpactFeedbackGenerator(style: .medium)
+    let notificationFeedback = UINotificationFeedbackGenerator()
 
-        var footer: String? {
-            switch self {
-            case .midgar: return nil
-            case .appearance: return String(localized: "System follows your device's light and dark setting.")
-            case .trial: return String(localized: "Three reminders at most: two days before your trial ends, on the last day, and once if a welcome-back price becomes available.")
-            case .lastFM: return nil
-            case .recap: return String(localized: "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story.")
-            case .playback: return Self.playbackFooter
-            case .guide: return String(localized: "How Bluetooth, AAC, and lossless files really affect what you hear.")
-            case .watch: return nil
-            case .library: return Self.libraryFooter
-            case .setup: return LibraryDebutCopy.settingsCaveat
-            case .about: return nil
-            }
-        }
-
-        /// Names the one format caveat listeners actually hear, so a lossy album
-        /// that clicks between tracks reads as the file's doing rather than the
-        /// app quietly failing at the thing it advertises.
-        private static var playbackFooter: String {
-            let gapless = String(localized: "Gapless is always on. Consecutive album tracks play with no silence between them — no setting to turn on, nothing to configure.")
-            let formats = String(localized: "It is exact for lossless files: FLAC, ALAC, WAV, AIFF. MP3 and AAC store a fraction of a second of encoder padding inside every file, which iOS does not strip, so those albums can still click between tracks. Re-rip the album to FLAC and the seam disappears.")
-            let autoplay = String(localized: "Autoplay keeps a similar-music station going when the queue ends.")
-            return "\(gapless)\n\n\(formats)\n\n\(autoplay)"
-        }
-
-        /// One sentence per switch in the section, in the order the switches
-        /// appear.
-        private static var libraryFooter: String {
-            let editions = String(localized: "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song.")
-            let duplicates = String(localized: "Hide duplicate songs lists a song once when it sits on several albums, such as a single and the album it came from. Press and hold a song to see every copy.")
-            let appleMusic = String(localized: "Flaccy asks Apple Music for covers it can't find anywhere else. Turning this on asks for permission once.")
-            return "\(editions)\n\n\(duplicates)\n\n\(appleMusic)"
-        }
-    }
-
-    nonisolated private enum Row: Hashable {
-        case appearance(AppAppearance)
-        case trialReminders(enabled: Bool)
-        case lastFMAccount(username: String?)
-        case pendingScrobbles(count: Int)
-        case importLastFM
-        case yearInMusic
-        case recapNotifications(frequency: String)
-        case equalizer(summary: String)
-        case gaplessPlayback
-        case autoplaySimilar
-        case libraryRadio
-        case crateDig
-        case listeningGuide
-        case watchSync(syncedCount: Int, profile: WatchAudioProfile)
-        case importFiles
-        case rescanLibrary
-        case groupAlbumEditions
-        case hideDuplicateSongs
-        case metadataReport(complete: Int, gaveUp: Int)
-        case findMissingArtwork(count: Int)
-        case appleMusicArtwork(Bool)
-        case libraryStats(albums: Int, tracks: Int)
-        case storage(used: String)
-        case libraryDebutSummary
-        case midgarEntry
-        case privacyPolicy
-        case termsOfUse
-    }
-
-    /// Renders an Apple-Settings-style icon: a white SF Symbol glyph centered
-    /// on a tinted continuous-corner rounded square.
-    private enum RowIcon {
-        static let side: CGFloat = 29
-
-        static func image(systemName: String, tint: UIColor) -> UIImage {
-            let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
-            return renderer.image { _ in
-                let rect = CGRect(x: 0, y: 0, width: side, height: side)
-                let path = UIBezierPath(roundedRect: rect, cornerRadius: 6.5)
-                tint.setFill()
-                path.fill()
-                let config = UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
-                guard let glyph = UIImage(systemName: systemName, withConfiguration: config)?
-                    .withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
-                let glyphRect = CGRect(
-                    x: (side - glyph.size.width) / 2,
-                    y: (side - glyph.size.height) / 2,
-                    width: glyph.size.width,
-                    height: glyph.size.height
-                )
-                glyph.draw(in: glyphRect)
-            }
-        }
-    }
-
-    private final class DataSource: UITableViewDiffableDataSource<Section, Row> {
-        var footerForSection: ((Section) -> String?)?
-
-        override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-            sectionIdentifier(for: section)?.header
-        }
-
-        override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-            guard let section = sectionIdentifier(for: section) else { return nil }
-            return footerForSection?(section) ?? section.footer
-        }
-    }
-
-    private static let cellReuseIdentifier = "SettingsCell"
-
-    private let selectionFeedback = UISelectionFeedbackGenerator()
-    private let impactLight = UIImpactFeedbackGenerator(style: .light)
-    private let impactMedium = UIImpactFeedbackGenerator(style: .medium)
-    private let notificationFeedback = UINotificationFeedbackGenerator()
-
-    private let headerView = SettingsHeaderView()
-    private var dataSource: DataSource!
-    private var storageUsed: String?
-    private var playsCount: Int?
-    private var lastFMImportProgress: Int?
-    private var isRescanning = false
-    private let metadataViewModel = EnrichmentReportViewModel()
-    private var libraryDebut: LibraryDebutSummary?
-    private var isTrialSectionVisible = false
-    private var isRestoring = false
+    let headerView = SettingsHeaderView()
+    var dataSource: DataSource!
+    var storageUsed: String?
+    var playsCount: Int?
+    var lastFMImportProgress: Int?
+    var isRescanning = false
+    let metadataViewModel = EnrichmentReportViewModel()
+    var libraryDebut: LibraryDebutSummary?
+    var isTrialSectionVisible = false
+    var isRestoring = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -197,7 +63,7 @@ final class SettingsViewController: UITableViewController {
 
     /// The Metadata row and the report it pushes read the same view model, so a
     /// count can never be stale in one place and live in the other.
-    private func observeMetadata() {
+    func observeMetadata() {
         metadataViewModel.onChange = { [weak self] in
             self?.applySnapshot(animated: true)
         }
@@ -216,7 +82,7 @@ final class SettingsViewController: UITableViewController {
         sizeHeaderToFit()
     }
 
-    @objc private func purchaseStateChanged() {
+    @objc func purchaseStateChanged() {
         refreshHeader()
         applySnapshot(animated: true)
         refreshTrialSectionVisibility()
@@ -225,7 +91,7 @@ final class SettingsViewController: UITableViewController {
     /// The reminders row stays while the trial runs or has lapsed, and for as
     /// long as any reminder is still pending — so a switch is never taken away
     /// from someone who still has a notification queued.
-    private func refreshTrialSectionVisibility() {
+    func refreshTrialSectionVisibility() {
         Task { [weak self] in
             var visible = !PurchaseManager.shared.state.isPurchased
             if !visible {
@@ -237,7 +103,7 @@ final class SettingsViewController: UITableViewController {
         }
     }
 
-    private func makeDoneButton() -> UIBarButtonItem {
+    func makeDoneButton() -> UIBarButtonItem {
         UIBarButtonItem(
             systemItem: .done,
             primaryAction: UIAction { [weak self] _ in
@@ -247,7 +113,7 @@ final class SettingsViewController: UITableViewController {
         )
     }
 
-    private func configureHeader() {
+    func configureHeader() {
         headerView.onUnlockTapped = { [weak self] in
             guard let self else { return }
             self.impactMedium.impactOccurred()
@@ -262,7 +128,7 @@ final class SettingsViewController: UITableViewController {
         tableView.tableHeaderView = headerView
     }
 
-    private func handleRestorePurchases() {
+    func handleRestorePurchases() {
         guard !isRestoring else { return }
         impactLight.impactOccurred()
         isRestoring = true
@@ -287,7 +153,7 @@ final class SettingsViewController: UITableViewController {
         }
     }
 
-    private func handleManageSubscription() {
+    func handleManageSubscription() {
         guard let scene = view.window?.windowScene else { return }
         selectionFeedback.selectionChanged()
         Task {
@@ -299,7 +165,7 @@ final class SettingsViewController: UITableViewController {
         }
     }
 
-    private func refreshHeader() {
+    func refreshHeader() {
         headerView.configure(
             state: PurchaseManager.shared.state,
             lifetimeOffer: PurchaseManager.shared.lifetimeOfferToPresent,
@@ -313,7 +179,7 @@ final class SettingsViewController: UITableViewController {
     /// A `tableHeaderView` is frame-driven, so its Auto Layout height is measured
     /// and stamped whenever the width or content changes, re-assigning the header
     /// to force the table to adopt the new height.
-    private func sizeHeaderToFit() {
+    func sizeHeaderToFit() {
         let width = tableView.bounds.width
         guard width > 0 else { return }
         let height = headerView.systemLayoutSizeFitting(
@@ -327,7 +193,7 @@ final class SettingsViewController: UITableViewController {
         }
     }
 
-    private func configureDataSource() {
+    func configureDataSource() {
         dataSource = DataSource(tableView: tableView) {
             [weak self] tableView, indexPath, row in
             self?.cell(for: row, at: indexPath, in: tableView) ?? UITableViewCell()
@@ -338,11 +204,11 @@ final class SettingsViewController: UITableViewController {
         dataSource.defaultRowAnimation = .fade
     }
 
-    private var pendingScrobbleCount: Int {
+    var pendingScrobbleCount: Int {
         (try? DatabaseManager.shared.fetchPendingScrobbles().count) ?? 0
     }
 
-    private func applySnapshot(animated: Bool) {
+    func applySnapshot(animated: Bool) {
         var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
         snapshot.appendSections(Section.allCases.filter { $0 != .trial || isTrialSectionVisible })
         snapshot.appendItems([.midgarEntry], toSection: .midgar)
@@ -383,7 +249,7 @@ final class SettingsViewController: UITableViewController {
     /// `Find Missing Artwork` appears only while there is something to find. A
     /// button that does nothing visible when tapped is worse than no button, and
     /// a settled library is supposed to be quiet everywhere.
-    private func libraryRows() -> [Row] {
+    func libraryRows() -> [Row] {
         let counts = metadataViewModel.counts
         var rows: [Row] = [
             .importFiles,
@@ -399,469 +265,6 @@ final class SettingsViewController: UITableViewController {
         rows.append(.libraryStats(albums: Library.shared.albums.count, tracks: Library.shared.allTracks.count))
         rows.append(.storage(used: storageUsed ?? "…"))
         return rows
-    }
-
-    private func cell(for row: Row, at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
-        if case .appearance(let current) = row {
-            return appearanceCell(current: current, in: tableView, at: indexPath)
-        }
-        if case .midgarEntry = row {
-            return tableView.dequeueReusableCell(withIdentifier: MidgarEntryCell.reuseID, for: indexPath)
-        }
-
-        let cell = tableView.dequeueReusableCell(withIdentifier: Self.cellReuseIdentifier, for: indexPath)
-        cell.accessoryType = .none
-        cell.accessoryView = nil
-        cell.selectionStyle = .default
-        cell.accessibilityTraits = .button
-        cell.accessibilityValue = nil
-        cell.accessibilityHint = nil
-        cell.accessibilityIdentifier = nil
-
-        var content = Self.baseContent(for: row)
-
-        switch row {
-        case .appearance, .midgarEntry:
-            break
-
-        case .privacyPolicy:
-            content.image = RowIcon.image(systemName: "hand.raised.fill", tint: .systemBlue)
-            content.text = String(localized: "Privacy Policy")
-            content.textProperties.color = .tintColor
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Privacy Policy")
-
-        case .termsOfUse:
-            content.image = RowIcon.image(systemName: "doc.text.fill", tint: .systemGray)
-            content.text = String(localized: "Terms of Use")
-            content.textProperties.color = .tintColor
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Terms of Use")
-
-        case .trialReminders(let enabled):
-            content.image = RowIcon.image(systemName: "bell.badge.fill", tint: .systemOrange)
-            content.text = String(localized: "Trial reminders")
-            cell.selectionStyle = .none
-            cell.accessoryView = makeTrialRemindersSwitch(isEnabled: enabled)
-            cell.accessibilityTraits = []
-            cell.accessibilityLabel = String(localized: "Trial reminders")
-            cell.accessibilityIdentifier = "settings.row.trialReminders"
-
-        case .lastFMAccount(let username):
-            content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemRed)
-            if let username {
-                content.text = String(localized: "Last.fm Account")
-                content.secondaryText = username
-                cell.accessoryType = .disclosureIndicator
-                cell.accessibilityHint = String(localized: "Shows account options")
-            } else {
-                content.text = String(localized: "Connect to Last.fm")
-                cell.accessoryType = .disclosureIndicator
-                cell.accessibilityHint = String(localized: "Signs in to Last.fm to scrobble your listens")
-            }
-            cell.accessibilityLabel = content.text
-            cell.accessibilityValue = content.secondaryText
-
-        case .pendingScrobbles(let count):
-            content.image = RowIcon.image(systemName: "clock.arrow.circlepath", tint: .systemOrange)
-            content.text = String(localized: "Retry Pending Scrobbles")
-            content.secondaryText = "\(count)"
-            content.textProperties.color = .tintColor
-            cell.accessibilityLabel = String(localized: "Retry pending scrobbles")
-            cell.accessibilityValue = String(localized: "\(count) pending scrobbles")
-
-        case .importLastFM:
-            content.image = RowIcon.image(systemName: "square.and.arrow.down.on.square", tint: .systemPink)
-            if let imported = lastFMImportProgress {
-                content.text = String(localized: "Importing Last.fm History")
-                if imported > 0 { content.secondaryText = "\(imported)" }
-                cell.accessoryView = makeSpinnerAccessory()
-                cell.selectionStyle = .none
-                cell.accessibilityLabel = String(localized: "Importing Last.fm History")
-                if imported > 0 {
-                    cell.accessibilityValue = String(localized: "\(imported) scrobbles imported")
-                }
-            } else {
-                content.text = String(localized: "Import Last.fm History")
-                content.textProperties.color = .tintColor
-                cell.accessibilityLabel = String(localized: "Import Last.fm History")
-                cell.accessibilityHint = String(localized: "Backfills your listening stats from Last.fm")
-            }
-
-        case .yearInMusic:
-            content.image = RowIcon.image(systemName: "sparkles", tint: .systemIndigo)
-            content.text = String(localized: "Your Year in Music")
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Your Year in Music")
-            cell.accessibilityHint = String(localized: "Shows your yearly listening recap with shareable story cards")
-            cell.accessibilityIdentifier = "settings.row.yearInMusic"
-
-        case .recapNotifications(let frequency):
-            content.image = RowIcon.image(systemName: "bell.badge.fill", tint: .systemRed)
-            content.text = String(localized: "Recap Notifications")
-            content.secondaryText = frequency
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Recap Notifications")
-            cell.accessibilityValue = frequency
-            cell.accessibilityHint = String(localized: "Chooses how often flaccy reminds you about your recap")
-
-        case .equalizer(let summary):
-            content.image = RowIcon.image(systemName: "slider.vertical.3", tint: .systemPink)
-            content.text = EqualizerCopy.title
-            content.secondaryText = summary
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = EqualizerCopy.title
-            cell.accessibilityValue = summary
-            cell.accessibilityHint = String(localized: "Shapes the sound with a response curve and presets")
-            cell.accessibilityIdentifier = "settings.row.equalizer"
-
-        case .gaplessPlayback:
-            content.image = RowIcon.image(systemName: "infinity", tint: .systemPurple)
-            content.text = String(localized: "Gapless Playback")
-            content.secondaryText = String(localized: "Always on")
-            cell.selectionStyle = .none
-            cell.accessibilityLabel = String(localized: "Gapless Playback")
-            cell.accessibilityValue = String(localized: "Always on")
-            cell.accessibilityTraits = []
-
-        case .autoplaySimilar:
-            content.image = RowIcon.image(systemName: "infinity.circle", tint: .systemPink)
-            content.text = String(localized: "Autoplay Similar")
-            cell.selectionStyle = .none
-            cell.accessoryView = makeAutoplaySwitch()
-            cell.accessibilityTraits = []
-
-        case .libraryRadio:
-            content.image = RowIcon.image(systemName: "dot.radiowaves.left.and.right", tint: .systemOrange)
-            content.text = String(localized: "Library Radio")
-            content.textProperties.color = .tintColor
-            cell.accessibilityLabel = String(localized: "Library Radio")
-            cell.accessibilityHint = String(localized: "Plays a station from your most-played tracks")
-
-        case .crateDig:
-            content.image = RowIcon.image(systemName: "opticaldisc.fill", tint: .systemIndigo)
-            content.text = String(localized: "Crate Dig")
-            content.textProperties.color = .tintColor
-            cell.accessibilityLabel = String(localized: "Crate Dig")
-            cell.accessibilityHint = String(localized: "Plays deep cuts from albums you already love")
-
-        case .listeningGuide:
-            content.image = RowIcon.image(systemName: "waveform", tint: .systemCyan)
-            content.text = String(localized: "Listening Guide")
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Listening Guide")
-            cell.accessibilityHint = String(localized: "Explains how Bluetooth, AAC, and lossless audio affect what you hear")
-            cell.accessibilityIdentifier = "settings.row.listeningGuide"
-
-        case .watchSync(let syncedCount, let profile):
-            content.image = RowIcon.image(systemName: "applewatch", tint: .systemBlue)
-            content.text = String(localized: "Sync Music to Watch")
-            content.secondaryText = syncedCount > 0 ? "\(syncedCount) · \(profile.displayName)" : profile.displayName
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Sync Music to Watch")
-            let spoken = [syncedCount > 0 ? String(localized: "\(syncedCount) tracks synced") : nil, profile.displayName]
-            cell.accessibilityValue = spoken.compactMap { $0 }.joined(separator: ", ")
-
-        case .importFiles:
-            content.image = RowIcon.image(systemName: "square.and.arrow.down", tint: .systemGreen)
-            content.text = String(localized: "Import Files")
-            content.textProperties.color = .tintColor
-            cell.accessibilityLabel = String(localized: "Import Files")
-            cell.accessibilityHint = String(localized: "Opens the file browser to add music")
-
-        case .rescanLibrary:
-            content.image = RowIcon.image(systemName: "arrow.clockwise", tint: .systemIndigo)
-            if isRescanning {
-                content.text = String(localized: "Rescanning Library")
-                content.textProperties.color = .secondaryLabel
-                cell.accessoryView = makeSpinnerAccessory()
-                cell.selectionStyle = .none
-                cell.accessibilityLabel = String(localized: "Rescanning Library")
-            } else {
-                content.text = String(localized: "Rescan Library")
-                content.textProperties.color = .tintColor
-                cell.accessibilityLabel = String(localized: "Rescan Library")
-                cell.accessibilityHint = String(localized: "Re-analyzes all tracks")
-            }
-
-        case .groupAlbumEditions:
-            content.image = RowIcon.image(systemName: "square.stack.3d.up", tint: .systemPurple)
-            content.text = String(localized: "Group Album Editions")
-            cell.selectionStyle = .none
-            cell.accessibilityTraits = .none
-            cell.accessoryView = makeGroupEditionsSwitch()
-            cell.accessibilityLabel = String(localized: "Group Album Editions")
-            cell.accessibilityHint = String(localized: "Folds deluxe, remaster, and explicit variants into one album")
-
-        case .hideDuplicateSongs:
-            content.image = RowIcon.image(systemName: "square.on.square", tint: .systemTeal)
-            content.text = String(localized: "Hide Duplicate Songs")
-            cell.selectionStyle = .none
-            cell.accessibilityTraits = .none
-            cell.accessoryView = makeHideDuplicatesSwitch()
-            cell.accessibilityLabel = String(localized: "Hide Duplicate Songs")
-            cell.accessibilityHint = String(localized: "Lists one copy of a song that appears on several albums")
-
-        case .metadataReport(let complete, let gaveUp):
-            content.image = RowIcon.image(systemName: "tag.fill", tint: .systemBlue)
-            content.text = String(localized: "Metadata")
-            content.secondaryText = EnrichmentJobCopy.reportCounts(
-                complete: complete, inProgress: metadataViewModel.counts.inProgress, gaveUp: gaveUp
-            )
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Metadata")
-            cell.accessibilityValue = content.secondaryText
-            cell.accessibilityIdentifier = "settings.row.metadata"
-
-        case .findMissingArtwork(let count):
-            content.image = RowIcon.image(systemName: "photo.on.rectangle.angled", tint: .systemPink)
-            content.text = EnrichmentJobCopy.findMissingArtwork
-            content.secondaryText = EnrichmentJobCopy.detail(remaining: count)
-            content.textProperties.color = .tintColor
-            cell.accessibilityLabel = EnrichmentJobCopy.findMissingArtwork
-            cell.accessibilityValue = content.secondaryText
-
-        case .appleMusicArtwork(let isEnabled):
-            content.image = RowIcon.image(systemName: "music.note", tint: .systemRed)
-            content.text = String(localized: "Use Apple Music artwork")
-            cell.selectionStyle = .none
-            cell.accessibilityTraits = []
-            cell.accessoryView = makeAppleMusicArtworkSwitch(isEnabled: isEnabled)
-            cell.accessibilityLabel = String(localized: "Use Apple Music artwork")
-
-        case .libraryDebutSummary:
-            content.image = RowIcon.image(systemName: "checkmark.seal.fill", tint: .systemGreen)
-            content.text = LibraryDebutCopy.cardTitle
-            content.secondaryText = libraryDebut.map {
-                LibraryDebutCopy.settingsSummary(
-                    builtOn: $0.completedAt, trackCount: $0.trackCount, aiCleanedTracks: $0.aiCleanedTracks
-                )
-            }
-            cell.selectionStyle = .none
-            cell.accessibilityTraits = .staticText
-            cell.accessibilityLabel = LibraryDebutCopy.cardTitle
-            cell.accessibilityValue = content.secondaryText
-
-        case .libraryStats(let albums, let tracks):
-            content.image = RowIcon.image(systemName: "chart.bar.fill", tint: .systemTeal)
-            content.text = String(localized: "Library")
-            content.secondaryText = String(localized: "\(albums) albums, \(tracks) tracks")
-            cell.selectionStyle = .none
-            cell.accessibilityTraits = .staticText
-            cell.accessibilityLabel = String(localized: "Library")
-            cell.accessibilityValue = content.secondaryText
-
-        case .storage(let used):
-            content.image = RowIcon.image(systemName: "internaldrive.fill", tint: .systemGray)
-            content.text = String(localized: "Storage Used")
-            content.secondaryText = used
-            cell.selectionStyle = .none
-            cell.accessibilityTraits = .staticText
-            cell.accessibilityLabel = String(localized: "Storage Used")
-            cell.accessibilityValue = used
-        }
-
-        cell.contentConfiguration = content
-        return cell
-    }
-
-    /// Rows whose secondary text is a sentence rather than a value get the
-    /// subtitle layout, because a trailing value cell truncates the counts to
-    /// nothing on a phone.
-    private static func baseContent(for row: Row) -> UIListContentConfiguration {
-        var content: UIListContentConfiguration
-        switch row {
-        case .metadataReport, .libraryDebutSummary:
-            content = .subtitleCell()
-            content.secondaryTextProperties.font = .preferredFont(forTextStyle: .footnote)
-            content.secondaryTextProperties.numberOfLines = 0
-        default:
-            content = .valueCell()
-            content.secondaryTextProperties.font = .preferredFont(forTextStyle: .body)
-        }
-        content.textProperties.font = .preferredFont(forTextStyle: .body)
-        content.textProperties.adjustsFontForContentSizeCategory = true
-        content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
-        content.secondaryTextProperties.color = .secondaryLabel
-        content.imageProperties.maximumSize = CGSize(width: RowIcon.side, height: RowIcon.side)
-        return content
-    }
-
-    private func appearanceCell(current: AppAppearance, in tableView: UITableView, at indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: AppearanceCell.reuseID, for: indexPath) as! AppearanceCell
-        cell.configure(selected: current)
-        cell.onChange = { [weak self] appearance in
-            guard let self else { return }
-            self.selectionFeedback.selectionChanged()
-            AppAppearance.current = appearance
-            AppearanceApplier.apply(appearance, animated: true)
-            MidgarLog.info("Appearance set to \(appearance.displayName)", category: .ui)
-        }
-        return cell
-    }
-
-    private func makeSpinnerAccessory() -> UIActivityIndicatorView {
-        let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.startAnimating()
-        return spinner
-    }
-
-    private func makeHideDuplicatesSwitch() -> UISwitch {
-        let toggle = UISwitch()
-        toggle.isOn = HideDuplicateSongsSetting.isEnabled
-        toggle.accessibilityLabel = String(localized: "Hide Duplicate Songs")
-        toggle.addAction(UIAction { [weak self] action in
-            guard let toggle = action.sender as? UISwitch else { return }
-            self?.selectionFeedback.selectionChanged()
-            HideDuplicateSongsSetting.set(toggle.isOn)
-        }, for: .valueChanged)
-        return toggle
-    }
-
-    private func makeGroupEditionsSwitch() -> UISwitch {
-        let toggle = UISwitch()
-        toggle.isOn = GroupAlbumEditionsSetting.isEnabled
-        toggle.accessibilityLabel = String(localized: "Group Album Editions")
-        toggle.addAction(UIAction { [weak self] action in
-            guard let toggle = action.sender as? UISwitch else { return }
-            self?.selectionFeedback.selectionChanged()
-            GroupAlbumEditionsSetting.set(toggle.isOn)
-        }, for: .valueChanged)
-        return toggle
-    }
-
-    /// Turning it on asks Apple Music for permission exactly once. A refusal
-    /// snaps the switch back rather than leaving a setting on that the system
-    /// will silently ignore.
-    private func makeAppleMusicArtworkSwitch(isEnabled: Bool) -> UISwitch {
-        let toggle = UISwitch()
-        toggle.isOn = isEnabled
-        toggle.accessibilityLabel = String(localized: "Use Apple Music artwork")
-        toggle.addAction(UIAction { [weak self] action in
-            guard let toggle = action.sender as? UISwitch else { return }
-            self?.selectionFeedback.selectionChanged()
-            self?.setAppleMusicArtwork(enabled: toggle.isOn, toggle: toggle)
-        }, for: .valueChanged)
-        return toggle
-    }
-
-    private func setAppleMusicArtwork(enabled: Bool, toggle: UISwitch) {
-        guard enabled else {
-            AppleMusicArtworkSetting.set(false)
-            return
-        }
-        toggle.isEnabled = false
-        Task { [weak self] in
-            let granted = await MusicKitService.shared.enableArtworkSource()
-            toggle.isEnabled = true
-            toggle.setOn(granted, animated: true)
-            guard let self else { return }
-            if granted {
-                await EnrichmentCoordinator.shared.resume()
-            } else {
-                self.notificationFeedback.notificationOccurred(.warning)
-                MidgarLog.info("Apple Music artwork declined", category: .content)
-            }
-            self.applySnapshot(animated: false)
-        }
-    }
-
-    /// Turning reminders on asks the system once; a refusal snaps the switch
-    /// back and points at the one place that can change the answer.
-    private func makeTrialRemindersSwitch(isEnabled: Bool) -> UISwitch {
-        let toggle = UISwitch()
-        toggle.isOn = isEnabled
-        toggle.accessibilityLabel = String(localized: "Trial reminders")
-        toggle.addAction(UIAction { [weak self] action in
-            guard let toggle = action.sender as? UISwitch else { return }
-            self?.selectionFeedback.selectionChanged()
-            self?.setTrialReminders(enabled: toggle.isOn, toggle: toggle)
-        }, for: .valueChanged)
-        return toggle
-    }
-
-    private func setTrialReminders(enabled: Bool, toggle: UISwitch) {
-        let scheduler = TrialReminderScheduler.shared
-        scheduler.markAsked()
-        guard enabled else {
-            scheduler.disable()
-            refreshTrialSectionVisibility()
-            return
-        }
-        toggle.isEnabled = false
-        Task { [weak self] in
-            let granted = await scheduler.enable()
-            toggle.isEnabled = true
-            toggle.setOn(granted, animated: true)
-            guard let self else { return }
-            if !granted {
-                self.notificationFeedback.notificationOccurred(.warning)
-                ToastView.show(String(localized: "Turn on notifications for Flaccy in Settings"), in: self.view, style: .info)
-            }
-            self.refreshTrialSectionVisibility()
-        }
-    }
-
-    private func makeAutoplaySwitch() -> UISwitch {
-        let toggle = UISwitch()
-        toggle.isOn = AudioPlayer.shared.autoplaySimilarWhenQueueEnds
-        toggle.accessibilityLabel = String(localized: "Autoplay Similar")
-        toggle.accessibilityHint = String(localized: "Keeps a similar-music station going when the queue ends")
-        toggle.addAction(UIAction { [weak self] action in
-            guard let toggle = action.sender as? UISwitch else { return }
-            self?.selectionFeedback.selectionChanged()
-            AudioPlayer.shared.autoplaySimilarWhenQueueEnds = toggle.isOn
-        }, for: .valueChanged)
-        return toggle
-    }
-
-    private func makeVersionFooter() -> UIView {
-        let info = Bundle.main.infoDictionary
-        let name = info?["CFBundleDisplayName"] as? String
-            ?? info?["CFBundleName"] as? String
-            ?? "flaccy"
-        let version = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = info?["CFBundleVersion"] as? String ?? "1"
-
-        let nameLabel = UILabel()
-        nameLabel.text = name
-        nameLabel.font = UIFontMetrics(forTextStyle: .footnote)
-            .scaledFont(for: .systemFont(ofSize: 13, weight: .semibold))
-        nameLabel.adjustsFontForContentSizeCategory = true
-        nameLabel.textColor = .secondaryLabel
-        nameLabel.textAlignment = .center
-
-        let versionLabel = UILabel()
-        versionLabel.text = String(localized: "Version \(version) (\(build))")
-        versionLabel.font = .preferredFont(forTextStyle: .footnote)
-        versionLabel.adjustsFontForContentSizeCategory = true
-        versionLabel.textColor = .tertiaryLabel
-        versionLabel.textAlignment = .center
-
-        let stack = UIStackView(arrangedSubviews: [nameLabel, versionLabel])
-        stack.axis = .vertical
-        stack.spacing = 2
-        stack.alignment = .center
-        stack.isLayoutMarginsRelativeArrangement = true
-        stack.layoutMargins = UIEdgeInsets(top: 20, left: 16, bottom: 24, right: 16)
-        stack.isAccessibilityElement = true
-        stack.accessibilityLabel = String(localized: "\(name), version \(version), build \(build)")
-
-        let width = view.bounds.width
-        let size = stack.systemLayoutSizeFitting(
-            CGSize(width: width, height: UIView.layoutFittingCompressedSize.height),
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        )
-        stack.frame = CGRect(origin: .zero, size: CGSize(width: width, height: size.height))
-        return stack
-    }
-
-    private func lastFMFooter() -> String {
-        if LastFMService.shared.isAuthenticated {
-            return String(localized: "Your listens are scrobbled to Last.fm and your loved tracks stay in sync.")
-        }
-        return String(localized: "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and import your listening history. Everything else works without it.")
     }
 
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -909,365 +312,4 @@ final class SettingsViewController: UITableViewController {
         }
     }
 
-    private func handleMetadataTap() {
-        selectionFeedback.selectionChanged()
-        navigationController?.pushViewController(EnrichmentReportViewController(), animated: true)
-    }
-
-    /// Nudges the durable queue rather than starting a scan: everything still
-    /// owed a lookup is already a row in the database, so this only asks the
-    /// coordinator to get on with it.
-    private func handleFindMissingArtworkTap() {
-        impactLight.impactOccurred()
-        Task { [weak self] in
-            await EnrichmentCoordinator.shared.resume()
-            self?.metadataViewModel.refresh()
-        }
-        MidgarLog.info("Find Missing Artwork requested from Settings", category: .content)
-    }
-
-    private func handleLastFMTap() {
-        if LastFMService.shared.isAuthenticated {
-            presentLastFMAccountSheet()
-        } else {
-            connectLastFM()
-        }
-    }
-
-    private func presentLastFMAccountSheet() {
-        selectionFeedback.selectionChanged()
-        let username = LastFMService.shared.username
-        let sheet = UIAlertController(
-            title: "Last.fm",
-            message: username.map { String(localized: "Connected as \($0)") } ?? String(localized: "Connected"),
-            preferredStyle: .actionSheet
-        )
-        if let username, let profileURL = URL(string: "https://www.last.fm/user/\(username)") {
-            sheet.addAction(UIAlertAction(title: String(localized: "View Profile"), style: .default) { _ in
-                UIApplication.shared.open(profileURL)
-            })
-        }
-        sheet.addAction(UIAlertAction(title: String(localized: "Disconnect"), style: .destructive) { [weak self] _ in
-            self?.confirmDisconnectLastFM()
-        })
-        sheet.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
-        present(sheet, animated: true)
-    }
-
-    private func confirmDisconnectLastFM() {
-        impactMedium.impactOccurred()
-        let alert = UIAlertController(
-            title: String(localized: "Disconnect Last.fm"),
-            message: String(localized: "Your listens will no longer be scrobbled. Your library, play history, and loved tracks stay on this device."),
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
-        alert.addAction(UIAlertAction(title: String(localized: "Disconnect"), style: .destructive) { [weak self] _ in
-            LastFMService.shared.logout()
-            self?.notificationFeedback.notificationOccurred(.success)
-            self?.applySnapshot(animated: true)
-        })
-        present(alert, animated: true)
-    }
-
-    private func connectLastFM() {
-        selectionFeedback.selectionChanged()
-        let fallbackWindow = (view.window?.windowScene ?? UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first { $0.activationState == .foregroundActive })?.keyWindow
-        guard let window = view.window ?? fallbackWindow else {
-            MidgarLog.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
-            return
-        }
-        Task {
-            do {
-                try await LastFMService.shared.authenticate(from: window)
-                notificationFeedback.notificationOccurred(.success)
-                applySnapshot(animated: true)
-            } catch {
-                MidgarLog.error("Last.fm auth failed: \(error.localizedDescription)", category: .auth)
-                guard !isAuthCancellation(error) else { return }
-                notificationFeedback.notificationOccurred(.error)
-                let message = (error as? LastFMError)?.errorDescription
-                    ?? String(localized: "Last.fm sign-in didn't complete: \(error.localizedDescription)")
-                let alert = UIAlertController(
-                    title: String(localized: "Couldn't Connect to Last.fm"),
-                    message: message,
-                    preferredStyle: .alert
-                )
-                alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
-                present(alert, animated: true)
-            }
-        }
-    }
-
-    private func isAuthCancellation(_ error: Error) -> Bool {
-        let nsError = error as NSError
-        return nsError.domain == ASWebAuthenticationSessionError.errorDomain
-            && nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
-    }
-
-    private func handleRetryScrobbles() {
-        impactLight.impactOccurred()
-        Task {
-            await AudioPlayer.shared.retryPendingScrobbles()
-            notificationFeedback.notificationOccurred(.success)
-            applySnapshot(animated: true)
-        }
-    }
-
-    private func handleLibraryRadio() {
-        impactMedium.impactOccurred()
-        AudioPlayer.shared.playLibraryRadio()
-        dismiss(animated: true)
-    }
-
-    private func handleCrateDig() {
-        impactMedium.impactOccurred()
-        AudioPlayer.shared.playCrateDig()
-        dismiss(animated: true)
-    }
-
-    /// Runs the history backfill with the import row rendered as an in-progress
-    /// spinner. `importHistory()` reports nothing itself, so live progress is
-    /// derived by polling the local scrobble count against a pre-import baseline,
-    /// mirroring `ChartsViewModel.importHistory`.
-    private func handleImportLastFM() {
-        guard lastFMImportProgress == nil else { return }
-        impactLight.impactOccurred()
-        lastFMImportProgress = 0
-        reconfigureRow(.importLastFM)
-        let baseline = Self.scrobbleCount()
-
-        let progressTask = Task.detached(priority: .utility) { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 800_000_000)
-                guard !Task.isCancelled, self != nil else { return }
-                let delta = max(0, Self.scrobbleCount() - baseline)
-                await MainActor.run { [weak self] in
-                    guard let self, self.lastFMImportProgress != nil else { return }
-                    self.lastFMImportProgress = delta
-                    self.reconfigureRow(.importLastFM)
-                }
-            }
-        }
-
-        Task { [weak self] in
-            await LastFMStatsService.shared.importHistory()
-            progressTask.cancel()
-            guard let self else { return }
-            self.lastFMImportProgress = nil
-            self.notificationFeedback.notificationOccurred(.success)
-            self.applySnapshot(animated: true)
-            self.refreshPlaysCount()
-        }
-    }
-
-    private func reconfigureRow(_ row: Row) {
-        var snapshot = dataSource.snapshot()
-        guard snapshot.itemIdentifiers.contains(row) else { return }
-        snapshot.reconfigureItems([row])
-        dataSource.apply(snapshot, animatingDifferences: false)
-    }
-
-    private nonisolated static func scrobbleCount() -> Int {
-        (try? DatabaseManager.shared.scrobbleCountInRange(from: .distantPast, to: .distantFuture)) ?? 0
-    }
-
-    private func handleYearInMusicTap() {
-        impactMedium.impactOccurred()
-        present(YearInMusicViewController(), animated: true)
-    }
-
-    private func handleRecapNotificationsTap() {
-        selectionFeedback.selectionChanged()
-        navigationController?.pushViewController(RecapNotificationsViewController(), animated: true)
-    }
-
-    private func handleListeningGuideTap() {
-        selectionFeedback.selectionChanged()
-        navigationController?.pushViewController(ListeningGuideViewController(), animated: true)
-    }
-
-    private func handleWatchTap() {
-        selectionFeedback.selectionChanged()
-        navigationController?.pushViewController(WatchSyncViewController(), animated: true)
-    }
-
-    private func handleImportTap() {
-        impactLight.impactOccurred()
-        dismiss(animated: true) { [weak self] in
-            self?.onImportFiles?()
-        }
-    }
-
-    private func handleRescanTap() {
-        guard !isRescanning, !Library.shared.isLoading else { return }
-        impactMedium.impactOccurred()
-        let alert = UIAlertController(
-            title: String(localized: "Rescan Library"),
-            message: String(localized: "This will re-analyze all tracks with AI. May take a few minutes for large libraries."),
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
-        alert.addAction(UIAlertAction(title: String(localized: "Rescan"), style: .default) { [weak self] _ in
-            self?.performRescan()
-        })
-        present(alert, animated: true)
-    }
-
-    /// Runs the rescan with only the rescan row disabled and spinning, so the
-    /// sheet stays dismissible; the singleton `Library` carries the work if this
-    /// controller is deallocated mid-scan.
-    private func performRescan() {
-        isRescanning = true
-        reconfigureRow(.rescanLibrary)
-
-        Task { [weak self] in
-            await Library.shared.resetAndReload()
-            guard let self else { return }
-            self.isRescanning = false
-            self.reconfigureRow(.rescanLibrary)
-            self.notificationFeedback.notificationOccurred(.success)
-            self.applySnapshot(animated: true)
-            self.refreshHeader()
-            self.refreshStorageUsed()
-            self.refreshPlaysCount()
-            self.refreshLibraryDebut()
-            self.metadataViewModel.refresh()
-        }
-    }
-
-    /// Recomputes the Documents-tree size off the main thread and re-renders the
-    /// storage row when it lands; every other snapshot renders the cached value.
-    private func refreshStorageUsed() {
-        Task.detached(priority: .utility) { [weak self] in
-            let used = Self.calculateStorageUsed()
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.storageUsed = used
-                self.applySnapshot(animated: false)
-            }
-        }
-    }
-
-    /// Counts total plays off the main thread for the hero dashboard, filling the
-    /// stat once it lands.
-    private func refreshPlaysCount() {
-        Task.detached(priority: .utility) { [weak self] in
-            let plays = Self.scrobbleCount()
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.playsCount = plays
-                self.refreshHeader()
-            }
-        }
-    }
-
-    /// The once-per-library setup summary, read off the main thread. It is
-    /// absent until a first build has actually completed one, and the section's
-    /// caveat footer says what "this library" means.
-    private func refreshLibraryDebut() {
-        Task.detached(priority: .utility) { [weak self] in
-            let summary = try? DatabaseManager.shared.libraryDebut()
-            await MainActor.run { [weak self] in
-                guard let self, self.libraryDebut != summary else { return }
-                self.libraryDebut = summary
-                self.applySnapshot(animated: false)
-            }
-        }
-    }
-
-    private func loadPriceIfNeeded() {
-        Task { [weak self] in
-            await PurchaseManager.shared.loadOffersIfNeeded()
-            await PurchaseManager.shared.loadLapsedOfferIfNeeded()
-            self?.refreshHeader()
-        }
-    }
-
-    private nonisolated static func calculateStorageUsed() -> String {
-        let fm = FileManager.default
-        let docsURL = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        var totalSize: Int64 = 0
-
-        guard let enumerator = fm.enumerator(
-            at: docsURL, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]
-        ) else { return String(localized: "0 MB") }
-
-        for case let fileURL as URL in enumerator {
-            if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
-               let fileSize = resourceValues.fileSize {
-                totalSize += Int64(fileSize)
-            }
-        }
-
-        let gigabytes = Double(totalSize) / 1_073_741_824
-        if gigabytes >= 1.0 {
-            return String(format: String(localized: "%.1f GB"), gigabytes)
-        }
-        let megabytes = Double(totalSize) / 1_048_576
-        return String(format: String(localized: "%.0f MB"), megabytes)
-    }
-}
-
-/// A settings row hosting a full-width segmented control for the light/dark
-/// override, applied live as the user drags across it.
-private final class AppearanceCell: UITableViewCell {
-
-    static let reuseID = "AppearanceCell"
-
-    var onChange: ((AppAppearance) -> Void)?
-
-    private let segmented = IdentifiedSegmentedControl(
-        items: AppAppearance.allCases.map(\.displayName),
-        identifiers: AppAppearance.allCases.map(\.accessibilityIdentifier)
-    )
-
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        selectionStyle = .none
-        segmented.translatesAutoresizingMaskIntoConstraints = false
-        segmented.addTarget(self, action: #selector(changed), for: .valueChanged)
-        contentView.addSubview(segmented)
-        NSLayoutConstraint.activate([
-            segmented.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor),
-            segmented.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
-            segmented.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            segmented.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
-        ])
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-
-    func configure(selected: AppAppearance) {
-        segmented.selectedSegmentIndex = selected.rawValue
-    }
-
-    @objc private func changed() {
-        guard let appearance = AppAppearance(rawValue: segmented.selectedSegmentIndex) else { return }
-        onChange?(appearance)
-    }
-}
-
-/// The Midgar portal doorway as the first row of Settings: transparent, with no
-/// separator or highlight of its own, so the card reads as a card rather than a
-/// list row. The cell steps out of the accessibility tree so VoiceOver reaches
-/// the card itself.
-private final class MidgarEntryCell: UITableViewCell {
-
-    static let reuseID = "MidgarEntryCell"
-
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        selectionStyle = .none
-        backgroundConfiguration = .clear()
-        separatorInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: .greatestFiniteMagnitude)
-        isAccessibilityElement = false
-        MidgarEntryView(config: FlaccyMidgar.shared.portalConfig).embed(in: contentView, verticalInset: 8)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
 }
