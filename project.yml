@@ -30,8 +30,7 @@ packages:
     url: https://github.com/RevenueCat/purchases-ios
     from: 5.87.1
   MidgarKit:
-    url: https://github.com/guitaripod/MidgarKit
-    exactVersion: 4.3.1
+    path: ../../packages/MidgarKit
 
 x-midgar-keychain-groups: &midgarKeychainGroups
   - $(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)

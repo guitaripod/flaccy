@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     dependencies: [
         .package(path: "../../FlaccyCore"),
-        .package(url: "https://github.com/guitaripod/MidgarKit", exact: "4.3.1"),
+        .package(path: "../../../../packages/MidgarKit"),
     ],
     targets: [
         .executableTarget(

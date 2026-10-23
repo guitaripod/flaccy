@@ -12,7 +12,7 @@ let package = Package(
         .library(name: "FlaccyCore", targets: ["FlaccyCore"])
     ],
     dependencies: [
-        .package(url: "https://github.com/guitaripod/MidgarKit", exact: "4.3.1")
+        .package(path: "../../../packages/MidgarKit")
     ],
     targets: [
         .target(
