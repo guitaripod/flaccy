@@ -88,7 +88,7 @@ final class TrialReminderScheduler {
             start: start,
             now: Date(),
             calendar: .current,
-            includeWelcomeBack: manager.lapsedOfferingExists
+            includeWelcomeBack: manager.lapsedOfferExists
         )
         let wanted = manager.state == .expired ? reminders.filter { $0.kind == .welcomeBack } : reminders
         await replacePending(with: wanted, welcomeBackEnds: TrialRunway.lapsedOfferEnd(start: start))

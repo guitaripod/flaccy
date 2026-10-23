@@ -1,7 +1,6 @@
 import AppKit
 import MidgarCore
 import FlaccyCore
-import RevenueCat
 import StoreKit
 
 /// The Flaccy Lifetime paywall, presented as a sheet on the main window: the
@@ -133,7 +132,7 @@ final class PaywallViewController: NSViewController {
             self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.stateDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.customerInfoDidLoad, object: nil
+            self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
         updateStatusLine()
         updateOffers()
@@ -429,7 +428,7 @@ final class PaywallViewController: NSViewController {
             guard let self else { return }
             defer { self.isTransacting = false }
             do {
-                switch try await PurchaseManager.shared.purchase(offer) {
+                switch try await PurchaseManager.shared.purchase(offer, confirmIn: self.view.window) {
                 case .purchased:
                     self.finishOwned()
                 case .pending:
@@ -470,6 +469,8 @@ final class PaywallViewController: NSViewController {
                     title: String(localized: "Nothing to Restore"),
                     message: String(localized: "No previous purchase was found for this Apple Account.")
                 )
+            case .cancelled:
+                break
             case .failed:
                 self.presentInfoAlert(
                     title: String(localized: "Restore Failed"),

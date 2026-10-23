@@ -135,7 +135,7 @@ final class GeneralSettingsPane: SettingsPane {
             self, selector: #selector(entitlementChanged), name: PurchaseManager.stateDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(entitlementChanged), name: PurchaseManager.customerInfoDidLoad, object: nil
+            self, selector: #selector(entitlementChanged), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
         Task { [weak self] in
             await PurchaseManager.shared.loadOffersIfNeeded()
@@ -223,6 +223,8 @@ final class GeneralSettingsPane: SettingsPane {
             )
         case .nothingToRestore:
             MacToast.show(String(localized: "No previous purchase was found for this Apple Account."), style: .info, in: view.window)
+        case .cancelled:
+            break
         case .failed:
             MacToast.show(String(localized: "Couldn't reach the App Store. Check your connection and try again."), style: .error, in: view.window)
         }

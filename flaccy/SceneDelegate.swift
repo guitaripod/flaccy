@@ -61,7 +61,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             self, selector: #selector(handlePaywallRequired), name: PurchaseManager.paywallRequired, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(customerInfoDidLoad), name: PurchaseManager.customerInfoDidLoad, object: nil
+            self, selector: #selector(entitlementsDidLoad), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
         TrialReminderPrompt.observeOpportunities()
     }
@@ -95,7 +95,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
 
-    @objc private func customerInfoDidLoad() {
+    @objc private func entitlementsDidLoad() {
         TrialRunwayPresenter.refresh(in: window)
     }
 

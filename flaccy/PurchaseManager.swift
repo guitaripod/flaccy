@@ -1,7 +1,12 @@
 import Foundation
+import MidgarCommerce
 import MidgarCore
-import RevenueCat
 import Security
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 nonisolated enum PurchasePlan: String, Equatable, Hashable, Sendable {
     case yearly
@@ -21,47 +26,51 @@ nonisolated enum EntitlementState: Equatable, Hashable {
     }
 }
 
-/// One buyable plan as the paywall renders it: the store's localized price plus
-/// the RevenueCat package that purchases it. A welcome-back offer is the same
-/// plan sold through the `lapsed` offering, and carries the regular price only
-/// when that comparison is honest — same currency, and actually lower.
+/// One buyable plan as the paywall renders it: the App Store product with its
+/// localized price. A welcome-back offer is the lifetime plan sold as its own
+/// product, and carries the regular price only when that comparison is honest —
+/// same currency, and actually lower.
 struct PurchaseOffer: Equatable {
     let plan: PurchasePlan
-    let displayPrice: String
-    let package: Package
+    let storeProduct: StoreProduct
     var isWelcomeBack = false
     var regularPrice: String? = nil
 
-    var storeProduct: StoreProduct { package.storeProduct }
+    var displayPrice: String { storeProduct.displayPrice }
 
     static func == (lhs: PurchaseOffer, rhs: PurchaseOffer) -> Bool {
         lhs.plan == rhs.plan
             && lhs.isWelcomeBack == rhs.isWelcomeBack
-            && lhs.package.storeProduct.productIdentifier == rhs.package.storeProduct.productIdentifier
+            && lhs.storeProduct.id == rhs.storeProduct.id
     }
 }
 
-/// Entitlement source of truth for the Apple clients, backed by RevenueCat.
+#if os(macOS)
+typealias PurchaseAnchor = NSWindow
+#else
+typealias PurchaseAnchor = UIScene
+#endif
+
+/// Entitlement source of truth for the Apple clients, backed by `MidgarStore`.
 ///
-/// RevenueCat owns receipts, restores, renewals and cross-device state; the
-/// seven-day trial stays local because it starts before any purchase exists and
-/// must survive a reinstall, which the Keychain gives us for free; it starts at
-/// the first play of the person's own music, not at install. The `pro`
-/// entitlement is attached to both the yearly subscription and the lifetime
-/// unlock, so one boolean answers "may this person play music". Everything the
-/// runway needs — which day it is, whether the banner is due, whether the
-/// welcome-back window is open — derives from the one stored start date through
-/// `TrialRunway`, so the clients never do their own arithmetic.
+/// MidgarStore buys, verifies and finishes on StoreKit 2 and reports every
+/// transaction to the Midgar ledger; RevenueCat only observes. The seven-day
+/// trial stays local because it starts before any purchase exists and must
+/// survive a reinstall, which the Keychain gives us for free; it starts at the
+/// first play of the person's own music, not at install. The yearly
+/// subscription and the lifetime unlock both grant `pro`, so one boolean
+/// answers "may this person play music". Everything the runway needs — which
+/// day it is, whether the banner is due, whether the welcome-back window is
+/// open — derives from the one stored start date through `TrialRunway`, so the
+/// clients never do their own arithmetic.
 final class PurchaseManager {
 
-    static let shared = PurchaseManager()
+    static let shared = PurchaseManager(store: FlaccyMidgar.shared.store)
 
     static let stateDidChange = Notification.Name("PurchaseStateDidChange")
     static let paywallRequired = Notification.Name("PaywallRequired")
-    static let customerInfoDidLoad = Notification.Name("PurchaseCustomerInfoDidLoad")
+    static let entitlementsDidLoad = Notification.Name("PurchaseEntitlementsDidLoad")
 
-    static let entitlementID = "pro"
-    static let lapsedOfferingID = "lapsed"
     static let trialLengthDays = TrialRunway.lengthDays
 
     private(set) var state: EntitlementState = .trialNotStarted
@@ -69,14 +78,14 @@ final class PurchaseManager {
     private(set) var trialStart = Date()
     private(set) var trialHasStarted = false
     private var trialStartIsUnreadable = false
-    private(set) var hasReceivedCustomerInfo = false
-    private var lapsedOfferingSeenThisSession = false
-    private var lapsedPackage: Package?
+    private(set) var hasLoadedEntitlements = false
+    private var welcomeProductSeenThisSession = false
+    private var welcomeProduct: StoreProduct?
     private var runwayPromptShownCached = false
 
-    private var customerInfoTask: Task<Void, Never>?
+    private var storeEventsTask: Task<Void, Never>?
 
-    private static let lapsedOfferingSeenKey = "flaccy.lapsedOfferingSeen"
+    private static let welcomeProductSeenKey = "flaccy.lapsedOfferingSeen"
 
     #if DEBUG
     private var trialDayOverrideActive = false
@@ -92,34 +101,38 @@ final class PurchaseManager {
         #endif
     }
 
-    /// The `lapsed` offering, once seen by any offerings fetch, is remembered
-    /// across launches so an offline consent or foreground still schedules the
-    /// welcome-back reminder.
-    var lapsedOfferingExists: Bool {
-        lapsedOfferingSeenThisSession || UserDefaults.standard.bool(forKey: Self.lapsedOfferingSeenKey)
+    /// The welcome-back product, once the App Store has returned it, is
+    /// remembered across launches so an offline consent or foreground still
+    /// schedules the welcome-back reminder.
+    var lapsedOfferExists: Bool {
+        welcomeProductSeenThisSession || UserDefaults.standard.bool(forKey: Self.welcomeProductSeenKey)
     }
 
     /// The welcome-back lifetime plan, built at read time so "Usually <regular>"
-    /// reflects the regular price whenever it has loaded, not whenever the lapsed
-    /// package happened to arrive.
+    /// reflects the regular price whenever it has loaded, not whenever the
+    /// welcome-back product happened to arrive.
     var lapsedLifetimeOffer: PurchaseOffer? {
-        guard let package = lapsedPackage else { return nil }
+        guard let welcomeProduct else { return nil }
         return PurchaseOffer(
             plan: .lifetime,
-            displayPrice: package.storeProduct.localizedPriceString,
-            package: package,
+            storeProduct: welcomeProduct,
             isWelcomeBack: true,
-            regularPrice: Self.regularPrice(against: lifetimeOffer?.storeProduct, welcome: package.storeProduct)
+            regularPrice: Self.regularPrice(against: lifetimeOffer?.storeProduct, welcome: welcomeProduct)
         )
     }
 
-    private init() {}
+    /// The purchase engine, absent in a test host or a screenshot seed.
+    private let store: MidgarStore?
 
-    /// An `expired` state derived before RevenueCat has answered is only the
-    /// local trial clock talking, and the answer arrives within a second for
-    /// someone who already paid, so playback is never refused on it.
+    init(store: MidgarStore?) {
+        self.store = store
+    }
+
+    /// An `expired` state derived before the entitlements have loaded is only
+    /// the local trial clock talking, and the answer arrives within a second
+    /// for someone who already paid, so playback is never refused on it.
     var allowsPlayback: Bool {
-        state != .expired || !hasReceivedCustomerInfo
+        state != .expired || !hasLoadedEntitlements
     }
 
     var yearlyOffer: PurchaseOffer? { offers.first { $0.plan == .yearly } }
@@ -130,7 +143,7 @@ final class PurchaseManager {
     }
 
     var lapsedOfferState: TrialRunway.LapsedOffer {
-        guard hasReceivedCustomerInfo, state == .expired else { return .notYet }
+        guard hasLoadedEntitlements, state == .expired else { return .notYet }
         return TrialRunway.lapsedOffer(start: trialStart, now: Date())
     }
 
@@ -149,7 +162,7 @@ final class PurchaseManager {
     /// The phase is checked before the Keychain is, and the add-only stamp is
     /// remembered once read true, so an activation edge on day one costs nothing.
     var runwayBannerIsDue: Bool {
-        guard hasReceivedCustomerInfo, case .trial = state else { return false }
+        guard hasLoadedEntitlements, case .trial = state else { return false }
         guard case .trial(let daysRemaining) = runwayPhase,
               daysRemaining <= TrialRunway.runwayBannerAtDaysRemaining
         else { return false }
@@ -163,7 +176,7 @@ final class PurchaseManager {
     }
 
     var reminderOptInIsDue: Bool {
-        guard hasReceivedCustomerInfo, case .trial = state,
+        guard hasLoadedEntitlements, case .trial = state,
               !TrialReminderScheduler.shared.hasBeenAsked
         else { return false }
         return TrialRunway.consentWindowIsOpen(phase: runwayPhase)
@@ -175,15 +188,15 @@ final class PurchaseManager {
         applyTrialDayOverride()
         #endif
         setState(trialState())
-        configureRevenueCat()
+        RevenueCatObserver.start()
         publishFunnelEntitlement()
         PurchaseFunnel.observeLibrary()
-        listenForCustomerInfo()
+        listenForStoreEvents()
         Task {
             await refresh()
             await TrialReminderScheduler.shared.refresh()
         }
-        Task { await migrateStoreKitPurchasesIfNeeded() }
+        Task { await store?.reportPurchaseHistory() }
     }
 
     /// The trial starts at the first play of the person's own music, never at
@@ -269,106 +282,76 @@ final class PurchaseManager {
     }
     #endif
 
-    private static let migratedKey = "flaccy.revenuecat.migratedStoreKit"
-
-    /// Lifetime unlocks bought before RevenueCat existed live only in StoreKit's
-    /// transaction history; one sync on the first RevenueCat launch hands them
-    /// over so nobody who already paid is asked again.
-    private func migrateStoreKitPurchasesIfNeeded() async {
-        let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: Self.migratedKey) else { return }
-        do {
-            let info = try await Purchases.shared.syncPurchases()
-            apply(info)
-            defaults.set(true, forKey: Self.migratedKey)
-            MidgarLog.info("Synced StoreKit history into RevenueCat (pro active: \(state.isPurchased))", category: .purchases)
-        } catch {
-            MidgarLog.error("StoreKit → RevenueCat sync failed: \(error.localizedDescription)", category: .purchases)
-        }
-    }
-
-    private func configureRevenueCat() {
-        guard !Purchases.isConfigured else { return }
-        Purchases.logLevel = .warn
-        Purchases.configure(
-            with: .builder(withAPIKey: Secrets.revenueCatAPIKey)
-                .with(storeKitVersion: .storeKit2)
-                .build()
-        )
-        MidgarLog.info("RevenueCat configured", category: .purchases)
-    }
-
+    /// Reads StoreKit and the ledger again. Without a store (a test host or a
+    /// screenshot seed) the trial clock alone decides.
     func refresh() async {
-        do {
-            let info = try await Purchases.shared.customerInfo()
-            apply(info)
-        } catch {
-            MidgarLog.error("Customer info fetch failed: \(error.localizedDescription)", category: .purchases)
+        guard let store else {
             refreshTrialPhase()
-            noteCustomerInfoLoaded()
+            noteEntitlementsLoaded()
+            return
         }
+        await store.refresh()
+        apply(await store.entitlements)
         await loadLapsedOfferIfNeeded()
     }
 
     @discardableResult
     func loadOffersIfNeeded() async -> [PurchaseOffer] {
         if !offers.isEmpty { return offers }
+        guard let store else { return [] }
         do {
-            let offerings = try await Purchases.shared.offerings()
-            noteLapsedOffering(in: offerings)
-            guard let current = offerings.current else {
-                MidgarLog.notice("No current RevenueCat offering", category: .purchases)
-                return []
-            }
+            let products = try await store.products()
+            noteWelcomeProduct(in: products)
             var loaded: [PurchaseOffer] = []
-            if let annual = current.annual {
-                loaded.append(PurchaseOffer(plan: .yearly, displayPrice: annual.storeProduct.localizedPriceString, package: annual))
+            if let yearly = products.first(where: { $0.id == FlaccyProducts.yearly }) {
+                loaded.append(PurchaseOffer(plan: .yearly, storeProduct: yearly))
             }
-            if let lifetime = current.lifetime {
-                loaded.append(PurchaseOffer(plan: .lifetime, displayPrice: lifetime.storeProduct.localizedPriceString, package: lifetime))
+            if let lifetime = products.first(where: { $0.id == FlaccyProducts.lifetime }) {
+                loaded.append(PurchaseOffer(plan: .lifetime, storeProduct: lifetime))
+            }
+            guard !loaded.isEmpty else {
+                MidgarLog.notice("The App Store returned none of Flaccy's plans", category: .purchases)
+                return []
             }
             offers = loaded
             MidgarLog.info(
-                "Loaded offers: \(loaded.map { "\($0.plan.rawValue)=\($0.displayPrice)" }.joined(separator: ", ")) (lapsed offering: \(lapsedOfferingExists))",
+                "Loaded offers: \(loaded.map { "\($0.plan.rawValue)=\($0.displayPrice)" }.joined(separator: ", ")) (welcome back: \(lapsedOfferExists))",
                 category: .purchases
             )
-            if !loaded.isEmpty {
-                NotificationCenter.default.post(name: Self.stateDidChange, object: nil)
-            }
+            NotificationCenter.default.post(name: Self.stateDidChange, object: nil)
         } catch {
-            MidgarLog.error("Offerings load failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("Offers load failed: \(error)", category: .purchases)
         }
         return offers
     }
 
-    /// Every offerings fetch records whether the `lapsed` offering exists and
-    /// keeps its lifetime package, so the welcome-back price needs no second
-    /// round trip when the window opens.
-    private func noteLapsedOffering(in offerings: Offerings) {
-        let package = offerings.all[Self.lapsedOfferingID]?.lifetime
-        if package != nil {
-            lapsedOfferingSeenThisSession = true
-            UserDefaults.standard.set(true, forKey: Self.lapsedOfferingSeenKey)
+    /// Every products fetch records whether the welcome-back product exists and
+    /// keeps it, so the welcome-back price needs no second round trip when the
+    /// window opens.
+    private func noteWelcomeProduct(in products: [StoreProduct]) {
+        let product = products.first { $0.id == FlaccyProducts.welcomeLifetime }
+        if product != nil {
+            welcomeProductSeenThisSession = true
+            UserDefaults.standard.set(true, forKey: Self.welcomeProductSeenKey)
         }
-        let changed = (lapsedPackage == nil) != (package == nil)
-        lapsedPackage = package
+        let changed = (welcomeProduct == nil) != (product == nil)
+        welcomeProduct = product
         if changed {
             NotificationCenter.default.post(name: Self.stateDidChange, object: nil)
         }
     }
 
-    /// The welcome-back lifetime package is only surfaced while its window is
+    /// The welcome-back lifetime product is only surfaced while its window is
     /// open for an expired trial (`lifetimeOfferToPresent` gates on that), and
-    /// is fetched again only when no offerings fetch has captured it yet.
+    /// is fetched again only when no products fetch has captured it yet.
     func loadLapsedOfferIfNeeded() async {
         await loadOffersIfNeeded()
         refreshTrialPhase()
-        guard case .available = lapsedOfferState, lapsedPackage == nil else { return }
+        guard case .available = lapsedOfferState, welcomeProduct == nil, let store else { return }
         do {
-            let offerings = try await Purchases.shared.offerings()
-            noteLapsedOffering(in: offerings)
+            noteWelcomeProduct(in: try await store.products())
             guard let offer = lapsedLifetimeOffer else {
-                MidgarLog.info("Welcome-back window open but no lapsed offering is configured", category: .purchases)
+                MidgarLog.info("Welcome-back window open but the App Store has no welcome-back product", category: .purchases)
                 return
             }
             MidgarLog.info(
@@ -376,7 +359,7 @@ final class PurchaseManager {
                 category: .purchases
             )
         } catch {
-            MidgarLog.error("Lapsed offering load failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("Welcome-back product load failed: \(error)", category: .purchases)
         }
     }
 
@@ -388,7 +371,7 @@ final class PurchaseManager {
               currency == welcome.currencyCode,
               welcome.price < regular.price
         else { return nil }
-        return regular.localizedPriceString
+        return regular.displayPrice
     }
 
     enum PurchaseOutcome {
@@ -397,10 +380,12 @@ final class PurchaseManager {
         case cancelled
     }
 
-    func purchase(_ offer: PurchaseOffer) async throws -> PurchaseOutcome {
+    /// Buys the offer's product with the confirmation sheet anchored to `anchor`,
+    /// the paywall's scene or window.
+    func purchase(_ offer: PurchaseOffer, confirmIn anchor: PurchaseAnchor?) async throws -> PurchaseOutcome {
         PurchaseFunnel.noteCheckoutStarted(offer)
         do {
-            let outcome = try await performPurchase(offer)
+            let outcome = try await performPurchase(offer, confirmIn: anchor)
             PurchaseFunnel.noteCheckoutFinished(Self.funnelOutcome(outcome))
             return outcome
         } catch {
@@ -409,23 +394,39 @@ final class PurchaseManager {
         }
     }
 
-    private func performPurchase(_ offer: PurchaseOffer) async throws -> PurchaseOutcome {
+    private func performPurchase(_ offer: PurchaseOffer, confirmIn anchor: PurchaseAnchor?) async throws -> PurchaseOutcome {
+        guard let store else { throw PurchaseFailure.other }
+        let productID = offer.storeProduct.id
+        let result: MidgarPurchaseResult
         do {
-            let result = try await Purchases.shared.purchase(package: offer.package)
-            if result.userCancelled {
-                MidgarLog.info("Purchase cancelled by user", category: .purchases)
-                return .cancelled
+            if let anchor {
+                result = try await store.purchase(productID, confirmIn: anchor)
+            } else {
+                result = try await store.purchase(productID)
             }
-            apply(result.customerInfo)
+        } catch let error as MidgarStoreError where PurchaseFailure.isCancellation(error) {
+            MidgarLog.info("Purchase cancelled by user", category: .purchases)
+            return .cancelled
+        } catch let error as MidgarStoreError {
+            MidgarLog.error("Purchase of \(productID) failed: \(error)", category: .purchases)
+            throw PurchaseFailure(error)
+        }
+        switch result {
+        case .purchased:
+            apply(await store.entitlements)
+            RevenueCatObserver.reportPurchase(productID)
+            if !state.isPurchased {
+                MidgarLog.error("Purchase of \(productID) completed without granting \(FlaccyProducts.entitlement)", category: .purchases)
+            }
             MidgarLog.info(
                 "Purchase completed for \(offer.plan.rawValue)\(offer.isWelcomeBack ? " (welcome back)" : "")",
                 category: .purchases
             )
             return .purchased
-        } catch let error as ErrorCode where error == .paymentPendingError {
+        case .pending:
             MidgarLog.info("Purchase pending external approval", category: .purchases)
             return .pending
-        } catch let error as ErrorCode where error == .purchaseCancelledError {
+        case .cancelled:
             MidgarLog.info("Purchase cancelled by user", category: .purchases)
             return .cancelled
         }
@@ -442,18 +443,35 @@ final class PurchaseManager {
     enum RestoreOutcome {
         case restored
         case nothingToRestore
+        case cancelled
         case failed
     }
 
+    /// Syncs with the App Store, reports what the account owns to the ledger and
+    /// re-reads it. A purchase found on the device counts as restored even when
+    /// the sync itself failed.
     func restore() async -> RestoreOutcome {
+        guard let store else { return .failed }
+        var failure: MidgarStoreError?
         do {
-            let info = try await Purchases.shared.restorePurchases()
-            apply(info)
+            try await store.restore()
+        } catch let error as MidgarStoreError {
+            failure = error
+            MidgarLog.error("Restore failed: \(error)", category: .purchases)
         } catch {
-            MidgarLog.error("Restore failed: \(error.localizedDescription)", category: .purchases)
-            return .failed
+            failure = .storeKit(String(describing: error))
+            MidgarLog.error("Restore failed: \(error)", category: .purchases)
         }
-        let outcome: RestoreOutcome = state.isPurchased ? .restored : .nothingToRestore
+        apply(await store.entitlements)
+        RevenueCatObserver.reportRestore()
+        let outcome: RestoreOutcome
+        if state.isPurchased {
+            outcome = .restored
+        } else if let failure {
+            outcome = PurchaseFailure.isCancellation(failure) ? .cancelled : .failed
+        } else {
+            outcome = .nothingToRestore
+        }
         MidgarLog.info("Restore finished: \(outcome)", category: .purchases)
         return outcome
     }
@@ -492,39 +510,45 @@ final class PurchaseManager {
         }
     }
 
-    private func listenForCustomerInfo() {
-        guard customerInfoTask == nil else { return }
-        customerInfoTask = Task { [weak self] in
-            for await info in Purchases.shared.customerInfoStream {
+    /// An Ask to Buy approval, an offer code, a renewal, a refund or a purchase
+    /// on another device arrives here, after the store has already handled it.
+    private func listenForStoreEvents() {
+        guard storeEventsTask == nil, let store else { return }
+        storeEventsTask = Task { [weak self] in
+            for await event in await store.events() {
+                if case .refused(let productID) = event {
+                    MidgarLog.error("The store refused an unverified transaction for \(productID)", category: .purchases)
+                }
                 guard let self else { return }
-                await MainActor.run { self.apply(info) }
+                self.apply(await store.entitlements)
             }
         }
     }
 
-    private func apply(_ info: CustomerInfo) {
+    private func apply(_ entitlements: [MidgarEntitlement]) {
         readTrialStartIfNeeded()
-        if let entitlement = info.entitlements[Self.entitlementID], entitlement.isActive {
-            setState(.purchased(Self.plan(for: entitlement)))
+        if let pro = entitlements.first(where: { $0.name == FlaccyProducts.entitlement }) {
+            setState(.purchased(Self.plan(for: pro)))
         } else {
             setState(trialState())
         }
-        noteCustomerInfoLoaded()
+        noteEntitlementsLoaded()
     }
 
     /// Announced on both names once: surfaces that only observe `stateDidChange`
     /// still re-render after the first load, even when the state did not move.
-    private func noteCustomerInfoLoaded() {
-        guard !hasReceivedCustomerInfo else { return }
-        hasReceivedCustomerInfo = true
-        NotificationCenter.default.post(name: Self.customerInfoDidLoad, object: nil)
+    private func noteEntitlementsLoaded() {
+        guard !hasLoadedEntitlements else { return }
+        hasLoadedEntitlements = true
+        NotificationCenter.default.post(name: Self.entitlementsDidLoad, object: nil)
         NotificationCenter.default.post(name: Self.stateDidChange, object: nil)
     }
 
-    /// A lifetime unlock never expires; anything with an expiration date is the
-    /// subscription, whatever its product identifier ends up being called.
-    private static func plan(for entitlement: EntitlementInfo) -> PurchasePlan {
-        entitlement.expirationDate == nil ? .lifetime : .yearly
+    /// A lifetime unlock never expires; a subscription is the yearly plan,
+    /// whatever its product identifier ends up being called. The store already
+    /// keeps the longer-lived grant when someone holds both.
+    private static func plan(for entitlement: MidgarEntitlement) -> PurchasePlan {
+        entitlement.kind == .nonConsumable ? .lifetime : .yearly
     }
 
     private func trialState() -> EntitlementState {

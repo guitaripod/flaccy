@@ -48,7 +48,7 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
             self, selector: #selector(stateChanged), name: PurchaseManager.stateDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(stateChanged), name: PurchaseManager.customerInfoDidLoad, object: nil
+            self, selector: #selector(stateChanged), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
         stateChanged()
     }
@@ -59,7 +59,7 @@ final class TrialStatusAccessoryController: NSTitlebarAccessoryViewController {
 
     @objc private func stateChanged() {
         let manager = PurchaseManager.shared
-        guard manager.hasReceivedCustomerInfo,
+        guard manager.hasLoadedEntitlements,
               let line = PaywallCopy.pillLine(state: manager.state, lifetime: manager.lifetimeOfferToPresent)
         else {
             setShown(false)

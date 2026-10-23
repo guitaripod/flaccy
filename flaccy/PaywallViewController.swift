@@ -1,6 +1,5 @@
 import FlaccyCore
 import MidgarCore
-import RevenueCat
 import SafariServices
 import StoreKit
 import UIKit
@@ -102,7 +101,7 @@ final class PaywallViewController: UIViewController {
             self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.stateDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.customerInfoDidLoad, object: nil
+            self, selector: #selector(purchaseStateDidChange), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
         Task {
             let manager = PurchaseManager.shared
@@ -534,7 +533,7 @@ final class PaywallViewController: UIViewController {
         Task {
             defer { isTransacting = false }
             do {
-                switch try await PurchaseManager.shared.purchase(offer) {
+                switch try await PurchaseManager.shared.purchase(offer, confirmIn: view.window?.windowScene) {
                 case .purchased:
                     finishAfterPurchase()
                 case .pending:
@@ -569,6 +568,8 @@ final class PaywallViewController: UIViewController {
                     title: String(localized: "Nothing to Restore"),
                     message: String(localized: "No previous purchase was found for this Apple Account.")
                 )
+            case .cancelled:
+                break
             case .failed:
                 notificationFeedback.notificationOccurred(.error)
                 presentInfoAlert(

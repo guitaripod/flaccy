@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCommerce
 import MidgarCore
 import MidgarPortal
 
@@ -23,13 +24,21 @@ nonisolated final class FlaccyMidgar: Sendable {
     /// The client of flaccy-api behind the gateway: the AI metadata proxy, Last.fm signing and the sample album.
     let api: FlaccyAPIClient
 
+    /// The purchase engine (D2): StoreKit 2 with the ledger as the record, RevenueCat only observing. Nil in a test
+    /// host or a screenshot seed, which must not reach the ledger.
+    let store: MidgarStore?
+
     private init() {
         let configuration = MidgarHTTPConfiguration(appID: Self.appID)
         let identity = MidgarIdentity(
             httpConfiguration: configuration, bundleID: Bundle.main.bundleIdentifier ?? Self.fallbackBundleID)
         self.identity = identity
-        account = MidgarHTTPClient(configuration: identity.authorizing(configuration))
+        let account = MidgarHTTPClient(configuration: identity.authorizing(configuration))
+        self.account = account
         api = FlaccyAPIClient()
+        store = Self.reachesMidgarServices
+            ? MidgarStore(configuration: FlaccyProducts.configuration(), identity: identity, http: account)
+            : nil
     }
 
     /// The portal configuration of Settings: the authorized client, so "Your Midgar" shows what the person owns in the
@@ -71,5 +80,35 @@ nonisolated final class FlaccyMidgar: Sendable {
         let info = ProcessInfo.processInfo
         if info.environment["XCTestConfigurationFilePath"] != nil { return false }
         return !info.arguments.contains("--seed-screenshots")
+    }
+}
+
+/// What Flaccy sells on this platform. iOS and Mac are separate purchases with their own products, never a universal
+/// purchase; each platform has the yearly subscription, the lifetime unlock and the welcome-back lifetime, all granting
+/// `pro`.
+nonisolated enum FlaccyProducts {
+    #if os(macOS)
+    static let yearly = "com.midgarcorp.flaccy.mac.pro.yearly"
+    static let lifetime = "com.midgarcorp.flaccy.mac.lifetime"
+    static let welcomeLifetime = "com.midgarcorp.flaccy.mac.lifetime.welcome"
+    #else
+    static let yearly = "com.midgarcorp.flaccy.pro.yearly"
+    static let lifetime = "com.midgarcorp.flaccy.lifetime"
+    static let welcomeLifetime = "com.midgarcorp.flaccy.lifetime.welcome"
+    #endif
+
+    static let entitlement = "pro"
+
+    static let all = [yearly, lifetime, welcomeLifetime]
+
+    /// The registry's `[commerce]` for this platform: MidgarStore buys and finishes, RevenueCat observes.
+    static func configuration(directory: URL? = nil) -> MidgarStoreConfiguration {
+        MidgarStoreConfiguration(
+            appID: FlaccyMidgar.appID,
+            productIDs: all,
+            entitlementsByProduct: Dictionary(uniqueKeysWithValues: all.map { ($0, entitlement) }),
+            mode: .purchases,
+            directory: directory
+        )
     }
 }

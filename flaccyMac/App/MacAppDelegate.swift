@@ -143,7 +143,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(appDidBecomeActive), name: NSApplication.didBecomeActiveNotification, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(customerInfoDidLoad), name: PurchaseManager.customerInfoDidLoad, object: nil
+            self, selector: #selector(entitlementsDidLoad), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
     }
 
@@ -155,7 +155,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         MacTrialRunwayPresenter.refresh(in: mainWindowController?.window)
     }
 
-    @objc private func customerInfoDidLoad() {
+    @objc private func entitlementsDidLoad() {
         MacTrialRunwayPresenter.refresh(in: mainWindowController?.window)
     }
 

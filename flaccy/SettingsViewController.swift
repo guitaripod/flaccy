@@ -191,7 +191,7 @@ final class SettingsViewController: UITableViewController {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateChanged),
-            name: PurchaseManager.customerInfoDidLoad, object: nil
+            name: PurchaseManager.entitlementsDidLoad, object: nil
         )
     }
 
@@ -277,6 +277,8 @@ final class SettingsViewController: UITableViewController {
             case .nothingToRestore:
                 self.notificationFeedback.notificationOccurred(.warning)
                 ToastView.show(String(localized: "No previous purchase was found for this Apple Account."), in: self.view, style: .info)
+            case .cancelled:
+                break
             case .failed:
                 self.notificationFeedback.notificationOccurred(.error)
                 ToastView.show(String(localized: "Couldn't reach the App Store. Check your connection and try again."), in: self.view, style: .error)

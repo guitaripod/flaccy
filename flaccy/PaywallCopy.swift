@@ -1,6 +1,6 @@
 import FlaccyCore
 import Foundation
-import RevenueCat
+import MidgarCommerce
 
 /// Every sentence the paywall, the Settings entitlement row, the day-6 runway
 /// and the reminder consent alert put on screen, written once for both Apple
