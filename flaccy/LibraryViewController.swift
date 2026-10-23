@@ -1,4 +1,5 @@
 import Combine
+import MidgarCore
 import FlaccyCore
 import UIKit
 import UniformTypeIdentifiers
@@ -498,7 +499,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 self?.viewModel.refreshPlaylists()
             } catch {
-                AppLogger.error("Failed to create playlist: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Failed to create playlist: \(error.localizedDescription)", category: .database)
                 if let self { ToastView.show(String(localized: "Couldn't create \u{201C}\(name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: self.view, style: .error) }
             }
         })
@@ -661,7 +662,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 self.downloadSampleMusic()
                 return
             }
-            AppLogger.info("Sample download asks first: \(confirmation)", category: .content)
+            MidgarLog.info("Sample download asks first: \(confirmation)", category: .content)
             self.presentSampleConfirmation(confirmation)
         }
     }
@@ -700,7 +701,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let progressObserver = NotificationCenter.default.addObserver(
             forName: SampleMusicService.progressDidChange, object: nil, queue: .main
         ) { [weak self] _ in
-            self?.applySampleButtonState()
+            MainActor.assumeIsolated { self?.applySampleButtonState() }
         }
 
         Task { [weak self] in
@@ -786,7 +787,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         runwayBanner.onDismiss = { [weak self] in
             PurchaseManager.shared.markRunwayPromptShown()
             self?.setRunwayBanner(visible: false)
-            AppLogger.info("Runway banner dismissed", category: .purchases)
+            MidgarLog.info("Runway banner dismissed", category: .purchases)
         }
         view.addSubview(runwayBanner)
         runwayBannerHeight = runwayBanner.heightAnchor.constraint(equalToConstant: 0)
@@ -818,7 +819,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self.view.layoutIfNeeded()
         }
         if show {
-            AppLogger.info("Runway banner shown", category: .purchases)
+            MidgarLog.info("Runway banner shown", category: .purchases)
         }
     }
 
@@ -1326,7 +1327,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewCell>(
             elementKind: UICollectionView.elementKindSectionHeader
         ) { supplementaryView, _, _ in
-            var config = UIListContentConfiguration.plainHeader()
+            var config = UIListContentConfiguration.header()
             config.text = String(localized: "Recently Played")
             config.textProperties.font = .scaled(.footnote, size: 13, weight: .semibold)
             config.textProperties.color = .secondaryLabel
@@ -1616,7 +1617,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                         self.viewModel.refreshPlaylists()
                         completion(true)
                     } catch {
-                        AppLogger.error("Failed to delete playlist: \(error.localizedDescription)", category: .database)
+                        MidgarLog.error("Failed to delete playlist: \(error.localizedDescription)", category: .database)
                         ToastView.show(String(localized: "Couldn't delete \u{201C}\(playlist.name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: self.view, style: .error)
                         completion(false)
                     }
@@ -1759,7 +1760,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             viewModel.refreshPlaylists()
             ToastView.show(String(localized: "Saved \u{201C}\(suggestion.title)\u{201D}"), in: view, style: .success)
         } catch {
-            AppLogger.error("Failed to save suggested playlist: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to save suggested playlist: \(error.localizedDescription)", category: .database)
             ToastView.show(String(localized: "Couldn't create \u{201C}\(suggestion.title)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: view, style: .error)
         }
     }
@@ -1808,7 +1809,7 @@ extension LibraryViewController: UICollectionViewDelegate {
 
         switch item {
         case .album(let album), .recentAlbum(let album):
-            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
                 let playAction = UIAction(title: String(localized: "Play"), image: UIImage(systemName: "play.fill")) { _ in
                     AudioPlayer.shared.play(album.tracks, startingAt: 0)
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()

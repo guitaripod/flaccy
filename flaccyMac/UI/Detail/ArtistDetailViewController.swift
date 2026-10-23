@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 
 /// Immersive artist page: circular photo header over a palette backdrop,
@@ -159,7 +160,7 @@ final class ArtistDetailViewController: NSViewController {
         artworkObserver = ArtworkChangeObserver { [weak self] in self?.reloadAlbumCoverPhoto() }
         loadEnrichment()
         similarRow.load(artist: artistName)
-        AppLogger.info("Artist detail opened: \(artistName)", category: .ui)
+        MidgarLog.info("Artist detail opened: \(artistName)", category: .ui)
     }
 
     override func viewWillAppear() {
@@ -265,7 +266,7 @@ final class ArtistDetailViewController: NSViewController {
                 isPlaying: currentPath == entry.track.fileURL
             )
             row.onDoubleClick = {
-                AppLogger.info("Playing popular track \(entry.track.title)", category: .playback)
+                MidgarLog.info("Playing popular track \(entry.track.title)", category: .playback)
                 AudioPlayer.shared.play(queue, startingAt: index)
             }
             row.onToggleLove = { [weak self] in
@@ -353,7 +354,7 @@ final class ArtistDetailViewController: NSViewController {
     private func playAll(shuffled: Bool) {
         let tracks = ownedTracks()
         guard !tracks.isEmpty else { return }
-        AppLogger.info("Playing all by \(artistName) (shuffled: \(shuffled))", category: .playback)
+        MidgarLog.info("Playing all by \(artistName) (shuffled: \(shuffled))", category: .playback)
         AudioPlayer.shared.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0)
     }
 

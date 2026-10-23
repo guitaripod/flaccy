@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 import RevenueCat
 #if canImport(UIKit)
 import UIKit
@@ -186,7 +187,7 @@ enum PurchaseFunnel {
 
     private static func send(_ attributes: [Key: String]) {
         guard canSend else { return }
-        AppLogger.debug(
+        MidgarLog.debug(
             "Funnel: \(attributes.map { "\($0.key.rawValue)=\($0.value)" }.sorted().joined(separator: " "))",
             category: .purchases
         )

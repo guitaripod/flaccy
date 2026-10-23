@@ -5,25 +5,24 @@ import XCTest
 /// The plot model's preview glide and the conversion naming behind the
 /// preset deck; `linux/src/ui/equalizer/curve.rs` and `linux/src/eq/engine.rs`
 /// do the same on the Linux side.
-@MainActor
-final class EqualizerAuditionTests: XCTestCase {
+nonisolated final class EqualizerAuditionTests: XCTestCase {
 
     private let plot = CGRect(x: 36, y: 18, width: 300, height: 200)
     private let bassBell = [EqualizerBand(type: .bell, frequency: 80, gain: 9, q: 1)]
 
-    func testNothingIsPreviewedUntilAskedTo() {
+    @MainActor func testNothingIsPreviewedUntilAskedTo() {
         let model = EqualizerPlotModel()
         XCTAssertFalse(model.isPreviewing)
         XCTAssertNil(model.previewPoints(in: plot))
     }
 
-    func testASnappedPreviewIsTheTargetCurveAtOnce() {
+    @MainActor func testASnappedPreviewIsTheTargetCurveAtOnce() {
         let model = EqualizerPlotModel()
         model.setPreview(bassBell, snap: true)
         XCTAssertEqual(model.previewPoints(in: plot), model.curvePoints(bassBell, in: plot))
     }
 
-    func testAGlidingPreviewStartsOnTheCurveInForceAndArrivesOnTheTarget() {
+    @MainActor func testAGlidingPreviewStartsOnTheCurveInForceAndArrivesOnTheTarget() {
         let model = EqualizerPlotModel()
         model.setPreview(bassBell, snap: false)
         let start = model.previewPoints(in: plot)
@@ -34,7 +33,7 @@ final class EqualizerAuditionTests: XCTestCase {
         XCTAssertLessThan(frames, 12)
     }
 
-    func testEndingAPreviewGoesBackToTheCurveInForce() {
+    @MainActor func testEndingAPreviewGoesBackToTheCurveInForce() {
         let model = EqualizerPlotModel()
         model.setPreview(bassBell, snap: true)
         model.setPreview(nil, snap: true)
@@ -42,7 +41,7 @@ final class EqualizerAuditionTests: XCTestCase {
         XCTAssertNil(model.previewPoints(in: plot))
     }
 
-    func testConversionSuffixesCollapseToTheNameTheyStartedFrom() {
+    @MainActor func testConversionSuffixesCollapseToTheNameTheyStartedFrom() {
         XCTAssertEqual(EqualizerCopy.baseName(of: "Flat"), "Flat")
         XCTAssertEqual(EqualizerCopy.baseName(of: "Flat (Advanced)"), "Flat")
         XCTAssertEqual(EqualizerCopy.baseName(of: "Flat (Advanced) (Simple) (Advanced)"), "Flat")

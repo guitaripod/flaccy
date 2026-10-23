@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 import Observation
 
@@ -76,7 +77,7 @@ final class WatchLibraryStore {
         isLoading = false
         loadFraction = tracker.displayFraction
         loadProgress = tracker.finish()
-        AppLogger.info("Watch library: \(albums.count) albums, \(items.count) tracks", category: .watch)
+        MidgarLog.info("Watch library: \(albums.count) albums, \(items.count) tracks", category: .watch)
     }
 
     /// The seeded Simulator files carry no tags, so their covers are generated;
@@ -104,7 +105,7 @@ final class WatchLibraryStore {
 /// is. Publishing under one lock makes "coalesce, read the fraction, enqueue"
 /// a single step, and the stream preserves that order all the way to the one
 /// assignment that moves both values together.
-private final class LoadProgressRelay: @unchecked Sendable {
+private nonisolated final class LoadProgressRelay: @unchecked Sendable {
 
     struct Snapshot: Sendable {
         let progress: LibraryLoadProgress

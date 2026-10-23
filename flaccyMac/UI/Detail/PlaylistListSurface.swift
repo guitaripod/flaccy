@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 /// A playlist's songs as rows the listener can drag into a new order. It is a
 /// table underneath, as tall as its rows and without a scroller of its own, so
@@ -95,7 +96,7 @@ final class PlaylistListSurface: NSObject, TrackPageSurface {
         let row = table.clickedRow
         guard displayed.indices.contains(row) else { return }
         let tracks = model.entries.map(\.track)
-        AppLogger.info("Playing \(tracks[displayed[row]].title) from \(model.pageName())", category: .playback)
+        MidgarLog.info("Playing \(tracks[displayed[row]].title) from \(model.pageName())", category: .playback)
         model.play(tracks, displayed[row])
     }
 

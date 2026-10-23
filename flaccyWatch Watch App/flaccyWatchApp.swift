@@ -7,6 +7,7 @@ import WatchKit
 /// view hierarchy (and its `.task`) may never appear.
 final class WatchAppDelegate: NSObject, WKApplicationDelegate {
     func applicationDidFinishLaunching() {
+        FlaccyLogging.configure()
         WatchSyncReceiver.shared.activate()
     }
 

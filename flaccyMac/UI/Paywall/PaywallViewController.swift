@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 import RevenueCat
 import StoreKit
@@ -146,12 +147,12 @@ final class PaywallViewController: NSViewController {
             manager.notePaywallShown()
             self?.proofCard.render(await proof, state: manager.state)
         }
-        AppLogger.info("Paywall presented (state \(PurchaseManager.shared.state))", category: .purchases)
+        MidgarLog.info("Paywall presented (state \(PurchaseManager.shared.state))", category: .purchases)
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-        AppLogger.info("PaywallViewController deinit", category: .ui)
+        MidgarLog.info("PaywallViewController deinit", category: .ui)
     }
 
     override func cancelOperation(_ sender: Any?) {
@@ -440,7 +441,7 @@ final class PaywallViewController: NSViewController {
                     break
                 }
             } catch {
-                AppLogger.error("Purchase failed: \(error.localizedDescription)", category: .purchases)
+                MidgarLog.error("Purchase failed: \(error.localizedDescription)", category: .purchases)
                 self.presentInfoAlert(
                     title: String(localized: "Purchase Failed"),
                     message: String(localized: "The purchase couldn't be completed: \(error.localizedDescription)")

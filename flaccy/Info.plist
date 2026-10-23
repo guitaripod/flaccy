@@ -13,6 +13,7 @@
 			<array>
 				<string>flaccy</string>
 				<string>com.midgarcorp.flaccy</string>
+				<string>midgar-01</string>
 			</array>
 		</dict>
 	</array>
@@ -45,28 +46,6 @@
 		<string>midgar-06</string>
 		<string>midgar-07</string>
 		<string>midgar-08</string>
-		<string>midgar-09</string>
-		<string>midgar-10</string>
-		<string>midgar-11</string>
-		<string>midgar-12</string>
-		<string>midgar-13</string>
-		<string>midgar-14</string>
-		<string>midgar-15</string>
-		<string>midgar-16</string>
-		<string>midgar-17</string>
-		<string>midgar-18</string>
-		<string>midgar-19</string>
-		<string>midgar-20</string>
-		<string>midgar-21</string>
-		<string>midgar-22</string>
-		<string>midgar-23</string>
-		<string>midgar-24</string>
-		<string>midgar-25</string>
-		<string>midgar-26</string>
-		<string>midgar-27</string>
-		<string>midgar-28</string>
-		<string>midgar-29</string>
-		<string>midgar-30</string>
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>

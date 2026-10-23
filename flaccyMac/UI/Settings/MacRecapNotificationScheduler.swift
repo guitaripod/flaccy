@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import UserNotifications
 
 enum RecapNotificationFrequency: String, CaseIterable {
@@ -78,18 +79,18 @@ final class MacRecapNotificationScheduler {
         UserDefaults.standard.set(frequency.rawValue, forKey: Self.frequencyKey)
         guard frequency != .off else {
             center.removePendingNotificationRequests(withIdentifiers: [Self.periodicIdentifier, Self.yearlyIdentifier])
-            AppLogger.info("Recap notifications turned off", category: .general)
+            MidgarLog.info("Recap notifications turned off", category: .general)
             return true
         }
         let granted: Bool
         do {
             granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
-            AppLogger.error("Notification authorization failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("Notification authorization failed: \(error.localizedDescription)", category: .general)
             granted = false
         }
         guard granted else {
-            AppLogger.warning("Recap notifications enabled but permission denied", category: .general)
+            MidgarLog.notice("Recap notifications enabled but permission denied", category: .general)
             return false
         }
         await refreshSchedule(force: true)
@@ -222,7 +223,7 @@ final class MacRecapNotificationScheduler {
             try pngData.write(to: url)
             return try UNNotificationAttachment(identifier: "recap.story", url: url)
         } catch {
-            AppLogger.error("Recap notification attachment failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("Recap notification attachment failed: \(error.localizedDescription)", category: .general)
             return nil
         }
     }
@@ -248,9 +249,9 @@ final class MacRecapNotificationScheduler {
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         do {
             try await center.add(request)
-            AppLogger.info("Scheduled \(identifier) notification for \(date)", category: .general)
+            MidgarLog.info("Scheduled \(identifier) notification for \(date)", category: .general)
         } catch {
-            AppLogger.error("Scheduling \(identifier) failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("Scheduling \(identifier) failed: \(error.localizedDescription)", category: .general)
         }
     }
 }

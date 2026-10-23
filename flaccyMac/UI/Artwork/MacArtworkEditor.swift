@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 /// Opens the artwork editor as a sheet on a window and reports how it ended
 /// with the toast the rest of the app uses. One editor at a time, and never
@@ -115,7 +116,7 @@ enum MacArtworkEditor {
                     try await Task.detached { try AlbumArtworkEditor.reset(subject) }.value
                     MacToast.show(String(localized: "Automatic cover restored"), style: .success, in: window)
                 } catch {
-                    AppLogger.error("Resetting playlist cover failed: \(error.localizedDescription)", category: .database)
+                    MidgarLog.error("Resetting playlist cover failed: \(error.localizedDescription)", category: .database)
                     MacToast.show(String(localized: "Couldn't restore the automatic cover — the library database couldn't be written. Check free disk space and try again."), style: .error, in: window)
                 }
             }

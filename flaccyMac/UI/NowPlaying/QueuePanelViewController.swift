@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import UniformTypeIdentifiers
 
 /// The queue panel used both as the window inspector and inside the immersive
@@ -139,7 +140,7 @@ final class QueuePanelViewController: NSViewController {
         } else {
             restore(offset: offset)
         }
-        AppLogger.debug("Queue panel reload: \(rows.count) rows, table frame \(tableView.frame)", category: .ui)
+        MidgarLog.debug("Queue panel reload: \(rows.count) rows, table frame \(tableView.frame)", category: .ui)
     }
 
     private static func buildRows(queue: [Track], currentIndex: Int) -> [Row] {
@@ -229,7 +230,7 @@ final class QueuePanelViewController: NSViewController {
         guard row >= 0, row < rows.count, case .track(let index, let group) = rows[row] else { return }
         guard group != .current else { return }
         player.jumpToIndex(index)
-        AppLogger.info("Queue panel jump to index \(index)", category: .ui)
+        MidgarLog.info("Queue panel jump to index \(index)", category: .ui)
     }
 
     @objc private func clearUpNext() {
@@ -310,7 +311,7 @@ extension QueuePanelViewController: NSTableViewDataSource, NSTableViewDelegate {
         if destination > sourceIndex { destination -= 1 }
         guard destination != sourceIndex else { return false }
         player.moveInQueue(from: sourceIndex, to: destination)
-        AppLogger.info("Queue panel reorder \(sourceIndex) -> \(destination)", category: .ui)
+        MidgarLog.info("Queue panel reorder \(sourceIndex) -> \(destination)", category: .ui)
         return true
     }
 

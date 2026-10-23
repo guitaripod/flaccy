@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG && os(iOS)
 import FlaccyCore
 import UIKit
@@ -73,7 +74,7 @@ enum EqualizerShots {
         let image = renderer.image { _ in window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) }
         let url = folder.appendingPathComponent("\(name).png")
         try? image.pngData()?.write(to: url)
-        AppLogger.info("EqualizerShots saved \(url.path)", category: .ui)
+        MidgarLog.info("EqualizerShots saved \(url.path)", category: .ui)
     }
 }
 #endif

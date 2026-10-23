@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import UIKit
 
 /// What Flaccy found, what it is still looking for, and what it gave up on.
@@ -170,6 +171,6 @@ final class EnrichmentReportViewController: UITableViewController {
         notificationFeedback.prepare()
         wasRetrying = true
         viewModel.retry()
-        AppLogger.info("Metadata report: retrying exhausted entities", category: .content)
+        MidgarLog.info("Metadata report: retrying exhausted entities", category: .content)
     }
 }

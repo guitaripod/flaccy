@@ -180,7 +180,9 @@ actor DetailEnrichmentCache {
     }
 }
 
-private final class SyncCache: @unchecked Sendable {
+/// The synchronous mirror of the cache's values. Every read and write of its two dictionaries happens under `lock`,
+/// so any thread may use it.
+private nonisolated final class SyncCache: @unchecked Sendable {
     private let lock = NSLock()
     private var artistTags: [String: [String]] = [:]
     private var albumPlayCounts: [String: Int] = [:]

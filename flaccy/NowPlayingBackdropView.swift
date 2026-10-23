@@ -1,4 +1,5 @@
 import MetalKit
+import MidgarCore
 import UIKit
 
 final class NowPlayingBackdropView: UIView {
@@ -160,7 +161,7 @@ final class NowPlayingBackdropView: UIView {
               let fragmentFunction = library.makeFunction(name: "backdrop_fragment"),
               let queue = device.makeCommandQueue()
         else {
-            AppLogger.warning("Metal backdrop unavailable, using gradient fallback", category: .ui)
+            MidgarLog.notice("Metal backdrop unavailable, using gradient fallback", category: .ui)
             return false
         }
         let descriptor = MTLRenderPipelineDescriptor()
@@ -168,7 +169,7 @@ final class NowPlayingBackdropView: UIView {
         descriptor.fragmentFunction = fragmentFunction
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else {
-            AppLogger.error("Backdrop pipeline creation failed, using gradient fallback", category: .ui)
+            MidgarLog.error("Backdrop pipeline creation failed, using gradient fallback", category: .ui)
             return false
         }
         commandQueue = queue

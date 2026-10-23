@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 
 /// Offline-first loved-track state. Toggling writes the local DB and queues a
 /// pending love/unlove op immediately; the Last.fm round-trip happens later and
@@ -67,15 +68,15 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         do {
             try db.setLoved(fileURL: path, loved: newValue, pendingOp: newValue ? "love" : "unlove")
         } catch {
-            AppLogger.error("Failed to persist loved state: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to persist loved state: \(error.localizedDescription)", category: .database)
             return isLoved(track: track)
         }
 
-        lock.lock()
-        if newValue { lovedPaths.insert(path) } else { lovedPaths.remove(path) }
-        lock.unlock()
+        lock.withLock {
+            if newValue { lovedPaths.insert(path) } else { lovedPaths.remove(path) }
+        }
 
-        postDidChange(userInfo: ["fileURL": path, "loved": newValue])
+        postDidChange(change: (fileURL: path, loved: newValue))
 
         await flushPendingLoves()
         return newValue
@@ -137,8 +138,9 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
 
     /// Posts `didChange` on the main thread so selector-based UIKit observers
     /// never run off main, regardless of which executor the caller is on.
-    private func postDidChange(userInfo: [AnyHashable: Any]? = nil) {
+    private func postDidChange(change: (fileURL: String, loved: Bool)? = nil) {
         DispatchQueue.main.async {
+            let userInfo = change.map { ["fileURL": $0.fileURL, "loved": $0.loved] as [AnyHashable: Any] }
             NotificationCenter.default.post(name: Self.didChange, object: nil, userInfo: userInfo)
         }
     }

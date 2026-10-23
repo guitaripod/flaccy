@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 import UniformTypeIdentifiers
 
@@ -73,7 +74,7 @@ final class ArtworkEditorViewController: NSViewController {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    deinit {
+    isolated deinit {
         pasteboardTimer?.invalidate()
         searchTask?.cancel()
         loadTask?.cancel()
@@ -774,10 +775,10 @@ final class ArtworkEditorViewController: NSViewController {
                     try AlbumArtworkEditor.save(data, for: subject)
                     return data
                 }.value
-                AppLogger.info("Artwork editor saved \(data.count / 1024) KB", category: .ui)
+                MidgarLog.info("Artwork editor saved \(data.count / 1024) KB", category: .ui)
                 self?.onFinish?(.saved)
             } catch {
-                AppLogger.error("Saving cover failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Saving cover failed: \(error.localizedDescription)", category: .database)
                 guard let self else { return }
                 self.isSaving = false
                 self.cropView.setLoading(false)
@@ -841,7 +842,7 @@ final class ArtworkEditorViewController: NSViewController {
                 try await Task.detached { try AlbumArtworkEditor.reset(subject) }.value
                 self?.onFinish?(.restored)
             } catch {
-                AppLogger.error("Resetting cover failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Resetting cover failed: \(error.localizedDescription)", category: .database)
                 self?.fail(subject.isPlaylist
                     ? String(localized: "Couldn't restore the automatic cover — the library database couldn't be written. Check free disk space and try again.")
                     : String(localized: "Couldn't restore the original artwork — the library database couldn't be written. Check free disk space and try again."))

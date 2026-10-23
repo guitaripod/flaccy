@@ -1,4 +1,5 @@
 import AVFoundation
+import MidgarCore
 import FlaccyCore
 import MediaPlayer
 import Observation
@@ -237,7 +238,7 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
         activateSessionAndPlay()
         persistSession()
         WatchPlayReporter.shared.trackDidStart(track)
-        AppLogger.info("Watch now playing: \(track.title) — \(track.artist)", category: .playback)
+        MidgarLog.info("Watch now playing: \(track.title) — \(track.artist)", category: .playback)
     }
 
     private func handleTrackFinished() {
@@ -294,7 +295,7 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
         updateNowPlayingInfo()
         persistSession()
         if let current = currentItem { WatchPlayReporter.shared.trackDidStart(current) }
-        AppLogger.info("Watch gapless advance: \(currentItem?.title ?? "")", category: .playback)
+        MidgarLog.info("Watch gapless advance: \(currentItem?.title ?? "")", category: .playback)
     }
 
     /// The end-of-track notification races AVQueuePlayer's `.advance`
@@ -344,7 +345,7 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
     /// "playing" state: drop the failed item, skip forward, and stop entirely
     /// once every queued track has failed in a row.
     private func handleItemFailed(_ item: AVPlayerItem) {
-        AppLogger.error(
+        MidgarLog.error(
             "Watch player item failed: \(item.error?.localizedDescription ?? "unknown error")",
             category: .playback
         )
@@ -425,7 +426,7 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
         currentTime = resolved.position
         pendingResumePosition = resolved.position
         updateNowPlayingInfo()
-        AppLogger.info(
+        MidgarLog.info(
             "Watch session restored: \(resolved.queue.current?.title ?? "") at \(Int(resolved.position))s",
             category: .playback
         )
@@ -465,7 +466,7 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, policy: .longFormAudio)
         } catch {
-            AppLogger.error("Watch audio session category failed: \(error.localizedDescription)", category: .playback)
+            MidgarLog.error("Watch audio session category failed: \(error.localizedDescription)", category: .playback)
         }
     }
 
@@ -485,7 +486,7 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
                 if success {
                     self.player?.play()
                 } else {
-                    AppLogger.error(
+                    MidgarLog.error(
                         "Watch audio session activate failed: \(error?.localizedDescription ?? "unknown error")",
                         category: .playback
                     )
@@ -555,7 +556,7 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
     /// holds, so tear the player down completely; the next play/pause tap
     /// rebuilds it from scratch via `loadTrack`.
     private func handleMediaServicesReset() {
-        AppLogger.warning("Watch media services were reset, tearing down player", category: .playback)
+        MidgarLog.notice("Watch media services were reset, tearing down player", category: .playback)
         cancelPendingPlayIntent()
         removeObservers()
         timeControlObservation = nil
@@ -619,49 +620,65 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
 
     private func configureRemoteCommands() {
         let center = MPRemoteCommandCenter.shared()
-        center.playCommand.addTarget { [weak self] _ in
-            guard let self, !self.isPlaying else { return .commandFailed }
-            self.togglePlayPause()
-            return .success
+        center.playCommand.addTarget { @Sendable [weak self] _ in
+            onMainActorSync {
+                guard let self, !self.isPlaying else { return .commandFailed }
+                self.togglePlayPause()
+                return .success
+            }
         }
-        center.pauseCommand.addTarget { [weak self] _ in
-            guard let self, self.isPlaying else { return .commandFailed }
-            self.togglePlayPause()
-            return .success
+        center.pauseCommand.addTarget { @Sendable [weak self] _ in
+            onMainActorSync {
+                guard let self, self.isPlaying else { return .commandFailed }
+                self.togglePlayPause()
+                return .success
+            }
         }
         center.nextTrackCommand.isEnabled = true
-        center.nextTrackCommand.addTarget { [weak self] _ in
-            self?.next()
-            return .success
+        center.nextTrackCommand.addTarget { @Sendable [weak self] _ in
+            onMainActorSync {
+                self?.next()
+                return .success
+            }
         }
         center.previousTrackCommand.isEnabled = true
-        center.previousTrackCommand.addTarget { [weak self] _ in
-            self?.previous()
-            return .success
+        center.previousTrackCommand.addTarget { @Sendable [weak self] _ in
+            onMainActorSync {
+                self?.previous()
+                return .success
+            }
         }
         center.changePlaybackPositionCommand.isEnabled = true
-        center.changePlaybackPositionCommand.addTarget { [weak self] event in
-            guard let self, let positionEvent = event as? MPChangePlaybackPositionCommandEvent else {
+        center.changePlaybackPositionCommand.addTarget { @Sendable [weak self] event in
+            guard let positionEvent = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
             }
-            self.seek(to: positionEvent.positionTime)
-            return .success
+            let position = positionEvent.positionTime
+            return onMainActorSync {
+                guard let self else { return .commandFailed }
+                self.seek(to: position)
+                return .success
+            }
         }
         center.skipForwardCommand.isEnabled = true
         center.skipForwardCommand.preferredIntervals = [15]
-        center.skipForwardCommand.addTarget { [weak self] event in
-            guard let self else { return .commandFailed }
+        center.skipForwardCommand.addTarget { @Sendable [weak self] event in
             let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
-            self.seek(to: min(self.duration, self.currentTime + interval))
-            return .success
+            return onMainActorSync {
+                guard let self else { return .commandFailed }
+                self.seek(to: min(self.duration, self.currentTime + interval))
+                return .success
+            }
         }
         center.skipBackwardCommand.isEnabled = true
         center.skipBackwardCommand.preferredIntervals = [15]
-        center.skipBackwardCommand.addTarget { [weak self] event in
-            guard let self else { return .commandFailed }
+        center.skipBackwardCommand.addTarget { @Sendable [weak self] event in
             let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
-            self.seek(to: max(0, self.currentTime - interval))
-            return .success
+            return onMainActorSync {
+                guard let self else { return .commandFailed }
+                self.seek(to: max(0, self.currentTime - interval))
+                return .success
+            }
         }
     }
 
@@ -695,7 +712,7 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
             cachedArtwork = nil
             return nil
         }
-        let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        let artwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
         cachedArtwork = (track.id, artwork)
         return artwork
     }

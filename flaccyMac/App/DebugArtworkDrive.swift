@@ -1,7 +1,18 @@
+import MidgarCore
 #if DEBUG
 import AppKit
 import FlaccyCore
 import ImageIO
+
+/// A tally of notifications that an exercise counts. The observer posts on the main queue and the exercise reads the
+/// tally on the main actor, so the two never touch it at once.
+nonisolated final class ObservedCount: @unchecked Sendable {
+    private(set) var value = 0
+
+    func increment() {
+        value += 1
+    }
+}
 import UniformTypeIdentifiers
 
 /// Headless verification for the artwork editor. `--exercise-artwork` drives
@@ -32,7 +43,7 @@ enum DebugArtworkDrive {
     private static func report(_ expectation: String, _ passed: Bool) {
         results.append(passed)
         let line = "ArtworkExercise \(passed ? "PASS" : "FAIL"): \(expectation)"
-        AppLogger.info(line, category: .general)
+        MidgarLog.info(line, category: .general)
         FileHandle.standardError.write(Data((line + "\n").utf8))
         let url = URL(fileURLWithPath: NSTemporaryDirectory() + "artwork-exercise.txt")
         let existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
@@ -61,7 +72,7 @@ enum DebugArtworkDrive {
         await exerciseSaveAndReset(album: album, window: window)
         let verdict = results.allSatisfy { $0 } ? "PASSED" : "FAILED"
         let line = "ArtworkExercise \(verdict): \(results.filter { $0 }.count) of \(results.count)"
-        AppLogger.info(line, category: .general)
+        MidgarLog.info(line, category: .general)
         FileHandle.standardError.write(Data((line + "\n").utf8))
     }
 
@@ -105,9 +116,9 @@ enum DebugArtworkDrive {
         let source = quadrantImage(width: 1200, height: 900)
         editor.debugAdopt(source, source: "exercise")
         report("an adopted picture enables Save", editor.debugSaveEnabled)
-        var notifications = 0
+        let notifications = ObservedCount()
         let token = NotificationCenter.default.addObserver(forName: AlbumArtworkCache.didChangeNotification, object: nil, queue: .main) { _ in
-            notifications += 1
+            notifications.increment()
         }
         defer { NotificationCenter.default.removeObserver(token) }
         editor.debugSave()
@@ -115,8 +126,8 @@ enum DebugArtworkDrive {
         let saved = try? database.fetchAlbumArtwork(title: reservedTitle, artist: PlaylistCover.artist)
         report("Save stores the cover under the reserved key", saved != nil && saved.flatMap(decode).map { isColor($0, $0.width / 4, $0.height / 4, red: true) } == true)
         report("the editor now reports a custom cover", AlbumArtworkEditor.hasCustomCover(subject))
-        await waitUntil { notifications > 0 && mosaic.showsCustomCover }
-        report("saving fires the change notification once", notifications == 1)
+        await waitUntil { notifications.value > 0 && mosaic.showsCustomCover }
+        report("saving fires the change notification once", notifications.value == 1)
         report("the mosaic view reports the custom state", mosaic.showsCustomCover)
         await waitUntil { parent.attachedSheet == nil }
 
@@ -175,7 +186,7 @@ enum DebugArtworkDrive {
 
         let verdict = results.allSatisfy { $0 } ? "PASSED" : "FAILED"
         let line = "ArtworkExercise \(verdict): \(results.filter { $0 }.count) of \(results.count)"
-        AppLogger.info(line, category: .general)
+        MidgarLog.info(line, category: .general)
         FileHandle.standardError.write(Data((line + "\n").utf8))
     }
 
@@ -356,9 +367,9 @@ enum DebugArtworkDrive {
         await waitUntil { detail.debugShownImage != nil }
         report("the album detail header shows the original cover first", detail.debugShownImage.map { !isColor($0, $0.width / 4, $0.height / 4, red: true) } ?? false)
 
-        var notifications = 0
+        let notifications = ObservedCount()
         let token = NotificationCenter.default.addObserver(forName: AlbumArtworkCache.didChangeNotification, object: nil, queue: .main) { _ in
-            notifications += 1
+            notifications.increment()
         }
         defer { NotificationCenter.default.removeObserver(token) }
 
@@ -377,8 +388,8 @@ enum DebugArtworkDrive {
         report("the saved cover is the first thing the database returns", (try? DatabaseManager.shared.fetchAlbumArtwork(title: album.title, artist: album.artist)) == data)
         report("every key has the cover", keys.allSatisfy { (try? DatabaseManager.shared.fetchAlbumArtwork(title: $0.title, artist: $0.artist)) == data })
         report("the in-memory cache was invalidated before anything repainted", AlbumArtworkCache.shared.artwork(forAlbum: album.title, artist: album.artist) == nil)
-        await waitUntil { notifications > 0 }
-        report("the change notification fired once", notifications == 1)
+        await waitUntil { notifications.value > 0 }
+        report("the change notification fired once", notifications.value == 1)
         report("the editor now sees a custom cover", AlbumArtworkEditor.hasCustomCover(album))
         await waitUntil { item.debugShownImage.map { isColor($0, $0.width / 4, $0.height / 4, red: true) } ?? false }
         let after = item.debugShownImage
@@ -398,7 +409,7 @@ enum DebugArtworkDrive {
         report("the grid tile went back to the original", item.debugShownImage.map { !isColor($0, $0.width / 4, $0.height / 4, red: true) } ?? false)
         await waitUntil { detail.debugShownImage.map { !isColor($0, $0.width / 4, $0.height / 4, red: true) } ?? false }
         report("the album detail header went back too", detail.debugShownImage.map { !isColor($0, $0.width / 4, $0.height / 4, red: true) } ?? false)
-        report("the notification fired again", notifications == 2)
+        report("the notification fired again", notifications.value == 2)
     }
 
     private static func waitUntil(timeout: Int = 40, _ condition: () -> Bool) async {
@@ -442,7 +453,7 @@ enum DebugArtworkDrive {
             return
         }
         guard let editor = MacArtworkEditor.present(for: album, from: parent) else {
-            AppLogger.error("ArtworkShot: the editor did not open", category: .general)
+            MidgarLog.error("ArtworkShot: the editor did not open", category: .general)
             return
         }
         try? await Task.sleep(for: .seconds(2))
@@ -455,7 +466,7 @@ enum DebugArtworkDrive {
             try? await Task.sleep(for: .seconds(4))
         }
         try? await Task.sleep(for: .seconds(2))
-        AppLogger.info("ArtworkShot \(variant): local tiles \(editor.debugLocalTileCount), online tiles \(editor.debugOnlineTileCount), soft \(editor.debugSoftLabelVisible), save enabled \(editor.debugSaveEnabled)", category: .general)
+        MidgarLog.info("ArtworkShot \(variant): local tiles \(editor.debugLocalTileCount), online tiles \(editor.debugOnlineTileCount), soft \(editor.debugSoftLabelVisible), save enabled \(editor.debugSaveEnabled)", category: .general)
         DebugDrive.captureSheet(of: window, name: "flaccy-shot-artwork-\(variant)")
         if variant == "saved" {
             editor.debugSave()
@@ -472,11 +483,11 @@ enum DebugArtworkDrive {
         PlaylistActions.add(tracks, toPlaylist: id, named: name, in: nil)
         if variant == "playlist" { seedCustomCover(forPlaylistNamed: name) }
         guard let editor = MacArtworkEditor.present(forPlaylist: playlist, tracks: tracks, from: parent) else {
-            AppLogger.error("ArtworkShot: the playlist editor did not open", category: .general)
+            MidgarLog.error("ArtworkShot: the playlist editor did not open", category: .general)
             return
         }
         try? await Task.sleep(for: .seconds(3))
-        AppLogger.info("ArtworkShot \(variant): local tiles \(editor.debugLocalTileCount), online tiles \(editor.debugOnlineTileCount), save enabled \(editor.debugSaveEnabled)", category: .general)
+        MidgarLog.info("ArtworkShot \(variant): local tiles \(editor.debugLocalTileCount), online tiles \(editor.debugOnlineTileCount), save enabled \(editor.debugSaveEnabled)", category: .general)
         DebugDrive.captureSheet(of: parent, name: "flaccy-shot-artwork-\(variant)")
         editor.requestCancel()
         try? await Task.sleep(for: .seconds(1))

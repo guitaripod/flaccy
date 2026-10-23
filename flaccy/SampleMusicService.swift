@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 
 /// Downloads the CC0 sample album from the flaccy-api Worker into Documents,
 /// where the normal library sync picks it up like any imported FLAC. Nothing
@@ -30,7 +31,7 @@ final class SampleMusicService {
     private var resumeData: [String: Data] = [:]
     private var hasStartedPlayback = false
 
-    private static let productionBaseURL = URL(string: "https://flaccy-api.midgarcorp.cc/v1/samples")!
+    private static let productionBaseURL = FlaccyMidgar.shared.api.url(path: "v1/samples")
     private static var baseURL: URL {
         #if DEBUG
         SampleDebugHooks.baseURL ?? productionBaseURL
@@ -69,6 +70,8 @@ final class SampleMusicService {
         let bytes: Int64
     }
 
+    private let api = FlaccyMidgar.shared.api
+
     private init() {}
 
     func downloadSamples() async -> Bool {
@@ -82,7 +85,7 @@ final class SampleMusicService {
             postProgress("")
         }
         do {
-            let (data, _) = try await URLSession.shared.data(from: Self.baseURL)
+            let (data, _) = try await URLSession.shared.data(for: api.downloadRequest(url: Self.baseURL))
             let manifest = try JSONDecoder().decode(Manifest.self, from: data)
             attribution = manifest.attribution
             let albumOrder = manifest.tracks.map(\.file)
@@ -100,7 +103,7 @@ final class SampleMusicService {
                     try await download(file) { [weak self] received in
                         self?.postDownloadProgress(Double(baseline + received) / Double(totalBytes))
                     }
-                    AppLogger.info("Sample downloaded: \(file.name)", category: .content)
+                    MidgarLog.info("Sample downloaded: \(file.name)", category: .content)
                 }
                 landedBytes += file.bytes
                 postDownloadProgress(Double(landedBytes) / Double(totalBytes))
@@ -113,12 +116,12 @@ final class SampleMusicService {
             }
             hasStartedPlayback = false
             resumeData.removeAll()
-            AppLogger.info("Sample music installed (\(manifest.tracks.count) tracks)", category: .content)
+            MidgarLog.info("Sample music installed (\(manifest.tracks.count) tracks)", category: .content)
             PurchaseFunnel.noteSampleDownload(.finished)
             return true
         } catch {
             interruption = landedSampleFileCount() > 0 ? .resumable : .unreachable
-            AppLogger.error("Sample download failed (\(interruption == .resumable ? "resumable" : "nothing landed"), \(resumeData.count) partial): \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Sample download failed (\(interruption == .resumable ? "resumable" : "nothing landed"), \(resumeData.count) partial): \(error.localizedDescription)", category: .content)
             PurchaseFunnel.noteSampleDownload(.failed)
             return false
         }
@@ -150,7 +153,7 @@ final class SampleMusicService {
     }
 
     private static func contentLength(of url: URL) async -> Int64 {
-        guard let (bytes, response) = try? await URLSession.shared.bytes(from: url) else { return 0 }
+        guard let (bytes, response) = try? await URLSession.shared.bytes(for: FlaccyMidgar.shared.api.downloadRequest(url: url)) else { return 0 }
         bytes.task.cancel()
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { return 0 }
         return max(response.expectedContentLength, 0)
@@ -184,14 +187,14 @@ final class SampleMusicService {
     private func fetch(_ file: PlannedFile, capture: DownloadTaskCapture) async throws -> (URL, URLResponse) {
         if let saved = resumeData.removeValue(forKey: file.name) {
             do {
-                AppLogger.info("Sample resuming: \(file.name)", category: .content)
+                MidgarLog.info("Sample resuming: \(file.name)", category: .content)
                 return try await URLSession.shared.download(resumeFrom: saved, delegate: capture)
             } catch {
-                AppLogger.info("Sample resume refused, restarting \(file.name): \(error.localizedDescription)", category: .content)
+                MidgarLog.info("Sample resume refused, restarting \(file.name): \(error.localizedDescription)", category: .content)
             }
         }
         do {
-            return try await URLSession.shared.download(from: file.url, delegate: capture)
+            return try await URLSession.shared.download(for: api.downloadRequest(url: file.url), delegate: capture)
         } catch {
             if let leftovers = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
                 resumeData[file.name] = leftovers
@@ -216,7 +219,7 @@ final class SampleMusicService {
         let tracks = sampleTracks(albumOrder: albumOrder)
         guard !tracks.isEmpty else { return false }
         guard !AudioPlayer.shared.isPlaying else { return true }
-        AppLogger.info("Sample: playing with \(tracks.count) of \(albumOrder.count) tracks landed", category: .content)
+        MidgarLog.info("Sample: playing with \(tracks.count) of \(albumOrder.count) tracks landed", category: .content)
         AudioPlayer.shared.play(tracks, startingAt: 0)
         if AudioPlayer.shared.currentTrack != nil {
             PurchaseFunnel.noteSampleDownload(.playing)
@@ -248,6 +251,7 @@ final class SampleMusicService {
     }
 }
 
+/// Remembers the task the session created for a download. `captured` is read and written only under `lock`.
 private nonisolated final class DownloadTaskCapture: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
 
     private let lock = NSLock()

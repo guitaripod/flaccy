@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 import UIKit
 import WatchConnectivity
@@ -98,7 +99,7 @@ final class WatchSyncService: NSObject {
         guard let wcSession else { return }
         wcSession.delegate = self
         wcSession.activate()
-        AppLogger.info("WCSession activate requested (iOS)", category: .connectivity)
+        MidgarLog.info("WCSession activate requested (iOS)", category: .connectivity)
     }
 
     var watchFreeBytes: Int64 { ledger.watchFreeBytes }
@@ -137,7 +138,7 @@ final class WatchSyncService: NSObject {
         guard newProfile != profile else { return }
         profile = newProfile
         UserDefaults.standard.set(newProfile.rawValue, forKey: Self.profileKey)
-        AppLogger.info("Watch audio profile set to \(newProfile.rawValue)", category: .connectivity)
+        MidgarLog.info("Watch audio profile set to \(newProfile.rawValue)", category: .connectivity)
         notify()
     }
 
@@ -221,7 +222,7 @@ final class WatchSyncService: NSObject {
     func sync(tracks: [Track]) -> SendResult {
         let readiness = self.readiness
         guard readiness.canQueue else {
-            AppLogger.warning("Sync skipped: \(readiness)", category: .connectivity)
+            MidgarLog.notice("Sync skipped: \(readiness)", category: .connectivity)
             return .notReady(readiness)
         }
         let pending = tracks.filter { !isSynced($0) }.count
@@ -250,7 +251,7 @@ final class WatchSyncService: NSObject {
         runStems.subtract(stems)
         persistRequested()
         sendCommand([SyncKeys.command: SyncKeys.commandRemove, SyncKeys.removePaths: stems])
-        AppLogger.info("Requested remove of \(stems.count) tracks", category: .connectivity)
+        MidgarLog.info("Requested remove of \(stems.count) tracks", category: .connectivity)
         pump()
         return true
     }
@@ -260,7 +261,7 @@ final class WatchSyncService: NSObject {
         ledger.reset()
         persistRequested()
         sendCommand([SyncKeys.command: SyncKeys.commandRemoveAll])
-        AppLogger.info("Requested remove-all", category: .connectivity)
+        MidgarLog.info("Requested remove-all", category: .connectivity)
         endRunIfIdle()
         notify()
     }
@@ -344,7 +345,7 @@ final class WatchSyncService: NSObject {
             return
         }
         guard FileManager.default.fileExists(atPath: track.fileURL.path) else {
-            AppLogger.error("Sync source missing, dropping request: \(stem)", category: .connectivity)
+            MidgarLog.error("Sync source missing, dropping request: \(stem)", category: .connectivity)
             dropOrphan(stem)
             return
         }
@@ -386,13 +387,13 @@ final class WatchSyncService: NSObject {
         let transfer = wcSession.transferFile(output.url, metadata: metadata.dictionary)
         attach(transfer, stem: stem)
         ledger.markSending(stem: stem, fraction: transfer.progress.fractionCompleted)
-        AppLogger.info("Queued transfer: \(destination) (\(output.bytes) bytes\(output.wasEncoded ? ", encoded" : ""))", category: .connectivity)
+        MidgarLog.info("Queued transfer: \(destination) (\(output.bytes) bytes\(output.wasEncoded ? ", encoded" : ""))", category: .connectivity)
         afterLedgerChange()
     }
 
     private func preparationFailed(stem: String, error: Error) {
         preparationEnded(stem)
-        AppLogger.error("Preparing \(stem) failed: \(error.localizedDescription)", category: .connectivity)
+        MidgarLog.error("Preparing \(stem) failed: \(error.localizedDescription)", category: .connectivity)
         ledger.markFailed(stem: stem, failure: .transient, now: Date())
         afterLedgerChange()
     }
@@ -428,7 +429,7 @@ final class WatchSyncService: NSObject {
         for stem in orphans { discardWork(for: stem) }
         ledger.withdraw(orphans)
         persistRequested()
-        AppLogger.info("Dropped \(orphans.count) requested tracks no longer in the library", category: .connectivity)
+        MidgarLog.info("Dropped \(orphans.count) requested tracks no longer in the library", category: .connectivity)
     }
 
     func discardWork(for stem: String) {

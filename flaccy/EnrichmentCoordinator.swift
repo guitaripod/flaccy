@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 import Network
 
 /// Drains the durable enrichment queue.
@@ -91,7 +92,7 @@ actor EnrichmentCoordinator {
     func requestNow(title: String, artist: String, force: Bool = false) async -> Bool {
         let outcome = await EnrichmentTasks.run(.album(title: title, artist: artist), force: force)
         guard outcome.changedLibrary else { return false }
-        await AppLogger.info("Enriched on request: \(artist) — \(title)", category: .content)
+        MidgarLog.info("Enriched on request: \(artist) — \(title)", category: .content)
         announce(title: title, artist: artist)
         return true
     }
@@ -401,7 +402,7 @@ actor EnrichmentCoordinator {
     }
 
     private nonisolated func log(_ message: String) {
-        Task { await AppLogger.info(message, category: .content) }
+        Task { MidgarLog.info(message, category: .content) }
     }
 
     /// Publishes at most once every 0.25 s. The snapshot is written to the box

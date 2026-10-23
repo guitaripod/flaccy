@@ -18,6 +18,9 @@ final class HeatmapView: UIView {
         backgroundColor = .clear
         isAccessibilityElement = true
         accessibilityTraits = .image
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitAccessibilityContrast.self, UITraitPreferredContentSizeCategory.self]) { (view: HeatmapView, _) in
+            view.setNeedsLayout()
+        }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -30,11 +33,6 @@ final class HeatmapView: UIView {
         dataVersion += 1
         let active = counts.values.filter { $0 > 0 }.count
         accessibilityLabel = String(localized: "Listening heatmap, \(active) active days")
-        setNeedsLayout()
-    }
-
-    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
-        super.traitCollectionDidChange(previous)
         setNeedsLayout()
     }
 

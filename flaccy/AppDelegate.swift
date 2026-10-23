@@ -1,4 +1,5 @@
 import AVFoundation
+import MidgarCore
 import UIKit
 import UserNotifications
 
@@ -9,10 +10,12 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        FlaccyMidgar.configureLogging()
+        FlaccyMidgar.shared.start()
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         } catch {
-            AppLogger.error("Audio session category failed: \(error.localizedDescription)", category: .playback)
+            MidgarLog.error("Audio session category failed: \(error.localizedDescription)", category: .playback)
         }
 
         UNUserNotificationCenter.current().delegate = self
@@ -49,7 +52,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         case (RecapNotificationScheduler.yearInMusicDestination?, _):
             presentYearInMusic()
         case (_, TrialReminderScheduler.paywallDestination?):
-            AppLogger.info("Trial reminder tapped: \(response.notification.request.identifier)", category: .purchases)
+            MidgarLog.info("Trial reminder tapped: \(response.notification.request.identifier)", category: .purchases)
             PurchaseManager.shared.requestPaywall()
         default:
             break

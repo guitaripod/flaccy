@@ -54,7 +54,7 @@ final class LibraryMosaicView: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    deinit { rotationTimer?.invalidate() }
+    isolated deinit { rotationTimer?.invalidate() }
 
     override var intrinsicContentSize: CGSize {
         let extent = Metrics.maximumSlotSide * 4 + Metrics.gap * 3
@@ -280,22 +280,16 @@ final class LibraryMosaicView: UIView {
 
     private func startRotationIfNeeded() {
         guard rotationTimer == nil, !pending.isEmpty, window != nil else { return }
-        rotationTimer = Timer.scheduledTimer(withTimeInterval: Metrics.rotationInterval, repeats: true) { [weak self] timer in
-            MainActor.assumeIsolated {
-                guard let self else {
-                    timer.invalidate()
-                    return
-                }
-                self.rotateOldestTile(timer)
-            }
+        rotationTimer = Timer.scheduledTimer(withTimeInterval: Metrics.rotationInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rotateOldestTile() }
         }
     }
 
     /// Retires the least recently refreshed tile in favour of a queued cover, so
     /// the grid keeps reporting a library far larger than thirty-six albums.
-    private func rotateOldestTile(_ timer: Timer) {
+    private func rotateOldestTile() {
         guard !pending.isEmpty, !refreshOrder.isEmpty else {
-            timer.invalidate()
+            rotationTimer?.invalidate()
             rotationTimer = nil
             return
         }

@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import UniformTypeIdentifiers
 import Combine
 
@@ -130,7 +131,7 @@ final class ChartsViewController: NSViewController {
     }
 
     deinit {
-        AppLogger.info("ChartsViewController deinit", category: .ui)
+        MidgarLog.info("ChartsViewController deinit", category: .ui)
     }
 
     private func buildContent() {
@@ -335,7 +336,7 @@ final class ChartsViewController: NSViewController {
 
     private func play(_ list: ChartList, shuffled: Bool) {
         guard let queue = playQueues[list], !queue.isEmpty else { return }
-        AppLogger.info("Recap play list: \(list) (\(queue.count) tracks, shuffled: \(shuffled))", category: .playback)
+        MidgarLog.info("Recap play list: \(list) (\(queue.count) tracks, shuffled: \(shuffled))", category: .playback)
         AudioPlayer.shared.play(shuffled ? queue.shuffled() : queue, startingAt: 0)
     }
 
@@ -651,12 +652,12 @@ final class ChartsViewController: NSViewController {
     private func play(track: Track) {
         let queue = playQueues[.tracks] ?? []
         guard let start = queue.firstIndex(where: { $0.fileURL == track.fileURL }) else { return }
-        AppLogger.info("Recap play track: \(track.title)", category: .playback)
+        MidgarLog.info("Recap play track: \(track.title)", category: .playback)
         AudioPlayer.shared.play(queue, startingAt: start)
     }
 
     private func startStation(artist: String) {
-        AppLogger.info("Recap start station: \(artist)", category: .playback)
+        MidgarLog.info("Recap start station: \(artist)", category: .playback)
         AudioPlayer.shared.startStation(seedArtist: artist)
         MacToast.show(String(localized: "Station started from \(artist)"), style: .success, in: view.window)
     }
@@ -766,9 +767,9 @@ final class ChartsViewController: NSViewController {
             guard let data = image.pngData() else { return }
             do {
                 try data.write(to: url)
-                AppLogger.info("Recap share card saved to \(url.path)", category: .ui)
+                MidgarLog.info("Recap share card saved to \(url.path)", category: .ui)
             } catch {
-                AppLogger.error("Recap card save failed: \(error.localizedDescription)", category: .ui)
+                MidgarLog.error("Recap card save failed: \(error.localizedDescription)", category: .ui)
             }
         }
     }

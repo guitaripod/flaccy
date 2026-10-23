@@ -61,13 +61,6 @@ struct AlbumListRow: View {
                 Label("Remove from Watch", systemImage: "trash")
             }
         }
-        .contextMenu {
-            Button(role: .destructive) {
-                requestRemoval(album)
-            } label: {
-                Label("Remove from Watch", systemImage: "trash")
-            }
-        }
         .accessibilityAction(named: Text("Remove from Watch")) { requestRemoval(album) }
         .task {
             guard LibraryShots.removalTarget == album.title else { return }

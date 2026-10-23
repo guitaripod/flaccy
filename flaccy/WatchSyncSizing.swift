@@ -9,6 +9,7 @@ import os
 /// its tiny fictional files.
 nonisolated enum WatchSyncSizing {
 
+    /// Replaced once at launch by the screenshot demo, before any sync reads it.
     nonisolated(unsafe) static var sourceBytes: @Sendable (Track) -> Int64 = { diskBytes(of: $0.fileURL) }
 
     private static let diskSizes = OSAllocatedUnfairLock(initialState: [String: Int64]())

@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG && os(iOS) && targetEnvironment(simulator)
 import FlaccyCore
 import Foundation
@@ -63,7 +64,7 @@ extension WatchSyncService {
         WatchSyncLink.simulated = Self.demoWatchState.link
         WatchSyncSizing.sourceBytes = { track in Self.demoSourceBytes(of: track) }
         buildDemoState()
-        AppLogger.info("Watch sync demo state installed", category: .connectivity)
+        MidgarLog.info("Watch sync demo state installed", category: .connectivity)
         notify()
     }
 
@@ -103,7 +104,7 @@ extension WatchSyncService {
 
     /// A believable size for the one-second-per-kilobyte fictional files: what a
     /// FLAC of this length, rate and depth would weigh.
-    private static func demoSourceBytes(of track: Track) -> Int64 {
+    nonisolated private static func demoSourceBytes(of track: Track) -> Int64 {
         let rate = Double(track.sampleRate ?? 44_100)
         let depth = Double(track.bitDepth ?? 16)
         return Int64(track.duration * rate * 2 * depth / 8 * 0.58)

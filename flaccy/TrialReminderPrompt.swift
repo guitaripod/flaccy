@@ -1,4 +1,5 @@
 import UIKit
+import MidgarCore
 
 /// The consent alert behind the trial reminders. It is offered at a completed
 /// play in the window where both trial reminders still lie ahead, only while
@@ -38,7 +39,7 @@ enum TrialReminderPrompt {
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: PaywallCopy.noThanks, style: .cancel) { _ in
-            AppLogger.info("Trial reminders declined", category: .purchases)
+            MidgarLog.info("Trial reminders declined", category: .purchases)
         })
         let remind = UIAlertAction(title: PaywallCopy.remindMe, style: .default) { [weak presenter] _ in
             Task { await enableReminders(from: presenter) }
@@ -47,7 +48,7 @@ enum TrialReminderPrompt {
         alert.preferredAction = remind
         TrialReminderScheduler.shared.markAsked()
         presenter.present(alert, animated: true)
-        AppLogger.info("Trial reminder consent asked", category: .purchases)
+        MidgarLog.info("Trial reminder consent asked", category: .purchases)
     }
 
     private static func enableReminders(from presenter: UIViewController?) async {

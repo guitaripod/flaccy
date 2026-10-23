@@ -77,10 +77,15 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
                 memoryCache.removeObject(forKey: cacheKey(title: key.title, artist: key.artist, tier: tier) as NSString)
             }
         }
-        let post = {
-            NotificationCenter.default.post(name: AlbumArtworkCache.didChangeNotification, object: nil)
+        if Thread.isMainThread {
+            Self.postDidChange()
+        } else {
+            DispatchQueue.main.async { Self.postDidChange() }
         }
-        if Thread.isMainThread { post() } else { DispatchQueue.main.async(execute: post) }
+    }
+
+    private static func postDidChange() {
+        NotificationCenter.default.post(name: didChangeNotification, object: nil)
     }
 
     private func currentEpoch() -> Int {

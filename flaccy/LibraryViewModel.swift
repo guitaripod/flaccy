@@ -1,4 +1,5 @@
 import Combine
+import MidgarCore
 import FlaccyCore
 
 #if canImport(UIKit)
@@ -764,7 +765,7 @@ final class LibraryViewModel {
                 return PlaylistItem(id: id, name: record.name, trackCount: counts[id] ?? 0)
             }
         } catch {
-            AppLogger.error("Failed to fetch playlists: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to fetch playlists: \(error.localizedDescription)", category: .database)
             result = []
         }
         cachedPlaylists = result
@@ -862,7 +863,7 @@ final class LibraryViewModel {
         bindLibrarySurface()
     }
 
-    deinit {
+    isolated deinit {
         NotificationCenter.default.removeObserver(self)
         Self.removeSharedMeta(for: library)
     }
@@ -878,20 +879,11 @@ final class LibraryViewModel {
     /// about elapsed time that no notification will ever ask on its own.
     private func bindLibrarySurface() {
         let load = NotificationCenter.default.publisher(for: Library.progressDidChange)
-            .compactMap { notification -> LibrarySignal? in
-                guard let progress = notification.userInfo?[Library.ProgressKey.progress] as? LibraryLoadProgress,
-                      let fraction = notification.userInfo?[Library.ProgressKey.fraction] as? Double
-                else { return nil }
-                return .load(progress, fraction)
-            }
+            .compactMap(Self.loadSignal(from:))
             .eraseToAnyPublisher()
 
         let job = NotificationCenter.default.publisher(for: EnrichmentCoordinator.progressDidChange)
-            .compactMap { notification -> LibrarySignal? in
-                guard let progress = notification.userInfo?[EnrichmentCoordinator.ProgressKey.progress]
-                    as? EnrichmentJobProgress else { return nil }
-                return .job(progress)
-            }
+            .compactMap(Self.jobSignal(from:))
             .eraseToAnyPublisher()
 
         let tick = debutTick.map { LibrarySignal.tick }.eraseToAnyPublisher()
@@ -912,6 +904,21 @@ final class LibraryViewModel {
                 }
                 self.loadStatePublisher.send(self.routedState())
             }
+    }
+
+    /// Reads a load-progress notification on the thread that posted it, which is why this is not isolated.
+    private nonisolated static func loadSignal(from notification: Notification) -> LibrarySignal? {
+        guard let progress = notification.userInfo?[Library.ProgressKey.progress] as? LibraryLoadProgress,
+              let fraction = notification.userInfo?[Library.ProgressKey.fraction] as? Double
+        else { return nil }
+        return .load(progress, fraction)
+    }
+
+    /// Reads an enrichment-progress notification on the thread that posted it, which is why this is not isolated.
+    private nonisolated static func jobSignal(from notification: Notification) -> LibrarySignal? {
+        guard let progress = notification.userInfo?[EnrichmentCoordinator.ProgressKey.progress]
+            as? EnrichmentJobProgress else { return nil }
+        return .job(progress)
     }
 
     private func routedState() -> LibraryLoadState {
@@ -1001,7 +1008,7 @@ final class LibraryViewModel {
         do {
             try DatabaseManager.shared.saveLibraryDebut(summary)
         } catch {
-            AppLogger.error("Failed to record library debut: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to record library debut: \(error.localizedDescription)", category: .database)
         }
         dismissDebut()
     }
@@ -1108,7 +1115,6 @@ final class LibraryViewModel {
     }
 
     private var snapshotEpoch = 0
-    private let snapshotQueue = DispatchQueue(label: "flaccy.library.snapshot", qos: .userInitiated)
 
     /// Why the last snapshot was published.
     ///
@@ -1123,19 +1129,16 @@ final class LibraryViewModel {
 
     private(set) var snapshotIntent: SnapshotIntent = .replaceList
 
-    /// Builds the next snapshot off the main thread so segment switches and
-    /// sort changes never stall the segmented control / menu animations.
+    /// Builds the next snapshot on the next turn of the main actor, after the
+    /// segmented control / menu animation that asked for it has started. A
+    /// request that a newer one has superseded by then is dropped unbuilt.
     private func publishSnapshot(intent: SnapshotIntent = .replaceList) {
         snapshotEpoch &+= 1
         let epoch = snapshotEpoch
         snapshotIntent = intent
-        snapshotQueue.async { [weak self] in
-            guard let self else { return }
-            let snapshot = self.buildSnapshot()
-            DispatchQueue.main.async {
-                guard epoch == self.snapshotEpoch else { return }
-                self.snapshotPublisher.send(snapshot)
-            }
+        Task { @MainActor [weak self] in
+            guard let self, epoch == self.snapshotEpoch else { return }
+            self.snapshotPublisher.send(self.buildSnapshot())
         }
     }
 

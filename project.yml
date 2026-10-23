@@ -1,0 +1,371 @@
+name: flaccy
+include:
+  - ../../build/xcodegen/midgar-app.yml
+options:
+  bundleIdPrefix: com.midgarcorp
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "18.6"
+    macOS: "26.0"
+    watchOS: "11.0"
+settings:
+  base:
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    CLANG_CXX_LANGUAGE_STANDARD: gnu++20
+    GCC_C_LANGUAGE_STANDARD: gnu17
+    MTL_FAST_MATH: YES
+  configs:
+    Debug:
+      MTL_ENABLE_DEBUG_INFO: INCLUDE_SOURCE
+    Release:
+      MTL_ENABLE_DEBUG_INFO: NO
+      VALIDATE_PRODUCT: YES
+packages:
+  FlaccyCore:
+    path: FlaccyCore
+  GRDB:
+    url: https://github.com/groue/GRDB.swift.git
+    from: 7.0.0
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios
+    from: 5.87.1
+  MidgarKit:
+    url: https://github.com/guitaripod/MidgarKit
+    exactVersion: 4.3.1
+
+x-midgar-keychain-groups: &midgarKeychainGroups
+  - $(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)
+  - $(AppIdentifierPrefix)cc.midgarcorp.shared
+
+x-distribution-identity: &distributionIdentity "Apple Distribution"
+
+x-app-assets: &appAssets
+  ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+targets:
+  flaccy:
+    templates:
+      - MidgarApp
+    templateAttributes:
+      platform: iOS
+    sources:
+      - path: flaccy
+        type: syncedFolder
+        excludes:
+          - Info.plist
+          - flaccy-ios.entitlements
+          - Secrets.swift.example
+    dependencies:
+      - package: FlaccyCore
+      - package: GRDB
+      - package: RevenueCat
+      - package: MidgarKit
+        product: MidgarCore
+      - package: MidgarKit
+        product: MidgarCommerce
+      - package: MidgarKit
+        product: MidgarUI
+      - package: MidgarKit
+        product: MidgarPortal
+      - target: flaccyWatch Watch App
+        embed: true
+    entitlements:
+      path: flaccy/flaccy-ios.entitlements
+      properties:
+        keychain-access-groups: *midgarKeychainGroups
+    scheme:
+      testTargets:
+        - flaccyTests
+        - package: FlaccyCore/FlaccyCoreTests
+    settings:
+      groups:
+        - MidgarIOSApp
+      base:
+        <<: *appAssets
+        INFOPLIST_FILE: flaccy/Info.plist
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
+        INFOPLIST_KEY_UILaunchScreen_Generation: NO
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: NO
+        INFOPLIST_KEY_UILaunchStoryboardName: LaunchScreen
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
+        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/Frameworks"]
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "2"
+        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccy
+        PRODUCT_NAME: $(TARGET_NAME)
+        STRING_CATALOG_GENERATE_SYMBOLS: YES
+        SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+        TARGETED_DEVICE_FAMILY: "1"
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "Apple Development: Marcus Ziadé (AUJJ76QHS7)"
+          CODE_SIGN_STYLE: Manual
+          PROVISIONING_PROFILE_SPECIFIER: flaccy Dev Air
+        Release:
+          CODE_SIGN_IDENTITY: *distributionIdentity
+          CODE_SIGN_STYLE: Manual
+          PROVISIONING_PROFILE_SPECIFIER: flaccy AppStore 2026
+
+  flaccyMac:
+    templates:
+      - MidgarApp
+    templateAttributes:
+      platform: macOS
+    sources:
+      - path: flaccyMac
+        type: syncedFolder
+        excludes:
+          - Info.plist
+          - flaccyMac.entitlements
+      - path: flaccy
+        type: syncedFolder
+        excludes:
+          - Info.plist
+          - flaccy-ios.entitlements
+          - Secrets.swift.example
+          - WatchSyncServiceTransport.swift
+          - AdaptiveLayout.swift
+          - AlbumCell.swift
+          - AlbumDetailViewController.swift
+          - AmbientPaletteBackdropView.swift
+          - AppAppearance.swift
+          - AppDelegate.swift
+          - ArtistDetailViewController.swift
+          - ArtistImageService.swift
+          - ArtworkCropView.swift
+          - ArtworkEditorViewController.swift
+          - Assets.xcassets
+          - ChartsViewController.swift
+          - ComputerTransferGuideViewController.swift
+          - DuplicateCopiesViewController.swift
+          - EnrichmentReportViewController.swift
+          - EqualizerControls.swift
+          - EqualizerCurveView.swift
+          - EqualizerImportViewController.swift
+          - EqualizerPresetsViewController.swift
+          - EqualizerViewController.swift
+          - FilterChipsView.swift
+          - HeatmapView.swift
+          - IdentifiedSegmentedControl.swift
+          - LibraryDebutSheetController.swift
+          - LibraryDebutSummaryCard.swift
+          - LibraryDebutView.swift
+          - LibraryMosaicView.swift
+          - LibraryStatusBanner.swift
+          - LibraryViewController.swift
+          - LiquidGlass.swift
+          - ListeningClockView.swift
+          - ListeningGuideViewController.swift
+          - LoveButton.swift
+          - LyricsViewController.swift
+          - MarqueeLabel.swift
+          - MiniPlayerView.swift
+          - NowPlayingBackdropView.swift
+          - NowPlayingViewController.swift
+          - PaywallViewController.swift
+          - PlayerContainerViewController.swift
+          - PlaylistDetailViewController.swift
+          - PrivacyInfo.xcprivacy
+          - QualityBadgeView.swift
+          - QueueViewController.swift
+          - RecapCells.swift
+          - RecapNotificationScheduler.swift
+          - RecapNotificationsViewController.swift
+          - RecapShareCardView.swift
+          - SceneDelegate.swift
+          - ScrubberView.swift
+          - SectionIndexView.swift
+          - SettingsHeaderView.swift
+          - SettingsViewController.swift
+          - SonglinkShareable.swift
+          - StreamingLinksViewController.swift
+          - SystemVolumeSlider.swift
+          - ToastView.swift
+          - TrackContextMenu.swift
+          - TrackGridCell.swift
+          - TrialReminderPrompt.swift
+          - TrialRunwayBannerView.swift
+          - TrialRunwayPresenter.swift
+          - WantlistViewController.swift
+          - WatchPlayIngestor.swift
+          - WatchSyncBackgroundTask.swift
+          - WatchSyncCells.swift
+          - WatchSyncCopy.swift
+          - WatchSyncExercise.swift
+          - WatchSyncHelpViewController.swift
+          - WatchSyncMetrics.swift
+          - WatchSyncReadiness.swift
+          - WatchSyncServiceDemo.swift
+          - WatchSyncService.swift
+          - WatchSyncSizing.swift
+          - WatchSyncStorageMeter.swift
+          - WatchSyncViewController.swift
+          - WatchTranscoder.swift
+          - YearInMusicStoryView.swift
+          - YearInMusicViewController.swift
+    dependencies:
+      - package: FlaccyCore
+      - package: GRDB
+      - package: RevenueCat
+      - package: MidgarKit
+        product: MidgarCore
+      - package: MidgarKit
+        product: MidgarCommerce
+      - package: MidgarKit
+        product: MidgarUI
+      - package: MidgarKit
+        product: MidgarPortal
+    entitlements:
+      path: flaccyMac/flaccyMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.files.bookmarks.app-scope: true
+        keychain-access-groups: *midgarKeychainGroups
+    scheme:
+      testTargets:
+        - package: FlaccyCore/FlaccyCoreTests
+    settings:
+      groups:
+        - MidgarMacApp
+      base:
+        <<: *appAssets
+        COMBINE_HIDPI_IMAGES: YES
+        ENABLE_HARDENED_RUNTIME: NO
+        EXCLUDED_SOURCE_FILE_NAMES: LaunchScreen.storyboard
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: flaccyMac/Info.plist
+        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/../Frameworks"]
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccy.mac
+        PRODUCT_NAME: Flaccy
+        SKIP_INSTALL: NO
+        SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+      configs:
+        Release:
+          CODE_SIGN_IDENTITY: *distributionIdentity
+          CODE_SIGN_STYLE: Manual
+          PROVISIONING_PROFILE_SPECIFIER: flaccy-mac-appstore-2026
+
+  flaccyWatch Watch App:
+    templates:
+      - MidgarApp
+    templateAttributes:
+      platform: watchOS
+    sources:
+      - path: flaccyWatch Watch App
+        type: syncedFolder
+        excludes:
+          - Info.plist
+      - flaccy/EnrichmentJobCopy.swift
+      - flaccy/LibraryDebutCopy.swift
+      - flaccy/LibraryLoadPhaseCopy.swift
+    dependencies:
+      - package: FlaccyCore
+    scheme: {}
+    settings:
+      base:
+        <<: *appAssets
+        ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
+        ENABLE_PREVIEWS: YES
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: flaccyWatch Watch App/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Flaccy
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
+        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/Frameworks"]
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccy.watchkitapp
+        PRODUCT_NAME: $(TARGET_NAME)
+        SDKROOT: watchos
+        SKIP_INSTALL: YES
+        TARGETED_DEVICE_FAMILY: "4"
+      configs:
+        Release:
+          CODE_SIGN_IDENTITY: *distributionIdentity
+          CODE_SIGN_STYLE: Manual
+          PROVISIONING_PROFILE_SPECIFIER: flaccy Watch AppStore 2026
+          VALIDATE_PRODUCT: YES
+
+  flaccyTests:
+    templates:
+      - MidgarUnitTests
+    templateAttributes:
+      platform: iOS
+    sources:
+      - path: flaccyTests
+    dependencies:
+      - target: flaccy
+    settings:
+      base:
+        CLANG_ENABLE_OBJC_WEAK: NO
+        CURRENT_PROJECT_VERSION: "2"
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "1.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccyTests
+        PRODUCT_NAME: $(TARGET_NAME)
+        SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+        SWIFT_EMIT_LOC_STRINGS: NO
+        SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+        TARGETED_DEVICE_FAMILY: "1"
+
+  flaccyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: flaccyUITests
+        excludes:
+          - Flaccy.storekit
+    dependencies:
+      - target: flaccy
+    scheme:
+      testTargets:
+        - flaccyUITests
+      storeKitConfiguration: flaccyUITests/Flaccy.storekit
+    settings:
+      groups:
+        - MidgarSwift
+        - MidgarSigning
+        - MidgarBuildHygiene
+      base:
+        CURRENT_PROJECT_VERSION: "2"
+        GENERATE_INFOPLIST_FILE: YES
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+        MARKETING_VERSION: "1.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccyUITests
+        PRODUCT_NAME: $(TARGET_NAME)
+        SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+        SWIFT_EMIT_LOC_STRINGS: NO
+        TARGETED_DEVICE_FAMILY: "1"
+
+  flaccyMacUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: flaccyMacUITests
+    dependencies:
+      - target: flaccyMac
+    scheme:
+      testTargets:
+        - flaccyMacUITests
+    settings:
+      groups:
+        - MidgarSwift
+        - MidgarSigning
+        - MidgarBuildHygiene
+      base:
+        COMBINE_HIDPI_IMAGES: NO
+        GENERATE_INFOPLIST_FILE: YES
+        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/../Frameworks", "@loader_path/../Frameworks"]
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccy.mac.uitests
+        PRODUCT_NAME: flaccyMacUITests

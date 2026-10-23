@@ -603,7 +603,9 @@ final class MacEqualizerPreviewPill: NSView {
             context.duration = duration
             animator().alphaValue = name == nil ? 0 : 1
         } completionHandler: { [weak self] in
-            if self?.isShown == false { self?.bars.setPlaying(false) }
+            MainActor.assumeIsolated {
+                if self?.isShown == false { self?.bars.setPlaying(false) }
+            }
         }
     }
 

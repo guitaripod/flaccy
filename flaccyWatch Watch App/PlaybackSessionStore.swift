@@ -1,11 +1,12 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 
 /// Keeps the last playback session on disk so the watch can pick up exactly
 /// where it stopped. Writes are coalesced and happen off the main thread:
 /// a burst of events costs one atomic file replace, and the newest snapshot
 /// always wins.
-final class PlaybackSessionStore: @unchecked Sendable {
+nonisolated final class PlaybackSessionStore: @unchecked Sendable {
 
     static let shared = PlaybackSessionStore()
 
@@ -31,7 +32,7 @@ final class PlaybackSessionStore: @unchecked Sendable {
         do {
             return try JSONDecoder().decode(WatchPlaybackSnapshot.self, from: data)
         } catch {
-            AppLogger.warning("Watch session file unreadable: \(error.localizedDescription)", category: .playback)
+            MidgarLog.notice("Watch session file unreadable: \(error.localizedDescription)", category: .playback)
             return nil
         }
     }
@@ -67,7 +68,7 @@ final class PlaybackSessionStore: @unchecked Sendable {
             let data = try JSONEncoder().encode(snapshot)
             try data.write(to: fileURL, options: .atomic)
         } catch {
-            AppLogger.error("Watch session save failed: \(error.localizedDescription)", category: .playback)
+            MidgarLog.error("Watch session save failed: \(error.localizedDescription)", category: .playback)
         }
     }
 }

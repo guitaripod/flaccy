@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import UniformTypeIdentifiers
 
 /// Year in Music configurator: a slide list, year picker, theme swatches, and
@@ -97,7 +98,7 @@ final class YearInMusicViewController: NSViewController {
     }
 
     deinit {
-        AppLogger.info("YearInMusicViewController deinit", category: .ui)
+        MidgarLog.info("YearInMusicViewController deinit", category: .ui)
     }
 
     private func buildSidebar() {
@@ -222,6 +223,8 @@ final class YearInMusicViewController: NSViewController {
     private func recomputeData() {
         let year = selectedYear
         let durations = YearInMusicService.shared.libraryDurations()
+        let libraryAlbums = Library.shared.albums
+        let libraryTracks = Library.shared.allTracks
         let slide = selectedSlide
         let format = selectedFormat
         let themeIndex = selectedThemeIndex
@@ -231,7 +234,8 @@ final class YearInMusicViewController: NSViewController {
 
         Task.detached {
             let computed = YearInMusicService.shared.compute(year: year, libraryDurations: durations)
-            let artwork = computed.hasContent ? StoryArtwork.resolve(for: computed) : .empty
+            let artwork = computed.hasContent
+                ? StoryArtwork.resolve(for: computed, albums: libraryAlbums, tracks: libraryTracks) : .empty
             let seed = computed.topArtists.first.map { "\($0.name)\(year)" } ?? "flaccy\(year)"
             let themes = StoryTheme.all(seedPalette: ArtworkPaletteExtractor.fallbackPalette(seed: seed))
             let resolvedIndex = min(themeIndex, themes.count - 1)
@@ -357,16 +361,16 @@ final class YearInMusicViewController: NSViewController {
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let url = panel.url else { return }
             guard let data = image.pngData() else {
-                AppLogger.error("Year in Music export failed: the slide could not be encoded as PNG", category: .ui)
+                MidgarLog.error("Year in Music export failed: the slide could not be encoded as PNG", category: .ui)
                 MacToast.show(String(localized: "Couldn't export the slide — it couldn't be encoded as a PNG. Try again."), style: .error, in: self?.view.window)
                 return
             }
             do {
                 try data.write(to: url)
-                AppLogger.info("Year in Music export saved to \(url.path)", category: .ui)
+                MidgarLog.info("Year in Music export saved to \(url.path)", category: .ui)
                 MacToast.show(String(localized: "Exported \(url.lastPathComponent)"), style: .success, in: self?.view.window)
             } catch {
-                AppLogger.error("Year in Music export failed: \(error.localizedDescription)", category: .ui)
+                MidgarLog.error("Year in Music export failed: \(error.localizedDescription)", category: .ui)
                 MacToast.show(String(localized: "Couldn't save \u{201C}\(url.lastPathComponent)\u{201D}: \(error.localizedDescription)"), style: .error, in: self?.view.window)
             }
         }

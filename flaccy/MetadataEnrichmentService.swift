@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 
 nonisolated struct AlbumEnrichmentValues: Sendable {
     let coverArtURL: String?
@@ -28,7 +29,7 @@ nonisolated enum EnrichmentFailureClassifier {
 
     static func classify(_ error: Error) async -> EnrichmentFailure {
         guard let urlError = error as? URLError else { return .transport }
-        await AppLogger.debug("Enrichment transport failure: \(describe(urlError))", category: .content)
+        MidgarLog.debug("Enrichment transport failure: \(describe(urlError))", category: .content)
         return .transport
     }
 

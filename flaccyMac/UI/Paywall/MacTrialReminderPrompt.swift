@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 
 /// The one consent alert behind the trial reminders, asked as a sheet on the
@@ -37,7 +38,7 @@ enum MacTrialReminderPrompt {
               window.contentViewController?.presentedViewControllers?.isEmpty ?? true
         else { return }
         TrialReminderScheduler.shared.markAsked()
-        AppLogger.info("Trial reminder consent asked", category: .purchases)
+        MidgarLog.info("Trial reminder consent asked", category: .purchases)
 
         let alert = NSAlert()
         alert.messageText = PaywallCopy.reminderConsentTitle
@@ -46,7 +47,7 @@ enum MacTrialReminderPrompt {
         alert.addButton(withTitle: PaywallCopy.noThanks)
         alert.beginSheetModal(for: window) { response in
             guard response == .alertFirstButtonReturn else {
-                AppLogger.info("Trial reminders declined", category: .purchases)
+                MidgarLog.info("Trial reminders declined", category: .purchases)
                 return
             }
             Task { await enableOrExplain(in: window) }

@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 /// Everything the Mac does at an activation edge for the trial's last stretch,
 /// in one place and in one order: the day re-derived first, then the one-time
@@ -26,6 +27,6 @@ enum MacTrialRunwayPresenter {
             PaywallCopy.runwayToast,
             style: .info, in: window
         )
-        AppLogger.info("Trial runway toast shown", category: .purchases)
+        MidgarLog.info("Trial runway toast shown", category: .purchases)
     }
 }

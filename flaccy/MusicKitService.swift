@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 import MusicKit
 
 /// Whether Flaccy may ask Apple Music for artwork it could not find anywhere
@@ -62,8 +63,11 @@ final class MusicKitService {
 
     static let shared = MusicKitService()
 
-    private let songCache = NSCache<NSString, CachedSongMatch>()
-    private let albumCache = NSCache<NSString, CachedAlbumMatch>()
+    /// `NSCache` does its own locking, so the song cache is safe to use from the nonisolated lookups.
+    private nonisolated(unsafe) let songCache = NSCache<NSString, CachedSongMatch>()
+
+    /// The album counterpart of `songCache`, safe for the same reason.
+    private nonisolated(unsafe) let albumCache = NSCache<NSString, CachedAlbumMatch>()
 
     private init() {
         songCache.countLimit = 200
@@ -77,7 +81,7 @@ final class MusicKitService {
     nonisolated func requestAuthorizationIfNeeded() async -> Bool {
         let status = await MusicAuthorization.request()
         if status != .authorized {
-            await AppLogger.warning("MusicKit authorization denied: \(status)", category: .content)
+            MidgarLog.notice("MusicKit authorization denied: \(status)", category: .content)
         }
         return status == .authorized
     }
@@ -99,7 +103,7 @@ final class MusicKitService {
             request.limit = 10
             let response = try await request.response()
 
-            await AppLogger.info("MusicKit: \(response.songs.count) results for '\(artist) \(title)'", category: .content)
+            MidgarLog.info("MusicKit: \(response.songs.count) results for '\(artist) \(title)'", category: .content)
 
             let match = response.songs.first { song in
                 song.title.localizedCaseInsensitiveContains(title)
@@ -107,7 +111,7 @@ final class MusicKitService {
             } ?? response.songs.first
 
             guard let song = match, let url = song.url else {
-                await AppLogger.debug("MusicKit: no song match for \(artist) - \(title)", category: .content)
+                MidgarLog.debug("MusicKit: no song match for \(artist) - \(title)", category: .content)
                 return .notFound
             }
 
@@ -120,7 +124,7 @@ final class MusicKitService {
             songCache.setObject(CachedSongMatch(match: result), forKey: cacheKey)
             return .found(result)
         } catch {
-            await AppLogger.error("MusicKit song search failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("MusicKit song search failed: \(error.localizedDescription)", category: .content)
             return .failed
         }
     }
@@ -148,7 +152,7 @@ final class MusicKitService {
             } ?? response.albums.first
 
             guard let album = match, let url = album.url else {
-                await AppLogger.debug("MusicKit: no album match for \(artist) - \(title)", category: .content)
+                MidgarLog.debug("MusicKit: no album match for \(artist) - \(title)", category: .content)
                 return .notFound
             }
 
@@ -163,7 +167,7 @@ final class MusicKitService {
             albumCache.setObject(CachedAlbumMatch(match: result), forKey: cacheKey)
             return .found(result)
         } catch {
-            await AppLogger.error("MusicKit album search failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("MusicKit album search failed: \(error.localizedDescription)", category: .content)
             return .failed
         }
     }
@@ -182,7 +186,7 @@ final class MusicKitService {
                 ?? response.artists.first { $0.name.localizedCaseInsensitiveContains(artist) }
 
             guard let artworkURL = match?.artwork?.url(width: 1024, height: 1024) else {
-                await AppLogger.debug("MusicKit: no artist artwork for \(artist)", category: .content)
+                MidgarLog.debug("MusicKit: no artist artwork for \(artist)", category: .content)
                 return nil
             }
 
@@ -190,7 +194,7 @@ final class MusicKitService {
             guard let http = response2 as? HTTPURLResponse, http.statusCode == 200 else { return nil }
             return data
         } catch {
-            await AppLogger.error("MusicKit artist image fetch failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("MusicKit artist image fetch failed: \(error.localizedDescription)", category: .content)
             return nil
         }
     }
@@ -225,18 +229,18 @@ final class MusicKitService {
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
             return data
         } catch {
-            await AppLogger.error("MusicKit artwork download failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("MusicKit artwork download failed: \(error.localizedDescription)", category: .content)
             return nil
         }
     }
 }
 
-private final class CachedSongMatch: NSObject {
+private nonisolated final class CachedSongMatch: NSObject {
     let match: MusicKitSongMatch
     init(match: MusicKitSongMatch) { self.match = match }
 }
 
-private final class CachedAlbumMatch: NSObject {
+private nonisolated final class CachedAlbumMatch: NSObject {
     let match: MusicKitAlbumMatch
     init(match: MusicKitAlbumMatch) { self.match = match }
 }

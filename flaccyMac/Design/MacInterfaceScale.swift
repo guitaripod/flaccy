@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 extension Notification.Name {
     static let flaccyInterfaceScaleChanged = Notification.Name("flaccy.mac.interfaceScaleChanged")
@@ -109,7 +110,7 @@ final class InterfaceZoomHostView: NSView {
         setBoundsSize(target)
         content.frame = bounds
         needsLayout = true
-        AppLogger.info("Interface scale \(Int(scale * 100))% — frame \(frame.size), bounds \(bounds.size)", category: .ui)
+        MidgarLog.info("Interface scale \(Int(scale * 100))% — frame \(frame.size), bounds \(bounds.size)", category: .ui)
     }
 }
 

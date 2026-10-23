@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG
 import AppKit
 import Combine
@@ -12,7 +13,7 @@ enum MemoryAudit {
     private static var failures = 0
 
     static func run(window: NSWindow?) async {
-        AppLogger.info("MemoryAudit: start", category: .general)
+        MidgarLog.info("MemoryAudit: start", category: .general)
         await waitForLibrary()
 
         await checkSongsTableTrackChange()
@@ -24,7 +25,7 @@ enum MemoryAudit {
         await checkSettingsRelease()
         await checkEqualizerRelease()
 
-        AppLogger.info("MemoryAudit: done failures=\(failures)", category: .general)
+        MidgarLog.info("MemoryAudit: done failures=\(failures)", category: .general)
     }
 
     private static func waitForLibrary() async {
@@ -49,22 +50,22 @@ enum MemoryAudit {
             return
         }
 
-        var libraryUpdates = 0
+        let libraryUpdates = ObservedCount()
         let token = NotificationCenter.default.addObserver(
             forName: Library.didUpdateNotification, object: nil, queue: .main
-        ) { _ in libraryUpdates += 1 }
+        ) { _ in libraryUpdates.increment() }
         defer { NotificationCenter.default.removeObserver(token) }
 
         let reloads = model.debugReloadCount
         let updates = model.debugTrackUpdateCount
-        let updatesAtPost = libraryUpdates
+        let updatesAtPost = libraryUpdates.value
         NotificationCenter.default.post(name: AudioPlayer.trackDidChange, object: nil)
         for _ in 0..<40 {
             if model.debugTrackUpdateCount > updates { break }
             try? await Task.sleep(for: .milliseconds(100))
         }
         let extraReloads = model.debugReloadCount - reloads
-        let extraLibraryUpdates = libraryUpdates - updatesAtPost
+        let extraLibraryUpdates = libraryUpdates.value - updatesAtPost
         check(
             "songs track change skips full reload",
             extraReloads <= extraLibraryUpdates
@@ -72,7 +73,7 @@ enum MemoryAudit {
         if model.debugCurrentTrackIsIndexed {
             check("songs track change updates one row", model.debugTrackUpdateCount > updates)
         } else {
-            AppLogger.info("MemoryAudit: SKIP songs row update (no indexed current track)", category: .general)
+            MidgarLog.info("MemoryAudit: SKIP songs row update (no indexed current track)", category: .general)
         }
     }
 
@@ -141,7 +142,7 @@ enum MemoryAudit {
         var controller: SettingsWindowController? = SettingsWindowController(
             contentController: NSViewController()
         )
-        weak var weakController = controller
+        weak let weakController = controller
         controller?.show()
         controller?.close()
         controller = nil
@@ -184,7 +185,7 @@ enum MemoryAudit {
 
     private static func check(_ name: String, _ passed: Bool) {
         if passed {
-            AppLogger.info("MemoryAudit: PASS \(name)", category: .general)
+            MidgarLog.info("MemoryAudit: PASS \(name)", category: .general)
         } else {
             fail(name)
         }
@@ -192,7 +193,7 @@ enum MemoryAudit {
 
     private static func fail(_ name: String) {
         failures += 1
-        AppLogger.error("MemoryAudit: FAIL \(name)", category: .general)
+        MidgarLog.error("MemoryAudit: FAIL \(name)", category: .general)
     }
 }
 #endif

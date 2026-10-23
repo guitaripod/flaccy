@@ -149,8 +149,15 @@ nonisolated struct StoryArtwork {
 
     static let empty = StoryArtwork(collage: [], artistRows: [], trackRows: [])
 
+    /// Resolves the cover pictures from the library as it stood when the caller read it on the main actor, so the
+    /// lookups can run on any thread.
+    @MainActor
     static func resolve(for data: YearInMusicData) -> StoryArtwork {
-        let index = RecapLibraryIndex(albums: Library.shared.albums, tracks: Library.shared.allTracks)
+        resolve(for: data, albums: Library.shared.albums, tracks: Library.shared.allTracks)
+    }
+
+    static func resolve(for data: YearInMusicData, albums: [Album], tracks: [Track]) -> StoryArtwork {
+        let index = RecapLibraryIndex(albums: albums, tracks: tracks)
 
         func exactAlbumImage(title: String, artist: String) -> PlatformImage? {
             if let cached = AlbumArtworkCache.shared.artwork(forAlbum: title, artist: artist) {

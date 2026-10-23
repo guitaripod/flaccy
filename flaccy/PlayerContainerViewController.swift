@@ -1,4 +1,5 @@
 import QuartzCore
+import MidgarCore
 import UIKit
 
 protocol PlayerMorphContaining: AnyObject {
@@ -394,7 +395,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
             abs(fresh.width - fullArtRect.width)
         )
         if drift > 0.5 {
-            AppLogger.info(
+            MidgarLog.info(
                 "Morph art target drift \(String(format: "%.1f", drift))pt at \(context): \(fullArtRect) -> \(fresh)",
                 category: .ui
             )
@@ -424,7 +425,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
             lockInGenerator.impactOccurred(intensity: 1)
         }
         UIAccessibility.post(notification: .screenChanged, argument: landedFull ? npc.view : miniPlayer)
-        AppLogger.info("Player morph settled -> \(landedFull ? "full" : "dock")", category: .ui)
+        MidgarLog.info("Player morph settled -> \(landedFull ? "full" : "dock")", category: .ui)
         if !landedFull, let settle = onSettleToDock {
             onSettleToDock = nil
             settle()

@@ -52,7 +52,7 @@ final class EnrichmentReportViewModel {
     /// The scopes a person can recognise in a list. `aiBatch` is deliberately
     /// absent: a directory of files is not an entity worth naming, and
     /// `EnrichmentJobCopy.missingMetadata` refuses to word one.
-    private static let reportedScopes: [EnrichmentScope] = [.album, .artist]
+    private nonisolated static let reportedScopes: [EnrichmentScope] = [.album, .artist]
 
     /// How long a burst of job publishes has to go quiet before the counts are
     /// re-read.

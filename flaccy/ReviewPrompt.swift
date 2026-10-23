@@ -1,3 +1,4 @@
+import MidgarCore
 import StoreKit
 #if canImport(UIKit)
 import UIKit
@@ -41,7 +42,7 @@ enum ReviewPrompt {
             successCountAtLastAsk: defaults.integer(forKey: successCountAtLastAskKey),
             now: Date()
         ) else {
-            AppLogger.info("Review prompt skipped at success #\(count) (not eligible)", category: .ui)
+            MidgarLog.info("Review prompt skipped at success #\(count) (not eligible)", category: .ui)
             return
         }
 
@@ -70,14 +71,14 @@ enum ReviewPrompt {
 
     private static func attemptAsk(successCount: Int) {
         guard requestReview() else {
-            AppLogger.info("Review prompt deferred at success #\(successCount) (no eligible window)", category: .ui)
+            MidgarLog.info("Review prompt deferred at success #\(successCount) (no eligible window)", category: .ui)
             return
         }
         let defaults = UserDefaults.standard
         let dates = storedAskDates() + [Date()]
         defaults.set(dates, forKey: askDatesKey)
         defaults.set(successCount, forKey: successCountAtLastAskKey)
-        AppLogger.info("Requested App Store review (ask #\(dates.count), success #\(successCount))", category: .ui)
+        MidgarLog.info("Requested App Store review (ask #\(dates.count), success #\(successCount))", category: .ui)
     }
 
     private static func storedAskDates() -> [Date] {

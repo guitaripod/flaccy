@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 import Observation
 import WatchConnectivity
@@ -81,7 +82,7 @@ final class WatchSyncStatus {
 /// Every mutable field below is touched only on `workQueue`; the delegate's
 /// callbacks and the UI's calls all funnel through it, so the on-disk library,
 /// the in-memory inventory and the reported state cannot disagree.
-final class WatchSyncReceiver: NSObject, @unchecked Sendable {
+nonisolated final class WatchSyncReceiver: NSObject, @unchecked Sendable {
 
     static let shared = WatchSyncReceiver()
 
@@ -110,7 +111,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
         guard let wcSession else { return }
         wcSession.delegate = self
         wcSession.activate()
-        AppLogger.info("WCSession activate requested (watch)", category: .connectivity)
+        MidgarLog.info("WCSession activate requested (watch)", category: .connectivity)
     }
 
     /// Deletes what the person removed on the wrist, along with any other file
@@ -125,7 +126,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
             self.scheduleHeartbeat()
             self.notifyLibraryChanged()
             self.tellPhoneRemoved(removed)
-            AppLogger.info("Removed \(removed.count) files on the watch at the person's request", category: .connectivity)
+            MidgarLog.info("Removed \(removed.count) files on the watch at the person's request", category: .connectivity)
         }
     }
 
@@ -135,7 +136,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
         if let inventory { return inventory }
         let scanned = SyncInventory.scanning(directory: documentsDirectory)
         inventory = scanned
-        AppLogger.info("Watch inventory scanned: \(scanned.count) files, \(scanned.usedBytes / 1_048_576) MB", category: .connectivity)
+        MidgarLog.info("Watch inventory scanned: \(scanned.count) files, \(scanned.usedBytes / 1_048_576) MB", category: .connectivity)
         return scanned
     }
 
@@ -255,9 +256,9 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
             try wcSession.updateApplicationContext(dict)
             let count = (dict[SyncKeys.syncedPaths] as? [String])?.count ?? 0
             let free = (dict[SyncKeys.freeBytes] as? Int64) ?? 0
-            AppLogger.info("Watch heartbeat: \(count) tracks, \(free / 1_048_576) MB free", category: .connectivity)
+            MidgarLog.info("Watch heartbeat: \(count) tracks, \(free / 1_048_576) MB free", category: .connectivity)
         } catch {
-            AppLogger.error("Heartbeat failed: \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.error("Heartbeat failed: \(error.localizedDescription)", category: .connectivity)
         }
     }
 
@@ -281,7 +282,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
 
     private func tellPhoneRemoved(_ paths: [String]) {
         guard let wcSession, wcSession.activationState == .activated else {
-            AppLogger.warning("Removal not reported to the phone: session not active", category: .connectivity)
+            MidgarLog.notice("Removal not reported to the phone: session not active", category: .connectivity)
             return
         }
         wcSession.transferUserInfo([
@@ -299,7 +300,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
         let batch = SyncBatchTransfer.decode(context[SyncKeys.syncBatch])
         guard progress != nil || batch != nil else { return }
         if let batch {
-            AppLogger.info("Phone batch: \(batch.completed)/\(batch.total), preparing=\(batch.preparing)", category: .connectivity)
+            MidgarLog.info("Phone batch: \(batch.completed)/\(batch.total), preparing=\(batch.preparing)", category: .connectivity)
         }
         DispatchQueue.main.async {
             if let progress { self.status.apply(jobProgress: progress) }
@@ -346,12 +347,12 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
     /// directly so it can be driven without a live WatchConnectivity transfer.
     func store(fileURL: URL, metadataDictionary: [String: Any]?) {
         guard let metadata = TransferMetadata(dictionary: metadataDictionary) else {
-            AppLogger.error("Received file with no relativePath metadata", category: .connectivity)
+            MidgarLog.error("Received file with no relativePath metadata", category: .connectivity)
             return
         }
         let path = metadata.relativePath
         guard SyncPathGuard.isSafe(path) else {
-            AppLogger.error("Refused unsafe path '\(path)'", category: .connectivity)
+            MidgarLog.error("Refused unsafe path '\(path)'", category: .connectivity)
             reportStoreFailure(path: path, reason: .writeFailed)
             return
         }
@@ -360,13 +361,13 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
         DispatchQueue.main.async { self.status.markReceiving() }
 
         if metadata.bytes > 0, incomingSize != metadata.bytes {
-            AppLogger.error("Size mismatch for \(path): got \(incomingSize), expected \(metadata.bytes)", category: .connectivity)
+            MidgarLog.error("Size mismatch for \(path): got \(incomingSize), expected \(metadata.bytes)", category: .connectivity)
             reportStoreFailure(path: path, reason: .writeFailed)
             return
         }
 
         if freeBytes() - incomingSize < Self.safetyMargin {
-            AppLogger.warning("Watch full — skipping \(path) (\(freeBytes() / 1_048_576) MB free)", category: .connectivity)
+            MidgarLog.notice("Watch full — skipping \(path) (\(freeBytes() / 1_048_576) MB free)", category: .connectivity)
             reportStoreFailure(path: path, reason: .diskFull, bytesNeeded: incomingSize)
             return
         }
@@ -375,7 +376,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
             try placeAtomically(fileURL, at: self.fileURL(for: path))
         } catch {
             let outOfSpace = isOutOfSpace(error)
-            AppLogger.error("Failed to store \(path): \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.error("Failed to store \(path): \(error.localizedDescription)", category: .connectivity)
             reportStoreFailure(path: path, reason: outOfSpace ? .diskFull : .writeFailed, bytesNeeded: outOfSpace ? incomingSize : 0)
             return
         }
@@ -383,7 +384,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
         let displaced = mutateInventory { $0.insert(path: path, size: incomingSize) }
         removeDisplaced(displaced, replacedBy: path)
         setLastError(path: nil, reason: nil)
-        AppLogger.info("Stored \(path) (\(incomingSize / 1_024) KB)", category: .connectivity)
+        MidgarLog.info("Stored \(path) (\(incomingSize / 1_024) KB)", category: .connectivity)
         scheduleHeartbeat()
         notifyLibraryChanged()
     }
@@ -393,7 +394,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
     private func removeDisplaced(_ displaced: [String], replacedBy path: String) {
         for sibling in displaced {
             try? FileManager.default.removeItem(at: fileURL(for: sibling))
-            AppLogger.info("Removed \(sibling), replaced by \(path)", category: .connectivity)
+            MidgarLog.info("Removed \(sibling), replaced by \(path)", category: .connectivity)
         }
     }
 
@@ -402,7 +403,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
         case SyncKeys.commandRemoveAll:
             let count = deleteEverything()
             setLastError(path: nil, reason: nil)
-            AppLogger.info("Removed all \(count) tracks", category: .connectivity)
+            MidgarLog.info("Removed all \(count) tracks", category: .connectivity)
             sendHeartbeatNow()
             notifyLibraryChanged()
         case SyncKeys.commandRemove:
@@ -410,7 +411,7 @@ final class WatchSyncReceiver: NSObject, @unchecked Sendable {
             let removed = deleteFiles(matching: paths)
             clearDiskFullIfSpaceReturned()
             clearErrorIfRemoved(removed)
-            AppLogger.info("Phone removed \(removed.count) files (\(paths.count) requested)", category: .connectivity)
+            MidgarLog.info("Phone removed \(removed.count) files (\(paths.count) requested)", category: .connectivity)
             sendHeartbeatNow()
             notifyLibraryChanged()
         case SyncKeys.commandGetState:
@@ -431,12 +432,12 @@ extension WatchSyncReceiver: WCSessionDelegate {
         error: Error?
     ) {
         if let error {
-            AppLogger.error("WCSession activation error (watch): \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.error("WCSession activation error (watch): \(error.localizedDescription)", category: .connectivity)
         }
-        AppLogger.info("WCSession activated (watch): state=\(activationState.rawValue)", category: .connectivity)
-        let context = session.receivedApplicationContext
+        MidgarLog.info("WCSession activated (watch): state=\(activationState.rawValue)", category: .connectivity)
+        let context = SyncPayload(session.receivedApplicationContext)
         workQueue.async {
-            self.ingestPhoneContext(context)
+            self.ingestPhoneContext(context.values)
             self.sendHeartbeatNow()
         }
         WatchPlayLog.shared.sessionDidActivate()
@@ -474,7 +475,7 @@ extension WatchSyncReceiver: WCSessionDelegate {
 
     func session(_ session: WCSession, didFinish userInfoTransfer: WCSessionUserInfoTransfer, error: Error?) {
         if let error {
-            AppLogger.warning("User-info transfer failed: \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.notice("User-info transfer failed: \(error.localizedDescription)", category: .connectivity)
         }
         WatchPlayLog.shared.transferDidFinish(userInfoTransfer, error: error)
     }
@@ -485,7 +486,7 @@ extension WatchSyncReceiver: WCSessionDelegate {
 }
 
 #if DEBUG && targetEnvironment(simulator)
-extension WatchSyncReceiver {
+nonisolated extension WatchSyncReceiver {
 
     func exerciseStore(fileURL: URL, metadata: [String: Any]) {
         workQueue.sync { store(fileURL: fileURL, metadataDictionary: metadata) }
@@ -502,7 +503,7 @@ extension WatchSyncReceiver {
 #endif
 
 #if DEBUG && targetEnvironment(simulator)
-extension WatchSyncReceiver {
+nonisolated extension WatchSyncReceiver {
 
     /// Materialises a file the phone says it just handed over, standing in for
     /// the file transfer the simulator pair never delivers.

@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG && os(iOS)
 import Foundation
 
@@ -35,7 +36,7 @@ enum SampleExercise {
     }
 
     private static func report(_ expectation: String, _ passed: Bool) {
-        AppLogger.info("SampleExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .content)
+        MidgarLog.info("SampleExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .content)
     }
 }
 #endif

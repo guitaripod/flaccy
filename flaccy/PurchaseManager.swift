@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 import RevenueCat
 import Security
 
@@ -201,7 +202,7 @@ final class PurchaseManager {
             trialStartIsUnreadable = false
         case .unreadable(let status):
             trialStartIsUnreadable = true
-            AppLogger.warning("Trial start not readable from the Keychain yet (status \(status)); will retry", category: .purchases)
+            MidgarLog.notice("Trial start not readable from the Keychain yet (status \(status)); will retry", category: .purchases)
         }
     }
 
@@ -223,7 +224,7 @@ final class PurchaseManager {
         TrialClock.stampIfAbsent(Date(), for: .trialStart)
         readTrialStartIfNeeded()
         guard trialHasStarted else { return }
-        AppLogger.info("Trial started at the first play of the library's own music", category: .purchases)
+        MidgarLog.info("Trial started at the first play of the library's own music", category: .purchases)
         refreshTrialPhase()
         Task { await TrialReminderScheduler.shared.refresh() }
     }
@@ -264,7 +265,7 @@ final class PurchaseManager {
         trialStart = Date().addingTimeInterval(-TimeInterval(day - 1) * TrialRunway.day)
         trialHasStarted = true
         trialDayOverrideActive = true
-        AppLogger.info("Trial clock overridden: day \(day) (elapsed \(day - 1) d)", category: .purchases)
+        MidgarLog.info("Trial clock overridden: day \(day) (elapsed \(day - 1) d)", category: .purchases)
     }
     #endif
 
@@ -280,9 +281,9 @@ final class PurchaseManager {
             let info = try await Purchases.shared.syncPurchases()
             apply(info)
             defaults.set(true, forKey: Self.migratedKey)
-            AppLogger.info("Synced StoreKit history into RevenueCat (pro active: \(state.isPurchased))", category: .purchases)
+            MidgarLog.info("Synced StoreKit history into RevenueCat (pro active: \(state.isPurchased))", category: .purchases)
         } catch {
-            AppLogger.error("StoreKit → RevenueCat sync failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("StoreKit → RevenueCat sync failed: \(error.localizedDescription)", category: .purchases)
         }
     }
 
@@ -294,7 +295,7 @@ final class PurchaseManager {
                 .with(storeKitVersion: .storeKit2)
                 .build()
         )
-        AppLogger.info("RevenueCat configured", category: .purchases)
+        MidgarLog.info("RevenueCat configured", category: .purchases)
     }
 
     func refresh() async {
@@ -302,7 +303,7 @@ final class PurchaseManager {
             let info = try await Purchases.shared.customerInfo()
             apply(info)
         } catch {
-            AppLogger.error("Customer info fetch failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("Customer info fetch failed: \(error.localizedDescription)", category: .purchases)
             refreshTrialPhase()
             noteCustomerInfoLoaded()
         }
@@ -316,7 +317,7 @@ final class PurchaseManager {
             let offerings = try await Purchases.shared.offerings()
             noteLapsedOffering(in: offerings)
             guard let current = offerings.current else {
-                AppLogger.warning("No current RevenueCat offering", category: .purchases)
+                MidgarLog.notice("No current RevenueCat offering", category: .purchases)
                 return []
             }
             var loaded: [PurchaseOffer] = []
@@ -327,7 +328,7 @@ final class PurchaseManager {
                 loaded.append(PurchaseOffer(plan: .lifetime, displayPrice: lifetime.storeProduct.localizedPriceString, package: lifetime))
             }
             offers = loaded
-            AppLogger.info(
+            MidgarLog.info(
                 "Loaded offers: \(loaded.map { "\($0.plan.rawValue)=\($0.displayPrice)" }.joined(separator: ", ")) (lapsed offering: \(lapsedOfferingExists))",
                 category: .purchases
             )
@@ -335,7 +336,7 @@ final class PurchaseManager {
                 NotificationCenter.default.post(name: Self.stateDidChange, object: nil)
             }
         } catch {
-            AppLogger.error("Offerings load failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("Offerings load failed: \(error.localizedDescription)", category: .purchases)
         }
         return offers
     }
@@ -367,15 +368,15 @@ final class PurchaseManager {
             let offerings = try await Purchases.shared.offerings()
             noteLapsedOffering(in: offerings)
             guard let offer = lapsedLifetimeOffer else {
-                AppLogger.info("Welcome-back window open but no lapsed offering is configured", category: .purchases)
+                MidgarLog.info("Welcome-back window open but no lapsed offering is configured", category: .purchases)
                 return
             }
-            AppLogger.info(
+            MidgarLog.info(
                 "Loaded welcome-back offer: \(offer.displayPrice) (usually \(offer.regularPrice ?? "unknown"))",
                 category: .purchases
             )
         } catch {
-            AppLogger.error("Lapsed offering load failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("Lapsed offering load failed: \(error.localizedDescription)", category: .purchases)
         }
     }
 
@@ -412,20 +413,20 @@ final class PurchaseManager {
         do {
             let result = try await Purchases.shared.purchase(package: offer.package)
             if result.userCancelled {
-                AppLogger.info("Purchase cancelled by user", category: .purchases)
+                MidgarLog.info("Purchase cancelled by user", category: .purchases)
                 return .cancelled
             }
             apply(result.customerInfo)
-            AppLogger.info(
+            MidgarLog.info(
                 "Purchase completed for \(offer.plan.rawValue)\(offer.isWelcomeBack ? " (welcome back)" : "")",
                 category: .purchases
             )
             return .purchased
         } catch let error as ErrorCode where error == .paymentPendingError {
-            AppLogger.info("Purchase pending external approval", category: .purchases)
+            MidgarLog.info("Purchase pending external approval", category: .purchases)
             return .pending
         } catch let error as ErrorCode where error == .purchaseCancelledError {
-            AppLogger.info("Purchase cancelled by user", category: .purchases)
+            MidgarLog.info("Purchase cancelled by user", category: .purchases)
             return .cancelled
         }
     }
@@ -449,18 +450,18 @@ final class PurchaseManager {
             let info = try await Purchases.shared.restorePurchases()
             apply(info)
         } catch {
-            AppLogger.error("Restore failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("Restore failed: \(error.localizedDescription)", category: .purchases)
             return .failed
         }
         let outcome: RestoreOutcome = state.isPurchased ? .restored : .nothingToRestore
-        AppLogger.info("Restore finished: \(outcome)", category: .purchases)
+        MidgarLog.info("Restore finished: \(outcome)", category: .purchases)
         return outcome
     }
 
     func markRunwayPromptShown() {
         runwayPromptShownCached = true
         guard !trialClockIsOverridden else {
-            AppLogger.info("Runway prompt stamp skipped under --trial-day", category: .purchases)
+            MidgarLog.info("Runway prompt stamp skipped under --trial-day", category: .purchases)
             return
         }
         TrialClock.stampIfAbsent(Date(), for: .runwayPromptShown)
@@ -486,7 +487,7 @@ final class PurchaseManager {
                 aiReviewedTracks: try db.aiReviewedTrackCount()
             )
         } catch {
-            AppLogger.error("Paywall proof counts failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("Paywall proof counts failed: \(error.localizedDescription)", category: .purchases)
             return .empty
         }
     }
@@ -536,7 +537,7 @@ final class PurchaseManager {
 
     private func setState(_ newState: EntitlementState) {
         guard newState != state else { return }
-        AppLogger.info("Entitlement state \(state) -> \(newState)", category: .purchases)
+        MidgarLog.info("Entitlement state \(state) -> \(newState)", category: .purchases)
         state = newState
         publishFunnelEntitlement()
         if newState.isPurchased {
@@ -546,7 +547,7 @@ final class PurchaseManager {
     }
 
     func requestPaywall() {
-        AppLogger.info("Playback gated, requesting paywall", category: .purchases)
+        MidgarLog.info("Playback gated, requesting paywall", category: .purchases)
         NotificationCenter.default.post(name: Self.paywallRequired, object: nil)
     }
 }
@@ -616,7 +617,7 @@ private enum TrialClock {
         ]
         let status = SecItemAdd(attributes as CFDictionary, nil)
         if status != errSecSuccess && status != errSecDuplicateItem {
-            AppLogger.error("Failed to store \(account.rawValue) in Keychain (status \(status))", category: .purchases)
+            MidgarLog.error("Failed to store \(account.rawValue) in Keychain (status \(status))", category: .purchases)
         }
     }
 }

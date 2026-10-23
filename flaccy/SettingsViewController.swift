@@ -1,7 +1,8 @@
 import AuthenticationServices
+import MidgarCore
 import FlaccyCore
 import StoreKit
-import MidgarKit
+import MidgarPortal
 import UIKit
 
 final class SettingsViewController: UITableViewController {
@@ -19,6 +20,7 @@ final class SettingsViewController: UITableViewController {
         case watch
         case library
         case setup
+        case about
 
         var header: String? {
             switch self {
@@ -32,6 +34,7 @@ final class SettingsViewController: UITableViewController {
             case .watch: return String(localized: "Apple Watch")
             case .library: return String(localized: "Library")
             case .setup: return nil
+            case .about: return String(localized: "About")
             }
         }
 
@@ -47,6 +50,7 @@ final class SettingsViewController: UITableViewController {
             case .watch: return nil
             case .library: return Self.libraryFooter
             case .setup: return LibraryDebutCopy.settingsCaveat
+            case .about: return nil
             }
         }
 
@@ -96,6 +100,8 @@ final class SettingsViewController: UITableViewController {
         case storage(used: String)
         case libraryDebutSummary
         case midgarEntry
+        case privacyPolicy
+        case termsOfUse
     }
 
     /// Renders an Apple-Settings-style icon: a white SF Symbol glyph centered
@@ -286,7 +292,7 @@ final class SettingsViewController: UITableViewController {
             do {
                 try await AppStore.showManageSubscriptions(in: scene)
             } catch {
-                AppLogger.error("Manage subscriptions sheet failed: \(error.localizedDescription)", category: .purchases)
+                MidgarLog.error("Manage subscriptions sheet failed: \(error.localizedDescription)", category: .purchases)
             }
         }
     }
@@ -367,6 +373,7 @@ final class SettingsViewController: UITableViewController {
         if libraryDebut != nil {
             snapshot.appendItems([.libraryDebutSummary], toSection: .setup)
         }
+        snapshot.appendItems([.privacyPolicy, .termsOfUse], toSection: .about)
         snapshot.reloadSections([.lastFM])
         dataSource.apply(snapshot, animatingDifferences: animated)
     }
@@ -414,6 +421,20 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .appearance, .midgarEntry:
             break
+
+        case .privacyPolicy:
+            content.image = RowIcon.image(systemName: "hand.raised.fill", tint: .systemBlue)
+            content.text = String(localized: "Privacy Policy")
+            content.textProperties.color = .tintColor
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = String(localized: "Privacy Policy")
+
+        case .termsOfUse:
+            content.image = RowIcon.image(systemName: "doc.text.fill", tint: .systemGray)
+            content.text = String(localized: "Terms of Use")
+            content.textProperties.color = .tintColor
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = String(localized: "Terms of Use")
 
         case .trialReminders(let enabled):
             content.image = RowIcon.image(systemName: "bell.badge.fill", tint: .systemOrange)
@@ -672,7 +693,7 @@ final class SettingsViewController: UITableViewController {
             self.selectionFeedback.selectionChanged()
             AppAppearance.current = appearance
             AppearanceApplier.apply(appearance, animated: true)
-            AppLogger.info("Appearance set to \(appearance.displayName)", category: .ui)
+            MidgarLog.info("Appearance set to \(appearance.displayName)", category: .ui)
         }
         return cell
     }
@@ -737,7 +758,7 @@ final class SettingsViewController: UITableViewController {
                 await EnrichmentCoordinator.shared.resume()
             } else {
                 self.notificationFeedback.notificationOccurred(.warning)
-                AppLogger.info("Apple Music artwork declined", category: .content)
+                MidgarLog.info("Apple Music artwork declined", category: .content)
             }
             self.applySnapshot(animated: false)
         }
@@ -874,6 +895,8 @@ final class SettingsViewController: UITableViewController {
         case .listeningGuide: handleListeningGuideTap()
         case .equalizer: present(EqualizerViewController.makePresented(), animated: true)
         case .watchSync: handleWatchTap()
+        case .privacyPolicy: UIApplication.shared.open(LegalLinks.privacyURL)
+        case .termsOfUse: UIApplication.shared.open(LegalLinks.termsURL)
         case .importFiles: handleImportTap()
         case .rescanLibrary: handleRescanTap()
         case .metadataReport: handleMetadataTap()
@@ -898,7 +921,7 @@ final class SettingsViewController: UITableViewController {
             await EnrichmentCoordinator.shared.resume()
             self?.metadataViewModel.refresh()
         }
-        AppLogger.info("Find Missing Artwork requested from Settings", category: .content)
+        MidgarLog.info("Find Missing Artwork requested from Settings", category: .content)
     }
 
     private func handleLastFMTap() {
@@ -951,7 +974,7 @@ final class SettingsViewController: UITableViewController {
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive })?.keyWindow
         guard let window = view.window ?? fallbackWindow else {
-            AppLogger.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
+            MidgarLog.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
             return
         }
         Task {
@@ -960,7 +983,7 @@ final class SettingsViewController: UITableViewController {
                 notificationFeedback.notificationOccurred(.success)
                 applySnapshot(animated: true)
             } catch {
-                AppLogger.error("Last.fm auth failed: \(error.localizedDescription)", category: .auth)
+                MidgarLog.error("Last.fm auth failed: \(error.localizedDescription)", category: .auth)
                 guard !isAuthCancellation(error) else { return }
                 notificationFeedback.notificationOccurred(.error)
                 let message = (error as? LastFMError)?.errorDescription
@@ -1240,7 +1263,7 @@ private final class MidgarEntryCell: UITableViewCell {
         backgroundConfiguration = .clear()
         separatorInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: .greatestFiniteMagnitude)
         isAccessibilityElement = false
-        MidgarEntryView().embed(in: contentView, verticalInset: 8)
+        MidgarEntryView(config: FlaccyMidgar.shared.portalConfig).embed(in: contentView, verticalInset: 8)
     }
 
     @available(*, unavailable)

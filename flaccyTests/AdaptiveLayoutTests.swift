@@ -5,45 +5,45 @@ import XCTest
 /// iPhone Duo sizes (outer 466 x 678, inner 669 x 951, bar 84 pt, fold 40 pt
 /// wide at the centre) and against a Pro Max held sideways, which is wide but
 /// must not be treated as a two-pane window.
-final class AdaptiveLayoutTests: XCTestCase {
+nonisolated final class AdaptiveLayoutTests: XCTestCase {
 
-    func testInnerLandscapeSplits() {
+    @MainActor func testInnerLandscapeSplits() {
         XCTAssertTrue(AdaptiveLayout.usesSplit(size: CGSize(width: 951, height: 669)))
     }
 
-    func testOtherSizesDoNotSplit() {
+    @MainActor func testOtherSizesDoNotSplit() {
         XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 669, height: 951)))
         XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 678, height: 466)))
         XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 466, height: 678)))
         XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 932, height: 430)))
     }
 
-    func testSplitEndsPanesAtTheFold() {
+    @MainActor func testSplitEndsPanesAtTheFold() {
         let fold = CGRect(x: 455.5, y: 0, width: 40, height: 669)
         let geometry = AdaptiveLayout.splitGeometry(width: 951, division: fold)
         XCTAssertEqual(geometry.primaryWidth, 455.5)
         XCTAssertEqual(geometry.secondaryLeading, 495.5)
     }
 
-    func testSplitWithoutFoldKeepsAGutterAroundTheCentre() {
+    @MainActor func testSplitWithoutFoldKeepsAGutterAroundTheCentre() {
         let geometry = AdaptiveLayout.splitGeometry(width: 951, division: nil)
         XCTAssertEqual(geometry.primaryWidth, 455)
         XCTAssertEqual(geometry.secondaryLeading, 495)
     }
 
-    func testHorizontalFoldIsNotASplit() {
+    @MainActor func testHorizontalFoldIsNotASplit() {
         let horizontal = CGRect(x: 0, y: 455.5, width: 669, height: 40)
         let geometry = AdaptiveLayout.splitGeometry(width: 951, division: horizontal)
         XCTAssertEqual(geometry.secondaryLeading, 495)
     }
 
-    func testPhoneWidthsKeepThreeColumns() {
+    @MainActor func testPhoneWidthsKeepThreeColumns() {
         XCTAssertEqual(AdaptiveLayout.gridColumns(forWidth: 382), 3)
         XCTAssertEqual(AdaptiveLayout.gridColumns(forWidth: 393), 3)
         XCTAssertEqual(AdaptiveLayout.gridColumns(forWidth: 455), 3)
     }
 
-    func testWideGridsAreAlwaysEven() {
+    @MainActor func testWideGridsAreAlwaysEven() {
         for width in stride(from: CGFloat(500), through: 1400, by: 7) {
             XCTAssertEqual(AdaptiveLayout.gridColumns(forWidth: width) % 2, 0, "width \(width)")
         }
@@ -51,7 +51,7 @@ final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertEqual(AdaptiveLayout.gridColumns(forWidth: 951), 6)
     }
 
-    func testArtistShelvesAreEvenAndStartAtTwo() {
+    @MainActor func testArtistShelvesAreEvenAndStartAtTwo() {
         XCTAssertEqual(AdaptiveLayout.shelfColumns(forWidth: 300), 2)
         XCTAssertEqual(AdaptiveLayout.shelfColumns(forWidth: 382), 2)
         XCTAssertEqual(AdaptiveLayout.shelfColumns(forWidth: 594), 4)
@@ -60,7 +60,7 @@ final class AdaptiveLayoutTests: XCTestCase {
         }
     }
 
-    func testDetailHeaderStyles() {
+    @MainActor func testDetailHeaderStyles() {
         XCTAssertEqual(AdaptiveLayout.detailHeaderStyle(forSize: CGSize(width: 402, height: 780)), .stacked)
         XCTAssertEqual(AdaptiveLayout.detailHeaderStyle(forSize: CGSize(width: 382, height: 644)), .banner)
         XCTAssertEqual(AdaptiveLayout.detailHeaderStyle(forSize: CGSize(width: 371, height: 669)), .banner)
@@ -69,14 +69,14 @@ final class AdaptiveLayoutTests: XCTestCase {
         XCTAssertEqual(AdaptiveLayout.detailHeaderStyle(forSize: CGSize(width: 867, height: 669)), .sideBySide)
     }
 
-    func testPlayerLayouts() {
+    @MainActor func testPlayerLayouts() {
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 466, height: 678), horizontalFold: nil), .portrait)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 455, height: 669), horizontalFold: nil), .portrait)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 678, height: 466), horizontalFold: nil), .landscape)
         XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 932, height: 430), horizontalFold: nil), .landscape)
     }
 
-    func testFocusNeedsRoomToSplit() {
+    @MainActor func testFocusNeedsRoomToSplit() {
         let geometry = AdaptiveLayout.SplitGeometry(primaryWidth: 455.5, secondaryLeading: 495.5)
         XCTAssertEqual(
             AdaptiveLayout.playerLayout(size: CGSize(width: 951, height: 669), horizontalFold: nil, focus: geometry),
@@ -88,7 +88,7 @@ final class AdaptiveLayoutTests: XCTestCase {
         )
     }
 
-    func testLaptopNeedsAFoldAcrossATallView() {
+    @MainActor func testLaptopNeedsAFoldAcrossATallView() {
         let fold: ClosedRange<CGFloat> = 455.5...495.5
         XCTAssertEqual(
             AdaptiveLayout.playerLayout(size: CGSize(width: 669, height: 951), horizontalFold: fold),

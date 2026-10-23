@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 /// The audio-quality explainer rebuilt for desktop: the five fact cards from
 /// the shared ListeningGuideContent in a scrollable glass layout, reordered so
@@ -63,7 +64,7 @@ final class ListeningGuideViewController: NSViewController {
     }
 
     deinit {
-        AppLogger.info("ListeningGuideViewController deinit", category: .ui)
+        MidgarLog.info("ListeningGuideViewController deinit", category: .ui)
     }
 
     private func buildContent() {
@@ -184,6 +185,6 @@ final class ListeningGuideViewController: NSViewController {
     @objc private func openSource(_ sender: NSButton) {
         guard let url = objc_getAssociatedObject(sender, &Self.sourceURLKey) as? URL else { return }
         NSWorkspace.shared.open(url)
-        AppLogger.info("Listening guide source opened: \(url.absoluteString)", category: .ui)
+        MidgarLog.info("Listening guide source opened: \(url.absoluteString)", category: .ui)
     }
 }

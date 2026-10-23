@@ -1,4 +1,5 @@
 import AVFoundation
+import MidgarCore
 import Foundation
 import FlaccyCore
 
@@ -153,7 +154,7 @@ final class LyricsService {
         do {
             try DatabaseManager.shared.saveLyricsOffset(trackTitle: track, artist: artist, offsetMs: offsetMs)
         } catch {
-            AppLogger.error("Saving lyrics offset failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Saving lyrics offset failed: \(error.localizedDescription)", category: .content)
         }
     }
 
@@ -214,7 +215,7 @@ final class LyricsService {
                 track: track, artist: artist, replacing: cached,
                 fetched: Fetched(synced: nil, plain: nil, lyricsfile: nil, instrumental: false)
             )
-            AppLogger.info("No lyrics for \(track) — \(artist) (cached miss)", category: .content)
+            MidgarLog.info("No lyrics for \(track) — \(artist) (cached miss)", category: .content)
             return .missing
         case .failed(let failure):
             guard let stale else { return .failed(failure) }
@@ -241,7 +242,7 @@ final class LyricsService {
         do {
             try DatabaseManager.shared.saveLyrics(record)
         } catch {
-            AppLogger.error("Saving lyrics failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Saving lyrics failed: \(error.localizedDescription)", category: .content)
         }
     }
 
@@ -253,7 +254,7 @@ final class LyricsService {
                 trackTitle: track, artist: artist, revision: LyricsResolution.revision
             )
         } catch {
-            AppLogger.error("Updating lyrics revision failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Updating lyrics revision failed: \(error.localizedDescription)", category: .content)
         }
     }
 
@@ -346,7 +347,7 @@ final class LyricsService {
         }
         let wanted = LyricsWanted(title: title, artist: lead, album: album, duration: duration)
         guard let best = LyricsScoring.bestCandidate(wanted, candidates) else { return .missing }
-        AppLogger.info(
+        MidgarLog.info(
             "lrclib search matched \(track) — \(artist) (score \(String(format: "%.2f", best.score)))",
             category: .content
         )
@@ -374,11 +375,11 @@ final class LyricsService {
                     lastFailure = .forStatus(code)
                     try await Task.sleep(for: .seconds(Self.retryWait(for: http)))
                 default:
-                    AppLogger.error("Lyrics request failed: HTTP \(http.statusCode)", category: .content)
+                    MidgarLog.error("Lyrics request failed: HTTP \(http.statusCode)", category: .content)
                     return .failed(.forStatus(http.statusCode))
                 }
             } catch {
-                AppLogger.error("Lyrics request failed: \(error.localizedDescription)", category: .content)
+                MidgarLog.error("Lyrics request failed: \(error.localizedDescription)", category: .content)
                 return .failed(Self.failure(of: error))
             }
         }
@@ -428,7 +429,7 @@ final class LyricsService {
             let sidecar = fileURL.deletingPathExtension().appendingPathExtension(ext)
             if let text = try? String(contentsOf: sidecar, encoding: .utf8),
                LyricsResolution.isFilled(text) {
-                AppLogger.info("Using lyrics sidecar \(sidecar.lastPathComponent)", category: .content)
+                MidgarLog.info("Using lyrics sidecar \(sidecar.lastPathComponent)", category: .content)
                 return classify(text)
             }
         }
@@ -450,7 +451,7 @@ final class LyricsService {
                 || key.contains("LYRIC") || key.contains("USLT") || key.contains("\u{00A9}LYR")
             guard isLyrics, let text = try? await item.load(.stringValue),
                   LyricsResolution.isFilled(text) else { continue }
-            AppLogger.info("Using embedded lyrics tag from \(fileURL.lastPathComponent)", category: .content)
+            MidgarLog.info("Using embedded lyrics tag from \(fileURL.lastPathComponent)", category: .content)
             return text
         }
         return nil

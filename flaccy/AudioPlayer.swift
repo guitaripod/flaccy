@@ -1,4 +1,5 @@
 import AVFoundation
+import MidgarCore
 import FlaccyCore
 import MediaPlayer
 import Network
@@ -31,7 +32,7 @@ protocol AudioPlaying: AnyObject {
     func toggleShuffle()
     func cycleRepeatMode()
     func clearUpNext()
-    func seekSmooth(to time: CMTime, tolerance: CMTime, completion: @escaping () -> Void)
+    func seekSmooth(to time: CMTime, tolerance: CMTime, completion: @escaping @MainActor () -> Void)
     func jumpToIndex(_ index: Int)
     func removeFromQueue(at index: Int)
     func handleDeletedTracks(_ urls: Set<URL>)
@@ -115,7 +116,7 @@ final class AudioPlayer: AudioPlaying {
         get { UserDefaults.standard.object(forKey: autoplayDefaultsKey) as? Bool ?? true }
         set {
             UserDefaults.standard.set(newValue, forKey: autoplayDefaultsKey)
-            AppLogger.info("Autoplay similar when queue ends set to \(newValue)", category: .playback)
+            MidgarLog.info("Autoplay similar when queue ends set to \(newValue)", category: .playback)
         }
     }
 
@@ -241,7 +242,7 @@ final class AudioPlayer: AudioPlaying {
             do {
                 try DatabaseManager.shared.retirePendingScrobbles(olderThan: .distantFuture)
             } catch {
-                AppLogger.error("Failed to retire pending scrobbles on disconnect: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Failed to retire pending scrobbles on disconnect: \(error.localizedDescription)", category: .database)
             }
         }
     }
@@ -257,7 +258,7 @@ final class AudioPlayer: AudioPlaying {
     /// next track boundary.
     @objc private func handleLibraryRootChanged() {
         guard !queue.isEmpty else { return }
-        AppLogger.info("Library root changed; clearing playback queue of \(queue.count) tracks", category: .playback)
+        MidgarLog.info("Library root changed; clearing playback queue of \(queue.count) tracks", category: .playback)
         handleDeletedTracks(Set(queue.map(\.fileURL)))
     }
     #endif
@@ -313,7 +314,7 @@ final class AudioPlayer: AudioPlaying {
     @objc private func handleMediaServicesReset() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            AppLogger.warning("Media services were reset, rebuilding player", category: .content)
+            MidgarLog.notice("Media services were reset, rebuilding player", category: .content)
             let resumePosition = self.lastKnownPlaybackPosition
             self.timeControlObservation = nil
             self.currentItemObservation = nil
@@ -336,7 +337,7 @@ final class AudioPlayer: AudioPlaying {
         DispatchQueue.main.async { [weak self] in
             guard let self, let failedItem, failedItem === self.playingItem else { return }
             let errorDescription = (notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)?.localizedDescription ?? "unknown"
-            AppLogger.error("Item failed to play to end at index \(self.currentIndex): \(errorDescription)", category: .playback)
+            MidgarLog.error("Item failed to play to end at index \(self.currentIndex): \(errorDescription)", category: .playback)
             self.nextTrack()
         }
     }
@@ -448,8 +449,10 @@ final class AudioPlayer: AudioPlaying {
         if currentTime > 3 {
             feedback.selection()
             player?.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
-                self?.updateNowPlayingInfo()
-                self?.postOnMain(AudioPlayer.playbackProgressDidChange)
+                Task { @MainActor in
+                    self?.updateNowPlayingInfo()
+                    self?.postOnMain(AudioPlayer.playbackProgressDidChange)
+                }
             }
             return
         }
@@ -466,22 +469,26 @@ final class AudioPlayer: AudioPlaying {
         guard let player, player.currentItem === playingItem else { return }
         let cmTime = CMTime(seconds: clampedSeekTarget(time), preferredTimescale: 600)
         player.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
-            self?.updateNowPlayingInfo()
-            self?.postOnMain(AudioPlayer.playbackProgressDidChange)
+            Task { @MainActor in
+                self?.updateNowPlayingInfo()
+                self?.postOnMain(AudioPlayer.playbackProgressDidChange)
+            }
         }
     }
 
-    func seekSmooth(to time: CMTime, tolerance: CMTime, completion: @escaping () -> Void) {
+    func seekSmooth(to time: CMTime, tolerance: CMTime, completion: @escaping @MainActor () -> Void) {
         guard let player, player.currentItem === playingItem else {
             completion()
             return
         }
         let target = CMTime(seconds: clampedSeekTarget(CMTimeGetSeconds(time)), preferredTimescale: 600)
         player.seek(to: target, toleranceBefore: tolerance, toleranceAfter: tolerance) { [weak self] finished in
-            if finished {
-                self?.updateNowPlayingInfo()
+            Task { @MainActor in
+                if finished {
+                    self?.updateNowPlayingInfo()
+                }
+                completion()
             }
-            completion()
         }
     }
 
@@ -672,15 +679,17 @@ final class AudioPlayer: AudioPlaying {
         cancelSleepTimer()
         sleepTimerRemaining = TimeInterval(minutes * 60)
         sleepTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            if let remaining = self.sleepTimerRemaining {
-                self.sleepTimerRemaining = remaining - 1
-                postOnMain(AudioPlayer.sleepTimerDidUpdate)
-                if remaining <= 1 {
-                    self.cancelSleepTimer()
-                    self.userPausedPlayback = true
-                    self.player?.pause()
-                    self.applyPlaybackState(false)
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if let remaining = self.sleepTimerRemaining {
+                    self.sleepTimerRemaining = remaining - 1
+                    self.postOnMain(AudioPlayer.sleepTimerDidUpdate)
+                    if remaining <= 1 {
+                        self.cancelSleepTimer()
+                        self.userPausedPlayback = true
+                        self.player?.pause()
+                        self.applyPlaybackState(false)
+                    }
                 }
             }
         }
@@ -719,7 +728,7 @@ final class AudioPlayer: AudioPlaying {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.sleepAtEndOfTrack else { return }
             guard (notification.object as? AVPlayerItem) === self.playingItem else { return }
-            AppLogger.info("Sleep at end of track reached, stopping on \(self.currentTrack?.title ?? "unknown")", category: .playback)
+            MidgarLog.info("Sleep at end of track reached, stopping on \(self.currentTrack?.title ?? "unknown")", category: .playback)
             self.cancelSleepTimer()
             self.userPausedPlayback = true
             self.applyPlaybackState(false)
@@ -768,11 +777,11 @@ final class AudioPlayer: AudioPlaying {
             return
         }
         if let resolvedIndex = resolveQueueIndex(for: item) {
-            AppLogger.warning("Advance resolved by URL match to index \(resolvedIndex) (preload bookkeeping was stale)", category: .playback)
+            MidgarLog.notice("Advance resolved by URL match to index \(resolvedIndex) (preload bookkeeping was stale)", category: .playback)
             completeAutoAdvance(to: resolvedIndex, item: item)
             return
         }
-        AppLogger.warning("Unrecognized current item after advance, reloading index \(currentIndex)", category: .playback)
+        MidgarLog.notice("Unrecognized current item after advance, reloading index \(currentIndex)", category: .playback)
         loadTrack(at: currentIndex)
     }
 
@@ -786,7 +795,7 @@ final class AudioPlayer: AudioPlaying {
 
     private func completeAutoAdvance(to nextIndex: Int, item: AVPlayerItem) {
         guard queue.indices.contains(nextIndex) else {
-            AppLogger.warning("Auto-advance target index \(nextIndex) out of bounds (queue count \(queue.count))", category: .playback)
+            MidgarLog.notice("Auto-advance target index \(nextIndex) out of bounds (queue count \(queue.count))", category: .playback)
             handleQueueExhausted()
             return
         }
@@ -803,7 +812,7 @@ final class AudioPlayer: AudioPlaying {
         lastKnownPlaybackPosition = 0
 
         let track = queue[currentIndex]
-        AppLogger.info("Auto-advance \(previousIndex) -> \(currentIndex): \(track.title) - \(track.artist)", category: .playback)
+        MidgarLog.info("Auto-advance \(previousIndex) -> \(currentIndex): \(track.title) - \(track.artist)", category: .playback)
 
         resyncPreloadedItems()
         scheduleAutoplayContinuationIfNeeded()
@@ -833,11 +842,11 @@ final class AudioPlayer: AudioPlaying {
 
         if autoplaySimilarWhenQueueEnds, repeatMode == .off, !sleepAtEndOfTrack {
             if autoplayContinuationInFlight {
-                AppLogger.info("Queue exhausted at index \(currentIndex) with continuation build in flight, deferring", category: .playback)
+                MidgarLog.info("Queue exhausted at index \(currentIndex) with continuation build in flight, deferring", category: .playback)
                 pendingQueueExhaustion = true
                 return
             }
-            AppLogger.info("Queue exhausted at index \(currentIndex), attempting autoplay continuation", category: .playback)
+            MidgarLog.info("Queue exhausted at index \(currentIndex), attempting autoplay continuation", category: .playback)
             buildAutoplayContinuation { [weak self] appended in
                 guard let self else { return }
                 if appended, self.queue.indices.contains(self.currentIndex + 1) {
@@ -852,7 +861,7 @@ final class AudioPlayer: AudioPlaying {
     }
 
     private func finishQueueExhausted() {
-        AppLogger.info("Queue exhausted at index \(currentIndex), stopping", category: .playback)
+        MidgarLog.info("Queue exhausted at index \(currentIndex), stopping", category: .playback)
         if sleepAtEndOfTrack {
             cancelSleepTimer()
         }
@@ -943,7 +952,7 @@ final class AudioPlayer: AudioPlaying {
 
         startTimeObserver()
 
-        AppLogger.info("Load track \(index): \(track.title) - \(track.artist)", category: .playback)
+        MidgarLog.info("Load track \(index): \(track.title) - \(track.artist)", category: .playback)
         updateNowPlayingInfo()
         ensureArtworkLoaded(for: track)
         sendNowPlayingToLastFM(track: track)
@@ -977,9 +986,9 @@ final class AudioPlayer: AudioPlaying {
             player?.insert(nextItem, after: player?.items().last)
             preloadedItem = nextItem
             preloadedIndex = nextIndex
-            AppLogger.info("Preloaded index \(nextIndex) after \(index)", category: .playback)
+            MidgarLog.info("Preloaded index \(nextIndex) after \(index)", category: .playback)
         } else {
-            AppLogger.warning("canInsert returned false for track \(nextIndex): \(queue[nextIndex].title)", category: .playback)
+            MidgarLog.notice("canInsert returned false for track \(nextIndex): \(queue[nextIndex].title)", category: .playback)
         }
     }
 
@@ -1012,10 +1021,12 @@ final class AudioPlayer: AudioPlaying {
     private func startTimeObserver() {
         let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
         timeObserver = player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
-            guard let self else { return }
-            self.lastKnownPlaybackPosition = self.currentTime
-            self.checkScrobbleCriteria()
-            postOnMain(AudioPlayer.playbackProgressDidChange)
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.lastKnownPlaybackPosition = self.currentTime
+                self.checkScrobbleCriteria()
+                self.postOnMain(AudioPlayer.playbackProgressDidChange)
+            }
         }
     }
 
@@ -1096,13 +1107,13 @@ final class AudioPlayer: AudioPlaying {
             do {
                 try DatabaseManager.shared.incrementPlayCount(trackId: playCountTrackID)
             } catch {
-                AppLogger.error("Failed to increment play count: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Failed to increment play count: \(error.localizedDescription)", category: .database)
             }
         }
         do {
             try DatabaseManager.shared.insertScrobble(record)
         } catch {
-            AppLogger.error("Failed to persist scrobble: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to persist scrobble: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -1120,7 +1131,7 @@ final class AudioPlayer: AudioPlaying {
     private func configureRemoteCommands() {
         let center = MPRemoteCommandCenter.shared()
 
-        center.playCommand.addTarget { [weak self] _ in
+        center.playCommand.addTarget { @Sendable [weak self] _ in
             DispatchQueue.main.async {
                 guard let self, !self.isPlaying else { return }
                 self.togglePlayPause()
@@ -1128,7 +1139,7 @@ final class AudioPlayer: AudioPlaying {
             return .success
         }
 
-        center.pauseCommand.addTarget { [weak self] _ in
+        center.pauseCommand.addTarget { @Sendable [weak self] _ in
             DispatchQueue.main.async {
                 guard let self, self.isPlaying else { return }
                 self.togglePlayPause()
@@ -1136,7 +1147,7 @@ final class AudioPlayer: AudioPlaying {
             return .success
         }
 
-        center.togglePlayPauseCommand.addTarget { [weak self] _ in
+        center.togglePlayPauseCommand.addTarget { @Sendable [weak self] _ in
             DispatchQueue.main.async { self?.togglePlayPause() }
             return .success
         }
@@ -1144,23 +1155,24 @@ final class AudioPlayer: AudioPlaying {
         // Next/previous must stay enabled for lock screen + expanded Dynamic
         // Island transport. Skip-interval commands steal those slots on iOS.
         center.nextTrackCommand.isEnabled = true
-        center.nextTrackCommand.addTarget { [weak self] _ in
+        center.nextTrackCommand.addTarget { @Sendable [weak self] _ in
             DispatchQueue.main.async { self?.nextTrack() }
             return .success
         }
 
         center.previousTrackCommand.isEnabled = true
-        center.previousTrackCommand.addTarget { [weak self] _ in
+        center.previousTrackCommand.addTarget { @Sendable [weak self] _ in
             DispatchQueue.main.async { self?.previousTrack() }
             return .success
         }
 
         center.changePlaybackPositionCommand.isEnabled = true
-        center.changePlaybackPositionCommand.addTarget { [weak self] event in
+        center.changePlaybackPositionCommand.addTarget { @Sendable [weak self] event in
             guard let positionEvent = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
             }
-            DispatchQueue.main.async { self?.seek(to: positionEvent.positionTime) }
+            let position = positionEvent.positionTime
+            DispatchQueue.main.async { self?.seek(to: position) }
             return .success
         }
 
@@ -1177,7 +1189,7 @@ final class AudioPlayer: AudioPlaying {
         center.skipBackwardCommand.isEnabled = true
         center.skipForwardCommand.preferredIntervals = [15]
         center.skipBackwardCommand.preferredIntervals = [15]
-        center.skipForwardCommand.addTarget { [weak self] event in
+        center.skipForwardCommand.addTarget { @Sendable [weak self] event in
             let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -1185,7 +1197,7 @@ final class AudioPlayer: AudioPlaying {
             }
             return .success
         }
-        center.skipBackwardCommand.addTarget { [weak self] event in
+        center.skipBackwardCommand.addTarget { @Sendable [weak self] event in
             let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 15
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -1196,23 +1208,23 @@ final class AudioPlayer: AudioPlaying {
         #endif
 
         center.changeShuffleModeCommand.isEnabled = true
-        center.changeShuffleModeCommand.addTarget { [weak self] event in
+        center.changeShuffleModeCommand.addTarget { @Sendable [weak self] event in
             guard let shuffleEvent = event as? MPChangeShuffleModeCommandEvent else { return .commandFailed }
+            let wantsShuffle = shuffleEvent.shuffleType != .off
             DispatchQueue.main.async {
                 guard let self else { return }
-                let wantsShuffle = shuffleEvent.shuffleType != .off
                 if wantsShuffle != self.shuffleEnabled { self.toggleShuffle() }
             }
             return .success
         }
 
         center.changeRepeatModeCommand.isEnabled = true
-        center.changeRepeatModeCommand.addTarget { [weak self] event in
+        center.changeRepeatModeCommand.addTarget { @Sendable [weak self] event in
             guard let repeatEvent = event as? MPChangeRepeatModeCommandEvent else { return .commandFailed }
+            let repeatType = repeatEvent.repeatType
             DispatchQueue.main.async {
                 guard let self else { return }
-                let target: RepeatMode =
-                    repeatEvent.repeatType == .all ? .all : repeatEvent.repeatType == .one ? .one : .off
+                let target: RepeatMode = repeatType == .all ? .all : repeatType == .one ? .one : .off
                 while self.repeatMode != target { self.cycleRepeatMode() }
             }
             return .success
@@ -1221,20 +1233,20 @@ final class AudioPlayer: AudioPlaying {
         center.likeCommand.isEnabled = true
         center.likeCommand.localizedTitle = String(localized: "Love on Last.fm")
         center.likeCommand.localizedShortTitle = String(localized: "Love")
-        center.likeCommand.addTarget { [weak self] _ in
-            guard let self, let track = self.currentTrack else { return .commandFailed }
-            // Flip the system heart immediately so Dynamic Island / lock screen
-            // update without waiting for the app to come foreground.
-            let next = !LovedTracksService.shared.isLoved(track: track)
-            MPRemoteCommandCenter.shared().likeCommand.isActive = next
-            Task {
-                let result = await LovedTracksService.shared.toggleLove(track: track)
-                await MainActor.run {
+        center.likeCommand.addTarget { @Sendable [weak self] _ in
+            onMainActorSync {
+                guard let self, let track = self.currentTrack else { return .commandFailed }
+                // Flip the system heart immediately so Dynamic Island / lock screen
+                // update without waiting for the app to come foreground.
+                let next = !LovedTracksService.shared.isLoved(track: track)
+                MPRemoteCommandCenter.shared().likeCommand.isActive = next
+                Task {
+                    let result = await LovedTracksService.shared.toggleLove(track: track)
                     MPRemoteCommandCenter.shared().likeCommand.isActive = result
                     self.syncRemoteCommandState()
                 }
+                return .success
             }
-            return .success
         }
 
         center.seekForwardCommand.isEnabled = false
@@ -1318,7 +1330,7 @@ final class AudioPlayer: AudioPlaying {
             ? image.size
             : NSSize(width: 600, height: 600)
         #endif
-        return MPMediaItemArtwork(boundsSize: bounds) { _ in image }
+        return MPMediaItemArtwork(boundsSize: bounds) { @Sendable _ in image }
     }
 
     /// The system playbackState is derived here — the one sink every state
@@ -1522,7 +1534,7 @@ final class AudioPlayer: AudioPlaying {
         postOnMain(AudioPlayer.queueDidChange)
         postOnMain(AudioPlayer.shuffleRepeatDidChange)
 
-        AppLogger.info("Restored queue: \(restoredTracks.count) tracks, index \(currentIndex), elapsed \(resumeElapsed)s", category: .content)
+        MidgarLog.info("Restored queue: \(restoredTracks.count) tracks, index \(currentIndex), elapsed \(resumeElapsed)s", category: .content)
     }
 
     /// Rebuilds the player around the current queue index and leaves playback paused at the given position; shared by queue restore and media-services recovery.
@@ -1561,7 +1573,7 @@ final class AudioPlayer: AudioPlaying {
         guard !isBuildingStation else { return }
         isBuildingStation = true
         let pool = Library.shared.allTracks
-        AppLogger.info("Building artist station for \(seedArtist) from \(pool.count) library tracks", category: .playback)
+        MidgarLog.info("Building artist station for \(seedArtist) from \(pool.count) library tracks", category: .playback)
         Task.detached { [weak self] in
             let pool = HideDuplicateSongsSetting.uniquePool(pool)
             let tracks = await StationBuilder.artistStation(
@@ -1578,7 +1590,7 @@ final class AudioPlayer: AudioPlaying {
         guard !isBuildingStation else { return }
         isBuildingStation = true
         let pool = Library.shared.allTracks
-        AppLogger.info("Building track station for \(seedTrack.title) - \(seedTrack.artist)", category: .playback)
+        MidgarLog.info("Building track station for \(seedTrack.title) - \(seedTrack.artist)", category: .playback)
         Task.detached { [weak self] in
             let pool = HideDuplicateSongsSetting.uniquePool(pool, preferring: [seedTrack])
             let tracks = await StationBuilder.trackStation(
@@ -1595,7 +1607,7 @@ final class AudioPlayer: AudioPlaying {
         guard !isBuildingStation else { return }
         isBuildingStation = true
         let pool = Library.shared.allTracks
-        AppLogger.info("Building library radio from \(pool.count) library tracks", category: .playback)
+        MidgarLog.info("Building library radio from \(pool.count) library tracks", category: .playback)
         Task.detached { [weak self] in
             let pool = HideDuplicateSongsSetting.uniquePool(pool)
             let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
@@ -1613,7 +1625,7 @@ final class AudioPlayer: AudioPlaying {
         guard !isBuildingStation else { return }
         isBuildingStation = true
         let pool = Library.shared.allTracks
-        AppLogger.info("Building crate dig from \(pool.count) library tracks", category: .playback)
+        MidgarLog.info("Building crate dig from \(pool.count) library tracks", category: .playback)
         Task.detached { [weak self] in
             let pool = HideDuplicateSongsSetting.uniquePool(pool)
             let counts = (try? DatabaseManager.shared.playCountByTrack()) ?? []
@@ -1628,10 +1640,10 @@ final class AudioPlayer: AudioPlaying {
     private func startBuiltStation(_ tracks: [Track], seedArtist: String?) {
         isBuildingStation = false
         guard !tracks.isEmpty else {
-            AppLogger.warning("Station build produced no tracks (seed \(seedArtist ?? "library"))", category: .playback)
+            MidgarLog.notice("Station build produced no tracks (seed \(seedArtist ?? "library"))", category: .playback)
             return
         }
-        AppLogger.info("Starting station with \(tracks.count) tracks (seed \(seedArtist ?? "library"))", category: .playback)
+        MidgarLog.info("Starting station with \(tracks.count) tracks (seed \(seedArtist ?? "library"))", category: .playback)
         play(tracks, startingAt: 0, stationSeed: seedArtist)
     }
 
@@ -1678,14 +1690,14 @@ final class AudioPlayer: AudioPlaying {
         let existing = Set(queue.map(\.fileURL))
         let fresh = batch.filter { !existing.contains($0.fileURL) }
         guard !fresh.isEmpty else {
-            AppLogger.info("Autoplay continuation produced no new tracks", category: .playback)
+            MidgarLog.info("Autoplay continuation produced no new tracks", category: .playback)
             completion?(false)
             resolvePendingExhaustion(appended: false)
             return
         }
         queue.append(contentsOf: fresh)
         originalQueue.append(contentsOf: fresh)
-        AppLogger.info("Autoplay appended \(fresh.count) continuation tracks (queue now \(queue.count))", category: .playback)
+        MidgarLog.info("Autoplay appended \(fresh.count) continuation tracks (queue now \(queue.count))", category: .playback)
         resyncPreloadedItems()
         postOnMain(AudioPlayer.queueDidChange)
         completion?(true)
@@ -1700,7 +1712,7 @@ final class AudioPlayer: AudioPlaying {
         pendingQueueExhaustion = false
         guard playingItem == nil else { return }
         if appended, queue.indices.contains(currentIndex + 1) {
-            AppLogger.info("Resuming deferred exhaustion with continuation at index \(currentIndex + 1)", category: .playback)
+            MidgarLog.info("Resuming deferred exhaustion with continuation at index \(currentIndex + 1)", category: .playback)
             loadTrack(at: currentIndex + 1)
         } else {
             finishQueueExhausted()
@@ -1758,14 +1770,14 @@ final class AudioPlayer: AudioPlaying {
         do {
             var pending = try await Task.detached { try Self.retireStaleAndFetchPending() }.value
             while !pending.isEmpty {
-                AppLogger.info("Retrying \(pending.count) pending scrobbles", category: .sync)
+                MidgarLog.info("Retrying \(pending.count) pending scrobbles", category: .sync)
 
                 let tuples = pending.compactMap { record -> (id: Int64, track: String, artist: String, album: String, timestamp: Date, duration: Int)? in
                     guard let id = record.id else { return nil }
                     return (id: id, track: record.trackTitle, artist: record.artist, album: record.albumTitle, timestamp: record.timestamp, duration: record.duration)
                 }
                 let submittedIds = await LastFMService.shared.submitPendingScrobbles(scrobbles: tuples)
-                AppLogger.info("Scrobble retry: \(submittedIds.count)/\(pending.count) submitted", category: .sync)
+                MidgarLog.info("Scrobble retry: \(submittedIds.count)/\(pending.count) submitted", category: .sync)
                 guard !submittedIds.isEmpty else { break }
 
                 pending = try await Task.detached { () throws -> [ScrobbleRecord] in
@@ -1774,7 +1786,7 @@ final class AudioPlayer: AudioPlaying {
                 }.value
             }
         } catch {
-            AppLogger.error("Scrobble retry failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Scrobble retry failed: \(error.localizedDescription)", category: .sync)
         }
     }
 

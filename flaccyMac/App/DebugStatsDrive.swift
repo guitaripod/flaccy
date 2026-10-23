@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG
 import AppKit
 
@@ -41,7 +42,7 @@ enum DebugStatsDrive {
     }
 
     private static func report(_ line: String) {
-        AppLogger.info(line, category: .performance)
+        MidgarLog.info(line, category: .performance)
         let url = URL(fileURLWithPath: NSTemporaryDirectory() + "stats-bench.txt")
         let existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         try? (existing + line + "\n").write(to: url, atomically: true, encoding: .utf8)
@@ -178,7 +179,7 @@ enum DebugStatsDrive {
             }
         }
         try? DatabaseManager.shared.insertScrobbles(batch)
-        AppLogger.info("DebugStatsDrive: seeded \(batch.count) recent scrobbles over \(tracks.count) tracks", category: .general)
+        MidgarLog.info("DebugStatsDrive: seeded \(batch.count) recent scrobbles over \(tracks.count) tracks", category: .general)
     }
 }
 #endif

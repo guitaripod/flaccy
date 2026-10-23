@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 import FlaccyCore
 import GRDB
 
@@ -90,14 +91,14 @@ nonisolated struct ArtistRecord: Codable, FetchableRecord, PersistableRecord, Id
 
 /// The release credit a row belongs to, falling back to its own performing
 /// artist for a row `DatabaseManager.resolveAlbumCredits()` has not settled yet.
-extension TrackRecord {
+nonisolated extension TrackRecord {
     var credit: String {
         guard let albumArtist, !albumArtist.isEmpty else { return artist }
         return albumArtist
     }
 }
 
-extension LightTrackRecord {
+nonisolated extension LightTrackRecord {
     var credit: String {
         guard let albumArtist, !albumArtist.isEmpty else { return artist }
         return albumArtist
@@ -216,11 +217,11 @@ nonisolated final class DatabaseManager: Sendable {
             do {
                 dbQueue = try Self.openDatabase(at: dbPath)
             } catch {
-                AppLogger.error("Database open/migrate failed, recreating: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Database open/migrate failed, recreating: \(error.localizedDescription)", category: .database)
                 Self.moveCorruptDatabaseAside(at: dbPath)
                 dbQueue = try Self.openDatabase(at: dbPath)
             }
-            AppLogger.info("Database initialized at \(dbPath)", category: .database)
+            MidgarLog.info("Database initialized at \(dbPath)", category: .database)
         } catch {
             fatalError("Failed to initialize database after recovery attempt: \(error)")
         }
@@ -757,7 +758,7 @@ nonisolated final class DatabaseManager: Sendable {
                 do {
                     try Self.hoistingCoverArt(track, in: db).insert(db)
                 } catch {
-                    AppLogger.error("Skipped track insert for \(track.fileURL): \(error.localizedDescription)", category: .database)
+                    MidgarLog.error("Skipped track insert for \(track.fileURL): \(error.localizedDescription)", category: .database)
                 }
             }
         }
@@ -1195,7 +1196,7 @@ nonisolated final class DatabaseManager: Sendable {
             do {
                 return try Self.debutDecoder().decode(LibraryDebutSummary.self, from: Data(json.utf8))
             } catch {
-                AppLogger.error("Library debut summary unreadable: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Library debut summary unreadable: \(error.localizedDescription)", category: .database)
                 return nil
             }
         }

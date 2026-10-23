@@ -50,7 +50,7 @@ final class MacEqualizerCurveView: NSView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    deinit {
+    isolated deinit {
         ticker?.invalidate()
     }
 
@@ -249,17 +249,25 @@ final class MacEqualizerCurveView: NSView {
     }
 }
 
-private final class MacEqualizerBandElement: NSAccessibilityElement {
-    weak var owner: MacEqualizerCurveView?
-    var bandIndex = 0
+private nonisolated final class MacEqualizerBandElement: NSAccessibilityElement {
+    /// Set when the curve view builds its elements and read by the accessibility callbacks, which AppKit delivers on
+    /// the main thread.
+    nonisolated(unsafe) weak var owner: MacEqualizerCurveView?
+    /// Set with `owner` and read by the same callbacks.
+    nonisolated(unsafe) var bandIndex = 0
 
     override func accessibilityPerformIncrement() -> Bool {
-        owner?.stepBand(bandIndex, by: 1)
-        return true
+        step(by: 1)
     }
 
     override func accessibilityPerformDecrement() -> Bool {
-        owner?.stepBand(bandIndex, by: -1)
+        step(by: -1)
+    }
+
+    private func step(by delta: Double) -> Bool {
+        let owner = owner
+        let band = bandIndex
+        MainActor.assumeIsolated { owner?.stepBand(band, by: delta) }
         return true
     }
 }

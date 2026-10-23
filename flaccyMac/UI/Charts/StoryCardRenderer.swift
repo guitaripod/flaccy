@@ -5,7 +5,7 @@ import AppKit
 /// view hierarchy, so exports can never come out blank). Layout constants
 /// mirror the iOS renderer: 360-wide canvas, 30pt margins, hairline rules,
 /// rotated year watermark, monogram tiles for missing art.
-enum StoryCardRenderer {
+nonisolated enum StoryCardRenderer {
 
     private static let margin: CGFloat = 30
 

@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG
 import FlaccyCore
 import Foundation
@@ -125,7 +126,7 @@ enum EqualizerExercise {
         report("switching it back on attaches a tap while the song plays", reattached)
 
         AudioPlayer.shared.togglePlayPause()
-        AppLogger.info("EqualizerExercise finished", category: .playback)
+        MidgarLog.info("EqualizerExercise finished", category: .playback)
     }
 
     private static let analysisOwner = NSObject()
@@ -215,7 +216,7 @@ enum EqualizerExercise {
     }
 
     private static func report(_ expectation: String, _ passed: Bool) {
-        AppLogger.info("EqualizerExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .playback)
+        MidgarLog.info("EqualizerExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .playback)
     }
 }
 #endif

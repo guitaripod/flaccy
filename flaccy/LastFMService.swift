@@ -1,5 +1,7 @@
 import AuthenticationServices
+import MidgarCore
 import Foundation
+import os
 import Security
 
 nonisolated enum ChartPeriod: String, CaseIterable, Sendable {
@@ -124,24 +126,40 @@ nonisolated struct ArtistInfo: Sendable {
     let musicBrainzID: String?
 }
 
-final class LastFMService {
+/// The Last.fm client. Its credentials live in the Keychain and `UserDefaults` and everything else is immutable, so the
+/// requests run from any actor; only the web sign-in session, which presents UI, is pinned to the main actor.
+nonisolated final class LastFMService: @unchecked Sendable {
 
     static let shared = LastFMService()
 
     static let authDidChange = Notification.Name("LastFMServiceAuthDidChange")
 
-    nonisolated private static let apiKey = Secrets.lastFMApiKey
+    private static let configuredAPIKey = OSAllocatedUnfairLock(initialState: "")
+
+    /// The Last.fm API key. It is empty until ``configure(apiKey:)`` runs, which leaves the service unconfigured.
+    private static var apiKey: String {
+        configuredAPIKey.withLock { $0 }
+    }
+
+    /// Hands the service the API key from the gitignored `Secrets` file. That file's `Secrets` type is main-actor
+    /// isolated like the rest of the app, so the key is copied here once at launch, before any request reads it.
+    @MainActor
+    static func configure(apiKey: String) {
+        configuredAPIKey.withLock { $0 = apiKey }
+    }
+
     nonisolated private static let baseURL = "https://ws.audioscrobbler.com/2.0/"
-    nonisolated private static let signEndpoint = GroqService.apiBaseURL.appendingPathComponent("v1/lastfm/sign")
     private static let sessionKeyKey = "lastfm_session_key"
     private static let usernameKey = "lastfm_username"
 
     private let urlSession: URLSession
-    private var authSession: ASWebAuthenticationSession?
-    private var authContextProvider: WebAuthContextProvider?
+    /// Touched only by the main-actor sign-in methods below.
+    private nonisolated(unsafe) var authSession: ASWebAuthenticationSession?
+    /// Held with `authSession` and touched only by the same main-actor sign-in methods.
+    private nonisolated(unsafe) var authContextProvider: WebAuthContextProvider?
 
     var isConfigured: Bool {
-        Self.apiKey != "YOUR_LASTFM_API_KEY"
+        !Self.apiKey.isEmpty && Self.apiKey != "YOUR_LASTFM_API_KEY"
     }
 
     var isAuthenticated: Bool {
@@ -167,7 +185,7 @@ final class LastFMService {
         guard let legacy = UserDefaults.standard.string(forKey: Self.sessionKeyKey) else { return nil }
         KeychainStore.set(legacy, for: Self.sessionKeyKey)
         UserDefaults.standard.removeObject(forKey: Self.sessionKeyKey)
-        AppLogger.info("Migrated Last.fm session key from UserDefaults to Keychain", category: .auth)
+        MidgarLog.info("Migrated Last.fm session key from UserDefaults to Keychain", category: .auth)
         return legacy
     }
 
@@ -177,6 +195,7 @@ final class LastFMService {
         urlSession = URLSession(configuration: config)
     }
 
+    @MainActor
     func authenticate(from anchor: ASPresentationAnchor) async throws {
         guard isConfigured else { throw LastFMError.apiKeyNotConfigured }
         discardAuthSession()
@@ -203,11 +222,11 @@ final class LastFMService {
                 self.authSession = session
                 guard session.start() else {
                     self.releaseAuthSession(session)
-                    AppLogger.error("Last.fm sign-in could not be presented", category: .auth)
+                    MidgarLog.error("Last.fm sign-in could not be presented", category: .auth)
                     continuation.resume(throwing: LastFMError.authenticationUnavailable)
                     return
                 }
-                AppLogger.info("Last.fm sign-in presented", category: .auth)
+                MidgarLog.info("Last.fm sign-in presented", category: .auth)
             }
         } catch {
             releaseAuthSession(started)
@@ -232,7 +251,7 @@ final class LastFMService {
 
         sessionKey = key
         username = session["name"] as? String
-        AppLogger.info("Last.fm authentication successful", category: .auth)
+        MidgarLog.info("Last.fm authentication successful", category: .auth)
         NotificationCenter.default.post(name: Self.authDidChange, object: nil)
     }
 
@@ -241,6 +260,7 @@ final class LastFMService {
     /// keeps the system's authentication agent busy, and every later `start()`
     /// is queued behind it and silently never presents — the button looks dead.
     /// Clearing the stale session first is what makes a retry work.
+    @MainActor
     private func discardAuthSession() {
         authSession?.cancel()
         authSession = nil
@@ -249,6 +269,7 @@ final class LastFMService {
 
     /// Forgets `session` only if it is still the current one, so a finished
     /// attempt cannot tear down the newer attempt that superseded it.
+    @MainActor
     private func releaseAuthSession(_ session: ASWebAuthenticationSession?) {
         guard let session, authSession === session else { return }
         authSession = nil
@@ -258,13 +279,13 @@ final class LastFMService {
     func logout() {
         sessionKey = nil
         username = nil
-        AppLogger.info("Last.fm session cleared", category: .auth)
+        MidgarLog.info("Last.fm session cleared", category: .auth)
         NotificationCenter.default.post(name: Self.authDidChange, object: nil)
     }
 
     nonisolated func updateNowPlaying(track: String, artist: String, album: String, duration: Int) async {
-        guard let sk = await sessionKey else {
-            await AppLogger.debug("Skipping now playing update — not authenticated", category: .sync)
+        guard let sk = sessionKey else {
+            MidgarLog.debug("Skipping now playing update — not authenticated", category: .sync)
             return
         }
 
@@ -280,9 +301,9 @@ final class LastFMService {
 
         do {
             _ = try await performSignedRequest(params: params, httpMethod: "POST")
-            await AppLogger.debug("Now playing updated: \(track) - \(artist)", category: .sync)
+            MidgarLog.debug("Now playing updated: \(track) - \(artist)", category: .sync)
         } catch {
-            await AppLogger.error("Now playing update failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Now playing update failed: \(error.localizedDescription)", category: .sync)
         }
     }
 
@@ -295,8 +316,8 @@ final class LastFMService {
         albumArtist: String? = nil,
         trackNumber: Int? = nil
     ) async -> Bool {
-        guard let sk = await sessionKey else {
-            await AppLogger.debug("Skipping scrobble — not authenticated", category: .sync)
+        guard let sk = sessionKey else {
+            MidgarLog.debug("Skipping scrobble — not authenticated", category: .sync)
             return false
         }
 
@@ -320,28 +341,28 @@ final class LastFMService {
             }
             switch Self.parseScrobbleResponse(data: data, expectedCount: 1) {
             case .retryableError(let code, let message):
-                await AppLogger.warning("Scrobble deferred (error \(code): \(message)): \(track) - \(artist)", category: .sync)
+                MidgarLog.notice("Scrobble deferred (error \(code): \(message)): \(track) - \(artist)", category: .sync)
                 return false
             case .acceptedCount(let accepted):
                 if accepted > 0 {
-                    await AppLogger.info("Scrobbled: \(track) - \(artist)", category: .sync)
+                    MidgarLog.info("Scrobbled: \(track) - \(artist)", category: .sync)
                     return true
                 }
-                await AppLogger.warning("Scrobble rejected: \(track) - \(artist)", category: .sync)
+                MidgarLog.notice("Scrobble rejected: \(track) - \(artist)", category: .sync)
                 return false
             case .entries(let statuses):
                 guard let status = statuses.first else { return false }
                 if status.accepted {
-                    await AppLogger.info("Scrobbled: \(track) - \(artist)", category: .sync)
+                    MidgarLog.info("Scrobbled: \(track) - \(artist)", category: .sync)
                 } else if status.ignoredCode == 3 {
-                    await AppLogger.warning("Scrobble rejected as too old (>14 days): \(track) - \(artist)", category: .sync)
+                    MidgarLog.notice("Scrobble rejected as too old (>14 days): \(track) - \(artist)", category: .sync)
                 } else {
-                    await AppLogger.warning("Scrobble permanently ignored (code \(status.ignoredCode)): \(track) - \(artist)", category: .sync)
+                    MidgarLog.notice("Scrobble permanently ignored (code \(status.ignoredCode)): \(track) - \(artist)", category: .sync)
                 }
                 return true
             }
         } catch {
-            await AppLogger.error("Scrobble failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Scrobble failed: \(error.localizedDescription)", category: .sync)
             return false
         }
     }
@@ -352,8 +373,8 @@ final class LastFMService {
     nonisolated func submitPendingScrobbles(
         scrobbles: [(id: Int64, track: String, artist: String, album: String, timestamp: Date, duration: Int)]
     ) async -> [Int64] {
-        guard let sk = await sessionKey else {
-            await AppLogger.debug("Skipping batch scrobble — not authenticated", category: .sync)
+        guard let sk = sessionKey else {
+            MidgarLog.debug("Skipping batch scrobble — not authenticated", category: .sync)
             return []
         }
 
@@ -384,13 +405,13 @@ final class LastFMService {
                 }
                 switch Self.parseScrobbleResponse(data: data, expectedCount: batch.count) {
                 case .retryableError(let code, let message):
-                    await AppLogger.warning("Batch scrobble deferred (error \(code): \(message)), \(batch.count) kept pending", category: .sync)
+                    MidgarLog.notice("Batch scrobble deferred (error \(code): \(message)), \(batch.count) kept pending", category: .sync)
                 case .acceptedCount(let accepted):
                     if accepted > 0 {
                         submittedIds.append(contentsOf: batch.map(\.id))
-                        await AppLogger.info("Batch scrobbled \(batch.count) tracks (accepted \(accepted))", category: .sync)
+                        MidgarLog.info("Batch scrobbled \(batch.count) tracks (accepted \(accepted))", category: .sync)
                     } else {
-                        await AppLogger.warning("Batch scrobble accepted 0 of \(batch.count), kept pending", category: .sync)
+                        MidgarLog.notice("Batch scrobble accepted 0 of \(batch.count), kept pending", category: .sync)
                     }
                 case .entries(let statuses):
                     var acceptedCount = 0
@@ -399,13 +420,13 @@ final class LastFMService {
                         if status.accepted {
                             acceptedCount += 1
                         } else {
-                            await AppLogger.warning("Scrobble permanently ignored (code \(status.ignoredCode)): \(entry.track) - \(entry.artist)", category: .sync)
+                            MidgarLog.notice("Scrobble permanently ignored (code \(status.ignoredCode)): \(entry.track) - \(entry.artist)", category: .sync)
                         }
                     }
-                    await AppLogger.info("Batch scrobbled \(acceptedCount)/\(batch.count) tracks accepted", category: .sync)
+                    MidgarLog.info("Batch scrobbled \(acceptedCount)/\(batch.count) tracks accepted", category: .sync)
                 }
             } catch {
-                await AppLogger.error("Batch scrobble failed (kept pending): \(error.localizedDescription)", category: .sync)
+                MidgarLog.error("Batch scrobble failed (kept pending): \(error.localizedDescription)", category: .sync)
             }
         }
         return submittedIds
@@ -418,7 +439,7 @@ final class LastFMService {
         case .empty:
             return nil
         case .failed(let failure):
-            await AppLogger.error("Fetch album info failed: \(failure.rawValue)", category: .content)
+            MidgarLog.error("Fetch album info failed: \(failure.rawValue)", category: .content)
             return nil
         }
     }
@@ -430,7 +451,7 @@ final class LastFMService {
         case .empty:
             return nil
         case .failed(let failure):
-            await AppLogger.error("Fetch artist info failed: \(failure.rawValue)", category: .content)
+            MidgarLog.error("Fetch artist info failed: \(failure.rawValue)", category: .content)
             return nil
         }
     }
@@ -448,7 +469,7 @@ final class LastFMService {
             "album": album,
             "autocorrect": "1",
         ]
-        if let user = await username { params["username"] = user }
+        if let user = username { params["username"] = user }
 
         return await classifiedRead(params: params) { json in
             guard let albumDict = json["album"] as? [String: Any] else { return nil }
@@ -486,8 +507,8 @@ final class LastFMService {
     }
 
     nonisolated func fetchTopTracks(period: ChartPeriod, limit: Int = 50) async -> [ChartTrack] {
-        guard let user = await username else {
-            await AppLogger.debug("Skipping chart fetch — no username", category: .sync)
+        guard let user = username else {
+            MidgarLog.debug("Skipping chart fetch — no username", category: .sync)
             return []
         }
 
@@ -519,7 +540,7 @@ final class LastFMService {
                 return ChartTrack(rank: rank, name: name, artistName: artistName, playCount: playCount)
             }
         } catch {
-            await AppLogger.error("Chart fetch failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Chart fetch failed: \(error.localizedDescription)", category: .sync)
             return []
         }
     }
@@ -533,8 +554,8 @@ final class LastFMService {
     }
 
     nonisolated private func setLove(method: String, artist: String, track: String) async -> Bool {
-        guard let sk = await sessionKey else {
-            await AppLogger.debug("Skipping \(method) — not authenticated", category: .sync)
+        guard let sk = sessionKey else {
+            MidgarLog.debug("Skipping \(method) — not authenticated", category: .sync)
             return false
         }
         let params: [String: String] = [
@@ -548,13 +569,13 @@ final class LastFMService {
             _ = try await performSignedRequest(params: params, httpMethod: "POST")
             return true
         } catch {
-            await AppLogger.error("\(method) failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("\(method) failed: \(error.localizedDescription)", category: .sync)
             return false
         }
     }
 
     nonisolated func fetchLovedTracks(page: Int = 1, limit: Int = 200) async -> (tracks: [LovedTrack], totalPages: Int) {
-        guard let user = await username else { return ([], 0) }
+        guard let user = username else { return ([], 0) }
         let params: [String: String] = [
             "method": "user.getLovedTracks",
             "api_key": Self.apiKey,
@@ -579,13 +600,13 @@ final class LastFMService {
             }
             return (tracks, totalPages)
         } catch {
-            await AppLogger.error("Fetch loved tracks failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch loved tracks failed: \(error.localizedDescription)", category: .sync)
             return ([], 0)
         }
     }
 
     nonisolated func fetchUserInfo() async -> LastFMUserInfo? {
-        guard let user = await username else { return nil }
+        guard let user = username else { return nil }
         let params: [String: String] = [
             "method": "user.getInfo",
             "api_key": Self.apiKey,
@@ -608,13 +629,13 @@ final class LastFMService {
                 country: (dict["country"] as? String).flatMap { $0.isEmpty ? nil : $0 }
             )
         } catch {
-            await AppLogger.error("Fetch user info failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch user info failed: \(error.localizedDescription)", category: .sync)
             return nil
         }
     }
 
     nonisolated func fetchRecentTracks(page: Int = 1, limit: Int = 200, from: Int? = nil, to: Int? = nil) async -> (tracks: [RecentTrack], total: Int, totalPages: Int) {
-        guard let user = await username else { return ([], 0, 0) }
+        guard let user = username else { return ([], 0, 0) }
         var params: [String: String] = [
             "method": "user.getRecentTracks",
             "api_key": Self.apiKey,
@@ -650,13 +671,13 @@ final class LastFMService {
             }
             return (tracks.filter { !$0.nowPlaying }, total, totalPages)
         } catch {
-            await AppLogger.error("Fetch recent tracks failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch recent tracks failed: \(error.localizedDescription)", category: .sync)
             return ([], 0, 0)
         }
     }
 
     nonisolated func scrobbleCount(from: Int, to: Int) async -> Int {
-        guard let user = await username else { return 0 }
+        guard let user = username else { return 0 }
         let params: [String: String] = [
             "method": "user.getRecentTracks",
             "api_key": Self.apiKey,
@@ -672,13 +693,13 @@ final class LastFMService {
             else { return 0 }
             return Self.intValue((recent["@attr"] as? [String: Any])?["total"]) ?? 0
         } catch {
-            await AppLogger.error("Scrobble count failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Scrobble count failed: \(error.localizedDescription)", category: .sync)
             return 0
         }
     }
 
     nonisolated func fetchTopArtists(period: ChartPeriod, limit: Int = 50) async -> [ChartArtist] {
-        guard let user = await username else { return [] }
+        guard let user = username else { return [] }
         let params: [String: String] = [
             "method": "user.getTopArtists",
             "api_key": Self.apiKey,
@@ -697,13 +718,13 @@ final class LastFMService {
                 return ChartArtist(rank: rank, name: name, playCount: Self.intValue(entry["playcount"]) ?? 0)
             }
         } catch {
-            await AppLogger.error("Fetch top artists failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch top artists failed: \(error.localizedDescription)", category: .sync)
             return []
         }
     }
 
     nonisolated func fetchTopAlbums(period: ChartPeriod, limit: Int = 50) async -> [ChartAlbum] {
-        guard let user = await username else { return [] }
+        guard let user = username else { return [] }
         let params: [String: String] = [
             "method": "user.getTopAlbums",
             "api_key": Self.apiKey,
@@ -729,13 +750,13 @@ final class LastFMService {
                 )
             }
         } catch {
-            await AppLogger.error("Fetch top albums failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch top albums failed: \(error.localizedDescription)", category: .sync)
             return []
         }
     }
 
     nonisolated func fetchWeeklyChartList() async -> [(fromUts: Int, toUts: Int)] {
-        guard let user = await username else { return [] }
+        guard let user = username else { return [] }
         let params: [String: String] = [
             "method": "user.getWeeklyChartList",
             "api_key": Self.apiKey,
@@ -751,13 +772,13 @@ final class LastFMService {
                 return (fromUts: from, toUts: to)
             }
         } catch {
-            await AppLogger.error("Fetch weekly chart list failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch weekly chart list failed: \(error.localizedDescription)", category: .sync)
             return []
         }
     }
 
     nonisolated func fetchWeeklyArtistChart(from: Int, to: Int) async -> [ChartArtist] {
-        guard let user = await username else { return [] }
+        guard let user = username else { return [] }
         let params: [String: String] = [
             "method": "user.getWeeklyArtistChart",
             "api_key": Self.apiKey,
@@ -776,13 +797,13 @@ final class LastFMService {
                 return ChartArtist(rank: rank, name: name, playCount: Self.intValue(entry["playcount"]) ?? 0)
             }
         } catch {
-            await AppLogger.error("Fetch weekly artist chart failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch weekly artist chart failed: \(error.localizedDescription)", category: .sync)
             return []
         }
     }
 
     nonisolated func fetchWeeklyTrackChart(from: Int, to: Int) async -> [ChartTrack] {
-        guard let user = await username else { return [] }
+        guard let user = username else { return [] }
         let params: [String: String] = [
             "method": "user.getWeeklyTrackChart",
             "api_key": Self.apiKey,
@@ -803,13 +824,13 @@ final class LastFMService {
                 return ChartTrack(rank: rank, name: name, artistName: artistName, playCount: Self.intValue(entry["playcount"]) ?? 0)
             }
         } catch {
-            await AppLogger.error("Fetch weekly track chart failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch weekly track chart failed: \(error.localizedDescription)", category: .sync)
             return []
         }
     }
 
     nonisolated func fetchWeeklyAlbumChart(from: Int, to: Int) async -> [ChartAlbum] {
-        guard let user = await username else { return [] }
+        guard let user = username else { return [] }
         let params: [String: String] = [
             "method": "user.getWeeklyAlbumChart",
             "api_key": Self.apiKey,
@@ -830,7 +851,7 @@ final class LastFMService {
                 return ChartAlbum(rank: rank, name: name, artistName: artistName, playCount: Self.intValue(entry["playcount"]) ?? 0, imageURL: nil)
             }
         } catch {
-            await AppLogger.error("Fetch weekly album chart failed: \(error.localizedDescription)", category: .sync)
+            MidgarLog.error("Fetch weekly album chart failed: \(error.localizedDescription)", category: .sync)
             return []
         }
     }
@@ -854,7 +875,7 @@ final class LastFMService {
                 return (name: name, match: match)
             }
         } catch {
-            await AppLogger.error("Fetch similar artists failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Fetch similar artists failed: \(error.localizedDescription)", category: .content)
             return []
         }
     }
@@ -867,7 +888,7 @@ final class LastFMService {
             "track": track,
             "autocorrect": "1",
         ]
-        if let user = await username { params["username"] = user }
+        if let user = username { params["username"] = user }
         do {
             let data = try await throttledGET(params: params)
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -889,7 +910,7 @@ final class LastFMService {
                 tags: tags
             )
         } catch {
-            await AppLogger.error("Fetch track info failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Fetch track info failed: \(error.localizedDescription)", category: .content)
             return nil
         }
     }
@@ -913,7 +934,7 @@ final class LastFMService {
                 return (name: name, playCount: Self.intValue(entry["playcount"]) ?? 0, rank: rank)
             }
         } catch {
-            await AppLogger.error("Fetch artist top tracks failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Fetch artist top tracks failed: \(error.localizedDescription)", category: .content)
             return []
         }
     }
@@ -943,7 +964,7 @@ final class LastFMService {
                 )
             }
         } catch {
-            await AppLogger.error("Fetch artist top albums failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Fetch artist top albums failed: \(error.localizedDescription)", category: .content)
             return []
         }
     }
@@ -962,7 +983,7 @@ final class LastFMService {
             else { return [] }
             return Self.asArray(top["tag"]).compactMap { $0["name"] as? String }
         } catch {
-            await AppLogger.error("Fetch artist top tags failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Fetch artist top tags failed: \(error.localizedDescription)", category: .content)
             return []
         }
     }
@@ -1210,23 +1231,20 @@ final class LastFMService {
     /// refusal (quota, outage, offline) throws like any failed Last.fm call:
     /// scrobbles stay pending and are retried.
     nonisolated private func requestSignature(for params: [String: String]) async throws -> String {
-        var request = URLRequest(url: Self.signEndpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(GroqService.deviceIdentifier, forHTTPHeaderField: "X-Device-ID")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["params": params])
+        do throws(MidgarHTTPError) {
+            return try await FlaccyMidgar.shared.api.lastFMSignature(for: params)
+        } catch {
+            throw LastFMError.apiError(Self.signingFailure(error))
+        }
+    }
 
-        let (data, response) = try await urlSession.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw LastFMError.invalidResponse
+    /// The reason a signing call failed: the HTTP status when the worker refused, else what kept it from answering.
+    nonisolated private static func signingFailure(_ error: MidgarHTTPError) -> String {
+        switch error {
+        case .server(let status, _, _): "signing failed (HTTP \(status))"
+        case .rateLimited: "signing failed (HTTP 429)"
+        default: "signing failed (\(error.localizedDescription))"
         }
-        guard (200...299).contains(http.statusCode) else {
-            throw LastFMError.apiError("signing failed (HTTP \(http.statusCode))")
-        }
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let signature = json["api_sig"] as? String
-        else { throw LastFMError.invalidResponse }
-        return signature
     }
 
     nonisolated private static func extractLargestImage(from imageArray: Any?) -> String? {

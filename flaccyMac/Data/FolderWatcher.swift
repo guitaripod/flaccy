@@ -1,4 +1,5 @@
 import CoreServices
+import MidgarCore
 import Foundation
 
 /// FSEvents watcher over the library root. Events are debounced because imports
@@ -11,6 +12,8 @@ final class FolderWatcher {
     /// then immediately need another one.
     private static let debounce: TimeInterval = 3
 
+    /// Created by `start` and released by `tearDownStream`, which only `stop` and `deinit` call, never at the same time as
+    /// each other or as `start`: a deinit runs when nothing else holds the watcher.
     nonisolated(unsafe) private var stream: FSEventStreamRef?
     private var debounceTask: Task<Void, Never>?
     private var generation = 0
@@ -43,13 +46,13 @@ final class FolderWatcher {
             0.5,
             FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagIgnoreSelf)
         ) else {
-            AppLogger.error("FSEventStreamCreate failed for \(url.path)", category: .content)
+            MidgarLog.error("FSEventStreamCreate failed for \(url.path)", category: .content)
             return
         }
         FSEventStreamSetDispatchQueue(created, .main)
         FSEventStreamStart(created)
         stream = created
-        AppLogger.info("Watching library folder \(url.path) (generation \(currentGeneration))", category: .content)
+        MidgarLog.info("Watching library folder \(url.path) (generation \(currentGeneration))", category: .content)
     }
 
     func stop() {
@@ -76,7 +79,7 @@ final class FolderWatcher {
         debounceTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.debounce))
             guard !Task.isCancelled, let self, self.generation == scheduledGeneration else { return }
-            AppLogger.info("Library folder changed, triggering rescan", category: .content)
+            MidgarLog.info("Library folder changed, triggering rescan", category: .content)
             self.onChange?()
         }
     }

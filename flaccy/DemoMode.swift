@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG && os(iOS) && targetEnvironment(simulator)
 import FlaccyCore
 import UIKit
@@ -20,9 +21,9 @@ enum DemoMode {
         do {
             try db.eraseDemoContent()
             eraseDemoFiles()
-            AppLogger.info("Demo: stale content erased for version \(version)", category: .database)
+            MidgarLog.info("Demo: stale content erased for version \(version)", category: .database)
         } catch {
-            AppLogger.error("Demo: erase failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Demo: erase failed: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -116,7 +117,7 @@ enum DemoMode {
         seedWantlist(db: db)
         seedEnrichment(db: db)
         UserDefaults.standard.set(version, forKey: versionKey)
-        AppLogger.info("Demo: supplements seeded (version \(version))", category: .content)
+        MidgarLog.info("Demo: supplements seeded (version \(version))", category: .content)
     }
 
     private static func path(_ albumTitle: String, _ number: Int) -> String? {
@@ -292,7 +293,7 @@ enum DemoMode {
         do {
             try db.mergeWantlistSuggestions(records)
         } catch {
-            AppLogger.error("Demo: wantlist seed failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Demo: wantlist seed failed: \(error.localizedDescription)", category: .database)
         }
 
         let releases: [(String, String, Int, Int, UInt32, UInt32, UInt32)] = [

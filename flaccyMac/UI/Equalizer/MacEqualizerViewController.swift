@@ -848,7 +848,7 @@ final class MacEqualizerViewController: NSViewController {
         if wantsAdvanced == (profile.kind == .parametric) { return }
         if wantsAdvanced {
             beginEditing()
-            engine.convertInForce(to: .parametric)
+            _ = engine.convertInForce(to: .parametric)
             selectedIndex = 0
             finishEditing()
             return
@@ -863,7 +863,7 @@ final class MacEqualizerViewController: NSViewController {
             guard let self else { return }
             if response == .alertFirstButtonReturn {
                 self.beginEditing()
-                self.engine.convertInForce(to: .graphic)
+                _ = self.engine.convertInForce(to: .graphic)
                 self.selectedIndex = 5
                 self.finishEditing()
             } else {
@@ -1468,11 +1468,11 @@ final class MacMeterBar: NSView {
 }
 
 /// A menu item that runs a closure, so menus built on the fly need no selectors.
-final class MacClosureMenuItem: NSMenuItem {
+nonisolated final class MacClosureMenuItem: NSMenuItem {
 
-    private let handler: () -> Void
+    private let handler: @MainActor () -> Void
 
-    init(title: String, handler: @escaping () -> Void) {
+    init(title: String, handler: @escaping @MainActor () -> Void) {
         self.handler = handler
         super.init(title: title, action: #selector(run), keyEquivalent: "")
         target = self
@@ -1481,6 +1481,7 @@ final class MacClosureMenuItem: NSMenuItem {
     required init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     @objc private func run() {
-        handler()
+        let handler = handler
+        MainActor.assumeIsolated { handler() }
     }
 }

@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 import UniformTypeIdentifiers
 import UserNotifications
@@ -25,7 +26,9 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        AppLogger.info("Flaccy for Mac launched (root: \(LibraryRoot.current.path))", category: .general)
+        FlaccyMidgar.configureLogging()
+        FlaccyMidgar.shared.start()
+        MidgarLog.info("Flaccy for Mac launched (root: \(LibraryRoot.current.path))", category: .general)
         #if DEBUG
         ScreenshotSeeder.seedIfRequested()
         DebugLayoutFixtures.seedIfRequested()
@@ -74,7 +77,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         AudioPlayer.shared.saveQueueState()
         folderWatcher.stop()
-        AppLogger.info("Flaccy for Mac terminating", category: .general)
+        MidgarLog.info("Flaccy for Mac terminating", category: .general)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -166,7 +169,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     private func notifyLibraryRootFallbackIfNeeded() {
         guard LibraryRoot.shared.isFallbackActive, let window = mainWindowController?.window else { return }
-        AppLogger.warning("Library root offline at launch; prompting user", category: .content)
+        MidgarLog.notice("Library root offline at launch; prompting user", category: .content)
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = String(localized: "Music Folder Unavailable")
@@ -218,7 +221,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     private func deferPaywallUntilSheetEnds(on window: NSWindow) {
         guard deferredPaywallSheetObserver == nil else { return }
-        AppLogger.info("Paywall deferred until the current sheet ends", category: .purchases)
+        MidgarLog.info("Paywall deferred until the current sheet ends", category: .purchases)
         deferredPaywallSheetObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didEndSheetNotification, object: window, queue: .main
         ) { [weak self] _ in
@@ -235,7 +238,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     private func deferPaywallUntilDebutEnds() {
         guard deferredPaywall == nil else { return }
-        AppLogger.info("Paywall deferred until the Debut ends", category: .purchases)
+        MidgarLog.info("Paywall deferred until the Debut ends", category: .purchases)
         deferredPaywall = MacLibrarySurfaceModel.shared.state
             .map(\.surface)
             .filter { $0 != .debut }
@@ -265,7 +268,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
                 try LibraryRoot.shared.chooseFolder(url)
                 PurchaseFunnel.noteFolderChosen()
             } catch {
-                AppLogger.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
+                MidgarLog.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
                 MacToast.show(String(localized: "Couldn't use \u{201C}\(url.lastPathComponent)\u{201D} as your music folder — macOS wouldn't grant Flaccy lasting access: \(error.localizedDescription)"), style: .error, in: window)
             }
         }
@@ -357,7 +360,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func jumpToCurrentSong(_ sender: Any?) {
         guard AudioPlayer.shared.currentTrack != nil else {
-            AppLogger.info("Jump to current song: nothing is playing", category: .ui)
+            MidgarLog.info("Jump to current song: nothing is playing", category: .ui)
             MacToast.show(String(localized: "Nothing playing"), style: .info, in: mainWindowController?.window)
             return
         }
@@ -400,15 +403,15 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func zoomIn(_ sender: Any?) {
-        MacInterfaceScale.zoomIn()
+        _ = MacInterfaceScale.zoomIn()
     }
 
     @objc func zoomOut(_ sender: Any?) {
-        MacInterfaceScale.zoomOut()
+        _ = MacInterfaceScale.zoomOut()
     }
 
     @objc func zoomReset(_ sender: Any?) {
-        MacInterfaceScale.reset()
+        _ = MacInterfaceScale.reset()
     }
 }
 
@@ -434,10 +437,10 @@ extension MacAppDelegate: UNUserNotificationCenterDelegate {
                 name: .flaccyShowSection, object: nil,
                 userInfo: [SectionNotificationKey.section: SidebarSection.yearInMusic.rawValue]
             )
-            AppLogger.info("Recap notification opened Year in Music", category: .general)
+            MidgarLog.info("Recap notification opened Year in Music", category: .general)
         } else if userInfo[TrialReminderScheduler.destinationUserInfoKey] as? String
             == TrialReminderScheduler.paywallDestination {
-            AppLogger.info("Trial reminder opened the paywall", category: .purchases)
+            MidgarLog.info("Trial reminder opened the paywall", category: .purchases)
             PurchaseManager.shared.requestPaywall()
         }
     }
@@ -489,7 +492,7 @@ extension MacAppDelegate {
             if capture {
                 await self.stageBCapture()
             }
-            AppLogger.info("StageBDrive: complete", category: .general)
+            MidgarLog.info("StageBDrive: complete", category: .general)
         }
     }
 
@@ -524,7 +527,7 @@ extension MacAppDelegate {
         AudioPlayer.shared.setSleepTimer(minutes: 15)
         try? await Task.sleep(for: .seconds(2))
         stageBCaptureWindow(stageBWindow, name: "transport-sleep")
-        AppLogger.info("StageBDrive: sleep timer remaining after 2s = \(AudioPlayer.shared.sleepTimerRemaining ?? -1)", category: .playback)
+        MidgarLog.info("StageBDrive: sleep timer remaining after 2s = \(AudioPlayer.shared.sleepTimerRemaining ?? -1)", category: .playback)
 
         NotificationCenter.default.post(name: .flaccyToggleNowPlaying, object: nil)
         try? await Task.sleep(for: .seconds(3))
@@ -542,7 +545,7 @@ extension MacAppDelegate {
         showSettings(nil)
         try? await Task.sleep(for: .seconds(2))
         if let tabController = settingsTabController() {
-            AppLogger.info("StageBDrive: settings window frame \(settingsWindow()?.frame ?? .zero), tab view subviews \(tabController.view.subviews.count)", category: .general)
+            MidgarLog.info("StageBDrive: settings window frame \(settingsWindow()?.frame ?? .zero), tab view subviews \(tabController.view.subviews.count)", category: .general)
             for (index, name) in ["settings-general", "settings-lastfm", "settings-recap", "settings-library", "settings-about"].enumerated() {
                 tabController.selectedTabViewItemIndex = index
                 try? await Task.sleep(for: .seconds(1))
@@ -568,12 +571,12 @@ extension MacAppDelegate {
         AudioPlayer.shared.seek(to: max(0, duration - 30))
         try? await Task.sleep(for: .seconds(4))
         let after = (try? DatabaseManager.shared.scrobbleCountInRange(from: dayStart, to: .distantFuture)) ?? -1
-        AppLogger.info("StageBDrive: scrobble eligibility check — rows today before=\(before) after=\(after) (duration \(duration))", category: .playback)
+        MidgarLog.info("StageBDrive: scrobble eligibility check — rows today before=\(before) after=\(after) (duration \(duration))", category: .playback)
     }
 
     private func stageBStress() async {
         for round in 1...3 {
-            AppLogger.info("StageBDrive: stress round \(round)", category: .general)
+            MidgarLog.info("StageBDrive: stress round \(round)", category: .general)
             for section in [SidebarSection.charts, .yearInMusic, .wantlist, .listeningGuide, .albums] {
                 NotificationCenter.default.post(
                     name: .flaccyShowSection, object: nil,
@@ -601,7 +604,7 @@ extension MacAppDelegate {
             dismissPresentedSheets()
             try? await Task.sleep(for: .milliseconds(600))
         }
-        AppLogger.info("StageBDrive: stress complete", category: .general)
+        MidgarLog.info("StageBDrive: stress complete", category: .general)
     }
 
     private func settingsWindow() -> NSWindow? {
@@ -621,7 +624,7 @@ extension MacAppDelegate {
 
     private func stageBCaptureView(_ view: NSView?, name: String) {
         guard let view else {
-            AppLogger.error("StageBDrive: no view for \(name)", category: .general)
+            MidgarLog.error("StageBDrive: no view for \(name)", category: .general)
             return
         }
         view.layoutSubtreeIfNeeded()
@@ -646,9 +649,9 @@ extension MacAppDelegate {
         let path = NSTemporaryDirectory() + "flaccy-b2-\(name).png"
         do {
             try data.write(to: URL(fileURLWithPath: path))
-            AppLogger.info("StageBDrive: captured \(path) (\(view.bounds.size))", category: .general)
+            MidgarLog.info("StageBDrive: captured \(path) (\(view.bounds.size))", category: .general)
         } catch {
-            AppLogger.error("StageBDrive: write failed for \(name): \(error.localizedDescription)", category: .general)
+            MidgarLog.error("StageBDrive: write failed for \(name): \(error.localizedDescription)", category: .general)
         }
     }
 
@@ -657,7 +660,7 @@ extension MacAppDelegate {
         window?.displayIfNeeded()
         guard let view = window?.contentView,
               let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
-            AppLogger.error("StageBDrive: capture failed for \(name)", category: .general)
+            MidgarLog.error("StageBDrive: capture failed for \(name)", category: .general)
             return
         }
         view.cacheDisplay(in: view.bounds, to: rep)
@@ -665,9 +668,9 @@ extension MacAppDelegate {
         let path = NSTemporaryDirectory() + "flaccy-b2-\(name).png"
         do {
             try data.write(to: URL(fileURLWithPath: path))
-            AppLogger.info("StageBDrive: captured \(path)", category: .general)
+            MidgarLog.info("StageBDrive: captured \(path)", category: .general)
         } catch {
-            AppLogger.error("StageBDrive: write failed for \(name): \(error.localizedDescription)", category: .general)
+            MidgarLog.error("StageBDrive: write failed for \(name): \(error.localizedDescription)", category: .general)
         }
     }
 
@@ -675,7 +678,7 @@ extension MacAppDelegate {
         let year = Calendar.current.component(.year, from: Date())
         let data = YearInMusicService.shared.compute(year: year)
         guard data.hasContent else {
-            AppLogger.error("StageBDrive: no YIM data to export", category: .general)
+            MidgarLog.error("StageBDrive: no YIM data to export", category: .general)
             return
         }
         let artwork = StoryArtwork.resolve(for: data)
@@ -688,7 +691,7 @@ extension MacAppDelegate {
                 ), let png = image.pngData() else { continue }
                 let path = NSTemporaryDirectory() + "flaccy-b2-yim-\(slide.displayName.lowercased().replacingOccurrences(of: " ", with: "-"))-\(suffix).png"
                 try? png.write(to: URL(fileURLWithPath: path))
-                AppLogger.info("StageBDrive: exported \(path)", category: .general)
+                MidgarLog.info("StageBDrive: exported \(path)", category: .general)
             }
         }
         if let recap = ChartsViewModelSnapshotForDrive() {
@@ -697,7 +700,7 @@ extension MacAppDelegate {
                let png = card.pngData() {
                 let cardPath = NSTemporaryDirectory() + "flaccy-b2-recap-card.png"
                 try? png.write(to: URL(fileURLWithPath: cardPath))
-                AppLogger.info("StageBDrive: exported \(cardPath)", category: .general)
+                MidgarLog.info("StageBDrive: exported \(cardPath)", category: .general)
             }
         }
     }

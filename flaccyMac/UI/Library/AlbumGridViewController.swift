@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 
 /// The album wall: a diffable NSCollectionView over the shared
@@ -242,7 +243,7 @@ final class AlbumGridViewController: NSViewController {
         layout.headerReferenceSize = hasMultipleSections ? NSSize(width: 0, height: 34) : .zero
         dataSource?.apply(snapshot, animatingDifferences: animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
         refreshEmptyState()
-        AppLogger.debug("Album grid showing \(snapshot.numberOfItems) items", category: .ui)
+        MidgarLog.debug("Album grid showing \(snapshot.numberOfItems) items", category: .ui)
     }
 
     private func refreshEmptyState() {
@@ -264,7 +265,7 @@ final class AlbumGridViewController: NSViewController {
               let sort = LibraryViewModel.AlbumSort(rawValue: raw) else { return }
         viewModel.setAlbumSort(sort)
         collectionView.scroll(.zero)
-        AppLogger.info("Album sort changed to \(sort.displayName)", category: .ui)
+        MidgarLog.info("Album sort changed to \(sort.displayName)", category: .ui)
     }
 
     @objc private func zoomChanged(_ sender: NSSlider) {
@@ -350,7 +351,7 @@ final class AlbumGridViewController: NSViewController {
     private func play(_ album: Album) {
         let resolved = resolvedAlbum(album)
         guard !resolved.tracks.isEmpty else { return }
-        AppLogger.info("Playing album \(resolved.title) — \(resolved.artist)", category: .playback)
+        MidgarLog.info("Playing album \(resolved.title) — \(resolved.artist)", category: .playback)
         AudioPlayer.shared.play(resolved.tracks, startingAt: 0)
     }
 

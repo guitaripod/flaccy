@@ -104,7 +104,7 @@ final class ArtworkChangeObserver {
         }
     }
 
-    deinit {
+    isolated deinit {
         if let token { NotificationCenter.default.removeObserver(token) }
     }
 }

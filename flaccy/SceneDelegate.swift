@@ -1,4 +1,5 @@
 import UIKit
+import MidgarCore
 
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
@@ -79,7 +80,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     private func deferPaywallUntilDebutDismisses() {
         guard deferredPaywallObserver == nil else { return }
-        AppLogger.info("Paywall deferred until the Debut dismisses", category: .purchases)
+        MidgarLog.info("Paywall deferred until the Debut dismisses", category: .purchases)
         deferredPaywallObserver = NotificationCenter.default.addObserver(
             forName: LibraryViewController.debutDidDismiss, object: nil, queue: .main
         ) { [weak self] _ in
@@ -254,7 +255,7 @@ final class RootContainerViewController: UIViewController {
     }
 
     private func applySplitLayout(_ geometry: AdaptiveLayout.SplitGeometry) {
-        AppLogger.debug(
+        MidgarLog.debug(
             "Split layout: window \(view.bounds.size), division \(String(describing: view.divisionRegionFrame)), "
                 + "primary \(geometry.primaryWidth), secondary at \(geometry.secondaryLeading)",
             category: .ui

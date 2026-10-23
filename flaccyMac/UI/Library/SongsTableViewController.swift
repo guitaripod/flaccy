@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 
 extension Notification.Name {
@@ -167,7 +168,7 @@ final class SongsTableViewController: NSViewController {
                 emptyStateView.isHidden = OnboardingPanelView.visibility != .hide
             }
         }
-        AppLogger.debug("Songs table showing \(newRows.count) rows", category: .ui)
+        MidgarLog.debug("Songs table showing \(newRows.count) rows", category: .ui)
         resolvePendingReveal()
     }
 
@@ -246,7 +247,7 @@ final class SongsTableViewController: NSViewController {
     private func playVisible(shuffled: Bool) {
         let tracks = rows.map(\.track)
         guard !tracks.isEmpty else { return }
-        AppLogger.info("Playing songs list: \(tracks.count) tracks, shuffled: \(shuffled)", category: .playback)
+        MidgarLog.info("Playing songs list: \(tracks.count) tracks, shuffled: \(shuffled)", category: .playback)
         AudioPlayer.shared.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0)
     }
 
@@ -279,7 +280,7 @@ final class SongsTableViewController: NSViewController {
 
     @objc private func jumpToCurrentSong() {
         guard let path = AudioPlayer.shared.currentTrack?.fileURL.path else {
-            AppLogger.info("Jump to current song: nothing is playing", category: .ui)
+            MidgarLog.info("Jump to current song: nothing is playing", category: .ui)
             return
         }
         pendingReveal = (path, false)
@@ -302,7 +303,7 @@ final class SongsTableViewController: NSViewController {
             LibrarySearchState.requestClear()
         } else {
             pendingReveal = nil
-            AppLogger.info("Jump to current song: the playing track is not in the songs list", category: .ui)
+            MidgarLog.info("Jump to current song: the playing track is not in the songs list", category: .ui)
         }
     }
 
@@ -315,7 +316,7 @@ final class SongsTableViewController: NSViewController {
         clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: offset))
         scrollView.reflectScrolledClipView(clip)
         view.window?.makeFirstResponder(tableView)
-        AppLogger.info("Jump to current song: row \(index)", category: .ui)
+        MidgarLog.info("Jump to current song: row \(index)", category: .ui)
     }
 
     @objc private func playbackChanged() {
@@ -337,7 +338,7 @@ final class SongsTableViewController: NSViewController {
         let row = tableView.clickedRow
         guard row >= 0, row < rows.count else { return }
         let tracks = rows.map(\.track)
-        AppLogger.info("Playing songs table from row \(row): \(tracks[row].title)", category: .playback)
+        MidgarLog.info("Playing songs table from row \(row): \(tracks[row].title)", category: .playback)
         AudioPlayer.shared.play(tracks, startingAt: row)
     }
 
@@ -385,7 +386,7 @@ extension SongsTableViewController: NSTableViewDataSource {
         if tableView.numberOfRows > 0 {
             tableView.scrollRowToVisible(0)
         }
-        AppLogger.info(
+        MidgarLog.info(
             "Songs sorted by \(viewModel.sortTiers.map { "\($0.column.rawValue)\($0.ascending ? "↑" : "↓")" }.joined(separator: ", "))",
             category: .ui
         )

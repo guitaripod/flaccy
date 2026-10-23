@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 /// AppKit port of the iOS ArtistImageService: memory/disk cache → Apple Music
 /// catalog artwork → Last.fm artist image (rejecting the star placeholder) →
@@ -75,7 +76,7 @@ final class MacArtistImageService {
             else { return nil }
             return image
         } catch {
-            await AppLogger.error("Artist image download failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Artist image download failed: \(error.localizedDescription)", category: .content)
             return nil
         }
     }

@@ -32,6 +32,8 @@ ssh macbook "ONLY=$(printf %q "$ONLY") bash -l" <<'REMOTE'
 set -euo pipefail
 cd ~/Dev/ios/flaccy
 
+xcodegen generate --quiet
+
 if ! scripts/test-shared.sh; then
     echo "** SHARED TESTS FAILED — NOT BUILDING **"
     exit 1

@@ -14,7 +14,10 @@ import Foundation
 /// preamp glide over `rampFrames` samples, and the stage crossfades in and out
 /// of the dry signal over `crossfadeFrames`, so enabling the equalizer while a
 /// song plays does not click.
-public final class EqualizerKernel {
+///
+/// It is `@unchecked Sendable` because the engine hands a kernel to one render
+/// thread at a time behind a lock, so no two threads ever run it together.
+public final class EqualizerKernel: @unchecked Sendable {
 
     public static let maxSections = EqualizerBand.maximumPerProfile
     public static let rampFrames = 1_024

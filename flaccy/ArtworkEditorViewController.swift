@@ -1,4 +1,5 @@
 import PhotosUI
+import MidgarCore
 import UIKit
 import UniformTypeIdentifiers
 
@@ -621,7 +622,7 @@ final class ArtworkEditorViewController: UIViewController {
                     self?.finish()
                 }
             } catch {
-                AppLogger.error("Saving cover failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Saving cover failed: \(error.localizedDescription)", category: .database)
                 await MainActor.run {
                     UINotificationFeedbackGenerator().notificationOccurred(.error)
                     self?.saveButton.isEnabled = true
@@ -692,7 +693,7 @@ final class ArtworkEditorViewController: UIViewController {
                     completion(true)
                 }
             } catch {
-                AppLogger.error("Resetting cover failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Resetting cover failed: \(error.localizedDescription)", category: .database)
                 await MainActor.run {
                     UINotificationFeedbackGenerator().notificationOccurred(.error)
                     completion(false)

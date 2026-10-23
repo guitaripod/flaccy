@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 /// Playlist list: stacked-artwork mosaics, create/rename/delete via header
 /// button and context menu, double-click to open the reorderable detail.
@@ -122,7 +123,7 @@ final class PlaylistsViewController: NSViewController {
         reload()
     }
 
-    deinit {
+    isolated deinit {
         NotificationCenter.default.removeObserver(self)
         searchDebounce?.cancel()
     }
@@ -142,7 +143,7 @@ final class PlaylistsViewController: NSViewController {
                 self.entries = self.sortedEntries(entries)
                 self.tableView.reloadData()
                 self.emptyStateView.isHidden = !entries.isEmpty || !query.isEmpty
-                AppLogger.debug("Playlists list showing \(entries.count) playlists", category: .ui)
+                MidgarLog.debug("Playlists list showing \(entries.count) playlists", category: .ui)
             }
         }
     }
@@ -170,7 +171,7 @@ final class PlaylistsViewController: NSViewController {
                 )
             }
         } catch {
-            AppLogger.error("Playlist fetch failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Playlist fetch failed: \(error.localizedDescription)", category: .database)
             return []
         }
     }
@@ -236,7 +237,7 @@ final class PlaylistsViewController: NSViewController {
                 guard let id = record.id else { continue }
                 try? DatabaseManager.shared.deletePlaylist(id: id)
             }
-            AppLogger.info("Deleted \(records.count) playlists", category: .database)
+            MidgarLog.info("Deleted \(records.count) playlists", category: .database)
             NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
         }
     }
@@ -304,10 +305,10 @@ final class PlaylistsViewController: NSViewController {
                 try DatabaseManager.shared.savePlaylistCover(cover, id: newId)
             }
             try DatabaseManager.shared.deletePlaylist(id: playlistId)
-            AppLogger.info("Playlist \(oldName) renamed to \(newName)", category: .database)
+            MidgarLog.info("Playlist \(oldName) renamed to \(newName)", category: .database)
             NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
         } catch {
-            AppLogger.error("Playlist rename failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Playlist rename failed: \(error.localizedDescription)", category: .database)
             MacToast.show(String(localized: "Couldn't rename \u{201C}\(oldName)\u{201D} — the library database couldn't be written. Check free disk space and try again."), style: .error, in: window)
         }
     }
@@ -324,10 +325,10 @@ final class PlaylistsViewController: NSViewController {
             guard response == .alertFirstButtonReturn else { return }
             do {
                 try DatabaseManager.shared.deletePlaylist(id: id)
-                AppLogger.info("Playlist deleted: \(record.name)", category: .database)
+                MidgarLog.info("Playlist deleted: \(record.name)", category: .database)
                 NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
             } catch {
-                AppLogger.error("Playlist delete failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Playlist delete failed: \(error.localizedDescription)", category: .database)
                 MacToast.show(String(localized: "Couldn't delete \u{201C}\(record.name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), style: .error, in: window)
             }
         }

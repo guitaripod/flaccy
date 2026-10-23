@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 
 /// Takes plays the watch performed on its own and counts them like any other
@@ -29,7 +30,7 @@ enum WatchPlayIngestor {
                 trackID: service.track(forStem: SyncStem.of(entry.path))?.dbID
             )
         }
-        AppLogger.info("Counting \(counted.count) plays from the watch", category: .connectivity)
+        MidgarLog.info("Counting \(counted.count) plays from the watch", category: .connectivity)
         Task {
             await Task.detached { persist(counted) }.value
             if submitsToLastFM {
@@ -49,13 +50,13 @@ enum WatchPlayIngestor {
                 do {
                     try DatabaseManager.shared.incrementPlayCount(trackId: trackID)
                 } catch {
-                    AppLogger.error("Watch play count failed: \(error.localizedDescription)", category: .database)
+                    MidgarLog.error("Watch play count failed: \(error.localizedDescription)", category: .database)
                 }
             }
             do {
                 try DatabaseManager.shared.insertScrobble(play.record)
             } catch {
-                AppLogger.error("Watch scrobble failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Watch scrobble failed: \(error.localizedDescription)", category: .database)
             }
         }
     }

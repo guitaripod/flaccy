@@ -1,4 +1,5 @@
 import UIKit
+import MidgarCore
 
 final class StreamingLinksViewController: UIViewController {
 
@@ -188,13 +189,13 @@ final class StreamingLinksViewController: UIViewController {
 
     private func openPlatform(_ link: PlatformLink) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        AppLogger.info("Opening \(link.displayName) link", category: .ui)
+        MidgarLog.info("Opening \(link.displayName) link", category: .ui)
         UIApplication.shared.open(link.url)
     }
 
     private func shareURL(_ url: URL, label: String) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        AppLogger.info("Sharing \(label) link", category: .ui)
+        MidgarLog.info("Sharing \(label) link", category: .ui)
         let text = String(localized: "\(result.title) by \(result.artist)")
         let activity = UIActivityViewController(activityItems: [text, url], applicationActivities: nil)
         activity.completionWithItemsHandler = { [weak self] _, completed, _, _ in
@@ -208,7 +209,7 @@ final class StreamingLinksViewController: UIViewController {
     private func copyURL(_ url: URL, label: String) {
         UIPasteboard.general.url = url
         UINotificationFeedbackGenerator().notificationOccurred(.success)
-        AppLogger.info("Copied \(label) link", category: .ui)
+        MidgarLog.info("Copied \(label) link", category: .ui)
         ToastView.show(String(localized: "\(label) link copied"), in: view, style: .success)
     }
 
@@ -220,7 +221,7 @@ final class StreamingLinksViewController: UIViewController {
             self?.copyURL(url, label: label)
         }
         let open = UIAction(title: String(localized: "Open"), image: UIImage(systemName: "safari")) { _ in
-            AppLogger.info("Opening \(label) link from menu", category: .ui)
+            MidgarLog.info("Opening \(label) link from menu", category: .ui)
             UIApplication.shared.open(url)
         }
         return UIMenu(children: [share, copy, open])

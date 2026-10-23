@@ -1,4 +1,5 @@
 import AVFoundation
+import MidgarCore
 import CryptoKit
 import FlaccyCore
 import Foundation
@@ -61,7 +62,7 @@ actor WatchTranscoder {
         let encoded = try encodedResult(at: destination)
         if let sourceBytes = Self.fileSize(of: source), encoded.bytes >= sourceBytes {
             try? FileManager.default.removeItem(at: destination)
-            AppLogger.info("Watch transcode of \(source.lastPathComponent) was not smaller than the source; sending it as is", category: .connectivity)
+            MidgarLog.info("Watch transcode of \(source.lastPathComponent) was not smaller than the source; sending it as is", category: .connectivity)
             return try passthrough(source)
         }
         return encoded
@@ -259,6 +260,7 @@ extension WatchTranscoder {
     }
 }
 
+/// The cancellation state of one encode. Every field is read and written under `lock`.
 nonisolated private final class EncodeSession: @unchecked Sendable {
 
     private let lock = NSLock()
@@ -297,6 +299,7 @@ nonisolated private final class EncodeSession: @unchecked Sendable {
     }
 }
 
+/// Resumes a continuation at most once. `continuation` is read and cleared under `lock`.
 nonisolated private final class OnceResumer: @unchecked Sendable {
 
     private let lock = NSLock()
@@ -315,6 +318,7 @@ nonisolated private final class OnceResumer: @unchecked Sendable {
     }
 }
 
+/// The reader and writer of one encode, handed to the pump queue that alone drives them; the session is thread-safe.
 nonisolated private struct Pipeline: @unchecked Sendable {
     let reader: AVAssetReader
     let output: AVAssetReaderTrackOutput
@@ -353,12 +357,12 @@ extension WatchTranscoder {
         } catch {
             try? FileManager.default.removeItem(at: partial)
             if !(error is TranscodeError) || Self.isFailure(error) {
-                AppLogger.warning("Watch transcode failed for \(source.lastPathComponent): \(error)", category: .connectivity)
+                MidgarLog.notice("Watch transcode failed for \(source.lastPathComponent): \(error)", category: .connectivity)
             }
             throw error
         }
         let elapsed = Date().timeIntervalSince(started)
-        AppLogger.info(
+        MidgarLog.info(
             "Watch transcode \(source.lastPathComponent) at \(bitRate / 1000) kbps in \(String(format: "%.2f", elapsed)) s",
             category: .connectivity
         )

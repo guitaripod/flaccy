@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 import FlaccyCore
 
@@ -92,7 +93,7 @@ final class ContentRouter: NSViewController {
         ])
         currentChild = next
         keepOnboardingInFront()
-        AppLogger.info("Content router showing \(section.title)", category: .ui)
+        MidgarLog.info("Content router showing \(section.title)", category: .ui)
     }
 
     func revealAlbum(title: String, artist: String) {
@@ -221,7 +222,7 @@ final class ContentRouter: NSViewController {
             onboardingView.removeFromSuperview()
             self.onboardingView = nil
             currentChild?.view.alphaValue = 1
-            AppLogger.info("Onboarding panel dismissed", category: .ui)
+            MidgarLog.info("Onboarding panel dismissed", category: .ui)
         }
     }
 
@@ -241,7 +242,7 @@ final class ContentRouter: NSViewController {
         onboardingView = panel
         keepOnboardingInFront()
         panel.render(MacLibrarySurfaceModel.shared.state.value)
-        AppLogger.info("Onboarding panel shown", category: .ui)
+        MidgarLog.info("Onboarding panel shown", category: .ui)
     }
 
     /// The welcome panel has to stay in front of whichever section is showing.
@@ -268,9 +269,9 @@ final class ContentRouter: NSViewController {
             panel.animator().alphaValue = 0
             currentChild?.view.animator().alphaValue = 1
         } completionHandler: {
-            panel.removeFromSuperview()
+            MainActor.assumeIsolated { panel.removeFromSuperview() }
         }
-        AppLogger.info("Library debut dismissed (\(summary.trackCount) tracks)", category: .ui)
+        MidgarLog.info("Library debut dismissed (\(summary.trackCount) tracks)", category: .ui)
     }
 
     /// The Mac's equivalent of the iPhone's success haptic: the number the
@@ -334,12 +335,7 @@ final class MacLibrarySurfaceModel {
         debutCompleted = Self.readDebutCompleted()
 
         NotificationCenter.default.publisher(for: Library.progressDidChange)
-            .compactMap { notification -> (LibraryLoadProgress, Double)? in
-                guard let progress = notification.userInfo?[Library.ProgressKey.progress] as? LibraryLoadProgress,
-                      let fraction = notification.userInfo?[Library.ProgressKey.fraction] as? Double
-                else { return nil }
-                return (progress, fraction)
-            }
+            .compactMap(Self.loadProgress(from:))
             .receive(on: DispatchQueue.main)
             .sink { [weak self] progress, fraction in
                 self?.apply { $0.load = progress; $0.fraction = fraction }
@@ -347,7 +343,7 @@ final class MacLibrarySurfaceModel {
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: EnrichmentCoordinator.progressDidChange)
-            .compactMap { $0.userInfo?[EnrichmentCoordinator.ProgressKey.progress] as? EnrichmentJobProgress }
+            .compactMap(Self.jobProgress(from:))
             .receive(on: DispatchQueue.main)
             .sink { [weak self] job in
                 self?.heardFromJob = true
@@ -365,6 +361,19 @@ final class MacLibrarySurfaceModel {
         apply { $0.job = EnrichmentCoordinator.shared.progress }
     }
 
+    /// Reads a load-progress notification on the thread that posted it, which is why this is not isolated.
+    private nonisolated static func loadProgress(from notification: Notification) -> (LibraryLoadProgress, Double)? {
+        guard let progress = notification.userInfo?[Library.ProgressKey.progress] as? LibraryLoadProgress,
+              let fraction = notification.userInfo?[Library.ProgressKey.fraction] as? Double
+        else { return nil }
+        return (progress, fraction)
+    }
+
+    /// Reads an enrichment-progress notification on the thread that posted it, which is why this is not isolated.
+    private nonisolated static func jobProgress(from notification: Notification) -> EnrichmentJobProgress? {
+        notification.userInfo?[EnrichmentCoordinator.ProgressKey.progress] as? EnrichmentJobProgress
+    }
+
     /// Records the finished Debut and lets the router out of its latch. Called
     /// once, by the surface that dismissed the summary card.
     func completeDebut(_ summary: LibraryDebutSummary) {
@@ -374,7 +383,7 @@ final class MacLibrarySurfaceModel {
         do {
             try DatabaseManager.shared.saveLibraryDebut(summary)
         } catch {
-            AppLogger.error("Saving library debut failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Saving library debut failed: \(error.localizedDescription)", category: .database)
         }
         apply { _ in }
     }

@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 
 nonisolated struct PlatformLink: Sendable, Hashable {
     let key: String
@@ -60,9 +61,10 @@ final class SonglinkService {
 
     private let session: URLSession
     private let throttle = SonglinkThrottle()
-    private let cache = NSCache<NSString, CachedResult>()
+    /// `NSCache` does its own locking, so the result cache is safe to use from the nonisolated lookups.
+    private nonisolated(unsafe) let cache = NSCache<NSString, CachedResult>()
 
-    private static let knownPlatforms: [String: (displayName: String, iconName: String, tintColorHex: UInt, order: Int)] = [
+    private nonisolated static let knownPlatforms: [String: (displayName: String, iconName: String, tintColorHex: UInt, order: Int)] = [
         "spotify": ("Spotify", "waveform", 0x1DB954, 0),
         "appleMusic": ("Apple Music", "music.note", 0xFC3C44, 1),
         "youtubeMusic": ("YouTube Music", "play.rectangle.fill", 0xFF0000, 2),
@@ -101,7 +103,7 @@ final class SonglinkService {
         case .found(let match):
             songMatch = match
         case .notFound:
-            await AppLogger.debug("Songlink: no Apple Music match for \(artist) - \(title)", category: .content)
+            MidgarLog.debug("Songlink: no Apple Music match for \(artist) - \(title)", category: .content)
             return .noMatch
         case .failed:
             return .unreachable
@@ -131,7 +133,7 @@ final class SonglinkService {
         case .found(let match):
             albumMatch = match
         case .notFound:
-            await AppLogger.debug("Songlink: no Apple Music album match for \(artist) - \(title)", category: .content)
+            MidgarLog.debug("Songlink: no Apple Music album match for \(artist) - \(title)", category: .content)
             return .noMatch
         case .failed:
             return .unreachable
@@ -155,7 +157,7 @@ final class SonglinkService {
     /// data. A page that cannot be parsed still yields the universal link.
     nonisolated private func fetchSonglink(url: URL, title: String, artist: String) async -> SonglinkOutcome {
         guard let pageURL = SonglinkPage.pageURL(forAppleMusic: url) else {
-            await AppLogger.warning("Songlink: no iTunes id in \(url.absoluteString)", category: .content)
+            MidgarLog.notice("Songlink: no iTunes id in \(url.absoluteString)", category: .content)
             return .noMatch
         }
         var request = URLRequest(url: pageURL)
@@ -164,11 +166,11 @@ final class SonglinkService {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { return .unreachable }
             if http.statusCode == 429 {
-                await AppLogger.warning("Songlink rate limited", category: .content)
+                MidgarLog.notice("Songlink rate limited", category: .content)
                 return .unreachable
             }
             guard http.statusCode == 200 else {
-                await AppLogger.warning("Songlink page returned \(http.statusCode)", category: .content)
+                MidgarLog.notice("Songlink page returned \(http.statusCode)", category: .content)
                 return http.statusCode == 404 ? .noMatch : .unreachable
             }
             let parsed = SonglinkPage.parse(html: String(decoding: data, as: UTF8.self))
@@ -183,7 +185,7 @@ final class SonglinkService {
                 artist: parsed.artist ?? artist
             ))
         } catch {
-            await AppLogger.error("Songlink fetch failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Songlink fetch failed: \(error.localizedDescription)", category: .content)
             return .unreachable
         }
     }
@@ -264,7 +266,7 @@ nonisolated enum SonglinkPage {
     }
 }
 
-private final class CachedResult: NSObject {
+private nonisolated final class CachedResult: NSObject {
     let result: SonglinkResult
     init(result: SonglinkResult) { self.result = result }
 }

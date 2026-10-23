@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 import WatchConnectivity
 
@@ -36,7 +37,7 @@ extension WatchSyncService {
         switch phase {
         case .preparing, .sending:
             ledger.markHandedOff(stem: stem, now: Date())
-            AppLogger.info("Transfer handed off \(stem) — awaiting watch confirmation", category: .connectivity)
+            MidgarLog.info("Transfer handed off \(stem) — awaiting watch confirmation", category: .connectivity)
         default:
             break
         }
@@ -45,7 +46,7 @@ extension WatchSyncService {
     }
 
     private func transferFailed(stem: String, failure: WatchSyncLedger.Failure, description: String) {
-        AppLogger.error("Transfer failed \(stem): \(description)", category: .connectivity)
+        MidgarLog.error("Transfer failed \(stem): \(description)", category: .connectivity)
         guard ledger.requested.contains(stem) else {
             settle(stem)
             return
@@ -78,7 +79,7 @@ extension WatchSyncService {
             }
         }
         if adopted > 0 {
-            AppLogger.info("Adopted \(adopted) outstanding transfers on launch", category: .connectivity)
+            MidgarLog.info("Adopted \(adopted) outstanding transfers on launch", category: .connectivity)
         }
     }
 
@@ -104,7 +105,7 @@ extension WatchSyncService {
             transfers[stem]?.cancel()
             settle(stem)
         }
-        AppLogger.info("Watch heartbeat: \(confirmed.count) tracks, \(free / 1_048_576) MB free, full=\(full)", category: .connectivity)
+        MidgarLog.info("Watch heartbeat: \(confirmed.count) tracks, \(free / 1_048_576) MB free, full=\(full)", category: .connectivity)
         persistRequested()
         pump()
     }
@@ -121,7 +122,7 @@ extension WatchSyncService {
         wcSession.sendMessage([SyncKeys.command: SyncKeys.commandGetState], replyHandler: { [weak self] reply in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.ingest(context: reply) } }
         }, errorHandler: { error in
-            AppLogger.warning("getState failed: \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.notice("getState failed: \(error.localizedDescription)", category: .connectivity)
         })
     }
 
@@ -133,7 +134,7 @@ extension WatchSyncService {
             wcSession.sendMessage(payload, replyHandler: { [weak self] reply in
                 DispatchQueue.main.async { MainActor.assumeIsolated { self?.ingest(context: reply) } }
             }, errorHandler: { error in
-                AppLogger.warning("Command sendMessage failed; queued instead: \(error.localizedDescription)", category: .connectivity)
+                MidgarLog.notice("Command sendMessage failed; queued instead: \(error.localizedDescription)", category: .connectivity)
                 wcSession.transferUserInfo(payload)
             })
         } else {
@@ -174,7 +175,7 @@ extension WatchSyncService {
             try wcSession.updateApplicationContext(context)
             lastSentContext = context
         } catch {
-            AppLogger.warning("Phone context update failed: \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.notice("Phone context update failed: \(error.localizedDescription)", category: .connectivity)
         }
     }
 
@@ -187,7 +188,7 @@ extension WatchSyncService {
             ledger.withdraw(stems)
             runStems.subtract(stems)
             persistRequested()
-            AppLogger.info("Watch removed \(stems.count) tracks; no longer requested", category: .connectivity)
+            MidgarLog.info("Watch removed \(stems.count) tracks; no longer requested", category: .connectivity)
             afterLedgerChange()
         case SyncKeys.commandPlays:
             let entries = (payload[SyncKeys.plays] as? [[String: Any]] ?? []).compactMap { WatchPlayEntry(dictionary: $0) }
@@ -199,10 +200,10 @@ extension WatchSyncService {
 
     private func sessionActivated(state: WCSessionActivationState, error: Error?) {
         if let error {
-            AppLogger.error("WCSession activation error: \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.error("WCSession activation error: \(error.localizedDescription)", category: .connectivity)
         }
         guard let session = wcSession else { return }
-        AppLogger.info(
+        MidgarLog.info(
             "WCSession activated (iOS): state=\(state.rawValue) paired=\(session.isPaired) installed=\(session.isWatchAppInstalled)",
             category: .connectivity
         )
@@ -240,23 +241,23 @@ extension WatchSyncService: WCSessionDelegate {
         let reachable = session.isReachable
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                AppLogger.info("Watch reachability: \(reachable)", category: .connectivity)
+                MidgarLog.info("Watch reachability: \(reachable)", category: .connectivity)
                 if reachable { WatchSyncService.shared.requestWatchState() }
             }
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        let context = applicationContext
+        let context = SyncPayload(applicationContext)
         DispatchQueue.main.async {
-            MainActor.assumeIsolated { WatchSyncService.shared.ingest(context: context) }
+            MainActor.assumeIsolated { WatchSyncService.shared.ingest(context: context.values) }
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        let payload = userInfo
+        let payload = SyncPayload(userInfo)
         DispatchQueue.main.async {
-            MainActor.assumeIsolated { WatchSyncService.shared.handleWatchCommand(payload) }
+            MainActor.assumeIsolated { WatchSyncService.shared.handleWatchCommand(payload.values) }
         }
     }
 
@@ -286,7 +287,7 @@ extension WatchSyncService: WCSessionDelegate {
         let installed = session.isWatchAppInstalled
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                AppLogger.info("Watch state changed: installed=\(installed)", category: .connectivity)
+                MidgarLog.info("Watch state changed: installed=\(installed)", category: .connectivity)
                 let service = WatchSyncService.shared
                 if installed { service.pump() } else { service.resetForNoWatchApp() }
                 service.notify()
@@ -295,11 +296,11 @@ extension WatchSyncService: WCSessionDelegate {
     }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
-        AppLogger.info("WCSession inactive", category: .connectivity)
+        MidgarLog.info("WCSession inactive", category: .connectivity)
     }
 
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
-        AppLogger.info("WCSession deactivated; reactivating", category: .connectivity)
+        MidgarLog.info("WCSession deactivated; reactivating", category: .connectivity)
         session.activate()
     }
 }
@@ -307,6 +308,7 @@ extension WatchSyncService: WCSessionDelegate {
 #if DEBUG && targetEnvironment(simulator)
 extension WatchSyncService {
 
+    /// Set once at launch by the simulator-only demo and exercise flags, before any transfer starts.
     nonisolated(unsafe) static var simulatesDelivery = false
 
     /// The simulator pair accepts file transfers but never delivers them, so a

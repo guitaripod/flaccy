@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 extension Notification.Name {
     static let flaccyPlaylistsDidChange = Notification.Name("flaccy.mac.playlistsDidChange")
@@ -55,14 +56,14 @@ enum PlaylistActions {
             guard !name.isEmpty else { return }
             do {
                 let playlist = try DatabaseManager.shared.createPlaylist(name: name)
-                AppLogger.info("Playlist created: \(name)", category: .database)
+                MidgarLog.info("Playlist created: \(name)", category: .database)
                 if let id = playlist.id, !tracks.isEmpty {
                     add(tracks, toPlaylist: id, named: name, in: window)
                 } else {
                     NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
                 }
             } catch {
-                AppLogger.error("Playlist creation failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Playlist creation failed: \(error.localizedDescription)", category: .database)
                 MacToast.show(String(localized: "Couldn't create \u{201C}\(name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), style: .error, in: window)
             }
         }
@@ -80,7 +81,7 @@ enum PlaylistActions {
                 playlistId: id,
                 trackFileURLs: tracks.map { LibraryPathResolver.relativePath(for: $0.fileURL) }
             )
-            AppLogger.info("Added \(tracks.count) track(s) to playlist \(name)", category: .database)
+            MidgarLog.info("Added \(tracks.count) track(s) to playlist \(name)", category: .database)
             MacToast.show(
                 tracks.count == 1
                 ? String(localized: "Added to \(name)")
@@ -89,7 +90,7 @@ enum PlaylistActions {
             )
             NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
         } catch {
-            AppLogger.error("Add to playlist failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Add to playlist failed: \(error.localizedDescription)", category: .database)
             MacToast.show(String(localized: "Couldn't add to \u{201C}\(name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), style: .error, in: window)
         }
     }
@@ -105,20 +106,20 @@ enum PlaylistActions {
                 try DatabaseManager.shared.reorderPlaylistTrack(id: id, newPosition: position)
                 writes += 1
             } catch {
-                AppLogger.error("Playlist reorder write failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Playlist reorder write failed: \(error.localizedDescription)", category: .database)
             }
         }
-        AppLogger.info("Playlist reorder persisted (\(writes) position writes)", category: .database)
+        MidgarLog.info("Playlist reorder persisted (\(writes) position writes)", category: .database)
     }
 }
 
 /// NSMenuItem that runs a closure, so menu factories don't need a target
 /// object to route selectors through.
-final class ClosureMenuItem: NSMenuItem {
+nonisolated final class ClosureMenuItem: NSMenuItem {
 
-    private let handler: () -> Void
+    private let handler: @MainActor () -> Void
 
-    init(title: String, systemImage: String? = nil, handler: @escaping () -> Void) {
+    init(title: String, systemImage: String? = nil, handler: @escaping @MainActor () -> Void) {
         self.handler = handler
         super.init(title: title, action: #selector(invoke), keyEquivalent: "")
         target = self
@@ -130,6 +131,7 @@ final class ClosureMenuItem: NSMenuItem {
     required init(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     @objc private func invoke() {
-        handler()
+        let handler = handler
+        MainActor.assumeIsolated { handler() }
     }
 }

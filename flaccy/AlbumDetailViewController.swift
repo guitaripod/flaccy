@@ -521,7 +521,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         headerColumn.addSubview(mainStack)
         let guide = view.safeAreaLayoutGuide
-        var constraints = [
+        let constraints = [
             headerColumn.topAnchor.constraint(equalTo: view.topAnchor),
             headerColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             headerColumn.leadingAnchor.constraint(equalTo: guide.leadingAnchor),

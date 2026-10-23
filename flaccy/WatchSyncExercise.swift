@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG && os(iOS)
 import AVFoundation
 import FlaccyCore
@@ -36,7 +37,7 @@ enum WatchSyncExercise {
             task.update(completed: completed, total: 20)
         }
         task.finish()
-        AppLogger.info("WatchSyncExercise finished background task run", category: .connectivity)
+        MidgarLog.info("WatchSyncExercise finished background task run", category: .connectivity)
     }
 
     private static func run() async {
@@ -60,7 +61,7 @@ enum WatchSyncExercise {
         service.setProfile(.standard)
         removeFixture()
         await Library.shared.reload()
-        AppLogger.info("WatchSyncExercise finished", category: .connectivity)
+        MidgarLog.info("WatchSyncExercise finished", category: .connectivity)
     }
 
     private static let artistFolder = "Watch Exercise Artist"
@@ -162,7 +163,7 @@ enum WatchSyncExercise {
     }
 
     private static func report(_ expectation: String, _ passed: Bool) {
-        AppLogger.info("WatchSyncExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .connectivity)
+        MidgarLog.info("WatchSyncExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .connectivity)
     }
 }
 #endif

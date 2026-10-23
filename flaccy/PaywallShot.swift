@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG && os(iOS)
 import UIKit
 
@@ -33,9 +34,9 @@ enum PaywallShot {
         let url = documents.appendingPathComponent("paywall.png")
         do {
             try data.write(to: url)
-            AppLogger.info("PaywallShot: wrote \(url.path) (\(Int(image.size.width))×\(Int(image.size.height)) @\(image.scale)x)", category: .ui)
+            MidgarLog.info("PaywallShot: wrote \(url.path) (\(Int(image.size.width))×\(Int(image.size.height)) @\(image.scale)x)", category: .ui)
         } catch {
-            AppLogger.error("PaywallShot: write failed: \(error.localizedDescription)", category: .ui)
+            MidgarLog.error("PaywallShot: write failed: \(error.localizedDescription)", category: .ui)
         }
     }
 }

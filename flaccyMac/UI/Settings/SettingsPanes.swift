@@ -1,8 +1,9 @@
 import AppKit
+import MidgarCore
 import AuthenticationServices
 import Combine
 import FlaccyCore
-import MidgarKit
+import MidgarPortal
 import ServiceManagement
 import UserNotifications
 
@@ -114,7 +115,7 @@ final class GeneralSettingsPane: SettingsPane {
     /// card's own fixed height, followed by the same rule that divides every
     /// other section.
     private func addMidgarEntry() {
-        let entry = MidgarEntryView()
+        let entry = MidgarEntryView(config: FlaccyMidgar.shared.portalConfig)
         addFullWidth(entry)
         entry.heightAnchor.constraint(equalToConstant: MidgarEntryView.preferredHeight).isActive = true
         formStack.addArrangedSubview(separator())
@@ -278,7 +279,7 @@ final class GeneralSettingsPane: SettingsPane {
                 try SMAppService.mainApp.unregister()
             }
         } catch {
-            AppLogger.error("Login item change failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("Login item change failed: \(error.localizedDescription)", category: .general)
             loginCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off
         }
     }
@@ -409,7 +410,7 @@ final class LastFMSettingsPane: SettingsPane {
 
     @objc private func connectTapped() {
         guard let window = view.window ?? NSApp.keyWindow ?? NSApp.windows.first else {
-            AppLogger.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
+            MidgarLog.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
             return
         }
         Task { [weak self] in
@@ -421,7 +422,7 @@ final class LastFMSettingsPane: SettingsPane {
                    authError.code == .canceledLogin {
                     return
                 }
-                AppLogger.error("Last.fm authentication failed: \(error.localizedDescription)", category: .auth)
+                MidgarLog.error("Last.fm authentication failed: \(error.localizedDescription)", category: .auth)
                 let message = (error as? LastFMError)?.errorDescription
                     ?? String(localized: "Couldn't connect to Last.fm: \(error.localizedDescription)")
                 MacToast.show(message, style: .error, in: self?.view.window)
@@ -956,7 +957,7 @@ final class LibrarySettingsPane: SettingsPane {
             self.appleMusicCheckbox.isEnabled = true
             self.appleMusicCheckbox.state = granted ? .on : .off
             guard !granted else { return }
-            AppLogger.info("Apple Music artwork source declined", category: .content)
+            MidgarLog.info("Apple Music artwork source declined", category: .content)
             MacToast.show(
                 String(localized: "Flaccy needs Apple Music access to use its artwork."),
                 style: .error, in: self.view.window
@@ -1000,7 +1001,7 @@ final class LibrarySettingsPane: SettingsPane {
                 try LibraryRoot.shared.chooseFolder(url)
                 self?.refresh()
             } catch {
-                AppLogger.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
+                MidgarLog.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
                 MacToast.show(String(localized: "Couldn't use \u{201C}\(url.lastPathComponent)\u{201D} as your music folder — macOS wouldn't grant Flaccy lasting access: \(error.localizedDescription)"), style: .error, in: self?.view.window)
             }
         }
@@ -1107,10 +1108,10 @@ final class AboutSettingsPane: SettingsPane {
     }
 
     @objc private func openPrivacy() {
-        NSWorkspace.shared.open(URL(string: "https://mako.midgarcorp.cc/privacy/flaccy")!)
+        NSWorkspace.shared.open(LegalLinks.privacyURL)
     }
 
     @objc private func openTerms() {
-        NSWorkspace.shared.open(URL(string: "https://mako.midgarcorp.cc/terms/flaccy")!)
+        NSWorkspace.shared.open(LegalLinks.termsURL)
     }
 }

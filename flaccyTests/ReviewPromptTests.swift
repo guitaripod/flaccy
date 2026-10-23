@@ -5,7 +5,7 @@ import XCTest
 /// history, so the whole policy — first ask at the 2nd success, the 14-day
 /// and 3-success cooldown on every ask after that, and the 3-per-365-day cap
 /// — is pinned here without touching UserDefaults or the StoreKit sheet.
-final class ReviewPromptTests: XCTestCase {
+nonisolated final class ReviewPromptTests: XCTestCase {
 
     private let day: TimeInterval = 86_400
     private let now = Date()
@@ -14,51 +14,51 @@ final class ReviewPromptTests: XCTestCase {
         now.addingTimeInterval(-days * day)
     }
 
-    func testNoAskAtOneSuccess() {
+    @MainActor func testNoAskAtOneSuccess() {
         XCTAssertFalse(ReviewPrompt.isEligible(
             successCount: 1, askDates: [], successCountAtLastAsk: 0, now: now
         ))
     }
 
-    func testAskAtTwoSuccesses() {
+    @MainActor func testAskAtTwoSuccesses() {
         XCTAssertTrue(ReviewPrompt.isEligible(
             successCount: 2, askDates: [], successCountAtLastAsk: 0, now: now
         ))
     }
 
-    func testNoReAskBeforeFourteenDays() {
+    @MainActor func testNoReAskBeforeFourteenDays() {
         XCTAssertFalse(ReviewPrompt.isEligible(
             successCount: 5, askDates: [daysAgo(13.9)], successCountAtLastAsk: 2, now: now
         ))
     }
 
-    func testNoReAskBeforeThreeNewSuccesses() {
+    @MainActor func testNoReAskBeforeThreeNewSuccesses() {
         XCTAssertFalse(ReviewPrompt.isEligible(
             successCount: 4, askDates: [daysAgo(30)], successCountAtLastAsk: 2, now: now
         ))
     }
 
-    func testReAskAfterBothFourteenDaysAndThreeNewSuccesses() {
+    @MainActor func testReAskAfterBothFourteenDaysAndThreeNewSuccesses() {
         XCTAssertTrue(ReviewPrompt.isEligible(
             successCount: 5, askDates: [daysAgo(14.1)], successCountAtLastAsk: 2, now: now
         ))
     }
 
-    func testNeverAFourthAskWithinThreeSixtyFiveDays() {
+    @MainActor func testNeverAFourthAskWithinThreeSixtyFiveDays() {
         let askDates = [daysAgo(300), daysAgo(200), daysAgo(20)]
         XCTAssertFalse(ReviewPrompt.isEligible(
             successCount: 50, askDates: askDates, successCountAtLastAsk: 10, now: now
         ))
     }
 
-    func testFourthAskAllowedOnceTheOldestAskAgesOut() {
+    @MainActor func testFourthAskAllowedOnceTheOldestAskAgesOut() {
         let askDates = [daysAgo(370), daysAgo(200), daysAgo(20)]
         XCTAssertTrue(ReviewPrompt.isEligible(
             successCount: 50, askDates: askDates, successCountAtLastAsk: 10, now: now
         ))
     }
 
-    func testAgedOutAskStillStartsItsOwnFourteenDayThreeSuccessCooldown() {
+    @MainActor func testAgedOutAskStillStartsItsOwnFourteenDayThreeSuccessCooldown() {
         let askDates = [daysAgo(370), daysAgo(200), daysAgo(5)]
         XCTAssertFalse(ReviewPrompt.isEligible(
             successCount: 50, askDates: askDates, successCountAtLastAsk: 10, now: now

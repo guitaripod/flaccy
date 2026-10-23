@@ -227,11 +227,13 @@ final class MacStatusStripView: NSView {
             context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.2
             animator().alphaValue = visible ? 1 : 0
         } completionHandler: { [weak self] in
-            guard let self else { return }
-            self.isHidden = self.alphaValue == 0
-            if self.isHidden {
-                self.bar.stopAnimation(nil)
-                self.spinner.stopAnimation(nil)
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.isHidden = self.alphaValue == 0
+                if self.isHidden {
+                    self.bar.stopAnimation(nil)
+                    self.spinner.stopAnimation(nil)
+                }
             }
         }
     }

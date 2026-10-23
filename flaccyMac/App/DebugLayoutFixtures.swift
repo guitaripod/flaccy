@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG
 import AppKit
 import FlaccyCore
@@ -128,10 +129,10 @@ enum DebugLayoutFixtures {
                 info.lastFetched = now
                 try db.updateAlbumInfo(info)
             } catch {
-                AppLogger.error("Layout fixture album info failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Layout fixture album info failed: \(error.localizedDescription)", category: .database)
             }
         }
-        AppLogger.info("Layout fixtures seeded: \(songs.count) songs", category: .content)
+        MidgarLog.info("Layout fixtures seeded: \(songs.count) songs", category: .content)
     }
 
     private static func seedPlaylist(db: DatabaseManager) {

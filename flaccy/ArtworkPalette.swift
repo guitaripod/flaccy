@@ -1,4 +1,5 @@
 import simd
+import MidgarCore
 
 #if canImport(UIKit)
 import UIKit
@@ -6,7 +7,7 @@ import UIKit
 import AppKit
 #endif
 
-struct ArtworkPalette: Equatable {
+nonisolated struct ArtworkPalette: Equatable, Sendable {
     let colors: [PlatformColor]
 
     var simdColors: [SIMD4<Float>] {
@@ -28,9 +29,10 @@ struct ArtworkPalette: Equatable {
     var dominant: PlatformColor { colors.first ?? .systemIndigo }
 }
 
-enum ArtworkPaletteExtractor {
+nonisolated enum ArtworkPaletteExtractor {
 
-    private static let cache: NSCache<NSString, Box> = {
+    /// `NSCache` does its own locking, so the shared cache is safe to read and fill from the extraction queue and the main thread.
+    nonisolated(unsafe) private static let cache: NSCache<NSString, Box> = {
         let cache = NSCache<NSString, Box>()
         cache.countLimit = 256
         cache.totalCostLimit = 1024 * 1024
@@ -38,7 +40,7 @@ enum ArtworkPaletteExtractor {
     }()
     private static let queue = DispatchQueue(label: "com.flaccy.palette", qos: .utility)
 
-    private final class Box {
+    private final class Box: Sendable {
         let palette: ArtworkPalette
         init(_ palette: ArtworkPalette) { self.palette = palette }
     }
@@ -48,11 +50,12 @@ enum ArtworkPaletteExtractor {
         cache.removeObject(forKey: "np-\(title)\0\(artist)" as NSString)
     }
 
+    @MainActor
     static func palette(
         for image: PlatformImage?,
         cacheKey: String,
         fallbackSeed: String,
-        completion: @escaping (ArtworkPalette) -> Void
+        completion: @escaping @MainActor (ArtworkPalette) -> Void
     ) {
         if let cached = cache.object(forKey: cacheKey as NSString) {
             completion(cached.palette)
@@ -66,7 +69,7 @@ enum ArtworkPaletteExtractor {
         queue.async {
             let palette = extract(from: image) ?? fallbackPalette(seed: fallbackSeed)
             cache.setObject(Box(palette), forKey: cacheKey as NSString)
-            DispatchQueue.main.async { completion(palette) }
+            DispatchQueue.main.async { MainActor.assumeIsolated { completion(palette) } }
         }
     }
 
@@ -94,7 +97,7 @@ enum ArtworkPaletteExtractor {
     /// so extraction stays cheap enough for the utility queue on every track change.
     private static func extract(from image: PlatformImage) -> ArtworkPalette? {
         guard let pixels = downsampledPixels(from: image, dimension: 24), !pixels.isEmpty else {
-            AppLogger.warning("Palette extraction failed to downsample artwork", category: .ui)
+            MidgarLog.notice("Palette extraction failed to downsample artwork", category: .ui)
             return nil
         }
         var centroids = seedCentroids(from: pixels)

@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 
 /// Artist wall: circular artist photos (resolved through the shared image
@@ -177,7 +178,7 @@ final class ArtistsViewController: NSViewController {
             emptyStateView.isHidden = false
             emptyStateView.showNoResults(query: query)
         }
-        AppLogger.debug("Artists grid showing \(snapshot.numberOfItems) artists", category: .ui)
+        MidgarLog.debug("Artists grid showing \(snapshot.numberOfItems) artists", category: .ui)
     }
 
     @objc private func sortChanged(_ sender: NSPopUpButton) {

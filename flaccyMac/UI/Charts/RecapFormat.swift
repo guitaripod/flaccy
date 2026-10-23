@@ -2,7 +2,7 @@ import AppKit
 
 /// Shared number formatting for the mac Recap surfaces: grouped counts and a
 /// compact thousands/millions label. Mirrors the iOS RecapFormat exactly.
-enum RecapFormat {
+nonisolated enum RecapFormat {
 
     private static let decimalFormatter: NumberFormatter = {
         let formatter = NumberFormatter()

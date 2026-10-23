@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 
 #if canImport(UIKit)
@@ -70,17 +71,17 @@ final class Library: LibraryProviding {
     nonisolated static let audioExtensions: Set<String> = [
         "flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "caf",
     ]
-    static let didUpdateNotification = Notification.Name("LibraryDidUpdate")
-    static let loadingStateChanged = Notification.Name("LibraryLoadingStateChanged")
-    static let progressDidChange = Notification.Name("LibraryLoadProgressChanged")
-    static let albumCoversHoisted = Notification.Name("LibraryAlbumCoversHoisted")
+    nonisolated static let didUpdateNotification = Notification.Name("LibraryDidUpdate")
+    nonisolated static let loadingStateChanged = Notification.Name("LibraryLoadingStateChanged")
+    nonisolated static let progressDidChange = Notification.Name("LibraryLoadProgressChanged")
+    nonisolated static let albumCoversHoisted = Notification.Name("LibraryAlbumCoversHoisted")
 
-    enum ProgressKey {
+    nonisolated enum ProgressKey {
         static let progress = "progress"
         static let fraction = "fraction"
     }
 
-    enum CoverKey {
+    nonisolated enum CoverKey {
         static let covers = "covers"
     }
 
@@ -165,7 +166,7 @@ final class Library: LibraryProviding {
             emitProgress(force: true) { $0.phase = .buildingAlbums; $0.completed = 0; $0.total = 0 }
             await loadFromDatabase()
             publishLibraryTallies()
-            AppLogger.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
+            MidgarLog.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
         }
 
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
@@ -217,7 +218,7 @@ final class Library: LibraryProviding {
         isLoading = true
         defer { finishProgress() }
         emitProgress(force: true) { $0 = LibraryLoadProgress(phase: .openingLibrary) }
-        AppLogger.info("=== RESETTING LIBRARY ENRICHMENT STATE ===", category: .database)
+        MidgarLog.info("=== RESETTING LIBRARY ENRICHMENT STATE ===", category: .database)
         discardEnrichmentState()
 
         emitProgress(force: true) { $0.phase = .findingFiles }
@@ -243,7 +244,7 @@ final class Library: LibraryProviding {
             try db.deleteAllEnrichmentState()
             try db.clearLibraryDebut()
         } catch {
-            AppLogger.error("Failed to reset enrichment state: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to reset enrichment state: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -291,7 +292,7 @@ final class Library: LibraryProviding {
             let skipped = plan.alreadyInLibrary
                 + placed.filter { $0.item.kind == .audio && $0.placement == .alreadyPresent }.count
             if let shortfall = shortfall(for: copies.map(\.item), at: directory) {
-                AppLogger.warning(
+                MidgarLog.notice(
                     "Import refused: needs \(shortfall.needed) bytes, \(shortfall.available) available",
                     category: .content
                 )
@@ -307,15 +308,15 @@ final class Library: LibraryProviding {
                     try copyWithoutClobbering(copy.item.source, to: target)
                     guard copy.item.kind == .audio else { continue }
                     imported += 1
-                    AppLogger.info("Imported: \(copy.destination)", category: .content)
+                    MidgarLog.info("Imported: \(copy.destination)", category: .content)
                 } catch {
-                    AppLogger.error("Import failed for \(copy.destination): \(error.localizedDescription)", category: .content)
+                    MidgarLog.error("Import failed for \(copy.destination): \(error.localizedDescription)", category: .content)
                     guard copy.item.kind == .audio else { continue }
                     failed += 1
                 }
                 reporter.report(.copying(done: imported + failed, total: total), force: imported + failed == total)
             }
-            AppLogger.info("Import finished: \(imported) imported, \(skipped) skipped, \(failed) failed", category: .content)
+            MidgarLog.info("Import finished: \(imported) imported, \(skipped) skipped, \(failed) failed", category: .content)
             return LibraryImportOutcome(imported: imported, skipped: skipped, failed: failed)
         }.value
     }
@@ -369,9 +370,9 @@ final class Library: LibraryProviding {
         for track in tracks {
             do {
                 try FileManager.default.removeItem(at: track.fileURL)
-                AppLogger.info("Deleted: \(track.fileURL.lastPathComponent)", category: .content)
+                MidgarLog.info("Deleted: \(track.fileURL.lastPathComponent)", category: .content)
             } catch {
-                AppLogger.error("Delete failed for \(track.fileURL.lastPathComponent): \(error.localizedDescription)", category: .content)
+                MidgarLog.error("Delete failed for \(track.fileURL.lastPathComponent): \(error.localizedDescription)", category: .content)
             }
         }
         AudioPlayer.shared.handleDeletedTracks(Set(tracks.map(\.fileURL)))
@@ -383,7 +384,7 @@ final class Library: LibraryProviding {
     nonisolated private func syncFilesWithDatabase() async -> Bool {
         #if os(macOS)
         guard !LibraryRoot.shared.isFallbackActive else {
-            AppLogger.warning(
+            MidgarLog.notice(
                 "Sync skipped: bookmarked library folder is unavailable; database left untouched",
                 category: .content
             )
@@ -397,7 +398,7 @@ final class Library: LibraryProviding {
 
         var diskPaths = Set<String>()
 
-        for case let fileURL as URL in enumerator {
+        while let fileURL = enumerator.nextObject() as? URL {
             guard Self.audioExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
             let relPath = relativePath(for: fileURL)
             diskPaths.insert(relPath)
@@ -411,7 +412,7 @@ final class Library: LibraryProviding {
         do {
             knownPaths = try db.fetchAllTrackRelativePaths()
         } catch {
-            AppLogger.error("DB fetch paths error: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("DB fetch paths error: \(error.localizedDescription)", category: .database)
             return false
         }
 
@@ -423,7 +424,7 @@ final class Library: LibraryProviding {
         #endif
 
         if newPaths.isEmpty && removedPaths.isEmpty {
-            AppLogger.info("Sync: \(diskPaths.count) files, no changes", category: .content)
+            MidgarLog.info("Sync: \(diskPaths.count) files, no changes", category: .content)
             emitProgress(force: true) {
                 $0.phase = .readingTags
                 $0.completed = knownPaths.count
@@ -436,14 +437,14 @@ final class Library: LibraryProviding {
         if !removedPaths.isEmpty {
             #if os(macOS)
             guard !diskPaths.isEmpty || rootChanged else {
-                AppLogger.warning(
+                MidgarLog.notice(
                     "Sync: library root scanned empty while database holds \(knownPaths.count) tracks; skipping destructive cleanup",
                     category: .content
                 )
                 return false
             }
             if rootChanged {
-                AppLogger.warning(
+                MidgarLog.notice(
                     "Sync: library root changed; pruning \(removedPaths.count) rows indexed from the previous root",
                     category: .content
                 )
@@ -452,7 +453,7 @@ final class Library: LibraryProviding {
             do {
                 try db.deleteTracksNotIn(relativePaths: diskPaths)
             } catch {
-                AppLogger.error("DB cleanup error: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("DB cleanup error: \(error.localizedDescription)", category: .database)
             }
         }
 
@@ -521,14 +522,14 @@ final class Library: LibraryProviding {
             insertBatch(buffer)
         }
 
-        AppLogger.info("Sync: \(diskPaths.count) files on disk, \(newPaths.count) new, \(removedPaths.count) removed", category: .content)
+        MidgarLog.info("Sync: \(diskPaths.count) files on disk, \(newPaths.count) new, \(removedPaths.count) removed", category: .content)
         return true
     }
 
-    private static let insertBatchSize = 50
+    private nonisolated static let insertBatchSize = 50
 
     #if os(macOS)
-    private static let rootIdentityKey = "flaccy.mac.libraryRootIdentity"
+    private nonisolated static let rootIdentityKey = "flaccy.mac.libraryRootIdentity"
 
     /// Records which root the database rows were indexed from, returning true
     /// when the current root differs from the recorded one — the only case in
@@ -548,7 +549,7 @@ final class Library: LibraryProviding {
             try db.insertTracks(records)
             announceHoistedCovers(in: records)
         } catch {
-            AppLogger.error("Insert tracks error: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Insert tracks error: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -582,7 +583,7 @@ final class Library: LibraryProviding {
             allTracks = loadedAlbums.flatMap(\.tracks)
             recordIndexedLibrary()
         } catch {
-            AppLogger.error("Load from DB failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Load from DB failed: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -676,7 +677,7 @@ final class Library: LibraryProviding {
     }
 
     private func logLibraryState() {
-        AppLogger.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
+        MidgarLog.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
     }
 
     nonisolated private static func majorityValue(_ values: [String]) -> String {

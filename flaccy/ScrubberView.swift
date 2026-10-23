@@ -1,4 +1,5 @@
 import UIKit
+import MidgarCore
 
 /// Capsule scrubber built on a real UISlider so touch tracking is fully
 /// native — vertical finger drift never cancels a scrub and the sheet's
@@ -67,11 +68,11 @@ final class ScrubberView: UISlider {
     override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
         guard duration > 0 else { return false }
         if isScrubbing {
-            AppLogger.warning("scrub beginTracking while already scrubbing — recovering stale scrub", category: .ui)
+            MidgarLog.notice("scrub beginTracking while already scrubbing — recovering stale scrub", category: .ui)
             finishScrub()
         }
         isScrubbing = true
-        AppLogger.debug("scrub beginTracking", category: .ui)
+        MidgarLog.debug("scrub beginTracking", category: .ui)
         grabGenerator.impactOccurred()
         detentGenerator.prepare()
         value = grabbedValue(for: touch)
@@ -90,12 +91,12 @@ final class ScrubberView: UISlider {
     }
 
     override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
-        AppLogger.debug("scrub endTracking", category: .ui)
+        MidgarLog.debug("scrub endTracking", category: .ui)
         finishScrub()
     }
 
     override func cancelTracking(with event: UIEvent?) {
-        AppLogger.debug("scrub cancelTracking", category: .ui)
+        MidgarLog.debug("scrub cancelTracking", category: .ui)
         finishScrub()
     }
 
@@ -106,7 +107,7 @@ final class ScrubberView: UISlider {
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesEnded(touches, with: event)
         if isScrubbing {
-            AppLogger.warning("scrub finished via touchesEnded fallback", category: .ui)
+            MidgarLog.notice("scrub finished via touchesEnded fallback", category: .ui)
             finishScrub()
         }
     }
@@ -114,7 +115,7 @@ final class ScrubberView: UISlider {
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesCancelled(touches, with: event)
         if isScrubbing {
-            AppLogger.warning("scrub finished via touchesCancelled fallback", category: .ui)
+            MidgarLog.notice("scrub finished via touchesCancelled fallback", category: .ui)
             finishScrub()
         }
     }
@@ -128,7 +129,7 @@ final class ScrubberView: UISlider {
     }
 
     @objc private func valueDidChange() {
-        AppLogger.debug("scrub valueChanged native value=\(value) isScrubbing=\(isScrubbing)", category: .ui)
+        MidgarLog.debug("scrub valueChanged native value=\(value) isScrubbing=\(isScrubbing)", category: .ui)
         guard isScrubbing else { return }
         onScrubChanged?(currentTime)
     }
@@ -143,7 +144,7 @@ final class ScrubberView: UISlider {
     /// position would land on the wrong song.
     func abortScrub() {
         guard isScrubbing else { return }
-        AppLogger.debug("scrub aborted (track changed)", category: .ui)
+        MidgarLog.debug("scrub aborted (track changed)", category: .ui)
         isAbortingScrub = true
         cancelTracking(with: nil)
         isAbortingScrub = false

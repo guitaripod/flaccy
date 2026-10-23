@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import UIKit
 
 /// Resolves a representative artist photo with the chain: memory/disk cache →
@@ -65,7 +66,7 @@ final class ArtistImageService {
             return image
         }
         guard !isSettledMiss(record, now: Date()) else {
-            AppLogger.debug("Artist photo settled as missing for \(artist)", category: .content)
+            MidgarLog.debug("Artist photo settled as missing for \(artist)", category: .content)
             return nil
         }
         return await lookUp(artist: artist, key: key, record: record)
@@ -114,13 +115,13 @@ final class ArtistImageService {
                 musicBrainzID: values.musicBrainzID, record: state
             )
         } catch {
-            AppLogger.error("Artist photo state not saved: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Artist photo state not saved: \(error.localizedDescription)", category: .database)
         }
 
         if image != nil {
-            AppLogger.debug("Artist photo resolved for \(artist)", category: .content)
+            MidgarLog.debug("Artist photo resolved for \(artist)", category: .content)
         } else {
-            AppLogger.debug("No artist photo found for \(artist)", category: .content)
+            MidgarLog.debug("No artist photo found for \(artist)", category: .content)
         }
         return image
     }
@@ -140,7 +141,7 @@ final class ArtistImageService {
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
             return UIImage(data: data)
         } catch {
-            AppLogger.error("Artist image download failed: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Artist image download failed: \(error.localizedDescription)", category: .content)
             return nil
         }
     }

@@ -21,7 +21,7 @@ struct AlbumDetailView: View {
                         TrackRow(item: item, index: index, isCurrent: player.currentItem == item)
                     }
                     .buttonStyle(.plain)
-                    .contextMenu { queueActions(for: [item]) }
+                    .swipeActions(edge: .leading, allowsFullSwipe: false) { queueActions(for: [item]) }
                     .id(rowIdentity(at: index, of: item))
                 }
             }
@@ -74,7 +74,7 @@ struct AlbumDetailView: View {
             .padding(.top, 2)
         }
         .padding(.vertical, 4)
-        .contextMenu { queueActions(for: album.items) }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) { queueActions(for: album.items) }
     }
 
     @ViewBuilder

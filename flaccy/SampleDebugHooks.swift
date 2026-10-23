@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG
 import Foundation
 
@@ -10,7 +11,7 @@ import Foundation
 /// link or Low Data Mode. `--sample-drive guide|sample` taps the guide row or
 /// the sample button a few seconds after launch, since no UI driver is
 /// installed on this machine.
-enum SampleDebugHooks {
+nonisolated enum SampleDebugHooks {
 
     enum ForcedRoute {
         case cellular
@@ -25,6 +26,7 @@ enum SampleDebugHooks {
     }
 
     private static let failOnceLock = NSLock()
+    /// Read and written only inside `failOnceLock`.
     nonisolated(unsafe) private static var failOnceSpent = false
 
     static var drive: String? {
@@ -55,7 +57,7 @@ enum SampleDebugHooks {
             return !failOnceSpent
         }
         if shouldFail {
-            AppLogger.info("Sample debug: dropping the connection after \(landedFiles) files", category: .content)
+            MidgarLog.info("Sample debug: dropping the connection after \(landedFiles) files", category: .content)
             throw URLError(.networkConnectionLost)
         }
     }

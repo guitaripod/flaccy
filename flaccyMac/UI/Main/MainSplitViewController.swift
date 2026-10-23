@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 /// Sidebar | content | inspector shell. The inspector hosts the live queue
 /// and lyrics panels; the queue/lyrics toggles collapse and expand it. The
@@ -132,14 +133,14 @@ final class MainSplitViewController: NSSplitViewController {
                 overlay.animator().alphaValue = 1
             }
         }
-        AppLogger.info("Now Playing immersive opened", category: .ui)
+        MidgarLog.info("Now Playing immersive opened", category: .ui)
     }
 
     private func closeNowPlaying() {
         guard let controller = nowPlayingController else { return }
         nowPlayingController = nil
         let overlay = controller.view
-        let finish = { [weak self] in
+        let finish: @MainActor () -> Void = { [weak self] in
             overlay.removeFromSuperview()
             controller.removeFromParent()
             self?.restoreNowPlayingChrome()
@@ -150,10 +151,10 @@ final class MainSplitViewController: NSSplitViewController {
             NSAnimationContext.runAnimationGroup({ context in
                 context.duration = 0.22
                 overlay.animator().alphaValue = 0
-            }, completionHandler: finish)
+            }, completionHandler: { MainActor.assumeIsolated { finish() } })
         }
         view.window?.makeFirstResponder(nil)
-        AppLogger.info("Now Playing immersive closed", category: .ui)
+        MidgarLog.info("Now Playing immersive closed", category: .ui)
     }
 
     /// The sidebar's scroll-pocket material and the titlebar pills live above
@@ -288,6 +289,6 @@ extension MainSplitViewController {
         }
         inspectorHost.show(mode)
         inspectorItem.animator().isCollapsed = false
-        AppLogger.info("Inspector expanded (\(mode.title))", category: .ui)
+        MidgarLog.info("Inspector expanded (\(mode.title))", category: .ui)
     }
 }

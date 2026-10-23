@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 
 nonisolated struct AlbumRetitle: Sendable {
     let fromTitle: String
@@ -76,14 +77,14 @@ nonisolated enum LibraryHygieneService {
                     loserRelativePaths: loserPaths
                 )
             } catch {
-                AppLogger.error("Library cleanup DB write failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Library cleanup DB write failed: \(error.localizedDescription)", category: .database)
                 return
             }
             for url in loserURLs {
                 do {
                     try FileManager.default.trashItem(at: url, resultingItemURL: nil)
                 } catch {
-                    AppLogger.error("Trash failed for \(url.lastPathComponent): \(error.localizedDescription)", category: .content)
+                    MidgarLog.error("Trash failed for \(url.lastPathComponent): \(error.localizedDescription)", category: .content)
                 }
             }
         }.value
@@ -92,7 +93,7 @@ nonisolated enum LibraryHygieneService {
             AudioPlayer.shared.handleDeletedTracks(Set(loserURLs))
         }
         await Library.shared.reloadFromDatabase()
-        AppLogger.info(
+        MidgarLog.info(
             "Library cleanup: removed \(plan.duplicateFileCount) duplicates, merged \(plan.albumMergeCount) album editions",
             category: .content
         )
@@ -107,7 +108,7 @@ nonisolated enum LibraryHygieneService {
     }
 }
 
-extension Track {
+nonisolated extension Track {
     var fileSizeOnDisk: Int64 {
         (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
     }

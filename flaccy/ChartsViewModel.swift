@@ -1,4 +1,5 @@
 import Combine
+import MidgarCore
 import Foundation
 
 /// Drives the Recap dashboard: computes a `RecapData` snapshot for the selected
@@ -28,11 +29,11 @@ final class ChartsViewModel {
         authObserver = NotificationCenter.default.addObserver(
             forName: LastFMService.authDidChange, object: nil, queue: .main
         ) { [weak self] _ in
-            self?.handleAuthChange()
+            MainActor.assumeIsolated { self?.handleAuthChange() }
         }
     }
 
-    deinit {
+    isolated deinit {
         if let authObserver {
             NotificationCenter.default.removeObserver(authObserver)
         }
@@ -67,7 +68,7 @@ final class ChartsViewModel {
         let revision = stats.scrobbleRevision
 
         if let cached = snapshotCache[period], cached.revision == revision {
-            AppLogger.debug("Recap \(period.rawValue) served from the session cache", category: .performance)
+            MidgarLog.debug("Recap \(period.rawValue) served from the session cache", category: .performance)
             var snapshot = cached.data
             snapshot.userInfo = cachedUserInfo ?? snapshot.userInfo
             publish(snapshot)
@@ -99,7 +100,7 @@ final class ChartsViewModel {
                 let started = DispatchTime.now().uptimeNanoseconds
                 let metrics = stats.recapMetrics(period: period)
                 let milliseconds = (DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
-                AppLogger.info(
+                MidgarLog.info(
                     "Recap \(period.rawValue) local snapshot in \(milliseconds) ms (\(metrics.totalPlays) plays)",
                     category: .performance
                 )
@@ -173,7 +174,7 @@ final class ChartsViewModel {
         guard lastFM.isAuthenticated, !importStatePublisher.value.isImporting else { return }
         let baseline = Self.scrobbleCount()
         importStatePublisher.send(.importing(imported: 0))
-        AppLogger.info("Recap history import started (baseline \(baseline) scrobbles)", category: .sync)
+        MidgarLog.info("Recap history import started (baseline \(baseline) scrobbles)", category: .sync)
 
         let progressTask = Task.detached { [weak self] in
             while !Task.isCancelled {
@@ -193,7 +194,7 @@ final class ChartsViewModel {
             progressTask.cancel()
             let imported = max(0, Self.scrobbleCount() - baseline)
             UserDefaults.standard.set(true, forKey: self.importStateKey)
-            AppLogger.info("Recap history import finished (\(imported) new scrobbles)", category: .sync)
+            MidgarLog.info("Recap history import finished (\(imported) new scrobbles)", category: .sync)
             await Library.shared.reloadFromDatabase()
             await MainActor.run {
                 self.importStatePublisher.send(.done(imported: imported))

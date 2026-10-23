@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG && (targetEnvironment(simulator) || os(macOS))
 import CoreGraphics
 import FlaccyCore
@@ -36,9 +37,9 @@ enum ScreenshotSeeder {
         guard isDebutRoute else { return }
         do {
             try DatabaseManager.shared.clearLibraryDebut()
-            AppLogger.info("Screenshot seed: debut cleared, ready to replay", category: .content)
+            MidgarLog.info("Screenshot seed: debut cleared, ready to replay", category: .content)
         } catch {
-            AppLogger.error("Screenshot seed: debut not cleared: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Screenshot seed: debut not cleared: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -119,7 +120,7 @@ enum ScreenshotSeeder {
         #if os(iOS)
         DemoMode.seedSupplements(db: db)
         #endif
-        AppLogger.info("Screenshot seed complete: \(catalog.count) albums", category: .content)
+        MidgarLog.info("Screenshot seed complete: \(catalog.count) albums", category: .content)
     }
 
     struct DemoTrack {
@@ -320,7 +321,7 @@ enum ScreenshotSeeder {
                     loved: track.loved,
                     lovedPendingOp: nil
                 )
-                try? db.insertTrack(record)
+                _ = try? db.insertTrack(record)
             }
         }
     }
@@ -337,7 +338,7 @@ enum ScreenshotSeeder {
                 info.lastFetched = now
                 try db.updateAlbumInfo(info)
             } catch {
-                AppLogger.error("Seed album info failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Seed album info failed: \(error.localizedDescription)", category: .database)
             }
         }
     }

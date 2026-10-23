@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 
 /// The optional menu bar player: a waveform status item whose menu shows the
 /// current track (artwork, title, artist), transport and love controls, the
@@ -42,14 +43,14 @@ final class MenuBarExtraController: NSObject, NSMenuDelegate {
         menu.delegate = self
         item.menu = menu
         statusItem = item
-        AppLogger.info("Menu bar extra installed", category: .ui)
+        MidgarLog.info("Menu bar extra installed", category: .ui)
     }
 
     private func remove() {
         guard let statusItem else { return }
         NSStatusBar.system.removeStatusItem(statusItem)
         self.statusItem = nil
-        AppLogger.info("Menu bar extra removed", category: .ui)
+        MidgarLog.info("Menu bar extra removed", category: .ui)
     }
 
     @objc private func settingChanged() {
@@ -69,7 +70,7 @@ final class MenuBarExtraController: NSObject, NSMenuDelegate {
         ) ?? NSImage(systemSymbolName: "waveform", accessibilityDescription: "Flaccy")
         if let track = AudioPlayer.shared.currentTrack {
             button.toolTip = "\(track.title) — \(track.artist)"
-            AppLogger.debug("Menu bar extra updated: \(track.title)", category: .ui)
+            MidgarLog.debug("Menu bar extra updated: \(track.title)", category: .ui)
         } else {
             button.toolTip = "Flaccy"
         }

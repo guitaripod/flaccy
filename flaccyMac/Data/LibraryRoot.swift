@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Foundation
 
 /// Resolves the folder the mac library indexes in place. Defaults to a
@@ -49,7 +50,7 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
         let recovered = !fallbackActive
         lock.unlock()
         guard recovered else { return }
-        AppLogger.info("Library root reconnected at \(resolved.path)", category: .content)
+        MidgarLog.info("Library root reconnected at \(resolved.path)", category: .content)
         DispatchQueue.main.async {
             NotificationCenter.default.post(name: Self.didChange, object: nil)
         }
@@ -73,13 +74,13 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
             options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil
         )
         UserDefaults.standard.set(bookmark, forKey: Self.bookmarkKey)
-        AppLogger.info("Library root changed to \(folder.path)", category: .content)
+        MidgarLog.info("Library root changed to \(folder.path)", category: .content)
         invalidateAndNotify()
     }
 
     func resetToDefault() {
         UserDefaults.standard.removeObject(forKey: Self.bookmarkKey)
-        AppLogger.info("Library root reset to default container folder", category: .content)
+        MidgarLog.info("Library root reset to default container folder", category: .content)
         invalidateAndNotify()
     }
 
@@ -126,7 +127,7 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
         ) else {
-            AppLogger.warning("Library bookmark failed to resolve, falling back to default root", category: .content)
+            MidgarLog.notice("Library bookmark failed to resolve, falling back to default root", category: .content)
             return nil
         }
         if folder.startAccessingSecurityScopedResource() {
@@ -136,11 +137,11 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
             options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil
         ) {
             UserDefaults.standard.set(refreshed, forKey: Self.bookmarkKey)
-            AppLogger.info("Refreshed stale library bookmark", category: .content)
+            MidgarLog.info("Refreshed stale library bookmark", category: .content)
         }
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory), isDirectory.boolValue else {
-            AppLogger.warning("Bookmarked library folder unreachable at \(folder.path), falling back to default root", category: .content)
+            MidgarLog.notice("Bookmarked library folder unreachable at \(folder.path), falling back to default root", category: .content)
             scopedURL?.stopAccessingSecurityScopedResource()
             scopedURL = nil
             return nil
@@ -164,7 +165,7 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
             do {
                 try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             } catch {
-                AppLogger.error("Failed to create default library root: \(error.localizedDescription)", category: .content)
+                MidgarLog.error("Failed to create default library root: \(error.localizedDescription)", category: .content)
             }
         }
         return root

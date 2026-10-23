@@ -88,7 +88,7 @@ final class ContentStackController: NSViewController {
         from outgoing: NSViewController,
         to incoming: NSViewController,
         forward: Bool,
-        completion: (() -> Void)? = nil
+        completion: (@MainActor () -> Void)? = nil
     ) {
         incoming.view.isHidden = false
         let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -110,13 +110,15 @@ final class ContentStackController: NSViewController {
             incoming.view.layer?.transform = CATransform3DIdentity
             outgoing.view.alphaValue = 0
         }, completionHandler: { [weak self, weak outgoing] in
-            guard let self else { return }
-            if let outgoing, outgoing !== self.stack.last {
-                outgoing.view.isHidden = true
-                outgoing.view.alphaValue = 1
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if let outgoing, outgoing !== self.stack.last {
+                    outgoing.view.isHidden = true
+                    outgoing.view.alphaValue = 1
+                }
+                completion?()
+                self.settleTopViewController()
             }
-            completion?()
-            self.settleTopViewController()
         })
     }
 

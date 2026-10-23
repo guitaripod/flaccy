@@ -30,7 +30,7 @@ nonisolated struct RecapData: Sendable {
 /// One-time backfill state for the "Import Last.fm history" affordance. The
 /// associated counts carry live import progress (`importing`) and the final
 /// summary (`done`) so the banner can communicate how many scrobbles landed.
-enum RecapImportState: Hashable {
+nonisolated enum RecapImportState: Hashable, Sendable {
     case available
     case importing(imported: Int)
     case done(imported: Int)
@@ -160,7 +160,7 @@ nonisolated enum RecapItem: Hashable {
 ///
 /// The persona itself is a stable English identifier produced by the stats services and used as a
 /// lookup key here, so every screen must render `title(for:)` rather than the raw value.
-enum RecapPersona {
+nonisolated enum RecapPersona {
     static func title(for persona: String) -> String {
         switch persona {
         case "Night Owl": String(localized: "Night Owl")

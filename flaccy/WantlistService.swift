@@ -1,4 +1,5 @@
 import AVFoundation
+import MidgarCore
 import Foundation
 
 nonisolated enum WantlistState: String, Sendable {
@@ -34,11 +35,11 @@ final class WantlistService {
         libraryObserver = NotificationCenter.default.addObserver(
             forName: Library.didUpdateNotification, object: nil, queue: .main
         ) { _ in
-            Task { WantlistService.shared.resolveAgainstLibrary() }
+            MainActor.assumeIsolated { WantlistService.shared.resolveAgainstLibrary() }
         }
     }
 
-    static func normKey(kind: WantlistKind, title: String, artist: String) -> String {
+    nonisolated static func normKey(kind: WantlistKind, title: String, artist: String) -> String {
         kind.rawValue + "\u{0}" + WantlistOwnership.matchKey(title: title, artist: artist)
     }
 
@@ -50,7 +51,7 @@ final class WantlistService {
         do {
             try database.mergeWantlistSuggestions(suggestions)
         } catch {
-            AppLogger.error("Wantlist merge failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Wantlist merge failed: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -64,7 +65,7 @@ final class WantlistService {
         )
         merge(suggestions: [record])
         NotificationCenter.default.post(name: Self.didChange, object: nil)
-        AppLogger.info("Wantlist manual add: \(title) — \(artist)", category: .content)
+        MidgarLog.info("Wantlist manual add: \(title) — \(artist)", category: .content)
     }
 
     func setState(_ state: WantlistState, normKey: String) {
@@ -75,7 +76,7 @@ final class WantlistService {
             )
             NotificationCenter.default.post(name: Self.didChange, object: nil)
         } catch {
-            AppLogger.error("Wantlist state update failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Wantlist state update failed: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -108,7 +109,7 @@ final class WantlistService {
                         )
                         resolved.append(item)
                     } catch {
-                        AppLogger.error("Wantlist resolve write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
+                        MidgarLog.error("Wantlist resolve write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
                     }
                 } else {
                     do {
@@ -116,7 +117,7 @@ final class WantlistService {
                             normKey: item.normKey, state: WantlistState.dismissed.rawValue, resolvedAt: Date()
                         )
                     } catch {
-                        AppLogger.error("Wantlist retire write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
+                        MidgarLog.error("Wantlist retire write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
                     }
                 }
                 continue
@@ -135,12 +136,12 @@ final class WantlistService {
                 )
                 resolved.append(item)
             } catch {
-                AppLogger.error("Wantlist resolve write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Wantlist resolve write failed for \(item.normKey): \(error.localizedDescription)", category: .database)
             }
         }
         guard !resolved.isEmpty else { return }
         let names = resolved.map { $0.kind == WantlistKind.artist.rawValue ? $0.artist : $0.title }
-        AppLogger.info("Wantlist resolved \(resolved.count) items: \(names.joined(separator: ", "))", category: .content)
+        MidgarLog.info("Wantlist resolved \(resolved.count) items: \(names.joined(separator: ", "))", category: .content)
         NotificationCenter.default.post(name: Self.didResolveItems, object: nil, userInfo: ["names": names])
         NotificationCenter.default.post(name: Self.didChange, object: nil)
     }
@@ -222,16 +223,16 @@ final class WantlistService {
             }
         }
         if !failedArtists.isEmpty {
-            AppLogger.error("New-release watch: fetch failed for \(failedArtists.joined(separator: ", "))", category: .content)
+            MidgarLog.error("New-release watch: fetch failed for \(failedArtists.joined(separator: ", "))", category: .content)
             let failed = Set(failedArtists.map { $0.lowercased() })
             let retained = ((try? database.fetchNewReleases()) ?? []).filter { failed.contains($0.artist.lowercased()) }
             releases.append(contentsOf: retained)
         }
         do {
             try database.replaceNewReleases(releases)
-            AppLogger.info("New-release watch: \(releases.count) releases across \(watchlist.count) artists", category: .content)
+            MidgarLog.info("New-release watch: \(releases.count) releases across \(watchlist.count) artists", category: .content)
         } catch {
-            AppLogger.error("New-release cache write failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("New-release cache write failed: \(error.localizedDescription)", category: .database)
         }
         return true
     }
@@ -316,12 +317,12 @@ final class PreviewPlayer {
         endObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
         ) { [weak self] _ in
-            self?.stop()
+            MainActor.assumeIsolated { self?.stop() }
         }
         self.player = player
         currentKey = key
         player.play()
-        AppLogger.info("Preview started: \(key)", category: .playback)
+        MidgarLog.info("Preview started: \(key)", category: .playback)
     }
 
     func stop() {

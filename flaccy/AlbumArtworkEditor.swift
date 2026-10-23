@@ -1,4 +1,5 @@
 import CoreGraphics
+import MidgarCore
 import FlaccyCore
 import Foundation
 import ImageIO
@@ -103,7 +104,7 @@ nonisolated enum AlbumArtworkEditor {
         case .playlist(let id):
             try DatabaseManager.shared.savePlaylistCover(data, id: id)
             AlbumArtworkCache.shared.invalidate(keys: [(subject.cacheTitle, subject.cacheArtist)])
-            AppLogger.info("Custom cover saved for playlist \(subject.title) (\(data.count / 1024) KB)", category: .content)
+            MidgarLog.info("Custom cover saved for playlist \(subject.title) (\(data.count / 1024) KB)", category: .content)
         }
     }
 
@@ -114,7 +115,7 @@ nonisolated enum AlbumArtworkEditor {
         case .playlist(let id):
             try DatabaseManager.shared.clearPlaylistCover(id: id)
             AlbumArtworkCache.shared.invalidate(keys: [(subject.cacheTitle, subject.cacheArtist)])
-            AppLogger.info("Custom cover cleared for playlist \(subject.title)", category: .content)
+            MidgarLog.info("Custom cover cleared for playlist \(subject.title)", category: .content)
         }
     }
 
@@ -122,14 +123,14 @@ nonisolated enum AlbumArtworkEditor {
         let keys = keys(for: album)
         try DatabaseManager.shared.saveCustomCover(data, forKeys: keys)
         refreshSurfaces(for: keys)
-        AppLogger.info("Custom cover saved for \(album.title) (\(data.count / 1024) KB)", category: .content)
+        MidgarLog.info("Custom cover saved for \(album.title) (\(data.count / 1024) KB)", category: .content)
     }
 
     static func reset(_ album: Album) throws {
         let keys = keys(for: album)
         try DatabaseManager.shared.clearCustomCover(forKeys: keys)
         refreshSurfaces(for: keys)
-        AppLogger.info("Custom cover cleared for \(album.title)", category: .content)
+        MidgarLog.info("Custom cover cleared for \(album.title)", category: .content)
     }
 
     private static func refreshSurfaces(for keys: [(title: String, artist: String)]) {

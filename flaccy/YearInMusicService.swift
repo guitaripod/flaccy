@@ -3,9 +3,9 @@ import Foundation
 /// Computes Year in Music snapshots from the local `scrobbles` table. Imported
 /// history rows carry no duration, so listening time falls back to the owned
 /// track's real length (or a typical song length) instead of undercounting.
-final class YearInMusicService {
+nonisolated final class YearInMusicService: Sendable {
 
-    nonisolated static let shared = YearInMusicService()
+    static let shared = YearInMusicService()
 
     private static let fallbackTrackSeconds = 210
 
@@ -17,6 +17,7 @@ final class YearInMusicService {
         (try? db.scrobbleYears()) ?? []
     }
 
+    @MainActor
     func compute(year: Int) -> YearInMusicData {
         compute(year: year, libraryDurations: libraryDurations())
     }
@@ -107,6 +108,7 @@ final class YearInMusicService {
         )
     }
 
+    @MainActor
     func libraryDurations() -> [String: Int] {
         var durations: [String: Int] = [:]
         for track in Library.shared.allTracks where track.duration > 0 {

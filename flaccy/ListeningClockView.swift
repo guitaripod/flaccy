@@ -15,6 +15,9 @@ final class ListeningClockView: UIView {
         backgroundColor = .clear
         isAccessibilityElement = true
         accessibilityTraits = .image
+        registerForTraitChanges([UITraitUserInterfaceStyle.self, UITraitAccessibilityContrast.self, UITraitPreferredContentSizeCategory.self]) { (view: ListeningClockView, _) in
+            view.setNeedsLayout()
+        }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -26,11 +29,6 @@ final class ListeningClockView: UIView {
         self.tint = tint
         dataVersion += 1
         accessibilityLabel = accessibilitySummary()
-        setNeedsLayout()
-    }
-
-    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
-        super.traitCollectionDidChange(previous)
         setNeedsLayout()
     }
 

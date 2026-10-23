@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 import WatchConnectivity
 
@@ -8,7 +9,7 @@ import WatchConnectivity
 /// the file only when WatchConnectivity reports its batch delivered, so a play
 /// survives a relaunch, a dead radio and a phone that is not around. The phone
 /// ignores an id it has already counted, which makes resending harmless.
-final class WatchPlayLog: @unchecked Sendable {
+nonisolated final class WatchPlayLog: @unchecked Sendable {
 
     static let shared = WatchPlayLog()
 
@@ -81,7 +82,7 @@ final class WatchPlayLog: @unchecked Sendable {
             self.snapshot.entries.append(StoredPlay(entry))
             self.dropOldestBeyondCapacity()
             self.persist()
-            AppLogger.info("Recorded watch play '\(entry.title)' (\(self.snapshot.entries.count) pending)", category: .connectivity)
+            MidgarLog.info("Recorded watch play '\(entry.title)' (\(self.snapshot.entries.count) pending)", category: .connectivity)
             self.sendPending()
         }
     }
@@ -101,7 +102,7 @@ final class WatchPlayLog: @unchecked Sendable {
         queue.async {
             self.loadIfNeeded()
             if let error {
-                AppLogger.warning("Play batch \(batchID) failed: \(error.localizedDescription)", category: .connectivity)
+                MidgarLog.notice("Play batch \(batchID) failed: \(error.localizedDescription)", category: .connectivity)
                 self.snapshot.batches[batchID] = nil
                 self.persist()
                 return
@@ -110,7 +111,7 @@ final class WatchPlayLog: @unchecked Sendable {
             self.snapshot.entries.removeAll { delivered.contains($0.id) }
             self.snapshot.batches[batchID] = nil
             self.persist()
-            AppLogger.info("Play batch \(batchID) delivered (\(delivered.count) plays, \(self.snapshot.entries.count) pending)", category: .connectivity)
+            MidgarLog.info("Play batch \(batchID) delivered (\(delivered.count) plays, \(self.snapshot.entries.count) pending)", category: .connectivity)
             self.sendPending()
         }
     }
@@ -124,7 +125,7 @@ final class WatchPlayLog: @unchecked Sendable {
             let alive = ids.filter { kept.contains($0) }
             return alive.isEmpty ? nil : alive
         }
-        AppLogger.warning("Play log over capacity: dropped \(overflow) oldest", category: .connectivity)
+        MidgarLog.notice("Play log over capacity: dropped \(overflow) oldest", category: .connectivity)
     }
 
     private var inFlightIDs: Set<String> {
@@ -150,7 +151,7 @@ final class WatchPlayLog: @unchecked Sendable {
                 SyncKeys.plays: batch.map { $0.entry.dictionary },
                 Self.batchKey: batchID,
             ])
-            AppLogger.info("Sent play batch \(batchID): \(batch.count) plays", category: .connectivity)
+            MidgarLog.info("Sent play batch \(batchID): \(batch.count) plays", category: .connectivity)
         }
         persist()
     }
@@ -165,7 +166,7 @@ final class WatchPlayLog: @unchecked Sendable {
         guard !stale.isEmpty else { return }
         for batchID in stale { snapshot.batches[batchID] = nil }
         persist()
-        AppLogger.info("Released \(stale.count) play batches for resending", category: .connectivity)
+        MidgarLog.info("Released \(stale.count) play batches for resending", category: .connectivity)
     }
 
     private func loadIfNeeded() {
@@ -175,7 +176,7 @@ final class WatchPlayLog: @unchecked Sendable {
         do {
             snapshot = try JSONDecoder().decode(Snapshot.self, from: data)
         } catch {
-            AppLogger.error("Play log unreadable, starting empty: \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.error("Play log unreadable, starting empty: \(error.localizedDescription)", category: .connectivity)
         }
     }
 
@@ -185,7 +186,7 @@ final class WatchPlayLog: @unchecked Sendable {
             let data = try JSONEncoder().encode(snapshot)
             try data.write(to: fileURL, options: .atomic)
         } catch {
-            AppLogger.error("Play log write failed: \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.error("Play log write failed: \(error.localizedDescription)", category: .connectivity)
         }
     }
 }

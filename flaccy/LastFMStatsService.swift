@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 
 nonisolated extension ChartPeriod {
     /// The earliest instant included in this period, measured back from `now`.
@@ -284,7 +285,7 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
                 try db.insertScrobbles(batch)
                 imported += batch.count
             } catch {
-                AppLogger.error("Import scrobble page \(page) failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Import scrobble page \(page) failed: \(error.localizedDescription)", category: .database)
             }
             page += 1
         } while page <= totalPages && page <= maxPages
@@ -292,8 +293,8 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
         do {
             try db.reconcilePlayCountsFromScrobbles()
         } catch {
-            AppLogger.error("Play-count reconcile failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Play-count reconcile failed: \(error.localizedDescription)", category: .database)
         }
-        AppLogger.info("Imported \(imported) historical scrobbles", category: .sync)
+        MidgarLog.info("Imported \(imported) historical scrobbles", category: .sync)
     }
 }

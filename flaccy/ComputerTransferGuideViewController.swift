@@ -1,4 +1,5 @@
 import UIKit
+import MidgarCore
 
 /// The routes that really get music from a computer onto the phone, each one
 /// something the app supports today: Finder file sharing and the Files app's
@@ -43,7 +44,7 @@ final class ComputerTransferGuideViewController: UIViewController {
             systemItem: .done, primaryAction: UIAction { [weak self] _ in self?.dismiss(animated: true) }
         )
         buildContent()
-        AppLogger.info("Computer transfer guide opened", category: .ui)
+        MidgarLog.info("Computer transfer guide opened", category: .ui)
     }
 
     private func buildContent() {

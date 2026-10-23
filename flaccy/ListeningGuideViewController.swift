@@ -1,4 +1,5 @@
 import UIKit
+import MidgarCore
 
 /// A dark editorial explainer on what Bluetooth, AAC, and lossless formats
 /// actually deliver, rendered as a scrolling stack of fact cards.
@@ -23,7 +24,7 @@ final class ListeningGuideViewController: UIViewController {
         setupBackdrop()
         setupScrollView()
         buildContent()
-        AppLogger.info("Listening guide opened", category: .ui)
+        MidgarLog.info("Listening guide opened", category: .ui)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -348,7 +349,7 @@ final class ListeningGuideViewController: UIViewController {
         button.accessibilityHint = String(localized: "Opens in your browser")
         button.addAction(UIAction { [weak self] _ in
             self?.impactLight.impactOccurred()
-            AppLogger.info("Listening guide source opened: \(url.absoluteString)", category: .ui)
+            MidgarLog.info("Listening guide source opened: \(url.absoluteString)", category: .ui)
             UIApplication.shared.open(url)
         }, for: .touchUpInside)
         return button

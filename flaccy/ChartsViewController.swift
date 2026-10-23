@@ -1,4 +1,5 @@
 import Combine
+import MidgarCore
 import UIKit
 
 /// The Recap dashboard: a scrolling, shareable surface of the listener's local
@@ -389,7 +390,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         let tracks = data.topTracks.map { resolveTrack($0) }
 
         let localCount = tracks.filter(\.isLocal).count
-        AppLogger.debug("Recap resolved \(localCount)/\(tracks.count) top tracks to local library", category: .content)
+        MidgarLog.debug("Recap resolved \(localCount)/\(tracks.count) top tracks to local library", category: .content)
 
         let snapshot = buildSnapshot(data: data, artists: artists, albums: albums, tracks: tracks)
         let targets = prewarmTargets(artists: artists, albums: albums, tracks: tracks)
@@ -537,7 +538,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             }
         }
         let elapsed = Date().timeIntervalSince(start)
-        AppLogger.info("Recap prewarm: \(cached)/\(targets.count) artworks cached in \(String(format: "%.2f", elapsed))s", category: .content)
+        MidgarLog.info("Recap prewarm: \(cached)/\(targets.count) artworks cached in \(String(format: "%.2f", elapsed))s", category: .content)
     }
 
     nonisolated private static func prewarm(_ target: ArtworkPrewarmTarget) async -> Bool {
@@ -713,7 +714,7 @@ extension ChartsViewController: UICollectionViewDelegate {
     private func playList(_ section: RecapSection, shuffled: Bool) {
         guard let queue = playQueues[section], !queue.isEmpty else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        AppLogger.info("Recap play list: \(section.headerTitle ?? "") (\(queue.count) tracks, shuffled: \(shuffled))", category: .playback)
+        MidgarLog.info("Recap play list: \(section.headerTitle ?? "") (\(queue.count) tracks, shuffled: \(shuffled))", category: .playback)
         audioPlayer.play(shuffled ? queue.shuffled() : queue, startingAt: 0)
     }
 
@@ -728,7 +729,7 @@ extension ChartsViewController: UICollectionViewDelegate {
         }
         guard let startIndex = queue.firstIndex(where: { $0.fileURL == tappedURL }) else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        AppLogger.info("Recap play track: \(tapped.name)", category: .playback)
+        MidgarLog.info("Recap play track: \(tapped.name)", category: .playback)
         audioPlayer.play(queue, startingAt: startIndex)
     }
 
@@ -737,14 +738,14 @@ extension ChartsViewController: UICollectionViewDelegate {
               let album = Library.shared.albums.first(where: { $0.id == id }),
               !album.tracks.isEmpty else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        AppLogger.info("Recap play album: \(album.title)", category: .playback)
+        MidgarLog.info("Recap play album: \(album.title)", category: .playback)
         audioPlayer.play(album.tracks, startingAt: 0)
     }
 
     private func playArtist(_ tapped: RecapArtistItem) {
         guard tapped.isLocal else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        AppLogger.info("Recap start station: \(tapped.name)", category: .playback)
+        MidgarLog.info("Recap start station: \(tapped.name)", category: .playback)
         audioPlayer.startStation(seedArtist: tapped.name)
     }
 }

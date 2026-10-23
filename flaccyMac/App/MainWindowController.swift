@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 import FlaccyCore
 import UniformTypeIdentifiers
@@ -77,7 +78,7 @@ final class MainWindowController: NSWindowController {
         MacToast.show(String(localized: "Interface \(MacInterfaceScale.percent)%"), in: window)
     }
 
-    deinit {
+    isolated deinit {
         NotificationCenter.default.removeObserver(self)
         if let spaceKeyMonitor {
             NSEvent.removeMonitor(spaceKeyMonitor)
@@ -334,7 +335,7 @@ final class AudioDropView: NSView {
             return false
         }
         isImporting = true
-        AppLogger.info("Importing \(urls.count) dropped item(s)", category: .content)
+        MidgarLog.info("Importing \(urls.count) dropped item(s)", category: .content)
         let toast = MacToast.showImport(in: window)
         Task { [weak self] in
             let outcome = await Library.shared.importFiles(from: urls) { toast.update($0) }

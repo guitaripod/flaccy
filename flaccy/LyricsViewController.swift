@@ -105,7 +105,7 @@ final class LyricsViewController: UIViewController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.handleTrackChange()
+            MainActor.assumeIsolated { self?.handleTrackChange() }
         }
     }
 
@@ -506,8 +506,10 @@ final class LyricsViewController: UIViewController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.needsLineRefresh = true
-            self?.syncDisplayLink()
+            MainActor.assumeIsolated {
+                self?.needsLineRefresh = true
+                self?.syncDisplayLink()
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 
 /// Builds the canonical right-click menus for tracks and albums so every
@@ -263,14 +264,14 @@ enum TrackDeletion {
                 try FileManager.default.trashItem(at: track.fileURL, resultingItemURL: nil)
                 trashed += 1
             } catch {
-                AppLogger.error(
+                MidgarLog.error(
                     "Trash failed for \(track.fileURL.lastPathComponent): \(error.localizedDescription)",
                     category: .content
                 )
             }
         }
         AudioPlayer.shared.handleDeletedTracks(Set(tracks.map(\.fileURL)))
-        AppLogger.info("Moved \(trashed) track(s) to Trash", category: .content)
+        MidgarLog.info("Moved \(trashed) track(s) to Trash", category: .content)
         MacToast.show(
             trashed == tracks.count
                 ? String(localized: "Moved to Trash")

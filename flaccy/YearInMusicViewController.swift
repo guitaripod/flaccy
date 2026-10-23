@@ -1,4 +1,5 @@
 import UIKit
+import MidgarCore
 
 /// Full-screen Year in Music share configurator: swipeable 9:16 story pages
 /// with parallax, theme picker, year picker, and one-tap export to Instagram
@@ -458,7 +459,7 @@ final class YearInMusicViewController: UIViewController {
         let options: [UIPasteboard.OptionsKey: Any] = [.expirationDate: Date().addingTimeInterval(300)]
         UIPasteboard.general.setItems(items, options: options)
         UIApplication.shared.open(url)
-        AppLogger.info("Shared Year in Music slide to Instagram Stories", category: .ui)
+        MidgarLog.info("Shared Year in Music slide to Instagram Stories", category: .ui)
     }
 
     private func shareCurrentSlide() {

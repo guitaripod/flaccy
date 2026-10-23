@@ -55,7 +55,7 @@ final class WatchSyncViewController: UITableViewController {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    deinit {
+    isolated deinit {
         NotificationCenter.default.removeObserver(self)
         estimateTask?.cancel()
         checkTask?.cancel()

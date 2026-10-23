@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 
 /// An album's songs as rows grouped under their disc headers. With `columns`
@@ -187,7 +188,7 @@ final class TrackBlocksSurface: TrackPageSurface {
         )
         row.onDoubleClick = { [weak self] in
             guard let self else { return }
-            AppLogger.info("Playing \(entry.track.title) from \(model.pageName())", category: .playback)
+            MidgarLog.info("Playing \(entry.track.title) from \(model.pageName())", category: .playback)
             model.play(model.entries.map(\.track), index)
         }
         row.onToggleLove = {

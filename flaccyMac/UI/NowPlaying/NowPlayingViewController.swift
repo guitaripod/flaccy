@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import AVFoundation
 import AVKit
 import Combine
@@ -411,7 +412,7 @@ final class NowPlayingViewController: NSViewController {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-        AppLogger.info("NowPlayingViewController deinit", category: .ui)
+        MidgarLog.info("NowPlayingViewController deinit", category: .ui)
     }
 
     override func cancelOperation(_ sender: Any?) {
@@ -958,7 +959,7 @@ final class NowPlayingViewController: NSViewController {
                 }
                 return
             }
-            guard let self, let anchor else { return }
+            guard self != nil, let anchor else { return }
             let picker = NSSharingServicePicker(items: [
                 String(localized: "\(result.title) by \(result.artist)"), result.pageURL,
             ])
@@ -1082,17 +1083,17 @@ final class SleepTimerMenuTarget: NSObject {
 
     @MainActor @objc func setMinutes(_ sender: NSMenuItem) {
         AudioPlayer.shared.setSleepTimer(minutes: sender.tag)
-        AppLogger.info("Sleep timer set: \(sender.tag) minutes", category: .playback)
+        MidgarLog.info("Sleep timer set: \(sender.tag) minutes", category: .playback)
     }
 
     @MainActor @objc func endOfTrack(_ sender: NSMenuItem) {
         AudioPlayer.shared.setSleepTimerEndOfTrack()
-        AppLogger.info("Sleep timer set: end of track", category: .playback)
+        MidgarLog.info("Sleep timer set: end of track", category: .playback)
     }
 
     @MainActor @objc func cancel(_ sender: NSMenuItem) {
         AudioPlayer.shared.cancelSleepTimer()
-        AppLogger.info("Sleep timer cancelled", category: .playback)
+        MidgarLog.info("Sleep timer cancelled", category: .playback)
     }
 }
 

@@ -997,7 +997,7 @@ final class EqualizerViewController: UIViewController {
         let wantsAdvanced = modeControl.selectedSegmentIndex == 1
         if wantsAdvanced == (profile.kind == .parametric) { return }
         if wantsAdvanced {
-            engine.convertInForce(to: .parametric)
+            _ = engine.convertInForce(to: .parametric)
             selectedIndex = 0
         } else {
             let alert = UIAlertController(
@@ -1007,7 +1007,7 @@ final class EqualizerViewController: UIViewController {
             )
             alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel) { [weak self] _ in self?.refresh(animated: false) })
             alert.addAction(UIAlertAction(title: String(localized: "Switch"), style: .default) { [weak self] _ in
-                self?.engine.convertInForce(to: .graphic)
+                _ = self?.engine.convertInForce(to: .graphic)
                 self?.selectedIndex = 3
             })
             present(alert, animated: true)

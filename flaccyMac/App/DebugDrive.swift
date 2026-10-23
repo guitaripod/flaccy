@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG
 import AppKit
 import FlaccyCore
@@ -66,7 +67,7 @@ enum DebugDrive {
             }
         }
         guard CommandLine.arguments.contains("--exercise-transport") else { return }
-        AppLogger.info("DebugDrive: transport exercise armed", category: .general)
+        MidgarLog.info("DebugDrive: transport exercise armed", category: .general)
         Task {
             await exercise(window: window)
         }
@@ -129,10 +130,12 @@ enum DebugDrive {
         let destination = URL(fileURLWithPath: path)
         try? FileManager.default.removeItem(at: destination)
         do {
-            try FileManager.default.copyItem(at: LogFileWriter.shared.currentLogURL, to: destination)
-            AppLogger.info("DebugDrive: log dumped to \(path)", category: .general)
+            MidgarLog.flush()
+            guard let current = MidgarLog.logFileURLs.first else { throw CocoaError(.fileNoSuchFile) }
+            try FileManager.default.copyItem(at: current, to: destination)
+            MidgarLog.info("DebugDrive: log dumped to \(path)", category: .general)
         } catch {
-            AppLogger.error("DebugDrive: log dump failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("DebugDrive: log dump failed: \(error.localizedDescription)", category: .general)
         }
     }
 
@@ -176,7 +179,7 @@ enum DebugDrive {
             if let album = Library.shared.albums.first(where: { $0.title == title }) {
                 LibraryNavigator.revealAlbum(title: album.title, artist: album.artist)
             } else {
-                AppLogger.error("DebugDrive: album not found: \(title)", category: .general)
+                MidgarLog.error("DebugDrive: album not found: \(title)", category: .general)
             }
             await driveDetailPage(window: window)
             name = "flaccy-shot-album"
@@ -201,7 +204,7 @@ enum DebugDrive {
                 .first(where: { $0.name == playlistName }) {
                 findStack(window: window)?.push(PlaylistDetailViewController(playlist: record))
             } else {
-                AppLogger.error("DebugDrive: playlist not found: \(playlistName)", category: .general)
+                MidgarLog.error("DebugDrive: playlist not found: \(playlistName)", category: .general)
             }
             await driveDetailPage(window: window)
             name = "flaccy-shot-playlist-detail"
@@ -331,7 +334,7 @@ enum DebugDrive {
         let album: AlbumDetailViewController? = findController(in: root)
         let playlist: PlaylistDetailViewController? = findController(in: root)
         guard let songs = album?.debugSongs ?? playlist?.debugSongs else {
-            AppLogger.error("DebugDrive: no song page on screen", category: .general)
+            MidgarLog.error("DebugDrive: no song page on screen", category: .general)
             return
         }
         if let index = value(after: "--detail-play").flatMap(Int.init), songs.model.entries.indices.contains(index) {
@@ -369,7 +372,7 @@ enum DebugDrive {
     /// playlist without being overwritten, and snaps the page to the top.
     private static func exerciseLayoutSwitching(_ songs: TrackPageSongs) async {
         func report(_ expectation: String, _ passed: Bool) {
-            AppLogger.info("DetailExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .general)
+            MidgarLog.info("DetailExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .general)
         }
         let key = TrackPageSongs.layoutKey
         for layout in TrackPageLayout.Layout.allCases where layout.isOffered(on: songs.model.kind) {
@@ -397,7 +400,7 @@ enum DebugDrive {
     private static func exercisePlaylistEditing(_ songs: TrackPageSongs) async {
         func titles() -> [String] { songs.model.entries.prefix(4).map(\.track.title) }
         func report(_ expectation: String, _ passed: Bool) {
-            AppLogger.info("DetailExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .general)
+            MidgarLog.info("DetailExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .general)
         }
         let before = titles()
         let count = songs.model.entries.count
@@ -424,7 +427,7 @@ enum DebugDrive {
             window?.contentView?.layoutSubtreeIfNeeded()
             window?.contentView?.displayIfNeeded()
             let elapsed = Int((CFAbsoluteTimeGetCurrent() - start) * 1000)
-            AppLogger.info("DebugDrive: \(label) took \(elapsed) ms for \(songs.model.entries.count) songs", category: .general)
+            MidgarLog.info("DebugDrive: \(label) took \(elapsed) ms for \(songs.model.entries.count) songs", category: .general)
         }
         for layout in TrackPageLayout.Layout.allCases where layout.isOffered(on: songs.model.kind) {
             milliseconds("layout \(layout.id)") { songs.debugChoose(layout) }
@@ -477,7 +480,7 @@ enum DebugDrive {
                 PlaylistActions.add(tracks, toPlaylist: playlistId, named: plan.name, in: nil)
             }
         } catch {
-            AppLogger.error("DebugDrive: playlist seeding failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("DebugDrive: playlist seeding failed: \(error.localizedDescription)", category: .general)
         }
     }
 
@@ -491,7 +494,7 @@ enum DebugDrive {
         }
         try? await Task.sleep(for: .seconds(1))
         guard let album = Library.shared.albums.first else {
-            AppLogger.error("DebugDrive: no album for stack exercise", category: .general)
+            MidgarLog.error("DebugDrive: no album for stack exercise", category: .general)
             return
         }
         for delayMs in [20, 60, 120, 180, 230, 300] {
@@ -505,10 +508,10 @@ enum DebugDrive {
         findStack(window: window)?.popToRoot()
         try? await Task.sleep(for: .seconds(1))
         guard let stack = findStack(window: window), let root = stack.stack.first else {
-            AppLogger.error("DebugDrive: stack exercise found no ContentStackController", category: .general)
+            MidgarLog.error("DebugDrive: stack exercise found no ContentStackController", category: .general)
             return
         }
-        AppLogger.info(
+        MidgarLog.info(
             "DebugDrive: stack exercise complete — depth \(stack.stack.count), rootHidden=\(root.view.isHidden), rootAlpha=\(root.view.alphaValue)",
             category: .general
         )
@@ -523,7 +526,7 @@ enum DebugDrive {
         try? "".write(to: resultsURL, atomically: true, encoding: .utf8)
         func report(_ expectation: String, _ passed: Bool) {
             let line = "SongsExercise \(passed ? "PASS" : "FAIL"): \(expectation)"
-            AppLogger.info(line, category: .general)
+            MidgarLog.info(line, category: .general)
             let existing = (try? String(contentsOf: resultsURL, encoding: .utf8)) ?? ""
             try? (existing + line + "\n").write(to: resultsURL, atomically: true, encoding: .utf8)
         }
@@ -632,7 +635,7 @@ enum DebugDrive {
             (view as? GlassCapsuleButton).map { [$0] } ?? view.subviews.flatMap(buttons(in:))
         }
         func report(_ expectation: String, _ passed: Bool) {
-            AppLogger.info("OnboardingExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .general)
+            MidgarLog.info("OnboardingExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .general)
         }
         func chain(of view: NSView?) -> String {
             var names: [String] = []
@@ -716,13 +719,13 @@ enum DebugDrive {
         }
         MacInterfaceScale.set(original)
         AudioPlayer.shared.togglePlayPause()
-        AppLogger.info("DebugDrive: zoom exercise PASS — survived \(steps.count * 2) scale changes", category: .general)
+        MidgarLog.info("DebugDrive: zoom exercise PASS — survived \(steps.count * 2) scale changes", category: .general)
     }
 
     private static func startHeroPlayback() {
         let hero = Library.shared.albums.first { $0.title == "Parallax Hours" } ?? Library.shared.albums.first
         guard let hero, !hero.tracks.isEmpty else {
-            AppLogger.error("DebugDrive: no album available for hero playback", category: .general)
+            MidgarLog.error("DebugDrive: no album available for hero playback", category: .general)
             return
         }
         AudioPlayer.shared.volume = 0.02
@@ -751,21 +754,21 @@ enum DebugDrive {
     /// cached-display path the Stage B drive uses for sheets.
     static func captureSheet(of window: NSWindow?, name: String) {
         guard let sheet = window?.sheets.first else {
-            AppLogger.error("DebugDrive: no sheet to capture for \(name)", category: .general)
+            MidgarLog.error("DebugDrive: no sheet to capture for \(name)", category: .general)
             return
         }
         sheet.contentView?.layoutSubtreeIfNeeded()
         sheet.displayIfNeeded()
         guard let data = windowServerPNG(sheet) ?? cachedDisplayPNG(sheet) else {
-            AppLogger.error("DebugDrive: sheet capture failed for \(name)", category: .general)
+            MidgarLog.error("DebugDrive: sheet capture failed for \(name)", category: .general)
             return
         }
         let path = NSTemporaryDirectory() + name + ".png"
         do {
             try data.write(to: URL(fileURLWithPath: path))
-            AppLogger.info("DebugDrive: captured sheet to \(path)", category: .general)
+            MidgarLog.info("DebugDrive: captured sheet to \(path)", category: .general)
         } catch {
-            AppLogger.error("DebugDrive: sheet capture write failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("DebugDrive: sheet capture write failed: \(error.localizedDescription)", category: .general)
         }
     }
 
@@ -775,7 +778,7 @@ enum DebugDrive {
     /// click keeps one as a single undo step.
     private static func exerciseDeck(_ screen: MacEqualizerViewController, engine: EqualizerEngine) async {
         func report(_ expectation: String, _ passed: Bool) {
-            AppLogger.info("DeckExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .general)
+            MidgarLog.info("DeckExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .general)
         }
         let treble = EqualizerPresets.id(forKey: "trebleBoost")
         let vocal = EqualizerPresets.id(forKey: "vocal")
@@ -812,31 +815,31 @@ enum DebugDrive {
 
     static func capture(window: NSWindow?, name: String) {
         if let window {
-            AppLogger.info(
+            MidgarLog.info(
                 "DebugDrive: capture \(name) — frame \(window.frame), screen \(window.screen?.frame ?? .zero), backingScale \(window.backingScaleFactor)",
                 category: .general
             )
         }
         if let root = window?.contentViewController as? RootContainerViewController {
             let sidebar = root.splitViewController.sidebarViewController
-            AppLogger.info("DebugDrive: sidebar renders \(sidebar.visibleRowCount) rows", category: .general)
+            MidgarLog.info("DebugDrive: sidebar renders \(sidebar.visibleRowCount) rows", category: .general)
         }
         if let contentView = window?.contentView,
            let tree = contentView.perform(NSSelectorFromString("_subtreeDescription"))?.takeUnretainedValue() as? String {
             let treePath = NSTemporaryDirectory() + "flaccy-viewtree.txt"
             try? tree.write(to: URL(fileURLWithPath: treePath), atomically: true, encoding: .utf8)
-            AppLogger.info("DebugDrive: view tree dumped to \(treePath)", category: .general)
+            MidgarLog.info("DebugDrive: view tree dumped to \(treePath)", category: .general)
         }
         guard let data = windowServerPNG(window) ?? cachedDisplayPNG(window) else {
-            AppLogger.error("DebugDrive: no capture path produced an image", category: .general)
+            MidgarLog.error("DebugDrive: no capture path produced an image", category: .general)
             return
         }
         let path = NSTemporaryDirectory() + name + ".png"
         do {
             try data.write(to: URL(fileURLWithPath: path))
-            AppLogger.info("DebugDrive: captured window to \(path)", category: .general)
+            MidgarLog.info("DebugDrive: captured window to \(path)", category: .general)
         } catch {
-            AppLogger.error("DebugDrive: window capture failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("DebugDrive: window capture failed: \(error.localizedDescription)", category: .general)
         }
     }
 
@@ -864,7 +867,7 @@ enum DebugDrive {
               )?.takeRetainedValue() as? [CGImage],
               let image = images.first, image.width > 1
         else {
-            AppLogger.error("DebugDrive: WindowServer capture unavailable, falling back to cacheDisplay", category: .general)
+            MidgarLog.error("DebugDrive: WindowServer capture unavailable, falling back to cacheDisplay", category: .general)
             return nil
         }
         let rep = NSBitmapImageRep(cgImage: image)
@@ -890,24 +893,24 @@ enum DebugDrive {
         }
         let albums = Library.shared.albums
         guard albums.count >= 2, let first = albums.first, let second = albums.dropFirst().first else {
-            AppLogger.error("DebugDrive: need 2+ albums to exercise library", category: .general)
+            MidgarLog.error("DebugDrive: need 2+ albums to exercise library", category: .general)
             return
         }
 
         AudioPlayer.shared.play(first.tracks, startingAt: 0)
         try? await Task.sleep(for: .seconds(1))
-        AppLogger.info(
+        MidgarLog.info(
             "DebugDrive: grid play — now \(AudioPlayer.shared.currentTrack?.title ?? "none"), queue \(AudioPlayer.shared.queue.count)",
             category: .general
         )
 
         if let next = second.tracks.first {
             AudioPlayer.shared.insertNext(next)
-            AppLogger.info("DebugDrive: Play Next inserted \(next.title), queue \(AudioPlayer.shared.queue.count)", category: .general)
+            MidgarLog.info("DebugDrive: Play Next inserted \(next.title), queue \(AudioPlayer.shared.queue.count)", category: .general)
         }
         if let queued = second.tracks.last {
             AudioPlayer.shared.addToQueue(queued)
-            AppLogger.info("DebugDrive: Add to Queue appended \(queued.title), queue \(AudioPlayer.shared.queue.count)", category: .general)
+            MidgarLog.info("DebugDrive: Add to Queue appended \(queued.title), queue \(AudioPlayer.shared.queue.count)", category: .general)
         }
 
         do {
@@ -915,23 +918,23 @@ enum DebugDrive {
             guard let playlistId = playlist.id else { return }
             PlaylistActions.add(Array(first.tracks.prefix(3)), toPlaylist: playlistId, named: playlist.name, in: window)
             var records = try DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlistId)
-            AppLogger.info("DebugDrive: playlist has \(records.count) rows", category: .general)
+            MidgarLog.info("DebugDrive: playlist has \(records.count) rows", category: .general)
             records.reverse()
             PlaylistActions.persistOrder(records)
             let reordered = try DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlistId)
-            AppLogger.info(
+            MidgarLog.info(
                 "DebugDrive: reorder check — first row now \(reordered.first?.trackFileURL ?? "none")",
                 category: .general
             )
             if let victim = reordered.first?.id {
                 try DatabaseManager.shared.removeTrackFromPlaylist(id: victim)
                 let remaining = try DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlistId)
-                AppLogger.info("DebugDrive: row removed, \(remaining.count) remain", category: .general)
+                MidgarLog.info("DebugDrive: row removed, \(remaining.count) remain", category: .general)
             }
             try DatabaseManager.shared.deletePlaylist(id: playlistId)
-            AppLogger.info("DebugDrive: playlist deleted", category: .general)
+            MidgarLog.info("DebugDrive: playlist deleted", category: .general)
         } catch {
-            AppLogger.error("DebugDrive: playlist exercise failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("DebugDrive: playlist exercise failed: \(error.localizedDescription)", category: .general)
         }
 
         if let sourceTrack = second.tracks.first {
@@ -945,13 +948,13 @@ enum DebugDrive {
                 let before = Library.shared.allTracks.count
                 await Library.shared.importFiles(from: [stagedFile]) { _ in }
                 let after = Library.shared.allTracks.count
-                AppLogger.info("DebugDrive: drop import — tracks \(before) → \(after)", category: .general)
+                MidgarLog.info("DebugDrive: drop import — tracks \(before) → \(after)", category: .general)
                 try? FileManager.default.removeItem(at: staging)
             } catch {
-                AppLogger.error("DebugDrive: import exercise failed: \(error.localizedDescription)", category: .general)
+                MidgarLog.error("DebugDrive: import exercise failed: \(error.localizedDescription)", category: .general)
             }
         }
-        AppLogger.info("DebugDrive: library exercise complete", category: .general)
+        MidgarLog.info("DebugDrive: library exercise complete", category: .general)
     }
 
     /// Imports a staged compilation folder twice through the real importer and
@@ -966,7 +969,7 @@ enum DebugDrive {
         }
         let tracks = Library.shared.allTracks.filter { $0.fileURL.pathExtension.lowercased() == "flac" }
         guard tracks.count >= 2 else {
-            AppLogger.error("DebugDrive: import exercise needs two FLAC tracks", category: .general)
+            MidgarLog.error("DebugDrive: import exercise needs two FLAC tracks", category: .general)
             return
         }
         let fileManager = FileManager.default
@@ -985,12 +988,12 @@ enum DebugDrive {
             try Data([0xFF, 0xD8]).write(to: folder.appendingPathComponent("cover.jpg"))
             try Data([0]).write(to: folder.appendingPathComponent(".hidden.flac"))
         } catch {
-            AppLogger.error("DebugDrive: import staging failed: \(error.localizedDescription)", category: .general)
+            MidgarLog.error("DebugDrive: import staging failed: \(error.localizedDescription)", category: .general)
             return
         }
 
         let first = await Library.shared.importFiles(from: [folder]) { progress in
-            AppLogger.info("DebugDrive: import progress \(progress)", category: .general)
+            MidgarLog.info("DebugDrive: import progress \(progress)", category: .general)
         }
         let second = await Library.shared.importFiles(from: [folder]) { _ in }
         let expectations: [(String, Bool)] = [
@@ -1006,14 +1009,14 @@ enum DebugDrive {
             ("library indexed both", Library.shared.allTracks.filter { $0.fileURL.path.contains(folderName) }.count == 2),
         ]
         for (name, passed) in expectations {
-            AppLogger.info("DebugDrive: import \(passed ? "PASS" : "FAIL") — \(name)", category: .general)
+            MidgarLog.info("DebugDrive: import \(passed ? "PASS" : "FAIL") — \(name)", category: .general)
         }
-        AppLogger.info("DebugDrive: import outcomes \(first) then \(second)", category: .general)
+        MidgarLog.info("DebugDrive: import outcomes \(first) then \(second)", category: .general)
         try? fileManager.removeItem(at: imported)
         try? fileManager.removeItem(at: staging)
         await Library.shared.reload()
         let verdict = expectations.allSatisfy(\.1) ? "PASSED" : "FAILED"
-        AppLogger.info("DebugDrive: import exercise \(verdict)", category: .general)
+        MidgarLog.info("DebugDrive: import exercise \(verdict)", category: .general)
     }
 
     private static func exercise(window: NSWindow?) async {
@@ -1024,26 +1027,26 @@ enum DebugDrive {
             attempts += 1
         }
         guard let album = Library.shared.albums.first, !album.tracks.isEmpty else {
-            AppLogger.error("DebugDrive: no albums to exercise", category: .general)
+            MidgarLog.error("DebugDrive: no albums to exercise", category: .general)
             return
         }
-        AppLogger.info("DebugDrive: playing \(album.title) — \(album.artist)", category: .general)
+        MidgarLog.info("DebugDrive: playing \(album.title) — \(album.artist)", category: .general)
         AudioPlayer.shared.play(album.tracks, startingAt: 0)
 
         try? await Task.sleep(for: .seconds(2))
-        AppLogger.info("DebugDrive: seek to 20s (playing: \(AudioPlayer.shared.isPlaying))", category: .general)
+        MidgarLog.info("DebugDrive: seek to 20s (playing: \(AudioPlayer.shared.isPlaying))", category: .general)
         AudioPlayer.shared.seek(to: 20)
 
         try? await Task.sleep(for: .seconds(1))
-        AppLogger.info("DebugDrive: pause", category: .general)
+        MidgarLog.info("DebugDrive: pause", category: .general)
         AudioPlayer.shared.togglePlayPause()
 
         try? await Task.sleep(for: .seconds(1))
-        AppLogger.info("DebugDrive: resume", category: .general)
+        MidgarLog.info("DebugDrive: resume", category: .general)
         AudioPlayer.shared.togglePlayPause()
 
         try? await Task.sleep(for: .seconds(1))
-        AppLogger.info("DebugDrive: next track", category: .general)
+        MidgarLog.info("DebugDrive: next track", category: .general)
         AudioPlayer.shared.nextTrack()
 
         try? await Task.sleep(for: .seconds(1))
@@ -1056,7 +1059,7 @@ enum DebugDrive {
             try? await Task.sleep(for: .milliseconds(500))
             window.setFrame(frame, display: true, animate: false)
         }
-        AppLogger.info(
+        MidgarLog.info(
             "DebugDrive: exercise complete (playing: \(AudioPlayer.shared.isPlaying), track: \(AudioPlayer.shared.currentTrack?.title ?? "none"), time: \(AudioPlayer.shared.currentTime))",
             category: .general
         )

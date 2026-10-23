@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 
 /// Immersive album page: palette-driven ambient backdrop, artwork card,
@@ -134,7 +135,7 @@ final class AlbumDetailViewController: NSViewController {
         loadArtworkAndPalette()
         similarRow.load(artist: album.artist)
         enrichOnAppear()
-        AppLogger.info("Album detail opened: \(album.title) — \(album.artist)", category: .ui)
+        MidgarLog.info("Album detail opened: \(album.title) — \(album.artist)", category: .ui)
     }
 
     override func viewWillAppear() {
@@ -363,7 +364,7 @@ final class AlbumDetailViewController: NSViewController {
             let status = try DatabaseManager.shared.fetchAlbumInfoStatus(title: title, artist: artist)
             return (status.year, status.genre)
         } catch {
-            AppLogger.error("Album metadata read failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Album metadata read failed: \(error.localizedDescription)", category: .database)
             return (nil, nil)
         }
     }
@@ -397,7 +398,7 @@ final class AlbumDetailViewController: NSViewController {
     private func play(shuffled: Bool) {
         let sorted = orderedTracks()
         guard !sorted.isEmpty else { return }
-        AppLogger.info("Playing album \(album.title) (shuffled: \(shuffled))", category: .playback)
+        MidgarLog.info("Playing album \(album.title) (shuffled: \(shuffled))", category: .playback)
         AudioPlayer.shared.play(shuffled ? sorted.shuffled() : sorted, startingAt: 0)
     }
 

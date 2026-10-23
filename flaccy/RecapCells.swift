@@ -1,4 +1,5 @@
 import ImageIO
+import MidgarCore
 import UIKit
 
 /// A remote-artwork lookup for a Recap chart entry that has no local match and no
@@ -29,7 +30,7 @@ actor RecapRemoteArtworkResolver {
     func resolvedURL(for query: RecapArtworkQuery) async -> String? {
         let key = query.cacheKey
         if let cached = cache[key] {
-            AppLogger.debug("Recap remote art cache hit \(key) -> \(cached ?? "nil")", category: .content)
+            MidgarLog.debug("Recap remote art cache hit \(key) -> \(cached ?? "nil")", category: .content)
             return cached
         }
         if let existing = inFlight[key] { return await existing.value }
@@ -39,7 +40,7 @@ actor RecapRemoteArtworkResolver {
         let url = await task.value
         inFlight[key] = nil
         cache[key] = url
-        AppLogger.debug("Recap remote art resolved \(key) -> \(url ?? "miss")", category: .content)
+        MidgarLog.debug("Recap remote art resolved \(key) -> \(url ?? "miss")", category: .content)
         return url
     }
 
@@ -66,9 +67,10 @@ actor RecapRemoteArtworkResolver {
 /// thumbnails are cached so scrolling never pays a synchronous decode cost.
 final class AsyncImageView: UIImageView {
 
-    private static let maxPixelSize: CGFloat = 600
+    private nonisolated static let maxPixelSize: CGFloat = 600
 
-    private static let thumbnailCache: NSCache<NSString, UIImage> = {
+    /// `NSCache` does its own locking, so the thumbnail cache can be read and filled from the decode queue and the main thread.
+    private nonisolated(unsafe) static let thumbnailCache: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>()
         cache.countLimit = 256
         return cache
@@ -77,21 +79,21 @@ final class AsyncImageView: UIImageView {
     /// Records entries that provably have no artwork (no local art, no remote URL,
     /// or a failed download) so a reconfigured cell shows its placeholder instantly
     /// instead of kicking off the same doomed lookup on every scroll pass.
-    private static let negativeCache: NSCache<NSString, NSNumber> = {
+    private nonisolated(unsafe) static let negativeCache: NSCache<NSString, NSNumber> = {
         let cache = NSCache<NSString, NSNumber>()
         cache.countLimit = 512
         return cache
     }()
 
-    private static func markMiss(_ key: NSString) {
-        negativeCache.setObject(NSNumber(value: true), forKey: key)
+    private nonisolated static func markMiss(_ key: String) {
+        negativeCache.setObject(NSNumber(value: true), forKey: key as NSString)
     }
 
-    private static func albumKey(title: String, artist: String) -> NSString {
-        "album:\(title)\u{0}\(artist)" as NSString
+    private nonisolated static func albumKey(title: String, artist: String) -> String {
+        "album:\(title)\u{0}\(artist)"
     }
 
-    private static let decodeQueue = DispatchQueue(
+    private nonisolated static let decodeQueue = DispatchQueue(
         label: "com.midgarcorp.flaccy.recap.decode",
         qos: .userInitiated,
         attributes: .concurrent
@@ -124,19 +126,19 @@ final class AsyncImageView: UIImageView {
     /// the async download for a genuine cache miss. `alsoCache` mirrors the result
     /// into a second key (an album key) so an album that resolved via a remote URL
     /// is later found by its synchronous album-key read.
-    func setRemote(_ urlString: String?, placeholder: UIImage?, alsoCache extraKey: NSString? = nil) {
+    func setRemote(_ urlString: String?, placeholder: UIImage?, alsoCache extraKey: String? = nil) {
         guard let urlString, let url = URL(string: urlString) else {
             token = UUID(); setPlaceholder(placeholder); endShimmer(); return
         }
-        let thumbKey = "remote:\(urlString)" as NSString
-        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) {
+        let thumbKey = "remote:\(urlString)"
+        if let thumb = Self.thumbnailCache.object(forKey: thumbKey as NSString) {
             token = UUID()
-            if let extraKey { Self.thumbnailCache.setObject(thumb, forKey: extraKey) }
+            if let extraKey { Self.thumbnailCache.setObject(thumb, forKey: extraKey as NSString) }
             setImageIfChanged(thumb)
             endShimmer()
             return
         }
-        if Self.negativeCache.object(forKey: thumbKey) != nil {
+        if Self.negativeCache.object(forKey: thumbKey as NSString) != nil {
             token = UUID(); setPlaceholder(placeholder); endShimmer(); return
         }
 
@@ -177,13 +179,13 @@ final class AsyncImageView: UIImageView {
     /// at once. The async resolve path runs only for a genuine cache miss.
     func setAlbum(title: String, artist: String, remoteURL: String?, placeholder: UIImage?, remoteFallback: RecapArtworkQuery? = nil) {
         let thumbKey = Self.albumKey(title: title, artist: artist)
-        if let thumb = Self.thumbnailCache.object(forKey: thumbKey) {
+        if let thumb = Self.thumbnailCache.object(forKey: thumbKey as NSString) {
             token = UUID()
             setImageIfChanged(thumb)
             endShimmer()
             return
         }
-        if Self.negativeCache.object(forKey: thumbKey) != nil {
+        if Self.negativeCache.object(forKey: thumbKey as NSString) != nil {
             token = UUID(); setPlaceholder(placeholder); endShimmer(); return
         }
 
@@ -202,7 +204,7 @@ final class AsyncImageView: UIImageView {
         AlbumArtworkCache.shared.loadThumbnail(forAlbum: title, artist: artist) { [weak self] image in
             guard let self, self.token == current else { return }
             guard let image else {
-                AppLogger.debug("Recap art miss \(title) / \(artist), remote=\(remoteURL != nil), fallback=\(remoteFallback != nil)", category: .content)
+                MidgarLog.debug("Recap art miss \(title) / \(artist), remote=\(remoteURL != nil), fallback=\(remoteFallback != nil)", category: .content)
                 if let remoteURL {
                     self.setRemote(remoteURL, placeholder: placeholder, alsoCache: thumbKey)
                 } else if let remoteFallback {
@@ -220,7 +222,7 @@ final class AsyncImageView: UIImageView {
         }
     }
 
-    private func resolveRemote(_ query: RecapArtworkQuery, placeholder: UIImage?, albumKey: NSString, token current: UUID) {
+    private func resolveRemote(_ query: RecapArtworkQuery, placeholder: UIImage?, albumKey: String, token current: UUID) {
         Task { [weak self] in
             let url = await RecapRemoteArtworkResolver.shared.resolvedURL(for: query)
             await MainActor.run {
@@ -239,19 +241,23 @@ final class AsyncImageView: UIImageView {
         if image !== newImage { image = newImage }
     }
 
-    private func deliver(_ image: UIImage, keys: [NSString], token current: UUID) {
-        for key in keys { Self.thumbnailCache.setObject(image, forKey: key) }
+    private nonisolated func deliver(_ image: UIImage, keys: [String], token current: UUID) {
+        for key in keys { Self.thumbnailCache.setObject(image, forKey: key as NSString) }
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.token == current else { return }
-            self.endShimmer()
-            self.set(image, animated: true)
+            MainActor.assumeIsolated {
+                guard let self, self.token == current else { return }
+                self.endShimmer()
+                self.set(image, animated: true)
+            }
         }
     }
 
-    private func finishShimmer(token current: UUID) {
+    private nonisolated func finishShimmer(token current: UUID) {
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.token == current else { return }
-            self.endShimmer()
+            MainActor.assumeIsolated {
+                guard let self, self.token == current else { return }
+                self.endShimmer()
+            }
         }
     }
 
@@ -287,7 +293,7 @@ final class AsyncImageView: UIImageView {
         shimmerLayer.isHidden = true
     }
 
-    private static func downsampled(from data: Data) -> UIImage? {
+    private nonisolated static func downsampled(from data: Data) -> UIImage? {
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceShouldCacheImmediately: true,
@@ -300,7 +306,7 @@ final class AsyncImageView: UIImageView {
         return UIImage(cgImage: cgImage)
     }
 
-    private static func prepared(_ image: UIImage) -> UIImage? {
+    private nonisolated static func prepared(_ image: UIImage) -> UIImage? {
         let longestPixels = max(image.size.width, image.size.height) * image.scale
         guard longestPixels > maxPixelSize else { return image.preparingForDisplay() ?? image }
         let ratio = maxPixelSize / longestPixels
@@ -329,13 +335,13 @@ final class AsyncImageView: UIImageView {
         remoteFallback: RecapArtworkQuery?
     ) async -> Bool {
         let thumbKey = albumKey(title: title, artist: artist)
-        if thumbnailCache.object(forKey: thumbKey) != nil { return true }
-        if negativeCache.object(forKey: thumbKey) != nil { return false }
+        if thumbnailCache.object(forKey: thumbKey as NSString) != nil { return true }
+        if negativeCache.object(forKey: thumbKey as NSString) != nil { return false }
         if Task.isCancelled { return false }
 
         if let local = await loadLocalArtwork(title: title, artist: artist),
            let thumb = await decodeOffMain({ prepared(local) }) {
-            thumbnailCache.setObject(thumb, forKey: thumbKey)
+            thumbnailCache.setObject(thumb, forKey: thumbKey as NSString)
             return true
         }
         if Task.isCancelled { return false }
@@ -352,7 +358,7 @@ final class AsyncImageView: UIImageView {
 
         if let cached = ImageCache.shared.image(forKey: urlString),
            let thumb = await decodeOffMain({ prepared(cached) }) {
-            thumbnailCache.setObject(thumb, forKey: thumbKey)
+            thumbnailCache.setObject(thumb, forKey: thumbKey as NSString)
             thumbnailCache.setObject(thumb, forKey: "remote:\(urlString)" as NSString)
             return true
         }
@@ -365,7 +371,7 @@ final class AsyncImageView: UIImageView {
             markMiss(thumbKey)
             return false
         }
-        thumbnailCache.setObject(thumb, forKey: thumbKey)
+        thumbnailCache.setObject(thumb, forKey: thumbKey as NSString)
         thumbnailCache.setObject(thumb, forKey: "remote:\(urlString)" as NSString)
         return true
     }
@@ -387,7 +393,7 @@ final class AsyncImageView: UIImageView {
 }
 
 /// Shared number formatting: grouped counts and a compact minutes-to-hours label.
-enum RecapFormat {
+nonisolated enum RecapFormat {
     private static let decimalFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal

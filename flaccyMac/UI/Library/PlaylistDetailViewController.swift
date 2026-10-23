@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 
 /// One playlist: a mosaic hero with play/shuffle capsules over its songs in
@@ -171,11 +172,11 @@ final class PlaylistDetailViewController: NSViewController {
                 return Row(record: record, track: track)
             }
         } catch {
-            AppLogger.error("Playlist tracks fetch failed: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Playlist tracks fetch failed: \(error.localizedDescription)", category: .database)
             rows = []
         }
         render()
-        AppLogger.debug("Playlist detail \(playlist.name): \(rows.count) rows", category: .ui)
+        MidgarLog.debug("Playlist detail \(playlist.name): \(rows.count) rows", category: .ui)
     }
 
     /// Paints the hero and the songs from `rows`, keeping the page where the
@@ -224,7 +225,7 @@ final class PlaylistDetailViewController: NSViewController {
     private func play(shuffled: Bool) {
         let tracks = rows.map(\.track)
         guard !tracks.isEmpty else { return }
-        AppLogger.info("Playing playlist \(playlist.name) (shuffled: \(shuffled))", category: .playback)
+        MidgarLog.info("Playing playlist \(playlist.name) (shuffled: \(shuffled))", category: .playback)
         AudioPlayer.shared.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0)
     }
 
@@ -235,10 +236,10 @@ final class PlaylistDetailViewController: NSViewController {
             do {
                 try DatabaseManager.shared.removeTrackFromPlaylist(id: id)
             } catch {
-                AppLogger.error("Playlist row removal failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Playlist row removal failed: \(error.localizedDescription)", category: .database)
             }
         }
-        AppLogger.info("Removed \(ids.count) row(s) from playlist \(playlist.name)", category: .database)
+        MidgarLog.info("Removed \(ids.count) row(s) from playlist \(playlist.name)", category: .database)
         NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
     }
 

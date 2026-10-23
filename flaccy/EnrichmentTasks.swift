@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 
 /// One unit of enrichment work, named the way `enrichmentState` keys it.
 ///
@@ -165,7 +166,7 @@ nonisolated enum AlbumEnrichmentTask {
                 record: record
             )
         } catch {
-            await AppLogger.error(
+            MidgarLog.error(
                 "Album enrichment write failed for \(title): \(error.localizedDescription)", category: .database
             )
         }
@@ -224,7 +225,7 @@ nonisolated enum ArtistEnrichmentTask {
                 record: record
             )
         } catch {
-            await AppLogger.error(
+            MidgarLog.error(
                 "Artist enrichment write failed for \(name): \(error.localizedDescription)", category: .database
             )
         }
@@ -292,7 +293,7 @@ nonisolated enum AIIdentificationTask {
             )
         }
 
-        await AppLogger.info("AI batch: \(directory) (\(tracks.count) tracks)", category: .content)
+        MidgarLog.info("AI batch: \(directory) (\(tracks.count) tracks)", category: .content)
 
         let analysis = await GroqService.shared.analyzeLibrary(tracks: contexts)
         let matched = if let identified = analysis.music { await apply(identified, to: tracks, in: db) } else { 0 }
@@ -301,7 +302,7 @@ nonisolated enum AIIdentificationTask {
         if let interruption = analysis.interruption {
             EnrichmentPolicy.apply(to: &record, scope: .aiBatch, resolved: [], failure: .transport, now: now)
             try? db.upsertEnrichmentRecord(record)
-            await AppLogger.info(
+            MidgarLog.info(
                 "AI batch \(directory): interrupted after \(matched)/\(tracks.count) tracks (\(interruption))",
                 category: .content
             )
@@ -323,7 +324,7 @@ nonisolated enum AIIdentificationTask {
         EnrichmentPolicy.apply(to: &record, scope: .aiBatch, resolved: resolved, failure: failure, now: now)
         try? db.upsertEnrichmentRecord(record)
 
-        await AppLogger.info(
+        MidgarLog.info(
             "AI batch \(directory): \(matched)/\(tracks.count) tracks identified", category: .content
         )
         return EnrichmentTasks.outcome(
@@ -357,7 +358,7 @@ nonisolated enum AIIdentificationTask {
                     try db.updateTrackPreservingArtwork(dbTrack)
                     matched += 1
                 } catch {
-                    await AppLogger.error("Track update failed: \(error.localizedDescription)", category: .database)
+                    MidgarLog.error("Track update failed: \(error.localizedDescription)", category: .database)
                 }
             }
 
@@ -367,7 +368,7 @@ nonisolated enum AIIdentificationTask {
                 if let genre = album.genre { info.genre = genre }
                 try db.updateAlbumInfo(info)
             } catch {
-                await AppLogger.error("Album info save failed: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Album info save failed: \(error.localizedDescription)", category: .database)
             }
         }
 

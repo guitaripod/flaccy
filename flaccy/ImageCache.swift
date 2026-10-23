@@ -1,4 +1,5 @@
 import CryptoKit
+import MidgarCore
 import ImageIO
 
 #if canImport(UIKit)
@@ -7,7 +8,9 @@ import UIKit
 import AppKit
 #endif
 
-final class ImageCache {
+/// A disk and memory image cache. The memory half is an `NSCache` and every disk write goes through `ioQueue`, so the
+/// cache is safe to use from any thread.
+nonisolated final class ImageCache: @unchecked Sendable {
 
     static let shared = ImageCache()
 
@@ -39,7 +42,7 @@ final class ImageCache {
             do {
                 try fileManager.createDirectory(at: diskCacheURL, withIntermediateDirectories: true)
             } catch {
-                AppLogger.error("Failed to create image cache directory: \(error.localizedDescription)", category: .content)
+                MidgarLog.error("Failed to create image cache directory: \(error.localizedDescription)", category: .content)
             }
         }
 
@@ -116,13 +119,14 @@ final class ImageCache {
         memoryCache.setObject(stored, forKey: key as NSString, cost: cost)
 
         let filePath = diskPath(forKey: key)
-        ioQueue.async { [fileManager] in
+        ioQueue.async {
+            let fileManager = FileManager.default
             guard let data = stored.jpegData(compressionQuality: 0.85) else { return }
             do {
                 try data.write(to: filePath, options: .atomic)
             } catch {
                 Task { @MainActor in
-                    AppLogger.error("Failed to write image to disk: \(error.localizedDescription)", category: .content)
+                    MidgarLog.error("Failed to write image to disk: \(error.localizedDescription)", category: .content)
                 }
                 if !fileManager.fileExists(atPath: filePath.deletingLastPathComponent().path) {
                     try? fileManager.createDirectory(
@@ -148,7 +152,7 @@ final class ImageCache {
                 try stored.write(to: filePath, options: .atomic)
             } catch {
                 Task { @MainActor in
-                    AppLogger.error("Failed to write image data to disk: \(error.localizedDescription)", category: .content)
+                    MidgarLog.error("Failed to write image data to disk: \(error.localizedDescription)", category: .content)
                 }
             }
         }
@@ -187,7 +191,7 @@ final class ImageCache {
         return max(1, pixels) * 4
     }
 
-    private static func cgImage(of image: PlatformImage) -> CGImage? {
+    private nonisolated static func cgImage(of image: PlatformImage) -> CGImage? {
         #if canImport(UIKit)
         image.cgImage
         #else
@@ -195,7 +199,7 @@ final class ImageCache {
         #endif
     }
 
-    private static func downsampled(_ image: PlatformImage) -> PlatformImage {
+    private nonisolated static func downsampled(_ image: PlatformImage) -> PlatformImage {
         guard let source = cgImage(of: image) else { return image }
         let longest = max(source.width, source.height)
         guard longest > Int(maxPixelSize) else { return image }
@@ -259,7 +263,7 @@ final class ImageCache {
                 removedCount += 1
             } catch {
                 Task { @MainActor in
-                    AppLogger.error("Failed to prune image cache file: \(error.localizedDescription)", category: .content)
+                    MidgarLog.error("Failed to prune image cache file: \(error.localizedDescription)", category: .content)
                 }
             }
         }
@@ -267,7 +271,7 @@ final class ImageCache {
         if removedCount > 0 {
             let summary = "Pruned \(removedCount) image cache files, \(totalSize) bytes remain"
             Task { @MainActor in
-                AppLogger.info(summary, category: .content)
+                MidgarLog.info(summary, category: .content)
             }
         }
     }

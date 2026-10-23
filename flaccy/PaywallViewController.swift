@@ -1,13 +1,9 @@
 import FlaccyCore
+import MidgarCore
 import RevenueCat
 import SafariServices
 import StoreKit
 import UIKit
-
-enum LegalLinks {
-    static let privacyURL = URL(string: "https://mako.midgarcorp.cc/privacy/flaccy")!
-    static let termsURL = URL(string: "https://mako.midgarcorp.cc/terms/flaccy")!
-}
 
 /// The lifetime-first paywall: a scrolling story — header, plan picker, what
 /// the person has already set up, what the app does, the yearly disclosure —
@@ -117,7 +113,7 @@ final class PaywallViewController: UIViewController {
             manager.notePaywallShown()
             showProof(await proof)
         }
-        AppLogger.info("Paywall presented (state \(PurchaseManager.shared.state))", category: .purchases)
+        MidgarLog.info("Paywall presented (state \(PurchaseManager.shared.state))", category: .purchases)
     }
 
     override func viewDidLayoutSubviews() {
@@ -550,7 +546,7 @@ final class PaywallViewController: UIViewController {
                     break
                 }
             } catch {
-                AppLogger.error("Purchase failed: \(error.localizedDescription)", category: .purchases)
+                MidgarLog.error("Purchase failed: \(error.localizedDescription)", category: .purchases)
                 notificationFeedback.notificationOccurred(.error)
                 presentInfoAlert(
                     title: String(localized: "Purchase Failed"),

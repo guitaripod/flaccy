@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 
 /// Synced-lyrics karaoke panel: the current line renders at full alpha and
@@ -208,7 +209,7 @@ final class LyricsPanelViewController: NSViewController {
         )
     }
 
-    deinit {
+    isolated deinit {
         NotificationCenter.default.removeObserver(self)
         ticker?.invalidate()
     }
@@ -413,7 +414,7 @@ final class LyricsPanelViewController: NSViewController {
                 let time = max(0, start - Self.seekLeadIn)
                 self.player.seek(to: time)
                 self.lastUserScroll = .distantPast
-                AppLogger.info("Lyrics line seek to \(time)", category: .ui)
+                MidgarLog.info("Lyrics line seek to \(time)", category: .ui)
             }
             linesStack.addArrangedSubview(lineView)
             lineView.widthAnchor.constraint(equalTo: linesStack.widthAnchor, constant: -40).isActive = true

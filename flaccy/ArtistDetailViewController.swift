@@ -481,7 +481,7 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
         let sectionHeaderRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewCell>(
             elementKind: UICollectionView.elementKindSectionHeader
         ) { [weak self] supplementaryView, _, indexPath in
-            var config = UIListContentConfiguration.plainHeader()
+            var config = UIListContentConfiguration.header()
             config.text = self?.section(at: indexPath.section)?.title
             config.textProperties.font = .scaled(.title3, size: 20, weight: .bold)
             config.textProperties.color = .white

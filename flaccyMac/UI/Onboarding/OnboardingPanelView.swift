@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 import FlaccyCore
 
@@ -212,7 +213,7 @@ final class OnboardingPanelView: NSView {
             scrim.animator().alphaValue = next == .welcome ? 0 : 1
             layoutSubtreeIfNeeded()
         } completionHandler: { [weak self] in
-            self?.scrim.isHidden = self?.scrim.alphaValue == 0
+            MainActor.assumeIsolated { self?.scrim.isHidden = self?.scrim.alphaValue == 0 }
         }
 
         NSAnimationContext.runAnimationGroup { context in
@@ -327,7 +328,7 @@ final class OnboardingPanelView: NSView {
         isDownloading = true
         spinner.startAnimation(nil)
         progressLabel.stringValue = String(localized: "Contacting server…")
-        AppLogger.info("Onboarding: sample album download started", category: .content)
+        MidgarLog.info("Onboarding: sample album download started", category: .content)
         Task { [weak self] in
             let success = await SampleMusicService.shared.downloadSamples()
             guard let self else { return }

@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 import FlaccyCore
 
@@ -127,7 +128,7 @@ final class SyncTitlebarAccessoryController: NSTitlebarAccessoryViewController {
             await EnrichmentCoordinator.shared.retryExhausted(scope: .album)
             await EnrichmentCoordinator.shared.resume()
         }
-        AppLogger.info("Titlebar chip requested a missing-artwork sweep", category: .content)
+        MidgarLog.info("Titlebar chip requested a missing-artwork sweep", category: .content)
     }
 
     @objc private func openLibrarySettings() {

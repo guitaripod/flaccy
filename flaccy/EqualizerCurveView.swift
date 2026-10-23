@@ -69,7 +69,7 @@ final class EqualizerCurveView: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    deinit {
+    isolated deinit {
         displayLink?.invalidate()
     }
 

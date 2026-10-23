@@ -46,8 +46,10 @@ enum MacToast {
                 context.duration = 0.3
                 toast.animator().alphaValue = 0
             }, completionHandler: {
-                toast.removeFromSuperview()
-                if currentToast === toast { currentToast = nil }
+                MainActor.assumeIsolated {
+                    toast.removeFromSuperview()
+                    if currentToast === toast { currentToast = nil }
+                }
             })
         }
     }

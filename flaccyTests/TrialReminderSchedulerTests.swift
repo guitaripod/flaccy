@@ -8,7 +8,7 @@ import XCTest
 /// wrong identifier silently survives `cancelAll`, a missing destination lands
 /// the tap on the Library, a mis-built trigger fires at midnight. These pin the
 /// pure builder; the calendar itself is proven in `TrialRunwayTests`.
-final class TrialReminderSchedulerTests: XCTestCase {
+nonisolated final class TrialReminderSchedulerTests: XCTestCase {
 
     private let calendar = Calendar.current
     private var start: Date!
@@ -23,20 +23,20 @@ final class TrialReminderSchedulerTests: XCTestCase {
         XCTAssertEqual(reminders.map(\.kind), TrialRunway.Reminder.Kind.allCases)
     }
 
-    private func requests() -> [UNNotificationRequest] {
+    @MainActor private func requests() -> [UNNotificationRequest] {
         TrialReminderScheduler.requests(for: reminders, welcomeBackEnds: welcomeBackEnds)
     }
 
-    private func request(_ kind: TrialRunway.Reminder.Kind) throws -> UNNotificationRequest {
+    @MainActor private func request(_ kind: TrialRunway.Reminder.Kind) throws -> UNNotificationRequest {
         try XCTUnwrap(requests().first { $0.identifier == kind.rawValue })
     }
 
-    func testIdentifiersAreTheReminderKinds() {
+    @MainActor func testIdentifiersAreTheReminderKinds() {
         XCTAssertEqual(requests().map(\.identifier), TrialRunway.Reminder.Kind.allCases.map(\.rawValue))
         XCTAssertEqual(requests().map(\.identifier), ["trial.twoDaysLeft", "trial.ended", "trial.welcomeBack"])
     }
 
-    func testEveryRequestRoutesToThePaywall() {
+    @MainActor func testEveryRequestRoutesToThePaywall() {
         for request in requests() {
             XCTAssertEqual(
                 request.content.userInfo[TrialReminderScheduler.destinationUserInfoKey] as? String,
@@ -47,19 +47,19 @@ final class TrialReminderSchedulerTests: XCTestCase {
         }
     }
 
-    func testTwoDaysLeftCopy() throws {
+    @MainActor func testTwoDaysLeftCopy() throws {
         let content = try request(.twoDaysLeft).content
         XCTAssertEqual(content.title, String(localized: "2 days left in your Flaccy trial"))
         XCTAssertEqual(content.body, String(localized: "Open Flaccy to keep everything you've set up."))
     }
 
-    func testEndedCopy() throws {
+    @MainActor func testEndedCopy() throws {
         let content = try request(.ended).content
         XCTAssertEqual(content.title, String(localized: "Your Flaccy trial has ended"))
         XCTAssertEqual(content.body, String(localized: "Everything you set up is still here."))
     }
 
-    func testWelcomeBackCopyNamesTheWindowEndAndNoPrice() throws {
+    @MainActor func testWelcomeBackCopyNamesTheWindowEndAndNoPrice() throws {
         let content = try request(.welcomeBack).content
         let ends = welcomeBackEnds.formatted(.dateTime.day().month())
         XCTAssertEqual(content.title, String(localized: "Welcome back to Flaccy"))
@@ -71,13 +71,13 @@ final class TrialReminderSchedulerTests: XCTestCase {
         XCTAssertFalse(content.body.contains("$"))
     }
 
-    func testEveryRequestCarriesTheDefaultSound() {
+    @MainActor func testEveryRequestCarriesTheDefaultSound() {
         for request in requests() {
             XCTAssertEqual(request.content.sound, .default, request.identifier)
         }
     }
 
-    func testTriggersMatchTheReminderFireTimes() throws {
+    @MainActor func testTriggersMatchTheReminderFireTimes() throws {
         for reminder in reminders {
             let trigger = try XCTUnwrap(request(reminder.kind).trigger as? UNCalendarNotificationTrigger)
             XCTAssertFalse(trigger.repeats)
@@ -99,7 +99,7 @@ final class TrialReminderSchedulerTests: XCTestCase {
         }
     }
 
-    func testTriggersLandInsideTheDeliveryWindow() throws {
+    @MainActor func testTriggersLandInsideTheDeliveryWindow() throws {
         for reminder in reminders {
             let trigger = try XCTUnwrap(request(reminder.kind).trigger as? UNCalendarNotificationTrigger)
             let hour = try XCTUnwrap(trigger.dateComponents.hour)
@@ -107,7 +107,7 @@ final class TrialReminderSchedulerTests: XCTestCase {
         }
     }
 
-    func testBuilderIsPure() {
+    @MainActor func testBuilderIsPure() {
         XCTAssertTrue(TrialReminderScheduler.requests(for: [], welcomeBackEnds: welcomeBackEnds).isEmpty)
         let subset = reminders.filter { $0.kind != .welcomeBack }
         XCTAssertEqual(

@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import FlaccyCore
 
 /// The songs of a page as a sortable table. It never scrolls by itself: it is
@@ -228,7 +229,7 @@ final class TrackTableSurface: NSObject, TrackPageSurface {
         let row = table.clickedRow
         guard displayed.indices.contains(row) else { return }
         let tracks = displayed.map { model.entries[$0].track }
-        AppLogger.info("Playing \(tracks[row].title) from \(model.pageName()) table", category: .playback)
+        MidgarLog.info("Playing \(tracks[row].title) from \(model.pageName()) table", category: .playback)
         model.play(tracks, row)
     }
 

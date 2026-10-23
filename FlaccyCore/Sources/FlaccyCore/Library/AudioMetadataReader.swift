@@ -1,3 +1,4 @@
+import MidgarCore
 #if canImport(AVFoundation)
 import AVFoundation
 import Foundation
@@ -53,26 +54,32 @@ public enum AudioMetadataReader {
         public let channels: Int?
     }
 
+    /// The metadata items AVFoundation loaded for one asset, handed to the concurrent value lookups. AVFoundation builds
+    /// the items immutable and nothing here mutates them, so reading them from several tasks is safe.
+    private struct LoadedMetadata: @unchecked Sendable {
+        let items: [AVMetadataItem]
+    }
+
     public static func read(from url: URL) async -> Result {
         let asset = AVURLAsset(url: url)
         let duration: TimeInterval
-        let metadata: [AVMetadataItem]
+        let metadata: LoadedMetadata
 
         do {
             let loaded = try await asset.load(.duration, .metadata)
             duration = CMTimeGetSeconds(loaded.0)
-            metadata = loaded.1
+            metadata = LoadedMetadata(items: loaded.1)
         } catch {
-            AppLogger.error("Metadata load failed for \(url.lastPathComponent): \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Metadata load failed for \(url.lastPathComponent): \(error.localizedDescription)", category: .content)
             return Result(title: nil, artist: nil, albumTitle: nil, albumArtist: nil, trackNumber: 0, duration: 0, artworkData: nil)
         }
 
-        async let titleTask = stringValue(for: .commonIdentifierTitle, in: metadata)
-        async let artistTask = stringValue(for: .commonIdentifierArtist, in: metadata)
-        async let albumTask = stringValue(for: .commonIdentifierAlbumName, in: metadata)
-        async let albumArtistTask = albumArtistValue(from: metadata)
-        async let trackTask = trackNumberValue(from: metadata)
-        async let artworkTask = artworkData(from: metadata)
+        async let titleTask = stringValue(for: .commonIdentifierTitle, in: metadata.items)
+        async let artistTask = stringValue(for: .commonIdentifierArtist, in: metadata.items)
+        async let albumTask = stringValue(for: .commonIdentifierAlbumName, in: metadata.items)
+        async let albumArtistTask = albumArtistValue(from: metadata.items)
+        async let trackTask = trackNumberValue(from: metadata.items)
+        async let artworkTask = artworkData(from: metadata.items)
 
         let format = readFormat(from: url)
 

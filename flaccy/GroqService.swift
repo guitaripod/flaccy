@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 
 nonisolated struct GenreClassification: Sendable, Codable {
     let genre: String
@@ -61,25 +62,7 @@ final class GroqService: MetadataClassifying {
 
     static let shared: MetadataClassifying = GroqService()
 
-    nonisolated static let apiBaseURL = URL(string: "https://flaccy-api.midgarcorp.cc")!
-
-    nonisolated private static let endpoint = apiBaseURL.appendingPathComponent("v1/metadata")
-
-    nonisolated static let deviceIdentifier: String = {
-        let key = "flaccy.deviceIdentifier"
-        if let existing = UserDefaults.standard.string(forKey: key) { return existing }
-        let fresh = UUID().uuidString
-        UserDefaults.standard.set(fresh, forKey: key)
-        return fresh
-    }()
-
-    private let session: URLSession
-
-    private init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 60
-        session = URLSession(configuration: config)
-    }
+    private init() {}
 
     nonisolated private static let maxBatchSize = 40
     nonisolated private static let minBatchSize = 5
@@ -92,7 +75,7 @@ final class GroqService: MetadataClassifying {
     nonisolated func analyzeLibrary(tracks: [TrackContext]) async -> AIAnalysis {
         guard !tracks.isEmpty else { return .nothing }
         guard await Self.hasActiveEntitlement() else {
-            await AppLogger.info("Skipping AI analysis: no active entitlement", category: .content)
+            MidgarLog.info("Skipping AI analysis: no active entitlement", category: .content)
             return .nothing
         }
 
@@ -102,7 +85,7 @@ final class GroqService: MetadataClassifying {
         }
 
         let merged = Self.mergeDuplicateAlbums(batch.albums)
-        await AppLogger.info("AI analyzed library: \(merged.count) albums identified", category: .content)
+        MidgarLog.info("AI analyzed library: \(merged.count) albums identified", category: .content)
         return AIAnalysis(music: IdentifiedMusic(albums: merged), interruption: batch.interruption)
     }
 
@@ -119,7 +102,7 @@ final class GroqService: MetadataClassifying {
                 let albums = try JSONDecoder().decode(IdentifiedMusic.self, from: data).albums
                 return BatchResult(albums: albums, interruption: nil)
             } catch {
-                await AppLogger.error("Failed to decode library analysis: \(error.localizedDescription)", category: .content)
+                MidgarLog.error("Failed to decode library analysis: \(error.localizedDescription)", category: .content)
                 return await splitOrGiveUp(tracks, reason: "undecodable response")
             }
         case .payloadTooLarge:
@@ -135,10 +118,10 @@ final class GroqService: MetadataClassifying {
     /// the batch is at or below the minimum size where splitting cannot help.
     nonisolated private func splitOrGiveUp(_ tracks: [TrackContext], reason: String) async -> BatchResult {
         guard tracks.count > Self.minBatchSize else {
-            await AppLogger.warning("Giving up on batch of \(tracks.count) tracks: \(reason)", category: .content)
+            MidgarLog.notice("Giving up on batch of \(tracks.count) tracks: \(reason)", category: .content)
             return BatchResult(albums: [], interruption: nil)
         }
-        await AppLogger.info("Splitting batch of \(tracks.count) tracks: \(reason)", category: .content)
+        MidgarLog.info("Splitting batch of \(tracks.count) tracks: \(reason)", category: .content)
         return await bisectAndAnalyze(tracks)
     }
 
@@ -237,27 +220,20 @@ final class GroqService: MetadataClassifying {
         do {
             return try JSONDecoder().decode(GenreClassification.self, from: data)
         } catch {
-            await AppLogger.error("Failed to decode genre classification: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("Failed to decode genre classification: \(error.localizedDescription)", category: .content)
             return nil
         }
     }
 
     nonisolated private func performRequest(_ chatRequest: ChatRequest, retryCount: Int = 0) async -> RequestOutcome {
         do {
-            var urlRequest = URLRequest(url: Self.endpoint)
-            urlRequest.httpMethod = "POST"
-            urlRequest.setValue(Self.deviceIdentifier, forHTTPHeaderField: "X-Device-ID")
-            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            urlRequest.httpBody = try JSONEncoder().encode(chatRequest)
-
-            let (data, response) = try await session.data(for: urlRequest)
-
-            guard let http = response as? HTTPURLResponse else { return .interrupted(.unreachable) }
+            let proxyReply = try await FlaccyMidgar.shared.api.postMetadata(chatRequest)
+            let data = proxyReply.body
 
             let reply = AIProxyReply.classify(
-                status: http.statusCode,
+                status: proxyReply.status,
                 errorCode: Self.errorCode(in: data),
-                retryAfter: http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init),
+                retryAfter: proxyReply.retryAfter,
                 now: Date()
             )
 
@@ -266,40 +242,40 @@ final class GroqService: MetadataClassifying {
                 break
             case .busy:
                 guard retryCount < Self.busyBackoff.count else {
-                    await AppLogger.warning("AI proxy stayed busy through every retry", category: .content)
+                    MidgarLog.notice("AI proxy stayed busy through every retry", category: .content)
                     return .interrupted(.unavailable)
                 }
                 let waitSeconds = Self.busyBackoff[retryCount]
-                await AppLogger.info("AI proxy busy, waiting \(waitSeconds)s (retry \(retryCount + 1)/\(Self.busyBackoff.count))", category: .content)
+                MidgarLog.info("AI proxy busy, waiting \(waitSeconds)s (retry \(retryCount + 1)/\(Self.busyBackoff.count))", category: .content)
                 try? await Task.sleep(for: .seconds(waitSeconds))
                 return await performRequest(chatRequest, retryCount: retryCount + 1)
             case .quotaReached(let resetsAt):
-                await AppLogger.info("AI daily limit reached; resumes \(resetsAt.formatted(date: .abbreviated, time: .shortened))", category: .content)
+                MidgarLog.info("AI daily limit reached; resumes \(resetsAt.formatted(date: .abbreviated, time: .shortened))", category: .content)
                 return .interrupted(.quotaReached(resetsAt: resetsAt))
             case .payloadTooLarge:
-                await AppLogger.warning("AI request too large", category: .content)
+                MidgarLog.notice("AI request too large", category: .content)
                 return .payloadTooLarge
             case .unavailable:
                 if let body = String(data: data, encoding: .utf8) {
-                    await AppLogger.error("AI proxy \(http.statusCode): \(body.prefix(200))", category: .content)
+                    MidgarLog.error("AI proxy \(proxyReply.status): \(body.prefix(200))", category: .content)
                 }
                 return .interrupted(.unavailable)
             }
 
             let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
             guard let choice = chatResponse.choices.first else {
-                await AppLogger.error("AI proxy returned an empty response", category: .content)
+                MidgarLog.error("AI proxy returned an empty response", category: .content)
                 return .interrupted(.unavailable)
             }
 
             if choice.finish_reason == "length" {
-                await AppLogger.warning("AI response truncated at token limit", category: .content)
+                MidgarLog.notice("AI response truncated at token limit", category: .content)
                 return .truncated
             }
 
             return .success(Data(choice.message.content.utf8))
         } catch {
-            await AppLogger.error("AI proxy error: \(error.localizedDescription)", category: .content)
+            MidgarLog.error("AI proxy error: \(error.localizedDescription)", category: .content)
             return .interrupted(error is URLError ? .unreachable : .unavailable)
         }
     }
@@ -327,19 +303,19 @@ private nonisolated struct ProxyError: Decodable {
     let error: String
 }
 
-private nonisolated struct ChatRequest: Encodable {
+private nonisolated struct ChatRequest: Encodable, Sendable {
     let messages: [ChatMessage]
     let temperature: Double
     let max_completion_tokens: Int
     let response_format: ResponseFormat?
 }
 
-private nonisolated struct ChatMessage: Codable {
+private nonisolated struct ChatMessage: Codable, Sendable {
     let role: String
     let content: String
 }
 
-private nonisolated struct ResponseFormat: Encodable {
+private nonisolated struct ResponseFormat: Encodable, Sendable {
     let type: String
 }
 

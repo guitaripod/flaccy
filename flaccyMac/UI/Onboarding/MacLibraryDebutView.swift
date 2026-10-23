@@ -211,11 +211,13 @@ final class MacLibraryDebutView: NSView {
             context.duration = Metrics.crossfade / 2
             caption.animator().alphaValue = 0
         } completionHandler: { [weak self] in
-            guard let self else { return }
-            self.caption.stringValue = title
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = Metrics.crossfade / 2
-                self.caption.animator().alphaValue = 1
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.caption.stringValue = title
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = Metrics.crossfade / 2
+                    self.caption.animator().alphaValue = 1
+                }
             }
         }
     }
@@ -293,7 +295,7 @@ private final class MacLibraryMosaicView: NSView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    deinit { rotationTimer?.invalidate() }
+    isolated deinit { rotationTimer?.invalidate() }
 
     override var isFlipped: Bool { true }
 
@@ -485,22 +487,16 @@ private final class MacLibraryMosaicView: NSView {
 
     private func startRotationIfNeeded() {
         guard rotationTimer == nil, !pending.isEmpty, window != nil else { return }
-        rotationTimer = Timer.scheduledTimer(withTimeInterval: Metrics.rotationInterval, repeats: true) { [weak self] timer in
-            MainActor.assumeIsolated {
-                guard let self else {
-                    timer.invalidate()
-                    return
-                }
-                self.rotateOldestTile(timer)
-            }
+        rotationTimer = Timer.scheduledTimer(withTimeInterval: Metrics.rotationInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rotateOldestTile() }
         }
     }
 
     /// Retires the least recently refreshed tile in favour of a queued cover, so
     /// the grid keeps reporting a library far larger than thirty-six albums.
-    private func rotateOldestTile(_ timer: Timer) {
+    private func rotateOldestTile() {
         guard !pending.isEmpty, !refreshOrder.isEmpty else {
-            timer.invalidate()
+            rotationTimer?.invalidate()
             rotationTimer = nil
             return
         }

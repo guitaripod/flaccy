@@ -1,4 +1,5 @@
 import AVFoundation
+import MidgarCore
 import FlaccyCore
 import Foundation
 
@@ -361,7 +362,7 @@ final class EqualizerEngine {
             refreshAttachments()
             return
         }
-        AppLogger.info(
+        MidgarLog.info(
             "Equalizer config v\(version) (\(reason)): engaged=\(running != nil) profile=\(running?.name ?? "none") bands=\(bands.count) preamp=\(String(format: "%.1f", preamp)) dB output=\(outputID ?? "none")",
             category: .playback
         )
@@ -423,7 +424,7 @@ final class EqualizerEngine {
     private func installTap(on item: AVPlayerItem, track: AVAssetTrack, attachment: Attachment) {
         let startsEngaged = item.currentTime().seconds < Self.freshItemSeconds
         guard !attachment.hasMix, let tap = EqualizerTapFactory.makeTap(box: box, startsEngaged: startsEngaged) else {
-            if !attachment.hasMix { AppLogger.warning("Equalizer tap could not be created", category: .playback) }
+            if !attachment.hasMix { MidgarLog.notice("Equalizer tap could not be created", category: .playback) }
             return
         }
         let parameters = AVMutableAudioMixInputParameters(track: track)
@@ -432,7 +433,7 @@ final class EqualizerEngine {
         mix.inputParameters = [parameters]
         item.audioMix = mix
         attachment.hasMix = true
-        AppLogger.info("Equalizer tap attached to \((item.asset as? AVURLAsset)?.url.lastPathComponent ?? "item")", category: .playback)
+        MidgarLog.info("Equalizer tap attached to \((item.asset as? AVURLAsset)?.url.lastPathComponent ?? "item")", category: .playback)
     }
 
     private func scheduleDetach(_ item: AVPlayerItem, attachment: Attachment) {
@@ -440,7 +441,7 @@ final class EqualizerEngine {
             guard let self, let item, !self.needsTap, attachment.hasMix else { return }
             item.audioMix = nil
             attachment.hasMix = false
-            AppLogger.info("Equalizer tap detached", category: .playback)
+            MidgarLog.info("Equalizer tap detached", category: .playback)
         }
     }
 

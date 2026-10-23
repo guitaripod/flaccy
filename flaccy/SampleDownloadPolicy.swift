@@ -43,6 +43,7 @@ nonisolated enum SampleDownloadPolicy {
         }
     }
 
+    /// Lets the first path update through. `claimed` is read and written only under `lock`.
     private final class OnceGate: @unchecked Sendable {
         private let lock = NSLock()
         private var claimed = false

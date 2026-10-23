@@ -1,3 +1,4 @@
+import MidgarCore
 #if DEBUG && targetEnvironment(simulator)
 import FlaccyCore
 import Foundation
@@ -8,7 +9,7 @@ import Foundation
 /// replaces its original under another extension, a file of the wrong size or
 /// on an unsafe path is refused, and removal by stem empties the folder.
 /// Launch with `--exercise-receive`; read the app log afterwards.
-enum WatchReceiveExercise {
+nonisolated enum WatchReceiveExercise {
 
     static let launchArgument = "--exercise-receive"
 
@@ -52,7 +53,7 @@ enum WatchReceiveExercise {
         report("the phone removes a track by stem", !exists(encoded) && !paths(receiver).contains(encoded))
         try? FileManager.default.removeItem(at: documents.appendingPathComponent("Exercise Artist"))
         try? FileManager.default.removeItem(at: staging)
-        AppLogger.info("WatchReceiveExercise finished", category: .connectivity)
+        MidgarLog.info("WatchReceiveExercise finished", category: .connectivity)
     }
 
     private static var documents: URL {
@@ -79,7 +80,7 @@ enum WatchReceiveExercise {
     }
 
     private static func report(_ expectation: String, _ passed: Bool) {
-        AppLogger.info("WatchReceiveExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .connectivity)
+        MidgarLog.info("WatchReceiveExercise \(passed ? "PASS" : "FAIL"): \(expectation)", category: .connectivity)
     }
 }
 #endif

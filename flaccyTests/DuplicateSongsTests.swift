@@ -3,7 +3,7 @@ import XCTest
 
 /// The same recording filed on several releases collapses to one row, while
 /// different recordings of a song and different songs of one name stay apart.
-final class DuplicateSongsTests: XCTestCase {
+nonisolated final class DuplicateSongsTests: XCTestCase {
 
     private func track(
         _ title: String, artist: String = "Aurelia Vance", album: String, duration: TimeInterval = 215,
@@ -17,7 +17,7 @@ final class DuplicateSongsTests: XCTestCase {
         )
     }
 
-    func testSameSongOnTwoAlbumsCollapsesToOne() {
+    @MainActor func testSameSongOnTwoAlbumsCollapsesToOne() {
         let single = track("Glass Harbor", album: "Glass Harbor - Single", id: 1)
         let album = track("Glass Harbor", album: "Tidewater", duration: 216, id: 2)
         let result = LibraryHygiene.collapsingDuplicateSongs([single, album])
@@ -25,46 +25,46 @@ final class DuplicateSongsTests: XCTestCase {
         XCTAssertEqual(result.copies.values.first?.count, 1)
     }
 
-    func testRemasterSuffixIsTheSameSong() {
+    @MainActor func testRemasterSuffixIsTheSameSong() {
         let original = track("Glass Harbor", album: "Tidewater", id: 1)
         let remaster = track("Glass Harbor (2011 Remaster)", album: "Tidewater Deluxe", id: 2)
         XCTAssertEqual(LibraryHygiene.collapsingDuplicateSongs([original, remaster]).tracks.count, 1)
     }
 
-    func testLiveAndAcousticVersionsStaySeparate() {
+    @MainActor func testLiveAndAcousticVersionsStaySeparate() {
         let studio = track("Glass Harbor", album: "Tidewater", id: 1)
         let live = track("Glass Harbor (Live)", album: "Live at the Pier", id: 2)
         let acoustic = track("Glass Harbor - Acoustic", album: "Stripped", id: 3)
         XCTAssertEqual(LibraryHygiene.collapsingDuplicateSongs([studio, live, acoustic]).tracks.count, 3)
     }
 
-    func testDifferentLengthsAreDifferentRecordings() {
+    @MainActor func testDifferentLengthsAreDifferentRecordings() {
         let radio = track("Glass Harbor", album: "Singles", duration: 190, id: 1)
         let album = track("Glass Harbor", album: "Tidewater", duration: 261, id: 2)
         XCTAssertEqual(LibraryHygiene.collapsingDuplicateSongs([radio, album]).tracks.count, 2)
     }
 
-    func testSameTitleByDifferentArtistsStaysSeparate() {
+    @MainActor func testSameTitleByDifferentArtistsStaysSeparate() {
         let first = track("Intro", artist: "Aurelia Vance", album: "Tidewater", id: 1)
         let second = track("Intro", artist: "Corvid & Crane", album: "Roost", id: 2)
         XCTAssertEqual(LibraryHygiene.collapsingDuplicateSongs([first, second]).tracks.count, 2)
     }
 
-    func testKeeperIsTheHighestFidelityCopy() {
+    @MainActor func testKeeperIsTheHighestFidelityCopy() {
         let lossy = track("Glass Harbor", album: "Hits", codec: "MP3", bitDepth: nil, id: 1)
         let hiRes = track("Glass Harbor", album: "Tidewater", codec: "FLAC", bitDepth: 24, id: 2)
         let result = LibraryHygiene.collapsingDuplicateSongs([lossy, hiRes])
         XCTAssertEqual(result.tracks, [hiRes])
     }
 
-    func testPreferredCopyBeatsFidelity() {
+    @MainActor func testPreferredCopyBeatsFidelity() {
         let lossy = track("Glass Harbor", album: "Hits", codec: "MP3", bitDepth: nil, id: 1)
         let hiRes = track("Glass Harbor", album: "Tidewater", codec: "FLAC", bitDepth: 24, id: 2)
         let result = LibraryHygiene.collapsingDuplicateSongs([lossy, hiRes]) { $0 == lossy ? 1 : 0 }
         XCTAssertEqual(result.tracks, [lossy])
     }
 
-    func testOrderOfSurvivorsIsPreserved() {
+    @MainActor func testOrderOfSurvivorsIsPreserved() {
         let a = track("Alpha", album: "One", id: 1, number: 1)
         let b = track("Bravo", album: "One", id: 2, number: 2)
         let aCopy = track("Alpha", album: "Two", codec: "MP3", bitDepth: nil, id: 3, number: 1)
@@ -72,7 +72,7 @@ final class DuplicateSongsTests: XCTestCase {
         XCTAssertEqual(result.tracks, [a, b])
     }
 
-    func testNoDuplicatesReturnsInputUntouched() {
+    @MainActor func testNoDuplicatesReturnsInputUntouched() {
         let tracks = [track("Alpha", album: "One", id: 1), track("Bravo", album: "One", id: 2, number: 2)]
         let result = LibraryHygiene.collapsingDuplicateSongs(tracks)
         XCTAssertEqual(result.tracks, tracks)

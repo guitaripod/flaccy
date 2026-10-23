@@ -38,7 +38,7 @@ final class ScreenshotTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testDarkTour() throws {
+    @MainActor func testDarkTour() throws {
         let app = launchApp()
         capture(app, wait: 8, name: "dark-01-library-grid")
 
@@ -86,7 +86,7 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 4, name: "dark-09-listening-guide")
     }
 
-    func testSongsListShot() throws {
+    @MainActor func testSongsListShot() throws {
         let app = launchApp()
         sleep(6)
         tap(app.buttons[ID.tabSongs], "Songs tab")
@@ -98,7 +98,7 @@ final class ScreenshotTests: XCTestCase {
         cycleLayout(app, showing: "compact")
     }
 
-    func testPaywallShot() throws {
+    @MainActor func testPaywallShot() throws {
         let app = launchApp()
         sleep(6)
         openSettings(app)
@@ -106,7 +106,7 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 4, name: "dark-11-paywall")
     }
 
-    func testSettingsShot() throws {
+    @MainActor func testSettingsShot() throws {
         let app = launchApp()
         sleep(6)
         openSettings(app)
@@ -122,7 +122,7 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 2, name: "settings-04-scrolled")
     }
 
-    func testSortSanity() throws {
+    @MainActor func testSortSanity() throws {
         let app = launchApp()
         sleep(6)
         openSortMenuAndPick(app, option: "artist")
@@ -140,7 +140,7 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 2, name: "sort-artists-name")
     }
 
-    func testLightTour() throws {
+    @MainActor func testLightTour() throws {
         let app = launchApp()
         openSettings(app)
         tap(app.buttons[ID.appearance("light")], "Light appearance segment")
@@ -159,7 +159,7 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 4, name: "light-09-listening-guide")
     }
 
-    private func openSortMenuAndPick(
+    @MainActor private func openSortMenuAndPick(
         _ app: XCUIApplication, option: String, file: StaticString = #filePath, line: UInt = #line
     ) {
         tap(app.buttons[ID.sort], "sort menu button", file: file, line: line)
@@ -171,13 +171,13 @@ final class ScreenshotTests: XCTestCase {
     /// Advances the layout toggle one step, asserting it is showing the mode the
     /// tour expects so a drifted starting layout fails instead of shooting the
     /// wrong density.
-    private func cycleLayout(
+    @MainActor private func cycleLayout(
         _ app: XCUIApplication, showing mode: String, file: StaticString = #filePath, line: UInt = #line
     ) {
         tap(app.buttons[ID.layoutToggle(showing: mode)], "layout toggle showing \(mode)", file: file, line: line)
     }
 
-    private func launchApp() -> XCUIApplication {
+    @MainActor private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments.append("--seed-screenshots")
         app.launchArguments.append(contentsOf: Self.languageArguments)
@@ -209,7 +209,7 @@ final class ScreenshotTests: XCTestCase {
         return ["-AppleLanguages", "(\(language))", "-AppleLocale", locale]
     }
 
-    private func capture(
+    @MainActor private func capture(
         _ app: XCUIApplication, wait seconds: UInt32, name: String,
         file: StaticString = #filePath, line: UInt = #line
     ) {
@@ -228,39 +228,39 @@ final class ScreenshotTests: XCTestCase {
         }
     }
 
-    private func openAlbum(
+    @MainActor private func openAlbum(
         _ app: XCUIApplication, named title: String, file: StaticString = #filePath, line: UInt = #line
     ) {
         tapScrolling(app.staticTexts[title].firstMatch, "album \(title)", in: app, file: file, line: line)
     }
 
-    private func startPlayback(
+    @MainActor private func startPlayback(
         _ app: XCUIApplication, trackNamed title: String, file: StaticString = #filePath, line: UInt = #line
     ) {
         tapScrolling(app.staticTexts[title].firstMatch, "track \(title)", in: app, file: file, line: line)
         sleep(3)
     }
 
-    private func expandNowPlaying(
+    @MainActor private func expandNowPlaying(
         _ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line
     ) {
         tap(app.buttons[ID.playerExpand], "mini player", file: file, line: line)
         sleep(3)
     }
 
-    private func collapseNowPlaying(
+    @MainActor private func collapseNowPlaying(
         _ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line
     ) {
         tap(app.buttons[ID.playerCollapse], "collapse player control", file: file, line: line)
         sleep(2)
     }
 
-    private func dismissSheet(_ app: XCUIApplication) {
+    @MainActor private func dismissSheet(_ app: XCUIApplication) {
         app.swipeDown(velocity: .fast)
         sleep(2)
     }
 
-    private func popToRoot(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+    @MainActor private func popToRoot(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         for _ in 0..<3 {
             if app.buttons[ID.tabAlbums].isHittable { break }
             let back = app.navigationBars.buttons.element(boundBy: 0)
@@ -275,7 +275,7 @@ final class ScreenshotTests: XCTestCase {
         )
     }
 
-    private func openSettings(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+    @MainActor private func openSettings(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         tap(app.buttons[ID.settings], "settings button", file: file, line: line)
         XCTAssertTrue(
             app.tables[ID.settingsTable].waitForExistence(timeout: 5),
@@ -291,7 +291,7 @@ final class ScreenshotTests: XCTestCase {
     /// further down the library does not merely start un-hittable — it does not
     /// exist yet, and half-screen steps keep it from being scrolled straight
     /// past between two checks.
-    private func scrollTo(
+    @MainActor private func scrollTo(
         _ element: XCUIElement, _ description: String, in app: XCUIApplication,
         file: StaticString = #filePath, line: UInt = #line
     ) {
@@ -309,7 +309,7 @@ final class ScreenshotTests: XCTestCase {
         )
     }
 
-    private func tapScrolling(
+    @MainActor private func tapScrolling(
         _ element: XCUIElement, _ description: String, in app: XCUIApplication,
         file: StaticString = #filePath, line: UInt = #line
     ) {
@@ -320,7 +320,7 @@ final class ScreenshotTests: XCTestCase {
     /// Every tap in the tour goes through here: a step that cannot reach its
     /// target fails the test rather than degrading into a screenshot of
     /// whatever screen happened to be showing.
-    private func tap(
+    @MainActor private func tap(
         _ element: XCUIElement, _ description: String, timeout: TimeInterval = 10,
         file: StaticString = #filePath, line: UInt = #line
     ) {
@@ -332,7 +332,7 @@ final class ScreenshotTests: XCTestCase {
         element.tap()
     }
 
-    private func waitUntilHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+    @MainActor private func waitUntilHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
             if element.exists && element.isHittable { return true }

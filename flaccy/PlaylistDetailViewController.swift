@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import UIKit
 
 final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
@@ -431,7 +432,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
                 self.loadTracks()
                 ToastView.show(String(localized: "Removed \(ids.count) duplicates"), in: self.view, style: .success)
             } catch {
-                AppLogger.error("Failed to remove duplicates: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Failed to remove duplicates: \(error.localizedDescription)", category: .database)
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
             }
         })
@@ -454,7 +455,7 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
             updateOverflowMenu()
             hasLoadedOnce = true
         } catch {
-            AppLogger.error("Failed to load playlist tracks: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to load playlist tracks: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -561,7 +562,7 @@ extension PlaylistDetailViewController: UITableViewDataSource {
             updateMosaic()
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } catch {
-            AppLogger.error("Failed to remove track from playlist: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to remove track from playlist: \(error.localizedDescription)", category: .database)
         }
     }
 
@@ -581,7 +582,7 @@ extension PlaylistDetailViewController: UITableViewDataSource {
             do {
                 try db.reorderPlaylistTrack(id: recordId, newPosition: index)
             } catch {
-                AppLogger.error("Failed to reorder playlist track: \(error.localizedDescription)", category: .database)
+                MidgarLog.error("Failed to reorder playlist track: \(error.localizedDescription)", category: .database)
             }
         }
         updateMosaic()
@@ -712,7 +713,7 @@ extension PlaylistDetailViewController: UITableViewDelegate {
             updateMosaic()
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } catch {
-            AppLogger.error("Failed to remove track from playlist: \(error.localizedDescription)", category: .database)
+            MidgarLog.error("Failed to remove track from playlist: \(error.localizedDescription)", category: .database)
         }
     }
 }

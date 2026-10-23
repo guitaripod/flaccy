@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import Combine
 import FlaccyCore
 
@@ -189,7 +190,7 @@ final class SongsTableViewModel {
         if let natural = newFilter.naturalSort {
             storeSortTiers(natural)
         }
-        AppLogger.info("Songs filter: \(newFilter.rawValue)", category: .ui)
+        MidgarLog.info("Songs filter: \(newFilter.rawValue)", category: .ui)
         publish()
     }
 

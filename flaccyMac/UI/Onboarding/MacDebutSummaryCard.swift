@@ -169,7 +169,7 @@ final class MacDebutSummaryCard: NSView {
 /// has to be asked of `albumInfo`. The work happens off the main thread because
 /// the same numbers are written to `libraryDebut` and read back in Settings
 /// forever after, and a wrong-but-fast answer would be wrong forever.
-enum MacDebutSummaryBuilder {
+nonisolated enum MacDebutSummaryBuilder {
 
     @MainActor
     static func build() async -> LibraryDebutSummary {

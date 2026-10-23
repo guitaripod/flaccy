@@ -1,4 +1,5 @@
 import Foundation
+import MidgarCore
 import UserNotifications
 
 /// The three opt-in reminders around the end of the trial — two days before,
@@ -41,15 +42,15 @@ final class TrialReminderScheduler {
         do {
             granted = try await center.requestAuthorization(options: [.alert, .sound])
         } catch {
-            AppLogger.error("Trial reminder authorization failed: \(error.localizedDescription)", category: .purchases)
+            MidgarLog.error("Trial reminder authorization failed: \(error.localizedDescription)", category: .purchases)
             granted = false
         }
         UserDefaults.standard.set(granted, forKey: Self.enabledKey)
         guard granted else {
-            AppLogger.warning("Trial reminders requested but notifications are denied", category: .purchases)
+            MidgarLog.notice("Trial reminders requested but notifications are denied", category: .purchases)
             return false
         }
-        AppLogger.info("Trial reminders enabled", category: .purchases)
+        MidgarLog.info("Trial reminders enabled", category: .purchases)
         await refresh()
         return true
     }
@@ -57,7 +58,7 @@ final class TrialReminderScheduler {
     func disable() {
         cancelAll()
         UserDefaults.standard.set(false, forKey: Self.enabledKey)
-        AppLogger.info("Trial reminders disabled", category: .purchases)
+        MidgarLog.info("Trial reminders disabled", category: .purchases)
     }
 
     /// Rebuilds the pending reminders from the current trial phase: all three
@@ -79,7 +80,7 @@ final class TrialReminderScheduler {
             return
         }
         guard !manager.trialClockIsOverridden else {
-            AppLogger.info("Trial reminder scheduling skipped under --trial-day", category: .purchases)
+            MidgarLog.info("Trial reminder scheduling skipped under --trial-day", category: .purchases)
             return
         }
         let start = manager.trialStart
@@ -144,9 +145,9 @@ final class TrialReminderScheduler {
         for request in Self.requests(for: reminders, welcomeBackEnds: welcomeBackEnds) {
             do {
                 try await center.add(request)
-                AppLogger.info("Scheduled \(request.identifier) trial reminder", category: .purchases)
+                MidgarLog.info("Scheduled \(request.identifier) trial reminder", category: .purchases)
             } catch {
-                AppLogger.error("Scheduling \(request.identifier) failed: \(error.localizedDescription)", category: .purchases)
+                MidgarLog.error("Scheduling \(request.identifier) failed: \(error.localizedDescription)", category: .purchases)
             }
         }
     }

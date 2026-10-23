@@ -1,4 +1,5 @@
 import FlaccyCore
+import MidgarCore
 import Foundation
 import WatchConnectivity
 import WatchKit
@@ -21,7 +22,7 @@ enum WatchBackgroundTasks {
         for task in tasks {
             if let connectivityTask = task as? WKWatchConnectivityRefreshBackgroundTask {
                 heldTasks.append(connectivityTask)
-                AppLogger.info("Holding connectivity background task (\(heldTasks.count) held)", category: .connectivity)
+                MidgarLog.info("Holding connectivity background task (\(heldTasks.count) held)", category: .connectivity)
             } else if let snapshotTask = task as? WKSnapshotRefreshBackgroundTask {
                 snapshotTask.setTaskCompleted(restoredDefaultState: true, estimatedSnapshotExpiration: .distantFuture, userInfo: nil)
             } else {
@@ -59,6 +60,6 @@ enum WatchBackgroundTasks {
         let finished = heldTasks
         heldTasks.removeAll()
         for task in finished { task.setTaskCompletedWithSnapshot(false) }
-        AppLogger.info("Completed \(finished.count) connectivity background tasks", category: .connectivity)
+        MidgarLog.info("Completed \(finished.count) connectivity background tasks", category: .connectivity)
     }
 }

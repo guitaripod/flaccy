@@ -1,4 +1,5 @@
 import AVFoundation
+import MidgarCore
 import AVKit
 import Combine
 import UIKit
@@ -283,7 +284,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             : nil
         let desired = AdaptiveLayout.playerLayout(size: size, horizontalFold: view.activeHorizontalFold, focus: focus)
         if desired != layoutMode {
-            AppLogger.debug("Now Playing layout \(desired) for \(size), fold \(String(describing: view.activeHorizontalFold))", category: .ui)
+            MidgarLog.debug("Now Playing layout \(desired) for \(size), fold \(String(describing: view.activeHorizontalFold))", category: .ui)
             layoutMode = desired
             switch desired {
             case .laptop(let top, let bottom): activateLayoutMode(desired, foldTop: top, foldBottom: bottom)
@@ -1249,7 +1250,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         staleScrubTicks += 1
         guard staleScrubTicks >= 2 else { return }
         staleScrubTicks = 0
-        AppLogger.warning("Recovering stale scrub via progress watchdog", category: .ui)
+        MidgarLog.notice("Recovering stale scrub via progress watchdog", category: .ui)
         scrubber.abortScrub()
         scrubEnded(at: scrubber.currentTime)
     }
@@ -1472,7 +1473,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         if isPaneMode { onFocusRequest?(target != .artwork) }
         setupAccessibilityOrder()
         UIAccessibility.post(notification: .layoutChanged, argument: target == .artwork ? artworkContainer : compactHeader)
-        AppLogger.info("Now Playing center state -> \(target)", category: .ui)
+        MidgarLog.info("Now Playing center state -> \(target)", category: .ui)
     }
 
     private func makeStateChild(for state: CenterState) -> UIViewController? {
@@ -1603,7 +1604,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func scrubEnded(at time: TimeInterval) {
-        AppLogger.debug("scrubEnded time=\(time) isSeeking=\(isSeeking)", category: .ui)
+        MidgarLog.debug("scrubEnded time=\(time) isSeeking=\(isSeeking)", category: .ui)
         if presentedViewController == nil, view.window != nil {
             backdropView.setPaused(false)
         }
@@ -1638,7 +1639,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             guard let self else { return }
             self.isSeeking = false
             guard generation == self.seekGeneration else { return }
-            AppLogger.debug(
+            MidgarLog.debug(
                 "seek complete target=\(target) chase=\(self.chaseTime) scrubbing=\(self.scrubber.isScrubbing)",
                 category: .ui
             )
@@ -2052,7 +2053,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     }
 
     private func fireTrackChange(direction: CGFloat) {
-        AppLogger.info(
+        MidgarLog.info(
             "Interactive track change committed (\(direction < 0 ? "next" : "previous"))", category: .ui
         )
         if direction < 0 {

@@ -1,4 +1,5 @@
 import BackgroundTasks
+import MidgarCore
 import FlaccyCore
 import UIKit
 
@@ -71,7 +72,7 @@ final class WatchSyncBackgroundTask {
             Task { @MainActor in WatchSyncBackgroundTask.shared.adopt(task) }
         }
         guard registered else {
-            AppLogger.warning("Continued processing task was not registered; using a plain background task", category: .connectivity)
+            MidgarLog.notice("Continued processing task was not registered; using a plain background task", category: .connectivity)
             beginLegacyTask()
             return
         }
@@ -81,9 +82,9 @@ final class WatchSyncBackgroundTask {
             } else {
                 try BGTaskScheduler.shared.submit(request)
             }
-            AppLogger.info("Continued processing task submitted for \(total) songs", category: .connectivity)
+            MidgarLog.info("Continued processing task submitted for \(total) songs", category: .connectivity)
         } catch {
-            AppLogger.warning("Continued processing task refused: \(error.localizedDescription)", category: .connectivity)
+            MidgarLog.notice("Continued processing task refused: \(error.localizedDescription)", category: .connectivity)
             beginLegacyTask()
         }
     }
@@ -99,7 +100,7 @@ final class WatchSyncBackgroundTask {
             Task { @MainActor in self?.handleExpiration(of: task) }
         }
         apply(to: task)
-        AppLogger.info("Continued processing task started", category: .connectivity)
+        MidgarLog.info("Continued processing task started", category: .connectivity)
     }
 
     @available(iOS 26.0, *)
@@ -114,7 +115,7 @@ final class WatchSyncBackgroundTask {
 
     @available(iOS 26.0, *)
     private func handleExpiration(of task: BGContinuedProcessingTask) {
-        AppLogger.info("Continued processing task ended by the system or the person", category: .connectivity)
+        MidgarLog.info("Continued processing task ended by the system or the person", category: .connectivity)
         isRunning = false
         holder = nil
         task.setTaskCompleted(success: true)

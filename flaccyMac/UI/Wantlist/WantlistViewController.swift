@@ -1,4 +1,5 @@
 import AppKit
+import MidgarCore
 import AVFoundation
 import Combine
 
@@ -118,7 +119,7 @@ final class WantlistViewController: NSViewController {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-        AppLogger.info("WantlistViewController deinit", category: .ui)
+        MidgarLog.info("WantlistViewController deinit", category: .ui)
     }
 
     @objc private func storeChanged() {
@@ -662,6 +663,6 @@ final class WantlistPreviewController {
         self.player = player
         activeButton?.setSymbol("stop.circle")
         player.play()
-        AppLogger.info("Wantlist preview started: \(key)", category: .playback)
+        MidgarLog.info("Wantlist preview started: \(key)", category: .playback)
     }
 }
