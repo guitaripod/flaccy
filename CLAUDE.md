@@ -72,7 +72,7 @@
 3. `Secrets.swift` is gitignored and will not be committed
 4. `xcodegen generate` writes the gitignored `flaccy.xcodeproj` from `project.yml` (shared templates in `build/xcodegen/midgar-app.yml`). Build `flaccy`, `flaccyMac` or `flaccyWatch Watch App` from it; `midgar ship` runs XcodeGen itself.
 
-## Midgar platform (MidgarKit 4.3.1)
+## Midgar platform (MidgarKit from the monorepo by path)
 - **Build**: Swift 6 language mode with strict concurrency, approachable concurrency and MainActor default isolation on every Apple target, warnings as errors in Release. FlaccyCore is Swift 6 too and nonisolated. Types that work off the main thread are `nonisolated`; a closure that Apple calls on its own queue (a Combine operator on a notification, `MPRemoteCommand`, `MPMediaItemArtwork`) must not inherit MainActor, or Swift 6 traps at runtime: use a `nonisolated` function, `@Sendable`, or `onMainActorSync`.
 - **Identity and portal**: `FlaccyMidgar` (iOS and Mac) builds the Midgar ID (`MidgarIdentity`, keychain groups `$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)` then `$(AppIdentifierPrefix)cc.midgarcorp.shared`, no App Attest entitlement), the portal configuration with the authorized client for Settings, and MidgarSignals. It runs from the app delegates before anything else. The watch app uses none of it.
 - **Gateway**: `FlaccyAPIClient` is the only code that talks to flaccy-api, at `https://api.midgarcorp.cc/v1/flaccy/...` with `X-App-ID: flaccy` (AI metadata proxy, Last.fm signing, the sample album). The AI route reads the proxy's string `error` codes from the raw reply, which `MidgarHTTPClient` does not keep for a 429, so that one call uses a plain `URLSession`.

@@ -129,7 +129,7 @@ Building without the `FLACCY_LASTFM_KEY` env var just hides scrobbling (Last.fm 
 
 ## Stack
 
-Apple: Programmatic UIKit & AppKit · SwiftUI (watch) · MVVM · GRDB (SQLite) · AVQueuePlayer · MusicKit · StoreKit · Combine — dependencies: [GRDB.swift](https://github.com/groue/GRDB.swift), [MidgarKit](https://github.com/guitaripod/MidgarKit), and local `FlaccyCore` SPM
+Apple: Programmatic UIKit & AppKit · SwiftUI (watch) · MVVM · GRDB (SQLite) · AVQueuePlayer · MusicKit · StoreKit · Combine — dependencies: [GRDB.swift](https://github.com/groue/GRDB.swift), MidgarKit (`packages/MidgarKit` in the monorepo, by path), and local `FlaccyCore` SPM
 
 Linux: Rust · gtk4-rs + libadwaita · GStreamer (playbin3 + gtk4 paintable) · rusqlite · lofty · mpris-server · cairo · serde/toml · image (jpeg/png/webp/bmp) — optional `yt-dlp`/`ffmpeg`/`ollama` at runtime
 
