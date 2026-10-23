@@ -91,12 +91,12 @@ flaccy/                 iOS app (programmatic UIKit, MVVM)
 flaccyMac/              macOS app (programmatic AppKit, Liquid Glass, MVVM)
 flaccyWatch Watch App/  standalone watchOS app (SwiftUI + Observation)
 FlaccyCore/             shared SPM package: LibraryScanner, TrackOrdering, LibraryLoadProgress,
-                        AudioMetadataReader, MediaItem, AudioPlaybackEngine, AppLogger, SyncProtocol
+                        AudioMetadataReader, MediaItem, AudioPlaybackEngine, logging categories, SyncProtocol
 linux/                  Linux app (Rust, GTK4 + libadwaita + GStreamer + rusqlite + lofty + mpris-server)
 marketing/              App Store screenshots (localized, 10 languages)
 Design/                 app icon and screenshot compositors
-scripts/                add_mac_target.rb, add_watch_target.rb, build-mac.sh (rsync + xcodebuild bridge)
-flaccy.xcodeproj        Xcode project (iOS + Mac + Watch targets)
+scripts/                build-mac.sh (rsync + xcodebuild bridge), rc-setup.py, check-strings.py
+project.yml             XcodeGen spec (iOS + Mac + Watch + test targets); flaccy.xcodeproj is generated and gitignored
 ```
 
 ## Setup (Apple platforms)
@@ -106,6 +106,7 @@ git clone https://github.com/guitaripod/flaccy.git
 cd flaccy
 cp flaccy/Secrets.swift.example flaccy/Secrets.swift
 # Edit Secrets.swift with your Last.fm API key (optional — app works without it; the shared secret is never in the app, flaccy-api signs requests)
+xcodegen generate
 open flaccy.xcodeproj
 ```
 
