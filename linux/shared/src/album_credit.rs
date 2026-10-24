@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/AlbumCredit.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/AlbumCredit.swift`.
 //!
 //! Who a *release* is filed under, as opposed to who performs each track.
 //! Grouping albums by the per-track credit shatters every compilation,

@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerProfile.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerProfile.swift`.
 //!
 //! A profile is either a graphic curve, the ten gains a person placed at the
 //! ISO centres, or a parametric list of filters. Graphic filter gains are

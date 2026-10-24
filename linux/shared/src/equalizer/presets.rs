@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerPresets.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerPresets.swift`.
 //!
 //! The sixteen built-in curves, as the ten gains a person would read off the
 //! sliders. They are starting points tuned by ear, not taken from any other

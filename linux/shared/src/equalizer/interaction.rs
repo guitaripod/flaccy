@@ -1,4 +1,4 @@
-//! Mirrors `flaccy/EqualizerPlotInteraction.swift`.
+//! Mirrors `Features/Equalizer/EqualizerPlotInteraction.swift`.
 //!
 //! How a pointer edits the curve, written once for every client. In Simple mode
 //! a press grabs the column it lands in and moves that band straight up and

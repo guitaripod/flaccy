@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerState.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerState.swift`.
 //!
 //! Everything the equalizer remembers between launches: the master switch, the
 //! profile used by default, the person's own profiles, and which output keeps

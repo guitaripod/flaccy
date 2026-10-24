@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/Headroom.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/Headroom.swift`.
 //!
 //! How much to turn the signal down so the equalizer's boosts cannot clip. The
 //! preamp is minus the peak of the summed response, rounded up to the next 0.1

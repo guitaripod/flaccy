@@ -1,7 +1,7 @@
 //! The equalizer as the rest of the app sees it: the saved state, the output it
 //! is following, and the element that puts the curve into the audio.
 //!
-//! Mirrors `flaccy/EqualizerEngine.swift`. Every change is published as a new
+//! Mirrors `Features/Equalizer/EqualizerEngine.swift`. Every change is published as a new
 //! immutable config; the element's kernel ramps to it, so nothing clicks. A
 //! screen that wants the live spectrum asks for analysis, which keeps the
 //! element processing (passing audio through) while the screen is open.

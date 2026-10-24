@@ -3,7 +3,7 @@
 # The Linux box authors; the Mac (over Tailscale) owns the iOS/macOS/watchOS SDKs.
 # scripts/test-shared.sh gates the builds: a cross-language change that breaks
 # the FlaccyCore/flaccy-shared parity proof must never reach a device build.
-# The Mac keeps its own gitignored flaccy/Secrets.swift, so the sync must never
+# The Mac keeps its own gitignored App/Secrets.swift, so the sync must never
 # delete it; everything else mirrors this tree exactly, uncommitted work included.
 # After an iOS or macOS build, scripts/check-strings.py names every compiled
 # string the catalog lacks or has not translated — a report, never a failure.
@@ -21,7 +21,7 @@ RSYNC_EXCLUDES=(
     --exclude 'DerivedData'
     --exclude '.build'
     --exclude 'linux/target'
-    --exclude 'flaccy/Secrets.swift'
+    --exclude 'App/Secrets.swift'
 )
 
 if [[ "$(uname -n)" != "macbook" ]]; then

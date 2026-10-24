@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/LibrarySurface.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/LibrarySurface.swift`.
 //!
 //! Which launch chrome a client shows is one routing decision in tested shared
 //! logic, not two booleans derived at delivery time — the frozen-1%-ring bug

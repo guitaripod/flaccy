@@ -2,7 +2,7 @@
 //! stacks, when it moves into a rail, how many columns the songs flow over and
 //! which layouts a page offers. Pure, so every client decides the same way.
 //!
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/TrackPageLayout.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/TrackPageLayout.swift`.
 
 use std::ops::Range;
 

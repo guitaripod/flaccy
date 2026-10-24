@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerProfileText.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerProfileText.swift`.
 //!
 //! Equalizer profiles as text: the format Equalizer APO and AutoEq publish, so a
 //! headphone correction copied from the web imports as it is and a profile

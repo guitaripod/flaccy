@@ -35,7 +35,7 @@ let package = Package(
         .library(name: "FlaccyCore", targets: ["FlaccyCore"])
     ] + engineProducts,
     dependencies: [
-        .package(path: "../../../packages/MidgarKit")
+        .package(path: "../../../../packages/MidgarKit")
     ] + engineDependencies,
     targets: [
         .target(

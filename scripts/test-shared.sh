@@ -23,8 +23,8 @@ SWIFT=(swift)
 if [[ "$(uname)" == "Darwin" ]]; then
     SWIFT=(xcrun swift)
 fi
-echo "== ${SWIFT[*]} test --package-path FlaccyCore"
-"${SWIFT[@]}" test --package-path FlaccyCore 2>&1 | tee "$SWIFT_LOG"
+echo "== ${SWIFT[*]} test --package-path Core/FlaccyCore"
+"${SWIFT[@]}" test --package-path Core/FlaccyCore 2>&1 | tee "$SWIFT_LOG"
 swift_status=${PIPESTATUS[0]}
 
 echo

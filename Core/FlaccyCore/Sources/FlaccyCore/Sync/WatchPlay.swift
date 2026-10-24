@@ -74,7 +74,7 @@ public struct WatchPlayEntry: Sendable, Equatable {
 public enum WatchPlayRule {
 
     /// Mirrors `meetsScrobbleCriteria` and its callers in
-    /// `flaccy/AudioPlayer.swift`: a track with a known duration counts once
+    /// `Features/Playback/AudioPlayer.swift`: a track with a known duration counts once
     /// `min(240, max(30, duration / 2))` seconds have been played, so tracks
     /// shorter than 30 seconds never qualify.
     public static func qualifies(playedSeconds: TimeInterval, trackDuration: TimeInterval) -> Bool {

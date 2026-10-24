@@ -87,10 +87,11 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 ## Repository layout
 
 ```
-flaccy/                 iOS app (programmatic UIKit, MVVM)
-flaccyMac/              macOS app (programmatic AppKit, Liquid Glass, MVVM)
-flaccyWatch Watch App/  standalone watchOS app (SwiftUI + Observation)
-FlaccyCore/             shared SPM package: LibraryScanner, TrackOrdering, LibraryLoadProgress,
+App/, Features/, Resources/  iOS app (programmatic UIKit, MVVM), shared with the Mac where not excluded
+Platforms/mac/          macOS app (programmatic AppKit, Liquid Glass, MVVM)
+Platforms/watch/        standalone watchOS app (SwiftUI + Observation)
+Tests/                  unit and UI test targets
+Core/FlaccyCore/        shared SPM package: LibraryScanner, TrackOrdering, LibraryLoadProgress,
                         AudioMetadataReader, MediaItem, AudioPlaybackEngine, logging categories, SyncProtocol
 linux/                  Linux app (Rust, GTK4 + libadwaita + GStreamer + rusqlite + lofty + mpris-server)
 marketing/              App Store screenshots (localized, 10 languages)
@@ -104,7 +105,7 @@ project.yml             XcodeGen spec (iOS + Mac + Watch + test targets); flaccy
 ```
 git clone https://github.com/guitaripod/flaccy.git
 cd flaccy
-cp flaccy/Secrets.swift.example flaccy/Secrets.swift
+cp App/Secrets.swift.example App/Secrets.swift
 # Edit Secrets.swift with your Last.fm API key (optional — app works without it; the shared secret is never in the app, flaccy-api signs requests)
 xcodegen generate
 open flaccy.xcodeproj

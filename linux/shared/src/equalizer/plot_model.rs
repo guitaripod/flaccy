@@ -1,4 +1,4 @@
-//! Mirrors `flaccy/EqualizerPlotModel.swift`.
+//! Mirrors `Features/Equalizer/EqualizerPlotModel.swift`.
 //!
 //! The state behind the response curve: the bands to draw, the points to put on
 //! them, and the easing that lets a preset glide into place and the spectrum

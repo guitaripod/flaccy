@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/ArtworkLocalRules.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/ArtworkLocalRules.swift`.
 //!
 //! Which images lying next to a release's music files are worth offering as its
 //! cover, and in what order. File access stays with each client; this is the

@@ -1,5 +1,5 @@
 //! Draws the response curve with Cairo, operation for operation as
-//! `flaccy/EqualizerPlotRenderer.swift` does with Core Graphics: the grid, the
+//! `Features/Equalizer/EqualizerPlotRenderer.swift` does with Core Graphics: the grid, the
 //! live spectrum behind the curve, the filled and glowing line, the active
 //! column, the nodes and the value bubble. Cairo has no shadows, so a glow is
 //! a few wider, fainter strokes under the line.

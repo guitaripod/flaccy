@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/EnrichmentJob.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/EnrichmentJob.swift`.
 //!
 //! Enrichment is a durable job, not a phase of a progress bar: one row per
 //! entity, an explicit terminal negative cache, a producer version for

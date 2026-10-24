@@ -22,7 +22,7 @@ settings:
       VALIDATE_PRODUCT: YES
 packages:
   FlaccyCore:
-    path: FlaccyCore
+    path: Core/FlaccyCore
   GRDB:
     url: https://github.com/groue/GRDB.swift.git
     from: 7.0.0
@@ -49,12 +49,16 @@ targets:
     templateAttributes:
       platform: iOS
     sources:
-      - path: flaccy
+      - path: App
         type: syncedFolder
         excludes:
           - Info.plist
           - flaccy-ios.entitlements
           - Secrets.swift.example
+      - path: Features
+        type: syncedFolder
+      - path: Resources
+        type: syncedFolder
     dependencies:
       - package: FlaccyCore
       - package: FlaccyCore
@@ -72,7 +76,7 @@ targets:
       - target: flaccyWatch Watch App
         embed: true
     entitlements:
-      path: flaccy/flaccy-ios.entitlements
+      path: App/flaccy-ios.entitlements
       properties:
         keychain-access-groups: *midgarKeychainGroups
     scheme:
@@ -84,7 +88,7 @@ targets:
         - MidgarIOSApp
       base:
         <<: *appAssets
-        INFOPLIST_FILE: flaccy/Info.plist
+        INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
         INFOPLIST_KEY_UILaunchScreen_Generation: NO
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: NO
@@ -119,145 +123,151 @@ targets:
     templateAttributes:
       platform: macOS
     sources:
-      - path: flaccyMac
+      - path: Platforms/mac
         type: syncedFolder
         excludes:
           - Info.plist
           - flaccyMac.entitlements
-      - path: flaccy
+      - path: App
         type: syncedFolder
         excludes:
           - Info.plist
           - flaccy-ios.entitlements
           - Secrets.swift.example
-          - WatchSyncServiceTransport.swift
-          - AdaptiveLayout.swift
-          - AlbumCell.swift
-          - AlbumDetailViewController.swift
-          - NowPlayingBarsView.swift
-          - AlbumTrackCell.swift
-          - AlbumDetailViewController+Delegates.swift
-          - AlbumDetailViewController+Enrichment.swift
-          - AlbumDetailViewController+Header.swift
-          - AmbientPaletteBackdropView.swift
-          - AppAppearance.swift
           - AppDelegate.swift
-          - ArtistDetailViewController.swift
-          - ArtistListCells.swift
-          - ArtistHeaderCell.swift
-          - ArtistDetailModels.swift
-          - ArtistImageService.swift
-          - ArtworkCropView.swift
-          - ArtworkEditorViewController.swift
-          - Assets.xcassets
-          - ChartsViewController.swift
-          - ComputerTransferGuideViewController.swift
-          - DuplicateCopiesViewController.swift
-          - EnrichmentReportViewController.swift
-          - EqualizerControls.swift
-          - EqualizerCurveView.swift
-          - EqualizerImportViewController.swift
-          - EqualizerPresetsViewController.swift
-          - EqualizerViewController.swift
-          - EqualizerViewController+CurveDelegate.swift
-          - EqualizerViewController+Actions.swift
-          - EqualizerViewController+Advanced.swift
-          - EqualizerViewController+Presets.swift
-          - EqualizerViewController+Layout.swift
-          - FilterChipsView.swift
-          - HeatmapView.swift
-          - IdentifiedSegmentedControl.swift
-          - LibraryDebutSheetController.swift
-          - LibraryDebutSummaryCard.swift
-          - LibraryDebutView.swift
-          - LibraryMosaicView.swift
-          - LibraryStatusBanner.swift
-          - LibraryViewController.swift
-          - LibraryViewController+Binding.swift
-          - PlaylistListCells.swift
-          - LibraryViewController+Delegates.swift
-          - LibraryViewController+ContextMenus.swift
-          - LibraryViewController+Layout.swift
-          - LibraryViewController+DataSource.swift
-          - LibraryViewController+Sorting.swift
-          - LibraryViewController+Sample.swift
-          - LibraryViewController+Banners.swift
-          - LibraryViewController+Debut.swift
-          - LiquidGlass.swift
-          - ListeningClockView.swift
-          - ListeningGuideViewController.swift
-          - LoveButton.swift
-          - LyricsViewController.swift
-          - TimingNoteViews.swift
-          - LyricCells.swift
-          - LyricWipeView.swift
-          - LyricsViewController+Delegates.swift
-          - LyricsViewController+Timing.swift
-          - MarqueeLabel.swift
-          - MiniPlayerView.swift
-          - NowPlayingBackdropView.swift
-          - NowPlayingViewController.swift
-          - NowPlayingViewController+Delegates.swift
-          - NowPlayingViewController+Appearance.swift
-          - NowPlayingViewController+TrackPan.swift
-          - NowPlayingViewController+Morph.swift
-          - NowPlayingViewController+Scrubbing.swift
-          - NowPlayingViewController+CenterState.swift
-          - NowPlayingViewController+State.swift
-          - NowPlayingViewController+Controls.swift
-          - NowPlayingViewController+Views.swift
-          - NowPlayingViewController+Layout.swift
-          - PaywallViewController.swift
-          - PlayerContainerViewController.swift
-          - PlaylistDetailViewController.swift
-          - PrivacyInfo.xcprivacy
-          - QualityBadgeView.swift
-          - QueueViewController.swift
-          - RecapCells.swift
-          - RecapSkeletonView.swift
-          - RecapInsightCells.swift
-          - RecapListCells.swift
-          - RecapProfileCells.swift
-          - AsyncImageView.swift
-          - RecapNotificationScheduler.swift
-          - RecapNotificationsViewController.swift
-          - RecapShareCardView.swift
           - SceneDelegate.swift
-          - ScrubberView.swift
-          - SectionIndexView.swift
-          - SettingsHeaderView.swift
-          - SettingsViewController.swift
-          - SettingsCells.swift
-          - SettingsViewController+Actions.swift
-          - SettingsViewController+Controls.swift
-          - SettingsViewController+Cells.swift
-          - SettingsViewController+Model.swift
-          - SonglinkShareable.swift
-          - StreamingLinksViewController.swift
-          - SystemVolumeSlider.swift
-          - ToastView.swift
-          - TrackContextMenu.swift
-          - TrackGridCell.swift
-          - TrialReminderPrompt.swift
-          - TrialRunwayBannerView.swift
-          - TrialRunwayPresenter.swift
-          - WantlistViewController.swift
-          - WatchPlayIngestor.swift
-          - WatchSyncBackgroundTask.swift
-          - WatchSyncCells.swift
-          - WatchSyncCopy.swift
-          - WatchSyncExercise.swift
-          - WatchSyncHelpViewController.swift
-          - WatchSyncMetrics.swift
-          - WatchSyncReadiness.swift
-          - WatchSyncServiceDemo.swift
-          - WatchSyncService.swift
-          - WatchSyncSizing.swift
-          - WatchSyncStorageMeter.swift
-          - WatchSyncViewController.swift
-          - WatchTranscoder.swift
-          - YearInMusicStoryView.swift
-          - YearInMusicViewController.swift
+          - UI/AdaptiveLayout.swift
+          - UI/AppAppearance.swift
+          - UI/AsyncImageView.swift
+          - UI/FilterChipsView.swift
+          - UI/IdentifiedSegmentedControl.swift
+          - UI/LiquidGlass.swift
+          - UI/LoveButton.swift
+          - UI/MarqueeLabel.swift
+          - UI/NowPlayingBarsView.swift
+          - UI/QualityBadgeView.swift
+          - UI/SectionIndexView.swift
+          - UI/SystemVolumeSlider.swift
+          - UI/ToastView.swift
+          - UI/TrackContextMenu.swift
+          - UI/TrackGridCell.swift
+      - path: Features
+        type: syncedFolder
+        excludes:
+          - AlbumDetail/AlbumDetailViewController+Delegates.swift
+          - AlbumDetail/AlbumDetailViewController+Enrichment.swift
+          - AlbumDetail/AlbumDetailViewController+Header.swift
+          - AlbumDetail/AlbumDetailViewController.swift
+          - AlbumDetail/AlbumTrackCell.swift
+          - AlbumDetail/AmbientPaletteBackdropView.swift
+          - ArtistDetail/ArtistDetailModels.swift
+          - ArtistDetail/ArtistDetailViewController.swift
+          - ArtistDetail/ArtistHeaderCell.swift
+          - ArtistDetail/ArtistImageService.swift
+          - ArtistDetail/ArtistListCells.swift
+          - Artwork/ArtworkCropView.swift
+          - Artwork/ArtworkEditorViewController.swift
+          - Debut/LibraryDebutSheetController.swift
+          - Debut/LibraryDebutSummaryCard.swift
+          - Debut/LibraryDebutView.swift
+          - Enrichment/EnrichmentReportViewController.swift
+          - Equalizer/EqualizerControls.swift
+          - Equalizer/EqualizerCurveView.swift
+          - Equalizer/EqualizerImportViewController.swift
+          - Equalizer/EqualizerPresetsViewController.swift
+          - Equalizer/EqualizerViewController+Actions.swift
+          - Equalizer/EqualizerViewController+Advanced.swift
+          - Equalizer/EqualizerViewController+CurveDelegate.swift
+          - Equalizer/EqualizerViewController+Layout.swift
+          - Equalizer/EqualizerViewController+Presets.swift
+          - Equalizer/EqualizerViewController.swift
+          - Library/AlbumCell.swift
+          - Library/ComputerTransferGuideViewController.swift
+          - Library/DuplicateCopiesViewController.swift
+          - Library/LibraryMosaicView.swift
+          - Library/LibraryStatusBanner.swift
+          - Library/LibraryViewController+Banners.swift
+          - Library/LibraryViewController+Binding.swift
+          - Library/LibraryViewController+ContextMenus.swift
+          - Library/LibraryViewController+DataSource.swift
+          - Library/LibraryViewController+Debut.swift
+          - Library/LibraryViewController+Delegates.swift
+          - Library/LibraryViewController+Layout.swift
+          - Library/LibraryViewController+Sample.swift
+          - Library/LibraryViewController+Sorting.swift
+          - Library/LibraryViewController.swift
+          - Library/PlaylistDetailViewController.swift
+          - Library/PlaylistListCells.swift
+          - ListeningGuide/ListeningGuideViewController.swift
+          - Lyrics/LyricCells.swift
+          - Lyrics/LyricWipeView.swift
+          - Lyrics/LyricsViewController+Delegates.swift
+          - Lyrics/LyricsViewController+Timing.swift
+          - Lyrics/LyricsViewController.swift
+          - Lyrics/TimingNoteViews.swift
+          - NowPlaying/MiniPlayerView.swift
+          - NowPlaying/NowPlayingBackdropView.swift
+          - NowPlaying/NowPlayingViewController+Appearance.swift
+          - NowPlaying/NowPlayingViewController+CenterState.swift
+          - NowPlaying/NowPlayingViewController+Controls.swift
+          - NowPlaying/NowPlayingViewController+Delegates.swift
+          - NowPlaying/NowPlayingViewController+Layout.swift
+          - NowPlaying/NowPlayingViewController+Morph.swift
+          - NowPlaying/NowPlayingViewController+Scrubbing.swift
+          - NowPlaying/NowPlayingViewController+State.swift
+          - NowPlaying/NowPlayingViewController+TrackPan.swift
+          - NowPlaying/NowPlayingViewController+Views.swift
+          - NowPlaying/NowPlayingViewController.swift
+          - NowPlaying/PlayerContainerViewController.swift
+          - NowPlaying/QueueViewController.swift
+          - NowPlaying/ScrubberView.swift
+          - Paywall/PaywallViewController.swift
+          - Paywall/TrialReminderPrompt.swift
+          - Paywall/TrialRunwayBannerView.swift
+          - Paywall/TrialRunwayPresenter.swift
+          - Recap/ChartsViewController.swift
+          - Recap/HeatmapView.swift
+          - Recap/ListeningClockView.swift
+          - Recap/RecapCells.swift
+          - Recap/RecapInsightCells.swift
+          - Recap/RecapListCells.swift
+          - Recap/RecapNotificationScheduler.swift
+          - Recap/RecapNotificationsViewController.swift
+          - Recap/RecapProfileCells.swift
+          - Recap/RecapShareCardView.swift
+          - Recap/RecapSkeletonView.swift
+          - Recap/YearInMusicStoryView.swift
+          - Recap/YearInMusicViewController.swift
+          - Settings/SettingsCells.swift
+          - Settings/SettingsHeaderView.swift
+          - Settings/SettingsViewController+Actions.swift
+          - Settings/SettingsViewController+Cells.swift
+          - Settings/SettingsViewController+Controls.swift
+          - Settings/SettingsViewController+Model.swift
+          - Settings/SettingsViewController.swift
+          - Sharing/SonglinkShareable.swift
+          - Sharing/StreamingLinksViewController.swift
+          - Wantlist/WantlistViewController.swift
+          - WatchSync/WatchPlayIngestor.swift
+          - WatchSync/WatchSyncBackgroundTask.swift
+          - WatchSync/WatchSyncCells.swift
+          - WatchSync/WatchSyncCopy.swift
+          - WatchSync/WatchSyncExercise.swift
+          - WatchSync/WatchSyncHelpViewController.swift
+          - WatchSync/WatchSyncMetrics.swift
+          - WatchSync/WatchSyncReadiness.swift
+          - WatchSync/WatchSyncService.swift
+          - WatchSync/WatchSyncServiceDemo.swift
+          - WatchSync/WatchSyncServiceTransport.swift
+          - WatchSync/WatchSyncSizing.swift
+          - WatchSync/WatchSyncStorageMeter.swift
+          - WatchSync/WatchSyncViewController.swift
+          - WatchSync/WatchTranscoder.swift
+      - path: Resources
+        type: syncedFolder
+        excludes:
+          - Assets.xcassets
+          - PrivacyInfo.xcprivacy
     dependencies:
       - package: FlaccyCore
       - package: FlaccyCore
@@ -273,7 +283,7 @@ targets:
       - package: MidgarKit
         product: MidgarPortal
     entitlements:
-      path: flaccyMac/flaccyMac.entitlements
+      path: Platforms/mac/flaccyMac.entitlements
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
@@ -292,7 +302,7 @@ targets:
         ENABLE_HARDENED_RUNTIME: NO
         EXCLUDED_SOURCE_FILE_NAMES: LaunchScreen.storyboard
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: flaccyMac/Info.plist
+        INFOPLIST_FILE: Platforms/mac/Info.plist
         LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/../Frameworks"]
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
@@ -312,13 +322,13 @@ targets:
     templateAttributes:
       platform: watchOS
     sources:
-      - path: flaccyWatch Watch App
+      - path: Platforms/watch
         type: syncedFolder
         excludes:
           - Info.plist
-      - flaccy/EnrichmentJobCopy.swift
-      - flaccy/LibraryDebutCopy.swift
-      - flaccy/LibraryLoadPhaseCopy.swift
+      - Features/Enrichment/EnrichmentJobCopy.swift
+      - Features/Debut/LibraryDebutCopy.swift
+      - Features/Library/LibraryLoadPhaseCopy.swift
     dependencies:
       - package: FlaccyCore
     scheme: {}
@@ -328,7 +338,7 @@ targets:
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
         ENABLE_PREVIEWS: YES
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_FILE: flaccyWatch Watch App/Info.plist
+        INFOPLIST_FILE: Platforms/watch/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Flaccy
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
@@ -353,7 +363,7 @@ targets:
     templateAttributes:
       platform: iOS
     sources:
-      - path: flaccyTests
+      - path: Tests/flaccyTests
     dependencies:
       - target: flaccy
     settings:
@@ -373,7 +383,7 @@ targets:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - path: flaccyUITests
+      - path: Tests/flaccyUITests
         excludes:
           - Flaccy.storekit
     dependencies:
@@ -381,7 +391,7 @@ targets:
     scheme:
       testTargets:
         - flaccyUITests
-      storeKitConfiguration: flaccyUITests/Flaccy.storekit
+      storeKitConfiguration: Tests/flaccyUITests/Flaccy.storekit
     settings:
       groups:
         - MidgarSwift
@@ -402,7 +412,7 @@ targets:
     type: bundle.ui-testing
     platform: macOS
     sources:
-      - path: flaccyMacUITests
+      - path: Tests/flaccyMacUITests
     dependencies:
       - target: flaccyMac
     scheme:

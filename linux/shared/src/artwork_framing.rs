@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/ArtworkFraming.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/ArtworkFraming.swift`.
 //!
 //! How a person has framed a cover: which part of a source image shows through
 //! a square window. The image is measured in source pixels, the window in

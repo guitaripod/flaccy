@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/SpectrumAnalyzer.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/SpectrumAnalyzer.swift`.
 //!
 //! Turns the last 2048 samples the equalizer saw into the 110 log-spaced bins the
 //! curve screen draws behind its response, in decibels relative to a full scale

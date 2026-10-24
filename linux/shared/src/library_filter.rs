@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/LibraryFilterRules.swift` and
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/LibraryFilterRules.swift` and
 //! `PeriodDelta.swift`.
 //!
 //! The pure rules behind the desktop library chips (Recently Added, Recently

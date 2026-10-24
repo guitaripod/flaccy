@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerKernel.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerKernel.swift`.
 //!
 //! The equalizer's signal path: a cascade of up to ten biquads, a preamp, a peak
 //! guard and a dry/wet crossfade, running on 32-bit float samples with the filter

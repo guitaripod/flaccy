@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/BiquadMath.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/BiquadMath.swift`.
 //!
 //! Robert Bristow-Johnson's Audio EQ Cookbook, the single source of the
 //! equalizer's maths on every client. Each formula keeps the Swift file's order

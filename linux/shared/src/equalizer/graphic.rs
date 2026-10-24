@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/GraphicSolver.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/GraphicSolver.swift`.
 //!
 //! A classic graphic equalizer sums ten overlapping bells, so a slider set to
 //! +6 dB is heard at roughly +7 dB where its neighbours reinforce it. Here the

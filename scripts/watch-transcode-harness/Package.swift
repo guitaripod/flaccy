@@ -5,7 +5,7 @@ let package = Package(
     name: "watch-transcode-harness",
     platforms: [.macOS(.v15)],
     dependencies: [
-        .package(path: "../../FlaccyCore"),
+        .package(path: "../../Core/FlaccyCore"),
         .package(path: "../../../../packages/MidgarKit"),
     ],
     targets: [

@@ -7,7 +7,7 @@ xcuserdata/
 flaccy.xcodeproj/
 
 # Secrets
-flaccy/Secrets.swift
+App/Secrets.swift
 
 # Dependencies
 .build/

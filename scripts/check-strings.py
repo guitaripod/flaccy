@@ -24,14 +24,18 @@ import plistlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CATALOG = ROOT / "flaccy" / "Localizable.xcstrings"
-SOURCE_DIRS = (str(ROOT / "flaccy") + "/", str(ROOT / "flaccyMac") + "/")
-WATCH_CATALOG = ROOT / "flaccyWatch Watch App" / "Localizable.xcstrings"
+CATALOG = ROOT / "Resources" / "Localizable.xcstrings"
+SOURCE_DIRS = (
+    str(ROOT / "App") + "/",
+    str(ROOT / "Features") + "/",
+    str(ROOT / "Platforms" / "mac") + "/",
+)
+WATCH_CATALOG = ROOT / "Platforms" / "watch" / "Localizable.xcstrings"
 WATCH_SOURCES = (
-    str(ROOT / "flaccyWatch Watch App") + "/",
-    str(ROOT / "flaccy" / "LibraryLoadPhaseCopy.swift"),
-    str(ROOT / "flaccy" / "EnrichmentJobCopy.swift"),
-    str(ROOT / "flaccy" / "LibraryDebutCopy.swift"),
+    str(ROOT / "Platforms" / "watch") + "/",
+    str(ROOT / "Features" / "Library" / "LibraryLoadPhaseCopy.swift"),
+    str(ROOT / "Features" / "Enrichment" / "EnrichmentJobCopy.swift"),
+    str(ROOT / "Features" / "Debut" / "LibraryDebutCopy.swift"),
 )
 
 

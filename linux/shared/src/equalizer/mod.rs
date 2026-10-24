@@ -1,5 +1,5 @@
 //! The equalizer's shared maths and state, mirrored from
-//! `FlaccyCore/Sources/FlaccyCore/Equalizer/`.
+//! `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/`.
 //!
 //! Every module here follows a Swift file operation for operation and carries
 //! the same golden numbers as its Swift test, so the curve a person draws, the

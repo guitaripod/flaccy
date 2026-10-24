@@ -1,5 +1,5 @@
 //! How a playlist's cover is addressed and which albums stand in for it.
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/PlaylistCover.swift`: a
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/PlaylistCover.swift`: a
 //! playlist's chosen picture is served by the same artwork cache and editor as
 //! an album's, so it is addressed by a reserved (title, artist) pair no album
 //! can carry.

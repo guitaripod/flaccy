@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/LibraryDebut.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/LibraryDebut.swift`.
 //!
 //! The first build of a library is a once-per-library showpiece in three acts:
 //! the bounded load bar, then the fraction-free job countdown, then a summary

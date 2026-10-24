@@ -1,5 +1,5 @@
 //! Every word the equalizer says, in the order and wording of
-//! `flaccy/EqualizerCopy.swift`, plus the number formatting and the lenient
+//! `Features/Equalizer/EqualizerCopy.swift`, plus the number formatting and the lenient
 //! parsing of what a person types into a field.
 
 use flaccy_shared::equalizer::biquad::FilterType;

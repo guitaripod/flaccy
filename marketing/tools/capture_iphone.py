@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Captures the seeded demo screens from a booted iPhone simulator, one launch per screen.
 
-Every screen is one `FLACCY_ROUTE` (see `DemoRouter` in flaccy/DemoMode.swift). The app
+Every screen is one `FLACCY_ROUTE` (see `DemoRouter` in App/DemoMode.swift). The app
 must already be installed on the simulator; this only launches, waits, and shoots.
 
   capture_iphone.py --udid UDID --out DIR [--lang de] [--appearance dark|light] [--only a,b]

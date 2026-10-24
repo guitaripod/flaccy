@@ -1,7 +1,7 @@
 //! Lyrics as a document: the lines of a song with when each starts and ends,
 //! the words inside them when a source knows them, and the interludes between.
 //!
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Lyrics` and is covered by the same
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Lyrics` and is covered by the same
 //! vectors, so every client reads an LRC, an enhanced LRC or a Lyricsfile into
 //! the same lines and asks the same clock which of them to light.
 

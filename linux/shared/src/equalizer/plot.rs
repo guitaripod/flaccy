@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerPlot.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Equalizer/EqualizerPlot.swift`.
 //!
 //! How the equalizer's response curve maps onto a drawing surface, and how a
 //! touch or a pointer maps back onto the numbers: 20 Hz to 20 kHz on a log

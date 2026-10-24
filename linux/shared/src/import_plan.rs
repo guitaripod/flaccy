@@ -1,4 +1,4 @@
-//! Mirrors `FlaccyCore/Sources/FlaccyCore/Library/ImportPlan.swift`.
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Library/ImportPlan.swift`.
 //!
 //! What an import copies and where each file lands, decided before a byte
 //! moves so every client files a picked folder the same way. A picked file
