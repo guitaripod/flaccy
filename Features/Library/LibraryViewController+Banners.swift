@@ -32,11 +32,13 @@ extension LibraryViewController {
         applyRunwayBannerVisibility(animated: true)
     }
 
+    /// Sizes the runway slot to the stored request. A request that arrives before the view has loaded is kept in `runwayBannerRequested` and applied by the first render after `setupRunwayBanner` creates the slot.
     func applyRunwayBannerVisibility(animated: Bool) {
+        guard isViewLoaded, let height = runwayBannerHeight else { return }
         let show = runwayBannerRequested && !debutOwnsScreen
         let target = show ? runwayBanner.expandedHeight(forWidth: view.bounds.width) : 0
-        guard runwayBannerHeight.constant != target else { return }
-        runwayBannerHeight.constant = target
+        guard height.constant != target else { return }
+        height.constant = target
         runwayBanner.isAccessibilityElement = false
         runwayBanner.accessibilityElementsHidden = !show
         guard animated, !UIAccessibility.isReduceMotionEnabled, view.window != nil else {
