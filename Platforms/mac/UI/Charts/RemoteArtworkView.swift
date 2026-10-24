@@ -89,7 +89,7 @@ final class RemoteArtworkView: NSView {
         Task { [weak self] in
             var image = await ImageCache.shared.loadImage(forKey: urlString)
             if image == nil,
-               let (data, response) = try? await URLSession.shared.data(from: url),
+               let (data, response) = try? await RemoteImageClient().data(from: url),
                (response as? HTTPURLResponse)?.statusCode == 200,
                let fetched = ImageCache.shared.imageFromData(data) {
                 ImageCache.shared.store(fetched, forKey: urlString)

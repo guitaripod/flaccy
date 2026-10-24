@@ -190,7 +190,7 @@ final class MusicKitService {
                 return nil
             }
 
-            let (data, response2) = try await URLSession.shared.data(from: artworkURL)
+            let (data, response2) = try await RemoteImageClient().data(from: artworkURL)
             guard let http = response2 as? HTTPURLResponse, http.statusCode == 200 else { return nil }
             return data
         } catch {
@@ -225,7 +225,7 @@ final class MusicKitService {
               let artworkURL = album.artworkURL else { return nil }
 
         do {
-            let (data, response) = try await URLSession.shared.data(from: artworkURL)
+            let (data, response) = try await RemoteImageClient().data(from: artworkURL)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
             return data
         } catch {

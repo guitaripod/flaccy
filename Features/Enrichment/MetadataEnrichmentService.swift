@@ -58,18 +58,11 @@ nonisolated final class MetadataEnrichmentService: Sendable {
 
     static let shared = MetadataEnrichmentService()
 
-    private let session: URLSession
+    private let client = MetadataEnrichmentClient()
     private let musicBrainzThrottle = MusicBrainzThrottle()
     private let generalThrottle = GeneralThrottle()
 
-    private init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15
-        config.httpAdditionalHeaders = [
-            "User-Agent": "flaccy/1.0 (https://github.com/guitaripod/flaccy)"
-        ]
-        session = URLSession(configuration: config)
-    }
+    private init() {}
 
     /// Chases everything `resolved` does not already cover, returning the
     /// `(EnrichmentFields, EnrichmentFailure?)` pair `EnrichmentPolicy.apply`
@@ -359,7 +352,7 @@ nonisolated final class MetadataEnrichmentService: Sendable {
         await generalThrottle.throttle()
 
         do {
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await client.data(from: url)
             guard let http = response as? HTTPURLResponse else { return .failed(.transport) }
             switch http.statusCode {
             case 200...299: return data.isEmpty ? .empty : .value(data)
@@ -381,7 +374,7 @@ nonisolated final class MetadataEnrichmentService: Sendable {
         parse: @Sendable ([String: Any]) -> Value?
     ) async -> EnrichmentSourceOutcome<Value> {
         do {
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await client.data(from: url)
             guard let http = response as? HTTPURLResponse else { return .failed(.transport) }
             switch http.statusCode {
             case 200...299: break

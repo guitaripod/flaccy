@@ -139,7 +139,7 @@ final class AsyncImageView: UIImageView {
                 self.deliver(thumb, keys: keys, token: current)
                 return
             }
-            URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            RemoteImageClient().load(from: url) { [weak self] data in
                 guard let self else { return }
                 guard let data, let thumb = Self.downsampled(from: data) else {
                     Self.markMiss(thumbKey)
@@ -148,7 +148,7 @@ final class AsyncImageView: UIImageView {
                 }
                 ImageCache.shared.store(data: data, forKey: urlString)
                 self.deliver(thumb, keys: keys, token: current)
-            }.resume()
+            }
         }
     }
 
@@ -348,7 +348,7 @@ final class AsyncImageView: UIImageView {
             thumbnailCache.setObject(thumb, forKey: "remote:\(urlString)" as NSString)
             return true
         }
-        guard let data = try? await URLSession.shared.data(from: url).0 else {
+        guard let data = try? await RemoteImageClient().data(from: url).0 else {
             if !Task.isCancelled { markMiss(thumbKey) }
             return false
         }

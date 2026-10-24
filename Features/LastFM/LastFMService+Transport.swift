@@ -37,7 +37,7 @@ nonisolated extension LastFMService {
         await Self.readThrottle.acquire()
 
         do {
-            let (data, response) = try await urlSession.data(from: url)
+            let (data, response) = try await client.data(from: url)
             guard let http = response as? HTTPURLResponse else { return .failed(.transport) }
             if http.statusCode == 429 { return .failed(.rateLimited) }
 
@@ -197,7 +197,7 @@ nonisolated extension LastFMService {
             throw LastFMError.invalidURL
         }
 
-        let (data, response) = try await urlSession.data(from: url)
+        let (data, response) = try await client.data(from: url)
         try validateResponse(response, data: data)
         return data
     }
@@ -216,7 +216,7 @@ nonisolated extension LastFMService {
             .joined(separator: "&")
         request.httpBody = body.data(using: .utf8)
 
-        let (data, response) = try await urlSession.data(for: request)
+        let (data, response) = try await client.data(for: request)
         try validateResponse(response, data: data)
         return data
     }

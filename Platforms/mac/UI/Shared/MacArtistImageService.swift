@@ -14,13 +14,6 @@ final class MacArtistImageService {
     nonisolated private static let lastFMPlaceholderHash = "2a96cbd8b46e442fc41c2b86b821562f"
     private static let missTTL: TimeInterval = 60 * 30
 
-    nonisolated private static let downloadSession: URLSession = {
-        let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 15
-        config.timeoutIntervalForResource = 30
-        return URLSession(configuration: config)
-    }()
-
     private init() {
         missCache.countLimit = 300
     }
@@ -70,7 +63,7 @@ final class MacArtistImageService {
         else { return nil }
 
         do {
-            let (data, response) = try await downloadSession.data(from: url)
+            let (data, response) = try await ArtistImageClient().data(from: url)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200,
                   let image = ImageCache.shared.imageFromData(data)
             else { return nil }

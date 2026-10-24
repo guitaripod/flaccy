@@ -234,7 +234,7 @@ final class WantlistService {
             URLQueryItem(name: "limit", value: "25"),
         ]
         guard let url = components.url,
-              let (data, response) = try? await URLSession.shared.data(from: url),
+              let (data, response) = try? await ITunesSearchClient().data(from: url),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let results = json["results"] as? [[String: Any]] else { return nil }
@@ -268,7 +268,7 @@ final class WantlistService {
             URLQueryItem(name: "limit", value: "5"),
         ]
         guard let url = components.url,
-              let (data, _) = try? await URLSession.shared.data(from: url),
+              let (data, _) = try? await ITunesSearchClient().data(from: url),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let results = json["results"] as? [[String: Any]] else { return nil }
         let match = results.first {

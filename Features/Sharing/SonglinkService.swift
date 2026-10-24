@@ -59,7 +59,7 @@ final class SonglinkService {
 
     static let shared = SonglinkService()
 
-    private let session: URLSession
+    private let client = SonglinkClient()
     private let throttle = SonglinkThrottle()
     /// `NSCache` does its own locking, so the result cache is safe to use from the nonisolated lookups.
     private nonisolated(unsafe) let cache = NSCache<NSString, CachedResult>()
@@ -86,9 +86,6 @@ final class SonglinkService {
     ]
 
     private init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15
-        session = URLSession(configuration: config)
         cache.countLimit = 100
     }
 
@@ -163,7 +160,7 @@ final class SonglinkService {
         var request = URLRequest(url: pageURL)
         request.setValue("Mozilla/5.0 (compatible; Flaccy)", forHTTPHeaderField: "User-Agent")
         do {
-            let (data, response) = try await session.data(for: request)
+            let (data, response) = try await client.data(for: request)
             guard let http = response as? HTTPURLResponse else { return .unreachable }
             if http.statusCode == 429 {
                 MidgarLog.notice("Songlink rate limited", category: .content)

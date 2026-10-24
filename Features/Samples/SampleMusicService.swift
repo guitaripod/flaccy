@@ -71,6 +71,7 @@ final class SampleMusicService {
     }
 
     private let api = FlaccyMidgar.shared.api
+    private static let client = SampleDownloadClient()
 
     private init() {}
 
@@ -85,7 +86,7 @@ final class SampleMusicService {
             postProgress("")
         }
         do {
-            let (data, _) = try await URLSession.shared.data(for: api.downloadRequest(url: Self.baseURL))
+            let data = try await Self.client.data(for: api.downloadRequest(url: Self.baseURL))
             let manifest = try JSONDecoder().decode(Manifest.self, from: data)
             attribution = manifest.attribution
             let albumOrder = manifest.tracks.map(\.file)
@@ -153,10 +154,7 @@ final class SampleMusicService {
     }
 
     private static func contentLength(of url: URL) async -> Int64 {
-        guard let (bytes, response) = try? await URLSession.shared.bytes(for: FlaccyMidgar.shared.api.downloadRequest(url: url)) else { return 0 }
-        bytes.task.cancel()
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { return 0 }
-        return max(response.expectedContentLength, 0)
+        await client.contentLength(for: FlaccyMidgar.shared.api.downloadRequest(url: url))
     }
 
     /// The async download API never calls the progress delegate methods, so
@@ -188,13 +186,13 @@ final class SampleMusicService {
         if let saved = resumeData.removeValue(forKey: file.name) {
             do {
                 MidgarLog.info("Sample resuming: \(file.name)", category: .content)
-                return try await URLSession.shared.download(resumeFrom: saved, delegate: capture)
+                return try await Self.client.download(resumeFrom: saved, capture: capture)
             } catch {
                 MidgarLog.info("Sample resume refused, restarting \(file.name): \(error.localizedDescription)", category: .content)
             }
         }
         do {
-            return try await URLSession.shared.download(for: api.downloadRequest(url: file.url), delegate: capture)
+            return try await Self.client.download(for: api.downloadRequest(url: file.url), capture: capture)
         } catch {
             if let leftovers = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
                 resumeData[file.name] = leftovers
@@ -248,20 +246,5 @@ final class SampleMusicService {
     private func postProgress(_ text: String) {
         progressText = text
         NotificationCenter.default.post(name: Self.progressDidChange, object: nil)
-    }
-}
-
-/// Remembers the task the session created for a download. `captured` is read and written only under `lock`.
-private nonisolated final class DownloadTaskCapture: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
-
-    private let lock = NSLock()
-    private var captured: URLSessionTask?
-
-    var task: URLSessionTask? {
-        lock.withLock { captured }
-    }
-
-    func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
-        lock.withLock { captured = task }
     }
 }

@@ -126,13 +126,9 @@ final class LyricsService {
 
     static let shared = LyricsService()
 
-    private let session: URLSession
+    private let client = LyricsClient()
 
-    private init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 10
-        session = URLSession(configuration: config)
-    }
+    private init() {}
 
     /// Warms the lyrics cache for a track as soon as it starts, so opening the
     /// lyrics view is instant. A no-op once the track is already cached.
@@ -364,7 +360,7 @@ final class LyricsService {
         var lastFailure = LyricsFailure.unreachable
         for attempt in 0..<2 {
             do {
-                let (data, response) = try await session.data(for: urlRequest)
+                let (data, response) = try await client.data(for: urlRequest)
                 guard let http = response as? HTTPURLResponse else { return .failed(.unreachable) }
                 switch http.statusCode {
                 case 200..<300:

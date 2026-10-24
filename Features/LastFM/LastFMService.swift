@@ -30,7 +30,7 @@ nonisolated final class LastFMService: @unchecked Sendable {
     static let sessionKeyKey = "lastfm_session_key"
     static let usernameKey = "lastfm_username"
 
-    let urlSession: URLSession
+    let client = LastFMClient()
     /// Touched only by the main-actor sign-in methods below.
     nonisolated(unsafe) var authSession: ASWebAuthenticationSession?
     /// Held with `authSession` and touched only by the same main-actor sign-in methods.
@@ -65,12 +65,6 @@ nonisolated final class LastFMService: @unchecked Sendable {
         UserDefaults.standard.removeObject(forKey: Self.sessionKeyKey)
         MidgarLog.info("Migrated Last.fm session key from UserDefaults to Keychain", category: .auth)
         return legacy
-    }
-
-    init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15
-        urlSession = URLSession(configuration: config)
     }
 
     @MainActor

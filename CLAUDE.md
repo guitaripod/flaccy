@@ -30,7 +30,7 @@ Music player for FLAC and other local libraries, one product on four clients: iO
 - User's library: import never clobbers or duplicates (`.name.flaccy-part` then rename, same path and size counts as present, refuse before a byte moves if it will not fit). Gapless is always on, never add a toggle. Do not port Downloads or music video (yt-dlp) to the Apple clients (Guideline 5.2.3).
 - Enrichment keys normalize identically in SQL and code (registered `flaccy_norm` function); normalize each half of a composite key separately. Albums group by release credit, not per-track artist. Scrobbles before 2002-01-01 UTC are undated.
 - Strings: every compiled string must exist in `Resources/Localizable.xcstrings` and be translated. Keys use `%lld`/`%@`, never `%1$lld`. Edit the catalog only through `json.dumps(d, indent=2, ensure_ascii=False, sort_keys=True) + "\n"`.
-- A new iOS-only file in `App/` or `Features/` must be added to the `flaccyMac` target's `excludes` in `project.yml` (paths relative to that source folder).
+- A new iOS-only file in `App/` or `Features/` must be added to the `flaccyMac` target's `excludes` in `project.yml` (paths relative to that source folder). Network access goes through a client in `App/Network/`, never `URLSession` in a view or service.
 - Secrets: `LastFMService.configure(apiKey:)` copies the key from `Secrets` at launch. RevenueCat keys (`Secrets.revenueCatAPIKey`) are gitignored. `scripts/rc-setup.py ios|mac` reads `RC_SECRET_FLACCY_<IOS|MAC>`.
 - Images are tracked with Git LFS: pushes need `git-lfs` on PATH, and a fresh clone or worktree needs `git lfs pull` before the art shows.
 

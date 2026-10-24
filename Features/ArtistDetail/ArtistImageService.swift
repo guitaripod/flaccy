@@ -20,13 +20,6 @@ final class ArtistImageService {
 
     private var inFlight: [String: Task<UIImage?, Never>] = [:]
 
-    nonisolated private static let downloadSession: URLSession = {
-        let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 15
-        config.timeoutIntervalForResource = 30
-        return URLSession(configuration: config)
-    }()
-
     private init() {}
 
     func image(for artist: String) async -> UIImage? {
@@ -137,7 +130,7 @@ final class ArtistImageService {
     nonisolated private static func download(_ urlString: String) async -> UIImage? {
         guard !isPlaceholder(urlString), let url = URL(string: urlString) else { return nil }
         do {
-            let (data, response) = try await downloadSession.data(from: url)
+            let (data, response) = try await ArtistImageClient().data(from: url)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
             return UIImage(data: data)
         } catch {
