@@ -226,10 +226,15 @@ nonisolated final class AlbumArtworkEditorTests: XCTestCase {
         }
     }
 
+    /// The space the swatches are painted and read in. `CGColor(red:green:blue:alpha:)`
+    /// is Generic RGB, so painting its nominal numbers into any other space
+    /// shifts them before the renderer is involved.
+    private var sRGB: CGColorSpace { CGColorSpace(name: CGColorSpace.sRGB)! }
+
     private func makeQuadrantImage(width: Int, height: Int) -> CGImage {
         let context = CGContext(
             data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            space: sRGB, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
         )!
         let quadrants: [(Swatch, CGRect)] = [
             (.red, CGRect(x: 0, y: height / 2, width: width / 2, height: height - height / 2)),
@@ -239,7 +244,7 @@ nonisolated final class AlbumArtworkEditorTests: XCTestCase {
         ]
         for (swatch, rect) in quadrants {
             let (r, g, b) = swatch.components
-            context.setFillColor(CGColor(red: CGFloat(r) / 255, green: CGFloat(g) / 255, blue: CGFloat(b) / 255, alpha: 1))
+            context.setFillColor(CGColor(colorSpace: sRGB, components: [CGFloat(r) / 255, CGFloat(g) / 255, CGFloat(b) / 255, 1])!)
             context.fill(rect)
         }
         return context.makeImage()!
@@ -261,7 +266,7 @@ nonisolated final class AlbumArtworkEditorTests: XCTestCase {
         var pixel = [UInt8](repeating: 0, count: 4)
         let context = CGContext(
             data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            space: sRGB, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
         )!
         context.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
         let (r, g, b) = swatch.components
