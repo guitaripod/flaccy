@@ -12,12 +12,17 @@ Licensed GPL-3.0.
 
 ## Install
 
-From a checkout of the repository:
+On Arch, from the AUR (installs `/usr/bin/flaccy-server` and the user unit):
 
-    cargo install --path apps/flaccy/linux/server
+    yay -S flaccy-server-bin
 
-This puts `flaccy-server` in `~/.cargo/bin`. Or copy the release binary
-for your machine somewhere on your `PATH`.
+Elsewhere (x86_64, glibc 2.39 or newer), download `flaccy-server-linux-x86_64.tar.gz`
+from the `server-v*` release on https://github.com/guitaripod/flaccy/releases and copy
+`flaccy-server` somewhere on your `PATH`. Or build it from a checkout of the repository:
+
+    cargo install --path linux/server
+
+which puts `flaccy-server` in `~/.cargo/bin`, where the bundled unit expects it.
 
 Converting a song to another format needs `ffmpeg` on the `PATH` of the
 server. Playing the original file does not.
