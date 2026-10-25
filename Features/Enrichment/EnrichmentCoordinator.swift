@@ -67,11 +67,22 @@ actor EnrichmentCoordinator {
 
     private init() {}
 
+    /// A DEBUG screenshot launch, whose fictional catalog has nothing to enrich
+    /// and whose captures must not show a countdown banner. Always false in a
+    /// release build, where the seeder does not exist.
+    private static var isScreenshotLaunch: Bool {
+        #if DEBUG && (targetEnvironment(simulator) || os(macOS))
+        ScreenshotSeeder.isActive
+        #else
+        false
+        #endif
+    }
+
     /// Starts a pass, or asks the one already running to go round again once it
     /// finishes. Cheap to call on every reload: a pass that finds nothing due
     /// costs one `count(*)` per scope and raises no surface at all.
     func resume() {
-        guard !ScreenshotSeeder.isActive else { return }
+        guard !Self.isScreenshotLaunch else { return }
         network.start()
         guard run == nil else {
             rerunRequested = true
