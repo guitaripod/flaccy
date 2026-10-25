@@ -68,13 +68,13 @@ impl PlaylistSort {
 /// One playlist as the grid and the picker show it: its playable size and the
 /// first few distinct albums that give it a cover.
 #[derive(Clone)]
-struct PlaylistCard {
-    id: i64,
-    name: String,
+pub(crate) struct PlaylistCard {
+    pub(crate) id: i64,
+    pub(crate) name: String,
     created_at: i64,
-    tracks: usize,
+    pub(crate) tracks: usize,
     duration: f64,
-    covers: Vec<AlbumRef>,
+    pub(crate) covers: Vec<AlbumRef>,
 }
 
 impl PlaylistCard {
@@ -151,7 +151,7 @@ fn cover_albums<'a>(
 
 /// Every playlist resolved against the live library: files that have left the
 /// library neither count nor play, matching what the detail page lists.
-fn load_cards(ui: &Rc<Ui>) -> Vec<PlaylistCard> {
+pub(crate) fn load_cards(ui: &Rc<Ui>) -> Vec<PlaylistCard> {
     let library = ui.core.library.borrow().clone();
     let by_path: HashMap<&str, &Track> = library
         .tracks
@@ -1758,7 +1758,7 @@ fn editable_cover(ui: &Rc<Ui>, art: &PlaylistArt, playlist_id: i64) -> gtk::Over
     host
 }
 
-fn playlist_list_menu(playlist_id: i64, has_cover: bool) -> gio::Menu {
+pub(crate) fn playlist_list_menu(playlist_id: i64, has_cover: bool) -> gio::Menu {
     let menu = gio::Menu::new();
     let play_section = gio::Menu::new();
     play_section.append_item(&playlist_item("Play", "win.playlist-play", playlist_id));

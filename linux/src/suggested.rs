@@ -8,10 +8,10 @@ const MIN_TRACKS: usize = 8;
 
 #[derive(Clone)]
 pub struct SuggestedPlaylist {
-    #[allow(dead_code)]
     pub id: &'static str,
     pub title: String,
     pub subtitle: String,
+    #[allow(dead_code)]
     pub icon_name: &'static str,
     pub tracks: Vec<Track>,
 }

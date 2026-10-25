@@ -122,6 +122,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     header.pack_start(&build_job_status(&ui));
 
     let menu = gio::Menu::new();
+    menu.append(Some(flaccy_shared::home_copy::CUSTOMIZE_HOME), Some("app.customize-home"));
     menu.append(Some("Download from Link"), Some("app.downloads"));
     menu.append(Some("Equalizer"), Some("app.equalizer"));
     menu.append(Some("Rescan Library"), Some("app.rescan"));
@@ -959,6 +960,13 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
 
     app.set_accels_for_action("win.focus-search", &["<Control>f"]);
     app.set_accels_for_action("app.preferences", &["<Control>comma"]);
+
+    let customize_home = gio::SimpleAction::new("customize-home", None);
+    {
+        let ui = Rc::clone(ui);
+        customize_home.connect_activate(move |_, _| ui::home_customize::present(&ui));
+    }
+    app.add_action(&customize_home);
 
     let equalizer = gio::SimpleAction::new("equalizer", None);
     {
@@ -1927,6 +1935,14 @@ fn demo_start_page() -> &'static str {
 fn demo_window_size() -> Option<(i32, i32)> {
     if !config::demo_mode() {
         return None;
+    }
+    if let Some((width, height)) = std::env::var("FLACCY_DEMO_SIZE")
+        .ok()
+        .and_then(|size| size.split_once('x').map(|(w, h)| (w.to_string(), h.to_string())))
+    {
+        if let (Ok(width), Ok(height)) = (width.parse(), height.parse()) {
+            return Some((width, height));
+        }
     }
     match std::env::var("FLACCY_DEMO_HOME").ok().as_deref() {
         Some("narrow") => Some((420, 900)),

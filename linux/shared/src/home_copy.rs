@@ -4,7 +4,7 @@
 
 use chrono::Datelike;
 
-use crate::home::{local, OnThisDayKind, PlaybackContext, ContextKind, Recency, Section};
+use crate::home::{local, ContextKind, OnThisDayKind, PlaybackContext, Recency, Section};
 use crate::library_filter::PeriodDelta;
 use crate::load_progress::group_digits;
 
@@ -259,17 +259,29 @@ mod tests {
         assert_eq!(section_title(Section::RecentlyAdded), "Recently Added");
         assert_eq!(section_title(Section::OnThisDay), "On This Day");
         assert_eq!(section_title(Section::ThisWeek), "This Week");
-        assert_eq!(section_subtitle(Section::Resume), "Your last album or playlist");
+        assert_eq!(
+            section_subtitle(Section::Resume),
+            "Your last album or playlist"
+        );
         assert_eq!(section_subtitle(Section::ThisWeek), "A glance at Stats");
     }
 
     #[test]
     fn c2_resume_kickers_name_when_the_session_was_left() {
         assert_eq!(resume_kicker(Recency::JustNow, 0), "Continue · just now");
-        assert_eq!(resume_kicker(Recency::EarlierToday, 0), "Continue · earlier today");
-        assert_eq!(resume_kicker(Recency::LastNight, 0), "Continue · last night");
+        assert_eq!(
+            resume_kicker(Recency::EarlierToday, 0),
+            "Continue · earlier today"
+        );
+        assert_eq!(
+            resume_kicker(Recency::LastNight, 0),
+            "Continue · last night"
+        );
         assert_eq!(resume_kicker(Recency::Yesterday, 0), "Continue · yesterday");
-        assert_eq!(resume_kicker(Recency::Weekday(4), 0), "Continue · Wednesday");
+        assert_eq!(
+            resume_kicker(Recency::Weekday(4), 0),
+            "Continue · Wednesday"
+        );
         assert_eq!(resume_kicker(Recency::Weekday(1), 0), "Continue · Sunday");
         assert_eq!(
             resume_kicker(Recency::Date(at(2026, 10, 12)), 0),
@@ -279,9 +291,15 @@ mod tests {
 
     #[test]
     fn c3_a_date_kicker_follows_the_local_calendar() {
-        let late = Utc.with_ymd_and_hms(2026, 10, 12, 23, 30, 0).unwrap().timestamp();
+        let late = Utc
+            .with_ymd_and_hms(2026, 10, 12, 23, 30, 0)
+            .unwrap()
+            .timestamp();
         assert_eq!(resume_kicker(Recency::Date(late), 0), "Continue · Oct 12");
-        assert_eq!(resume_kicker(Recency::Date(late), 3 * 3600), "Continue · Oct 13");
+        assert_eq!(
+            resume_kicker(Recency::Date(late), 3 * 3600),
+            "Continue · Oct 13"
+        );
     }
 
     #[test]
@@ -396,12 +414,18 @@ mod tests {
             title: "T".into(),
             subtitle: subtitle.into(),
         };
-        assert_eq!(jump_subtitle(&context(ContextKind::Album, "Solveig"), 3), "Solveig");
+        assert_eq!(
+            jump_subtitle(&context(ContextKind::Album, "Solveig"), 3),
+            "Solveig"
+        );
         assert_eq!(
             jump_subtitle(&context(ContextKind::Playlist, ""), 42),
             "Playlist · 42 songs"
         );
-        assert_eq!(jump_subtitle(&context(ContextKind::Mix, ""), 30), "Mix · 30 songs");
+        assert_eq!(
+            jump_subtitle(&context(ContextKind::Mix, ""), 30),
+            "Mix · 30 songs"
+        );
         assert_eq!(jump_subtitle(&context(ContextKind::Radio, ""), 0), "Radio");
     }
 

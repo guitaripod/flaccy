@@ -116,6 +116,9 @@ impl AppCore {
         player.set_volume(config.volume);
         player.set_shuffle(config.shuffle);
         player.set_repeat(crate::player::RepeatMode::from_id(&config.repeat_mode));
+        if config::demo_mode() && std::env::var("FLACCY_DEMO_HOME").as_deref() == Ok("dayone") {
+            db.delete_all_scrobbles();
+        }
         let session = config::load_session();
         if let Some(session) = &session {
             crate::logger::info(
@@ -166,8 +169,15 @@ impl AppCore {
             restore_volume: Cell::new(restore_volume),
             config_save_queued: Cell::new(false),
             context: RefCell::new(PlaybackContext::anonymous_queue()),
-            recents: RefCell::new(home_state::load_recents()),
-            last_session: RefCell::new(home_state::load_session()),
+            recents: RefCell::new(
+                Some(home_state::load_recents())
+                    .filter(|_| std::env::var("FLACCY_DEMO_HOME").as_deref() != Ok("dayone"))
+                    .unwrap_or_default(),
+            ),
+            last_session: RefCell::new(
+                home_state::load_session()
+                    .filter(|_| std::env::var("FLACCY_DEMO_HOME").as_deref() != Ok("dayone")),
+            ),
             session_save_queued: Cell::new(false),
             session_saved_position: Cell::new(0.0),
         });
@@ -433,7 +443,7 @@ impl AppCore {
         self.schedule_wantlist_refresh();
         self.schedule_history_import();
         self.wire_lastfm_sync();
-        if config::demo_mode() {
+        if config::demo_mode() && demo_autoplays() {
             self.schedule_demo_autoplay();
         }
         if self.smoke {
@@ -689,8 +699,9 @@ impl AppCore {
     }
 
     /// Puts the last session's queue back and plays it from where it stopped,
-    /// skipping songs whose files have left the library.
-    pub fn resume_session(self: &Rc<Self>) -> bool {
+    /// skipping songs whose files have left the library. `shuffle` plays the
+    /// same songs shuffled from the top instead.
+    pub fn resume_session(self: &Rc<Self>, shuffle: bool) -> bool {
         let Some(saved) = self.last_session.borrow().clone() else {
             return false;
         };
@@ -709,6 +720,10 @@ impl AppCore {
             .iter()
             .filter_map(|saved| by_path.get(saved.rel_path.as_str()).map(|t| (*t).clone()))
             .collect();
+        if shuffle {
+            self.play_list_in(tracks, true, "session", Some(saved.context.clone()));
+            return true;
+        }
         crate::scrobbler::checkpoint_skip(self);
         *self.context.borrow_mut() = saved.context.clone();
         self.player.restore_queue(tracks, plan.index, plan.elapsed);
@@ -1370,6 +1385,15 @@ impl AppCore {
             true
         });
     }
+}
+
+/// A demo run starts playing on its own, except for the Home states that show
+/// a paused library (`FLACCY_DEMO_HOME` other than `playing`).
+fn demo_autoplays() -> bool {
+    matches!(
+        std::env::var("FLACCY_DEMO_HOME").ok().as_deref(),
+        None | Some("playing")
+    )
 }
 
 /// The context of an album started whole.

@@ -68,7 +68,11 @@ impl SavedSession {
         Some(Surviving {
             tracks,
             index,
-            elapsed: if kept_place { self.elapsed.max(0.0) } else { 0.0 },
+            elapsed: if kept_place {
+                self.elapsed.max(0.0)
+            } else {
+                0.0
+            },
         })
     }
 }
@@ -237,7 +241,10 @@ mod tests {
         };
         let text = serde_json::to_string(&session).unwrap();
         assert!(text.contains("\"mix\""));
-        assert_eq!(serde_json::from_str::<SavedSession>(&text).unwrap(), session);
+        assert_eq!(
+            serde_json::from_str::<SavedSession>(&text).unwrap(),
+            session
+        );
     }
 
     #[test]
