@@ -17,7 +17,7 @@ final class HomeBackdropView: UIView {
         return cache
     }()
 
-    nonisolated(unsafe) private static let context = CIContext(options: [.useSoftwareRenderer: false])
+    nonisolated private static let context = CIContext(options: [.useSoftwareRenderer: false])
 
     private let imageView = UIImageView()
     private let fade = CAGradientLayer()
