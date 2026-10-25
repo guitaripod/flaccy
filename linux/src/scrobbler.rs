@@ -150,6 +150,7 @@ fn persist_scrobble(
             track.artist
         ),
     );
+    core.hub.emit(&AppEvent::ScrobbleRecorded);
 }
 
 pub fn drain_pending(core: &Rc<AppCore>) {

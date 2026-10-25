@@ -11,6 +11,8 @@ mod eq;
 mod events;
 mod filters;
 mod frame_stats;
+mod home_data;
+mod home_state;
 mod hygiene;
 mod importer;
 mod lastfm;

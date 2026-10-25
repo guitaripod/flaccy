@@ -1518,6 +1518,12 @@ impl Db {
         }
     }
 
+    /// Demo runs only: forgets every play so Home shows a library with no
+    /// history (`FLACCY_DEMO_HOME=dayone`) without a second seed.
+    pub fn delete_all_scrobbles(&self) {
+        let _ = self.conn.execute("DELETE FROM scrobbles", []);
+    }
+
     pub fn has_scrobbles(&self) -> bool {
         self.conn
             .query_row("SELECT 1 FROM scrobbles LIMIT 1", [], |_| Ok(()))
@@ -1542,6 +1548,56 @@ impl Db {
                 timestamp_unix: unix_from_string(&row.get::<_, String>(3)?),
                 duration: row.get(4)?,
             })
+        });
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// The scrobbles in `[from, to)`, oldest first: an index seek on the
+    /// timestamp, so asking for a few days costs a few days of rows.
+    pub fn fetch_scrobble_rows_between(&self, from_unix: i64, to_unix: i64) -> Vec<ScrobbleRow> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT trackTitle, artist, albumTitle, timestamp, duration
+             FROM scrobbles WHERE timestamp >= ?1 AND timestamp < ?2 ORDER BY timestamp",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map(
+            params![string_from_unix(from_unix), string_from_unix(to_unix)],
+            |row| {
+                Ok(ScrobbleRow {
+                    title: row.get(0)?,
+                    artist: row.get(1)?,
+                    album: row.get(2)?,
+                    timestamp_unix: unix_from_string(&row.get::<_, String>(3)?),
+                    duration: row.get(4)?,
+                })
+            },
+        );
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// The albums played since `since_unix`, newest play first, each with the
+    /// artist and time of its latest play: what Jump Back In reads of history.
+    pub fn recent_album_plays(&self, since_unix: i64, limit: usize) -> Vec<(String, String, i64)> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT albumTitle, artist, MAX(timestamp) AS latest FROM scrobbles
+             WHERE timestamp >= ?1 AND albumTitle <> ''
+             GROUP BY albumTitle ORDER BY latest DESC LIMIT ?2",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map(params![string_from_unix(since_unix), limit as i64], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                unix_from_string(&row.get::<_, String>(2)?),
+            ))
         });
         match rows {
             Ok(rows) => rows.flatten().collect(),
