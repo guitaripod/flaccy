@@ -1,9 +1,14 @@
-use crate::library::{Album, Track};
+use crate::library::{Album, ArtistEntry, Library, Track};
 use crate::recap::Period;
 use flaccy_shared::library_filter::{
     self as rules, AddedEntry, PlayedEntry, RediscoverEntry, ALBUM_THRESHOLDS, SONG_THRESHOLDS,
 };
+use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
+use std::rc::{Rc, Weak};
 
 /// The quick-pivot chips above the Songs and Albums pages: the same set the
 /// Apple clients offer (`LibraryFilter`), plus Most Played, which only the
@@ -84,10 +89,208 @@ pub fn range_from_id(id: &str) -> Period {
 const LOSSLESS_CODECS: [&str; 4] = ["FLAC", "ALAC", "WAV", "AIFF"];
 
 pub fn is_lossless(track: &Track) -> bool {
-    track
-        .codec
-        .as_deref()
-        .is_some_and(|codec| LOSSLESS_CODECS.contains(&codec.to_uppercase().as_str()))
+    track.codec.as_deref().is_some_and(|codec| {
+        LOSSLESS_CODECS
+            .iter()
+            .any(|lossless| codec.eq_ignore_ascii_case(lossless))
+    })
+}
+
+const CAPITAL_SIGMA: char = '\u{3a3}';
+
+/// Orders two strings exactly as their `to_lowercase()` forms would compare,
+/// without allocating either: ASCII compares byte by byte, and everything but
+/// a capital sigma (the one letter `str::to_lowercase` lowercases by context)
+/// compares character by character.
+pub fn cmp_ignore_case(a: &str, b: &str) -> Ordering {
+    if a.is_ascii() && b.is_ascii() {
+        return a
+            .bytes()
+            .map(|byte| byte.to_ascii_lowercase())
+            .cmp(b.bytes().map(|byte| byte.to_ascii_lowercase()));
+    }
+    if a.contains(CAPITAL_SIGMA) || b.contains(CAPITAL_SIGMA) {
+        return a.to_lowercase().cmp(&b.to_lowercase());
+    }
+    a.chars()
+        .flat_map(char::to_lowercase)
+        .cmp(b.chars().flat_map(char::to_lowercase))
+}
+
+thread_local! {
+    static LOWERCASE_SCRATCH: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// Whether `haystack.to_lowercase()` contains `needle_lower`, which the caller
+/// has already lowercased. Allocation-free for ASCII; other text is lowercased
+/// into one reused buffer.
+pub fn contains_ignore_case(haystack: &str, needle_lower: &str) -> bool {
+    if needle_lower.is_empty() {
+        return true;
+    }
+    if haystack.is_ascii() {
+        let needle = needle_lower.as_bytes();
+        return haystack.len() >= needle.len()
+            && haystack.as_bytes().windows(needle.len()).any(|window| {
+                window
+                    .iter()
+                    .zip(needle)
+                    .all(|(byte, wanted)| byte.to_ascii_lowercase() == *wanted)
+            });
+    }
+    if haystack.contains(CAPITAL_SIGMA) {
+        return haystack.to_lowercase().contains(needle_lower);
+    }
+    LOWERCASE_SCRATCH.with(|scratch| {
+        let mut scratch = scratch.borrow_mut();
+        scratch.clear();
+        scratch.extend(haystack.chars().flat_map(char::to_lowercase));
+        scratch.contains(needle_lower)
+    })
+}
+
+/// The search box text a page filters rows by, lowercased once per query
+/// rather than once per row per keystroke. It follows the query it is handed,
+/// so a page never filters by a stale needle.
+#[derive(Default)]
+pub struct SearchNeedle {
+    source: RefCell<String>,
+    lowered: RefCell<String>,
+}
+
+impl SearchNeedle {
+    /// Whether any of `fields` contains `query`, ignoring case. An empty query
+    /// matches everything.
+    pub fn matches(&self, query: &str, fields: &[&str]) -> bool {
+        if query.is_empty() {
+            return true;
+        }
+        if *self.source.borrow() != query {
+            *self.source.borrow_mut() = query.to_string();
+            *self.lowered.borrow_mut() = query.to_lowercase();
+        }
+        let lowered = self.lowered.borrow();
+        fields
+            .iter()
+            .any(|field| contains_ignore_case(field, &lowered))
+    }
+}
+
+/// Digest of every field of a track that any library page renders, sorts or
+/// filters on. Two rows with the same digest are interchangeable on screen.
+pub fn track_digest(track: &Track) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    track.rel_path.hash(&mut hasher);
+    track.title.hash(&mut hasher);
+    track.artist.hash(&mut hasher);
+    track.album.hash(&mut hasher);
+    track.loved.hash(&mut hasher);
+    track.duration.to_bits().hash(&mut hasher);
+    track.track_number.hash(&mut hasher);
+    track.play_count.hash(&mut hasher);
+    track.date_added.hash(&mut hasher);
+    track.codec.hash(&mut hasher);
+    track.bit_depth.hash(&mut hasher);
+    track.sample_rate.hash(&mut hasher);
+    track.last_played.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn album_digest(album: &Album) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    album.title.hash(&mut hasher);
+    album.artist.hash(&mut hasher);
+    album.year.hash(&mut hasher);
+    album.genre.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn album_recency_digest(album: &Album) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    album.added_unix().hash(&mut hasher);
+    album.last_played_unix().hash(&mut hasher);
+    hasher.finish()
+}
+
+fn artist_digest(artist: &ArtistEntry) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    artist.name.hash(&mut hasher);
+    artist.album_count.hash(&mut hasher);
+    artist.appearance_count.hash(&mut hasher);
+    artist.track_count.hash(&mut hasher);
+    artist.play_count.hash(&mut hasher);
+    artist.last_played.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn fold_digests(digests: impl Iterator<Item = u64>) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    for digest in digests {
+        digest.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+/// What changed between two builds of the library, as digests the pages
+/// compare instead of walking and hashing the library themselves. Order
+/// sensitive, so a reorder counts as a change.
+pub struct LibrarySignature {
+    pub track_rows: Vec<u64>,
+    pub tracks: u64,
+    pub albums: u64,
+    pub album_recency: u64,
+    pub artists: u64,
+}
+
+impl LibrarySignature {
+    pub fn of(library: &Library) -> Self {
+        let track_rows: Vec<u64> = library.tracks.iter().map(track_digest).collect();
+        let tracks = fold_digests(track_rows.iter().copied());
+        Self {
+            tracks,
+            track_rows,
+            albums: fold_digests(library.albums.iter().map(album_digest)),
+            album_recency: fold_digests(library.albums.iter().map(album_recency_digest)),
+            artists: fold_digests(library.artists.iter().map(artist_digest)),
+        }
+    }
+}
+
+type SignatureSlot = Option<(Weak<Library>, Rc<LibrarySignature>)>;
+
+thread_local! {
+    static LAST_SIGNATURE: RefCell<SignatureSlot> = const { RefCell::new(None) };
+}
+
+/// The signature of `library`, computed once per library build no matter how
+/// many pages ask: the library is replaced wholesale, never mutated in place,
+/// so the pointer names its contents.
+pub fn library_signature(library: &Rc<Library>) -> Rc<LibrarySignature> {
+    LAST_SIGNATURE.with(|slot| {
+        if let Some((weak, signature)) = slot.borrow().as_ref() {
+            if std::ptr::eq(weak.as_ptr(), Rc::as_ptr(library)) {
+                return Rc::clone(signature);
+            }
+        }
+        let signature = Rc::new(LibrarySignature::of(library));
+        *slot.borrow_mut() = Some((Rc::downgrade(library), Rc::clone(&signature)));
+        signature
+    })
+}
+
+/// A weak note of which library a page last built from, so a reload that
+/// carries the very same library can be told apart from a new one.
+#[derive(Default)]
+pub struct BuiltFrom(RefCell<Weak<Library>>);
+
+impl BuiltFrom {
+    pub fn is(&self, library: &Rc<Library>) -> bool {
+        std::ptr::eq(self.0.borrow().as_ptr(), Rc::as_ptr(library))
+    }
+
+    pub fn set(&self, library: &Rc<Library>) {
+        *self.0.borrow_mut() = Rc::downgrade(library);
+    }
 }
 
 fn rediscover_candidates(album: &Album) -> RediscoverEntry {
@@ -319,6 +522,94 @@ mod tests {
         }
         t.codec = None;
         assert!(!is_lossless(&t));
+    }
+
+    const SAMPLES: [&str; 12] = [
+        "Abbey Road",
+        "abbey road",
+        "ÖDÖN",
+        "ödön",
+        "Straße",
+        "STRASSE",
+        "ΟΔΟΣ",
+        "οδος",
+        "İstanbul",
+        "東京",
+        "",
+        "Zebra",
+    ];
+
+    #[test]
+    fn case_blind_ordering_matches_comparing_the_lowercased_strings() {
+        for a in SAMPLES {
+            for b in SAMPLES {
+                assert_eq!(
+                    cmp_ignore_case(a, b),
+                    a.to_lowercase().cmp(&b.to_lowercase()),
+                    "{a:?} vs {b:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn case_blind_search_matches_lowercasing_the_haystack() {
+        let needles = ["abbey", "ödön", "ß", "ς", "σ", "οδος", "i̇stanbul", "東", "", "zz"];
+        for haystack in SAMPLES {
+            for needle in needles {
+                assert_eq!(
+                    contains_ignore_case(haystack, needle),
+                    haystack.to_lowercase().contains(needle),
+                    "{haystack:?} contains {needle:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_search_needle_follows_the_query_it_is_given() {
+        let needle = SearchNeedle::default();
+        assert!(needle.matches("", &["anything"]));
+        assert!(needle.matches("ROAD", &["Abbey Road", "x"]));
+        assert!(!needle.matches("ROAD", &["Abbey", "Lane"]));
+        assert!(needle.matches("lane", &["Abbey", "Penny Lane"]));
+        assert!(!needle.matches("lane", &["Abbey Road"]));
+    }
+
+    #[test]
+    fn a_library_signature_is_shared_per_build_and_follows_the_contents() {
+        let mut loved = track("a.flac", "A", "X", "AL");
+        loved.loved = true;
+        let plain = track("a.flac", "A", "X", "AL");
+        let build = |tracks: Vec<Track>| {
+            Rc::new(Library {
+                albums: vec![album("AL", "X", tracks.clone())],
+                tracks,
+                artists: Vec::new(),
+            })
+        };
+        let first = build(vec![plain.clone()]);
+        let same = library_signature(&first);
+        assert!(Rc::ptr_eq(&same, &library_signature(&first)));
+        let twin = build(vec![plain.clone()]);
+        let twin_signature = library_signature(&twin);
+        assert_eq!(same.tracks, twin_signature.tracks);
+        assert_eq!(same.albums, twin_signature.albums);
+        let hearted = library_signature(&build(vec![loved]));
+        assert_ne!(same.tracks, hearted.tracks);
+        assert_ne!(same.track_rows, hearted.track_rows);
+        assert_eq!(same.albums, hearted.albums);
+    }
+
+    #[test]
+    fn built_from_tells_one_library_from_its_twin() {
+        let library = Rc::new(Library::empty());
+        let twin = Rc::new(Library::empty());
+        let note = BuiltFrom::default();
+        assert!(!note.is(&library));
+        note.set(&library);
+        assert!(note.is(&library));
+        assert!(!note.is(&twin));
     }
 
     #[test]
