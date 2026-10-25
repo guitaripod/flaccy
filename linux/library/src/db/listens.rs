@@ -125,23 +125,28 @@ impl Db {
         }
     }
 
-    /// Stores scrobbles pulled from Last.fm (already deduped) in one
-    /// transaction, as submitted plays of unknown length.
+    /// Stores scrobbles pulled from Last.fm (already deduped by the caller's
+    /// ledger) in one transaction, as submitted plays of unknown length. Each
+    /// insert also skips a play already stored at the same second under the
+    /// same title key, so two syncs that run at once (a headless pull beside
+    /// the app) cannot store a page twice. Answers how many were stored.
     pub fn insert_pulled_listens(&self, listens: &[PulledListen]) -> Result<usize, rusqlite::Error> {
         if listens.is_empty() {
             return Ok(0);
         }
         let tx = self.conn.unchecked_transaction()?;
+        let mut stored = 0;
         {
             let mut insert = tx.prepare_cached(
                 "INSERT INTO scrobbles
                  (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
-                 VALUES (?1, ?2, ?3, ?4, 0, 1, ?5, ?6, ?7)",
+                 SELECT ?1, ?2, ?3, ?4, 0, 1, ?5, ?6, ?7
+                 WHERE NOT EXISTS (SELECT 1 FROM scrobbles WHERE timestamp = ?4 AND titleKey = ?5)",
             )?;
             let mut cache = ListenKeyCache::default();
             for listen in listens {
                 let keys = cache.keys(&listen.title, &listen.artist, &listen.album);
-                insert.execute(params![
+                stored += insert.execute(params![
                     listen.title,
                     listen.artist,
                     listen.album,
@@ -153,7 +158,7 @@ impl Db {
             }
         }
         tx.commit()?;
-        Ok(listens.len())
+        Ok(stored)
     }
 
     /// The newest play that came from Last.fm rather than from this computer.
@@ -510,6 +515,19 @@ mod tests {
         assert!(stored.iter().any(|listen| listen.played_here && listen.title_key == "here"));
         assert!(stored.iter().any(|listen| !listen.played_here && listen.title_key == "there"));
         assert_eq!(db.newest_pulled_listen(), Some(1_700_000_100));
+    }
+
+    #[test]
+    fn a_page_stored_twice_by_overlapping_syncs_lands_once() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        let page = [
+            pulled(1_700_000_000, "Song", "A", ""),
+            pulled(1_700_000_000, "Other", "A", ""),
+        ];
+        assert_eq!(db.insert_pulled_listens(&page).unwrap(), 2);
+        assert_eq!(db.insert_pulled_listens(&page).unwrap(), 0);
+        assert_eq!(db.scrobble_count(), 2);
     }
 
     #[test]

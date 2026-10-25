@@ -124,6 +124,13 @@ final class ListenHistoryDatabaseTests: XCTestCase {
         XCTAssertEqual(albums[0].count, 4)
     }
 
+    func testAPageStoredTwiceByOverlappingSyncsLandsOnce() throws {
+        let page = [pulled(1_700_000_000, "Song", "A", ""), pulled(1_700_000_000, "Other", "A", "")]
+        XCTAssertEqual(try db.insertPulledListens(page), 2)
+        XCTAssertEqual(try db.insertPulledListens(page), 0)
+        XCTAssertEqual(try db.scrobbleCountInRange(from: .distantPast, to: .distantFuture), 2)
+    }
+
     func testTopListsApplyTheLimitAfterFolding() throws {
         try db.insertPulledListens([
             pulled(1, "One", "A", "X"), pulled(2, "ONE", "A", "X"),

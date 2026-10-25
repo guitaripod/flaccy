@@ -64,27 +64,36 @@ extension DatabaseManager {
         }
     }
 
-    /// Stores scrobbles pulled from Last.fm, already deduplicated, in one
-    /// transaction as submitted plays of unknown length.
+    /// Stores scrobbles pulled from Last.fm, already deduplicated by the
+    /// caller's ledger, in one transaction as submitted plays of unknown
+    /// length. Each insert also skips a play already stored at the same second
+    /// under the same title key, so overlapping syncs can never store a page
+    /// twice. Returns how many were stored.
     @discardableResult
     public func insertPulledListens(_ listens: [PulledListen]) throws -> Int {
         guard !listens.isEmpty else { return 0 }
-        try dbQueue.write { db in
+        let stored = try dbQueue.write { db -> Int in
             let insert = try db.cachedStatement(sql: """
                 INSERT INTO scrobbles
                     (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
-                VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?)
+                SELECT ?1, ?2, ?3, ?4, 0, 1, ?5, ?6, ?7
+                WHERE NOT EXISTS (SELECT 1 FROM scrobbles WHERE timestamp = ?4 AND titleKey = ?5)
             """)
             var memo = ListenKeyMemo()
+            var stored = 0
             for listen in listens {
                 let keys = memo.keys(title: listen.title, artist: listen.artist, album: listen.album)
                 try insert.execute(arguments: [
                     listen.title, listen.artist, listen.album, listen.timestamp, keys.title, keys.artist, keys.album,
                 ])
+                stored += db.changesCount
             }
+            return stored
         }
-        scrobbleRevisionCounter.bump()
-        return listens.count
+        if stored > 0 {
+            scrobbleRevisionCounter.bump()
+        }
+        return stored
     }
 
     /// The newest play that came from Last.fm rather than from this device.
