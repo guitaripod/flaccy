@@ -10,6 +10,15 @@ struct FunnelSignalsTests {
         struct Event: Equatable {
             let name: String
             let props: [String: MidgarSignalValue]
+
+            init(name: String, props: [String: MidgarSignalValue]) {
+                self.name = name
+                self.props = props
+            }
+
+            init(_ signal: MidgarSignal) {
+                self.init(name: signal.name, props: signal.props)
+            }
         }
 
         private let lock = NSLock()
@@ -19,8 +28,8 @@ struct FunnelSignalsTests {
             lock.withLock { stored }
         }
 
-        func record(_ name: String, props: [String: MidgarSignalValue]) {
-            lock.withLock { stored.append(Event(name: name, props: props)) }
+        func record(_ signal: MidgarSignal) {
+            lock.withLock { stored.append(Event(signal)) }
         }
     }
 

@@ -246,7 +246,7 @@ final class PurchaseManager {
     /// nothing it produces reaches the counts a pricing decision is made from.
     func notePaywallShown() {
         guard !trialClockIsOverridden else { return }
-        Task { await MidgarSignals.shared?.record("paywall.view", props: ["placement": "paywall"]) }
+        Task { await MidgarSignals.shared?.send(.paywallView(placement: .paywall)) }
     }
 
     /// Re-derives the trial day from the stored start, for a process that has
