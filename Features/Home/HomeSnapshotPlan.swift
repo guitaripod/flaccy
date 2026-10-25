@@ -4,6 +4,7 @@ import Foundation
 nonisolated enum HomeSectionID: Hashable, Sendable {
     case banners
     case hero
+    case heroWithJump
     case jumpBackIn
     case madeForYou
     case recentlyAdded
@@ -18,6 +19,7 @@ nonisolated enum HomeItem: Hashable, Sendable {
     case statusBanner
     case hero
     case empty
+    case jumpHeader
     case jump(PlaybackContext)
     case mix(String)
     case libraryRadio
@@ -35,7 +37,7 @@ nonisolated enum HomeSnapshotPlan {
     static let minimumMixCards = 2
 
     static func sections(
-        for model: HomeScreenModel, showsRunwayBanner: Bool, showsStatusBanner: Bool
+        for model: HomeScreenModel, showsRunwayBanner: Bool, showsStatusBanner: Bool, isWide: Bool = false
     ) -> [(section: HomeSectionID, items: [HomeItem])] {
         let feed = model.feed
         var plan: [(HomeSectionID, [HomeItem])] = []
@@ -49,9 +51,15 @@ nonisolated enum HomeSnapshotPlan {
             plan.append((.hero, [.empty]))
             return plan
         }
-        plan.append((.hero, [.hero]))
+        var blocks = feed.blocks.filter { $0 != .single(.resume) }[...]
+        if isWide, blocks.first == .single(.jumpBackIn), !feed.jumpBackIn.isEmpty {
+            blocks = blocks.dropFirst()
+            plan.append((.heroWithJump, [.hero, .jumpHeader] + feed.jumpBackIn.map { .jump($0.context) }))
+        } else {
+            plan.append((.hero, [.hero]))
+        }
 
-        for block in feed.blocks {
+        for block in blocks {
             switch block {
             case .single(let section):
                 if let entry = entry(for: section, model: model) { plan.append(entry) }

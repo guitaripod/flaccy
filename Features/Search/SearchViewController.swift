@@ -78,6 +78,7 @@ final class SearchViewController: UIViewController {
         collectionView.backgroundColor = .clear
         collectionView.delegate = self
         collectionView.keyboardDismissMode = .onDrag
+        collectionView.contentInsetAdjustmentBehavior = .always
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -109,6 +110,17 @@ final class SearchViewController: UIViewController {
             collectionView.dequeueConfiguredReusableSupplementary(using: headerRegistration, for: indexPath)
         }
     }
+
+    #if DEBUG
+    func demoSearch(query text: String) {
+        loadViewIfNeeded()
+        searchController.searchBar.text = text
+        searchController.isActive = false
+        query = text
+        results = libraryViewModel.searchResults(for: text)
+        applyResults()
+    }
+    #endif
 
     private func runSearch() {
         searchTask?.cancel()

@@ -28,6 +28,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         let rootVC = RootContainerViewController(content: tabs, player: playerContainer)
         self.rootController = rootVC
+        rootVC.onSplitChange = { [weak tabs] isSplit in tabs?.suppressesMiniPlayer = isSplit }
         tabs.library.debutHostProvider = { [weak rootVC] in rootVC?.view }
 
         window.overrideUserInterfaceStyle = AppAppearance.current.userInterfaceStyle
@@ -72,10 +73,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
         tabs.onMiniPlayerTap = { [weak playerContainer] in playerContainer?.expand() }
         guard #available(iOS 26.0, *) else {
-            playerContainer.dockBottomClearance = { [weak self, weak tabs] in
-                guard let tabs, let space = self?.playerContainer.view else { return 0 }
-                let safeBottom = space.safeAreaInsets.bottom
-                return max(space.bounds.height - tabs.tabBarTop(in: space) - safeBottom, 0)
+            playerContainer.dockObstruction = { [weak self, weak tabs] in
+                guard let tabs, let space = self?.playerContainer.view else { return .zero }
+                return tabs.barObstruction(in: space, safeArea: space.safeAreaInsets)
             }
             return
         }
@@ -165,7 +165,13 @@ final class RootContainerViewController: UIViewController {
     private var playerLeading: NSLayoutConstraint!
     private var appliedGeometry: AdaptiveLayout.SplitGeometry?
     private var hasCurrentTrack = false
-    private(set) var isSplit = false
+    private(set) var isSplit = false {
+        didSet {
+            guard isSplit != oldValue else { return }
+            onSplitChange?(isSplit)
+        }
+    }
+    var onSplitChange: ((Bool) -> Void)?
     private var isPlayerFocused = false
 
     override var childForStatusBarStyle: UIViewController? { statusBarSource }

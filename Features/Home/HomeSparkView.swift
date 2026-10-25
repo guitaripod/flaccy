@@ -6,6 +6,7 @@ final class HomeSparkView: UIView {
     static let height: CGFloat = 56
     private static let gap: CGFloat = 4
     private static let minimumBar: CGFloat = 4
+    private static let maximumBarWidth: CGFloat = 24
 
     private var values: [Int] = []
 
@@ -34,7 +35,7 @@ final class HomeSparkView: UIView {
         guard !values.isEmpty, let context = UIGraphicsGetCurrentContext() else { return }
         let peak = CGFloat(max(values.max() ?? 1, 1))
         let count = CGFloat(values.count)
-        let width = (bounds.width - Self.gap * (count - 1)) / count
+        let width = min((bounds.width - Self.gap * (count - 1)) / count, Self.maximumBarWidth)
         let others = UIColor.label.withAlphaComponent(0.24).resolvedColor(with: traitCollection)
         let today = UIColor.label.resolvedColor(with: traitCollection)
         for (index, value) in values.enumerated() {

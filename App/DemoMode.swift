@@ -280,6 +280,9 @@ enum DemoMode {
             applyHomeQueue()
             return
         }
+        for key in ["context", "savedAt"] {
+            UserDefaults.standard.removeObject(forKey: "flaccy.queue.\(key)")
+        }
         if environment["FLACCY_NO_QUEUE"] == "1" {
             for key in ["paths", "index", "currentPath", "elapsed", "shuffle", "repeat", "originalPaths"] {
                 UserDefaults.standard.removeObject(forKey: "flaccy.queue.\(key)")
@@ -523,6 +526,9 @@ enum DemoRouter {
         guard CommandLine.arguments.contains(ScreenshotSeeder.launchArgument),
               let route = DemoMode.environment["FLACCY_ROUTE"], !route.isEmpty else { return }
         Task {
+            if DemoMode.environment["FLACCY_LANDSCAPE"] == "1" {
+                window.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+            }
             await waitForLibrary()
             try? await Task.sleep(for: .seconds(0.4))
             if DemoMode.environment["FLACCY_EQ"] == "1" {
@@ -557,6 +563,7 @@ enum DemoRouter {
         switch route {
         case "home", "home-playing", "home-edit", "home-dayone": .home
         case "charts": .recap
+        case "search": .search
         default: .library
         }
     }
@@ -573,6 +580,8 @@ enum DemoRouter {
         case "library":
             tabs.library.select(segment: .albums)
             tabs.library.viewModel.setFilter(.all)
+        case "search":
+            tabs.search.demoSearch(query: env["FLACCY_QUERY"] ?? "a")
         case "songs": tabs.library.select(segment: .songs)
         case "artists": tabs.library.select(segment: .artists)
         case "playlists": tabs.library.select(segment: .playlists)

@@ -26,6 +26,18 @@ final class AppTabBarController: UITabBarController {
 
     var onMiniPlayerTap: (() -> Void)?
 
+    /// True while the window is split and Now Playing is a pane of its own, so
+    /// a second mini player in the tab accessory would only repeat it.
+    var suppressesMiniPlayer = false {
+        didSet {
+            guard suppressesMiniPlayer != oldValue else { return }
+            updateMiniPlayer(track: lastMiniPlayerTrack, isPlaying: lastMiniPlayerIsPlaying)
+        }
+    }
+
+    private var lastMiniPlayerTrack: Track?
+    private var lastMiniPlayerIsPlaying = false
+
     private var tabsByDestination: [Destination: UITab] = [:]
 
     private lazy var accessoryMiniPlayer: MiniPlayerView = {
@@ -106,8 +118,10 @@ final class AppTabBarController: UITabBarController {
     /// Shows or removes the mini player in the system's tab accessory. Before
     /// iOS 26 the player container's own floating dock does this job.
     func updateMiniPlayer(track: Track?, isPlaying: Bool) {
+        lastMiniPlayerTrack = track
+        lastMiniPlayerIsPlaying = isPlaying
         guard #available(iOS 26.0, *) else { return }
-        guard let track else {
+        guard let track, !suppressesMiniPlayer else {
             if bottomAccessory != nil { setBottomAccessory(nil, animated: true) }
             return
         }
@@ -129,8 +143,18 @@ final class AppTabBarController: UITabBarController {
         accessoryMiniPlayer.alpha = handedOff ? 0 : 1
     }
 
-    /// Where the floating dock may rest on iOS 18 to 25: just above the tab bar.
-    func tabBarTop(in space: UIView) -> CGFloat {
-        tabBar.convert(tabBar.bounds, to: space).minY
+    /// What the tab bar takes from `space`'s edges, wherever it sits: its height
+    /// along the bottom, its width down a side. Nothing while it is hidden or
+    /// has not been laid out. Used by the floating dock before iOS 26.
+    func barObstruction(in space: UIView, safeArea: UIEdgeInsets) -> UIEdgeInsets {
+        guard !tabBar.isHidden, tabBar.window != nil, tabBar.bounds.width > 0 else { return .zero }
+        let frame = tabBar.convert(tabBar.bounds, to: space)
+        let bounds = space.bounds
+        guard frame.height <= frame.width else {
+            if frame.midX < bounds.midX { return UIEdgeInsets(top: 0, left: max(frame.maxX, 0), bottom: 0, right: 0) }
+            return UIEdgeInsets(top: 0, left: 0, bottom: 0, right: max(bounds.maxX - frame.minX, 0))
+        }
+        guard frame.midY > bounds.midY else { return .zero }
+        return UIEdgeInsets(top: 0, left: 0, bottom: max(bounds.maxY - frame.minY - safeArea.bottom, 0), right: 0)
     }
 }

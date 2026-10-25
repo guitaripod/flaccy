@@ -10,6 +10,8 @@ final class SearchResultCell: UICollectionViewCell {
     private let coverView = AsyncImageView()
     private let titleLabel = UILabel()
     private let detailLabel = UILabel()
+    private lazy var separatorHeight = separator.heightAnchor.constraint(equalToConstant: 0.5)
+    private let separator = UIView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -33,7 +35,6 @@ final class SearchResultCell: UICollectionViewCell {
         row.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(row)
 
-        let separator = UIView()
         separator.backgroundColor = .separator
         separator.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(separator)
@@ -48,12 +49,18 @@ final class SearchResultCell: UICollectionViewCell {
             separator.leadingAnchor.constraint(equalTo: text.leadingAnchor),
             separator.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             separator.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            separator.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale),
+            separatorHeight,
         ])
+        updateSeparatorHeight()
+        registerForTraitChanges([UITraitDisplayScale.self]) { (cell: SearchResultCell, _) in cell.updateSeparatorHeight() }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    private func updateSeparatorHeight() {
+        separatorHeight.constant = 1 / max(traitCollection.displayScale, 1)
+    }
 
     override func prepareForReuse() {
         super.prepareForReuse()

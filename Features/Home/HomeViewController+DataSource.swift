@@ -19,6 +19,9 @@ extension HomeViewController {
             guard let self else { return }
             cell.host(item == .runwayBanner ? self.runwayBannerView : self.statusBannerView)
         }
+        let jumpTitle = UICollectionView.CellRegistration<HomeSectionTitleCell, HomeItem> { cell, _, _ in
+            cell.configure(title: HomeCopy.title(for: .jumpBackIn))
+        }
         let jump = UICollectionView.CellRegistration<HomeJumpTileCell, HomeFeed.Item> { cell, _, item in
             cell.configure(with: item)
         }
@@ -61,6 +64,8 @@ extension HomeViewController {
                 return collectionView.dequeueConfiguredReusableCell(using: empty, for: indexPath, item: item)
             case .runwayBanner, .statusBanner:
                 return collectionView.dequeueConfiguredReusableCell(using: banner, for: indexPath, item: item)
+            case .jumpHeader:
+                return collectionView.dequeueConfiguredReusableCell(using: jumpTitle, for: indexPath, item: item)
             case .jump(let context):
                 guard let entry = feed.jumpBackIn.first(where: { $0.context == context }) else { return nil }
                 return collectionView.dequeueConfiguredReusableCell(using: jump, for: indexPath, item: entry)

@@ -45,6 +45,9 @@ final class HomeHeroCell: UICollectionViewCell {
     private let buttonRow = UIStackView()
     private let impact = UIImpactFeedbackGenerator(style: .medium)
     private var circleWidths: [ObjectIdentifier: NSLayoutConstraint] = [:]
+    private var isNarrow = false
+
+    private static let narrowWidth: CGFloat = 340
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -148,6 +151,18 @@ final class HomeHeroCell: UICollectionViewCell {
     }
 
     private static let badgeHolderTag = 91
+
+    /// In half a wide window the card is too narrow for a cover beside the
+    /// words, so the words move under it.
+    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+        let narrow = layoutAttributes.size.width < Self.narrowWidth
+        if narrow != isNarrow {
+            isNarrow = narrow
+            topRow.axis = narrow ? .vertical : .horizontal
+            topRow.alignment = narrow ? .leading : .top
+        }
+        return super.preferredLayoutAttributesFitting(layoutAttributes)
+    }
 
     private func applyBorder() {
         let color = UIColor.label.withAlphaComponent(0.14).resolvedColor(with: traitCollection)

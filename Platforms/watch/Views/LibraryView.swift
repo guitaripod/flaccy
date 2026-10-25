@@ -27,7 +27,7 @@ struct LibraryView: View {
                 content
             }
         }
-        .navigationTitle("Flaccy")
+        .navigationTitle("On Watch")
         .toolbar {
             if player.currentItem != nil {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -86,22 +86,6 @@ struct LibraryView: View {
 
     private func list(_ albums: [MediaAlbum]) -> some View {
         List {
-            if let summary = player.resumeSummary {
-                Section {
-                    ContinueCard(
-                        title: summary.title,
-                        artist: summary.artist,
-                        albumTitle: summary.albumTitle,
-                        artworkData: summary.artworkData,
-                        action: continuePlayback
-                    )
-                }
-            }
-
-            if showsBatchBanner {
-                Section { ReceivingBanner(batch: syncStatus.incoming) }
-            }
-
             Section {
                 Button(action: shuffleAll) {
                     Label("Shuffle All", systemImage: "shuffle")
@@ -111,6 +95,16 @@ struct LibraryView: View {
                 .accessibilityHint(Text("Plays everything on this watch in random order"))
             } header: {
                 jobHeader
+            }
+
+            if showsBatchBanner {
+                Section { ReceivingBanner(batch: syncStatus.incoming) }
+            }
+
+            if let newest = newestAlbum(in: albums) {
+                Section {
+                    NewAlbumRow(album: newest) { onOpen(.album(newest)) }
+                }
             }
 
             Section {
@@ -185,9 +179,9 @@ struct LibraryView: View {
         )
     }
 
-    private func continuePlayback() {
-        player.resumePlayback()
-        onShowNowPlaying()
+    private func newestAlbum(in albums: [MediaAlbum]) -> MediaAlbum? {
+        guard let newest = store.newestAlbum else { return nil }
+        return albums.first { $0.id == newest.id }
     }
 
     /// The phone's job, above the shuffle row: present only while the phone is
@@ -200,8 +194,7 @@ struct LibraryView: View {
 
     private func shuffleAll() {
         guard !store.allTracks.isEmpty else { return }
-        if !player.shuffleEnabled { player.toggleShuffle() }
-        player.play(store.allTracks, startingAt: Int.random(in: store.allTracks.indices))
+        player.shuffleAll(store.allTracks)
         onShowNowPlaying()
     }
 }

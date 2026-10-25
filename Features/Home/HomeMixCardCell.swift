@@ -16,7 +16,7 @@ final class HomeMixCardCell: UICollectionViewCell {
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
     private let placeholderLabel = UILabel()
-    private let dashed = CAShapeLayer()
+    private let dashed = HomeDashedOutlineView(cornerRadius: 14)
     private let textStack = UIStackView()
 
     override init(frame: CGRect) {
@@ -56,11 +56,9 @@ final class HomeMixCardCell: UICollectionViewCell {
         textStack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(textStack)
 
-        dashed.fillColor = UIColor.clear.cgColor
-        dashed.lineWidth = 1.5
-        dashed.lineDashPattern = [6, 5]
         dashed.isHidden = true
-        art.layer.addSublayer(dashed)
+        dashed.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(dashed)
         placeholderLabel.font = .scaled(.footnote, size: 13, weight: .medium)
         placeholderLabel.adjustsFontForContentSizeCategory = true
         placeholderLabel.textColor = .secondaryLabel
@@ -75,6 +73,10 @@ final class HomeMixCardCell: UICollectionViewCell {
             art.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             art.widthAnchor.constraint(equalToConstant: Self.artSide),
             art.heightAnchor.constraint(equalToConstant: Self.artSide),
+            dashed.topAnchor.constraint(equalTo: art.topAnchor),
+            dashed.leadingAnchor.constraint(equalTo: art.leadingAnchor),
+            dashed.trailingAnchor.constraint(equalTo: art.trailingAnchor),
+            dashed.bottomAnchor.constraint(equalTo: art.bottomAnchor),
             playButton.widthAnchor.constraint(equalToConstant: Self.playSide),
             playButton.heightAnchor.constraint(equalToConstant: Self.playSide),
             playButton.trailingAnchor.constraint(equalTo: art.trailingAnchor, constant: -8),
@@ -88,23 +90,10 @@ final class HomeMixCardCell: UICollectionViewCell {
             placeholderLabel.trailingAnchor.constraint(equalTo: art.trailingAnchor, constant: -18),
         ])
         isAccessibilityElement = false
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (cell: HomeMixCardCell, _) in cell.applyDashColor() }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        dashed.path = UIBezierPath(
-            roundedRect: art.bounds.insetBy(dx: 0.75, dy: 0.75), cornerRadius: 14
-        ).cgPath
-        dashed.frame = art.bounds
-    }
-
-    private func applyDashColor() {
-        dashed.strokeColor = UIColor.label.withAlphaComponent(0.3).resolvedColor(with: traitCollection).cgColor
-    }
 
     override func prepareForReuse() {
         super.prepareForReuse()
@@ -140,7 +129,7 @@ final class HomeMixCardCell: UICollectionViewCell {
 
     func configurePlaceholder() {
         art.reset()
-        applyDashColor()
+        art.isHidden = true
         dashed.isHidden = false
         placeholderLabel.isHidden = false
         placeholderLabel.text = HomeCopy.moreMixes
@@ -153,9 +142,45 @@ final class HomeMixCardCell: UICollectionViewCell {
     }
 
     private func showCard() {
+        art.isHidden = false
         dashed.isHidden = true
         placeholderLabel.isHidden = true
         playButton.isHidden = false
         textStack.isHidden = false
+    }
+}
+
+/// A rounded, dashed outline on a faint fill, for a slot that is not filled yet.
+final class HomeDashedOutlineView: UIView {
+
+    private let outline = CAShapeLayer()
+    private let radius: CGFloat
+
+    init(cornerRadius: CGFloat) {
+        radius = cornerRadius
+        super.init(frame: .zero)
+        isUserInteractionEnabled = false
+        layer.cornerRadius = cornerRadius
+        layer.cornerCurve = .continuous
+        outline.fillColor = UIColor.clear.cgColor
+        outline.lineWidth = 1.5
+        outline.lineDashPattern = [6, 5]
+        layer.addSublayer(outline)
+        applyColors()
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: HomeDashedOutlineView, _) in view.applyColors() }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        outline.frame = bounds
+        outline.path = UIBezierPath(roundedRect: bounds.insetBy(dx: 0.75, dy: 0.75), cornerRadius: radius).cgPath
+    }
+
+    private func applyColors() {
+        outline.strokeColor = UIColor.label.withAlphaComponent(0.3).resolvedColor(with: traitCollection).cgColor
+        backgroundColor = UIColor.label.withAlphaComponent(0.05)
     }
 }

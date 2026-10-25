@@ -115,3 +115,32 @@ final class HomeEditFooterCell: UICollectionViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 }
+
+/// A section title that lives among the items, for the arrangement where a
+/// title has to sit inside a column of its own.
+final class HomeSectionTitleCell: UICollectionViewCell {
+
+    static let reuseID = "HomeSectionTitleCell"
+    private let titleLabel = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        titleLabel.font = .scaled(.title3, size: 22, weight: .bold, maxSize: 30)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.accessibilityTraits = .header
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    func configure(title: String) {
+        titleLabel.text = title
+    }
+}

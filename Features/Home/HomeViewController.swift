@@ -24,6 +24,7 @@ final class HomeViewController: UIViewController {
     private var runwayRequested = false
     private var showsStatusBanner = false
     private var hasRendered = false
+    private(set) var isWide = false
     private var cancellables = Set<AnyCancellable>()
 
     init(libraryViewModel: LibraryViewModel, library: LibraryViewController) {
@@ -57,9 +58,25 @@ final class HomeViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         positionBackdrop()
+        updateWidth()
         let width = collectionView.bounds.width
         let target = runwayBanner.expandedHeight(forWidth: width)
         if runwayHeight.constant != target { runwayHeight.constant = target }
+    }
+
+    /// Home arranges itself from the room its own content area has, and
+    /// re-arranges when that changes, as when the Duo opens its inner display
+    /// or the window is resized.
+    private func updateWidth() {
+        let insets = collectionView.adjustedContentInset
+        let width = collectionView.bounds.width - insets.left - insets.right
+        let wide = AdaptiveLayout.homeIsWide(contentWidth: width)
+        guard wide != isWide, hasRendered else {
+            if !hasRendered { isWide = wide }
+            return
+        }
+        isWide = wide
+        reapply()
     }
 
     private func setupSettingsButton() {
@@ -83,6 +100,7 @@ final class HomeViewController: UIViewController {
         collectionView.backgroundColor = .clear
         collectionView.delegate = self
         collectionView.alwaysBounceVertical = true
+        collectionView.contentInsetAdjustmentBehavior = .always
         collectionView.contentInset.bottom = 16
         collectionView.accessibilityIdentifier = "home.collection"
         view.addSubview(collectionView)
@@ -173,7 +191,8 @@ final class HomeViewController: UIViewController {
     private func apply(_ newModel: HomeScreenModel) {
         model = newModel
         let plan = HomeSnapshotPlan.sections(
-            for: newModel, showsRunwayBanner: showsRunwayBanner, showsStatusBanner: showsStatusBanner
+            for: newModel, showsRunwayBanner: showsRunwayBanner, showsStatusBanner: showsStatusBanner,
+            isWide: isWide
         )
         var snapshot = NSDiffableDataSourceSnapshot<HomeSectionID, HomeItem>()
         for (section, items) in plan {
@@ -185,6 +204,7 @@ final class HomeViewController: UIViewController {
         let animates = hasRendered && !UIAccessibility.isReduceMotionEnabled && view.window != nil
         dataSource.apply(snapshot, animatingDifferences: animates)
         hasRendered = true
+        collectionView.collectionViewLayout.invalidateLayout()
         backdrop.show(album: newModel.backdropAlbum)
         view.setNeedsLayout()
     }

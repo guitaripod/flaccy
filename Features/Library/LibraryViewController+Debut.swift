@@ -176,7 +176,8 @@ extension LibraryViewController {
             return
         }
         debutHost.layoutIfNeeded()
-        let targets = UIAccessibility.isReduceMotionEnabled ? [] : albumGridTargetFrames(in: debut)
+        let gridIsOnScreen = view.window != nil
+        let targets = UIAccessibility.isReduceMotionEnabled || !gridIsOnScreen ? [] : albumGridTargetFrames(in: debut)
         debutView = nil
         debutHost.bringSubviewToFront(debut)
         navigationController?.setNavigationBarHidden(false, animated: false)

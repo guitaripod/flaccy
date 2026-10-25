@@ -28,9 +28,9 @@ final class EditHomeViewController: UIViewController {
         view.addSubview(bar)
         view.addSubview(tableView)
         NSLayoutConstraint.activate([
-            bar.topAnchor.constraint(equalTo: view.topAnchor, constant: 16),
-            bar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            bar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            bar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            bar.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            bar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             tableView.topAnchor.constraint(equalTo: bar.bottomAnchor, constant: 8),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -86,6 +86,7 @@ final class EditHomeViewController: UIViewController {
         tableView.isEditing = true
         tableView.allowsSelection = false
         tableView.backgroundColor = .clear
+        tableView.contentInsetAdjustmentBehavior = .always
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellID)
         tableView.tableHeaderView = makeIntro()
         tableView.tableFooterView = makeFooter()
@@ -125,17 +126,39 @@ final class EditHomeViewController: UIViewController {
         return padded(stack, insets: UIEdgeInsets(top: 8, left: 36, bottom: 24, right: 36))
     }
 
+    private var headerFooterInsets: [ObjectIdentifier: UIEdgeInsets] = [:]
+
     private func padded(_ content: UIView, insets: UIEdgeInsets) -> UIView {
         let holder = UIView()
+        headerFooterInsets[ObjectIdentifier(holder)] = insets
+        holder.layoutMargins = insets
         content.translatesAutoresizingMaskIntoConstraints = false
         holder.addSubview(content)
         NSLayoutConstraint.activate([
-            content.topAnchor.constraint(equalTo: holder.topAnchor, constant: insets.top),
-            content.leadingAnchor.constraint(equalTo: holder.leadingAnchor, constant: insets.left),
-            content.trailingAnchor.constraint(equalTo: holder.trailingAnchor, constant: -insets.right),
-            content.bottomAnchor.constraint(equalTo: holder.bottomAnchor, constant: -insets.bottom),
+            content.topAnchor.constraint(equalTo: holder.layoutMarginsGuide.topAnchor),
+            content.leadingAnchor.constraint(equalTo: holder.layoutMarginsGuide.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: holder.layoutMarginsGuide.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: holder.layoutMarginsGuide.bottomAnchor),
         ])
         return holder
+    }
+
+    /// The intro and footer line up with the grouped list's own edge, which
+    /// moves in from a side that a bar or the fold has taken.
+    private func applySafeAreaToHeaderAndFooter() {
+        let safe = view.safeAreaInsets
+        for holder in [tableView.tableHeaderView, tableView.tableFooterView].compactMap({ $0 }) {
+            guard let base = headerFooterInsets[ObjectIdentifier(holder)] else { continue }
+            holder.layoutMargins = UIEdgeInsets(
+                top: base.top, left: base.left + safe.left, bottom: base.bottom, right: base.right + safe.right
+            )
+        }
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        applySafeAreaToHeaderAndFooter()
+        sizeHeaderAndFooter()
     }
 
     private func sizeHeaderAndFooter() {

@@ -110,9 +110,10 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     /// morph, and false once it has handed it back.
     var onExternalDockHandoff: ((Bool) -> Void)?
 
-    /// How far above the bottom safe area the floating dock rests, so it clears
-    /// a tab bar that is not a safe-area inset of this overlay.
-    var dockBottomClearance: (() -> CGFloat)?
+    /// How much of each edge a tab bar takes beyond this overlay's own safe
+    /// area, in this view's space, so the floating dock clears it wherever the
+    /// bar is: under the dock on a phone, down one side on an iPhone Duo.
+    var dockObstruction: (() -> UIEdgeInsets)?
     var onMorphProgress: ((CGFloat) -> Void)?
     var onFocusChange: ((Bool) -> Void)?
 
@@ -352,17 +353,19 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     }
 
     private func applyFloatingDockGeometry(in size: CGSize) {
-        let safeBottom = view.safeAreaInsets.bottom + (dockBottomClearance?() ?? 0)
+        let obstruction = dockObstruction?() ?? .zero
+        let safe = view.safeAreaInsets
+        let safeBottom = safe.bottom + obstruction.bottom
         dockHeight = MorphTuning.dockHeight
         dockCorner = MorphTuning.dockCorner
         dockArtworkCorner = MorphTuning.proxyDockCorner
-        dockLeadingConstant = MorphTuning.dockInset
-        dockTrailingConstant = -MorphTuning.dockInset
+        dockLeadingConstant = MorphTuning.dockInset + max(safe.left, obstruction.left)
+        dockTrailingConstant = -(MorphTuning.dockInset + max(safe.right, obstruction.right))
         miniPlayerHeight.constant = dockHeight
         dockTopConstant = size.height - safeBottom - MorphTuning.dockBottomGap - dockHeight
         dockBottomConstant = -(safeBottom + MorphTuning.dockBottomGap)
         dockArtRect = CGRect(
-            x: size.width - MorphTuning.dockInset - dockHeight,
+            x: size.width + dockTrailingConstant - dockHeight,
             y: dockTopConstant,
             width: dockHeight,
             height: dockHeight
