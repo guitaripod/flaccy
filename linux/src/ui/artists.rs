@@ -1,10 +1,12 @@
 use crate::events::AppEvent;
-use crate::library::{Album, ArtistEntry};
+use crate::filters;
+use crate::library::{Album, ArtistEntry, Library};
 use crate::ui::{albums, context, Ui};
 use adw::prelude::*;
 use gtk::glib::BoxedAnyObject;
 use gtk::{gdk, gio, glib, pango};
 use std::cell::{Cell, RefCell};
+use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -26,19 +28,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let filter = {
         let query = Rc::clone(&ui.query);
+        let needle = filters::SearchNeedle::default();
         gtk::CustomFilter::new(move |obj| {
             let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
                 return true;
             };
             let query = query.borrow();
-            if query.is_empty() {
-                return true;
-            }
-            boxed
-                .borrow::<ArtistEntry>()
-                .name
-                .to_lowercase()
-                .contains(&query.to_lowercase())
+            needle.matches(&query, &[&boxed.borrow::<ArtistEntry>().name])
         })
     };
     let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
@@ -200,9 +196,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let covers = Rc::clone(&covers);
         let sort_mode = Rc::clone(&sort_mode);
         let ui = Rc::clone(ui);
+        let covers_from = filters::BuiltFrom::default();
         Rc::new(move || {
             let library = ui.core.library.borrow().clone();
-            *covers.borrow_mut() = representative_covers(&library.albums);
+            if !covers_from.is(&library) {
+                *covers.borrow_mut() = representative_covers(&library.albums);
+                covers_from.set(&library);
+            }
             let mut sorted = library.artists.clone();
             sort_artists(&mut sorted, sort_mode.get());
             let items: Vec<BoxedAnyObject> = sorted.into_iter().map(BoxedAnyObject::new).collect();
@@ -214,11 +214,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let stack = stack.clone();
         let ui = Rc::clone(ui);
         let repopulate = Rc::clone(&repopulate);
-        let applied = Cell::new(0u64);
+        let applied = Cell::new(None::<u64>);
         move || {
             let library = ui.core.library.borrow().clone();
-            let fingerprint = artists_fingerprint(&library.artists);
-            if applied.replace(fingerprint) != fingerprint {
+            let fingerprint = filters::library_signature(&library).artists;
+            if applied.replace(Some(fingerprint)) != Some(fingerprint) {
                 repopulate();
             }
             stack.set_visible_child_name(if library.artists.is_empty() {
@@ -249,15 +249,35 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     }
 
     {
+        let library_dirty = Rc::new(Cell::new(false));
+        let search_dirty = Rc::new(Cell::new(false));
+        {
+            let rebuild = rebuild.clone();
+            let filter = filter.clone();
+            let library_dirty = Rc::clone(&library_dirty);
+            let search_dirty = Rc::clone(&search_dirty);
+            ui.core
+                .hub
+                .subscribe_widget(&stack, move |stack, event| match event {
+                    AppEvent::LibraryReloaded if stack.is_mapped() => rebuild(),
+                    AppEvent::LibraryReloaded => library_dirty.set(true),
+                    AppEvent::SearchChanged(_) if stack.is_mapped() => {
+                        filter.changed(gtk::FilterChange::Different)
+                    }
+                    AppEvent::SearchChanged(_) => search_dirty.set(true),
+                    _ => {}
+                });
+        }
         let rebuild = rebuild.clone();
         let filter = filter.clone();
-        ui.core
-            .hub
-            .subscribe_widget(&stack, move |_, event| match event {
-                AppEvent::LibraryReloaded => rebuild(),
-                AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
-                _ => {}
-            });
+        stack.connect_map(move |_| {
+            if library_dirty.replace(false) {
+                rebuild();
+            }
+            if search_dirty.replace(false) {
+                filter.changed(gtk::FilterChange::Different);
+            }
+        });
     }
 
     {
@@ -349,25 +369,20 @@ fn artist_counts_label(artist: &ArtistEntry) -> String {
     format!("{lead} · {}", plural(artist.track_count, "track"))
 }
 
-fn sort_artists(artists: &mut [ArtistEntry], mode: ArtistSort) {
-    let by_name =
-        |a: &ArtistEntry, b: &ArtistEntry| a.name.to_lowercase().cmp(&b.name.to_lowercase());
+type ArtistSortKey = (Reverse<i64>, Reverse<Option<i64>>, String);
+
+fn artist_sort_key(artist: &ArtistEntry, mode: ArtistSort) -> ArtistSortKey {
+    let name = artist.name.to_lowercase();
     match mode {
-        ArtistSort::Name => artists.sort_by(by_name),
-        ArtistSort::MostPlayed => {
-            artists.sort_by(|a, b| b.play_count.cmp(&a.play_count).then_with(|| by_name(a, b)))
-        }
-        ArtistSort::RecentlyPlayed => artists.sort_by(|a, b| {
-            b.last_played
-                .cmp(&a.last_played)
-                .then_with(|| by_name(a, b))
-        }),
-        ArtistSort::TrackCount => artists.sort_by(|a, b| {
-            b.track_count
-                .cmp(&a.track_count)
-                .then_with(|| by_name(a, b))
-        }),
+        ArtistSort::Name => (Reverse(0), Reverse(None), name),
+        ArtistSort::MostPlayed => (Reverse(artist.play_count), Reverse(None), name),
+        ArtistSort::RecentlyPlayed => (Reverse(0), Reverse(artist.last_played), name),
+        ArtistSort::TrackCount => (Reverse(artist.track_count as i64), Reverse(None), name),
     }
+}
+
+fn sort_artists(artists: &mut [ArtistEntry], mode: ArtistSort) {
+    artists.sort_by_cached_key(|artist| artist_sort_key(artist, mode));
 }
 
 /// Guards an async avatar callback against GridView cell recycling: only paint
@@ -423,19 +438,21 @@ fn build_artist_cell() -> gtk::Box {
 /// A composer on a Various Artists soundtrack is credited with no album at all,
 /// so a page built from credits alone would be an empty page above a library
 /// holding thirty-one of their tracks.
-pub fn artist_albums(library: &crate::library::Library, artist: &str) -> (Vec<Album>, Vec<Album>) {
+///
+/// Returns positions in `library.albums` rather than copies of the albums.
+pub fn artist_albums(library: &Library, artist: &str) -> (Vec<usize>, Vec<usize>) {
     let key = crate::hygiene::artist_key(artist);
     let mut credited = Vec::new();
     let mut appears_on = Vec::new();
-    for album in &library.albums {
+    for (index, album) in library.albums.iter().enumerate() {
         if crate::hygiene::artist_key(&album.artist) == key {
-            credited.push(album.clone());
+            credited.push(index);
         } else if album
             .tracks
             .iter()
             .any(|track| crate::hygiene::artist_key(&track.artist) == key)
         {
-            appears_on.push(album.clone());
+            appears_on.push(index);
         }
     }
     (credited, appears_on)
@@ -459,15 +476,16 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         .valign(gtk::Align::Start)
         .activate_on_single_click(true)
         .build();
-    for album in &albums {
-        flow.append(&album_cell_for_artist(ui, album));
+    for &index in &albums {
+        flow.append(&album_cell_for_artist(ui, &library.albums[index]));
     }
     {
         let ui = Rc::clone(ui);
+        let library = Rc::clone(&library);
         let albums = albums.clone();
         flow.connect_child_activated(move |_, child| {
-            if let Some(album) = albums.get(child.index().max(0) as usize) {
-                albums::push_album_detail(&ui, album);
+            if let Some(&index) = albums.get(child.index().max(0) as usize) {
+                albums::push_album_detail(&ui, &library.albums[index]);
             }
         });
     }
@@ -530,7 +548,7 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
         content.append(&flow);
     }
     if !appears_on.is_empty() {
-        content.append(&appears_on_section(ui, &appears_on));
+        content.append(&appears_on_section(ui, &library, &appears_on));
     }
     let similar_box = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -558,7 +576,7 @@ pub fn push_artist_page(ui: &Rc<Ui>, artist: &str) {
 
 /// The albums an artist plays on without being their credit, rendered like the
 /// credited grid so a performer's page never bottoms out below the header.
-fn appears_on_section(ui: &Rc<Ui>, albums: &[Album]) -> gtk::Box {
+fn appears_on_section(ui: &Rc<Ui>, library: &Rc<Library>, albums: &[usize]) -> gtk::Box {
     let container = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(8)
@@ -582,15 +600,16 @@ fn appears_on_section(ui: &Rc<Ui>, albums: &[Album]) -> gtk::Box {
         .valign(gtk::Align::Start)
         .activate_on_single_click(true)
         .build();
-    for album in albums {
-        flow.append(&album_cell_for_artist(ui, album));
+    for &index in albums {
+        flow.append(&album_cell_for_artist(ui, &library.albums[index]));
     }
     {
         let ui = Rc::clone(ui);
+        let library = Rc::clone(library);
         let albums = albums.to_vec();
         flow.connect_child_activated(move |_, child| {
-            if let Some(album) = albums.get(child.index().max(0) as usize) {
-                albums::push_album_detail(&ui, album);
+            if let Some(&index) = albums.get(child.index().max(0) as usize) {
+                albums::push_album_detail(&ui, &library.albums[index]);
             }
         });
     }
@@ -909,20 +928,53 @@ fn album_cell_for_artist(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
     child
 }
 
-/// Digest of the rendered artist rows, so enrichment-driven reloads (which
-/// never change artist names or counts) skip rebuilding the list.
-fn artists_fingerprint(artists: &[crate::library::ArtistEntry]) -> u64 {
-    let mut hash = 0xcbf2_9ce4_8422_2325u64;
-    for artist in artists {
-        let row = format!(
-            "{}|{}|{}|{}|{:?}",
-            artist.name,
-            artist.album_count,
-            artist.track_count,
-            artist.play_count,
-            artist.last_played
-        );
-        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn artist(name: &str, plays: i64, last: Option<i64>, tracks: usize) -> ArtistEntry {
+        ArtistEntry {
+            name: name.to_string(),
+            album_count: 1,
+            appearance_count: 0,
+            track_count: tracks,
+            play_count: plays,
+            last_played: last,
+        }
     }
-    hash
+
+    fn names(artists: &[ArtistEntry]) -> Vec<&str> {
+        artists.iter().map(|a| a.name.as_str()).collect()
+    }
+
+    #[test]
+    fn name_sort_ignores_case() {
+        let mut artists = vec![artist("beta", 0, None, 1), artist("Alpha", 0, None, 1)];
+        sort_artists(&mut artists, ArtistSort::Name);
+        assert_eq!(names(&artists), vec!["Alpha", "beta"]);
+    }
+
+    #[test]
+    fn most_played_and_track_count_run_high_to_low_then_by_name() {
+        let mut artists = vec![
+            artist("b", 5, None, 2),
+            artist("a", 5, None, 9),
+            artist("c", 9, None, 2),
+        ];
+        sort_artists(&mut artists, ArtistSort::MostPlayed);
+        assert_eq!(names(&artists), vec!["c", "a", "b"]);
+        sort_artists(&mut artists, ArtistSort::TrackCount);
+        assert_eq!(names(&artists), vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn recently_played_puts_the_never_played_last() {
+        let mut artists = vec![
+            artist("never", 0, None, 1),
+            artist("old", 1, Some(10), 1),
+            artist("new", 1, Some(20), 1),
+        ];
+        sort_artists(&mut artists, ArtistSort::RecentlyPlayed);
+        assert_eq!(names(&artists), vec!["new", "old", "never"]);
+    }
 }

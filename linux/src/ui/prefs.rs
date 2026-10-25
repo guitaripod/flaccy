@@ -8,7 +8,7 @@ use flaccy_shared::enrichment_job::{copy as job_copy, Activity, JobProgress, Sco
 use flaccy_shared::library_debut::copy as debut_copy;
 use gtk::gio;
 use gtk::glib;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 pub fn present(ui: &Rc<Ui>) {
@@ -87,8 +87,24 @@ fn build_hero(ui: &Rc<Ui>) -> gtk::Box {
     stats.append(&plays_col);
     hero.append(&stats);
 
+    let counter = Rc::new(PlayCounter {
+        db_path: ui.core.db_path.clone(),
+        label: plays_value.downgrade(),
+        in_flight: Cell::new(false),
+        stale: Cell::new(false),
+    });
+    let dirty = Rc::new(Cell::new(false));
+    {
+        let counter = Rc::clone(&counter);
+        let dirty = Rc::clone(&dirty);
+        hero.connect_map(move |_| {
+            if dirty.replace(false) {
+                counter.refresh();
+            }
+        });
+    }
     let hero_ui = Rc::clone(ui);
-    ui.core.hub.subscribe_widget(&hero, move |_hero, event| {
+    ui.core.hub.subscribe_widget(&hero, move |hero, event| {
         let changed = matches!(
             event,
             AppEvent::LibraryReloaded
@@ -102,12 +118,55 @@ fn build_hero(ui: &Rc<Ui>) -> gtk::Box {
         let library = hero_ui.core.library.borrow().clone();
         albums_value.set_label(&group_thousands(library.albums.len() as u64));
         tracks_value.set_label(&group_thousands(library.tracks.len() as u64));
-        plays_value.set_label(&group_thousands(
-            hero_ui.core.db.scrobble_count().max(0) as u64
-        ));
+        if hero.is_mapped() {
+            counter.refresh();
+        } else {
+            dirty.set(true);
+        }
     });
 
     hero
+}
+
+/// Keeps the Plays figure in step with the scrobble table. Counting 160,000
+/// rows is the database's job on a thread of its own, never the window's, and
+/// a count asked for while one is running just runs once more when it lands.
+struct PlayCounter {
+    db_path: std::path::PathBuf,
+    label: glib::WeakRef<gtk::Label>,
+    in_flight: Cell<bool>,
+    stale: Cell<bool>,
+}
+
+impl PlayCounter {
+    fn refresh(self: &Rc<Self>) {
+        if self.in_flight.replace(true) {
+            self.stale.set(true);
+            return;
+        }
+        let db_path = self.db_path.clone();
+        let (tx, rx) = async_channel::bounded::<i64>(1);
+        std::thread::Builder::new()
+            .name("flaccy-play-count".into())
+            .spawn(move || {
+                let count = crate::db::Db::open(&db_path)
+                    .map(|db| db.scrobble_count())
+                    .unwrap_or(0);
+                let _ = tx.send_blocking(count);
+            })
+            .ok();
+        let counter = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let count = rx.recv().await.unwrap_or(0);
+            counter.in_flight.set(false);
+            if let Some(label) = counter.label.upgrade() {
+                label.set_label(&group_thousands(count.max(0) as u64));
+            }
+            if counter.stale.replace(false) {
+                counter.refresh();
+            }
+        });
+    }
 }
 
 fn hero_identity() -> gtk::Box {

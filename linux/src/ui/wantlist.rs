@@ -5,10 +5,12 @@ use adw::prelude::*;
 use gtk::glib;
 use gtk::pango;
 use std::cell::{Cell, RefCell};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum Filter {
     All,
     Albums,
@@ -61,6 +63,33 @@ fn section_for(item: &WantlistItemRow) -> Section {
     }
 }
 
+/// Digest of everything the page draws: the chip that is on, the wanted rows
+/// and the new releases. A page whose digest has not moved is already showing
+/// the right thing.
+fn page_digest(active: Filter, wanted: &[WantlistItemRow], releases: &[NewReleaseRow]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    active.hash(&mut hasher);
+    for item in wanted {
+        item.norm_key.hash(&mut hasher);
+        item.kind.hash(&mut hasher);
+        item.title.hash(&mut hasher);
+        item.artist.hash(&mut hasher);
+        item.image_url.hash(&mut hasher);
+        item.source.hash(&mut hasher);
+        item.score.to_bits().hash(&mut hasher);
+        item.reason.hash(&mut hasher);
+        item.play_count.hash(&mut hasher);
+    }
+    for release in releases {
+        release.artist.hash(&mut hasher);
+        release.album.hash(&mut hasher);
+        release.release_unix.hash(&mut hasher);
+        release.image_url.hash(&mut hasher);
+        release.store_url.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let filter = Rc::new(Cell::new(Filter::All));
     let images = Rc::new(RemoteImages::new());
@@ -104,10 +133,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let content = content.clone();
         let stack = stack.clone();
         let images = Rc::clone(&images);
+        let drawn = Cell::new(None::<u64>);
         Rc::new(move || {
-            while let Some(child) = content.first_child() {
-                content.remove(&child);
-            }
             let wanted = ui.core.db.fetch_wanted_items();
             let now = chrono::Utc::now().timestamp();
             let releases: Vec<NewReleaseRow> = ui
@@ -117,6 +144,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 .into_iter()
                 .filter(|r| r.release_unix > now - 120 * 24 * 3600)
                 .collect();
+            let digest = page_digest(filter.get(), &wanted, &releases);
+            if drawn.replace(Some(digest)) == Some(digest) {
+                return;
+            }
+            while let Some(child) = content.first_child() {
+                content.remove(&child);
+            }
             if wanted.is_empty() && releases.is_empty() {
                 stack.set_visible_child_name("empty");
                 return;
@@ -159,13 +193,19 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         })
     };
     *rebuild.borrow_mut() = Some(Rc::clone(&render));
-    render();
 
+    let dirty = Rc::new(Cell::new(true));
     {
         let render = Rc::clone(&render);
-        ui.core.hub.subscribe_widget(&stack, move |_, event| {
-            if matches!(event, AppEvent::WantlistChanged | AppEvent::LibraryReloaded) {
+        let dirty = Rc::clone(&dirty);
+        ui.core.hub.subscribe_widget(&stack, move |stack, event| {
+            if !matches!(event, AppEvent::WantlistChanged | AppEvent::LibraryReloaded) {
+                return;
+            }
+            if stack.is_mapped() {
                 render();
+            } else {
+                dirty.set(true);
             }
         });
     }
@@ -173,6 +213,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let ui = Rc::clone(ui);
         let refreshed_once = Cell::new(false);
         stack.connect_map(move |_| {
+            if dirty.replace(false) {
+                render();
+            }
             let _ = ui.core.db.acknowledge_wantlist();
             ui.core.hub.emit(&AppEvent::WantlistSeen);
             if !refreshed_once.replace(true) {
@@ -256,16 +299,7 @@ fn artwork_widget(images: &Rc<RemoteImages>, image_url: Option<&str>, seed: &str
         .build();
     picture.set_overflow(gtk::Overflow::Hidden);
     picture.add_css_class("cover");
-    let size = 48u32;
-    let placeholder = crate::palette::placeholder_rgba(seed, size);
-    let texture = gtk::gdk::MemoryTexture::new(
-        size as i32,
-        size as i32,
-        gtk::gdk::MemoryFormat::R8g8b8a8,
-        &glib::Bytes::from_owned(placeholder),
-        (size * 4) as usize,
-    );
-    picture.set_paintable(Some(&texture));
+    picture.set_paintable(Some(&images.placeholder(seed)));
     if let Some(url) = image_url {
         let weak = picture.downgrade();
         images.request(url, move |texture| {
@@ -517,11 +551,14 @@ fn url_path_encode(input: &str) -> String {
     result
 }
 
+const PLACEHOLDER_SIZE: u32 = 48;
+
 type ImageCallback = Box<dyn Fn(Option<&gtk::gdk::MemoryTexture>)>;
 
 /// Tiny remote-image loader for wantlist artwork: downloads and decodes on a
 /// worker thread, caches decoded textures by URL, dedupes in-flight requests.
 pub struct RemoteImages {
+    placeholders: RefCell<HashMap<String, gtk::gdk::MemoryTexture>>,
     cache: RefCell<HashMap<String, gtk::gdk::MemoryTexture>>,
     misses: RefCell<std::collections::HashSet<String>>,
     pending: RefCell<HashMap<String, Vec<ImageCallback>>>,
@@ -530,10 +567,30 @@ pub struct RemoteImages {
 impl RemoteImages {
     pub fn new() -> Self {
         Self {
+            placeholders: RefCell::new(HashMap::new()),
             cache: RefCell::new(HashMap::new()),
             misses: RefCell::new(std::collections::HashSet::new()),
             pending: RefCell::new(HashMap::new()),
         }
+    }
+
+    /// The stand-in cover for `seed`, painted once and shared by every row that
+    /// asks for it, so redrawing the page repaints nothing.
+    fn placeholder(&self, seed: &str) -> gtk::gdk::MemoryTexture {
+        if let Some(texture) = self.placeholders.borrow().get(seed) {
+            return texture.clone();
+        }
+        let texture = gtk::gdk::MemoryTexture::new(
+            PLACEHOLDER_SIZE as i32,
+            PLACEHOLDER_SIZE as i32,
+            gtk::gdk::MemoryFormat::R8g8b8a8,
+            &glib::Bytes::from_owned(crate::palette::placeholder_rgba(seed, PLACEHOLDER_SIZE)),
+            (PLACEHOLDER_SIZE * 4) as usize,
+        );
+        self.placeholders
+            .borrow_mut()
+            .insert(seed.to_string(), texture.clone());
+        texture
     }
 
     pub fn request(
@@ -618,4 +675,42 @@ fn fetch_and_decode(url: &str) -> Option<(u32, u32, Vec<u8>)> {
     let thumbnail = decoded.thumbnail(96, 96).to_rgba8();
     let (width, height) = thumbnail.dimensions();
     Some((width, height, thumbnail.into_raw()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn item(key: &str, score: f64) -> WantlistItemRow {
+        WantlistItemRow {
+            norm_key: key.to_string(),
+            kind: "album".to_string(),
+            title: "T".to_string(),
+            artist: "A".to_string(),
+            image_url: None,
+            source: "gap".to_string(),
+            score,
+            reason: "r".to_string(),
+            play_count: 0,
+        }
+    }
+
+    #[test]
+    fn the_digest_moves_with_the_chip_and_with_every_row() {
+        let rows = vec![item("a", 1.0), item("b", 2.0)];
+        let base = page_digest(Filter::All, &rows, &[]);
+        assert_eq!(base, page_digest(Filter::All, &rows.clone(), &[]));
+        assert_ne!(base, page_digest(Filter::Albums, &rows, &[]));
+        assert_ne!(base, page_digest(Filter::All, &rows[..1], &[]));
+        let rescored = vec![item("a", 1.0), item("b", 3.0)];
+        assert_ne!(base, page_digest(Filter::All, &rescored, &[]));
+        let release = NewReleaseRow {
+            artist: "A".to_string(),
+            album: "B".to_string(),
+            release_unix: 5,
+            image_url: None,
+            store_url: None,
+        };
+        assert_ne!(base, page_digest(Filter::All, &rows, &[release]));
+    }
 }
