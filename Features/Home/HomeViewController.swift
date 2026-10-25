@@ -105,6 +105,7 @@ final class HomeViewController: UIViewController {
         collectionView.contentInset.bottom = 16
         collectionView.accessibilityIdentifier = "home.collection"
         view.addSubview(collectionView)
+        setContentScrollView(collectionView, for: .top)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
