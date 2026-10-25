@@ -28,6 +28,9 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         FlaccyMidgar.configureLogging()
+        #if !LEGACY_MAC_HANDOFF
+        UniversalMacHandoff.importIfNeeded()
+        #endif
         FlaccyMidgar.shared.start()
         ReviewPrompt.beginSession()
         MidgarLog.info("Flaccy for Mac launched (root: \(LibraryRoot.current.path))", category: .general)
@@ -69,6 +72,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
         startLibraryPipeline()
         RemoteLaunch.start()
+        #if LEGACY_MAC_HANDOFF
+        LegacyMacHandoff.exportAtLaunch()
+        LegacyMoveCardPresenter.presentOncePerLaunch(over: windowController)
+        #endif
         observeAppEvents()
         notifyLibraryRootFallbackIfNeeded()
         MacTrialRunwayPresenter.refresh(in: windowController.window)
@@ -76,6 +83,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         DebugDrive.runIfRequested(window: windowController.window)
         runStageBDriveIfRequested()
         ReexportExercise.runIfRequested()
+        HandoffExercise.runIfRequested(window: windowController.window)
         DebugDrive.runNewMixShotIfRequested(window: windowController.window)
         DebugDrive.runRemoteShotIfRequested(window: windowController.window)
         #endif
@@ -203,7 +211,9 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func notifyLibraryRootFallbackIfNeeded() {
-        guard LibraryRoot.shared.isFallbackActive, let window = mainWindowController?.window else { return }
+        guard LibraryRoot.shared.isFallbackActive, !HandoffFolderPrompt.isPending,
+              let window = mainWindowController?.window
+        else { return }
         MidgarLog.notice("Library root offline at launch; prompting user", category: .content)
         let alert = NSAlert()
         alert.alertStyle = .warning
@@ -293,6 +303,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.allowsMultipleSelection = false
         panel.prompt = String(localized: "Use This Folder")
         panel.message = String(localized: "Flaccy indexes the folder in place — nothing is copied or moved.")
+        panel.directoryURL = HandoffFolderPrompt.suggestedFolder
         FunnelSignals.shared.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }

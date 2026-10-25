@@ -9,6 +9,7 @@ final class TrackGridCell: UICollectionViewCell {
     private let titleLabel = UILabel()
     private lazy var titleRow = TitleWithChipView(titleLabel: titleLabel)
     private let artistLabel = UILabel()
+    private let downloadedMark = DownloadedMarkView()
     private let qualityBadge = QualityBadgeView(size: .compact)
     private let lovedBadge = UIImageView()
     private var currentArtworkKey: String?
@@ -59,7 +60,16 @@ final class TrackGridCell: UICollectionViewCell {
         artistLabel.numberOfLines = 1
         artistLabel.lineBreakMode = .byTruncatingTail
 
-        let stack = UIStackView(arrangedSubviews: [artworkContainer, titleRow, artistLabel])
+        artistLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        downloadedMark.isHidden = true
+        let artistRow = UIStackView(arrangedSubviews: [artistLabel, downloadedMark, UIView()])
+        artistRow.axis = .horizontal
+        artistRow.alignment = .center
+        artistRow.spacing = 4
+        artistRow.arrangedSubviews[2].setContentHuggingPriority(.fittingSizeLevel, for: .horizontal)
+        artistRow.arrangedSubviews[2].setContentCompressionResistancePriority(.fittingSizeLevel, for: .horizontal)
+
+        let stack = UIStackView(arrangedSubviews: [artworkContainer, titleRow, artistRow])
         stack.axis = .vertical
         stack.spacing = 6
         stack.setCustomSpacing(4, after: titleRow)
@@ -112,7 +122,7 @@ final class TrackGridCell: UICollectionViewCell {
         let newMix = track.showsNewMix
         let downloaded = track.isDownloadedRemote
         titleRow.setNewMix(newMix)
-        titleRow.setDownloaded(downloaded)
+        downloadedMark.isHidden = !downloaded
         accessibilityLabel = TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: newMix, downloaded: downloaded)
         contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
         qualityBadge.configure(with: track)
@@ -142,7 +152,7 @@ final class TrackGridCell: UICollectionViewCell {
         titleLabel.text = nil
         artistLabel.text = nil
         titleRow.setNewMix(false)
-        titleRow.setDownloaded(false)
+        downloadedMark.isHidden = true
         contentView.alpha = 1
         accessibilityLabel = nil
         qualityBadge.isHidden = true

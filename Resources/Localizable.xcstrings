@@ -27057,6 +27057,70 @@
         }
       }
     },
+    "Choose your music folder once more. macOS asks every app for permission separately.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle deinen Musikordner noch einmal aus. macOS fragt für jede App einzeln nach der Erlaubnis."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige tu carpeta de música una vez más. macOS pide permiso a cada app por separado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis ton dossier de musique une dernière fois. macOS demande l’autorisation séparément pour chaque app."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli ancora una volta la cartella della musica. macOS chiede il permesso a ogni app separatamente."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽フォルダをもう一度選択してください。macOS では、アクセスの許可がアプリごとに別々に求められます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악 폴더를 한 번만 더 선택해 주세요. macOS는 앱마다 따로 권한을 요청합니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz folder z muzyką jeszcze raz. macOS prosi o zgodę osobno dla każdej aplikacji."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha sua pasta de música mais uma vez. O macOS pede permissão a cada app separadamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请再选择一次你的音乐文件夹。macOS 会为每个 App 单独请求权限。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請再選擇一次你的音樂資料夾。macOS 會為每個 App 分別要求權限。"
+          }
+        }
+      }
+    },
     "Chooses how often flaccy reminds you about your recap": {
       "localizations": {
         "de": {
@@ -44535,6 +44599,70 @@
         }
       }
     },
+    "Flaccy for Mac is now part of Flaccy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy für Mac ist jetzt Teil von Flaccy"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy para Mac ahora forma parte de Flaccy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy pour Mac fait désormais partie de Flaccy"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy per Mac ora fa parte di Flaccy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac 版 Flaccy は Flaccy に統合されました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac용 Flaccy가 이제 Flaccy에 통합되었습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy na Maca jest teraz częścią Flaccy"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy para Mac agora faz parte do Flaccy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac 版 Flaccy 现已并入 Flaccy"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac 版 Flaccy 現已併入 Flaccy"
+          }
+        }
+      }
+    },
     "Flaccy gave up on %@ albums — no source has them.": {
       "localizations": {
         "de": {
@@ -47167,6 +47295,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "取得永久版…"
+          }
+        }
+      }
+    },
+    "Get the New Flaccy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Flaccy laden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtener el nuevo Flaccy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenir le nouveau Flaccy"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scarica il nuovo Flaccy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい Flaccy を入手"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 Flaccy 받기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobierz nowy Flaccy"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixar o novo Flaccy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取新版 Flaccy"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取得新版 Flaccy"
           }
         }
       }
@@ -98193,6 +98385,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "此名稱會顯示在資料庫的來源篩選器和訊息中。其中的歌曲保持不變。"
+          }
+        }
+      }
+    },
+    "The new Flaccy works on your iPhone, Mac and Apple Watch with one purchase. Your library, playlists and Pro come with you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das neue Flaccy läuft mit einem Kauf auf iPhone, Mac und Apple Watch. Deine Mediathek, deine Playlists und Pro kommen mit."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El nuevo Flaccy funciona en tu iPhone, Mac y Apple Watch con una sola compra. Tu biblioteca, tus listas y Pro se vienen contigo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le nouveau Flaccy fonctionne sur ton iPhone, ton Mac et ton Apple Watch avec un seul achat. Ta bibliothèque, tes playlists et Pro te suivent."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il nuovo Flaccy funziona su iPhone, Mac e Apple Watch con un solo acquisto. La tua libreria, le playlist e Pro vengono con te."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい Flaccy は、1 回の購入で iPhone、Mac、Apple Watch で使えます。ライブラリ、プレイリスト、Pro もそのまま引き継がれます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로운 Flaccy는 한 번의 구입으로 iPhone, Mac, Apple Watch에서 모두 사용할 수 있습니다. 보관함, 플레이리스트, Pro도 그대로 옮겨집니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nowy Flaccy działa na iPhonie, Macu i Apple Watchu po jednym zakupie. Twoja biblioteka, playlisty i Pro przechodzą razem z Tobą."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O novo Flaccy funciona no iPhone, no Mac e no Apple Watch com uma única compra. Sua biblioteca, suas playlists e o Pro vão com você."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新版 Flaccy 只需一次购买，即可在 iPhone、Mac 和 Apple Watch 上使用。你的资料库、播放列表和 Pro 都会一并带走。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新版 Flaccy 只需一次購買，即可在 iPhone、Mac 和 Apple Watch 上使用。你的資料庫、播放列表和 Pro 都會一併帶走。"
           }
         }
       }

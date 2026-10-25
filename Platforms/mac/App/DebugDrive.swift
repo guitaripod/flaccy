@@ -78,6 +78,7 @@ enum DebugDrive {
         case album(String)
         case artist(String)
         case onboarding
+        case legacyMove
         case nowPlaying
         case playlistDetail(String)
         case nowPlayingLyrics
@@ -91,6 +92,7 @@ enum DebugDrive {
 
     static func plannedShot() -> Shot? {
         if CommandLine.arguments.contains("--shot-onboarding") { return .onboarding }
+        if CommandLine.arguments.contains("--shot-legacy-move") { return .legacyMove }
         if CommandLine.arguments.contains("--shot-paywall") { return .paywall }
         if CommandLine.arguments.contains("--shot-playlists") { return .section(.playlists) }
         if let name = value(after: "--shot-playlist") { return .playlistDetail(name) }
@@ -149,6 +151,11 @@ enum DebugDrive {
         if case .onboarding = shot {
             try? await Task.sleep(for: .seconds(3))
             capture(window: window, name: "flaccy-shot-onboarding")
+            return
+        }
+        if case .legacyMove = shot {
+            try? await Task.sleep(for: .seconds(6))
+            captureSheet(of: window, name: "flaccy-shot-legacy-move")
             return
         }
         var attempts = 0
@@ -306,6 +313,8 @@ enum DebugDrive {
             captureSheet(of: window, name: "flaccy-shot-paywall")
             return
         case .onboarding:
+            return
+        case .legacyMove:
             return
         }
         try? await Task.sleep(for: .seconds(3))
