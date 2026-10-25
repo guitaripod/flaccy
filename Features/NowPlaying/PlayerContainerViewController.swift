@@ -27,6 +27,8 @@ private enum MorphTuning {
     static let dockBottomGap: CGFloat = 4
     static let proxyDockCorner: CGFloat = 16
     static let proxyFullCorner: CGFloat = 20
+    static let accessoryArtworkInset: CGFloat = 4
+    static let accessoryArtworkCorner: CGFloat = 10
 }
 
 /// A window-level overlay whose empty regions pass touches through to the app
@@ -71,6 +73,12 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
 
     private var dockTopConstant: CGFloat = 0
     private var dockBottomConstant: CGFloat = 0
+    private var dockLeadingConstant: CGFloat = MorphTuning.dockInset
+    private var dockTrailingConstant: CGFloat = -MorphTuning.dockInset
+    private var dockHeight: CGFloat = MorphTuning.dockHeight
+    private var dockCorner: CGFloat = MorphTuning.dockCorner
+    private var dockArtworkCorner: CGFloat = MorphTuning.proxyDockCorner
+    private var miniPlayerHeight: NSLayoutConstraint!
     private var travelDistance: CGFloat = 1
     private var dockArtRect: CGRect = .zero
     private var fullArtRect: CGRect = .zero
@@ -90,6 +98,21 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     private var fullArtCornerRadius: CGFloat = MorphTuning.proxyFullCorner
 
     var onRequestPush: ((UIViewController) -> Void)?
+
+    /// The frame of the system tab accessory that shows the mini player, in
+    /// this view's space, or nil while the dock is this controller's own
+    /// floating card. When set, the card is only visible during a morph.
+    var externalDockFrame: (() -> CGRect?)? {
+        didSet { miniPlayer.style = externalDockFrame == nil ? .floating : .accessory }
+    }
+
+    /// Called with true while the card has taken the accessory's place for a
+    /// morph, and false once it has handed it back.
+    var onExternalDockHandoff: ((Bool) -> Void)?
+
+    /// How far above the bottom safe area the floating dock rests, so it clears
+    /// a tab bar that is not a safe-area inset of this overlay.
+    var dockBottomClearance: (() -> CGFloat)?
     var onMorphProgress: ((CGFloat) -> Void)?
     var onFocusChange: ((Bool) -> Void)?
 
@@ -103,6 +126,8 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     override var preferredStatusBarStyle: UIStatusBarStyle {
         statusBarLight ? .lightContent : .default
     }
+
+    private var usesExternalDock: Bool { externalDockFrame != nil }
 
     private let thresholdGenerator = UIImpactFeedbackGenerator(style: .soft)
     private let lockInGenerator = UIImpactFeedbackGenerator(style: .soft)
@@ -163,6 +188,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         proxyView.isUserInteractionEnabled = false
         view.addSubview(proxyView)
 
+        miniPlayerHeight = miniPlayer.heightAnchor.constraint(equalToConstant: MorphTuning.dockHeight)
         topConstraint = cardView.topAnchor.constraint(equalTo: view.topAnchor)
         bottomConstraint = cardView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         leadingConstraint = cardView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
@@ -177,7 +203,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
             miniPlayer.topAnchor.constraint(equalTo: cardView.topAnchor),
             miniPlayer.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
             miniPlayer.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
-            miniPlayer.heightAnchor.constraint(equalToConstant: MorphTuning.dockHeight),
+            miniPlayerHeight,
             npc.view.topAnchor.constraint(equalTo: view.topAnchor),
             npc.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             npc.view.widthAnchor.constraint(equalTo: view.widthAnchor),
@@ -298,18 +324,49 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     private func recomputeGeometry() {
         view.layoutIfNeeded()
         let height = view.bounds.height
-        let safeBottom = view.safeAreaInsets.bottom
-        dockTopConstant = height - safeBottom - MorphTuning.dockBottomGap - MorphTuning.dockHeight
-        dockBottomConstant = -(safeBottom + MorphTuning.dockBottomGap)
+        let width = view.bounds.width
+        if let accessory = externalDockFrame?(), !accessory.isEmpty {
+            applyExternalDockGeometry(accessory, in: CGSize(width: width, height: height))
+        } else {
+            applyFloatingDockGeometry(in: CGSize(width: width, height: height))
+        }
         travelDistance = max(dockTopConstant, 1)
-        dockArtRect = CGRect(
-            x: view.bounds.width - MorphTuning.dockInset - MorphTuning.dockHeight,
-            y: dockTopConstant,
-            width: MorphTuning.dockHeight,
-            height: MorphTuning.dockHeight
-        )
         fullArtRect = npc.artworkMorphFrame()
         fullArtCornerRadius = npc.artworkMorphCornerRadius
+    }
+
+    /// The dock is the card resting where the system put the tab accessory, so
+    /// the morph starts from exactly the pixels the person tapped.
+    private func applyExternalDockGeometry(_ accessory: CGRect, in size: CGSize) {
+        dockTopConstant = accessory.minY
+        dockBottomConstant = -(size.height - accessory.maxY)
+        dockLeadingConstant = accessory.minX
+        dockTrailingConstant = -(size.width - accessory.maxX)
+        dockHeight = accessory.height
+        dockCorner = accessory.height / 2
+        dockArtworkCorner = MorphTuning.accessoryArtworkCorner
+        miniPlayerHeight.constant = dockHeight
+        let inset = MorphTuning.accessoryArtworkInset
+        let side = dockHeight - inset * 2
+        dockArtRect = CGRect(x: accessory.maxX - inset - side, y: accessory.minY + inset, width: side, height: side)
+    }
+
+    private func applyFloatingDockGeometry(in size: CGSize) {
+        let safeBottom = view.safeAreaInsets.bottom + (dockBottomClearance?() ?? 0)
+        dockHeight = MorphTuning.dockHeight
+        dockCorner = MorphTuning.dockCorner
+        dockArtworkCorner = MorphTuning.proxyDockCorner
+        dockLeadingConstant = MorphTuning.dockInset
+        dockTrailingConstant = -MorphTuning.dockInset
+        miniPlayerHeight.constant = dockHeight
+        dockTopConstant = size.height - safeBottom - MorphTuning.dockBottomGap - dockHeight
+        dockBottomConstant = -(safeBottom + MorphTuning.dockBottomGap)
+        dockArtRect = CGRect(
+            x: size.width - MorphTuning.dockInset - dockHeight,
+            y: dockTopConstant,
+            width: dockHeight,
+            height: dockHeight
+        )
     }
 
     /// The single source of truth: maps `t` onto the card geometry, the chrome
@@ -321,8 +378,8 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         isApplyingLayout = true
         topConstraint.constant = lerp(dockTopConstant, 0, t)
         bottomConstraint.constant = lerp(dockBottomConstant, 0, t)
-        leadingConstraint.constant = lerp(MorphTuning.dockInset, 0, t)
-        trailingConstraint.constant = lerp(-MorphTuning.dockInset, 0, t)
+        leadingConstraint.constant = lerp(dockLeadingConstant, 0, t)
+        trailingConstraint.constant = lerp(dockTrailingConstant, 0, t)
         view.layoutIfNeeded()
         isApplyingLayout = false
 
@@ -333,7 +390,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let cornerRadius = lerp(MorphTuning.dockCorner, MorphTuning.fullCorner, t)
+        let cornerRadius = lerp(dockCorner, MorphTuning.fullCorner, t)
         cardView.layer.cornerRadius = cornerRadius
         cardShadowView.frame = cardView.frame
         cardShadowView.layer.shadowPath = UIBezierPath(
@@ -347,8 +404,8 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
             npc.setArtworkHiddenForMorph(false)
         } else {
             proxyView.frame = interpolate(dockArtRect, fullArtRect, t)
-            proxyView.layer.cornerRadius = lerp(MorphTuning.proxyDockCorner, fullArtCornerRadius, t)
-            proxyView.layer.maskedCorners = t < 0.03
+            proxyView.layer.cornerRadius = lerp(dockArtworkCorner, fullArtCornerRadius, t)
+            proxyView.layer.maskedCorners = t < 0.03 && !usesExternalDock
                 ? [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
                 : [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
         }
@@ -372,6 +429,9 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         sessionStartTerminal = terminal
         pastThreshold = (terminal == .dock ? currentT : (1 - currentT)) >= MorphTuning.commitProgress
         recomputeGeometry()
+        cardView.isHidden = false
+        cardShadowView.isHidden = false
+        onExternalDockHandoff?(usesExternalDock)
         thresholdGenerator.prepare()
         lockInGenerator.prepare()
         npc.setBackdropActive(true)
@@ -411,6 +471,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         }
         state = terminal
         setProgress(landedFull ? 1 : 0)
+        refreshCardVisibility()
         statusBarLight = landedFull
         proxyView.isHidden = true
         npc.setArtworkHiddenForMorph(!landedFull)
@@ -436,6 +497,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         state = terminal
         recomputeGeometry()
         setProgress(terminal == .full ? 1 : 0)
+        refreshCardVisibility()
         let landedFull = terminal == .full
         statusBarLight = landedFull
         npc.view.isUserInteractionEnabled = landedFull
@@ -446,10 +508,20 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         updateOverlayCapture()
     }
 
+    /// With the dock living in the tab accessory the card exists only for the
+    /// length of a morph: shown the moment one begins, handed back when the
+    /// player has settled at the dock.
+    private func refreshCardVisibility() {
+        let resting = usesExternalDock && state == .dock && !isPaneMode
+        cardView.isHidden = resting
+        cardShadowView.isHidden = resting
+        onExternalDockHandoff?(usesExternalDock && !resting)
+    }
+
     private func updateOverlayCapture() {
         guard let overlay = view as? OverlayView else { return }
         overlay.capturesEverything = state != .dock && !isPaneMode
-        overlay.dockRect = (dockVisible || isPaneMode) ? cardView.frame : .zero
+        overlay.dockRect = ((dockVisible || isPaneMode) && !cardView.isHidden) ? cardView.frame : .zero
     }
 
     @objc private func handleMorphPan(_ gesture: UIPanGestureRecognizer) {
