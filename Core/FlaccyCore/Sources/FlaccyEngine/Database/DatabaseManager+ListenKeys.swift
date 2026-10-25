@@ -32,22 +32,58 @@ public struct ListenKeyMemo {
 
 extension DatabaseManager {
 
-    /// Fills the listen keys of every stored scrobble, through one cached
-    /// `UPDATE` inside the migration's transaction.
-    static func fillListenKeys(_ db: Database) throws {
-        let rows = try Row.fetchAll(db, sql: "SELECT id, trackTitle, artist, albumTitle FROM scrobbles")
-        let update = try db.cachedStatement(
-            sql: "UPDATE scrobbles SET titleKey = ?, artistKey = ?, albumKey = ? WHERE id = ?"
-        )
+    /// Scrobbles keyed per write transaction while filling, so a long history
+    /// never holds the database for more than a few tens of milliseconds.
+    static let listenKeyFillChunk = 5_000
+
+    /// Fills the listen keys of the scrobbles stored before the key columns
+    /// existed, a chunk per write, then builds the key indexes (after the
+    /// fill, so they are not maintained row by row) and returns how many rows
+    /// it filled. Rows still waiting have an empty title key and a title,
+    /// found through the key index once it exists, so asking again costs one
+    /// seek. Call it off the main actor: a first fill of a long history takes
+    /// a second or so.
+    @discardableResult
+    public func fillListenKeys() throws -> Int {
         var memo = ListenKeyMemo()
-        for row in rows {
-            let id: Int64 = row["id"]
-            let title: String = row["trackTitle"]
-            let artist: String = row["artist"]
-            let album: String = row["albumTitle"]
-            let keys = memo.keys(title: title, artist: artist, album: album)
-            try update.execute(arguments: [keys.title, keys.artist, keys.album, id])
+        var filled = 0
+        var afterID = Int64.min
+        while true {
+            let chunk = try dbQueue.write { db -> Int in
+                let rows = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT id, trackTitle, artist, albumTitle FROM scrobbles
+                        WHERE id > ? AND titleKey = '' AND trackTitle <> '' ORDER BY id LIMIT ?
+                        """,
+                    arguments: [afterID, Self.listenKeyFillChunk]
+                )
+                if let last = rows.last {
+                    afterID = last["id"]
+                }
+                let update = try db.cachedStatement(
+                    sql: "UPDATE scrobbles SET titleKey = ?, artistKey = ?, albumKey = ? WHERE id = ?"
+                )
+                for row in rows {
+                    let id: Int64 = row["id"]
+                    let keys = memo.keys(title: row["trackTitle"], artist: row["artist"], album: row["albumTitle"])
+                    try update.execute(arguments: [keys.title, keys.artist, keys.album, id])
+                }
+                return rows.count
+            }
+            filled += chunk
+            if chunk < Self.listenKeyFillChunk { break }
         }
+        try dbQueue.write { db in
+            try db.execute(sql: """
+                CREATE INDEX IF NOT EXISTS scrobbles_on_listen_play ON scrobbles(titleKey, artistKey, timestamp);
+                CREATE INDEX IF NOT EXISTS scrobbles_on_artistKey ON scrobbles(artistKey);
+                """)
+        }
+        if filled > 0 {
+            scrobbleRevisionCounter.bump()
+        }
+        return filled
     }
 
     /// The sync state stored for a Last.fm account, nil before its first sync.

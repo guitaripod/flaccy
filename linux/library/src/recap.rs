@@ -182,27 +182,22 @@ pub fn compute(
         .collect();
     let clock = listening_clock(&dated);
     let heatmap_start = heatmap_start(period, rows, now_unix);
-    let mut keys = ListenKeyCache::default();
-    let charts = Charts::of(&scoped, &mut keys, 10);
-    RecapData {
+    let listening = Listening::of(scoped.iter().copied());
+    with_listen_keys(|keys| RecapData {
         total_plays: scoped.len() as i64,
-        total_minutes: scoped
-            .iter()
-            .map(|r| played_seconds(r, &mut keys, durations))
-            .sum::<i64>()
-            / 60,
-        top_artists: charts.artists,
-        top_albums: charts.albums,
-        top_tracks: charts.tracks,
+        total_minutes: listening.seconds(keys, durations) / 60,
+        top_artists: listening.top_artists(keys, 10),
+        top_albums: listening.top_albums(keys, 10).into_iter().map(joined).collect(),
+        top_tracks: listening.top_tracks(keys, 10).into_iter().map(joined).collect(),
         clock,
         streak_days,
-        persona: persona(&scoped, &clock, &mut keys),
+        persona: persona_from(scoped.len(), listening.distinct_artists(keys), &clock),
         heatmap: day_heatmap(rows, heatmap_start),
         heatmap_start,
         period_start: dimmed_before(period, now_unix),
         previous,
         has_history: !rows.is_empty(),
-    }
+    })
 }
 
 fn sunday_on_or_before(date: NaiveDate) -> NaiveDate {
@@ -225,78 +220,164 @@ fn dimmed_before(period: Period, now_unix: i64) -> Option<NaiveDate> {
     }
 }
 
-/// The three ranked lists of a set of plays, each entry one song, release or
-/// artist by listen key and named by the spelling heard most: `"Album —
-/// Artist"` and `"Title — Artist"` for releases and songs.
-struct Charts {
-    artists: Vec<(String, i64)>,
-    albums: Vec<(String, i64)>,
-    tracks: Vec<(String, i64)>,
+/// Runs `work` with the listen keys every recap so far has worked out: the
+/// same few thousand spellings come back on every period and every reload,
+/// so each is keyed once per process.
+fn with_listen_keys<R>(work: impl FnOnce(&mut ListenKeyCache) -> R) -> R {
+    static KEYS: std::sync::Mutex<Option<ListenKeyCache>> = std::sync::Mutex::new(None);
+    let mut slot = KEYS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    work(slot.get_or_insert_with(ListenKeyCache::default))
 }
 
-impl Charts {
-    fn of(rows: &[&ScrobbleRow], keys: &mut ListenKeyCache, limit: usize) -> Self {
-        let mut artists = SpellingTally::default();
-        let mut albums = SpellingTally::default();
-        let mut tracks = SpellingTally::default();
-        for row in rows {
-            let artist = keys.artist(&row.artist).to_string();
-            artists.add(&artist, &row.artist, row.timestamp_unix);
-            let album = keys.album(&row.album);
-            if !album.is_empty() {
-                let key = format!("{album}\u{0}{artist}");
-                albums.add(&key, &format!("{} — {}", row.album, row.artist), row.timestamp_unix);
-            }
-            let track = format!("{}\u{0}{artist}", keys.title(&row.title));
-            tracks.add(&track, &format!("{} — {}", row.title, row.artist), row.timestamp_unix);
-        }
-        Self {
-            artists: artists.ranked(limit),
-            albums: albums.ranked(limit),
-            tracks: tracks.ranked(limit),
-        }
-    }
-}
-
-/// Plays counted per listen key and spelling, with the latest play of each
-/// spelling, ready to fold.
+/// Plays tallied per distinct spelling in one pass that borrows the rows'
+/// text, so the listen keys behind the charts, the distinct counts and the
+/// minutes are worked out once per spelling rather than once per play.
 #[derive(Default)]
-struct SpellingTally {
-    spellings: HashMap<String, HashMap<String, (i64, i64)>>,
+struct Listening<'a> {
+    artists: HashMap<&'a str, Seen>,
+    albums: HashMap<(&'a str, &'a str), Seen>,
+    tracks: HashMap<(&'a str, &'a str), Seen>,
+    measured_seconds: i64,
 }
 
-impl SpellingTally {
-    fn add(&mut self, key: &str, name: &str, timestamp_unix: i64) {
-        let names = match self.spellings.get_mut(key) {
-            Some(names) => names,
-            None => self.spellings.entry(key.to_string()).or_default(),
-        };
-        let slot = match names.get_mut(name) {
-            Some(slot) => slot,
-            None => names.entry(name.to_string()).or_insert((0, i64::MIN)),
-        };
-        slot.0 += 1;
-        slot.1 = slot.1.max(timestamp_unix);
+/// One spelling's plays, the latest of them, and how many were stored
+/// without a length.
+#[derive(Clone, Copy, Default)]
+struct Seen {
+    plays: i64,
+    latest_unix: i64,
+    unmeasured: i64,
+}
+
+impl Seen {
+    fn add(&mut self, row: &ScrobbleRow) {
+        self.plays += 1;
+        self.latest_unix = self.latest_unix.max(row.timestamp_unix);
+        if row.duration <= 0 {
+            self.unmeasured += 1;
+        }
+    }
+}
+
+impl<'a> Listening<'a> {
+    fn of(rows: impl IntoIterator<Item = &'a ScrobbleRow>) -> Self {
+        let mut listening = Self::default();
+        for row in rows {
+            listening.artists.entry(&row.artist).or_default().add(row);
+            if !row.album.is_empty() {
+                listening.albums.entry((&row.album, &row.artist)).or_default().add(row);
+            }
+            listening.tracks.entry((&row.title, &row.artist)).or_default().add(row);
+            if row.duration > 0 {
+                listening.measured_seconds += row.duration;
+            }
+        }
+        listening
     }
 
-    fn distinct(&self) -> usize {
-        self.spellings.len()
-    }
-
-    fn ranked(self, limit: usize) -> Vec<(String, i64)> {
-        let spellings = self.spellings.into_iter().flat_map(|(key, names)| {
-            names.into_iter().map(move |(name, (plays, latest_unix))| Spelling {
-                key: key.clone(),
-                name,
-                plays,
-                seconds: 0,
-                latest_unix,
+    /// The seconds listened: each play's own length, else the library song's,
+    /// else a typical song's.
+    fn seconds(&self, keys: &mut ListenKeyCache, durations: &HashMap<String, i64>) -> i64 {
+        let estimated: i64 = self
+            .tracks
+            .iter()
+            .filter(|(_, seen)| seen.unmeasured > 0)
+            .map(|((title, artist), seen)| {
+                let length = durations
+                    .get(&keys.track(title, artist))
+                    .copied()
+                    .unwrap_or(FALLBACK_TRACK_SECONDS);
+                seen.unmeasured * length
             })
-        });
-        let mut folded = fold_spellings(spellings);
-        folded.truncate(limit);
-        folded.into_iter().map(|(name, plays, _)| (name, plays)).collect()
+            .sum();
+        self.measured_seconds + estimated
     }
+
+    fn top_artists(&self, keys: &mut ListenKeyCache, limit: usize) -> Vec<(String, i64)> {
+        let spellings: Vec<Spelling<String>> = self
+            .artists
+            .iter()
+            .map(|(artist, seen)| spelling(keys.artist(artist).to_string(), artist.to_string(), seen))
+            .collect();
+        ranked(spellings, limit)
+    }
+
+    /// The most played releases as `(album, artist, plays)`.
+    fn top_albums(&self, keys: &mut ListenKeyCache, limit: usize) -> Vec<(String, String, i64)> {
+        let spellings: Vec<Spelling<String>> = self
+            .albums
+            .iter()
+            .filter_map(|((album, artist), seen)| {
+                let album_key = keys.album(album).to_string();
+                if album_key.is_empty() {
+                    return None;
+                }
+                let key = format!("{album_key}\u{0}{}", keys.artist(artist));
+                Some(spelling(key, format!("{album}\u{0}{artist}"), seen))
+            })
+            .collect();
+        split_pairs(ranked(spellings, limit))
+    }
+
+    /// The most played songs as `(title, artist, plays)`.
+    fn top_tracks(&self, keys: &mut ListenKeyCache, limit: usize) -> Vec<(String, String, i64)> {
+        let spellings: Vec<Spelling<String>> = self
+            .tracks
+            .iter()
+            .map(|((title, artist), seen)| {
+                spelling(keys.track(title, artist), format!("{title}\u{0}{artist}"), seen)
+            })
+            .collect();
+        split_pairs(ranked(spellings, limit))
+    }
+
+    fn distinct_artists(&self, keys: &mut ListenKeyCache) -> usize {
+        self.artists
+            .keys()
+            .map(|artist| keys.artist(artist).to_string())
+            .collect::<HashSet<_>>()
+            .len()
+    }
+
+    fn distinct_albums(&self, keys: &mut ListenKeyCache) -> usize {
+        self.albums
+            .keys()
+            .filter_map(|(album, artist)| {
+                let album_key = keys.album(album).to_string();
+                (!album_key.is_empty()).then(|| (album_key, keys.artist(artist).to_string()))
+            })
+            .collect::<HashSet<_>>()
+            .len()
+    }
+
+    fn distinct_tracks(&self, keys: &mut ListenKeyCache) -> usize {
+        self.tracks
+            .keys()
+            .map(|(title, artist)| keys.track(title, artist))
+            .collect::<HashSet<_>>()
+            .len()
+    }
+}
+
+fn spelling(key: String, name: String, seen: &Seen) -> Spelling<String> {
+    Spelling {
+        key,
+        name,
+        plays: seen.plays,
+        seconds: 0,
+        latest_unix: seen.latest_unix,
+    }
+}
+
+fn ranked(spellings: Vec<Spelling<String>>, limit: usize) -> Vec<(String, i64)> {
+    let mut folded = fold_spellings(spellings);
+    folded.truncate(limit);
+    folded.into_iter().map(|(name, plays, _)| (name, plays)).collect()
+}
+
+/// `"first — second"` for a pair the charts show on one line.
+fn joined((first, second, plays): (String, String, i64)) -> (String, i64) {
+    (format!("{first} — {second}"), plays)
 }
 
 fn local_date(unix: i64) -> NaiveDate {
@@ -383,15 +464,14 @@ fn day_heatmap(rows: &[ScrobbleRow], start: Option<NaiveDate>) -> HashMap<NaiveD
 /// plus 23) > 0.35 → Night Owl; artist diversity > 0.6 → Explorer; < 0.2 →
 /// Loyalist; else Devotee. Empty history → Newcomer.
 pub fn persona(rows: &[&ScrobbleRow], clock: &[i64; 24], keys: &mut ListenKeyCache) -> &'static str {
-    if rows.is_empty() {
+    let distinct_artists = Listening::of(rows.iter().copied()).distinct_artists(keys);
+    persona_from(rows.len(), distinct_artists, clock)
+}
+
+fn persona_from(plays: usize, distinct_artists: usize, clock: &[i64; 24]) -> &'static str {
+    if plays == 0 {
         return "Newcomer";
     }
-    let distinct_artists = rows
-        .iter()
-        .map(|r| keys.artist(&r.artist).to_string())
-        .collect::<HashSet<_>>()
-        .len();
-    let plays = rows.len();
     let diversity = distinct_artists as f64 / plays as f64;
     let night_plays: i64 = (0..6).map(|h| clock[h]).sum::<i64>() + clock[23];
     let dated_plays: i64 = clock.iter().sum();
@@ -540,37 +620,28 @@ pub fn compute_year(
         .filter(|r| local_date(r.timestamp_unix).year() == year)
         .collect();
 
-    let mut total_seconds = 0i64;
-    let mut keys = ListenKeyCache::default();
-    let mut artists = SpellingTally::default();
-    let mut albums = SpellingTally::default();
-    let mut tracks = SpellingTally::default();
+    let listening = Listening::of(scoped.iter().copied());
     let mut day_counts: HashMap<NaiveDate, i64> = HashMap::new();
     let mut hour_counts = [0i64; 24];
-
     for row in &scoped {
-        total_seconds += played_seconds(row, &mut keys, library_durations);
-        let artist = keys.artist(&row.artist).to_string();
-        artists.add(&artist, &row.artist, row.timestamp_unix);
-        let album = keys.album(&row.album);
-        if !album.is_empty() {
-            let key = format!("{album}\u{0}{artist}");
-            albums.add(&key, &format!("{}\u{0}{}", row.album, row.artist), row.timestamp_unix);
-        }
-        let track = format!("{}\u{0}{artist}", keys.title(&row.title));
-        tracks.add(&track, &format!("{}\u{0}{}", row.title, row.artist), row.timestamp_unix);
         *day_counts
             .entry(local_date(row.timestamp_unix))
             .or_insert(0) += 1;
         hour_counts[local_hour(row.timestamp_unix) % 24] += 1;
     }
 
-    let distinct_artists = artists.distinct();
-    let distinct_albums = albums.distinct();
-    let distinct_tracks = tracks.distinct();
-    let top_artists = artists.ranked(5);
-    let top_albums = split_pairs(albums.ranked(5));
-    let top_tracks = split_pairs(tracks.ranked(5));
+    let (total_seconds, distinct_artists, distinct_albums, distinct_tracks, top_artists, top_albums, top_tracks) =
+        with_listen_keys(|keys| {
+            (
+                listening.seconds(keys, library_durations),
+                listening.distinct_artists(keys),
+                listening.distinct_albums(keys),
+                listening.distinct_tracks(keys),
+                listening.top_artists(keys, 5),
+                listening.top_albums(keys, 5),
+                listening.top_tracks(keys, 5),
+            )
+        });
 
     let peak = day_counts.iter().max_by_key(|(_, count)| **count);
     let peak_hour = if hour_counts.iter().any(|c| *c > 0) {
@@ -601,18 +672,6 @@ pub fn compute_year(
         longest_streak: longest_streak(&day_counts.keys().copied().collect()),
         persona,
     }
-}
-
-/// How long a play lasted: its own length when Flaccy played it, else the
-/// library song's length, else a typical song's.
-fn played_seconds(row: &ScrobbleRow, keys: &mut ListenKeyCache, durations: &HashMap<String, i64>) -> i64 {
-    if row.duration > 0 {
-        return row.duration;
-    }
-    durations
-        .get(&keys.track(&row.title, &row.artist))
-        .copied()
-        .unwrap_or(FALLBACK_TRACK_SECONDS)
 }
 
 /// `"first\0second"` names split back into their two halves.
