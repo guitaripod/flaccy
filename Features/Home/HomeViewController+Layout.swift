@@ -10,11 +10,19 @@ extension HomeViewController {
     func makeLayout() -> UICollectionViewCompositionalLayout {
         let configuration = UICollectionViewCompositionalLayoutConfiguration()
         configuration.interSectionSpacing = 0
-        return UICollectionViewCompositionalLayout(sectionProvider: { [weak self] index, environment in
+        return UICollectionViewCompositionalLayout(sectionProvider: { [weak self] index, _ in
             guard let self, let id = self.dataSource?.sectionIdentifier(for: index) else { return nil }
-            let width = environment.container.effectiveContentSize.width
-            return self.layoutSection(for: id, index: index, width: width)
+            let section = self.layoutSection(for: id, index: index, width: self.contentWidth)
+            section.contentInsetsReference = .safeArea
+            return section
         }, configuration: configuration)
+    }
+
+    /// The width the sections lay out in: the collection's own width less the
+    /// side the system bar takes, wherever it sits.
+    var contentWidth: CGFloat {
+        let insets = collectionView.safeAreaInsets
+        return collectionView.bounds.width - insets.left - insets.right
     }
 
     private func inset(for width: CGFloat) -> CGFloat {
