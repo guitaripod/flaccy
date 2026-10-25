@@ -5,7 +5,7 @@ import Combine
 
 /// The Recap dashboard: period picker, headline stat tiles, ranked top lists,
 /// the listening clock and full-width heatmap with hover tooltips, the
-/// Last.fm import-history banner with live progress, and share-card export.
+/// Last.fm history-sync banner with live progress, and share-card export.
 /// Forced dark over an ambient palette backdrop, all stats computed off-main
 /// by ChartsViewModel.
 final class ChartsViewController: NSViewController {
@@ -23,10 +23,9 @@ final class ChartsViewController: NSViewController {
     private let shareButton = NSButton(title: String(localized: "Share"), target: nil, action: nil)
     private let loadingSpinner = NSProgressIndicator()
 
-    private let importBanner = NSView()
-    private let importLabel = NSTextField(labelWithString: "")
-    private let importButton = NSButton(title: String(localized: "Import"), target: nil, action: nil)
-    private let importSpinner = NSProgressIndicator()
+    private let syncBanner = NSView()
+    private let syncLabel = NSTextField(labelWithString: "")
+    private let syncSpinner = NSProgressIndicator()
 
     private let statsRow = NSStackView()
     private let artistsList = NSStackView()
@@ -98,7 +97,7 @@ final class ChartsViewController: NSViewController {
 
     private func applyDynamicLayerColors() {
         view.effectiveAppearance.performAsCurrentDrawingAppearance {
-            importBanner.layer?.backgroundColor = MacColors.fill(0.08).cgColor
+            syncBanner.layer?.backgroundColor = MacColors.fill(0.08).cgColor
         }
     }
 
@@ -119,10 +118,10 @@ final class ChartsViewController: NSViewController {
                 self?.setLoading(loading)
             }
             .store(in: &cancellables)
-        viewModel.importStatePublisher
+        viewModel.syncStatusPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
-                self?.renderImportState(state)
+            .sink { [weak self] status in
+                self?.renderSyncStatus(status)
             }
             .store(in: &cancellables)
 
@@ -179,7 +178,7 @@ final class ChartsViewController: NSViewController {
         contentStack.addArrangedSubview(header)
         header.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
 
-        buildImportBanner()
+        buildSyncBanner()
         buildStatsRow()
         buildSkeleton()
         buildEmptyState()
@@ -203,11 +202,11 @@ final class ChartsViewController: NSViewController {
         emptyState.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
     }
 
-    private func buildImportBanner() {
-        importBanner.wantsLayer = true
-        importBanner.layer?.backgroundColor = MacColors.fill(0.08).cgColor
-        importBanner.layer?.cornerRadius = 14
-        importBanner.layer?.cornerCurve = .continuous
+    private func buildSyncBanner() {
+        syncBanner.wantsLayer = true
+        syncBanner.layer?.backgroundColor = MacColors.fill(0.08).cgColor
+        syncBanner.layer?.cornerRadius = 14
+        syncBanner.layer?.cornerCurve = .continuous
 
         let icon = NSImageView(image: NSImage(
             systemSymbolName: "square.and.arrow.down.on.square", accessibilityDescription: nil
@@ -215,36 +214,31 @@ final class ChartsViewController: NSViewController {
         icon.symbolConfiguration = .init(pointSize: 16, weight: .medium)
         icon.contentTintColor = MacColors.primaryLabel
 
-        importLabel.font = .systemFont(ofSize: 12, weight: .medium)
-        importLabel.textColor = MacColors.primaryLabel
-        importLabel.maximumNumberOfLines = 2
-        importLabel.lineBreakMode = .byWordWrapping
+        syncLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        syncLabel.textColor = MacColors.primaryLabel
+        syncLabel.maximumNumberOfLines = 2
+        syncLabel.lineBreakMode = .byWordWrapping
 
-        importButton.bezelStyle = .rounded
-        importButton.controlSize = .small
-        importButton.target = self
-        importButton.action = #selector(importTapped)
+        syncSpinner.style = .spinning
+        syncSpinner.controlSize = .small
+        syncSpinner.isDisplayedWhenStopped = false
 
-        importSpinner.style = .spinning
-        importSpinner.controlSize = .small
-        importSpinner.isDisplayedWhenStopped = false
-
-        let row = NSStackView(views: [icon, importLabel, NSView(), importSpinner, importButton])
+        let row = NSStackView(views: [icon, syncLabel, NSView(), syncSpinner])
         row.orientation = .horizontal
         row.alignment = .centerY
         row.spacing = 10
         row.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 12, right: 14)
         row.translatesAutoresizingMaskIntoConstraints = false
-        importBanner.addSubview(row)
+        syncBanner.addSubview(row)
         NSLayoutConstraint.activate([
-            row.topAnchor.constraint(equalTo: importBanner.topAnchor),
-            row.leadingAnchor.constraint(equalTo: importBanner.leadingAnchor),
-            row.trailingAnchor.constraint(equalTo: importBanner.trailingAnchor),
-            row.bottomAnchor.constraint(equalTo: importBanner.bottomAnchor),
+            row.topAnchor.constraint(equalTo: syncBanner.topAnchor),
+            row.leadingAnchor.constraint(equalTo: syncBanner.leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: syncBanner.trailingAnchor),
+            row.bottomAnchor.constraint(equalTo: syncBanner.bottomAnchor),
         ])
-        contentStack.addArrangedSubview(importBanner)
-        importBanner.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
-        importBanner.isHidden = true
+        contentStack.addArrangedSubview(syncBanner)
+        syncBanner.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
+        syncBanner.isHidden = true
     }
 
     private func buildStatsRow() {
@@ -281,7 +275,7 @@ final class ChartsViewController: NSViewController {
         let title = NSTextField(labelWithString: String(localized: "No listening history yet"))
         title.font = .systemFont(ofSize: 18, weight: .semibold)
         title.textColor = MacColors.primaryLabel
-        let subtitle = NSTextField(labelWithString: String(localized: "Play some music, or connect Last.fm in Settings and import your history."))
+        let subtitle = NSTextField(labelWithString: String(localized: "Play some music, or connect Last.fm in Settings to bring in your history."))
         subtitle.font = .systemFont(ofSize: 12)
         subtitle.textColor = MacColors.secondaryLabel
         emptyState.orientation = .vertical
@@ -683,27 +677,14 @@ final class ChartsViewController: NSViewController {
         return menu
     }
 
-    private func renderImportState(_ state: RecapImportState) {
-        importBanner.isHidden = !state.showsBanner
-        switch state {
-        case .available:
-            importLabel.stringValue = String(localized: "Import your full Last.fm history to power the Recap and Year in Music.")
-            importButton.isHidden = false
-            importButton.isEnabled = true
-            importSpinner.stopAnimation(nil)
-        case .importing(let imported):
-            importLabel.stringValue = imported > 0
-                ? String(localized: "Importing history… \(RecapFormat.count(imported)) scrobbles so far")
-                : String(localized: "Importing history…")
-            importButton.isHidden = true
-            importSpinner.startAnimation(nil)
-        case .done(let imported):
-            importLabel.stringValue = String(localized: "Imported \(RecapFormat.count(imported)) scrobbles from Last.fm.")
-            importButton.isHidden = true
-            importSpinner.stopAnimation(nil)
-        case .unavailable:
-            break
+    private func renderSyncStatus(_ status: ListenHistoryStatus) {
+        syncBanner.isHidden = !status.isBackfilling
+        guard status.isBackfilling else {
+            syncSpinner.stopAnimation(nil)
+            return
         }
+        syncLabel.stringValue = status.summary
+        syncSpinner.startAnimation(nil)
     }
 
     /// Shows `period`, the way Home's Open Recap link lands on the last week.
@@ -730,10 +711,6 @@ final class ChartsViewController: NSViewController {
         let index = periodPicker.selectedSegment
         guard index >= 0, index < ChartPeriod.allCases.count else { return }
         viewModel.load(period: ChartPeriod.allCases[index])
-    }
-
-    @objc private func importTapped() {
-        viewModel.importHistory()
     }
 
     @objc private func shareTapped() {

@@ -1,4 +1,5 @@
 import AuthenticationServices
+import Combine
 import MidgarCore
 import FlaccyCore
 import StoreKit
@@ -126,39 +127,27 @@ extension SettingsViewController {
         dismiss(animated: true)
     }
 
-    /// Runs the history backfill with the import row rendered as an in-progress
-    /// spinner. `importHistory()` reports nothing itself, so live progress is
-    /// derived by polling the local scrobble count against a pre-import baseline,
-    /// mirroring `ChartsViewModel.importHistory`.
-    func handleImportLastFM() {
-        guard lastFMImportProgress == nil else { return }
+    func handleHistorySync() {
+        guard !ListenHistorySync.shared.status.isBusy else { return }
         impactLight.impactOccurred()
-        lastFMImportProgress = 0
-        reconfigureRow(.importLastFM)
-        let baseline = Self.scrobbleCount()
+        ListenHistorySync.shared.syncNow()
+    }
 
-        let progressTask = Task.detached(priority: .utility) { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 800_000_000)
-                guard !Task.isCancelled, self != nil else { return }
-                let delta = max(0, Self.scrobbleCount() - baseline)
-                await MainActor.run { [weak self] in
-                    guard let self, self.lastFMImportProgress != nil else { return }
-                    self.lastFMImportProgress = delta
-                    self.reconfigureRow(.importLastFM)
-                }
+    /// Keeps the History Sync row and the plays count in step with the sync.
+    func observeHistorySync() {
+        syncStatusObserver = ListenHistorySync.shared.statusPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.reconfigureRow(.historySync)
             }
-        }
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(historyDidChange), name: ListenHistorySync.didChange, object: nil
+        )
+    }
 
-        Task { [weak self] in
-            await LastFMStatsService.shared.importHistory()
-            progressTask.cancel()
-            guard let self else { return }
-            self.lastFMImportProgress = nil
-            self.notificationFeedback.notificationOccurred(.success)
-            self.applySnapshot(animated: true)
-            self.refreshPlaysCount()
-        }
+    @objc func historyDidChange() {
+        refreshPlaysCount()
     }
 
     func reconfigureRow(_ row: Row) {

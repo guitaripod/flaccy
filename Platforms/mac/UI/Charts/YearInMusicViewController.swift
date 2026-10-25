@@ -190,7 +190,7 @@ final class YearInMusicViewController: NSViewController {
         let title = NSTextField(labelWithString: String(localized: "No listening history for this year"))
         title.font = .systemFont(ofSize: 17, weight: .semibold)
         title.textColor = MacColors.primaryLabel
-        let subtitle = NSTextField(labelWithString: String(localized: "Play some music or import your Last.fm history in Settings."))
+        let subtitle = NSTextField(labelWithString: String(localized: "Play some music, or connect Last.fm in Settings to bring in your history."))
         subtitle.font = .systemFont(ofSize: 12)
         subtitle.textColor = MacColors.secondaryLabel
         emptyState.orientation = .vertical

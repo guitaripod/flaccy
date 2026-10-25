@@ -106,13 +106,26 @@ enum DetailChip {
     }
 }
 
+/// How often an album was played, counted from the local listening history so
+/// it works offline and includes plays from every app and device Last.fm saw.
+nonisolated enum AlbumListenCount {
+
+    static func count(for album: Album) async -> Int {
+        await count(albumTitle: album.title, songs: album.tracks.map { (title: $0.title, artist: $0.artist) })
+    }
+
+    @concurrent
+    private static func count(albumTitle: String, songs: [(title: String, artist: String)]) async -> Int {
+        (try? DatabaseManager.shared.albumListenCount(albumTitle: albumTitle, songs: songs)) ?? 0
+    }
+}
+
 /// Process-lifetime in-memory memoization for Last.fm detail enrichment so
 /// revisiting an album or artist within a session never re-hits the network.
 actor DetailEnrichmentCache {
 
     static let shared = DetailEnrichmentCache()
 
-    private var albumPlayCounts: [String: Int] = [:]
     private var artistTags: [String: [String]] = [:]
     private var popularTracks: [String: [(name: String, playCount: Int, rank: Int)]] = [:]
     private var similarAlbums: [String: [Album]] = [:]
@@ -123,20 +136,6 @@ actor DetailEnrichmentCache {
 
     nonisolated func cachedTopTags(artist: String) -> [String]? {
         sync.tags(forArtist: artist.lowercased())
-    }
-
-    nonisolated func cachedAlbumPlayCount(artist: String, album: String) -> Int? {
-        sync.playCount(forKey: "\(artist.lowercased())\u{0}\(album.lowercased())")
-    }
-
-    func albumPlayCount(artist: String, album: String) async -> Int {
-        let key = "\(artist.lowercased())\u{0}\(album.lowercased())"
-        if let cached = albumPlayCounts[key] { return cached }
-        let info = await LastFMService.shared.fetchAlbumInfo(artist: artist, album: album)
-        let count = info?.userPlayCount ?? 0
-        albumPlayCounts[key] = count
-        sync.setPlayCount(count, forKey: key)
-        return count
     }
 
     func topTags(artist: String) async -> [String] {
@@ -180,12 +179,11 @@ actor DetailEnrichmentCache {
     }
 }
 
-/// The synchronous mirror of the cache's values. Every read and write of its two dictionaries happens under `lock`,
+/// The synchronous mirror of the cache's values. Every read and write of its dictionary happens under `lock`,
 /// so any thread may use it.
 private nonisolated final class SyncCache: @unchecked Sendable {
     private let lock = NSLock()
     private var artistTags: [String: [String]] = [:]
-    private var albumPlayCounts: [String: Int] = [:]
 
     func tags(forArtist key: String) -> [String]? {
         lock.lock(); defer { lock.unlock() }
@@ -195,15 +193,5 @@ private nonisolated final class SyncCache: @unchecked Sendable {
     func setTags(_ tags: [String], forArtist key: String) {
         lock.lock(); defer { lock.unlock() }
         artistTags[key] = tags
-    }
-
-    func playCount(forKey key: String) -> Int? {
-        lock.lock(); defer { lock.unlock() }
-        return albumPlayCounts[key]
-    }
-
-    func setPlayCount(_ count: Int, forKey key: String) {
-        lock.lock(); defer { lock.unlock() }
-        albumPlayCounts[key] = count
     }
 }

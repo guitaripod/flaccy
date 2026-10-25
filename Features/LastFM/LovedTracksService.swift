@@ -158,7 +158,7 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
     }
 
     private func matchKey(title: String, artist: String) -> String {
-        "\(title.lowercased())\u{0}\(artist.lowercased())"
+        ListenHistory.trackKey(title: title, artist: artist)
     }
 
     private static let documentsPath = FileManager.default

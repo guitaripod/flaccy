@@ -66,8 +66,13 @@ nonisolated extension LastFMService {
         }
     }
 
-    nonisolated func fetchRecentTracks(page: Int = 1, limit: Int = 200, from: Int? = nil, to: Int? = nil) async -> (tracks: [RecentTrack], total: Int, totalPages: Int) {
-        guard let user = username else { return ([], 0, 0) }
+    /// One page of the account's scrobbles, newest first, optionally limited to
+    /// the Unix seconds `from` through `to`. Throws on any failure, so a caller
+    /// that pulls a range can tell a failed page from an empty one.
+    nonisolated func fetchRecentTracks(
+        page: Int = 1, limit: Int = 200, from: Int? = nil, to: Int? = nil
+    ) async throws -> (tracks: [RecentTrack], total: Int, totalPages: Int) {
+        guard let user = username else { throw LastFMError.authenticationFailed }
         var params: [String: String] = [
             "method": "user.getRecentTracks",
             "api_key": Self.apiKey,
@@ -78,34 +83,33 @@ nonisolated extension LastFMService {
         ]
         if let from { params["from"] = String(from) }
         if let to { params["to"] = String(to) }
-        do {
-            let data = try await throttledGET(params: params)
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let recent = json["recenttracks"] as? [String: Any]
-            else { return ([], 0, 0) }
-
-            let attr = recent["@attr"] as? [String: Any]
-            let total = Self.intValue(attr?["total"]) ?? 0
-            let totalPages = Self.intValue(attr?["totalPages"]) ?? 1
-            let tracks = Self.asArray(recent["track"]).compactMap { entry -> RecentTrack? in
-                guard let name = entry["name"] as? String else { return nil }
-                let artistName: String
-                if let obj = entry["artist"] as? [String: Any] {
-                    artistName = obj["name"] as? String ?? obj["#text"] as? String ?? ""
-                } else {
-                    artistName = entry["artist"] as? String ?? ""
-                }
-                let album = (entry["album"] as? [String: Any])?["#text"] as? String ?? ""
-                let entryAttr = entry["@attr"] as? [String: Any]
-                let nowPlaying = (entryAttr?["nowplaying"] as? String) == "true"
-                let uts = Self.intValue((entry["date"] as? [String: Any])?["uts"])
-                return RecentTrack(name: name, artist: artistName, album: album, uts: uts, nowPlaying: nowPlaying)
-            }
-            return (tracks.filter { !$0.nowPlaying }, total, totalPages)
-        } catch {
-            MidgarLog.error("Fetch recent tracks failed: \(error.localizedDescription)", category: .sync)
-            return ([], 0, 0)
+        let data = try await throttledGET(params: params)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw LastFMError.invalidResponse
         }
+        guard let recent = json["recenttracks"] as? [String: Any] else {
+            throw (json["message"] as? String).map(LastFMError.apiError) ?? LastFMError.invalidResponse
+        }
+        let attr = recent["@attr"] as? [String: Any]
+        let total = Self.intValue(attr?["total"]) ?? 0
+        let totalPages = Self.intValue(attr?["totalPages"]) ?? 1
+        let tracks = Self.asArray(recent["track"]).compactMap(Self.recentTrack)
+        return (tracks.filter { !$0.nowPlaying }, total, totalPages)
+    }
+
+    private nonisolated static func recentTrack(from entry: [String: Any]) -> RecentTrack? {
+        guard let name = entry["name"] as? String else { return nil }
+        let artistName: String
+        if let obj = entry["artist"] as? [String: Any] {
+            artistName = obj["name"] as? String ?? obj["#text"] as? String ?? ""
+        } else {
+            artistName = entry["artist"] as? String ?? ""
+        }
+        let album = (entry["album"] as? [String: Any])?["#text"] as? String ?? ""
+        let entryAttr = entry["@attr"] as? [String: Any]
+        let nowPlaying = (entryAttr?["nowplaying"] as? String) == "true"
+        let uts = Self.intValue((entry["date"] as? [String: Any])?["uts"])
+        return RecentTrack(name: name, artist: artistName, album: album, uts: uts, nowPlaying: nowPlaying)
     }
 
     nonisolated func scrobbleCount(from: Int, to: Int) async -> Int {

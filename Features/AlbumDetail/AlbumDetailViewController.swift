@@ -26,6 +26,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     let metaLabel = UILabel()
     var enrichmentTask: Task<Void, Never>?
     var metadataTask: Task<Void, Never>?
+    var playCountTask: Task<Void, Never>?
     let impactLight = UIImpactFeedbackGenerator(style: .light)
     let impactMedium = UIImpactFeedbackGenerator(style: .medium)
 
@@ -55,6 +56,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(self, selector: #selector(artworkChanged), name: AlbumArtworkCache.didChangeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(tracksRevised), name: Library.tracksRevised, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(tracksRevised), name: RemoteAvailability.didChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(historyDidChange), name: ListenHistorySync.didChange, object: nil)
         loadEnrichment()
         repairMetadataIfNeeded()
     }
@@ -72,6 +74,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     deinit {
         enrichmentTask?.cancel()
         metadataTask?.cancel()
+        playCountTask?.cancel()
         NotificationCenter.default.removeObserver(self)
     }
 

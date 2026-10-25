@@ -1,3 +1,4 @@
+import FlaccyCore
 import Foundation
 
 /// Computes Year in Music snapshots from the local `scrobbles` table. Imported
@@ -6,8 +7,6 @@ import Foundation
 nonisolated final class YearInMusicService: Sendable {
 
     static let shared = YearInMusicService()
-
-    private static let fallbackTrackSeconds = 210
 
     private let db = DatabaseManager.shared
 
@@ -33,55 +32,76 @@ nonisolated final class YearInMusicService: Sendable {
 
         let durations = libraryDurations
         var totalSeconds = 0
-        var artistCounts: [String: Int] = [:]
-        var albumCounts: [String: (album: String, artist: String, count: Int)] = [:]
-        var trackCounts: [String: (title: String, artist: String, count: Int)] = [:]
+        var keyMemo = ListenKeyMemo()
+        var artists = SpellingTally()
+        var albums = SpellingTally()
+        var tracks = SpellingTally()
+        var albumArtist: [String: String] = [:]
+        var trackAlbumPlays: [String: [String: Int]] = [:]
         var dayCounts: [Date: Int] = [:]
         var hourCounts = [Int](repeating: 0, count: 24)
-        var trackAlbumCounts: [String: [String: Int]] = [:]
 
         for row in rows {
+            let keys = keyMemo.keys(title: row.trackTitle, artist: row.artist, album: row.albumTitle)
+            let trackKey = keys.title + "\u{0}" + keys.artist
             if row.duration > 0 {
                 totalSeconds += row.duration
             } else {
-                let key = LastFMStatsService.trackKey(row.trackTitle, row.artist)
-                totalSeconds += durations[key] ?? Self.fallbackTrackSeconds
+                totalSeconds += durations[trackKey] ?? DatabaseManager.unknownPlaySeconds
             }
-            artistCounts[row.artist, default: 0] += 1
-            let albumKey = "\(row.albumTitle)\u{0}\(row.artist)"
-            albumCounts[albumKey] = (row.albumTitle, row.artist, (albumCounts[albumKey]?.count ?? 0) + 1)
-            let trackKey = "\(row.trackTitle)\u{0}\(row.artist)"
-            trackCounts[trackKey] = (row.trackTitle, row.artist, (trackCounts[trackKey]?.count ?? 0) + 1)
-            if !row.albumTitle.isEmpty {
-                trackAlbumCounts[trackKey, default: [:]][row.albumTitle, default: 0] += 1
+            let moment = Int(row.timestamp.timeIntervalSince1970)
+            artists.add(key: keys.artist, name: row.artist, at: moment)
+            tracks.add(key: trackKey, name: Self.pair(row.trackTitle, row.artist), at: moment)
+            if !keys.album.isEmpty {
+                let albumKey = keys.album + "\u{0}" + keys.artist
+                albums.add(key: albumKey, name: Self.pair(row.albumTitle, row.artist), at: moment)
+                albumArtist[albumKey] = keys.artist
+                trackAlbumPlays[trackKey, default: [:]][albumKey, default: 0] += 1
             }
             dayCounts[calendar.startOfDay(for: row.timestamp), default: 0] += 1
             let hour = calendar.component(.hour, from: row.timestamp)
             if hour >= 0 && hour < 24 { hourCounts[hour] += 1 }
         }
 
-        let topArtists = artistCounts.sorted { $0.value > $1.value }
-            .prefix(5)
+        let foldedArtists = artists.folded()
+        let foldedAlbums = albums.folded()
+        let foldedTracks = tracks.folded()
+        let artistNames = Dictionary(uniqueKeysWithValues: foldedArtists.map { ($0.key, $0.name) })
+        let albumNames = Dictionary(uniqueKeysWithValues: foldedAlbums.map { ($0.key, Self.unpair($0.name).first) })
+
+        let topArtists = Self.topFive(foldedArtists)
             .enumerated()
-            .map { ChartArtist(rank: $0.offset + 1, name: $0.element.key, playCount: $0.element.value) }
-        let topAlbums = albumCounts.values.sorted { $0.count > $1.count }
-            .prefix(5)
+            .map { ChartArtist(rank: $0.offset + 1, name: $0.element.name, playCount: $0.element.plays) }
+        let topAlbums = Self.topFive(foldedAlbums)
             .enumerated()
-            .map { ChartAlbum(rank: $0.offset + 1, name: $0.element.album, artistName: $0.element.artist, playCount: $0.element.count, imageURL: nil) }
-        let topTracks = trackCounts.values.sorted { $0.count > $1.count }
-            .prefix(5)
+            .map { entry -> ChartAlbum in
+                let parts = Self.unpair(entry.element.name)
+                return ChartAlbum(rank: entry.offset + 1, name: parts.first, artistName: parts.second, playCount: entry.element.plays, imageURL: nil)
+            }
+        let topTracks = Self.topFive(foldedTracks)
             .enumerated()
-            .map { ChartTrack(rank: $0.offset + 1, name: $0.element.title, artistName: $0.element.artist, playCount: $0.element.count) }
+            .map { entry -> ChartTrack in
+                let parts = Self.unpair(entry.element.name)
+                return ChartTrack(rank: entry.offset + 1, name: parts.first, artistName: parts.second, playCount: entry.element.plays)
+            }
 
         var artistTopAlbums: [String: String] = [:]
         var artistAlbumBest: [String: Int] = [:]
-        for entry in albumCounts.values where !entry.album.isEmpty {
-            if entry.count > (artistAlbumBest[entry.artist] ?? 0) {
-                artistAlbumBest[entry.artist] = entry.count
-                artistTopAlbums[entry.artist] = entry.album
+        for entry in foldedAlbums.sorted(by: { $0.name < $1.name }) {
+            guard let artistKey = albumArtist[entry.key], let artistName = artistNames[artistKey] else { continue }
+            if entry.plays > (artistAlbumBest[artistName] ?? 0) {
+                artistAlbumBest[artistName] = entry.plays
+                artistTopAlbums[artistName] = Self.unpair(entry.name).first
             }
         }
-        let trackAlbums = trackAlbumCounts.compactMapValues { $0.max { $0.value < $1.value }?.key }
+        var trackAlbums: [String: String] = [:]
+        for entry in foldedTracks {
+            guard let plays = trackAlbumPlays[entry.key],
+                  let best = plays.max(by: { ($0.value, $1.key) < ($1.value, $0.key) }),
+                  let albumName = albumNames[best.key] else { continue }
+            let parts = Self.unpair(entry.name)
+            trackAlbums[parts.first + "\u{0}" + parts.second] = albumName
+        }
 
         let peak = dayCounts.max { $0.value < $1.value }
         let peakHour = hourCounts.contains(where: { $0 > 0 })
@@ -92,9 +112,9 @@ nonisolated final class YearInMusicService: Sendable {
             year: year,
             totalPlays: rows.count,
             totalMinutes: totalSeconds / 60,
-            distinctArtists: artistCounts.count,
-            distinctAlbums: albumCounts.count,
-            distinctTracks: trackCounts.count,
+            distinctArtists: artists.distinct,
+            distinctAlbums: albums.distinct,
+            distinctTracks: tracks.distinct,
             topArtists: topArtists,
             topAlbums: topAlbums,
             topTracks: topTracks,
@@ -102,19 +122,58 @@ nonisolated final class YearInMusicService: Sendable {
             peakDayPlays: peak?.value ?? 0,
             peakHour: peakHour,
             longestStreak: longestStreak(days: Set(dayCounts.keys), calendar: calendar),
-            persona: persona(plays: rows.count, distinctArtists: artistCounts.count, hourCounts: hourCounts),
+            persona: persona(plays: rows.count, distinctArtists: artists.distinct, hourCounts: hourCounts),
             artistTopAlbums: artistTopAlbums,
             trackAlbums: trackAlbums
         )
     }
 
+    private static let pairSeparator = "\u{1F}"
+
+    private static func pair(_ first: String, _ second: String) -> String {
+        first + pairSeparator + second
+    }
+
+    private static func unpair(_ name: String) -> (first: String, second: String) {
+        let parts = name.components(separatedBy: pairSeparator)
+        return (first: parts[0], second: parts.count > 1 ? parts[1] : "")
+    }
+
+    private static func topFive(_ folded: [SpellingTally.Entry]) -> [SpellingTally.Entry] {
+        Array(folded.sorted { $0.plays != $1.plays ? $0.plays > $1.plays : $0.name < $1.name }.prefix(5))
+    }
+
+    /// Plays counted per key under every spelling heard, so each key can be
+    /// named by the spelling heard most.
+    private struct SpellingTally {
+        struct Entry {
+            let key: String
+            let name: String
+            let plays: Int
+        }
+
+        private var spellings: [String: [String: (plays: Int, latest: Int)]] = [:]
+
+        var distinct: Int { spellings.count }
+
+        mutating func add(key: String, name: String, at moment: Int) {
+            let seen = spellings[key]?[name]
+            spellings[key, default: [:]][name] = ((seen?.plays ?? 0) + 1, max(seen?.latest ?? moment, moment))
+        }
+
+        func folded() -> [Entry] {
+            spellings.compactMap { key, names in
+                let counted = names.map {
+                    ListenHistory.Spelling(key: key, name: $0.key, plays: $0.value.plays, seconds: 0, latest: $0.value.latest)
+                }
+                return ListenHistory.foldSpellings(counted).first.map { Entry(key: key, name: $0.name, plays: $0.plays) }
+            }
+        }
+    }
+
     @MainActor
     func libraryDurations() -> [String: Int] {
-        var durations: [String: Int] = [:]
-        for track in Library.shared.allTracks where track.duration > 0 {
-            durations[LastFMStatsService.trackKey(track.title, track.artist)] = Int(track.duration)
-        }
-        return durations
+        LastFMStatsService.shared.libraryLengths()
     }
 
     nonisolated private func longestStreak(days: Set<Date>, calendar: Calendar) -> Int {
