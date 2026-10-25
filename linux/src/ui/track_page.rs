@@ -10,6 +10,7 @@ use gtk::gio;
 use gtk::glib::BoxedAnyObject;
 use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 const RAIL_WIDTH: i32 = 380;
@@ -31,12 +32,27 @@ pub fn layout_icon(layout: TrackLayout) -> &'static str {
     }
 }
 
-/// Whether a song answers a page's filter box; `needle` is already lowercase.
-pub fn matches(track: &Track, needle: &str) -> bool {
-    needle.is_empty()
-        || track.title.to_lowercase().contains(needle)
-        || track.artist.to_lowercase().contains(needle)
-        || track.album.to_lowercase().contains(needle)
+const FIELD_BREAK: char = '\0';
+
+/// What a page's filter box searches in one song: title, artist and album,
+/// lowercased once and kept apart by a NUL that a typed needle can never
+/// contain, so a match can never straddle two fields. Built once per song per
+/// page build, not once per keystroke.
+pub fn search_text(track: &Track) -> String {
+    let capacity = track.title.len() + track.artist.len() + track.album.len() + 2;
+    let mut text = String::with_capacity(capacity);
+    text.push_str(&track.title.to_lowercase());
+    text.push(FIELD_BREAK);
+    text.push_str(&track.artist.to_lowercase());
+    text.push(FIELD_BREAK);
+    text.push_str(&track.album.to_lowercase());
+    text
+}
+
+/// Whether a song's `search_text` answers a page's filter box; `needle` is
+/// already lowercase.
+pub fn matches_text(text: &str, needle: &str) -> bool {
+    needle.is_empty() || text.contains(needle)
 }
 
 /// The page shell both song pages share: a hero, a scrolling body, and — in a
@@ -306,6 +322,7 @@ pub struct TrackTable {
     store: gio::ListStore,
     filter: gtk::CustomFilter,
     query: Rc<RefCell<String>>,
+    search: Rc<RefCell<HashMap<String, String>>>,
     selection: gtk::SingleSelection,
 }
 
@@ -319,13 +336,22 @@ impl TrackTable {
     ) -> TrackTable {
         let store = gio::ListStore::new::<BoxedAnyObject>();
         let query: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
+        let search: Rc<RefCell<HashMap<String, String>>> = Rc::new(RefCell::new(HashMap::new()));
         let filter = {
             let query = Rc::clone(&query);
+            let search = Rc::clone(&search);
             gtk::CustomFilter::new(move |obj| {
                 let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
                     return true;
                 };
-                matches(&boxed.borrow::<Track>(), &query.borrow())
+                let query = query.borrow();
+                if query.is_empty() {
+                    return true;
+                }
+                search
+                    .borrow()
+                    .get(&boxed.borrow::<Track>().rel_path)
+                    .is_none_or(|text| matches_text(text, &query))
             })
         };
         let filtered = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
@@ -492,11 +518,16 @@ impl TrackTable {
             store,
             filter,
             query,
+            search,
             selection,
         }
     }
 
     pub fn set_tracks(&self, tracks: &[Track]) {
+        *self.search.borrow_mut() = tracks
+            .iter()
+            .map(|track| (track.rel_path.clone(), search_text(track)))
+            .collect();
         let items: Vec<BoxedAnyObject> = tracks
             .iter()
             .map(|track| BoxedAnyObject::new(track.clone()))
@@ -560,4 +591,69 @@ pub fn reveal_row(scroll: &gtk::ScrolledWindow, table: &TrackTable, position: u3
         return;
     };
     scroll_by(scroll, f64::from(point.y()) + table.row_offset(position));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn song(title: &str, artist: &str, album: &str) -> Track {
+        Track {
+            id: 0,
+            rel_path: format!("{title}.flac"),
+            title: title.to_string(),
+            artist: artist.to_string(),
+            album: album.to_string(),
+            album_artist: None,
+            track_number: 1,
+            duration: 1.0,
+            codec: None,
+            bit_depth: None,
+            sample_rate: None,
+            channels: None,
+            loved: false,
+            play_count: 0,
+            date_added: 0,
+            last_played: None,
+        }
+    }
+
+    fn reference(track: &Track, needle: &str) -> bool {
+        needle.is_empty()
+            || track.title.to_lowercase().contains(needle)
+            || track.artist.to_lowercase().contains(needle)
+            || track.album.to_lowercase().contains(needle)
+    }
+
+    #[test]
+    fn search_text_answers_like_lowercasing_each_field() {
+        let tracks = [
+            song("Blue Monday", "New Order", "Power, Corruption & Lies"),
+            song("ÄÖ Straße", "Σίσυφος", "ΟΔΥΣΣΕΥΣ"),
+            song("", "", ""),
+        ];
+        let needles = [
+            "", "blue", "order", "lies", "monday new", "new order power", "ö str", "σίσυφος",
+            "οδυσσευσ", "ς", "\u{1}", "zzz",
+        ];
+        for track in &tracks {
+            let text = search_text(track);
+            for needle in needles {
+                assert_eq!(
+                    matches_text(&text, needle),
+                    reference(track, needle),
+                    "{:?} against {needle:?}",
+                    track.title
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_match_never_straddles_two_fields() {
+        let text = search_text(&song("abc", "def", "ghi"));
+        assert!(matches_text(&text, "bc"));
+        assert!(!matches_text(&text, "cd"));
+        assert!(!matches_text(&text, "fg"));
+    }
 }
