@@ -527,7 +527,7 @@ enum DemoRouter {
               let route = DemoMode.environment["FLACCY_ROUTE"], !route.isEmpty else { return }
         Task {
             if DemoMode.environment["FLACCY_LANDSCAPE"] == "1" {
-                window.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+                window.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) // duo-audit:ignore DEBUG-only demo flag that rotates the scene for captures
             }
             await waitForLibrary()
             try? await Task.sleep(for: .seconds(0.4))

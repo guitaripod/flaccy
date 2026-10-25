@@ -527,11 +527,7 @@ final class EqualizerPresetsViewController: UIViewController {
     }
 
     private func hairline() -> UIView {
-        let line = UIView()
-        line.backgroundColor = UIColor.white.withAlphaComponent(0.1)
-        line.translatesAutoresizingMaskIntoConstraints = false
-        line.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale).isActive = true
-        return line
+        HairlineView(color: UIColor.white.withAlphaComponent(0.1))
     }
 
     private func sectionTag(_ text: String) -> UILabel {

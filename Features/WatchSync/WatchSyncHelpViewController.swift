@@ -155,7 +155,7 @@ final class WatchSyncHelpViewController: UIViewController {
         let stack = UIStackView()
         stack.axis = .vertical
         for (index, row) in rows.enumerated() {
-            if index > 0 { stack.addArrangedSubview(StepSeparator()) }
+            if index > 0 { stack.addArrangedSubview(HairlineView(color: .separator)) }
             stack.addArrangedSubview(row)
         }
         stack.backgroundColor = .secondarySystemGroupedBackground
@@ -239,20 +239,6 @@ final class WatchSyncHelpViewController: UIViewController {
     }
 }
 
-private final class StepSeparator: UIView {
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = .separator
-        translatesAutoresizingMaskIntoConstraints = false
-        heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale).isActive = true
-        isAccessibilityElement = false
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError() }
-}
-
 private final class StepRow: UIView {
 
     init(number: Int, text: String, symbol: String) {
@@ -300,3 +286,4 @@ private final class StepRow: UIView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 }
+
