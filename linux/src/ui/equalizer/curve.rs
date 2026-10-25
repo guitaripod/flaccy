@@ -5,8 +5,8 @@
 //! this file only feeds it points and relays what it decides.
 
 use super::copy;
-use super::render::{self, PlotFrame, Rgb, Style};
-use crate::ui::FrameDriver;
+use super::render::{self, CurveMemo, PlotCache, PlotFrame, Rgb, Style};
+use crate::ui::screen::is_watched;
 use adw::prelude::*;
 use flaccy_shared::equalizer::graphic::GraphicSolver;
 use flaccy_shared::equalizer::interaction::{PlotAction, PlotInteraction};
@@ -18,6 +18,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 const FRAME_INTERVAL: f64 = 1.0 / 30.0;
+const FRAME_DURATION: std::time::Duration = std::time::Duration::from_millis(33);
 /// Frames in a row with nothing moving after which the frame clock is let go.
 const IDLE_FRAMES_BEFORE_PARKING: u32 = 45;
 /// How often a parked curve looks for audio to start drawing again.
@@ -42,6 +43,13 @@ pub enum CurveEvent {
     EndCompare,
 }
 
+/// The points of the previewed curve and of the one it glides from.
+#[derive(Default)]
+struct PreviewMemos {
+    to: CurveMemo,
+    from: CurveMemo,
+}
+
 type Handler = Rc<dyn Fn(CurveEvent)>;
 type SpectrumSource = Rc<dyn Fn() -> Option<Vec<f32>>>;
 
@@ -55,8 +63,9 @@ pub struct CurveView {
     preview_morph: Cell<f64>,
     handler: RefCell<Option<Handler>>,
     spectrum: RefCell<Option<SpectrumSource>>,
-    driver: FrameDriver,
-    accumulated: Cell<f64>,
+    timer: RefCell<Option<glib::SourceId>>,
+    plot_cache: RefCell<PlotCache>,
+    preview_memos: RefCell<PreviewMemos>,
     spectrum_signature: Cell<f32>,
     comparing_with_key: Cell<bool>,
     wanted: Cell<bool>,
@@ -207,8 +216,9 @@ impl CurveView {
             preview_morph: Cell::new(1.0),
             handler: RefCell::new(None),
             spectrum: RefCell::new(None),
-            driver: FrameDriver::default(),
-            accumulated: Cell::new(0.0),
+            timer: RefCell::new(None),
+            plot_cache: RefCell::new(PlotCache::default()),
+            preview_memos: RefCell::new(PreviewMemos::default()),
             spectrum_signature: Cell::new(0.0),
             comparing_with_key: Cell::new(false),
             wanted: Cell::new(false),
@@ -316,18 +326,21 @@ impl CurveView {
     /// The previewed curve placed on the plot, part-way from the one before it
     /// while the glide plays.
     fn preview_points(&self, plot: Rect) -> Option<Vec<Point>> {
-        let target = self.preview.borrow().clone()?;
+        let preview = self.preview.borrow();
+        let target = preview.as_ref()?;
         let model = self.model.borrow();
-        let to = model.curve_points(&target, plot, 160);
+        let mut memos = self.preview_memos.borrow_mut();
+        let memos = &mut *memos;
+        let to = memos.to.points(&model, target, plot);
         let progress = self.preview_morph.get();
         if progress >= 1.0 {
-            return Some(to);
+            return Some(to.to_vec());
         }
-        let from = model.curve_points(&self.preview_from.borrow(), plot, 160);
+        let from = memos.from.points(&model, &self.preview_from.borrow(), plot);
         let eased = progress * progress * (3.0 - 2.0 * progress);
         Some(
             from.iter()
-                .zip(&to)
+                .zip(to)
                 .map(|(from, to)| Point { x: to.x, y: from.y + (to.y - from.y) * eased })
                 .collect(),
         )
@@ -364,6 +377,7 @@ impl CurveView {
         let has_focus = self.area.has_focus() && self.area.is_focus();
         let frame = PlotFrame {
             preview: preview.as_deref(),
+            cache: &self.plot_cache,
             width: width as f64,
             plot,
             model: &model,
@@ -489,9 +503,9 @@ impl CurveView {
         true
     }
 
-    /// Starts the frame clock: the spectrum rises and falls and the preset
+    /// Starts the frame timer: the spectrum rises and falls and the preset
     /// glide plays out, repainting only on a frame where something moved. When
-    /// nothing has moved for a while the clock is let go, and a slow poll
+    /// nothing has moved for a while the timer is let go, and a slow poll
     /// brings it back once there is audio to draw or the content changes.
     pub fn start_frames(self: &Rc<Self>, on_frame: impl Fn() + 'static) {
         *self.on_frame.borrow_mut() = Some(Rc::new(on_frame));
@@ -502,10 +516,15 @@ impl CurveView {
     pub fn stop_frames(&self) {
         self.wanted.set(false);
         self.parked.set(false);
-        self.driver.stop();
-        self.accumulated.set(0.0);
+        self.release_timer();
         if let Some(poll) = self.poll.borrow_mut().take() {
             poll.remove();
+        }
+    }
+
+    fn release_timer(&self) {
+        if let Some(timer) = self.timer.borrow_mut().take() {
+            timer.remove();
         }
     }
 
@@ -515,34 +534,43 @@ impl CurveView {
         }
         self.parked.set(false);
         self.idle_frames.set(0);
+        if self.timer.borrow().is_some() {
+            return;
+        }
         let view = Rc::downgrade(self);
-        self.driver.start(&self.area, move |delta| {
-            let Some(view) = view.upgrade() else {
-                return;
-            };
-            let waited = view.accumulated.get() + delta;
-            if waited < FRAME_INTERVAL - 0.004 {
-                view.accumulated.set(waited);
-                return;
+        let timer = glib::timeout_add_local(FRAME_DURATION, move || {
+            if let Some(view) = view.upgrade() {
+                view.frame();
             }
-            view.accumulated.set(0.0);
-            let active = view.advance();
-            let callback = view.on_frame.borrow().clone();
-            if let Some(callback) = callback {
-                callback();
-            }
-            if active {
-                view.idle_frames.set(0);
-            } else if view.idle_frames.get() + 1 >= IDLE_FRAMES_BEFORE_PARKING {
-                view.park_soon();
-            } else {
-                view.idle_frames.set(view.idle_frames.get() + 1);
-            }
+            glib::ControlFlow::Continue
         });
+        *self.timer.borrow_mut() = Some(timer);
     }
 
-    /// Parks from an idle callback, because a tick callback cannot remove
-    /// itself while it is running.
+    /// One tick of the frame timer. A curve nobody can see (unmapped, or its
+    /// window suspended) has nothing to animate, so it parks at once.
+    fn frame(self: &Rc<Self>) {
+        if !is_watched(&self.area) {
+            self.idle_frames.set(IDLE_FRAMES_BEFORE_PARKING);
+            self.park_soon();
+            return;
+        }
+        let active = self.advance();
+        let callback = self.on_frame.borrow().clone();
+        if let Some(callback) = callback {
+            callback();
+        }
+        if active {
+            self.idle_frames.set(0);
+        } else if self.idle_frames.get() + 1 >= IDLE_FRAMES_BEFORE_PARKING {
+            self.park_soon();
+        } else {
+            self.idle_frames.set(self.idle_frames.get() + 1);
+        }
+    }
+
+    /// Parks from an idle callback, because a timer callback should not remove
+    /// its own source while it is running.
     fn park_soon(self: &Rc<Self>) {
         if self.parking.replace(true) {
             return;
@@ -560,7 +588,7 @@ impl CurveView {
 
     /// Lets go of the frame clock until something wants drawing again.
     fn park(self: &Rc<Self>) {
-        self.driver.stop();
+        self.release_timer();
         self.parked.set(true);
         let view = Rc::downgrade(self);
         let poll = glib::timeout_add_local(std::time::Duration::from_millis(PARKED_POLL_MS), move || {
@@ -571,7 +599,7 @@ impl CurveView {
                 return glib::ControlFlow::Break;
             }
             let source = view.spectrum.borrow().clone();
-            if source.and_then(|source| source()).is_some() {
+            if is_watched(&view.area) && source.and_then(|source| source()).is_some() {
                 *view.poll.borrow_mut() = None;
                 view.run_frames();
                 return glib::ControlFlow::Break;
