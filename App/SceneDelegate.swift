@@ -41,6 +41,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         PaywallShot.runIfRequested(in: window)
         SampleExercise.runIfRequested()
         ReexportExercise.runIfRequested()
+        NewMixShot.runIfRequested(nav: nav, player: playerContainer)
         WatchSyncExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         EqualizerShots.runIfRequested(in: window)

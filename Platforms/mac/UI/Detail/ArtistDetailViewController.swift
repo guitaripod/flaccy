@@ -263,7 +263,8 @@ final class ArtistDetailViewController: NSViewController {
                 title: entry.track.title,
                 duration: entry.track.duration,
                 loved: LovedTracksService.shared.isLoved(track: entry.track),
-                isPlaying: currentPath == entry.track.fileURL
+                isPlaying: currentPath == entry.track.fileURL,
+                newMix: entry.track.showsNewMix
             )
             row.onDoubleClick = {
                 MidgarLog.info("Playing popular track \(entry.track.title)", category: .playback)

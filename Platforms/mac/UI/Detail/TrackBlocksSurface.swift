@@ -184,7 +184,8 @@ final class TrackBlocksSurface: TrackPageSurface {
             title: entry.track.title,
             duration: entry.track.duration,
             loved: LovedTracksService.shared.isLoved(track: entry.track),
-            isPlaying: playing == entry.track.fileURL
+            isPlaying: playing == entry.track.fileURL,
+            newMix: entry.track.showsNewMix
         )
         row.onDoubleClick = { [weak self] in
             guard let self else { return }

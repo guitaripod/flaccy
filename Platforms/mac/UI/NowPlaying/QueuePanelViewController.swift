@@ -80,6 +80,7 @@ final class QueuePanelViewController: NSViewController {
         let center = NotificationCenter.default
         center.addObserver(self, selector: #selector(queueChanged), name: AudioPlayer.queueDidChange, object: nil)
         center.addObserver(self, selector: #selector(trackChanged), name: AudioPlayer.trackDidChange, object: nil)
+        center.addObserver(self, selector: #selector(queueChanged), name: Library.tracksRevised, object: nil)
         center.addObserver(self, selector: #selector(playbackStateChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
         scrollView.automaticallyAdjustsContentInsets = false
         reload()
@@ -471,6 +472,8 @@ final class QueueTrackCellView: NSView {
     private let artworkContainer = NSView()
     private let placeholder = CAGradientLayer()
     private let titleLabel = NSTextField(labelWithString: "")
+    private let newMixChip = MacNewMixChip()
+    private lazy var titleRow = NSStackView(views: [titleLabel, newMixChip])
     private let subtitleLabel = NSTextField(labelWithString: "")
     private let bars = PlayingBarsView()
     private let card = NSView()
@@ -500,11 +503,16 @@ final class QueueTrackCellView: NSView {
 
         titleLabel.font = .systemFont(ofSize: 12, weight: .medium)
         titleLabel.lineBreakMode = .byTruncatingTail
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        newMixChip.isHidden = true
+        titleRow.orientation = .horizontal
+        titleRow.alignment = .centerY
+        titleRow.spacing = 6
         subtitleLabel.font = .systemFont(ofSize: 10)
         subtitleLabel.textColor = .secondaryLabelColor
         subtitleLabel.lineBreakMode = .byTruncatingTail
 
-        let text = NSStackView(views: [titleLabel, subtitleLabel])
+        let text = NSStackView(views: [titleRow, subtitleLabel])
         text.orientation = .vertical
         text.alignment = .leading
         text.spacing = 1
@@ -545,6 +553,9 @@ final class QueueTrackCellView: NSView {
     func configure(track: Track, group: QueueRowGroup) {
         titleLabel.stringValue = track.title
         subtitleLabel.stringValue = track.artist
+        let newMix = track.showsNewMix
+        newMixChip.isHidden = !newMix
+        titleLabel.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(track.title, newMix: newMix))
         toolTip = "\(track.title) — \(track.artist)"
 
         let isCurrent = group == .current

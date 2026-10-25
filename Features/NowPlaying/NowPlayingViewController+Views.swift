@@ -299,9 +299,16 @@ extension NowPlayingViewController {
     func refreshTrackSignals() {
         let track = AudioPlayer.shared.currentTrack
         qualityBadge.configure(with: track)
+        versionRow.configure(with: track)
         loveButton.isEnabled = track != nil
         let loved = track.map { LovedTracksService.shared.isLoved(track: $0) } ?? false
         loveButton.setLoved(loved, animated: false)
+    }
+
+    /// Re-reads the playing song's versions when the library reports a new
+    /// mix, so the chip and the export time appear without a track change.
+    @objc func tracksRevised() {
+        versionRow.configure(with: AudioPlayer.shared.currentTrack)
     }
 
     @objc func lovedTracksDidChange() {

@@ -7,6 +7,7 @@ final class TrackGridCell: UICollectionViewCell {
     private let artworkContainer = UIView()
     private let artworkView = UIImageView()
     private let titleLabel = UILabel()
+    private lazy var titleRow = TitleWithChipView(titleLabel: titleLabel)
     private let artistLabel = UILabel()
     private let qualityBadge = QualityBadgeView(size: .compact)
     private let lovedBadge = UIImageView()
@@ -58,10 +59,10 @@ final class TrackGridCell: UICollectionViewCell {
         artistLabel.numberOfLines = 1
         artistLabel.lineBreakMode = .byTruncatingTail
 
-        let stack = UIStackView(arrangedSubviews: [artworkContainer, titleLabel, artistLabel])
+        let stack = UIStackView(arrangedSubviews: [artworkContainer, titleRow, artistLabel])
         stack.axis = .vertical
         stack.spacing = 6
-        stack.setCustomSpacing(4, after: titleLabel)
+        stack.setCustomSpacing(4, after: titleRow)
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
 
@@ -108,6 +109,9 @@ final class TrackGridCell: UICollectionViewCell {
     func configure(with track: Track, loved: Bool) {
         titleLabel.text = track.title
         artistLabel.text = track.artist
+        let newMix = track.showsNewMix
+        titleRow.setNewMix(newMix)
+        accessibilityLabel = newMix ? TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: true) : nil
         qualityBadge.configure(with: track)
         lovedBadge.isHidden = !loved
 
@@ -134,6 +138,8 @@ final class TrackGridCell: UICollectionViewCell {
         artworkView.image = nil
         titleLabel.text = nil
         artistLabel.text = nil
+        titleRow.setNewMix(false)
+        accessibilityLabel = nil
         qualityBadge.isHidden = true
         lovedBadge.isHidden = true
         contentView.transform = .identity

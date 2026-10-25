@@ -11,15 +11,25 @@ import Foundation
 /// song imported from another folder with Replace becomes revision 3 and leaves
 /// its old file in Previous Versions; restoring puts the second version back
 /// without a new revision. Launch with `--exercise-reexport`; read the app log.
+///
+/// `--shot-new-mix` is the picture mode: `seedRevisedSong()` leaves one
+/// re-exported song and its companion in the library, for the platform drivers
+/// to open on the screens that show the New mix chip.
 @MainActor
 enum ReexportExercise {
 
     static let launchArgument = "--exercise-reexport"
+    static let shotArgument = "--shot-new-mix"
 
     private static let folderName = "Reexport Exercise"
-    private static let songName = "Rough Mix.wav"
+    private static let shotLongName = "A Very Long Song Title That Has To Give Way Before The New Mix Chip Does.wav"
+    private static var songName: String {
+        CommandLine.arguments.contains("--long-title") ? shotLongName : "Rough Mix.wav"
+    }
     private static let companionName = "Other Take.wav"
     private static let artist = "Reexport Exercise Artist"
+    static let shotAlbumTitle = "Reexport Exercise Album"
+    static let shotArtist = artist
     private static let playlistName = "Reexport Exercise Playlist"
 
     private struct Failure: Error {
@@ -27,7 +37,8 @@ enum ReexportExercise {
     }
 
     static func runIfRequested() {
-        guard CommandLine.arguments.contains(launchArgument) else { return }
+        guard CommandLine.arguments.contains(launchArgument),
+              !CommandLine.arguments.contains(shotArgument) else { return }
         Task { await run() }
     }
 
@@ -54,6 +65,39 @@ enum ReexportExercise {
         } catch {
             try? await removeFixtures(playlistID: playlistID)
             MidgarLog.error("REEXPORT EXERCISE FAILED: \(error.localizedDescription)", category: .content)
+        }
+    }
+
+    /// Writes a song, lets the library index it, writes it again so the library
+    /// notices a second version, and returns the revised song with the
+    /// fixtures left in place. Returns nil, after logging why, when the library
+    /// did not see the re-export.
+    static func seedRevisedSong() async -> Track? {
+        await waitForFirstLoad()
+        do {
+            try await removeFixtures(playlistID: nil)
+            try FileManager.default.createDirectory(at: libraryFolder, withIntermediateDirectories: true)
+            try writeSong(at: songURL, frequency: 220, seconds: 3)
+            try writeSong(at: libraryFolder.appendingPathComponent(companionName), frequency: 330, seconds: 90)
+            await Library.shared.reload()
+            await Library.shared.settleRevisions()
+            try await Task.sleep(for: .milliseconds(1_200))
+            try writeSong(at: songURL, frequency: 440, seconds: 90)
+            await Library.shared.reload()
+            await Library.shared.settleRevisions()
+            let track = try require(
+                Library.shared.allTracks.first { LibraryPaths.relativePath(of: $0.fileURL) == relativeSongPath },
+                "the library holds the re-exported song"
+            )
+            try check(track.revision == 2 && track.showsNewMix, "the re-exported song is revision 2 and shows New mix")
+            MidgarLog.info("NEW MIX SHOT READY: \(track.title)", category: .content)
+            return track
+        } catch let failure as Failure {
+            MidgarLog.error("NEW MIX SHOT FAILED: \(failure.step)", category: .content)
+            return nil
+        } catch {
+            MidgarLog.error("NEW MIX SHOT FAILED: \(error.localizedDescription)", category: .content)
+            return nil
         }
     }
 
@@ -286,7 +330,7 @@ enum ReexportExercise {
             }
         }
         let title = (url.deletingPathExtension().lastPathComponent)
-        try appendInfoTags(to: url, title: title, artist: artist, album: "Reexport Exercise Album")
+        try appendInfoTags(to: url, title: title, artist: artist, album: shotAlbumTitle)
     }
 
     private static func appendInfoTags(to url: URL, title: String, artist: String, album: String) throws {

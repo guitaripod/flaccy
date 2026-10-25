@@ -49,6 +49,8 @@ final class DetailTrackRowView: NSView {
     private let numberLabel = NSTextField(labelWithString: "")
     private let playingIcon = NSImageView()
     private let titleLabel = NSTextField(labelWithString: "")
+    private let newMixChip = MacNewMixChip()
+    private lazy var titleStack = NSStackView(views: [titleLabel, newMixChip])
     private let subtitleLabel = NSTextField(labelWithString: "")
     private let heartButton = NSButton()
     private let durationLabel = NSTextField(labelWithString: "")
@@ -74,6 +76,12 @@ final class DetailTrackRowView: NSView {
         titleLabel.font = .systemFont(ofSize: 13)
         titleLabel.textColor = MacColors.primaryLabel
         titleLabel.lineBreakMode = .byTruncatingTail
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        newMixChip.isHidden = true
+        titleStack.orientation = .horizontal
+        titleStack.spacing = 6
+        titleStack.alignment = .centerY
 
         subtitleLabel.font = .systemFont(ofSize: 12)
         subtitleLabel.textColor = MacColors.tertiaryLabel
@@ -89,7 +97,7 @@ final class DetailTrackRowView: NSView {
         durationLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         durationLabel.textColor = MacColors.secondaryLabel
 
-        for view in [numberLabel, playingIcon, titleLabel, subtitleLabel, heartButton, durationLabel] {
+        for view in [numberLabel, playingIcon, titleStack, subtitleLabel, heartButton, durationLabel] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -100,10 +108,10 @@ final class DetailTrackRowView: NSView {
             numberLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             playingIcon.centerXAnchor.constraint(equalTo: numberLabel.centerXAnchor),
             playingIcon.centerYAnchor.constraint(equalTo: centerYAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: numberLabel.trailingAnchor, constant: 12),
-            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: heartButton.leadingAnchor, constant: -8),
-            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 10),
+            titleStack.leadingAnchor.constraint(equalTo: numberLabel.trailingAnchor, constant: 12),
+            titleStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            titleStack.trailingAnchor.constraint(lessThanOrEqualTo: heartButton.leadingAnchor, constant: -8),
+            subtitleLabel.leadingAnchor.constraint(equalTo: titleStack.trailingAnchor, constant: 10),
             subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: heartButton.leadingAnchor, constant: -8),
             subtitleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             heartButton.trailingAnchor.constraint(equalTo: durationLabel.leadingAnchor, constant: -12),
@@ -121,7 +129,8 @@ final class DetailTrackRowView: NSView {
         duration: TimeInterval,
         loved: Bool,
         isPlaying: Bool,
-        subtitle: String? = nil
+        subtitle: String? = nil,
+        newMix: Bool = false
     ) {
         numberLabel.stringValue = "\(number)"
         subtitleLabel.stringValue = subtitle ?? ""
@@ -130,6 +139,8 @@ final class DetailTrackRowView: NSView {
         playingIcon.isHidden = !isPlaying
         titleLabel.stringValue = title
         titleLabel.toolTip = title
+        newMixChip.isHidden = !newMix
+        titleLabel.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(title, newMix: newMix))
         titleLabel.font = .systemFont(ofSize: 13, weight: isPlaying ? .semibold : .regular)
         durationLabel.stringValue = PlaybackFormat.duration(duration)
         self.isPlaying = isPlaying

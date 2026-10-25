@@ -289,7 +289,8 @@ extension TrackTableSurface: NSTableViewDelegate {
             text: text,
             isPlaying: isPlaying,
             animatesBars: AudioPlayer.shared.isPlaying,
-            loved: column == .title && LovedTracksService.shared.isLoved(track: track)
+            loved: column == .title && LovedTracksService.shared.isLoved(track: track),
+            newMix: column == .title && track.showsNewMix
         )
         return cell
     }
@@ -308,8 +309,11 @@ final class TrackTableCell: NSTableCellView {
     private let label = NSTextField(labelWithString: "")
     private let bars = PlayingBarsView()
     private let heart = NSImageView()
+    private let newMixChip = MacNewMixChip()
     private let column: TrackTableSurface.Column
     private var isPlaying = false
+    private var chipConstraints: [NSLayoutConstraint] = []
+    private var plainTitleConstraints: [NSLayoutConstraint] = []
 
     init(identifier: NSUserInterfaceItemIdentifier, column: TrackTableSurface.Column) {
         self.column = column
@@ -349,12 +353,21 @@ final class TrackTableCell: NSTableCellView {
             ]
         case .title:
             addSubview(heart)
+            newMixChip.isHidden = true
+            newMixChip.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(newMixChip)
+            label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            plainTitleConstraints = [label.trailingAnchor.constraint(lessThanOrEqualTo: heart.leadingAnchor, constant: -4)]
+            chipConstraints = [
+                newMixChip.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 6),
+                newMixChip.trailingAnchor.constraint(lessThanOrEqualTo: heart.leadingAnchor, constant: -4),
+                newMixChip.centerYAnchor.constraint(equalTo: centerYAnchor),
+            ]
             constraints += [
                 label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
-                label.trailingAnchor.constraint(lessThanOrEqualTo: heart.leadingAnchor, constant: -4),
                 heart.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -2),
                 heart.centerYAnchor.constraint(equalTo: centerYAnchor),
-            ]
+            ] + plainTitleConstraints
         default:
             constraints += [
                 label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
@@ -370,8 +383,12 @@ final class TrackTableCell: NSTableCellView {
         didSet { applyColors() }
     }
 
-    func configure(text: String, isPlaying: Bool, animatesBars: Bool, loved: Bool) {
+    func configure(text: String, isPlaying: Bool, animatesBars: Bool, loved: Bool, newMix: Bool = false) {
         label.stringValue = text
+        showNewMixChip(newMix)
+        if column == .title {
+            label.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(text, newMix: newMix))
+        }
         label.toolTip = column == .number ? nil : text
         self.isPlaying = isPlaying
         let weight: NSFont.Weight = isPlaying && column == .title ? .semibold : .regular
@@ -385,6 +402,20 @@ final class TrackTableCell: NSTableCellView {
         }
         applyColors()
         heart.isHidden = !loved
+    }
+
+    /// Puts the chip right after the title, or hands the title the whole room
+    /// again when the song has no new mix.
+    private func showNewMixChip(_ shows: Bool) {
+        guard column == .title, newMixChip.isHidden == shows else { return }
+        newMixChip.isHidden = !shows
+        if shows {
+            NSLayoutConstraint.deactivate(plainTitleConstraints)
+            NSLayoutConstraint.activate(chipConstraints)
+        } else {
+            NSLayoutConstraint.deactivate(chipConstraints)
+            NSLayoutConstraint.activate(plainTitleConstraints)
+        }
     }
 
     private func applyColors() {

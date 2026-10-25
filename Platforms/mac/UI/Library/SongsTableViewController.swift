@@ -417,7 +417,8 @@ extension SongsTableViewController: NSTableViewDelegate {
                 ?? PlayingTitleCellView(identifier: cellID)
             cell.configure(
                 title: track.title,
-                isPlaying: AudioPlayer.shared.currentTrack?.fileURL == track.fileURL
+                isPlaying: AudioPlayer.shared.currentTrack?.fileURL == track.fileURL,
+                newMix: track.showsNewMix
             )
             return cell
         }
@@ -536,7 +537,10 @@ final class PlayingTitleCellView: NSTableCellView {
 
     private let label = NSTextField(labelWithString: "")
     private let speaker = NSImageView()
+    private let newMixChip = MacNewMixChip()
     private var speakerWidth: NSLayoutConstraint?
+    private var chipConstraints: [NSLayoutConstraint] = []
+    private var plainTitleConstraints: [NSLayoutConstraint] = []
 
     init(identifier: NSUserInterfaceItemIdentifier) {
         super.init(frame: .zero)
@@ -549,20 +553,30 @@ final class PlayingTitleCellView: NSTableCellView {
 
         label.font = .systemFont(ofSize: 12)
         label.lineBreakMode = .byTruncatingTail
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         label.translatesAutoresizingMaskIntoConstraints = false
+
+        newMixChip.isHidden = true
+        newMixChip.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(speaker)
         addSubview(label)
+        addSubview(newMixChip)
         textField = label
 
         let width = speaker.widthAnchor.constraint(equalToConstant: 0)
         speakerWidth = width
-        NSLayoutConstraint.activate([
+        plainTitleConstraints = [label.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -2)]
+        chipConstraints = [
+            newMixChip.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 6),
+            newMixChip.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -2),
+            newMixChip.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ]
+        NSLayoutConstraint.activate(plainTitleConstraints + [
             speaker.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
             speaker.centerYAnchor.constraint(equalTo: centerYAnchor),
             width,
             label.leadingAnchor.constraint(equalTo: speaker.trailingAnchor, constant: 4),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -2),
             label.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
     }
@@ -573,13 +587,29 @@ final class PlayingTitleCellView: NSTableCellView {
         didSet { applyTint() }
     }
 
-    func configure(title: String, isPlaying: Bool) {
+    func configure(title: String, isPlaying: Bool, newMix: Bool = false) {
         label.stringValue = title
         label.toolTip = title
+        label.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(title, newMix: newMix))
+        showNewMixChip(newMix)
         label.font = .systemFont(ofSize: 12, weight: isPlaying ? .semibold : .regular)
         speaker.isHidden = !isPlaying
         speakerWidth?.constant = isPlaying ? 14 : 0
         applyTint()
+    }
+
+    /// Puts the chip right after the title, or hands the title the whole room
+    /// again when the song has no new mix.
+    private func showNewMixChip(_ shows: Bool) {
+        guard newMixChip.isHidden == shows else { return }
+        newMixChip.isHidden = !shows
+        if shows {
+            NSLayoutConstraint.deactivate(plainTitleConstraints)
+            NSLayoutConstraint.activate(chipConstraints)
+        } else {
+            NSLayoutConstraint.deactivate(chipConstraints)
+            NSLayoutConstraint.activate(plainTitleConstraints)
+        }
     }
 
     private func applyTint() {

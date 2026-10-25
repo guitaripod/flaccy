@@ -140,6 +140,7 @@ targets:
           - UI/LiquidGlass.swift
           - UI/LoveButton.swift
           - UI/MarqueeLabel.swift
+          - UI/NewMixChipView.swift
           - UI/NowPlayingBarsView.swift
           - UI/QualityBadgeView.swift
           - UI/SectionIndexView.swift
@@ -192,6 +193,7 @@ targets:
           - Library/LibraryViewController+Sample.swift
           - Library/LibraryViewController+Sorting.swift
           - Library/LibraryViewController.swift
+          - Library/NewMixShot.swift
           - Library/PlaylistDetailViewController.swift
           - Library/PlaylistListCells.swift
           - ListeningGuide/ListeningGuideViewController.swift
@@ -203,6 +205,7 @@ targets:
           - Lyrics/TimingNoteViews.swift
           - NowPlaying/MiniPlayerView.swift
           - NowPlaying/NowPlayingBackdropView.swift
+          - NowPlaying/NowPlayingVersionRow.swift
           - NowPlaying/NowPlayingViewController+Appearance.swift
           - NowPlaying/NowPlayingViewController+CenterState.swift
           - NowPlaying/NowPlayingViewController+Controls.swift

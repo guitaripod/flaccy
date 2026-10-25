@@ -73,6 +73,7 @@ protocol LibraryProviding: AnyObject {
     ) async -> LibraryImportOutcome
     func deleteTracks(_ tracks: [Track]) async
     func settleRevisions() async
+    func version(of track: Track) -> TrackVersion?
 }
 
 extension LibraryProviding {
@@ -118,6 +119,7 @@ final class Library: LibraryProviding {
 
     private(set) var albums: [Album] = []
     private(set) var allTracks: [Track] = []
+    private var revisedVersions: [URL: TrackVersion] = [:]
     private(set) var isLoading: Bool = false {
         didSet { NotificationCenter.default.post(name: Library.loadingStateChanged, object: nil) }
     }
@@ -532,10 +534,21 @@ final class Library: LibraryProviding {
             let loadedAlbums = try await fetchAlbumsFromDatabase()
             albums = loadedAlbums
             allTracks = loadedAlbums.flatMap(\.tracks)
+            revisedVersions = Dictionary(
+                allTracks.compactMap { track in TrackVersion(track: track).map { (track.fileURL, $0) } },
+                uniquingKeysWith: { first, _ in first }
+            )
             recordIndexedLibrary()
         } catch {
             MidgarLog.error("Load from DB failed: \(error.localizedDescription)", category: .database)
         }
+    }
+
+    /// What the library knows of a song's versions right now, or nil for a song
+    /// that was never re-exported. Rows and queues hold songs read earlier, so
+    /// they ask here rather than trusting the revision they were built with.
+    func version(of track: Track) -> TrackVersion? {
+        revisedVersions[track.fileURL]
     }
 
     /// Records that this library has been built at least once, the moment the

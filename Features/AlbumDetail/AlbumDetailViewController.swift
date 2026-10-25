@@ -53,6 +53,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(lovedChanged), name: LovedTracksService.didChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(artworkChanged), name: AlbumArtworkCache.didChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(tracksRevised), name: Library.tracksRevised, object: nil)
         loadEnrichment()
         repairMetadataIfNeeded()
     }
@@ -134,6 +135,10 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     }
 
     @objc func lovedChanged() {
+        reconfigureAllRows()
+    }
+
+    @objc func tracksRevised() {
         reconfigureAllRows()
     }
 

@@ -168,7 +168,8 @@ extension PlaylistListSurface: NSTableViewDelegate {
             duration: entry.track.duration,
             loved: LovedTracksService.shared.isLoved(track: entry.track),
             isPlaying: AudioPlayer.shared.currentTrack?.fileURL == entry.track.fileURL,
-            subtitle: entry.track.artist
+            subtitle: entry.track.artist,
+            newMix: entry.track.showsNewMix
         )
         cell.row.onToggleLove = {
             Task { _ = await LovedTracksService.shared.toggleLove(track: entry.track) }

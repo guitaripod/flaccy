@@ -6,12 +6,17 @@ import UniformTypeIdentifiers
 
 extension LibraryViewController {
 
-    func badgeAccessories(qualityTrack: Track?, loved: Bool, scrobbleCount: Int? = nil) -> [UICellAccessory] {
+    func badgeAccessories(
+        qualityTrack: Track?, loved: Bool, scrobbleCount: Int? = nil, newMix: Bool = false
+    ) -> [UICellAccessory] {
         let container = UIStackView()
         container.axis = .horizontal
         container.spacing = 6
         container.alignment = .center
 
+        if newMix {
+            container.addArrangedSubview(NewMixChipView())
+        }
         if let scrobbleCount {
             container.addArrangedSubview(scrobbleCountView(scrobbleCount))
         }
@@ -136,6 +141,7 @@ extension LibraryViewController {
         }
 
         let songCompactRegistration = UICollectionView.CellRegistration<ListArtworkCell, Track> { [weak self] cell, _, track in
+            let newMix = track.showsNewMix
             var content = UIListContentConfiguration.valueCell()
             content.text = track.title
             content.secondaryText = track.artist
@@ -145,8 +151,12 @@ extension LibraryViewController {
             cell.currentArtworkKey = nil
             cell.accessories = self?.badgeAccessories(
                 qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track),
-                scrobbleCount: self?.viewModel.scrobbleCount(for: track)
+                scrobbleCount: self?.viewModel.scrobbleCount(for: track),
+                newMix: newMix
             ) ?? []
+            cell.accessibilityLabel = newMix
+                ? TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: true)
+                : nil
         }
 
         let artistRegistration = UICollectionView.CellRegistration<ListArtworkCell, ArtistItem> { [weak self] cell, _, artist in

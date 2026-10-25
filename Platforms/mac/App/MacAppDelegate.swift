@@ -73,6 +73,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         DebugDrive.runIfRequested(window: windowController.window)
         runStageBDriveIfRequested()
         ReexportExercise.runIfRequested()
+        DebugDrive.runNewMixShotIfRequested(window: windowController.window)
         #endif
     }
 

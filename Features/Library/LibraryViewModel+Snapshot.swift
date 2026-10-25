@@ -46,6 +46,7 @@ extension LibraryViewModel {
             songs = collapsingDuplicates(in: songs)
             visibleSongs = songs
             snapshot.appendItems(songs.map { .song($0) })
+            repaint(revisedSongItems(in: songs), in: &snapshot)
         case .artists:
             snapshot.appendSections([0])
             let filtered = query.isEmpty
@@ -118,6 +119,23 @@ extension LibraryViewModel {
         } else {
             miniPlayerStatePublisher.send(nil)
         }
+    }
+
+    /// The song rows to repaint for the re-exports announced since the last
+    /// snapshot: a song keeps its identity across a new mix, so the diff would
+    /// leave its row as it was.
+    func revisedSongItems(in songs: [Track]) -> [LibraryItem] {
+        guard !revisedSongPaths.isEmpty else { return [] }
+        defer { revisedSongPaths.removeAll() }
+        return songs
+            .filter { revisedSongPaths.contains(LibraryPaths.relativePath(of: $0.fileURL)) }
+            .map { .song($0) }
+    }
+
+    @objc func tracksRevised(_ notification: Notification) {
+        let paths = notification.userInfo?[Library.RevisionKey.paths] as? [String] ?? []
+        revisedSongPaths.formUnion(paths)
+        publishSnapshot(intent: .refreshLibrary)
     }
 
     @objc func libraryDidUpdate() {

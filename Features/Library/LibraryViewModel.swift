@@ -337,6 +337,9 @@ final class LibraryViewModel {
         NotificationCenter.default.addObserver(
             self, selector: #selector(loadingStateChanged), name: Library.loadingStateChanged, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(tracksRevised(_:)), name: Library.tracksRevised, object: nil
+        )
 
         bindLibrarySurface()
     }
@@ -441,6 +444,7 @@ final class LibraryViewModel {
     private(set) var snapshotIntent: SnapshotIntent = .replaceList
     var cachedSongSearchKeys: [String: String]?
     var renderedAlbumSignatures = [String: String]()
+    var revisedSongPaths = Set<String>()
 
     /// Builds the next snapshot on the next turn of the main actor, after the
     /// segmented control / menu animation that asked for it has started. A
