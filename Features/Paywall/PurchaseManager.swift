@@ -188,6 +188,7 @@ final class PurchaseManager {
         applyTrialDayOverride()
         #endif
         setState(trialState())
+        FunnelSignals.shared.observeLibrary()
         listenForStoreEvents()
         Task {
             await refresh()
@@ -222,7 +223,10 @@ final class PurchaseManager {
     /// written even after a purchase so a lapsed subscription still has a start.
     func noteTrackStarted(_ track: Track) {
         guard !trialHasStarted, !trialClockIsOverridden else { return }
-        guard !SampleMusicService.isSample(track.fileURL) else { return }
+        guard !SampleMusicService.isSample(track.fileURL) else {
+            FunnelSignals.shared.noteSamplePlayed()
+            return
+        }
         guard case .absent = TrialClock.lookup(.trialStart) else {
             refreshTrialPhase()
             return
@@ -231,6 +235,7 @@ final class PurchaseManager {
         readTrialStartIfNeeded()
         guard trialHasStarted else { return }
         MidgarLog.info("Trial started at the first play of the library's own music", category: .purchases)
+        FunnelSignals.shared.noteTrialStarted()
         refreshTrialPhase()
         Task { await TrialReminderScheduler.shared.refresh() }
     }
@@ -372,6 +377,19 @@ final class PurchaseManager {
     /// Buys the offer's product with the confirmation sheet anchored to `anchor`,
     /// the paywall's scene or window.
     func purchase(_ offer: PurchaseOffer, confirmIn anchor: PurchaseAnchor?) async throws -> PurchaseOutcome {
+        let productID = offer.storeProduct.id
+        FunnelSignals.shared.noteCheckoutStarted(product: productID)
+        do {
+            let outcome = try await performPurchase(offer, confirmIn: anchor)
+            FunnelSignals.shared.noteCheckoutFinished(outcome, product: productID)
+            return outcome
+        } catch {
+            FunnelSignals.shared.noteCheckoutFailed(product: productID)
+            throw error
+        }
+    }
+
+    private func performPurchase(_ offer: PurchaseOffer, confirmIn anchor: PurchaseAnchor?) async throws -> PurchaseOutcome {
         guard let store else { throw PurchaseFailure.other }
         let productID = offer.storeProduct.id
         let result: MidgarPurchaseResult
