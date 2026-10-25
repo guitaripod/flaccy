@@ -646,6 +646,27 @@ mod tests {
     }
 
     #[test]
+    fn a_kept_song_that_changes_on_the_server_is_downloaded_again_and_stays_kept() {
+        let rig = rig("kept-new-version");
+        seed_songs(&rig, 1);
+        let id = add_fixture_server(&rig);
+        rig.remote.sync(&id, &|_| {}).unwrap();
+        let path = format!("remote://{id}/song-0");
+        rig.remote.pin(std::slice::from_ref(&path));
+        wait_until(|| rig.remote.is_downloaded(&path));
+        let changed = song_bytes(1_500_000, 99);
+        rig.fixture.put("song-0", changed.clone());
+        rig.fixture.clear_catalog();
+        rig.fixture.add_child(child_json("song-0", "Title 0", "Album", 1, 1_500_000));
+        let report = rig.remote.sync(&id, &|_| {}).unwrap();
+        assert_eq!(report.applied.new_versions, vec!["song-0".to_string()]);
+        wait_until(|| rig.remote.is_downloaded(&path));
+        assert!(rig.remote.is_pinned(&path));
+        let kept = rig.base.join("data/remote").join(&id).join("song-0.flac");
+        assert_eq!(std::fs::read(kept).unwrap(), changed);
+    }
+
+    #[test]
     fn an_offline_server_dims_songs_that_are_not_on_this_computer() {
         let rig = rig("offline");
         seed_songs(&rig, 2);

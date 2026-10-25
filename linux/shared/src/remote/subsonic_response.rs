@@ -47,6 +47,8 @@ pub struct Envelope {
     pub search_result3: Option<SearchResult3>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub playlists: Option<Playlists>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub playlist: Option<PlaylistWithEntries>,
 }
 
 impl Envelope {
@@ -315,6 +317,15 @@ pub struct Playlist {
     pub public: Option<bool>,
 }
 
+/// A playlist from `getPlaylist`: its `Playlist` fields beside its `entry` songs.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct PlaylistWithEntries {
+    #[serde(flatten)]
+    pub info: Playlist,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entry: Option<Vec<Child>>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -503,6 +514,30 @@ mod tests {
         assert_eq!((song.starred.as_ref(), song.play_count, song.played.as_ref()), (None, None, None));
         let text = serde_json::to_string(&song).unwrap();
         assert!(!text.contains("starred") && !text.contains("playCount") && !text.contains("played"));
+    }
+
+    #[test]
+    fn a_get_playlist_answer_carries_its_fields_and_its_entries_in_order() {
+        let envelope = parse(
+            r#"{"subsonic-response":{"status":"ok","playlist":{"id":"pl-1","name":"Road Trip","songCount":2,"duration":60,"created":"2026-10-01T10:00:00Z","changed":"2026-10-20T10:00:00Z","owner":"ana","public":true,"entry":[{"id":"song-a","title":"First","artist":"Band","album":"Album","track":1,"duration":30,"suffix":"flac"},{"id":"song-b","title":"Second","artist":"Band","album":"Album","track":2,"duration":30,"suffix":"flac"}]}}}"#,
+        );
+        let playlist = envelope.playlist.clone().unwrap();
+        assert_eq!(playlist.info.id.as_deref(), Some("pl-1"));
+        assert_eq!(playlist.info.name.as_deref(), Some("Road Trip"));
+        assert_eq!(playlist.info.song_count, Some(2));
+        assert_eq!(playlist.info.duration, Some(60));
+        assert_eq!(playlist.info.owner.as_deref(), Some("ana"));
+        assert_eq!(playlist.info.public, Some(true));
+        let titles: Vec<&str> = playlist
+            .entry
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|song| song.title.as_str())
+            .collect();
+        assert_eq!(titles, vec!["First", "Second"]);
+        let text = serde_json::to_string(&Root { response: envelope.clone() }).unwrap();
+        assert_eq!(parse(&text), envelope);
     }
 
     #[test]
