@@ -32,6 +32,9 @@ const ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL: &str = "
     ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
     WHERE albumInfo.coverArtData IS NULL";
 
+mod remote;
+pub use remote::{ApplyReport, MissingCover, RemoteSongMeta};
+
 pub struct Db {
     conn: Connection,
 }
@@ -552,12 +555,18 @@ impl Db {
                 .conn
                 .execute(&format!("ALTER TABLE tracks ADD COLUMN {column}"), []);
         }
+        self.migrate_remote_columns()?;
         Ok(())
     }
 
+    /// The paths the folder scan owns: every indexed song except the ones a
+    /// server supplies, which the scan neither adds nor prunes.
     pub fn fetch_relative_paths(&self) -> HashSet<String> {
         let mut result = HashSet::new();
-        let Ok(mut stmt) = self.conn.prepare("SELECT fileURL FROM tracks") else {
+        let Ok(mut stmt) = self
+            .conn
+            .prepare("SELECT fileURL FROM tracks WHERE remoteServer IS NULL")
+        else {
             return result;
         };
         let rows = stmt.query_map([], |row| row.get::<_, String>(0));
@@ -802,7 +811,7 @@ impl Db {
     pub fn resolve_album_credits(&self) -> usize {
         let Ok(mut stmt) = self
             .conn
-            .prepare("SELECT fileURL, albumTitle, artist, albumArtist FROM tracks")
+            .prepare("SELECT fileURL, albumTitle, artist, albumArtist, remoteAlbumId FROM tracks")
         else {
             return 0;
         };
@@ -812,16 +821,18 @@ impl Db {
                 row.get::<_, String>(1)?,
                 row.get::<_, String>(2)?,
                 row.get::<_, Option<String>>(3)?,
+                row.get::<_, Option<String>>(4)?,
             ))
         }) else {
             return 0;
         };
 
         let mut clusters: HashMap<String, Vec<(String, String, Option<String>)>> = HashMap::new();
-        for (rel_path, album, artist, stored) in rows.flatten() {
-            let scope = match album_credit::release_scope(&rel_path) {
-                Some(folder) => folder.to_string(),
-                None => format!("\x01{}", crate::hygiene::artist_key(&artist)),
+        for (rel_path, album, artist, stored, server_album) in rows.flatten() {
+            let scope = match (server_album, album_credit::release_scope(&rel_path)) {
+                (Some(release), _) => format!("\x02{release}"),
+                (None, Some(folder)) => folder.to_string(),
+                (None, None) => format!("\x01{}", crate::hygiene::artist_key(&artist)),
             };
             let key = format!("{}\x00{}", crate::keys::normalize(&album), scope);
             clusters
@@ -1020,7 +1031,8 @@ impl Db {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT id, fileURL, title, artist, albumTitle, trackNumber, duration,
                     codec, bitDepth, sampleRate, channels, loved, playCount,
-                    dateAdded, lastPlayed, albumArtist, revision, revisedAt, fileModifiedMs
+                    dateAdded, lastPlayed, albumArtist, revision, revisedAt, fileModifiedMs,
+                    remoteDisc
              FROM tracks ORDER BY albumTitle, trackNumber, title",
         ) else {
             return Vec::new();
@@ -1050,6 +1062,7 @@ impl Db {
                     .get::<_, Option<String>>(17)?
                     .map(|text| unix_ms_from_string(&text)),
                 file_modified_ms: row.get(18)?,
+                disc_number: row.get(19)?,
             })
         });
         match rows {

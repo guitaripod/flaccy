@@ -65,6 +65,26 @@ impl CleanupResult {
     }
 }
 
+/// The songs and albums that live in the music folder. Songs from a server have
+/// no file to trash and are re-read from the server on every refresh, so
+/// cleanup never sees them.
+fn local_only(raw: &library::Library) -> (Vec<Track>, Vec<library::Album>) {
+    let is_local = |track: &Track| !crate::remote::is_remote(&track.rel_path);
+    let tracks = raw.tracks.iter().filter(|track| is_local(track)).cloned().collect();
+    let albums = raw
+        .albums
+        .iter()
+        .filter_map(|album| {
+            let local: Vec<Track> = album.tracks.iter().filter(|track| is_local(track)).cloned().collect();
+            (!local.is_empty()).then(|| library::Album {
+                tracks: local,
+                ..album.clone()
+            })
+        })
+        .collect();
+    (tracks, albums)
+}
+
 /// The full-library "Clean Up Library…" flow: scans off-main for duplicate
 /// files and album-edition variations, shows a mandatory dry-run preview, and
 /// only mutates the library (trashing losers, fusing editions) on confirmation.
@@ -77,9 +97,10 @@ pub fn present(ui: &Rc<Ui>) {
         .spawn(move || {
             let Ok(db) = Db::open(&db_path) else { return };
             let raw = library::load(&db, false);
+            let (tracks, albums) = local_only(&raw);
             let plan = CleanupPlan {
-                duplicates: hygiene::find_duplicate_groups(&raw.tracks, &root),
-                consolidations: hygiene::consolidation_groups(&raw.albums),
+                duplicates: hygiene::find_duplicate_groups(&tracks, &root),
+                consolidations: hygiene::consolidation_groups(&albums),
             };
             let _ = tx.send_blocking(plan);
         })
@@ -208,6 +229,10 @@ fn join_variants(variants: &[AlbumVariant]) -> String {
 /// already computed by the caller; this only confirms and applies.
 pub fn present_selection_dedup(ui: &Rc<Ui>, tracks: Vec<Track>) {
     let root = ui.core.music_root();
+    let tracks: Vec<Track> = tracks
+        .into_iter()
+        .filter(|track| !crate::remote::is_remote(&track.rel_path))
+        .collect();
     let groups = hygiene::find_duplicate_groups(&tracks, &root);
     let removable: usize = groups.iter().map(|group| group.losers.len()).sum();
     if removable == 0 {

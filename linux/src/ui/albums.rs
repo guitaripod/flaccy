@@ -156,6 +156,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             .build();
         let item_weak = item.downgrade();
         let anchor = cell.clone();
+        let menu_ui = Rc::clone(&setup_ui);
         gesture.connect_pressed(move |_, _, x, y| {
             let Some(item) = item_weak.upgrade() else {
                 return;
@@ -164,7 +165,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 return;
             };
             let key = boxed.borrow::<Album>().key();
-            context::popup_menu_at(&anchor, &context::album_menu(&key), x, y);
+            context::popup_menu_at(
+                &anchor,
+                &context::album_menu(&key, context::album_downloads(&menu_ui.core, &key)),
+                x,
+                y,
+            );
         });
         cell.add_controller(gesture);
         item.set_child(Some(&cell));
@@ -865,7 +871,7 @@ fn cover_host_with_pencil(ui: &Rc<Ui>, album: &Album, picture: &gtk::Picture) ->
         });
     }
     host.add_overlay(&pencil);
-    context::attach_album_context_menu(&host, key.clone());
+    context::attach_album_context_menu(&host, &ui.core, key.clone());
     {
         let ui_for_drop = Rc::clone(ui);
         let fallback = album.clone();
@@ -964,6 +970,7 @@ mod sort_tests {
                 revision: 1,
                 revised_at: None,
                 file_modified_ms: None,
+                disc_number: None,
             }],
         }
     }

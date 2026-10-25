@@ -10,6 +10,7 @@ use std::rc::Rc;
 /// on GTK 4.22 under-allocates multi-section models and clips trailing rows),
 /// so section count is not constrained.
 pub fn track_menu(rel_path: &str, loved: bool, has_previous: bool) -> gio::Menu {
+    let remote = crate::remote::is_remote(rel_path);
     let menu = gio::Menu::new();
     let queue_section = gio::Menu::new();
     queue_section.append_item(&item("Play Next", "win.track-play-next", rel_path));
@@ -31,7 +32,13 @@ pub fn track_menu(rel_path: &str, loved: bool, has_previous: bool) -> gio::Menu 
     actions_section.append_item(&item("Add to Playlist…", "win.playlist-choose", rel_path));
     actions_section.append_item(&item("Share Songlink…", "win.track-share", rel_path));
     actions_section.append_item(&item("Copy Songlink", "win.track-songlink", rel_path));
-    actions_section.append_item(&item("Show in Files", "win.track-reveal", rel_path));
+    if remote {
+        let kept = crate::remote::is_pinned(rel_path);
+        let (label, action) = download_entry(kept, "win.track-unpin", "win.track-pin");
+        actions_section.append_item(&item(label, action, rel_path));
+    } else {
+        actions_section.append_item(&item("Show in Files", "win.track-reveal", rel_path));
+    }
     if has_previous {
         actions_section.append_item(&item(
             copy::RESTORE_PREVIOUS,
@@ -41,13 +48,43 @@ pub fn track_menu(rel_path: &str, loved: bool, has_previous: bool) -> gio::Menu 
     }
     menu.append_section(None, &actions_section);
 
-    let delete_section = gio::Menu::new();
-    delete_section.append_item(&item("Move to Trash…", "win.track-delete", rel_path));
-    menu.append_section(None, &delete_section);
+    if !remote {
+        let delete_section = gio::Menu::new();
+        delete_section.append_item(&item("Move to Trash…", "win.track-delete", rel_path));
+        menu.append_section(None, &delete_section);
+    }
     menu
 }
 
-pub fn album_menu(key: &str) -> gio::Menu {
+/// The label and action of a menu's Download entry: it keeps the songs, or when
+/// they are all kept already, removes the download.
+pub fn download_entry<'a>(
+    kept: bool,
+    remove_action: &'a str,
+    keep_action: &'a str,
+) -> (&'static str, &'a str) {
+    if kept {
+        ("Remove Download", remove_action)
+    } else {
+        ("Download", keep_action)
+    }
+}
+
+/// What an album's Download entry offers, from the songs the library holds for
+/// it; see `crate::remote::downloads_state`.
+pub fn album_downloads(core: &AppCore, key: &str) -> Option<bool> {
+    let library = core.library.borrow().clone();
+    let album = library.album_by_key(key)?;
+    crate::remote::downloads_state(album.tracks.iter().map(|track| track.rel_path.as_str()))
+}
+
+/// What a playlist's Download entry offers, from the songs it holds.
+pub fn playlist_downloads(core: &AppCore, playlist_id: i64) -> Option<bool> {
+    let rows = core.db.playlist_tracks(playlist_id);
+    crate::remote::downloads_state(rows.iter().map(|row| row.rel_path.as_str()))
+}
+
+pub fn album_menu(key: &str, downloads: Option<bool>) -> gio::Menu {
     let menu = gio::Menu::new();
     let play_section = gio::Menu::new();
     play_section.append_item(&item("Play", "win.play-album", key));
@@ -66,6 +103,10 @@ pub fn album_menu(key: &str) -> gio::Menu {
     extra_section.append_item(&item("Copy Songlink", "win.album-songlink", key));
     extra_section.append_item(&item("Edit Artwork…", "win.album-artwork", key));
     extra_section.append_item(&item("Enrich Metadata", "win.album-enrich", key));
+    if let Some(kept) = downloads {
+        let (label, action) = download_entry(kept, "win.album-unpin", "win.album-pin");
+        extra_section.append_item(&item(label, action, key));
+    }
     extra_section.append_item(&item("Show in Files", "win.album-reveal", key));
     menu.append_section(None, &extra_section);
 
@@ -210,13 +251,14 @@ pub fn attach_artist_context_menu(widget: &impl IsA<gtk::Widget>, artist: String
     widget.add_controller(gesture);
 }
 
-pub fn attach_album_context_menu(widget: &impl IsA<gtk::Widget>, key: String) {
+pub fn attach_album_context_menu(widget: &impl IsA<gtk::Widget>, core: &Rc<AppCore>, key: String) {
+    let core = Rc::clone(core);
     let gesture = gtk::GestureClick::builder()
         .button(gdk::BUTTON_SECONDARY)
         .build();
     let target = widget.clone().upcast::<gtk::Widget>();
     gesture.connect_pressed(move |_, _, x, y| {
-        let menu = album_menu(&key);
+        let menu = album_menu(&key, album_downloads(&core, &key));
         popup_menu_at(&target, &menu, x, y);
     });
     widget.add_controller(gesture);

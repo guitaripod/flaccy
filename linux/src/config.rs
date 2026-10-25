@@ -53,7 +53,18 @@ pub struct Config {
     /// Empty means "whichever installed Ollama model looks most suitable".
     pub music_video_llm_model: String,
     pub music_video_align: bool,
+    /// How much disk the remote songs' cache may use before the least recently
+    /// played go, in gigabytes. Kept downloads sit outside it.
+    pub remote_cache_cap_gb: u32,
+    /// Which source the Songs page is narrowed to: empty for all of them,
+    /// `local` for the music folder, or a server id.
+    pub songs_source: String,
 }
+
+/// The cache cap a fresh install starts with, and the smallest one offered.
+pub const REMOTE_CACHE_CAP_DEFAULT_GB: u32 = 2;
+pub const REMOTE_CACHE_CAP_MIN_GB: u32 = 1;
+pub const REMOTE_CACHE_CAP_MAX_GB: u32 = 500;
 
 /// Bounds for the lyrics type scale, shared by Preferences and the panel's own
 /// quick controls.
@@ -75,6 +86,16 @@ pub fn clamp_ui_scale(scale: f64) -> f64 {
 }
 
 impl Config {
+    /// The remote cache cap in bytes, kept inside the range Preferences offers.
+    pub fn remote_cache_cap_bytes(&self) -> u64 {
+        u64::from(
+            self.remote_cache_cap_gb
+                .clamp(REMOTE_CACHE_CAP_MIN_GB, REMOTE_CACHE_CAP_MAX_GB),
+        ) * 1024
+            * 1024
+            * 1024
+    }
+
     pub fn ui_scale(&self) -> f64 {
         if self.ui_scale.is_finite() {
             clamp_ui_scale(self.ui_scale.clamp(UI_SCALE_MIN, UI_SCALE_MAX))
@@ -122,6 +143,8 @@ impl Default for Config {
             music_video_llm: true,
             music_video_llm_model: String::new(),
             music_video_align: true,
+            remote_cache_cap_gb: REMOTE_CACHE_CAP_DEFAULT_GB,
+            songs_source: String::new(),
         }
     }
 }

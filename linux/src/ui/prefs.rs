@@ -34,6 +34,11 @@ pub fn present(ui: &Rc<Ui>) {
     page.add(&about_group());
 
     dialog.add(&page);
+    let servers_page = crate::ui::servers::page(ui);
+    dialog.add(&servers_page);
+    if std::env::var("FLACCY_DEMO_PREFS").as_deref() == Ok("servers") {
+        dialog.set_visible_page(&servers_page);
+    }
     dialog.present(Some(&ui.window));
     republish_job_progress(ui);
 }

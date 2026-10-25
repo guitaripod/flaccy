@@ -71,6 +71,23 @@ impl LibraryFilter {
     }
 }
 
+/// The source id of the music folder in the Songs source chips and in the saved
+/// Songs source; a server's chip carries the server's id.
+pub const LOCAL_SOURCE: &str = "local";
+
+/// Whether a song belongs to the source the source chips narrow the list to:
+/// every song while none is lit (`source` empty), the music folder's songs for
+/// `LOCAL_SOURCE`, and a server's songs for its id.
+pub fn source_admits(source: &str, rel_path: &str) -> bool {
+    if source.is_empty() {
+        return true;
+    }
+    match crate::remote::server_of(rel_path) {
+        Some(server) => source == server,
+        None => source == LOCAL_SOURCE,
+    }
+}
+
 /// The range a saved Most Played chip comes back with.
 pub const DEFAULT_RANGE: Period = Period::Month;
 
@@ -285,7 +302,19 @@ mod tests {
             revision: 1,
             revised_at: None,
             file_modified_ms: None,
+            disc_number: None,
         }
+    }
+
+    #[test]
+    fn a_source_chip_admits_its_own_songs_only() {
+        assert!(source_admits("", "Band/a.flac"));
+        assert!(source_admits("", "remote://s1/abc"));
+        assert!(source_admits(LOCAL_SOURCE, "Band/a.flac"));
+        assert!(!source_admits(LOCAL_SOURCE, "remote://s1/abc"));
+        assert!(source_admits("s1", "remote://s1/abc"));
+        assert!(!source_admits("s1", "remote://s2/abc"));
+        assert!(!source_admits("s1", "Band/a.flac"));
     }
 
     fn album(title: &str, artist: &str, tracks: Vec<Track>) -> Album {

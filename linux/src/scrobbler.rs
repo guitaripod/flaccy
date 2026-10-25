@@ -37,6 +37,7 @@ pub fn on_track_started(core: &Rc<AppCore>, track: Option<Track>) {
                 played_seconds: 0.0,
                 last_position: 0.0,
             });
+            tell_server_started(&track);
             if let Some(client) = client_for(core) {
                 if client.session_key.is_some() {
                     std::thread::spawn(move || {
@@ -53,6 +54,22 @@ pub fn on_track_started(core: &Rc<AppCore>, track: Option<Track>) {
         None => {
             *core.current_play.borrow_mut() = None;
         }
+    }
+}
+
+/// Tells the song's own server it began playing, when the song is remote.
+fn tell_server_started(track: &Track) {
+    let playable = crate::remote::unplayable_message(&track.rel_path, &track.title).is_none();
+    if let Some(remote) = crate::remote::handle().filter(|_| playable && crate::remote::is_remote(&track.rel_path)) {
+        remote.scrobble(&track.rel_path, false);
+    }
+}
+
+/// Tells the song's own server it was listened to past the scrobble point,
+/// when the song is remote.
+fn tell_server_listened(track: &Track) {
+    if let Some(remote) = crate::remote::handle().filter(|_| crate::remote::is_remote(&track.rel_path)) {
+        remote.scrobble(&track.rel_path, true);
     }
 }
 
@@ -135,6 +152,9 @@ fn persist_scrobble(
     ) {
         crate::logger::error("scrobble", &format!("insert scrobble failed: {err}"));
         return;
+    }
+    if !local_only {
+        tell_server_listened(track);
     }
     if count_play {
         if let Err(err) = core.db.increment_play_count(&track.rel_path) {

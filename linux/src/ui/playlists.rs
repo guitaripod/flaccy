@@ -267,7 +267,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                         return;
                     };
                     let has_cover = ui.core.db.has_playlist_cover(card.id);
-                    context::popup_menu_at(&anchor, &playlist_list_menu(card.id, has_cover), x, y);
+                    let downloads = context::playlist_downloads(&ui.core, card.id);
+                    context::popup_menu_at(
+                        &anchor,
+                        &playlist_list_menu(card.id, has_cover, downloads),
+                        x,
+                        y,
+                    );
                 });
             }
             cell.add_controller(menu_gesture);
@@ -1508,7 +1514,8 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         let ui = Rc::clone(ui);
         more.set_create_popup_func(move |button| {
             let has_cover = ui.core.db.has_playlist_cover(playlist_id);
-            button.set_menu_model(Some(&playlist_manage_menu(playlist_id, has_cover)));
+            let downloads = context::playlist_downloads(&ui.core, playlist_id);
+            button.set_menu_model(Some(&playlist_manage_menu(playlist_id, has_cover, downloads)));
         });
     }
     let buttons = gtk::Box::builder()
@@ -1726,7 +1733,13 @@ fn attach_playlist_list_menu(row: &impl IsA<gtk::Widget>, ui: &Rc<Ui>, playlist_
     let ui = Rc::clone(ui);
     gesture.connect_pressed(move |_, _, x, y| {
         let has_cover = ui.core.db.has_playlist_cover(playlist_id);
-        context::popup_menu_at(&target, &playlist_list_menu(playlist_id, has_cover), x, y);
+        let downloads = context::playlist_downloads(&ui.core, playlist_id);
+        context::popup_menu_at(
+            &target,
+            &playlist_list_menu(playlist_id, has_cover, downloads),
+            x,
+            y,
+        );
     });
     row.add_controller(gesture);
 }
@@ -1760,7 +1773,7 @@ fn editable_cover(ui: &Rc<Ui>, art: &PlaylistArt, playlist_id: i64) -> gtk::Over
     host
 }
 
-fn playlist_list_menu(playlist_id: i64, has_cover: bool) -> gio::Menu {
+fn playlist_list_menu(playlist_id: i64, has_cover: bool, downloads: Option<bool>) -> gio::Menu {
     let menu = gio::Menu::new();
     let play_section = gio::Menu::new();
     play_section.append_item(&playlist_item("Play", "win.playlist-play", playlist_id));
@@ -1770,12 +1783,16 @@ fn playlist_list_menu(playlist_id: i64, has_cover: bool) -> gio::Menu {
         playlist_id,
     ));
     menu.append_section(None, &play_section);
-    menu.append_section(None, &playlist_manage_menu(playlist_id, has_cover));
+    menu.append_section(None, &playlist_manage_menu(playlist_id, has_cover, downloads));
     menu
 }
 
-fn playlist_manage_menu(playlist_id: i64, has_cover: bool) -> gio::Menu {
+fn playlist_manage_menu(playlist_id: i64, has_cover: bool, downloads: Option<bool>) -> gio::Menu {
     let manage_section = gio::Menu::new();
+    if let Some(kept) = downloads {
+        let (label, action) = context::download_entry(kept, "win.playlist-unpin", "win.playlist-pin");
+        manage_section.append_item(&playlist_item(label, action, playlist_id));
+    }
     manage_section.append_item(&playlist_item(
         "Rename…",
         "win.playlist-rename",

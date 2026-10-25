@@ -905,7 +905,7 @@ fn album_cell_for_artist(ui: &Rc<Ui>, album: &Album) -> gtk::FlowBoxChild {
         cell.append(&year_label);
     }
     let child = gtk::FlowBoxChild::builder().child(&cell).build();
-    crate::ui::context::attach_album_context_menu(&child, album.key());
+    crate::ui::context::attach_album_context_menu(&child, &ui.core, album.key());
     child
 }
 

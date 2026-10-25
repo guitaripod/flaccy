@@ -11,6 +11,7 @@ pub mod library;
 pub mod logger;
 pub mod music_video;
 pub mod recap;
+pub mod remote;
 pub mod scanner;
 pub mod versions;
 

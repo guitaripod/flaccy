@@ -977,6 +977,14 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
             ui::delete::present_delete_tracks(ui, vec![track.clone()]);
         }
     });
+    add_string_action(ui, "track-pin", |ui, rel| keep_songs(ui, vec![rel.to_string()], true));
+    add_string_action(ui, "track-unpin", |ui, rel| keep_songs(ui, vec![rel.to_string()], false));
+    add_string_action(ui, "album-pin", |ui, key| {
+        keep_songs(ui, album_song_paths(ui, key), true);
+    });
+    add_string_action(ui, "album-unpin", |ui, key| {
+        keep_songs(ui, album_song_paths(ui, key), false);
+    });
     add_string_action(ui, "album-delete", |ui, key| {
         ui::delete::present_delete_album(ui, key);
     });
@@ -1047,7 +1055,12 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
             .library
             .borrow()
             .album_by_key(key)
-            .and_then(|album| album.tracks.first())
+            .and_then(|album| {
+                album
+                    .tracks
+                    .iter()
+                    .find(|track| !crate::remote::is_remote(&track.rel_path))
+            })
             .map(|track| track.abs_path(&ui.core.music_root()));
         if let Some(path) = path {
             reveal_in_files(ui, path);
@@ -1221,6 +1234,12 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_int64_action(ui, "playlist-rename", |ui, id| {
         ui::playlists::prompt_rename_playlist(ui, id);
     });
+    add_int64_action(ui, "playlist-pin", |ui, id| {
+        keep_songs(ui, playlist_song_paths(ui, id), true);
+    });
+    add_int64_action(ui, "playlist-unpin", |ui, id| {
+        keep_songs(ui, playlist_song_paths(ui, id), false);
+    });
     add_int64_action(ui, "playlist-delete", |ui, id| {
         ui::playlists::confirm_delete_playlist(ui, id);
     });
@@ -1230,6 +1249,45 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_int64_action(ui, "playlist-cover-reset", |ui, id| {
         ui::playlist_cover::confirm_reset(ui, id);
     });
+}
+
+/// The paths of an album's songs.
+fn album_song_paths(ui: &Rc<Ui>, key: &str) -> Vec<String> {
+    ui.core
+        .library
+        .borrow()
+        .album_by_key(key)
+        .map(|album| album.tracks.iter().map(|track| track.rel_path.clone()).collect())
+        .unwrap_or_default()
+}
+
+/// The paths of a playlist's songs.
+fn playlist_song_paths(ui: &Rc<Ui>, playlist_id: i64) -> Vec<String> {
+    ui.core
+        .db
+        .playlist_tracks(playlist_id)
+        .into_iter()
+        .map(|row| row.rel_path)
+        .collect()
+}
+
+/// Keeps the remote songs among `paths` on this computer, or stops keeping
+/// them. Local songs are left as they are.
+pub(crate) fn keep_songs(ui: &Rc<Ui>, paths: Vec<String>, keep: bool) {
+    let remote_paths = crate::remote::remote_paths(paths.iter().map(String::as_str));
+    let Some(remote) = crate::remote::handle().filter(|_| !remote_paths.is_empty()) else {
+        return;
+    };
+    if keep {
+        remote.pin(&remote_paths);
+    } else {
+        remote.unpin(&remote_paths);
+        let noun = if remote_paths.len() == 1 { "song" } else { "songs" };
+        ui.core.toast(&format!(
+            "Removed the download of {} {noun}. They stream from the server again.",
+            remote_paths.len()
+        ));
+    }
 }
 
 /// Opens the system file manager with the given file selected (portal
@@ -1848,6 +1906,12 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
         let core = Rc::clone(&ui.core);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
             crate::reexport_drill::run(&core);
+        });
+    }
+    if let Ok(spec) = std::env::var("FLACCY_DEMO_REMOTE") {
+        let core = Rc::clone(&ui.core);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            crate::remote_drill::run(&core, &spec);
         });
     }
     if let Ok(spec) = std::env::var("FLACCY_DEMO_ARTWORK") {

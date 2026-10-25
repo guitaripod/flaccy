@@ -27,6 +27,7 @@ pub mod queue_panel;
 pub mod resize;
 pub mod screen;
 pub mod seek_bar;
+pub mod servers;
 pub mod slider;
 pub mod songlink_dialog;
 pub mod songs;

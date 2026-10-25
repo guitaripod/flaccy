@@ -482,6 +482,7 @@ mod tests {
             revision: 1,
             revised_at: None,
             file_modified_ms: None,
+            disc_number: None,
         }
     }
 

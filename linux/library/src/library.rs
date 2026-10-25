@@ -32,6 +32,9 @@ pub struct TrackRow {
     pub revised_at: Option<i64>,
     /// When the file was last written, in milliseconds since the epoch.
     pub file_modified_ms: Option<i64>,
+    /// The disc a song from a server sits on. Songs from the music folder have
+    /// none: their disc comes from their path.
+    pub disc_number: Option<i32>,
 }
 
 pub type Track = TrackRow;
@@ -258,7 +261,7 @@ impl Library {
 /// numeric runs compare by value rather than lexically.
 pub fn sort_album_tracks(tracks: &mut [Track]) {
     if is_multi_disc(tracks) {
-        tracks.sort_by(|a, b| natural_cmp(&a.rel_path.to_lowercase(), &b.rel_path.to_lowercase()));
+        tracks.sort_by(multi_disc_order);
     } else {
         tracks.sort_by(|a, b| {
             a.track_number
@@ -266,6 +269,24 @@ pub fn sort_album_tracks(tracks: &mut [Track]) {
                 .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
         });
     }
+}
+
+/// The order of a multi-disc release: files by their natural path order, then
+/// songs from a server by disc, track number and title. Files and songs from a
+/// server never mix their rules inside one comparison, so the order stays total.
+fn multi_disc_order(a: &Track, b: &Track) -> std::cmp::Ordering {
+    let remote = |track: &Track| flaccy_shared::remote::remote_path::is_remote(&track.rel_path);
+    remote(a).cmp(&remote(b)).then_with(|| {
+        if remote(a) {
+            a.disc_number
+                .cmp(&b.disc_number)
+                .then_with(|| a.track_number.cmp(&b.track_number))
+                .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+                .then_with(|| a.rel_path.cmp(&b.rel_path))
+        } else {
+            natural_cmp(&a.rel_path.to_lowercase(), &b.rel_path.to_lowercase())
+        }
+    })
 }
 
 /// A contiguous run of an album's tracks belonging to one physical disc or
@@ -288,7 +309,7 @@ impl DiscSection {
 pub fn disc_sections(tracks: &[Track]) -> Option<Vec<DiscSection>> {
     let labels = tracks
         .iter()
-        .map(|t| disc_label(&t.rel_path))
+        .map(track_disc_label)
         .collect::<Option<Vec<_>>>()?;
     if labels
         .iter()
@@ -309,6 +330,15 @@ pub fn disc_sections(tracks: &[Track]) -> Option<Vec<DiscSection>> {
         }
     }
     Some(sections)
+}
+
+/// The disc or side a track sits on: the disc a server reported for its song,
+/// or what the file's path says.
+fn track_disc_label(track: &Track) -> Option<String> {
+    if flaccy_shared::remote::remote_path::is_remote(&track.rel_path) {
+        return track.disc_number.map(|disc| format!("Disc {disc}"));
+    }
+    disc_label(&track.rel_path)
 }
 
 /// Reads the disc/side marker from a track's file path: a leading vinyl side
@@ -624,6 +654,7 @@ mod meta_tests {
             revision: 1,
             revised_at: None,
             file_modified_ms: None,
+            disc_number: None,
         }
     }
 
@@ -689,6 +720,7 @@ mod artwork_key_tests {
             revision: 1,
             revised_at: None,
             file_modified_ms: None,
+            disc_number: None,
         }
     }
 
@@ -778,6 +810,7 @@ mod sort_tests {
                 revision: 1,
                 revised_at: None,
                 file_modified_ms: None,
+                disc_number: None,
             },
             TrackRow {
                 id: 2,
@@ -799,6 +832,7 @@ mod sort_tests {
                 revision: 1,
                 revised_at: None,
                 file_modified_ms: None,
+                disc_number: None,
             },
             TrackRow {
                 id: 3,
@@ -820,6 +854,7 @@ mod sort_tests {
                 revision: 1,
                 revised_at: None,
                 file_modified_ms: None,
+                disc_number: None,
             },
         ];
         let mut grouped: HashMap<String, Vec<Track>> = HashMap::new();
@@ -867,6 +902,7 @@ mod sort_tests {
             revision: 1,
             revised_at: None,
             file_modified_ms: None,
+            disc_number: None,
         }
     }
 
@@ -947,6 +983,48 @@ mod sort_tests {
             .map(|s| s.label.clone())
             .collect();
         assert_eq!(labels, vec!["Disc 1", "Disc 2"]);
+    }
+
+    fn remote_track(id: &str, disc: Option<i32>, number: i32, title: &str) -> Track {
+        let mut remote = track(&format!("remote://s1/{id}"), number, title);
+        remote.disc_number = disc;
+        remote
+    }
+
+    #[test]
+    fn songs_from_a_server_order_by_disc_then_track_and_never_by_their_ids() {
+        let mut tracks = vec![
+            remote_track("zz9", Some(2), 1, "Disc Two Opener"),
+            remote_track("aa1", Some(1), 2, "Disc One Second"),
+            remote_track("mm5", Some(2), 2, "Disc Two Second"),
+            remote_track("bb2", Some(1), 1, "Disc One Opener"),
+        ];
+        sort_album_tracks(&mut tracks);
+        let order: Vec<&str> = tracks.iter().map(|t| t.title.as_str()).collect();
+        assert_eq!(
+            order,
+            vec!["Disc One Opener", "Disc One Second", "Disc Two Opener", "Disc Two Second"]
+        );
+    }
+
+    #[test]
+    fn server_discs_become_sections_and_ids_never_look_like_vinyl_sides() {
+        let tracks = vec![
+            remote_track("a1xyz", Some(1), 1, "One"),
+            remote_track("b2xyz", Some(1), 2, "Two"),
+            remote_track("c3xyz", Some(2), 1, "Three"),
+        ];
+        let labels: Vec<String> = disc_sections(&tracks)
+            .expect("two discs")
+            .iter()
+            .map(|section| section.label.clone())
+            .collect();
+        assert_eq!(labels, vec!["Disc 1", "Disc 2"]);
+        let without_discs = vec![
+            remote_track("a1xyz", None, 1, "One"),
+            remote_track("b2xyz", None, 2, "Two"),
+        ];
+        assert!(disc_sections(&without_discs).is_none());
     }
 
     #[test]

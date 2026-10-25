@@ -1079,7 +1079,7 @@ fn top_list(
                     let ui_click = Rc::clone(ui);
                     let play_key = key.clone();
                     on_row_click(&row, move || ui_click.core.play_album_key(&play_key, false));
-                    crate::ui::context::attach_album_context_menu(&row, key);
+                    crate::ui::context::attach_album_context_menu(&row, &ui.core, key);
                 }
             }
             ChartKind::Tracks => {

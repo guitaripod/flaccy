@@ -77,8 +77,13 @@ pub struct AppCore {
     /// The level unmuting returns to.
     restore_volume: Cell<f64>,
     config_save_queued: Cell<bool>,
+    /// A refresh of the servers' catalogs is running, so another is not begun.
+    pub remote_syncing: Cell<bool>,
 }
 
+/// How long after launch the servers are refreshed first, and how often after.
+const REMOTE_FIRST_REFRESH_DELAY: Duration = Duration::from_millis(800);
+const REMOTE_REFRESH_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 /// Below this the volume counts as muted.
 const MUTE_FLOOR: f64 = 0.005;
 /// Where unmuting lands when there is no earlier level to return to.
@@ -92,6 +97,7 @@ impl AppCore {
         let config = config::load();
         let db_path = crate::db::default_db_path();
         let db = Db::open_with_recovery(&db_path).expect("library database must open");
+        crate::remote::start(&config, &db_path);
         let hub = Rc::new(EventHub::new());
         let root = config.music_root();
         crate::logger::info("lifecycle", &format!("library root: {}", root.display()));
@@ -150,9 +156,11 @@ impl AppCore {
             lyrics: RefCell::new(crate::lyrics::Lyrics::default()),
             restore_volume: Cell::new(restore_volume),
             config_save_queued: Cell::new(false),
+            remote_syncing: Cell::new(false),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
+        core.wire_remote();
         core
     }
 
@@ -259,7 +267,7 @@ impl AppCore {
 
     /// Reloads the views for songs the scan recognised as new versions, and
     /// offers the new mix from the start when one of them is playing.
-    fn note_new_versions(self: &Rc<Self>, rel_paths: &[String]) {
+    pub(crate) fn note_new_versions(self: &Rc<Self>, rel_paths: &[String]) {
         self.reload_library();
         if let Some(track) = self.player.current_track() {
             if rel_paths.contains(&track.rel_path) {
@@ -521,6 +529,7 @@ impl AppCore {
         crate::musicvideo::start(self);
         self.wire_autoplay();
         self.rescan();
+        self.start_remote();
         self.schedule_periodic_drain();
         self.schedule_wantlist_refresh();
         self.schedule_history_import();
@@ -804,6 +813,140 @@ impl AppCore {
         self.save_config();
     }
 
+    /// Refreshes every server's catalog off the main thread, then reloads the
+    /// library when anything changed. `announce` is true when the person asked,
+    /// so a failure is a toast; a refresh nobody asked for only writes the log.
+    pub fn sync_remote_servers(self: &Rc<Self>, announce: bool) {
+        let Some(remote) = crate::remote::handle().cloned() else {
+            return;
+        };
+        let servers = remote.servers();
+        if servers.is_empty() || self.remote_syncing.replace(true) {
+            return;
+        }
+        self.hub.emit(&AppEvent::RemoteChanged);
+        let (tx, rx) = async_channel::unbounded::<(String, Result<flaccy_library::remote::sync::SyncReport, String>)>();
+        std::thread::Builder::new()
+            .name("flaccy-remote-refresh".into())
+            .spawn(move || {
+                for server in servers {
+                    let result = remote
+                        .sync(&server.id, &|_| {})
+                        .map_err(|failure| failure.message());
+                    let _ = tx.send_blocking((server.name, result));
+                }
+            })
+            .ok();
+        let core = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let mut changed = false;
+            while let Ok((name, result)) = rx.recv().await {
+                match result {
+                    Ok(report) => {
+                        let applied = &report.applied;
+                        let moved = applied.inserted
+                            + applied.updated
+                            + applied.new_versions.len()
+                            + applied.removed.len();
+                        changed |= moved > 0;
+                        if announce {
+                            core.toast(&format!(
+                                "Refreshed {name}: {} songs, {moved} changed.",
+                                report.songs
+                            ));
+                        }
+                    }
+                    Err(message) => {
+                        crate::logger::warn("remote", &format!("refresh of {name} failed: {message}"));
+                        if announce {
+                            core.toast(&message);
+                        }
+                    }
+                }
+            }
+            core.remote_syncing.set(false);
+            if changed {
+                core.reload_library();
+            }
+            core.hub.emit(&AppEvent::RemoteChanged);
+        });
+    }
+
+    /// Hands the remote library's events to the main loop, and tells it which
+    /// remote song plays and which comes next so it can fetch ahead.
+    fn wire_remote(self: &Rc<Self>) {
+        let Some(remote) = crate::remote::handle().cloned() else {
+            return;
+        };
+        let (tx, rx) = async_channel::unbounded::<flaccy_library::remote::service::RemoteEvent>();
+        remote.set_listener(Arc::new(move |event| {
+            let _ = tx.send_blocking(event);
+        }));
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            use flaccy_library::remote::service::RemoteEvent;
+            while let Ok(event) = rx.recv().await {
+                let Some(core) = weak.upgrade() else { return };
+                match event {
+                    RemoteEvent::Changed => core.hub.emit(&AppEvent::RemoteChanged),
+                    RemoteEvent::Toast(message) => core.toast(&message),
+                    RemoteEvent::NewVersions(paths) => core.note_new_versions(&paths),
+                    RemoteEvent::CoversReady(keys) => {
+                        core.album_artwork_changed(&keys);
+                        core.hub.emit(&AppEvent::AlbumCoversHoisted(keys));
+                    }
+                }
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.hub.subscribe(move |event| {
+            let Some(core) = weak.upgrade() else {
+                return false;
+            };
+            if matches!(event, AppEvent::TrackChanged(_) | AppEvent::QueueChanged) {
+                core.prefetch_remote();
+            }
+            true
+        });
+    }
+
+    /// Asks the cache to fetch the rest of the playing remote song and the
+    /// start of the next queued one.
+    fn prefetch_remote(&self) {
+        let Some(remote) = crate::remote::handle() else {
+            return;
+        };
+        let (current, next) = self.player.current_and_next();
+        let remote_path = |track: &Option<Track>| {
+            track
+                .as_ref()
+                .map(|track| track.rel_path.clone())
+                .filter(|path| crate::remote::is_remote(path))
+        };
+        let (current, next) = (remote_path(&current), remote_path(&next));
+        if current.is_some() || next.is_some() {
+            remote.prefetch(current.as_deref(), next.as_deref());
+        }
+    }
+
+    /// Refreshes the servers a moment after launch and every six hours after,
+    /// and finishes any download an earlier run left half done.
+    fn start_remote(self: &Rc<Self>) {
+        let Some(remote) = crate::remote::handle() else {
+            return;
+        };
+        remote.start_background();
+        let core = Rc::clone(self);
+        glib::timeout_add_local_once(REMOTE_FIRST_REFRESH_DELAY, move || {
+            core.sync_remote_servers(false);
+        });
+        let core = Rc::clone(self);
+        glib::timeout_add_local(REMOTE_REFRESH_INTERVAL, move || {
+            core.sync_remote_servers(false);
+            glib::ControlFlow::Continue
+        });
+    }
+
     pub fn toggle_love(self: &Rc<Self>, rel_path: &str) {
         let library = self.library.borrow().clone();
         let Some(track) = library.track_by_rel_path(rel_path) else {
@@ -826,6 +969,9 @@ impl AppCore {
             &format!("{} {} — {}", pending_op, track.title, track.artist),
         );
         crate::scrobbler::submit_love(self, rel_path, &track.title, &track.artist, loved);
+        if let Some(remote) = crate::remote::handle().filter(|_| crate::remote::is_remote(rel_path)) {
+            remote.set_starred(rel_path, loved);
+        }
     }
 
     pub fn save_config(&self) {

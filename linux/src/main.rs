@@ -29,6 +29,8 @@ mod palette;
 mod player;
 pub(crate) use flaccy_library::recap;
 mod reexport_drill;
+mod remote;
+mod remote_drill;
 mod render;
 mod samples;
 pub(crate) use flaccy_library::scanner;

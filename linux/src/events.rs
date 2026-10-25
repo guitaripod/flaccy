@@ -94,6 +94,10 @@ pub enum AppEvent {
     },
     MusicVideoChanged,
     MusicVideoCandidates,
+    /// Something about the remote library changed: the server list, which
+    /// songs are downloaded, whether a server can be reached or a refresh began
+    /// or ended. Views that mark remote songs repaint.
+    RemoteChanged,
     /// The equalizer's saved state, the profile in force or whether it is
     /// running changed.
     EqualizerChanged,
