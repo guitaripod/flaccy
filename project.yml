@@ -26,9 +26,6 @@ packages:
   GRDB:
     url: https://github.com/groue/GRDB.swift.git
     from: 7.0.0
-  RevenueCat:
-    url: https://github.com/RevenueCat/purchases-ios
-    from: 5.87.1
   MidgarKit:
     path: ../../packages/MidgarKit
 
@@ -64,7 +61,6 @@ targets:
       - package: FlaccyCore
         product: FlaccyEngine
       - package: GRDB
-      - package: RevenueCat
       - package: MidgarKit
         product: MidgarCore
       - package: MidgarKit
@@ -273,7 +269,6 @@ targets:
       - package: FlaccyCore
         product: FlaccyEngine
       - package: GRDB
-      - package: RevenueCat
       - package: MidgarKit
         product: MidgarCore
       - package: MidgarKit

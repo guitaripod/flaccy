@@ -80,7 +80,6 @@ final class SampleMusicService {
         isDownloading = true
         interruption = nil
         postProgress("")
-        PurchaseFunnel.noteSampleDownload(.started)
         defer {
             isDownloading = false
             postProgress("")
@@ -118,12 +117,10 @@ final class SampleMusicService {
             hasStartedPlayback = false
             resumeData.removeAll()
             MidgarLog.info("Sample music installed (\(manifest.tracks.count) tracks)", category: .content)
-            PurchaseFunnel.noteSampleDownload(.finished)
             return true
         } catch {
             interruption = landedSampleFileCount() > 0 ? .resumable : .unreachable
             MidgarLog.error("Sample download failed (\(interruption == .resumable ? "resumable" : "nothing landed"), \(resumeData.count) partial): \(error.localizedDescription)", category: .content)
-            PurchaseFunnel.noteSampleDownload(.failed)
             return false
         }
     }
@@ -219,9 +216,6 @@ final class SampleMusicService {
         guard !AudioPlayer.shared.isPlaying else { return true }
         MidgarLog.info("Sample: playing with \(tracks.count) of \(albumOrder.count) tracks landed", category: .content)
         AudioPlayer.shared.play(tracks, startingAt: 0)
-        if AudioPlayer.shared.currentTrack != nil {
-            PurchaseFunnel.noteSampleDownload(.playing)
-        }
         return true
     }
 

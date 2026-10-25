@@ -2,10 +2,12 @@
 """Flaccy's trial-to-purchase funnel, read back from RevenueCat.
 
 The trial and both paywalls are Flaccy's own, so RevenueCat's charts only see
-the people who paid. `PurchaseFunnel` (Features/Paywall/PurchaseFunnel.swift) mirrors
-every step into subscriber attributes; this reads them back per first-seen
+the people who paid. Builds that still carry the RevenueCat SDK mirrored every
+step into subscriber attributes; this reads them back per first-seen
 week and per lifetime price shown, so a price change is judged by paywall
-views and checkouts rather than by a handful of sales.
+views and checkouts rather than by a handful of sales. The SDK and the
+attribute writer are gone from newer builds, so only installs on an older build
+appear here.
 
 Customers from builds before the funnel shipped carry no attributes, so their
 funnel columns read "-"; retention (came back after a day, still around a week

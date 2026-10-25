@@ -54,7 +54,7 @@ typealias PurchaseAnchor = UIScene
 /// Entitlement source of truth for the Apple clients, backed by `MidgarStore`.
 ///
 /// MidgarStore buys, verifies and finishes on StoreKit 2 and reports every
-/// transaction to the Midgar ledger; RevenueCat only observes. The seven-day
+/// transaction to the Midgar ledger. The seven-day
 /// trial stays local because it starts before any purchase exists and must
 /// survive a reinstall, which the Keychain gives us for free; it starts at the
 /// first play of the person's own music, not at install. The yearly
@@ -188,9 +188,6 @@ final class PurchaseManager {
         applyTrialDayOverride()
         #endif
         setState(trialState())
-        RevenueCatObserver.start()
-        publishFunnelEntitlement()
-        PurchaseFunnel.observeLibrary()
         listenForStoreEvents()
         Task {
             await refresh()
@@ -210,7 +207,6 @@ final class PurchaseManager {
             trialStart = start
             trialHasStarted = true
             trialStartIsUnreadable = false
-            publishFunnelEntitlement()
         case .absent:
             trialStartIsUnreadable = false
         case .unreadable(let status):
@@ -226,10 +222,7 @@ final class PurchaseManager {
     /// written even after a purchase so a lapsed subscription still has a start.
     func noteTrackStarted(_ track: Track) {
         guard !trialHasStarted, !trialClockIsOverridden else { return }
-        guard !SampleMusicService.isSample(track.fileURL) else {
-            PurchaseFunnel.noteSamplePlayed()
-            return
-        }
+        guard !SampleMusicService.isSample(track.fileURL) else { return }
         guard case .absent = TrialClock.lookup(.trialStart) else {
             refreshTrialPhase()
             return
@@ -242,17 +235,13 @@ final class PurchaseManager {
         Task { await TrialReminderScheduler.shared.refresh() }
     }
 
-    /// A state derived while the start is unreadable says "not started" for
-    /// someone whose trial may be long over, so it is never reported.
-    private func publishFunnelEntitlement() {
-        guard !trialStartIsUnreadable else { return }
-        PurchaseFunnel.noteEntitlement(state, trialStart: trialHasStarted ? trialStart : nil)
-    }
-
-    /// Called by both paywalls once their offers have loaded, so the price
-    /// recorded is the one the person was actually shown.
+    /// Called by both paywalls once their offers have loaded, and recorded with
+    /// the schema's generic `paywall` placement because both are one view
+    /// whichever surface opens them. The `--trial-day` clock is a fiction, so
+    /// nothing it produces reaches the counts a pricing decision is made from.
     func notePaywallShown() {
-        PurchaseFunnel.notePaywallShown(offer: lifetimeOfferToPresent, state: state)
+        guard !trialClockIsOverridden else { return }
+        Task { await MidgarSignals.shared?.record("paywall.view", props: ["placement": "paywall"]) }
     }
 
     /// Re-derives the trial day from the stored start, for a process that has
@@ -383,18 +372,6 @@ final class PurchaseManager {
     /// Buys the offer's product with the confirmation sheet anchored to `anchor`,
     /// the paywall's scene or window.
     func purchase(_ offer: PurchaseOffer, confirmIn anchor: PurchaseAnchor?) async throws -> PurchaseOutcome {
-        PurchaseFunnel.noteCheckoutStarted(offer)
-        do {
-            let outcome = try await performPurchase(offer, confirmIn: anchor)
-            PurchaseFunnel.noteCheckoutFinished(Self.funnelOutcome(outcome))
-            return outcome
-        } catch {
-            PurchaseFunnel.noteCheckoutFinished(.failed)
-            throw error
-        }
-    }
-
-    private func performPurchase(_ offer: PurchaseOffer, confirmIn anchor: PurchaseAnchor?) async throws -> PurchaseOutcome {
         guard let store else { throw PurchaseFailure.other }
         let productID = offer.storeProduct.id
         let result: MidgarPurchaseResult
@@ -414,7 +391,6 @@ final class PurchaseManager {
         switch result {
         case .purchased:
             apply(await store.entitlements)
-            RevenueCatObserver.reportPurchase(productID)
             if !state.isPurchased {
                 MidgarLog.error("Purchase of \(productID) completed without granting \(FlaccyProducts.entitlement)", category: .purchases)
             }
@@ -429,14 +405,6 @@ final class PurchaseManager {
         case .cancelled:
             MidgarLog.info("Purchase cancelled by user", category: .purchases)
             return .cancelled
-        }
-    }
-
-    private static func funnelOutcome(_ outcome: PurchaseOutcome) -> PurchaseFunnel.CheckoutOutcome {
-        switch outcome {
-        case .purchased: .purchased
-        case .pending: .pending
-        case .cancelled: .cancelled
         }
     }
 
@@ -463,7 +431,6 @@ final class PurchaseManager {
             MidgarLog.error("Restore failed: \(error)", category: .purchases)
         }
         apply(await store.entitlements)
-        RevenueCatObserver.reportRestore()
         let outcome: RestoreOutcome
         if state.isPurchased {
             outcome = .restored
@@ -563,7 +530,6 @@ final class PurchaseManager {
         guard newState != state else { return }
         MidgarLog.info("Entitlement state \(state) -> \(newState)", category: .purchases)
         state = newState
-        publishFunnelEntitlement()
         if newState.isPurchased {
             TrialReminderScheduler.shared.cancelAll()
         }

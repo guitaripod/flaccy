@@ -165,8 +165,4 @@ extension LibraryViewController: UIDocumentPickerDelegate {
             toast.finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
         }
     }
-
-    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        PurchaseFunnel.noteImportCancelled()
-    }
 }

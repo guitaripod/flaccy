@@ -259,15 +259,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.allowsMultipleSelection = false
         panel.prompt = String(localized: "Use This Folder")
         panel.message = String(localized: "Flaccy indexes the folder in place — nothing is copied or moved.")
-        PurchaseFunnel.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
-            guard response == .OK, let url = panel.url else {
-                PurchaseFunnel.noteImportCancelled()
-                return
-            }
+            guard response == .OK, let url = panel.url else { return }
             do {
                 try LibraryRoot.shared.chooseFolder(url)
-                PurchaseFunnel.noteFolderChosen()
             } catch {
                 MidgarLog.error("Bookmark creation failed: \(error.localizedDescription)", category: .content)
                 MacToast.show(String(localized: "Couldn't use \u{201C}\(url.lastPathComponent)\u{201D} as your music folder — macOS wouldn't grant Flaccy lasting access: \(error.localizedDescription)"), style: .error, in: window)
@@ -285,12 +280,8 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.allowedContentTypes = [.audio, .folder]
         panel.prompt = String(localized: "Import")
         panel.message = String(localized: "Copies files into Flaccy's library folder, preserving folder structure.")
-        PurchaseFunnel.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
-            guard response == .OK, !panel.urls.isEmpty else {
-                PurchaseFunnel.noteImportCancelled()
-                return
-            }
+            guard response == .OK, !panel.urls.isEmpty else { return }
             let urls = panel.urls
             let toast = MacToast.showImport(in: window)
             Task {

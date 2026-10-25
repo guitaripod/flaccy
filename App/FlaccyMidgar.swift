@@ -24,7 +24,7 @@ nonisolated final class FlaccyMidgar: Sendable {
     /// The client of flaccy-api behind the gateway: the AI metadata proxy, Last.fm signing and the sample album.
     let api: FlaccyAPIClient
 
-    /// The purchase engine (D2): StoreKit 2 with the ledger as the record, RevenueCat only observing. Nil in a test
+    /// The purchase engine (D2): StoreKit 2 with the ledger as the record. Nil in a test
     /// host or a screenshot seed, which must not reach the ledger.
     let store: MidgarStore?
 
@@ -101,7 +101,7 @@ nonisolated enum FlaccyProducts {
 
     static let all = [yearly, lifetime, welcomeLifetime]
 
-    /// The registry's `[commerce]` for this platform: MidgarStore buys and finishes, RevenueCat observes.
+    /// The registry's `[commerce]` for this platform: MidgarStore buys and finishes.
     static func configuration(directory: URL? = nil) -> MidgarStoreConfiguration {
         MidgarStoreConfiguration(
             appID: FlaccyMidgar.appID,

@@ -12,10 +12,10 @@ Answers for App Store Connect, App Privacy section, for the iOS app and the Mac 
 
 | Data type (Apple) | Linked to the user | Used to track | Purpose | What it is in Flaccy |
 | --- | --- | --- | --- | --- |
-| Identifiers, User ID | Yes | No | App Functionality | The random Midgar ID, kept in iCloud Keychain and shared with Midgar's other apps on the person's devices. It goes to `api.midgarcorp.cc` (the identity service) when it is created or joined, and authorizes the portal's "Your Midgar" panel. RevenueCat also holds its own anonymous app user id. (New with this release.) |
+| Identifiers, User ID | Yes | No | App Functionality | The random Midgar ID, kept in iCloud Keychain and shared with Midgar's other apps on the person's devices. It goes to `api.midgarcorp.cc` (the identity service) when it is created or joined, and authorizes the portal's "Your Midgar" panel. (New with this release.) |
 | Identifiers, Device ID | Yes | No | App Functionality | The app reads no advertising identifier and no vendor identifier. MidgarKit's App Attest key id, per app and per device, stored with the Midgar ID when the ID is created or joined. App Store and TestFlight builds use App Attest's production environment whether or not the app has the App Attest entitlement (Apple, App Attest Environment entitlement), so released builds create it. The AI cleanup and Last.fm signing requests to `flaccy-api` also carry a random per-install UUID (`X-Device-ID`) that only counts daily requests. (New with this release.) |
 | Usage Data, Product Interaction | No | No | Analytics | The anonymous More Apps card events (opened, shown, tapped) that the portal sends to `api.midgarcorp.cc/v1/signals` through MidgarKit's anonymous signals client, with no Midgar ID, device identifier or `Authorization` header. Reading "Your Midgar" sends no event. (New with this release.) |
-| Purchases, Purchase History | Yes | No | App Functionality | The App Store transactions of Flaccy Pro (yearly) and the lifetime unlocks, bought through MidgarStore with the Midgar ID as Apple's app account token and reported to the Midgar ledger, and seen by RevenueCat in observer mode (`purchasesAreCompletedBy: .myApp`). |
+| Purchases, Purchase History | Yes | No | App Functionality | The App Store transactions of Flaccy Pro (yearly) and the lifetime unlocks, bought through MidgarStore with the Midgar ID as Apple's app account token and reported to the Midgar ledger. |
 | User Content, Other User Content | No | No | App Functionality | The AI metadata cleanup sends file and folder names (never audio) through `api.midgarcorp.cc/v1/flaccy` to the Claude model and keeps nothing. The request carries the per-install `X-Device-ID` only for the daily count. |
 
 Everything else is "Data Not Collected".
@@ -31,12 +31,11 @@ Everything else is "Data Not Collected".
 ## Check before the label is entered
 
 - Every call to Flaccy's server now goes through `api.midgarcorp.cc/v1/flaccy`; the legacy `flaccy-api.midgarcorp.cc` address is no longer used by this build, so the data collected is unchanged apart from the Midgar ID, the App Attest key id and the portal counts.
-- Purchases go through MidgarStore (P2.16): each verified transaction carries the Midgar ID as app account token and goes to the Midgar ledger; RevenueCat observes the same transactions, so Purchase History is linked.
+- Purchases go through MidgarStore (P2.16): each verified transaction carries the Midgar ID as app account token and goes to the Midgar ledger; Purchase History is linked.
 - The Watch app has its own manifest and collects nothing: it does not use the Midgar ID, the gateway or the portal.
 
 ## Third-party SDK notes
 
-- RevenueCat: processes purchase data on our behalf (Purchase History, User ID above).
 - MidgarKit 4.3.1: `MidgarPortal` ships a manifest that declares Product Interaction for Analytics, not linked, matching the row above. `MidgarCore` (identity, HTTP, logging, signals) ships none and uses no required-reason API beyond the ones listed below. Anonymous signals send nothing else: MetricKit collection is not started.
 - Cloudflare: hosts the gateway (`api.midgarcorp.cc`) and the services behind it, including Flaccy's worker, and may keep standard request logs (IP address) for a limited time; IP address is not a data type in the label.
 - Anthropic: answers the AI metadata cleanup request that Flaccy's worker forwards.

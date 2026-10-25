@@ -66,7 +66,6 @@ extension LibraryViewController {
         picker.allowsMultipleSelection = true
         picker.delegate = self
         present(picker, animated: true)
-        PurchaseFunnel.noteAddMusicOpened()
     }
 
     func buildSongContextMenu(for track: Track) -> UIMenu {
