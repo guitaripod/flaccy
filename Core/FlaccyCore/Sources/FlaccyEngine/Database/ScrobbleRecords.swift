@@ -1,4 +1,5 @@
 import Foundation
+import FlaccyCore
 import GRDB
 
 public struct ScrobbleRecord: Codable, FetchableRecord, PersistableRecord, Identifiable, Sendable {
@@ -29,6 +30,22 @@ public struct ScrobbleRecord: Codable, FetchableRecord, PersistableRecord, Ident
         self.timestamp = timestamp
         self.duration = duration
         self.submitted = submitted
+    }
+
+    /// Writes the listen keys beside the fields they derive from, so every
+    /// insert path stores them without its caller knowing they exist.
+    public func encode(to container: inout PersistenceContainer) throws {
+        let keys = ListenHistory.Keys(title: trackTitle, artist: artist, album: albumTitle)
+        container["id"] = id
+        container["trackTitle"] = trackTitle
+        container["artist"] = artist
+        container["albumTitle"] = albumTitle
+        container["timestamp"] = timestamp
+        container["duration"] = duration
+        container["submitted"] = submitted
+        container["titleKey"] = keys.title
+        container["artistKey"] = keys.artist
+        container["albumKey"] = keys.album
     }
 }
 

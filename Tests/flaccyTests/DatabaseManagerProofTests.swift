@@ -77,17 +77,17 @@ nonisolated final class DatabaseManagerProofTests: XCTestCase {
         XCTAssertEqual(try db.scrobbleCount(submittedOnly: false), 3)
     }
 
-    func testBatchInsertAndIdentitiesRoundTripThroughTheImportKey() throws {
+    func testBatchInsertStoresEveryRowForTheDedupLedger() throws {
         let first = makeScrobble(submitted: true, title: "Café Del Mar", at: 1_750_000_000)
         let second = makeScrobble(submitted: true, title: "Other", at: 1_750_000_100)
         try db.insertScrobbles([first, second])
         try db.insertScrobbles([])
 
         XCTAssertEqual(try db.scrobbleCount(submittedOnly: true), 2)
-        let identities = try db.scrobbleIdentities()
-        XCTAssertEqual(identities.count, 2)
-        XCTAssertTrue(identities.contains(DatabaseManager.scrobbleIdentity(timestamp: first.timestamp, title: "CAFÉ DEL MAR")))
-        XCTAssertTrue(identities.contains(DatabaseManager.scrobbleIdentity(timestamp: second.timestamp, title: "other")))
+        let stored = try db.storedListens(since: .distantPast)
+        XCTAssertEqual(stored.count, 2)
+        XCTAssertTrue(stored.contains { $0.titleKey == ListenHistory.titleKey("CAFÉ DEL MAR") && $0.playedHere })
+        XCTAssertTrue(stored.contains { $0.titleKey == ListenHistory.titleKey("other") && $0.timestamp == 1_750_000_100 })
     }
 
     func testReconcileSetsCountAndLastPlayedOnlyForTracksWithScrobbles() throws {
