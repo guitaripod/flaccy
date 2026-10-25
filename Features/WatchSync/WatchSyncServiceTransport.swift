@@ -119,9 +119,10 @@ extension WatchSyncService {
     /// truth rather than the possibly stale cached application context.
     func requestWatchState() {
         guard let wcSession, wcSession.activationState == .activated, wcSession.isReachable else { return }
-        wcSession.sendMessage([SyncKeys.command: SyncKeys.commandGetState], replyHandler: { [weak self] reply in
-            DispatchQueue.main.async { MainActor.assumeIsolated { self?.ingest(context: reply) } }
-        }, errorHandler: { error in
+        wcSession.sendMessage([SyncKeys.command: SyncKeys.commandGetState], replyHandler: { @Sendable [weak self] reply in
+            let payload = SyncPayload(reply)
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.ingest(context: payload.values) } }
+        }, errorHandler: { @Sendable error in
             MidgarLog.notice("getState failed: \(error.localizedDescription)", category: .connectivity)
         })
     }
@@ -131,11 +132,13 @@ extension WatchSyncService {
     func sendCommand(_ payload: [String: Any]) {
         guard let wcSession else { return }
         if wcSession.isReachable {
-            wcSession.sendMessage(payload, replyHandler: { [weak self] reply in
-                DispatchQueue.main.async { MainActor.assumeIsolated { self?.ingest(context: reply) } }
-            }, errorHandler: { error in
+            let command = SyncPayload(payload)
+            wcSession.sendMessage(payload, replyHandler: { @Sendable [weak self] reply in
+                let answer = SyncPayload(reply)
+                DispatchQueue.main.async { MainActor.assumeIsolated { self?.ingest(context: answer.values) } }
+            }, errorHandler: { @Sendable error in
                 MidgarLog.notice("Command sendMessage failed; queued instead: \(error.localizedDescription)", category: .connectivity)
-                wcSession.transferUserInfo(payload)
+                WCSession.default.transferUserInfo(command.values)
             })
         } else {
             wcSession.transferUserInfo(payload)

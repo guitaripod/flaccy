@@ -424,7 +424,7 @@ nonisolated final class WatchSyncReceiver: NSObject, @unchecked Sendable {
     }
 }
 
-extension WatchSyncReceiver: WCSessionDelegate {
+nonisolated extension WatchSyncReceiver: WCSessionDelegate {
 
     func session(
         _ session: WCSession,
