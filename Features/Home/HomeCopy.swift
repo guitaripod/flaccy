@@ -15,6 +15,15 @@ enum HomeCopy {
     static var playNext: String { String(localized: "Play after the current song") }
     static var yourQueue: String { String(localized: "Your Queue") }
     static var openRecap: String { String(localized: "Open Recap") }
+    static var goToAlbum: String { String(localized: "Go to Album") }
+    static var goToPlaylist: String { String(localized: "Go to Playlist") }
+    static var playFromBeginning: String { String(localized: "Play from the Beginning") }
+    static var removeFromJumpBackIn: String { String(localized: "Remove from Jump Back In") }
+    static var playingNext: String { String(localized: "Playing next") }
+    static var settings: String { String(localized: "Settings") }
+    static var cancel: String { String(localized: "Cancel") }
+    static var done: String { String(localized: "Done") }
+    static var visibleOnHome: String { String(localized: "Show on Home") }
 
     static func title(for section: HomeSection) -> String {
         switch section {
