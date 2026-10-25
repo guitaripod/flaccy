@@ -2504,6 +2504,7 @@ mod tests {
                 .collect(),
             albums,
             artists: Vec::new(),
+            index: Default::default(),
         }
     }
 

@@ -1187,6 +1187,7 @@ impl Library {
             tracks: self.tracks.clone(),
             albums: self.albums.clone(),
             artists: self.artists.clone(),
+            index: self.index.clone(),
         };
         updated.set_loved(rel_path, loved);
         updated
@@ -1365,6 +1366,7 @@ mod tests {
             }],
             tracks,
             artists: Vec::new(),
+            index: Default::default(),
         }
     }
 

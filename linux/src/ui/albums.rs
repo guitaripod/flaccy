@@ -1154,12 +1154,14 @@ mod sort_tests {
             tracks: Vec::new(),
             albums: albums.clone(),
             artists: Vec::new(),
+            index: Default::default(),
         };
         assert_eq!(card.album_in(&library).map(|a| a.title.as_str()), Some("Two"));
         let reordered = Library {
             tracks: Vec::new(),
             albums: vec![albums[2].clone(), albums[0].clone(), albums[1].clone()],
             artists: Vec::new(),
+            index: Default::default(),
         };
         assert_eq!(
             card.album_in(&reordered).map(|a| a.title.as_str()),
@@ -1169,6 +1171,7 @@ mod sort_tests {
             tracks: Vec::new(),
             albums: vec![albums[0].clone()],
             artists: Vec::new(),
+            index: Default::default(),
         };
         assert!(card.album_in(&gone).is_none());
     }

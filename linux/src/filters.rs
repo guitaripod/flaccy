@@ -586,6 +586,7 @@ mod tests {
                 albums: vec![album("AL", "X", tracks.clone())],
                 tracks,
                 artists: Vec::new(),
+                index: Default::default(),
             })
         };
         let first = build(vec![plain.clone()]);

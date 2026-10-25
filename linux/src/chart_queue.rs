@@ -11,44 +11,56 @@ const ENTRY_SEPARATOR: &str = " — ";
 /// so a queue is whatever can play.
 pub struct ChartIndex<'a> {
     library: &'a Library,
-    tracks: HashMap<String, &'a Track>,
-    albums: HashMap<String, &'a Album>,
+    keys: &'a ChartKeys,
+}
+
+/// The normalised `title ␀ artist` keys of every song and release in a
+/// library, as positions into it. Built once per loaded library and shared by
+/// every `ChartIndex` over it.
+pub struct ChartKeys {
+    tracks: HashMap<String, usize>,
+    albums: HashMap<String, usize>,
+}
+
+impl ChartKeys {
+    pub fn build(library: &Library) -> Self {
+        let mut albums = HashMap::with_capacity(library.albums.len());
+        for (at, album) in library.albums.iter().enumerate() {
+            albums.insert(key(&album.title, &album.artist), at);
+        }
+        let mut tracks = HashMap::with_capacity(library.tracks.len());
+        for (at, track) in library.tracks.iter().enumerate() {
+            tracks.insert(key(&track.title, &track.artist), at);
+        }
+        Self { tracks, albums }
+    }
 }
 
 impl<'a> ChartIndex<'a> {
     pub fn new(library: &'a Library) -> Self {
-        let mut albums = HashMap::new();
-        for album in &library.albums {
-            albums.insert(key(&album.title, &album.artist), album);
-        }
-        let mut tracks = HashMap::new();
-        for track in &library.tracks {
-            tracks.insert(key(&track.title, &track.artist), track);
-        }
         Self {
             library,
-            tracks,
-            albums,
+            keys: library.index.chart_keys(library),
         }
     }
 
     /// The owned song behind a `"Title — Artist"` entry.
     pub fn track(&self, entry: &str) -> Option<&'a Track> {
         split_candidates(entry)
-            .find_map(|(title, artist)| self.tracks.get(&key(title, artist)))
-            .copied()
+            .find_map(|(title, artist)| self.keys.tracks.get(&key(title, artist)))
+            .map(|&at| &self.library.tracks[at])
     }
 
     /// The owned release behind an `"Album — Artist"` entry.
     pub fn album(&self, entry: &str) -> Option<&'a Album> {
         split_candidates(entry)
-            .find_map(|(title, artist)| self.albums.get(&key(title, artist)))
-            .copied()
+            .find_map(|(title, artist)| self.keys.albums.get(&key(title, artist)))
+            .map(|&at| &self.library.albums[at])
     }
 
     /// Whether the library holds anything by `artist`.
     pub fn owns_artist(&self, artist: &str) -> bool {
-        !self.library.artist_tracks(artist).is_empty()
+        self.library.owns_artist(artist)
     }
 
     /// The owned songs behind a top-tracks chart, in rank order.
@@ -232,5 +244,23 @@ mod tests {
         assert_eq!(paths, ["a/1.flac", "a/2.flac", "b/1.flac"]);
         assert!(index.owns_artist("Cascada"));
         assert!(!index.owns_artist("Nobody"));
+    }
+
+    #[test]
+    fn every_index_over_a_library_shares_one_set_of_keys() {
+        let library = library();
+        let first = ChartIndex::new(&library);
+        let second = ChartIndex::new(&library);
+        assert!(std::ptr::eq(first.keys, second.keys));
+    }
+
+    #[test]
+    fn the_last_song_with_a_key_wins() {
+        let mut library = library();
+        let twin = track("z/1.flac", "DOMINO!", "cascada", "Elsewhere");
+        library.tracks.push(twin);
+        let index = ChartIndex::new(&library);
+        let found = index.track("Domino — Cascada");
+        assert_eq!(found.map(|t| t.rel_path.as_str()), Some("z/1.flac"));
     }
 }
