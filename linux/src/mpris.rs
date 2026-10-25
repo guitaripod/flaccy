@@ -1,9 +1,11 @@
 use crate::app::AppCore;
+use crate::db::Db;
 use crate::events::AppEvent;
 use crate::library::Track;
 use gtk::glib;
 use mpris_server::zbus::zvariant::ObjectPath;
 use mpris_server::{LoopStatus, Metadata, PlaybackStatus, Player, Time};
+use std::cell::Cell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -117,6 +119,7 @@ pub fn start(core: &Rc<AppCore>) {
 
         let hub = Rc::clone(&core.hub);
         let weak_core = Rc::downgrade(&core);
+        let metadata_generation = Rc::new(Cell::new(0_u64));
         hub.subscribe(move |event| {
             let Some(core) = weak_core.upgrade() else {
                 return false;
@@ -126,10 +129,7 @@ pub fn start(core: &Rc<AppCore>) {
             };
             match event {
                 AppEvent::TrackChanged(track) => {
-                    let metadata = metadata_for(&core, track.as_ref());
-                    glib::spawn_future_local(async move {
-                        let _ = player.set_metadata(metadata).await;
-                    });
+                    publish_metadata(&core, &player, &metadata_generation, track.clone());
                 }
                 AppEvent::AlbumArtworkChanged { title, artist } => {
                     let playing_this = core
@@ -137,10 +137,7 @@ pub fn start(core: &Rc<AppCore>) {
                         .current_track()
                         .filter(|track| &track.album == title && &track.artist == artist);
                     if let Some(track) = playing_this {
-                        let metadata = metadata_for(&core, Some(&track));
-                        glib::spawn_future_local(async move {
-                            let _ = player.set_metadata(metadata).await;
-                        });
+                        publish_metadata(&core, &player, &metadata_generation, Some(track));
                     }
                 }
                 AppEvent::PlayingChanged(playing) => {
@@ -193,10 +190,46 @@ pub fn start(core: &Rc<AppCore>) {
     });
 }
 
-fn metadata_for(core: &Rc<AppCore>, track: Option<&Track>) -> Metadata {
+/// Publishes the metadata for `track` once its cover is exported.
+///
+/// The cover read, hash and write happen on a worker thread, so a track change
+/// never waits on the disk. Each call takes a new generation number and the
+/// result is applied only if it is still the newest, which keeps a fast skip
+/// (or a cover change landing mid-export) from putting a stale track's art on
+/// the shell after the current track's metadata.
+fn publish_metadata(
+    core: &Rc<AppCore>,
+    player: &Rc<Player>,
+    generation: &Rc<Cell<u64>>,
+    track: Option<Track>,
+) {
+    let ticket = generation.get() + 1;
+    generation.set(ticket);
     let Some(track) = track else {
-        return Metadata::new();
+        let player = Rc::clone(player);
+        glib::spawn_future_local(async move {
+            let _ = player.set_metadata(Metadata::new()).await;
+        });
+        return;
     };
+    let db_path = core.db_path.clone();
+    let (album, artist) = (track.album.clone(), track.artist.clone());
+    let (tx, rx) = async_channel::bounded::<Option<PathBuf>>(1);
+    std::thread::spawn(move || {
+        let _ = tx.send_blocking(export_artwork(&db_path, &album, &artist));
+    });
+    let player = Rc::clone(player);
+    let generation = Rc::clone(generation);
+    glib::spawn_future_local(async move {
+        let art = rx.recv().await.ok().flatten();
+        if generation.get() != ticket {
+            return;
+        }
+        let _ = player.set_metadata(metadata_for(&track, art)).await;
+    });
+}
+
+fn metadata_for(track: &Track, art: Option<PathBuf>) -> Metadata {
     let mut builder = Metadata::builder()
         .title(track.title.clone())
         .artist([track.artist.clone()])
@@ -205,7 +238,7 @@ fn metadata_for(core: &Rc<AppCore>, track: Option<&Track>) -> Metadata {
     if let Ok(path) = ObjectPath::try_from(track_path(track)) {
         builder = builder.trackid(path);
     }
-    if let Some(art) = export_artwork(core, track) {
+    if let Some(art) = art {
         if let Ok(uri) = glib::filename_to_uri(&art, None::<&str>) {
             builder = builder.art_url(uri.to_string());
         }
@@ -229,19 +262,37 @@ fn accepts_position(seconds: f64, duration: f64) -> bool {
 /// file name carries a hash of the picture itself, so a cover the person just
 /// chose gets a new URL and the shell cannot keep showing the old one; files
 /// left by earlier covers of the same album are removed.
-fn export_artwork(core: &Rc<AppCore>, track: &Track) -> Option<PathBuf> {
+fn export_artwork(db_path: &std::path::Path, album_title: &str, artist: &str) -> Option<PathBuf> {
     let cache_dir = dirs::cache_dir()?.join("flaccy").join("mpris");
     std::fs::create_dir_all(&cache_dir).ok()?;
-    let data = core.db.fetch_album_artwork(&track.album, &track.artist)?;
-    let album = crate::palette::fnv1a_64(&format!("{}|{}", track.album, track.artist));
+    let data = Db::open(db_path)
+        .ok()?
+        .fetch_album_artwork(album_title, artist)?;
+    let album = crate::palette::fnv1a_64(&format!("{album_title}|{artist}"));
     let prefix = format!("{album:016x}-");
     let path = cache_dir.join(format!("{prefix}{:016x}.img", content_hash(&data)));
     if path.exists() {
         return Some(path);
     }
     remove_stale_exports(&cache_dir, &prefix);
-    std::fs::write(&path, &data).ok()?;
+    write_atomically(&cache_dir, &path, &data)?;
     Some(path)
+}
+
+/// Writes through a dot-prefixed temporary name and renames it into place, so
+/// two exports of the same album running at once never leave a half-written
+/// file at the URL the shell is about to read, and the stale-export sweep, which
+/// matches only the album prefix, never removes a file still being written.
+fn write_atomically(directory: &std::path::Path, path: &std::path::Path, data: &[u8]) -> Option<()> {
+    static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let unique = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let staging = directory.join(format!(".export-{}-{unique}.tmp", std::process::id()));
+    std::fs::write(&staging, data).ok()?;
+    if std::fs::rename(&staging, path).is_err() {
+        let _ = std::fs::remove_file(&staging);
+        return None;
+    }
+    Some(())
 }
 
 fn content_hash(data: &[u8]) -> u64 {
@@ -264,7 +315,7 @@ fn remove_stale_exports(directory: &std::path::Path, prefix: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{accepts_position, content_hash, remove_stale_exports};
+    use super::{accepts_position, content_hash, remove_stale_exports, write_atomically};
 
     #[test]
     fn a_new_cover_gets_a_new_file_name_and_the_old_export_is_removed() {
@@ -277,6 +328,18 @@ mod tests {
         remove_stale_exports(&dir, "00aa-");
         assert!(!dir.join("00aa-0001.img").exists());
         assert!(dir.join("00bb-0001.img").exists(), "other albums keep theirs");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_export_lands_whole_and_leaves_no_staging_file() {
+        let dir = std::env::temp_dir().join(format!("flaccy-mpris-atomic-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let target = dir.join("00aa-0001.img");
+        write_atomically(&dir, &target, b"cover").expect("written");
+        write_atomically(&dir, &target, b"cover").expect("rewritten");
+        assert_eq!(std::fs::read(&target).expect("read"), b"cover");
+        assert_eq!(std::fs::read_dir(&dir).expect("list").count(), 1);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

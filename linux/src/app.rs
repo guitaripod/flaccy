@@ -684,8 +684,7 @@ impl AppCore {
     }
 
     pub fn toggle_love(self: &Rc<Self>, rel_path: &str) {
-        let library = self.library.borrow().clone();
-        let Some(track) = library.track_by_rel_path(rel_path) else {
+        let Some(track) = self.library.borrow().track_by_rel_path(rel_path).cloned() else {
             return;
         };
         let loved = !track.loved;
@@ -694,8 +693,7 @@ impl AppCore {
             crate::logger::error("database", &format!("setLoved failed: {err}"));
             return;
         }
-        let updated = self.library.borrow().clone_with_loved(rel_path, loved);
-        *self.library.borrow_mut() = Rc::new(updated);
+        self.apply_loved(rel_path, loved);
         self.hub.emit(&AppEvent::LovedChanged {
             rel_path: rel_path.to_string(),
             loved,
@@ -705,6 +703,21 @@ impl AppCore {
             &format!("{} {} — {}", pending_op, track.title, track.artist),
         );
         crate::scrobbler::submit_love(self, rel_path, &track.title, &track.artist, loved);
+    }
+
+    /// Flips the loved flag in the loaded library. Nothing holds a snapshot of
+    /// the library beyond a handler's own turn, so the shared pointer is almost
+    /// always unique and the flag is set in place; a snapshot that is still out
+    /// there gets the copy-on-write path, which leaves it exactly as it was.
+    fn apply_loved(&self, rel_path: &str, loved: bool) {
+        let mut slot = self.library.borrow_mut();
+        match Rc::get_mut(&mut slot) {
+            Some(library) => library.set_loved(rel_path, loved),
+            None => {
+                let updated = slot.clone_with_loved(rel_path, loved);
+                *slot = Rc::new(updated);
+            }
+        }
     }
 
     pub fn save_config(&self) {
@@ -1169,24 +1182,27 @@ fn run_smoke(core: &Rc<AppCore>) {
 
 impl Library {
     fn clone_with_loved(&self, rel_path: &str, loved: bool) -> Library {
-        let mut tracks = self.tracks.clone();
-        for track in &mut tracks {
+        let mut updated = Library {
+            tracks: self.tracks.clone(),
+            albums: self.albums.clone(),
+            artists: self.artists.clone(),
+        };
+        updated.set_loved(rel_path, loved);
+        updated
+    }
+
+    fn set_loved(&mut self, rel_path: &str, loved: bool) {
+        for track in &mut self.tracks {
             if track.rel_path == rel_path {
                 track.loved = loved;
             }
         }
-        let mut albums = self.albums.clone();
-        for album in &mut albums {
+        for album in &mut self.albums {
             for track in &mut album.tracks {
                 if track.rel_path == rel_path {
                     track.loved = loved;
                 }
             }
-        }
-        Library {
-            tracks,
-            albums,
-            artists: self.artists.clone(),
         }
     }
 }
@@ -1303,6 +1319,7 @@ fn main_window(app: &adw::Application) -> Option<gtk::Window> {
 #[cfg(test)]
 mod tests {
     use super::{run_drop_import, DropImport};
+    use crate::library::{Album, Library, Track};
 
     fn drain(rx: &async_channel::Receiver<DropImport>) -> flaccy_shared::import_plan::Outcome {
         let mut finished = None;
@@ -1312,6 +1329,66 @@ mod tests {
             }
         }
         finished.expect("the import reports its outcome")
+    }
+
+    fn loved_fixture_track(rel_path: &str) -> Track {
+        Track {
+            id: 1,
+            rel_path: rel_path.to_string(),
+            title: rel_path.to_string(),
+            artist: "Artist".to_string(),
+            album: "Album".to_string(),
+            album_artist: None,
+            track_number: 1,
+            duration: 10.0,
+            codec: None,
+            bit_depth: None,
+            sample_rate: None,
+            channels: None,
+            loved: false,
+            play_count: 0,
+            date_added: 0,
+            last_played: None,
+        }
+    }
+
+    fn loved_fixture() -> Library {
+        let tracks = vec![loved_fixture_track("a.flac"), loved_fixture_track("b.flac")];
+        Library {
+            albums: vec![Album {
+                title: "Album".to_string(),
+                artist: "Artist".to_string(),
+                year: None,
+                genre: None,
+                tracks: tracks.clone(),
+            }],
+            tracks,
+            artists: Vec::new(),
+        }
+    }
+
+    fn loved_flags(library: &Library) -> (Vec<bool>, Vec<bool>) {
+        (
+            library.tracks.iter().map(|track| track.loved).collect(),
+            library.albums[0].tracks.iter().map(|track| track.loved).collect(),
+        )
+    }
+
+    #[test]
+    fn loving_a_track_flips_it_in_the_track_list_and_its_album_only() {
+        let mut library = loved_fixture();
+        library.set_loved("b.flac", true);
+        assert_eq!(loved_flags(&library), (vec![false, true], vec![false, true]));
+        library.set_loved("b.flac", false);
+        assert_eq!(loved_flags(&library), (vec![false, false], vec![false, false]));
+    }
+
+    #[test]
+    fn a_copy_on_write_love_leaves_the_snapshot_untouched() {
+        let library = loved_fixture();
+        let updated = library.clone_with_loved("a.flac", true);
+        assert_eq!(loved_flags(&library), (vec![false, false], vec![false, false]));
+        assert_eq!(loved_flags(&updated), (vec![true, false], vec![true, false]));
     }
 
     #[test]

@@ -31,8 +31,67 @@ const ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL: &str = "
     ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
     WHERE albumInfo.coverArtData IS NULL";
 
+/// The read-only twin of `ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL`: yields a row
+/// exactly when that statement would insert a credited release's `albumInfo`
+/// row or fill its empty cover, and touches no cover BLOB to say so.
+const HAS_COVERS_TO_ADOPT_SQL: &str = "
+    SELECT 1
+    FROM tracks t
+    JOIN albumInfo ai ON ai.title = t.albumTitle AND ai.artist = t.artist
+    LEFT JOIN albumInfo credited
+           ON credited.title = t.albumTitle AND credited.artist = t.albumArtist
+    WHERE t.albumArtist IS NOT NULL
+      AND t.albumArtist <> ''
+      AND t.albumArtist <> t.artist
+      AND ai.coverArtData IS NOT NULL
+      AND (credited.id IS NULL OR credited.coverArtData IS NULL)
+    LIMIT 1";
+
 pub struct Db {
     conn: Connection,
+}
+
+static MIGRATED_DATABASES: std::sync::Mutex<Vec<DatabaseIdentity>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// A database file as this process has seen it: its path plus the device,
+/// inode and creation time of what sits there now, so a file deleted and
+/// recreated at the same path (a recovery rename, a reset, a test) is migrated
+/// again instead of being taken for the one already prepared.
+#[derive(Clone, PartialEq, Eq)]
+struct DatabaseIdentity {
+    path: PathBuf,
+    device: u64,
+    inode: u64,
+    created: Option<std::time::SystemTime>,
+}
+
+impl DatabaseIdentity {
+    fn of(path: &Path) -> Option<Self> {
+        use std::os::unix::fs::MetadataExt;
+        let metadata = std::fs::metadata(path).ok()?;
+        Some(Self {
+            path: path.to_path_buf(),
+            device: metadata.dev(),
+            inode: metadata.ino(),
+            created: metadata.created().ok(),
+        })
+    }
+
+    fn is_migrated(&self) -> bool {
+        MIGRATED_DATABASES
+            .lock()
+            .map(|known| known.contains(self))
+            .unwrap_or(false)
+    }
+
+    /// Records the migration, replacing any earlier file at the same path.
+    fn mark_migrated(self) {
+        if let Ok(mut known) = MIGRATED_DATABASES.lock() {
+            known.retain(|entry| entry.path != self.path);
+            known.push(self);
+        }
+    }
 }
 
 pub struct NewTrack {
@@ -221,14 +280,31 @@ impl Db {
             let _ = std::fs::create_dir_all(parent);
         }
         let conn = Connection::open(path)?;
-        let _ = conn.busy_timeout(std::time::Duration::from_secs(5));
-        let _ = conn.pragma_update(None, "journal_mode", "WAL");
-        let _ = conn.pragma_update(None, "foreign_keys", "ON");
+        Self::tune_connection(&conn);
         Self::register_normalizer(&conn)?;
         let db = Self { conn };
-        db.migrate()?;
-        db.backfill_enrichment_markers()?;
+        let identity = DatabaseIdentity::of(path);
+        if !identity.as_ref().is_some_and(DatabaseIdentity::is_migrated) {
+            db.migrate()?;
+            db.backfill_enrichment_markers()?;
+            if let Some(identity) = identity {
+                identity.mark_migrated();
+            }
+        }
         Ok(db)
+    }
+
+    /// Per-connection settings every open path shares: WAL with the relaxed
+    /// `synchronous` level that is still crash-safe under it, a cache and
+    /// memory map sized for a library of cover BLOBs, and temp storage in RAM.
+    fn tune_connection(conn: &Connection) {
+        let _ = conn.busy_timeout(std::time::Duration::from_secs(5));
+        let _ = conn.pragma_update(None, "journal_mode", "WAL");
+        let _ = conn.pragma_update(None, "synchronous", "NORMAL");
+        let _ = conn.pragma_update(None, "foreign_keys", "ON");
+        let _ = conn.pragma_update(None, "cache_size", -32768);
+        let _ = conn.pragma_update(None, "temp_store", "MEMORY");
+        let _ = conn.pragma_update(None, "mmap_size", 256 * 1024 * 1024_i64);
     }
 
     /// Teaches this connection the key normalizer every enrichment statement
@@ -520,27 +596,44 @@ impl Db {
         result
     }
 
+    /// Opens the transaction a run of `insert_track` calls shares, so a scan
+    /// pays one commit per batch instead of one per statement. Pair with
+    /// `commit_inserts`; dropping the `Db` first rolls the open batch back.
+    pub fn begin_inserts(&self) -> Result<(), rusqlite::Error> {
+        self.conn.execute_batch("BEGIN")
+    }
+
+    /// Commits the batch `begin_inserts` opened; a commit that fails rolls the
+    /// batch back so the connection is never left inside a dangling transaction.
+    pub fn commit_inserts(&self) -> Result<(), rusqlite::Error> {
+        let result = self.conn.execute_batch("COMMIT");
+        if result.is_err() {
+            let _ = self.conn.execute_batch("ROLLBACK");
+        }
+        result
+    }
+
     pub fn insert_track(&self, track: &NewTrack) -> Result<(), rusqlite::Error> {
-        self.conn.execute(
+        self.conn.prepare_cached(
             "INSERT OR REPLACE INTO tracks
              (fileURL, title, artist, albumTitle, albumArtist, trackNumber, duration,
               dateAdded, codec, bitDepth, sampleRate, channels)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
-            params![
-                track.rel_path,
-                track.title,
-                track.artist,
-                track.album,
-                track.album_artist,
-                track.track_number,
-                track.duration,
-                now_string(),
-                track.codec,
-                track.bit_depth,
-                track.sample_rate,
-                track.channels,
-            ],
-        )?;
+        )?
+        .execute(params![
+            track.rel_path,
+            track.title,
+            track.artist,
+            track.album,
+            track.album_artist,
+            track.track_number,
+            track.duration,
+            now_string(),
+            track.codec,
+            track.bit_depth,
+            track.sample_rate,
+            track.channels,
+        ])?;
         if let Some(artwork) = &track.artwork {
             self.save_album_cover_if_missing(&track.album, &track.artist, artwork)?;
         }
@@ -553,13 +646,14 @@ impl Db {
         artist: &str,
         data: &[u8],
     ) -> Result<(), rusqlite::Error> {
-        self.conn.execute(
-            "INSERT INTO albumInfo (title, artist, coverArtData)
-             VALUES (?1, ?2, ?3)
-             ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
-             WHERE albumInfo.coverArtData IS NULL",
-            params![title, artist, data],
-        )?;
+        self.conn
+            .prepare_cached(
+                "INSERT INTO albumInfo (title, artist, coverArtData)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
+                 WHERE albumInfo.coverArtData IS NULL",
+            )?
+            .execute(params![title, artist, data])?;
         Ok(())
     }
 
@@ -630,24 +724,38 @@ impl Db {
                 }
             }
         }
+        if updates.is_empty() && !self.has_covers_to_adopt() {
+            return 0;
+        }
         let Ok(tx) = self.conn.unchecked_transaction() else {
             return 0;
         };
         let mut changed = 0;
-        for (rel_path, credit) in &updates {
-            changed += tx
-                .execute(
-                    "UPDATE tracks SET albumArtist = ?1 WHERE fileURL = ?2",
-                    params![credit, rel_path],
-                )
-                .unwrap_or(0);
+        if let Ok(mut update) = tx.prepare_cached("UPDATE tracks SET albumArtist = ?1 WHERE fileURL = ?2")
+        {
+            for (rel_path, credit) in &updates {
+                changed += update.execute(params![credit, rel_path]).unwrap_or(0);
+            }
         }
-        // Unconditional, not gated on `changed`: a release's credit settles on
-        // the first pass, while the cover it adopts may only be fetched by
-        // enrichment several reloads later.
         let _ = tx.execute(ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL, []);
         let _ = tx.commit();
         changed
+    }
+
+    /// Whether `ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL` would insert or fill
+    /// any row, answered without reading a cover BLOB or taking the write lock.
+    ///
+    /// The adoption cannot be gated on the credits having changed: a release's
+    /// credit settles on the first pass, while the cover it adopts may only be
+    /// fetched by enrichment several reloads later. It can be gated on this,
+    /// which is the same join with the conflict target looked up beside it, so
+    /// every reload over a settled library skips the statement entirely.
+    fn has_covers_to_adopt(&self) -> bool {
+        self.conn
+            .query_row(HAS_COVERS_TO_ADOPT_SQL, [], |_| Ok(()))
+            .optional()
+            .map(|row| row.is_some())
+            .unwrap_or(true)
     }
 
     /// Revives every entity that burned all its attempts, so a user asking for
@@ -778,14 +886,23 @@ impl Db {
             .is_some()
     }
 
+    /// Removes every stored track whose file is no longer in `keep`, and the
+    /// playlist entries and enrichment state that pointed at them. A library
+    /// that still matches the disk and has nothing left dangling, which is
+    /// nearly every launch, returns without opening a write transaction.
     pub fn delete_tracks_not_in(&self, keep: &HashSet<String>) -> Result<usize, rusqlite::Error> {
-        let existing = self.fetch_relative_paths();
+        let stale: Vec<String> = self
+            .fetch_relative_paths()
+            .into_iter()
+            .filter(|path| !keep.contains(path))
+            .collect();
+        if stale.is_empty() && !self.has_orphans_to_sweep() {
+            return Ok(0);
+        }
         let tx = self.conn.unchecked_transaction()?;
         let mut removed = 0;
-        for path in existing {
-            if !keep.contains(&path) {
-                removed += tx.execute("DELETE FROM tracks WHERE fileURL = ?1", params![path])?;
-            }
+        for path in stale {
+            removed += tx.execute("DELETE FROM tracks WHERE fileURL = ?1", params![path])?;
         }
         tx.execute(
             "DELETE FROM playlistTracks WHERE trackFileURL NOT IN (SELECT fileURL FROM tracks)",
@@ -794,6 +911,24 @@ impl Db {
         tx.execute(job::ORPHAN_SWEEP_SQL, [])?;
         tx.commit()?;
         Ok(removed)
+    }
+
+    /// Whether a playlist entry or an album's enrichment state points at a
+    /// track that no longer exists, found by reads alone. Rows a deletion made
+    /// elsewhere (`delete_track_by_rel_path` sweeps only the playlist) are
+    /// still cleared by the next scan, as they were when it always swept.
+    fn has_orphans_to_sweep(&self) -> bool {
+        let dangling = |sql: &str| {
+            self.conn
+                .query_row(sql, [], |_| Ok(()))
+                .optional()
+                .map(|row| row.is_some())
+                .unwrap_or(true)
+        };
+        dangling(
+            "SELECT 1 FROM playlistTracks
+             WHERE trackFileURL NOT IN (SELECT fileURL FROM tracks) LIMIT 1",
+        ) || dangling(&job::ORPHAN_SWEEP_SQL.replacen("DELETE FROM", "SELECT 1 FROM", 1))
     }
 
     pub fn fetch_all_tracks(&self) -> Vec<TrackRow> {
@@ -1042,6 +1177,18 @@ impl Db {
         Ok(())
     }
 
+    /// Runs `work` inside one transaction on this connection, so several
+    /// statements share a single commit. When no transaction can be opened the
+    /// work still runs, statement by statement, exactly as it would without this.
+    pub fn in_transaction<T>(&self, work: impl FnOnce() -> T) -> T {
+        let Ok(tx) = self.conn.unchecked_transaction() else {
+            return work();
+        };
+        let outcome = work();
+        let _ = tx.commit();
+        outcome
+    }
+
     pub fn insert_scrobble(
         &self,
         title: &str,
@@ -1123,13 +1270,17 @@ impl Db {
     }
 
     pub fn mark_scrobbles_submitted(&self, ids: &[i64]) -> Result<(), rusqlite::Error> {
-        for id in ids {
-            self.conn.execute(
-                "UPDATE scrobbles SET submitted = 1 WHERE id = ?1",
-                params![id],
-            )?;
+        if ids.is_empty() {
+            return Ok(());
         }
-        Ok(())
+        let tx = self.conn.unchecked_transaction()?;
+        {
+            let mut mark = tx.prepare_cached("UPDATE scrobbles SET submitted = 1 WHERE id = ?1")?;
+            for id in ids {
+                mark.execute(params![id])?;
+            }
+        }
+        tx.commit()
     }
 
     pub fn retire_pending_scrobbles_older_than(&self, cutoff_unix: i64) -> usize {
@@ -2678,6 +2829,84 @@ mod cleanup_tests {
         );
     }
 
+    /// Runs the adoption statement itself and reports whether it wrote a row,
+    /// the ground truth `has_covers_to_adopt` has to predict without writing.
+    fn adoption_writes_a_row(db: &Db) -> bool {
+        let before = db.conn.total_changes();
+        db.conn
+            .execute(ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL, [])
+            .expect("adopt");
+        db.conn.total_changes() > before
+    }
+
+    #[test]
+    fn the_adoption_probe_predicts_exactly_when_the_adoption_writes() {
+        let temp = TempDb::open();
+        for (index, artist) in ["Composer A", "Composer B"].iter().enumerate() {
+            insert_credited(&temp.db, &format!("Score/{index}.flac"), artist, "Score", None);
+        }
+        insert_credited(&temp.db, "Solo/0.flac", "Solo Artist", "Solo", None);
+        temp.db.resolve_album_credits();
+
+        assert!(!temp.db.has_covers_to_adopt());
+        assert!(!adoption_writes_a_row(&temp.db));
+
+        temp.db
+            .save_album_cover_if_missing("Solo", "Solo Artist", &[7])
+            .expect("solo cover");
+        assert!(!temp.db.has_covers_to_adopt());
+        assert!(!adoption_writes_a_row(&temp.db));
+
+        temp.db
+            .save_album_cover_if_missing("Score", "Composer A", &[1])
+            .expect("member cover");
+        assert!(temp.db.has_covers_to_adopt());
+        assert!(adoption_writes_a_row(&temp.db));
+        assert_eq!(
+            temp.db.fetch_album_artwork("Score", album_credit::VARIOUS_ARTISTS),
+            Some(vec![1])
+        );
+        assert!(!temp.db.has_covers_to_adopt());
+        assert!(!adoption_writes_a_row(&temp.db));
+
+        temp.db
+            .save_album_cover_if_missing("Score", "Composer B", &[2])
+            .expect("second member cover");
+        assert!(!temp.db.has_covers_to_adopt());
+        assert!(!adoption_writes_a_row(&temp.db));
+        assert_eq!(
+            temp.db.fetch_album_artwork("Score", album_credit::VARIOUS_ARTISTS),
+            Some(vec![1])
+        );
+    }
+
+    #[test]
+    fn an_empty_credited_row_is_filled_by_the_probe_gated_pass() {
+        let temp = TempDb::open();
+        for (index, artist) in ["Composer A", "Composer B"].iter().enumerate() {
+            insert_credited(&temp.db, &format!("Score/{index}.flac"), artist, "Score", None);
+        }
+        temp.db.resolve_album_credits();
+        temp.db
+            .conn
+            .execute(
+                "INSERT INTO albumInfo (title, artist) VALUES ('Score', ?1)",
+                params![album_credit::VARIOUS_ARTISTS],
+            )
+            .expect("empty credited row");
+        assert!(!temp.db.has_covers_to_adopt());
+
+        temp.db
+            .save_album_cover_if_missing("Score", "Composer B", &[5, 5])
+            .expect("member cover");
+        assert!(temp.db.has_covers_to_adopt());
+        assert_eq!(temp.db.resolve_album_credits(), 0);
+        assert_eq!(
+            temp.db.fetch_album_artwork("Score", album_credit::VARIOUS_ARTISTS),
+            Some(vec![5, 5])
+        );
+    }
+
     fn plan_vectors(
         consolidations: &[ConsolidationGroup],
         duplicates: &[DuplicateGroup],
@@ -2967,6 +3196,42 @@ mod cleanup_tests {
             hygiene::find_duplicate_groups(&after.tracks, &root).is_empty(),
             "re-running finds no duplicates"
         );
+    }
+
+    #[test]
+    fn marking_scrobbles_submitted_retires_exactly_the_given_ids_in_one_commit() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        for offset in 0..3 {
+            db.insert_scrobble("Song", "Artist", "Album", 1_700_000_000 + offset, 200, false)
+                .expect("insert");
+        }
+        let pending = db.fetch_pending_scrobbles();
+        assert_eq!(pending.len(), 3);
+
+        db.mark_scrobbles_submitted(&[pending[0].id, pending[2].id])
+            .expect("mark");
+        db.mark_scrobbles_submitted(&[]).expect("nothing to mark");
+
+        let remaining = db.fetch_pending_scrobbles();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, pending[1].id);
+    }
+
+    #[test]
+    fn a_play_and_its_scrobble_commit_together_inside_one_transaction() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        insert_credited(db, "a.flac", "Artist", "Album", None);
+        let outcome = db.in_transaction(|| {
+            db.insert_scrobble("a", "Artist", "Album", 1_700_000_000, 200, false)
+                .expect("scrobble");
+            db.increment_play_count("a.flac").expect("play count");
+            7
+        });
+        assert_eq!(outcome, 7);
+        assert_eq!(db.fetch_pending_scrobbles().len(), 1);
+        assert_eq!(db.fetch_all_tracks()[0].play_count, 1);
     }
 
     #[test]
@@ -3512,6 +3777,26 @@ mod cleanup_tests {
         );
     }
 
+    #[test]
+    fn a_scan_over_an_unchanged_disk_still_sweeps_state_a_deletion_left_dangling() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        insert(db, "keep/01.flac", "Kept", "Stayer", "Stays", 1, 100.0, "flac", Some(16), Some(44100));
+        let kept_key = job::key_album("Stays", "Stayer");
+        let dangling_key = job::key_album("Deleted", "Elsewhere");
+        for key in [&kept_key, &dangling_key] {
+            seed_state(db, key, Status::Satisfied, Fields::COVER.union(Fields::YEAR), 1);
+        }
+        assert!(db.has_orphans_to_sweep());
+
+        let keep: HashSet<String> = db.fetch_relative_paths();
+        assert_eq!(db.delete_tracks_not_in(&keep).expect("sweep"), 0);
+
+        assert!(state_row(db, &kept_key).is_some());
+        assert!(state_row(db, &dangling_key).is_none());
+        assert!(!db.has_orphans_to_sweep());
+    }
+
     /// The bug this kills: one offline pass used to stamp `lastFetched` on every
     /// queued album, writing all of them off for the length of the retry window.
     /// All scheduling now lives in `enrichmentState`.
@@ -3863,6 +4148,40 @@ mod cleanup_tests {
         assert_eq!(reopened.fetch_album_artwork("Old", "Band"), Some(vec![4]));
         drop(reopened);
         remove_all(&path);
+    }
+
+    #[test]
+    fn a_database_recreated_at_the_same_path_is_migrated_again() {
+        static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let unique = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let path = std::env::temp_dir().join(format!(
+            "flaccy-recreate-test-{}-{unique}.sqlite",
+            std::process::id()
+        ));
+        remove_all(&path);
+        drop(Db::open(&path).expect("first open migrates"));
+        remove_all(&path);
+
+        let db = Db::open(&path).expect("the recreated file migrates too");
+        insert_credited(&db, "a.flac", "Artist", "Album", None);
+        assert_eq!(db.fetch_relative_paths().len(), 1);
+        drop(db);
+        remove_all(&path);
+    }
+
+    #[test]
+    fn every_connection_carries_the_tuned_pragmas() {
+        let temp = TempDb::open();
+        let pragma = |name: &str| -> i64 {
+            temp.db
+                .conn
+                .query_row(&format!("PRAGMA {name}"), [], |row| row.get(0))
+                .expect("pragma")
+        };
+        assert_eq!(pragma("synchronous"), 1);
+        assert_eq!(pragma("cache_size"), -32768);
+        assert_eq!(pragma("temp_store"), 2);
+        assert_eq!(pragma("foreign_keys"), 1);
     }
 
     #[test]

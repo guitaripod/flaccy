@@ -125,21 +125,27 @@ fn persist_scrobble(
     local_only: bool,
     count_play: bool,
 ) {
-    if let Err(err) = core.db.insert_scrobble(
-        &track.title,
-        &track.artist,
-        &track.album,
-        started_unix,
-        track.duration.round() as i64,
-        local_only,
-    ) {
-        crate::logger::error("scrobble", &format!("insert scrobble failed: {err}"));
-        return;
-    }
-    if count_play {
-        if let Err(err) = core.db.increment_play_count(&track.rel_path) {
-            crate::logger::error("database", &format!("play count failed: {err}"));
+    let recorded = core.db.in_transaction(|| {
+        if let Err(err) = core.db.insert_scrobble(
+            &track.title,
+            &track.artist,
+            &track.album,
+            started_unix,
+            track.duration.round() as i64,
+            local_only,
+        ) {
+            crate::logger::error("scrobble", &format!("insert scrobble failed: {err}"));
+            return false;
         }
+        if count_play {
+            if let Err(err) = core.db.increment_play_count(&track.rel_path) {
+                crate::logger::error("database", &format!("play count failed: {err}"));
+            }
+        }
+        true
+    });
+    if !recorded {
+        return;
     }
     crate::logger::info(
         "scrobble",
@@ -402,19 +408,41 @@ fn sync_loved_blocking(db_path: &PathBuf, client: &LastFmClient, username: &str)
     changed
 }
 
+/// Retires the pending scrobbles too old to submit, then drains what is left
+/// and reconciles loves with Last.fm. The retirement is a write against the
+/// largest table in the database, so it runs on a worker and the rest follows
+/// on the main loop once it has finished: the drain must never read the rows
+/// the retirement is about to settle.
 pub fn startup_maintenance(core: &Rc<AppCore>) {
-    let cutoff = chrono::Utc::now().timestamp() - 14 * 24 * 3600;
-    let retired = core.db.retire_pending_scrobbles_older_than(cutoff);
-    if retired > 0 {
-        crate::logger::info(
-            "scrobble",
-            &format!("retired {retired} stale pending scrobbles"),
-        );
-    }
-    drain_pending(core);
-    flush_pending_love_ops(core);
-    sync_loved_from_lastfm(core);
+    let cutoff = chrono::Utc::now().timestamp() - STALE_PENDING_SECONDS;
+    let db_path = core.db_path.clone();
+    let (tx, rx) = async_channel::bounded::<usize>(1);
+    std::thread::Builder::new()
+        .name("flaccy-scrobble-retire".into())
+        .spawn(move || {
+            let retired = Db::open(&db_path)
+                .map(|db| db.retire_pending_scrobbles_older_than(cutoff))
+                .unwrap_or(0);
+            let _ = tx.send_blocking(retired);
+        })
+        .ok();
+    let weak = Rc::downgrade(core);
+    gtk::glib::spawn_future_local(async move {
+        let retired = rx.recv().await.unwrap_or(0);
+        let Some(core) = weak.upgrade() else { return };
+        if retired > 0 {
+            crate::logger::info(
+                "scrobble",
+                &format!("retired {retired} stale pending scrobbles"),
+            );
+        }
+        drain_pending(&core);
+        flush_pending_love_ops(&core);
+        sync_loved_from_lastfm(&core);
+    });
 }
+
+const STALE_PENDING_SECONDS: i64 = 14 * 24 * 3600;
 
 #[cfg(test)]
 mod tests {
