@@ -129,35 +129,42 @@ public enum ListenHistory {
         }
     }
 
-    /// One counted spelling of a key.
-    public struct Spelling<Key: Hashable>: Sendable where Key: Sendable {
+    /// One counted spelling of a key: its plays, their seconds and the latest
+    /// of them.
+    public struct Spelling<Key: Hashable & Sendable>: Sendable {
         public let key: Key
         public let name: String
         public let plays: Int
         public let seconds: Int
+        public let latest: Int
 
-        public init(key: Key, name: String, plays: Int, seconds: Int) {
+        public init(key: Key, name: String, plays: Int, seconds: Int, latest: Int) {
             self.key = key
             self.name = name
             self.plays = plays
             self.seconds = seconds
+            self.latest = latest
         }
     }
 
     /// Counts gathered per spelling folded into one entry per key, named by
-    /// the spelling heard most (ties go to the alphabetically first), ordered
-    /// by plays descending then name.
-    public static func foldSpellings<Key: Hashable>(
+    /// the spelling heard most (ties go to the one heard last, then the
+    /// alphabetically first), ordered by plays descending then name.
+    public static func foldSpellings<Key: Hashable & Sendable>(
         _ rows: [Spelling<Key>]
     ) -> [(name: String, plays: Int, seconds: Int)] {
         var groups: [Key: SpellingGroup] = [:]
         for row in rows {
-            var group = groups[row.key] ?? SpellingGroup(name: row.name, namePlays: 0, plays: 0, seconds: 0)
+            var group = groups[row.key]
+                ?? SpellingGroup(name: row.name, namePlays: 0, nameLatest: .min, plays: 0, seconds: 0)
             group.plays += row.plays
             group.seconds += row.seconds
-            if row.plays > group.namePlays || (row.plays == group.namePlays && row.name < group.name) {
+            let candidate = (row.plays, row.latest)
+            let current = (group.namePlays, group.nameLatest)
+            if candidate > current || (candidate == current && row.name < group.name) {
                 group.name = row.name
                 group.namePlays = row.plays
+                group.nameLatest = row.latest
             }
             groups[row.key] = group
         }
@@ -169,6 +176,7 @@ public enum ListenHistory {
     private struct SpellingGroup {
         var name: String
         var namePlays: Int
+        var nameLatest: Int
         var plays: Int
         var seconds: Int
     }

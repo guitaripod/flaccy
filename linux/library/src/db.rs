@@ -32,7 +32,9 @@ const ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL: &str = "
     ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
     WHERE albumInfo.coverArtData IS NULL";
 
+mod listens;
 mod remote;
+pub use listens::{ListenTally, PulledListen};
 pub use remote::{ApplyReport, MissingCover, RemoteSongMeta};
 
 /// The read-only twin of `ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL`: yields a row
@@ -412,6 +414,12 @@ impl Db {
             self.conn.execute(job::SEED_ARTIST_STATE_SQL, [])?;
             self.conn.pragma_update(None, "user_version", 2)?;
         }
+
+        if version < listens::LISTEN_KEYS_STAGE {
+            self.backfill_listen_keys()?;
+            self.conn
+                .pragma_update(None, "user_version", listens::LISTEN_KEYS_STAGE)?;
+        }
         Ok(())
     }
 
@@ -632,6 +640,7 @@ impl Db {
                 .execute(&format!("ALTER TABLE tracks ADD COLUMN {column}"), []);
         }
         self.migrate_remote_columns()?;
+        self.migrate_listen_key_columns()?;
         Ok(())
     }
 
@@ -1285,18 +1294,6 @@ impl Db {
     /// history (which includes imported Last.fm plays), so the Plays column and
     /// every play-based sort reflect a freshly imported history rather than only
     /// local playback.
-    pub fn reconcile_play_counts_from_scrobbles(&self) {
-        let result = self.conn.execute_batch(
-            "UPDATE tracks SET
-                playCount = (SELECT COUNT(*) FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist),
-                lastPlayed = (SELECT MAX(s.timestamp) FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist)
-             WHERE EXISTS (SELECT 1 FROM scrobbles s WHERE s.trackTitle = tracks.title AND s.artist = tracks.artist)",
-        );
-        if let Err(err) = result {
-            crate::logger::error("import", &format!("play-count reconcile failed: {err}"));
-        }
-    }
-
     pub fn set_play_count(&self, rel_path: &str, count: i64) -> Result<(), rusqlite::Error> {
         self.conn.execute(
             "UPDATE tracks SET playCount = ?1 WHERE fileURL = ?2",
@@ -1436,16 +1433,21 @@ impl Db {
         duration: i64,
         submitted: bool,
     ) -> Result<(), rusqlite::Error> {
+        let keys = crate::listen_history::ListenKeys::of(title, artist, album);
         self.conn.execute(
-            "INSERT INTO scrobbles (trackTitle, artist, albumTitle, timestamp, duration, submitted)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO scrobbles
+             (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 title,
                 artist,
                 album,
                 string_from_unix(timestamp_unix),
                 duration,
-                submitted
+                submitted,
+                keys.title,
+                keys.artist,
+                keys.album
             ],
         )?;
         Ok(())
@@ -1465,17 +1467,23 @@ impl Db {
         let mut inserted = 0usize;
         {
             let mut stmt = tx.prepare(
-                "INSERT INTO scrobbles (trackTitle, artist, albumTitle, timestamp, duration, submitted)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                "INSERT INTO scrobbles
+                 (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             )?;
+            let mut cache = listens::KeyCache::default();
             for (title, artist, album, timestamp_unix, duration, submitted) in rows {
+                let keys = cache.keys(title, artist, album);
                 stmt.execute(params![
                     title,
                     artist,
                     album,
                     string_from_unix(*timestamp_unix),
                     duration,
-                    submitted
+                    submitted,
+                    keys.title,
+                    keys.artist,
+                    keys.album
                 ])?;
                 inserted += 1;
             }

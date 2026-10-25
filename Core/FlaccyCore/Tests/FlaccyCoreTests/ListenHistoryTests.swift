@@ -78,17 +78,22 @@ final class ListenHistoryTests: XCTestCase {
         XCTAssertTrue(ledger.admit(timestamp: 901, keys: keys("Song", "Artist")))
     }
 
-    func testSpellingsFoldUnderTheOneHeardMost() {
+    func testSpellingsFoldUnderTheOneHeardMostThenLast() {
+        func spelling(_ key: String, _ name: String, _ plays: Int, _ latest: Int) -> ListenHistory.Spelling<String> {
+            .init(key: key, name: name, plays: plays, seconds: plays * 10, latest: latest)
+        }
         let folded = ListenHistory.foldSpellings([
-            .init(key: "sigurros", name: "Sigur Ros", plays: 3, seconds: 30),
-            .init(key: "sigurros", name: "Sigur Rós", plays: 5, seconds: 50),
-            .init(key: "bjork", name: "Björk", plays: 8, seconds: 80),
-            .init(key: "abba", name: "ABBA", plays: 2, seconds: 20),
-            .init(key: "abba", name: "Abba", plays: 2, seconds: 20),
+            spelling("sigurros", "Sigur Ros", 3, 900),
+            spelling("sigurros", "Sigur Rós", 5, 100),
+            spelling("bjork", "Björk", 8, 100),
+            spelling("abba", "ABBA", 2, 100),
+            spelling("abba", "Abba", 2, 300),
+            spelling("tool", "Tool", 1, 50),
+            spelling("tool", "TOOL", 1, 50),
         ])
-        XCTAssertEqual(folded.map(\.name), ["Björk", "Sigur Rós", "ABBA"])
-        XCTAssertEqual(folded.map(\.plays), [8, 8, 4])
-        XCTAssertEqual(folded.map(\.seconds), [80, 80, 40])
+        XCTAssertEqual(folded.map(\.name), ["Björk", "Sigur Rós", "Abba", "TOOL"])
+        XCTAssertEqual(folded.map(\.plays), [8, 8, 4, 2])
+        XCTAssertEqual(folded.map(\.seconds), [80, 80, 40, 20])
     }
 
     func testANewAccountBackfillsFromNowAndKeepsItsAnchor() {

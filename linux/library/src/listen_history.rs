@@ -146,31 +146,49 @@ impl ListenLedger {
     }
 }
 
-/// Folds counts gathered per spelling into one entry per key, named by the
-/// spelling heard most (ties go to the alphabetically first), ordered by
-/// plays descending then name.
-pub fn fold_spellings<K: std::hash::Hash + Eq + Clone>(
-    rows: impl IntoIterator<Item = (K, String, i64, i64)>,
+/// One counted spelling of a key: its plays, their seconds and the latest of
+/// them.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Spelling<K> {
+    pub key: K,
+    pub name: String,
+    pub plays: i64,
+    pub seconds: i64,
+    pub latest_unix: i64,
+}
+
+/// Folds counts gathered per spelling into one entry per key as `(name,
+/// plays, seconds)`, named by the spelling heard most (ties go to the one
+/// heard last, then the alphabetically first), ordered by plays descending
+/// then name.
+pub fn fold_spellings<K: std::hash::Hash + Eq>(
+    rows: impl IntoIterator<Item = Spelling<K>>,
 ) -> Vec<(String, i64, i64)> {
     struct Group {
         name: String,
         name_plays: i64,
+        name_latest: i64,
         plays: i64,
         seconds: i64,
     }
     let mut groups: HashMap<K, Group> = HashMap::new();
-    for (key, name, plays, seconds) in rows {
-        let group = groups.entry(key).or_insert_with(|| Group {
-            name: name.clone(),
+    for row in rows {
+        let group = groups.entry(row.key).or_insert_with(|| Group {
+            name: row.name.clone(),
             name_plays: 0,
+            name_latest: i64::MIN,
             plays: 0,
             seconds: 0,
         });
-        group.plays += plays;
-        group.seconds += seconds;
-        if plays > group.name_plays || (plays == group.name_plays && name < group.name) {
-            group.name = name;
-            group.name_plays = plays;
+        group.plays += row.plays;
+        group.seconds += row.seconds;
+        let wins = (row.plays, row.latest_unix) > (group.name_plays, group.name_latest)
+            || ((row.plays, row.latest_unix) == (group.name_plays, group.name_latest)
+                && row.name < group.name);
+        if wins {
+            group.name = row.name;
+            group.name_plays = row.plays;
+            group.name_latest = row.latest_unix;
         }
     }
     let mut folded: Vec<(String, i64, i64)> = groups
@@ -401,20 +419,30 @@ mod tests {
     }
 
     #[test]
-    fn spellings_fold_under_the_one_heard_most() {
+    fn spellings_fold_under_the_one_heard_most_then_last() {
+        let spelling = |key: &'static str, name: &str, plays: i64, latest_unix: i64| Spelling {
+            key,
+            name: name.to_string(),
+            plays,
+            seconds: plays * 10,
+            latest_unix,
+        };
         let folded = fold_spellings([
-            ("sigurros", "Sigur Ros".to_string(), 3, 30),
-            ("sigurros", "Sigur Rós".to_string(), 5, 50),
-            ("bjork", "Björk".to_string(), 8, 80),
-            ("abba", "ABBA".to_string(), 2, 20),
-            ("abba", "Abba".to_string(), 2, 20),
+            spelling("sigurros", "Sigur Ros", 3, 900),
+            spelling("sigurros", "Sigur Rós", 5, 100),
+            spelling("bjork", "Björk", 8, 100),
+            spelling("abba", "ABBA", 2, 100),
+            spelling("abba", "Abba", 2, 300),
+            spelling("tool", "Tool", 1, 50),
+            spelling("tool", "TOOL", 1, 50),
         ]);
         assert_eq!(
             folded,
             vec![
                 ("Björk".to_string(), 8, 80),
                 ("Sigur Rós".to_string(), 8, 80),
-                ("ABBA".to_string(), 4, 40),
+                ("Abba".to_string(), 4, 40),
+                ("TOOL".to_string(), 2, 20),
             ]
         );
     }
