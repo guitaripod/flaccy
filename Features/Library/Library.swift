@@ -13,6 +13,7 @@ nonisolated struct LibraryImportOutcome: Sendable, Equatable {
     let skipped: Int
     let failed: Int
     var shortfall: StorageShortfall? = nil
+    var replaced: Int = 0
 
     static let empty = LibraryImportOutcome(imported: 0, skipped: 0, failed: 0)
 }
@@ -22,6 +23,16 @@ nonisolated struct LibraryImportOutcome: Sendable, Equatable {
 nonisolated struct StorageShortfall: Sendable, Equatable {
     let needed: Int64
     let available: Int64
+}
+
+/// What one pass over the library folder found: whether the index changed, and
+/// the paths that are both on disk and already indexed, which the revision pass
+/// checks for a newer version of a song.
+nonisolated struct LibrarySyncResult: Sendable {
+    let changed: Bool
+    let indexedOnDisk: Set<String>
+
+    static let unchanged = LibrarySyncResult(changed: false, indexedOnDisk: [])
 }
 
 /// Where a running import is, counted in songs: the walk over the picked
@@ -57,9 +68,25 @@ protocol LibraryProviding: AnyObject {
     @discardableResult
     func importFiles(
         from urls: [URL],
-        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void,
+        decideReplacements: @escaping ImportReplacementDecider
     ) async -> LibraryImportOutcome
     func deleteTracks(_ tracks: [Track]) async
+    func settleRevisions() async
+    func version(of track: Track) -> TrackVersion?
+}
+
+extension LibraryProviding {
+
+    /// An import with nobody to ask: a newer version of a song already in the
+    /// library is kept beside it rather than replacing it.
+    @discardableResult
+    func importFiles(
+        from urls: [URL],
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
+    ) async -> LibraryImportOutcome {
+        await importFiles(from: urls, progress: progress, decideReplacements: { _ in .keepBoth })
+    }
 }
 
 final class Library: LibraryProviding {
@@ -75,6 +102,7 @@ final class Library: LibraryProviding {
     nonisolated static let loadingStateChanged = Notification.Name("LibraryLoadingStateChanged")
     nonisolated static let progressDidChange = Notification.Name("LibraryLoadProgressChanged")
     nonisolated static let albumCoversHoisted = Notification.Name("LibraryAlbumCoversHoisted")
+    nonisolated static let tracksRevised = Notification.Name("LibraryTracksRevised")
 
     nonisolated enum ProgressKey {
         static let progress = "progress"
@@ -85,8 +113,13 @@ final class Library: LibraryProviding {
         static let covers = "covers"
     }
 
+    nonisolated enum RevisionKey {
+        static let paths = "paths"
+    }
+
     private(set) var albums: [Album] = []
     private(set) var allTracks: [Track] = []
+    private var revisedVersions: [URL: TrackVersion] = [:]
     private(set) var isLoading: Bool = false {
         didSet { NotificationCenter.default.post(name: Library.loadingStateChanged, object: nil) }
     }
@@ -126,14 +159,16 @@ final class Library: LibraryProviding {
         )
     }
 
-    private let db = DatabaseManager.shared
+    let db = DatabaseManager.shared
 
-    nonisolated private var documentsDirectory: URL {
+    nonisolated var documentsDirectory: URL {
         LibraryPaths.root
     }
 
     private var isReloading = false
     private var reloadPending = false
+    var revisionTask: Task<Void, Never>?
+    var pendingRevisionPaths: Set<String>?
 
     func reload() async {
         if isReloading {
@@ -160,7 +195,8 @@ final class Library: LibraryProviding {
         }
 
         emitProgress(force: true) { $0.phase = .findingFiles }
-        let syncChanged = await syncFilesWithDatabase()
+        let sync = await syncFilesWithDatabase()
+        let syncChanged = sync.changed
 
         if firstLoad || syncChanged {
             emitProgress(force: true) { $0.phase = .buildingAlbums; $0.completed = 0; $0.total = 0 }
@@ -173,6 +209,10 @@ final class Library: LibraryProviding {
         isLoading = false
 
         Task { await EnrichmentCoordinator.shared.resume() }
+        if firstLoad {
+            Task.detached(priority: .utility) { PreviousVersions.purgeExpired(now: Date()) }
+        }
+        scheduleRevisionPass(for: sync.indexedOnDisk)
     }
 
     /// Shows whatever was indexed on a previous run before any disk work
@@ -222,7 +262,7 @@ final class Library: LibraryProviding {
         discardEnrichmentState()
 
         emitProgress(force: true) { $0.phase = .findingFiles }
-        await syncFilesWithDatabase()
+        let sync = await syncFilesWithDatabase()
         emitProgress(force: true) { $0.phase = .buildingAlbums; $0.completed = 0; $0.total = 0 }
         await loadFromDatabase()
         publishLibraryTallies()
@@ -232,6 +272,7 @@ final class Library: LibraryProviding {
         forgetIndexedLibrary()
 
         Task { await EnrichmentCoordinator.shared.resume() }
+        scheduleRevisionPass(for: sync.indexedOnDisk)
     }
 
     /// Puts every durable enrichment verdict back to "never attempted": the AI
@@ -258,109 +299,15 @@ final class Library: LibraryProviding {
     @discardableResult
     func importFiles(
         from urls: [URL],
-        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void,
+        decideReplacements: @escaping ImportReplacementDecider
     ) async -> LibraryImportOutcome {
-        let outcome = await Self.copyPickedFiles(urls, into: documentsDirectory, progress: progress)
+        let outcome = await LibraryImporter.run(
+            urls, into: documentsDirectory, progress: progress, decideReplacements: decideReplacements
+        )
         FunnelSignals.shared.noteImport(outcome)
         await reload()
         return outcome
-    }
-
-    /// Copying runs off the main actor because a document picked from a network
-    /// location (Files app over SMB/SSH) streams the whole file inside
-    /// `FileManager.copyItem` — main-thread work here freezes the UI for the
-    /// length of every transfer. `ImportPlan` decides every destination up front,
-    /// so a folder keeps its tree, a file already there is skipped, and an
-    /// import cut short resumes by simply being run again.
-    private nonisolated static func copyPickedFiles(
-        _ urls: [URL],
-        into directory: URL,
-        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
-    ) async -> LibraryImportOutcome {
-        await Task.detached(priority: .userInitiated) {
-            let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
-            defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
-            let reporter = ImportProgressReporter(deliver: progress)
-            reporter.report(.scanning, force: true)
-
-            let plan = ImportPlan.plan(picked: urls, libraryRoot: directory, audioExtensions: audioExtensions)
-            let placed = ImportPlan.placements(for: plan, in: directory)
-            let copies = placed.compactMap { entry -> (item: ImportPlan.Item, destination: String)? in
-                guard case .copy(let destination) = entry.placement else { return nil }
-                return (entry.item, destination)
-            }
-            let skipped = plan.alreadyInLibrary
-                + placed.filter { $0.item.kind == .audio && $0.placement == .alreadyPresent }.count
-            if let shortfall = shortfall(for: copies.map(\.item), at: directory) {
-                MidgarLog.notice(
-                    "Import refused: needs \(shortfall.needed) bytes, \(shortfall.available) available",
-                    category: .content
-                )
-                return LibraryImportOutcome(imported: 0, skipped: skipped, failed: 0, shortfall: shortfall)
-            }
-
-            let total = copies.filter { $0.item.kind == .audio }.count
-            var imported = 0
-            var failed = 0
-            for copy in copies {
-                let target = directory.appendingPathComponent(copy.destination)
-                do {
-                    try copyWithoutClobbering(copy.item.source, to: target)
-                    guard copy.item.kind == .audio else { continue }
-                    imported += 1
-                    MidgarLog.info("Imported: \(copy.destination)", category: .content)
-                } catch {
-                    MidgarLog.error("Import failed for \(copy.destination): \(error.localizedDescription)", category: .content)
-                    guard copy.item.kind == .audio else { continue }
-                    failed += 1
-                }
-                reporter.report(.copying(done: imported + failed, total: total), force: imported + failed == total)
-            }
-            MidgarLog.info("Import finished: \(imported) imported, \(skipped) skipped, \(failed) failed", category: .content)
-            return LibraryImportOutcome(imported: imported, skipped: skipped, failed: failed)
-        }.value
-    }
-
-    /// Copies through a hidden `.part` beside the destination and only then
-    /// takes the real name, which `moveItem` refuses to overwrite: an import
-    /// interrupted mid-song leaves no truncated file under the song's name for
-    /// the next run to mistake for a different recording. The read is
-    /// coordinated so a file provider (iCloud Drive, a network share) can
-    /// fetch the bytes first.
-    private nonisolated static func copyWithoutClobbering(_ source: URL, to target: URL) throws {
-        let fileManager = FileManager.default
-        let parent = target.deletingLastPathComponent()
-        try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
-        let staging = parent.appendingPathComponent(".\(target.lastPathComponent).flaccy-part")
-        try? fileManager.removeItem(at: staging)
-        var coordinationError: NSError?
-        var copyError: Error?
-        NSFileCoordinator().coordinate(readingItemAt: source, options: [], error: &coordinationError) { readable in
-            do {
-                try fileManager.copyItem(at: readable, to: staging)
-                try fileManager.moveItem(at: staging, to: target)
-            } catch {
-                copyError = error
-            }
-        }
-        if let error = coordinationError ?? copyError {
-            try? fileManager.removeItem(at: staging)
-            throw error
-        }
-    }
-
-    /// Nil when the copies fit or the volume will not say; a cloud placeholder
-    /// of unknown size counts as nothing, and its copy fails on its own if the
-    /// space runs out after all.
-    private nonisolated static func shortfall(for items: [ImportPlan.Item], at directory: URL) -> StorageShortfall? {
-        let needed = items.reduce(Int64(0)) { $0 + ($1.size ?? 0) }
-        guard needed > 0,
-              let available = try? directory.resourceValues(
-                forKeys: [.volumeAvailableCapacityForImportantUsageKey]
-              ).volumeAvailableCapacityForImportantUsage,
-              needed > available
-        else { return nil }
-        return StorageShortfall(needed: needed, available: available)
     }
 
     /// Deleting the files is the single source of truth — the reload's file
@@ -368,6 +315,10 @@ final class Library: LibraryProviding {
     func deleteTracks(_ tracks: [Track]) async {
         guard !tracks.isEmpty else { return }
         for track in tracks {
+            guard track.fileURL.isFileURL else {
+                MidgarLog.notice("Not deleting a song that lives on a server: \(track.title)", category: .content)
+                continue
+            }
             do {
                 try FileManager.default.removeItem(at: track.fileURL)
                 MidgarLog.info("Deleted: \(track.fileURL.lastPathComponent)", category: .content)
@@ -375,26 +326,26 @@ final class Library: LibraryProviding {
                 MidgarLog.error("Delete failed for \(track.fileURL.lastPathComponent): \(error.localizedDescription)", category: .content)
             }
         }
-        AudioPlayer.shared.handleDeletedTracks(Set(tracks.map(\.fileURL)))
+        AudioPlayer.shared.handleDeletedTracks(Set(tracks.map(\.fileURL).filter(\.isFileURL)))
         await reload()
     }
 
     @discardableResult
     @concurrent
-    nonisolated private func syncFilesWithDatabase() async -> Bool {
+    nonisolated private func syncFilesWithDatabase() async -> LibrarySyncResult {
         #if os(macOS)
         guard !LibraryRoot.shared.isFallbackActive else {
             MidgarLog.notice(
                 "Sync skipped: bookmarked library folder is unavailable; database left untouched",
                 category: .content
             )
-            return false
+            return .unchanged
         }
         #endif
         let fm = FileManager.default
         guard let enumerator = fm.enumerator(
             at: documentsDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-        ) else { return false }
+        ) else { return .unchanged }
 
         var diskPaths = Set<String>()
 
@@ -413,11 +364,12 @@ final class Library: LibraryProviding {
             knownPaths = try db.fetchAllTrackRelativePaths()
         } catch {
             MidgarLog.error("DB fetch paths error: \(error.localizedDescription)", category: .database)
-            return false
+            return .unchanged
         }
 
         let newPaths = diskPaths.subtracting(knownPaths)
         let removedPaths = knownPaths.subtracting(diskPaths)
+        let indexedOnDisk = diskPaths.intersection(knownPaths)
 
         #if os(macOS)
         let rootChanged = recordCurrentRootIdentity()
@@ -431,7 +383,7 @@ final class Library: LibraryProviding {
                 $0.total = knownPaths.count
                 $0.tracksIndexed = knownPaths.count
             }
-            return false
+            return LibrarySyncResult(changed: false, indexedOnDisk: indexedOnDisk)
         }
 
         if !removedPaths.isEmpty {
@@ -441,7 +393,7 @@ final class Library: LibraryProviding {
                     "Sync: library root scanned empty while database holds \(knownPaths.count) tracks; skipping destructive cleanup",
                     category: .content
                 )
-                return false
+                return .unchanged
             }
             if rootChanged {
                 MidgarLog.notice(
@@ -475,6 +427,8 @@ final class Library: LibraryProviding {
                 let fileURL = documentsDirectory.appendingPathComponent(relPath)
                 group.addTask {
                     let metadata = await MetadataService.extractMetadata(from: fileURL)
+                    let signature = AudioFingerprinter.signature(of: fileURL)
+                    let fingerprint = AudioFingerprinter.fingerprint(of: fileURL)
                     return TrackRecord(
                         fileURL: relPath,
                         title: metadata.title,
@@ -495,7 +449,10 @@ final class Library: LibraryProviding {
                         codec: metadata.codec,
                         bitDepth: metadata.bitDepth,
                         sampleRate: metadata.sampleRate,
-                        channels: metadata.channels
+                        channels: metadata.channels,
+                        fileSize: signature?.size,
+                        fileModifiedMs: signature?.modifiedMilliseconds,
+                        audioFingerprint: fingerprint
                     )
                 }
                 return true
@@ -523,7 +480,7 @@ final class Library: LibraryProviding {
         }
 
         MidgarLog.info("Sync: \(diskPaths.count) files on disk, \(newPaths.count) new, \(removedPaths.count) removed", category: .content)
-        return true
+        return LibrarySyncResult(changed: true, indexedOnDisk: indexedOnDisk)
     }
 
     private nonisolated static let insertBatchSize = 50
@@ -581,10 +538,21 @@ final class Library: LibraryProviding {
             let loadedAlbums = try await fetchAlbumsFromDatabase()
             albums = loadedAlbums
             allTracks = loadedAlbums.flatMap(\.tracks)
+            revisedVersions = Dictionary(
+                allTracks.compactMap { track in TrackVersion(track: track).map { (track.fileURL, $0) } },
+                uniquingKeysWith: { first, _ in first }
+            )
             recordIndexedLibrary()
         } catch {
             MidgarLog.error("Load from DB failed: \(error.localizedDescription)", category: .database)
         }
+    }
+
+    /// What the library knows of a song's versions right now, or nil for a song
+    /// that was never re-exported. Rows and queues hold songs read earlier, so
+    /// they ask here rather than trusting the revision they were built with.
+    func version(of track: Track) -> TrackVersion? {
+        revisedVersions[track.fileURL]
     }
 
     /// Records that this library has been built at least once, the moment the
@@ -692,27 +660,14 @@ final class Library: LibraryProviding {
     }
 
     nonisolated private func relativePath(for url: URL) -> String {
-        let docsPath = documentsDirectory.standardizedFileURL.path
-        let filePath = url.standardizedFileURL.path
-        var relative = url.lastPathComponent
-        if filePath.hasPrefix(docsPath) {
-            relative = String(filePath.dropFirst(docsPath.count))
-            if relative.hasPrefix("/") {
-                relative = String(relative.dropFirst())
-            }
-        }
-        #if os(macOS)
-        return canonicalSyncPath(relative)
-        #else
-        return relative
-        #endif
+        LibraryPaths.relativePath(of: url)
     }
 }
 
 /// Hands import progress to the main actor at most every 150 ms, plus the
 /// moments that must never be dropped, so a folder of small files copied from
 /// a fast disk cannot flood the main queue with label updates.
-private nonisolated final class ImportProgressReporter: @unchecked Sendable {
+nonisolated final class ImportProgressReporter: @unchecked Sendable {
     private let deliver: @MainActor @Sendable (LibraryImportProgress) -> Void
     private var lastDelivery: ContinuousClock.Instant?
 

@@ -177,7 +177,8 @@ final class LyricsService {
         }
         let offsetMs = cached?.offsetMs ?? 0
 
-        if let fileURL, let local = await Self.readLocalLyrics(at: fileURL) {
+        if let fileURL, let readable = RemoteStreamCache.shared.readableFile(for: fileURL),
+           let local = await Self.readLocalLyrics(at: readable) {
             save(
                 track: track, artist: artist, replacing: cached,
                 fetched: Fetched(synced: local.synced, plain: local.plain, lyricsfile: nil, instrumental: false)

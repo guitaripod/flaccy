@@ -1,6 +1,6 @@
 import AppKit
 
-/// Source-list sidebar: Library and Discover groups over the full-height
+/// Source-list sidebar: Home above the Library and Discover groups, over the full-height
 /// window material, selection routed to the content router.
 final class SidebarViewController: NSViewController {
 
@@ -46,7 +46,7 @@ final class SidebarViewController: NSViewController {
         super.viewDidLoad()
         outlineView.reloadData()
         outlineView.expandItem(nil, expandChildren: true)
-        select(.albums)
+        select(LaunchSectionSetting.section())
     }
 
     func select(_ section: SidebarSection) {
@@ -63,7 +63,7 @@ final class SidebarViewController: NSViewController {
 extension SidebarViewController: NSOutlineViewDataSource {
 
     func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
-        if item == nil { return groups.count }
+        if item == nil { return groups.count + 1 }
         if let group = item as? String {
             return groups.first { $0.title == group }?.sections.count ?? 0
         }
@@ -71,7 +71,7 @@ extension SidebarViewController: NSOutlineViewDataSource {
     }
 
     func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-        if item == nil { return groups[index].title }
+        if item == nil { return index == 0 ? SidebarSection.home : groups[index - 1].title }
         let group = item as? String ?? ""
         return groups.first { $0.title == group }?.sections[index] ?? SidebarSection.albums
     }
@@ -109,6 +109,7 @@ extension SidebarViewController: NSOutlineViewDelegate {
 
     func outlineViewSelectionDidChange(_ notification: Notification) {
         guard let section = outlineView.item(atRow: outlineView.selectedRow) as? SidebarSection else { return }
+        LaunchSectionSetting.remember(section)
         onSelect?(section)
     }
 

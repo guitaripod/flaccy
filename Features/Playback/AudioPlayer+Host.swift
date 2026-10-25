@@ -21,6 +21,17 @@ extension AudioPlayer: PlaybackEngineHost {
         EqualizerEngine.shared.attach(to: item)
     }
 
+    /// A song on a server plays from its cached file once that is whole, and streams through the
+    /// resource loader until then; either way the equalizer attaches to the item like any other.
+    func remoteAsset(for track: Track) -> AVURLAsset {
+        guard let song = track.remoteSong else { return AVURLAsset(url: track.fileURL) }
+        let route = RemoteAssetRoute.route(for: song, completeFile: RemoteStreamCache.shared.completeFileURL(for: song))
+        switch route {
+        case .file(let url): return AVURLAsset(url: url)
+        case .stream: return RemoteResourceLoader.shared.makeAsset(for: song)
+        }
+    }
+
     func activateAudioSession() {
         #if os(iOS)
         try? AVAudioSession.sharedInstance().setActive(true)
@@ -40,6 +51,7 @@ extension AudioPlayer: PlaybackEngineHost {
         hasScrobbled = false
         ensureArtworkLoaded(for: track)
         sendNowPlayingToLastFM(track: track)
+        reportRemoteStart(of: track)
         PurchaseManager.shared.noteTrackStarted(track)
     }
 

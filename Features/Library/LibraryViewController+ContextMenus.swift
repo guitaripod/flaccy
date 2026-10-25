@@ -46,7 +46,12 @@ extension LibraryViewController {
                 self?.confirmAutomaticCover(for: playlist)
             })
         }
-        return UIMenu(children: actions)
+        let paths = ((try? DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlist.id)) ?? []).map(\.trackFileURL)
+        var sections: [UIMenuElement] = actions
+        if let download = RemoteDownloadActions.action(forPaths: paths, in: self) {
+            sections.insert(UIMenu(options: .displayInline, children: [download]), at: 0)
+        }
+        return UIMenu(children: sections)
     }
 
     func presentSettings() {
@@ -83,6 +88,7 @@ extension LibraryViewController {
     }
 
     func relativePath(for track: Track) -> String {
+        if let song = track.remoteSong { return song.path }
         let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
         let trackPath = track.fileURL.standardizedFileURL.path
         guard trackPath.hasPrefix(docsDir.path) else { return track.fileURL.lastPathComponent }

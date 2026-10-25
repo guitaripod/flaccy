@@ -1,7 +1,7 @@
-use crate::filters::LibraryFilter;
+use crate::filters::{LibraryFilter, LOCAL_SOURCE};
 use crate::recap::{Period, ALL_PERIODS};
 use adw::prelude::*;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 /// The row of quick-pivot chips over the Songs and Albums pages: one is always
@@ -197,5 +197,92 @@ fn wire_range_choices(bar: &Rc<ChipBar>, menu: &gtk::MenuButton, on_range: Rc<dy
             bar.set_selected(LibraryFilter::MostPlayed);
             on_range(period);
         });
+    }
+}
+
+/// Chips naming where songs come from: this computer and each server. At most
+/// one is on; turning the lit one off shows every source again. The bar hides
+/// itself while no server is saved, since there is then only one source.
+pub struct SourceBar {
+    pub widget: gtk::Box,
+    chips: RefCell<Vec<(String, gtk::ToggleButton)>>,
+    selected: RefCell<String>,
+    listed: RefCell<Option<Vec<(String, String)>>>,
+    silent: Cell<bool>,
+    on_change: Rc<dyn Fn(String)>,
+}
+
+impl SourceBar {
+    pub fn new(on_change: impl Fn(String) + 'static) -> Rc<SourceBar> {
+        let widget = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(8)
+            .visible(false)
+            .build();
+        Rc::new(SourceBar {
+            widget,
+            chips: RefCell::new(Vec::new()),
+            selected: RefCell::new(String::new()),
+            listed: RefCell::new(None),
+            silent: Cell::new(false),
+            on_change: Rc::new(on_change),
+        })
+    }
+
+    /// Rebuilds the chips for `servers` (id and name) with `selected` lit; an
+    /// id that is no longer a source lights nothing. Returns the source now lit.
+    pub fn refresh(self: &Rc<Self>, servers: &[(String, String)], selected: &str) -> String {
+        let unchanged = self.listed.borrow().as_deref() == Some(servers)
+            && *self.selected.borrow() == selected;
+        if unchanged {
+            return selected.to_string();
+        }
+        *self.listed.borrow_mut() = Some(servers.to_vec());
+        while let Some(child) = self.widget.first_child() {
+            self.widget.remove(&child);
+        }
+        self.chips.borrow_mut().clear();
+        self.widget.set_visible(!servers.is_empty());
+        if servers.is_empty() {
+            self.selected.borrow_mut().clear();
+            return String::new();
+        }
+        let mut sources: Vec<(String, String)> = vec![(LOCAL_SOURCE.to_string(), "On this computer".to_string())];
+        sources.extend(servers.iter().cloned());
+        let lit = sources
+            .iter()
+            .find(|(id, _)| id == selected)
+            .map(|(id, _)| id.clone())
+            .unwrap_or_default();
+        *self.selected.borrow_mut() = lit.clone();
+        for (id, name) in sources {
+            let chip = gtk::ToggleButton::builder().label(&name).build();
+            chip.add_css_class("pill");
+            chip.add_css_class("chip");
+            chip.set_active(id == lit);
+            let bar = Rc::clone(self);
+            let chip_id = id.clone();
+            chip.connect_toggled(move |chip| bar.toggled(&chip_id, chip.is_active()));
+            self.widget.append(&chip);
+            self.chips.borrow_mut().push((id, chip));
+        }
+        lit
+    }
+
+    fn toggled(&self, id: &str, active: bool) {
+        if self.silent.get() {
+            return;
+        }
+        let next = if active { id.to_string() } else { String::new() };
+        if !active && *self.selected.borrow() != id {
+            return;
+        }
+        self.silent.set(true);
+        for (chip_id, chip) in self.chips.borrow().iter() {
+            chip.set_active(*chip_id == next);
+        }
+        self.silent.set(false);
+        *self.selected.borrow_mut() = next.clone();
+        (self.on_change)(next);
     }
 }

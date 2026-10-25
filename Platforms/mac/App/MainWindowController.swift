@@ -12,6 +12,7 @@ final class MainWindowController: NSWindowController {
 
     private var spaceKeyMonitor: Any?
     private var searchItem: NSSearchToolbarItem?
+    private var customizeItem: NSToolbarItem?
 
     convenience init() {
         let window = NSWindow(
@@ -38,6 +39,7 @@ final class MainWindowController: NSWindowController {
         window.toolbar = toolbar
 
         contentViewController = RootContainerViewController()
+        sectionDidChange()
         if let size = Self.debugWindowSize() {
             window.setContentSize(size)
             window.center()
@@ -52,6 +54,17 @@ final class MainWindowController: NSWindowController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(interfaceScaleChanged), name: .flaccyInterfaceScaleChanged, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(sectionDidChange), name: .flaccySectionDidChange, object: nil
+        )
+    }
+
+    @objc private func sectionDidChange() {
+        customizeItem?.isHidden = ActiveSection.current != .home
+    }
+
+    @objc private func customizeHome() {
+        NotificationCenter.default.post(name: .flaccyCustomizeHome, object: nil)
     }
 
     private static let baseMinimumSize = NSSize(width: 960, height: 600)
@@ -131,9 +144,10 @@ final class MainWindowController: NSWindowController {
 extension MainWindowController: NSToolbarDelegate {
 
     private static let searchIdentifier = NSToolbarItem.Identifier("LibrarySearch")
+    private static let customizeIdentifier = NSToolbarItem.Identifier("CustomizeHome")
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, Self.searchIdentifier]
+        [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, Self.customizeIdentifier, Self.searchIdentifier]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -145,6 +159,17 @@ extension MainWindowController: NSToolbarDelegate {
         itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
+        if itemIdentifier == Self.customizeIdentifier {
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: HomeCopy.customizeHomeMenu)
+            item.label = HomeCopy.customizeHomeMenu
+            item.toolTip = HomeCopy.customizeHomeMenu
+            item.target = self
+            item.action = #selector(customizeHome)
+            item.isHidden = ActiveSection.current != .home
+            customizeItem = item
+            return item
+        }
         guard itemIdentifier == Self.searchIdentifier else { return nil }
         let item = NSSearchToolbarItem(itemIdentifier: itemIdentifier)
         item.searchField.placeholderString = String(localized: "Search library")
@@ -179,6 +204,7 @@ final class RootContainerViewController: NSViewController {
     var overlayHost: NSView { zoomHost.content }
     private let statusStrip = MacStatusStripView()
     private var surfaceCancellable: AnyCancellable?
+    private var syncCancellable: AnyCancellable?
 
     private static let transportHeight: CGFloat = 84
     private static let transportMargin: CGFloat = 12
@@ -250,12 +276,21 @@ final class RootContainerViewController: NSViewController {
                 self?.render(state)
             }
         render(MacLibrarySurfaceModel.shared.state.value)
+        syncCancellable = NotificationCenter.default.publisher(for: RemoteSyncStatus.didChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.render(MacLibrarySurfaceModel.shared.state.value) }
     }
 
     /// The strip carries the ambient surface and nothing else. A Debut has its
     /// own stage in the onboarding panel, and `.none` genuinely means silence —
     /// a relaunch that finds no work due shows no chrome at all.
     private func render(_ state: MacLibrarySurfaceModel.State) {
+        if state.surface != .debut, let sync = RemoteSyncStatus.shared.current {
+            statusStrip.update(.server(sync))
+            statusStrip.setVisible(true)
+            raiseStatusStrip()
+            return
+        }
         guard state.surface == .ambient else {
             statusStrip.setVisible(false)
             return
@@ -338,7 +373,11 @@ final class AudioDropView: NSView {
         MidgarLog.info("Importing \(urls.count) dropped item(s)", category: .content)
         let toast = MacToast.showImport(in: window)
         Task { [weak self] in
-            let outcome = await Library.shared.importFiles(from: urls) { toast.update($0) }
+            let outcome = await Library.shared.importFiles(
+                from: urls,
+                progress: { toast.update($0) },
+                decideReplacements: { [weak self] prompt in await ImportReplacementAlert.ask(prompt, in: self?.window) }
+            )
             self?.isImporting = false
             toast.finish(reporting: outcome)
         }

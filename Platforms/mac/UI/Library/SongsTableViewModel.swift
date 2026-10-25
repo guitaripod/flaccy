@@ -15,7 +15,7 @@ final class SongsTableViewModel {
         var plays: Int
         var lastPlayed: Date?
 
-        nonisolated var id: String { track.fileURL.path }
+        nonisolated var id: String { track.fileURL.absoluteString }
     }
 
     /// The quick pivots above the table. `mostPlayed` is the only one that
@@ -125,6 +125,7 @@ final class SongsTableViewModel {
     #endif
 
     private(set) var filter: Filter
+    private(set) var source: LibrarySource? = LibrarySource.persisted(key: LibrarySource.macStorageKey)
     private(set) var mostPlayedRange: ChartPeriod
     private(set) var displayedPlaysRange: ChartPeriod?
 
@@ -192,6 +193,21 @@ final class SongsTableViewModel {
         }
         MidgarLog.info("Songs filter: \(newFilter.rawValue)", category: .ui)
         publish()
+    }
+
+    /// Narrows the songs to one source, or to all of them for nil.
+    func selectSource(_ newSource: LibrarySource?) {
+        guard source != newSource else { return }
+        source = newSource
+        LibrarySource.persist(newSource, key: LibrarySource.macStorageKey)
+        MidgarLog.info("Songs source: \(newSource?.id ?? "all")", category: .ui)
+        publish()
+    }
+
+    /// The source chips for the servers the person added, none while there are no servers.
+    func sourceChoices() -> [LibrarySourceChoice] {
+        let servers = ((try? DatabaseManager.shared.fetchRemoteServers()) ?? []).map { (id: $0.id, name: $0.name) }
+        return LibrarySourceChoice.choices(servers: servers)
     }
 
     func selectMostPlayed(range: ChartPeriod) {
@@ -265,7 +281,7 @@ final class SongsTableViewModel {
 
     @objc private func trackChanged() {
         guard let track = AudioPlayer.shared.currentTrack else { return }
-        let path = track.fileURL.path
+        let path = track.fileURL.absoluteString
         let relativePath = relativePath(for: track.fileURL)
         trackUpdateTask?.cancel()
         trackUpdateTask = Task.detached(priority: .utility) {
@@ -302,6 +318,7 @@ final class SongsTableViewModel {
     }
 
     private func relativePath(for url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return song.path }
         let root = LibraryPaths.root.path
         let path = url.standardizedFileURL.path
         guard path.hasPrefix(root) else { return url.lastPathComponent }
@@ -332,7 +349,8 @@ final class SongsTableViewModel {
     private func publish() {
         publishGeneration += 1
         let generation = publishGeneration
-        let rows = allRows
+        let source = self.source
+        let rows = source.map { source in allRows.filter { source.admits($0.track) } } ?? allRows
         let query = searchQuery
         let tiers = sortTiers
         let filter = self.filter
@@ -425,7 +443,7 @@ final class SongsTableViewModel {
             }
             let byTitle = lhs.track.title.localizedCaseInsensitiveCompare(rhs.track.title)
             if byTitle != .orderedSame { return byTitle == .orderedAscending }
-            return lhs.track.fileURL.path < rhs.track.fileURL.path
+            return lhs.track.fileURL.absoluteString < rhs.track.fileURL.absoluteString
         }
     }
 

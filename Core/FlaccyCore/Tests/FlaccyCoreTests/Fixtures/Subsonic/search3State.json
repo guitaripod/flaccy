@@ -1,0 +1,30 @@
+{
+    "subsonic-response": {
+        "status": "ok",
+        "version": "1.16.1",
+        "type": "navidrome",
+        "serverVersion": "0.64.2 (10114574)",
+        "openSubsonic": true,
+        "searchResult3": {
+            "song": [
+                {
+                    "id": "4vVKvXswBtHVzMYeWVqhKo",
+                    "title": "Opening",
+                    "album": "First Light",
+                    "artist": "Test Artist",
+                    "suffix": "flac",
+                    "starred": "2026-10-25T15:40:34.817723644+02:00",
+                    "playCount": 3,
+                    "played": "2026-10-24T09:15:00Z"
+                },
+                {
+                    "id": "0XVvAOjpl7gVx8NZVuwjk4",
+                    "title": "Middle",
+                    "album": "First Light",
+                    "artist": "Test Artist",
+                    "suffix": "flac"
+                }
+            ]
+        }
+    }
+}

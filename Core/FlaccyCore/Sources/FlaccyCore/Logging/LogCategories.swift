@@ -9,6 +9,7 @@ extension MidgarLog.Category {
     public static let performance = MidgarLog.Category("performance")
     public static let playback = MidgarLog.Category("playback")
     public static let purchases = MidgarLog.Category("purchases")
+    public static let remote = MidgarLog.Category("remote")
     public static let sync = MidgarLog.Category("sync")
     public static let watch = MidgarLog.Category("watch")
 }

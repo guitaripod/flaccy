@@ -16,6 +16,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     let titleMarquee = MarqueeLabel()
     let loveButton = LoveButton(pointSize: 22)
     let qualityBadge = QualityBadgeView(size: .regular)
+    let versionRow = NowPlayingVersionRow()
     let artistAvatarButton = UIButton(type: .custom)
     let artistButton = UIButton(type: .system)
     let dashLabel = UILabel()
@@ -70,12 +71,17 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     var centerState: CenterState = .artwork
     var bottomControls = UIStackView()
     let infoBlock = UIStackView()
+    let titleRow = UIStackView()
+    let badgeStrip = UIStackView()
+    let wrappedBadgeLine = UIStackView()
+    var actionRowIsNarrow = false
     var volumeRowView = UIView()
     var layoutMode: AdaptiveLayout.PlayerLayout = .portrait
     var modeConstraints: [NSLayoutConstraint] = []
     var laptopFoldTopConstraint: NSLayoutConstraint?
     var laptopFoldBottomConstraint: NSLayoutConstraint?
     var artworkGroupTrailing: NSLayoutConstraint!
+    var artworkGroupTop: NSLayoutConstraint!
     let focusLeftColumn = UILayoutGuide()
     let focusRightColumn = UILayoutGuide()
     let laptopLyricsHost = UIView()
@@ -170,6 +176,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             self, selector: #selector(lovedTracksDidChange), name: LovedTracksService.didChange, object: nil
         )
         NotificationCenter.default.addObserver(
+            self, selector: #selector(tracksRevised), name: Library.tracksRevised, object: nil
+        )
+        NotificationCenter.default.addObserver(
             self, selector: #selector(equalizerStateDidChange), name: EqualizerEngine.stateDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
@@ -196,6 +205,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateLayoutModeIfNeeded()
+        placeBadgeStrip()
+        refreshActionRowWrapping()
         backdropView.frame = view.bounds
         scrimLayer.frame = view.bounds
         artworkContainer.layer.shadowPath = UIBezierPath(
@@ -228,7 +239,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         setupTransport()
 
         let infoStack = infoBlock
-        for row in [makeTitleRow(), makeArtistAlbumRow(), playingFromLabel] { infoStack.addArrangedSubview(row) }
+        for row in [makeTitleRow(), versionRow, makeArtistAlbumRow(), playingFromLabel] { infoStack.addArrangedSubview(row) }
         infoStack.axis = .vertical
         infoStack.spacing = 4
 
@@ -319,7 +330,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         switch centerState {
         case .artwork:
             centerElements = [
-                artworkContainer, titleMarquee, qualityBadge, loveButton,
+                artworkContainer, titleMarquee, versionRow, qualityBadge, loveButton,
                 artistAvatarButton, artistButton, albumLabel, playingFromLabel,
             ]
         case .lyrics, .queue:

@@ -1,6 +1,5 @@
-use crate::library::{Album, Library, Track};
-use crate::wantlist::normalize;
-use std::collections::{HashMap, HashSet};
+use crate::library::{chart_key as key, Album, ChartKeys, Library, Track};
+use std::collections::HashSet;
 
 const ENTRY_SEPARATOR: &str = " — ";
 
@@ -12,28 +11,6 @@ const ENTRY_SEPARATOR: &str = " — ";
 pub struct ChartIndex<'a> {
     library: &'a Library,
     keys: &'a ChartKeys,
-}
-
-/// The normalised `title ␀ artist` keys of every song and release in a
-/// library, as positions into it. Built once per loaded library and shared by
-/// every `ChartIndex` over it.
-pub struct ChartKeys {
-    tracks: HashMap<String, usize>,
-    albums: HashMap<String, usize>,
-}
-
-impl ChartKeys {
-    pub fn build(library: &Library) -> Self {
-        let mut albums = HashMap::with_capacity(library.albums.len());
-        for (at, album) in library.albums.iter().enumerate() {
-            albums.insert(key(&album.title, &album.artist), at);
-        }
-        let mut tracks = HashMap::with_capacity(library.tracks.len());
-        for (at, track) in library.tracks.iter().enumerate() {
-            tracks.insert(key(&track.title, &track.artist), at);
-        }
-        Self { tracks, albums }
-    }
 }
 
 impl<'a> ChartIndex<'a> {
@@ -106,10 +83,6 @@ fn split_candidates(entry: &str) -> impl Iterator<Item = (&str, &str)> {
         .map(move |(at, _)| (&entry[..at], &entry[at + ENTRY_SEPARATOR.len()..]))
 }
 
-fn key(title: &str, artist: &str) -> String {
-    format!("{}\u{0}{}", normalize(title), normalize(artist))
-}
-
 fn unique(tracks: Vec<Track>) -> Vec<Track> {
     let mut seen = HashSet::new();
     tracks
@@ -140,6 +113,10 @@ mod tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
+            disc_number: None,
         }
     }
 

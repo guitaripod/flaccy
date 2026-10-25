@@ -1,3 +1,4 @@
+import FlaccyCore
 import Foundation
 
 /// The single root every shared component resolves track paths against.
@@ -11,6 +12,26 @@ nonisolated enum LibraryPaths {
         LibraryRoot.current
         #else
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        #endif
+    }
+
+    /// The slash-separated path of `url` under the root, the key a track is
+    /// stored and synced under, in the Unicode form the watch sync uses on the Mac.
+    static func relativePath(of url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return song.path }
+        let rootPath = root.standardizedFileURL.path
+        let filePath = url.standardizedFileURL.path
+        var relative = url.lastPathComponent
+        if filePath.hasPrefix(rootPath) {
+            relative = String(filePath.dropFirst(rootPath.count))
+            if relative.hasPrefix("/") {
+                relative = String(relative.dropFirst())
+            }
+        }
+        #if os(macOS)
+        return canonicalSyncPath(relative)
+        #else
+        return relative
         #endif
     }
 }

@@ -35,11 +35,13 @@ final class OnboardingPanelView: NSView {
     private let sampleButton = GlassCapsuleButton(title: String(localized: "Download Sample Album"), symbolName: "arrow.down.circle")
     private let trialStartsLabel = NSTextField(wrappingLabelWithString: PaywallCopy.trialStartsLine)
     private var isDownloading = false
+    private let isMovingLibrary = HandoffFolderPrompt.isPending
 
     private let scrim = NSView()
     private let host = NSView()
     private lazy var welcomeContent: NSStackView = Self.makeWelcomeContent(
-        spinner: spinner, progressLabel: progressLabel, sampleButton: sampleButton, trialStartsLabel: trialStartsLabel
+        spinner: spinner, progressLabel: progressLabel, sampleButton: sampleButton, trialStartsLabel: trialStartsLabel,
+        movingLibrary: isMovingLibrary
     )
     private let debutView = MacLibraryDebutView()
     private var summaryCard: MacDebutSummaryCard?
@@ -55,11 +57,21 @@ final class OnboardingPanelView: NSView {
         case keep
     }
 
+    #if DEBUG
+    /// Set by `--shot-home empty`, which captures Home's own first-run card
+    /// without the welcome panel standing in front of it.
+    static var isSuppressedForCapture = false
+    #endif
+
     /// Loading is intentionally a "keep" state: the library posts its update
     /// notification while a reload is still marked in-flight, so hiding on
     /// isLoading would dismiss the panel the moment the empty first scan runs.
     static var visibility: Visibility {
+        #if DEBUG
+        if isSuppressedForCapture { return .hide }
+        #endif
         if MacLibrarySurfaceModel.shared.state.value.surface == .debut { return .show }
+        if HandoffFolderPrompt.isPending { return .show }
         if !LibraryRoot.shared.isUsingDefaultRoot || LibraryRoot.shared.isFallbackActive
             || !Library.shared.allTracks.isEmpty {
             return .hide
@@ -138,7 +150,7 @@ final class OnboardingPanelView: NSView {
     /// The line only belongs before the trial has started, and the welcome
     /// panel is sized to its content, so the host follows when it comes or goes.
     private func refreshTrialStartsLabel() {
-        let hidden = PurchaseManager.shared.state != .trialNotStarted
+        let hidden = isMovingLibrary || PurchaseManager.shared.state != .trialNotStarted
         guard trialStartsLabel.isHidden != hidden else { return }
         trialStartsLabel.isHidden = hidden
         guard presentation == .welcome else { return }
@@ -257,7 +269,8 @@ final class OnboardingPanelView: NSView {
         spinner: NSProgressIndicator,
         progressLabel: NSTextField,
         sampleButton: GlassCapsuleButton,
-        trialStartsLabel: NSTextField
+        trialStartsLabel: NSTextField,
+        movingLibrary: Bool
     ) -> NSStackView {
         let icon = NSImageView(image: NSApp.applicationIconImage ?? NSImage())
         icon.translatesAutoresizingMaskIntoConstraints = false
@@ -267,8 +280,9 @@ final class OnboardingPanelView: NSView {
         let title = NSTextField(labelWithString: String(localized: "Welcome to Flaccy"))
         title.font = .systemFont(ofSize: 26, weight: .bold)
 
-        let subtitle = NSTextField(wrappingLabelWithString:
-            String(localized: "Point Flaccy at your music folder and it indexes everything in place — FLAC, ALAC, MP3 and more, nothing copied or moved.")
+        let subtitle = NSTextField(wrappingLabelWithString: movingLibrary
+            ? String(localized: "Choose your music folder once more. macOS asks every app for permission separately.")
+            : String(localized: "Point Flaccy at your music folder and it indexes everything in place — FLAC, ALAC, MP3 and more, nothing copied or moved.")
         )
         subtitle.font = .systemFont(ofSize: 13)
         subtitle.textColor = MacColors.secondaryLabel
@@ -282,7 +296,7 @@ final class OnboardingPanelView: NSView {
             NSApp.sendAction(#selector(MacAppDelegate.chooseMusicFolder(_:)), to: nil, from: nil)
         }
 
-        let buttons = MacLiquidGlass.buttonGroup([chooseButton, sampleButton], spacing: 12)
+        let buttons = MacLiquidGlass.buttonGroup(movingLibrary ? [chooseButton] : [chooseButton, sampleButton], spacing: 12)
 
         spinner.style = .spinning
         spinner.controlSize = .small
@@ -312,7 +326,11 @@ final class OnboardingPanelView: NSView {
         trialStartsLabel.alignment = .center
         trialStartsLabel.preferredMaxLayoutWidth = 380
 
-        let content = NSStackView(views: [icon, title, subtitle, buttons, progressRow, hint, trialStartsLabel])
+        let content = NSStackView(
+            views: movingLibrary
+                ? [icon, title, subtitle, buttons]
+                : [icon, title, subtitle, buttons, progressRow, hint, trialStartsLabel]
+        )
         content.orientation = .vertical
         content.alignment = .centerX
         content.spacing = 14

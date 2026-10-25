@@ -42,6 +42,12 @@ public final class DatabaseManager: Sendable {
         dbQueue = try Self.openDatabase(at: path)
     }
 
+    /// Writes a consistent copy of the whole library to `url`, taken while the app keeps using it.
+    public func writeSnapshot(to url: URL) throws {
+        let destination = try DatabaseQueue(path: url.path)
+        try dbQueue.backup(to: destination)
+    }
+
     /// Opens the SQLite database and runs all migrations, throwing instead of crashing
     /// so a corrupt file can be moved aside and the library rebuilt from Documents.
     static func openDatabase(at path: String) throws -> DatabaseQueue {

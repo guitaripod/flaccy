@@ -1,0 +1,21 @@
+[package]
+name = "flaccy-library"
+version = "1.0.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Flaccy's library layer without a UI: database, scanner, versions and the keys they share"
+
+[dependencies]
+flaccy-shared = { path = "../shared" }
+rusqlite = { version = "0.32", features = ["bundled", "functions"] }
+lofty = "0.22"
+sha2 = "0.10"
+serde_json = "1"
+dirs = "6"
+chrono = "0.4"
+async-channel = "2"
+md-5 = "0.10"
+rand = "0.9"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+ureq = { version = "2", features = ["json"] }

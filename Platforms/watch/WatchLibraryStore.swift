@@ -8,6 +8,7 @@ import Observation
 final class WatchLibraryStore {
 
     private(set) var albums: [MediaAlbum] = []
+    private(set) var newestAlbum: MediaAlbum?
     private(set) var allTracks: [MediaItem] = []
     private(set) var isLoading: Bool = false
     private(set) var loadProgress: LibraryLoadProgress = .idle
@@ -74,10 +75,33 @@ final class WatchLibraryStore {
             lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
         }
         albums = LibraryScanner.albums(from: credited)
+        newestAlbum = await Self.newestReceivedAlbum(in: albums, directory: documentsDirectory)
+        guard gen == generation, !Task.isCancelled else { return }
         isLoading = false
         loadFraction = tracker.displayFraction
         loadProgress = tracker.finish()
         MidgarLog.info("Watch library: \(albums.count) albums, \(items.count) tracks", category: .watch)
+    }
+
+    /// How recently an album must have arrived to be offered as New.
+    nonisolated static let newWindow: TimeInterval = 14 * 86_400
+
+    /// The album whose newest file landed last, if that was recent: what the
+    /// "New" row on the On Watch page points at.
+    nonisolated static func newestReceivedAlbum(in albums: [MediaAlbum], directory: URL) async -> MediaAlbum? {
+        await Task.detached(priority: .utility) {
+            var newest: (album: MediaAlbum, date: Date)?
+            for album in albums {
+                for item in album.items {
+                    let url = directory.appendingPathComponent(item.relativePath)
+                    let values = try? url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+                    guard let date = [values?.creationDate, values?.contentModificationDate].compactMap({ $0 }).max() else { continue }
+                    if newest == nil || date > newest!.date { newest = (album, date) }
+                }
+            }
+            guard let newest, Date().timeIntervalSince(newest.date) <= newWindow else { return nil }
+            return newest.album
+        }.value
     }
 
     /// The seeded Simulator files carry no tags, so their covers are generated;

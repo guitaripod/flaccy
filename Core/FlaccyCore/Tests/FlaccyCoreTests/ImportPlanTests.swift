@@ -166,4 +166,103 @@ final class ImportPlanTests: XCTestCase {
         XCTAssertNil(ImportPlan.materializedName(ofPlaceholder: ".icloud"))
         XCTAssertNil(ImportPlan.materializedName(ofPlaceholder: ".Song.flac"))
     }
+
+    private func placements(_ picked: [URL], inspector: ImportInspector? = nil) -> [ImportPlan.Placement] {
+        ImportPlan.placements(for: plan(picked), in: library, inspector: inspector).map(\.placement)
+    }
+
+    func testTheSameAudioAtTheSameSizeIsAlreadyPresent() throws {
+        let source = try write("Album/01.flac", in: outside, bytes: 4)
+        let target = try write("Album/01.flac", in: library, bytes: 4)
+        let inspector = FakeInspector([(source, "f1", "k"), (target, "f1", "k")])
+
+        XCTAssertEqual(placements([outside.appendingPathComponent("Album")], inspector: inspector), [.alreadyPresent])
+    }
+
+    func testSameSongWithNewerTagsReplacesTheFile() throws {
+        let source = try write("Album/01.flac", in: outside, bytes: 4)
+        let target = try write("Album/01.flac", in: library, bytes: 4)
+        let inspector = FakeInspector([(source, "f2", "k"), (target, "f1", "k")])
+
+        XCTAssertEqual(
+            placements([outside.appendingPathComponent("Album")], inspector: inspector),
+            [.replace(at: "Album/01.flac")]
+        )
+    }
+
+    func testTheSameAudioAtAnotherSizeReplacesTheFile() throws {
+        let source = try write("Album/01.flac", in: outside, bytes: 9)
+        let target = try write("Album/01.flac", in: library, bytes: 4)
+        let inspector = FakeInspector([(source, "f1", "k"), (target, "f1", "k")])
+
+        XCTAssertEqual(
+            placements([outside.appendingPathComponent("Album")], inspector: inspector),
+            [.replace(at: "Album/01.flac")]
+        )
+    }
+
+    func testADifferentSongUnderTheSameNameGetsTheNextFreeName() throws {
+        let source = try write("Album/01.flac", in: outside, bytes: 4)
+        let target = try write("Album/01.flac", in: library, bytes: 4)
+        let inspector = FakeInspector([(source, "f2", "k1"), (target, "f1", "k2")])
+
+        XCTAssertEqual(
+            placements([outside.appendingPathComponent("Album")], inspector: inspector),
+            [.copy(to: "Album/01_1.flac")]
+        )
+    }
+
+    func testWithoutAnInspectorTheSizeRuleStillDecides() throws {
+        try write("Album/01.flac", in: outside, bytes: 4)
+        try write("Album/01.flac", in: library, bytes: 4)
+
+        XCTAssertEqual(placements([outside.appendingPathComponent("Album")]), [.alreadyPresent])
+    }
+
+    func testASecondPickedFileOfTheSameSizeAsTheClaimIsAlreadyPresent() throws {
+        let first = try write("a/x.flac", in: outside, bytes: 4)
+        let second = try write("b/x.flac", in: outside, bytes: 4)
+        let target = try write("x.flac", in: library, bytes: 2)
+        let inspector = FakeInspector([(first, "new", "k"), (second, "newer", "k"), (target, "old", "k")])
+
+        XCTAssertEqual(
+            placements([first, second], inspector: inspector),
+            [.replace(at: "x.flac"), .alreadyPresent]
+        )
+    }
+
+    func testTwoPickedNewerVersionsOfOneNameReplaceOnceThenCopy() throws {
+        let first = try write("a/x.flac", in: outside, bytes: 4)
+        let second = try write("b/x.flac", in: outside, bytes: 9)
+        let target = try write("x.flac", in: library, bytes: 2)
+        let inspector = FakeInspector([(first, "new", "k"), (second, "newer", "k"), (target, "old", "k")])
+
+        XCTAssertEqual(
+            placements([first, second], inspector: inspector),
+            [.replace(at: "x.flac"), .copy(to: "x_1.flac")]
+        )
+    }
+}
+
+private struct FakeInspector: ImportInspector {
+    let fingerprints: [String: String]
+    let songKeys: [String: String]
+
+    init(_ entries: [(url: URL, fingerprint: String, songKey: String)]) {
+        fingerprints = Dictionary(uniqueKeysWithValues: entries.map { (Self.key($0.url), $0.fingerprint) })
+        songKeys = Dictionary(uniqueKeysWithValues: entries.map { (Self.key($0.url), $0.songKey) })
+    }
+
+    /// The plan walks resolved paths, and a temporary folder on the Mac sits behind the `/var` symlink.
+    private static func key(_ url: URL) -> String {
+        url.resolvingSymlinksInPath().path
+    }
+
+    func audioFingerprint(of url: URL) -> String? {
+        fingerprints[Self.key(url)]
+    }
+
+    func songKey(of url: URL) -> String? {
+        songKeys[Self.key(url)]
+    }
 }

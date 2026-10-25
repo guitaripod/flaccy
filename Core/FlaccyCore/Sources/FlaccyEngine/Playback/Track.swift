@@ -22,6 +22,9 @@ public struct Track: Sendable, Hashable, Identifiable {
     public var channels: Int?
     public var loved: Bool = false
     public var playCount: Int = 0
+    public var revision: Int = 1
+    public var revisedAt: Date?
+    public var fileModifiedMs: Int64?
 
     public init(
         fileURL: URL,
@@ -38,7 +41,10 @@ public struct Track: Sendable, Hashable, Identifiable {
         sampleRate: Int? = nil,
         channels: Int? = nil,
         loved: Bool = false,
-        playCount: Int = 0
+        playCount: Int = 0,
+        revision: Int = 1,
+        revisedAt: Date? = nil,
+        fileModifiedMs: Int64? = nil
     ) {
         self.fileURL = fileURL
         self.title = title
@@ -55,6 +61,9 @@ public struct Track: Sendable, Hashable, Identifiable {
         self.channels = channels
         self.loved = loved
         self.playCount = playCount
+        self.revision = revision
+        self.revisedAt = revisedAt
+        self.fileModifiedMs = fileModifiedMs
     }
 
     public static let losslessCodecs: Set<String> = ["FLAC", "ALAC", "WAV", "AIFF"]
@@ -116,7 +125,10 @@ public struct Track: Sendable, Hashable, Identifiable {
             sampleRate: sampleRate,
             channels: channels,
             loved: loved,
-            playCount: playCount
+            playCount: playCount,
+            revision: revision,
+            revisedAt: revisedAt,
+            fileModifiedMs: fileModifiedMs
         )
     }
 }

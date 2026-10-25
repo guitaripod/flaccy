@@ -31,6 +31,13 @@ pub enum AppEvent {
         loved: bool,
     },
     LastFmChanged,
+    /// The scan recognised a new version of the song that is playing: the file
+    /// the player has open is the old one, so the person is offered the new mix
+    /// from the start.
+    NewMixPlaying {
+        rel_path: String,
+        title: String,
+    },
     SearchChanged(String),
     /// Ctrl+J: bring the playing song into view in the Songs table.
     LocateCurrent,
@@ -82,12 +89,21 @@ pub enum AppEvent {
     WantlistChanged,
     WantlistSeen,
     DownloadsChanged,
+    /// A play was written to the scrobble table, so everything built from the
+    /// history (Home's This Week and Jump Back In) can be read again.
+    ScrobbleRecorded,
+    /// Home's inputs changed: the last session or the recent contexts.
+    HomeChanged,
     DownloadProgress {
         id: i64,
         fraction: f64,
     },
     MusicVideoChanged,
     MusicVideoCandidates,
+    /// Something about the remote library changed: the server list, which
+    /// songs are downloaded, whether a server can be reached or a refresh began
+    /// or ended. Views that mark remote songs repaint.
+    RemoteChanged,
     /// The equalizer's saved state, the profile in force or whether it is
     /// running changed.
     EqualizerChanged,

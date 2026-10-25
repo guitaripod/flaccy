@@ -22,7 +22,7 @@ nonisolated enum LibraryHygieneService {
 
     static func computePlan(albums: [Album], tracks: [Track]) -> HygienePlan {
         HygienePlan(
-            duplicateGroups: LibraryHygiene.duplicateGroups(tracks),
+            duplicateGroups: LibraryHygiene.duplicateGroups(tracks.filter { $0.fileURL.isFileURL }),
             consolidationGroups: LibraryHygiene.consolidationGroups(albums)
         )
     }

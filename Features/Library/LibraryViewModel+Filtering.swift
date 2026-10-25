@@ -10,7 +10,8 @@ import AppKit
 
 extension LibraryViewModel {
 
-    func filteredAlbums(_ albums: [Album]) -> [Album] {
+    func filteredAlbums(_ unsourced: [Album]) -> [Album] {
+        let albums = source.map { source in unsourced.filter { $0.tracks.contains(where: source.admits) } } ?? unsourced
         switch filter {
         case .all:
             return albums
@@ -36,7 +37,8 @@ extension LibraryViewModel {
         }
     }
 
-    func filteredSongs(_ songs: [Track]) -> [Track] {
+    func filteredSongs(_ unsourced: [Track]) -> [Track] {
+        let songs = source.map { source in unsourced.filter(source.admits) } ?? unsourced
         switch filter {
         case .all:
             return songs
@@ -191,7 +193,7 @@ extension LibraryViewModel {
         let tracks = library.allTracks
         map.reserveCapacity(tracks.count)
         for track in tracks {
-            map[track.fileURL.path] = Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)")
+            map[track.fileURL.absoluteString] = Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)")
         }
         cachedSongSearchKeys = map
         return map

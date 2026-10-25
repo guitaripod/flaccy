@@ -5,10 +5,60 @@ use crate::load_progress::LoadPhase;
 use crate::ui::{self, Ui};
 use adw::prelude::*;
 use flaccy_shared::enrichment_job::{copy as job_copy, Activity};
+use flaccy_shared::track_revision::copy;
 use gtk::glib;
 use gtk::{gdk, gio};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+
+/// One entry of the library sidebar. The saved page is its `name`, never its
+/// position, so adding a page cannot send a returning person somewhere else.
+pub struct SidebarPage {
+    pub name: &'static str,
+    pub icon: &'static str,
+    pub label: &'static str,
+}
+
+pub const SIDEBAR_PAGES: [SidebarPage; 9] = [
+    SidebarPage { name: "home", icon: "go-home-symbolic", label: "Home" },
+    SidebarPage { name: "albums", icon: "media-optical-symbolic", label: "Albums" },
+    SidebarPage { name: "songs", icon: "audio-x-generic-symbolic", label: "Songs" },
+    SidebarPage { name: "artists", icon: "system-users-symbolic", label: "Artists" },
+    SidebarPage { name: "playlists", icon: "view-list-symbolic", label: "Playlists" },
+    SidebarPage { name: "stats", icon: "flaccy-stats-symbolic", label: "Stats" },
+    SidebarPage { name: "wantlist", icon: "starred-symbolic", label: "Wantlist" },
+    SidebarPage { name: "downloads", icon: "folder-download-symbolic", label: "Downloads" },
+    SidebarPage { name: "guide", icon: "dialog-information-symbolic", label: "Guide" },
+];
+
+/// The sidebar position of the page called `name`.
+pub fn page_index(name: &str) -> Option<i32> {
+    SIDEBAR_PAGES
+        .iter()
+        .position(|page| page.name == name)
+        .map(|index| index as i32)
+}
+
+/// Selects the sidebar row of page `name`, which shows the page.
+pub fn show_page(sidebar: &gtk::ListBox, name: &str) {
+    if let Some(row) = page_index(name).and_then(|index| sidebar.row_at_index(index)) {
+        sidebar.select_row(Some(&row));
+    }
+}
+
+/// The page a launch opens on: Home unless the person asked to be put back
+/// where they left off. A demo run names its own page.
+fn launch_page(core: &AppCore) -> String {
+    if config::demo_mode() {
+        return demo_start_page().to_string();
+    }
+    let config = core.config.borrow();
+    if config.opens_on_home() {
+        "home".to_string()
+    } else {
+        config.sidebar_page.clone()
+    }
+}
 
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
     ui::ui_scale::apply(core.config.borrow().ui_scale());
@@ -20,10 +70,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     ui::lyrics_style::apply(core.config.borrow().lyrics_font_size);
     gtk::Window::set_default_icon_name("cc.midgarcorp.Flaccy");
 
-    let (width, height) = {
+    let (width, height) = demo_window_size().unwrap_or_else(|| {
         let config = core.config.borrow();
         (config.window_width.max(900), config.window_height.max(600))
-    };
+    });
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .title("Flaccy")
@@ -73,6 +123,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     header.pack_start(&build_job_status(&ui));
 
     let menu = gio::Menu::new();
+    menu.append(Some(flaccy_shared::home_copy::CUSTOMIZE_HOME), Some("app.customize-home"));
     menu.append(Some("Download from Link"), Some("app.downloads"));
     menu.append(Some("Equalizer"), Some("app.equalizer"));
     menu.append(Some("Rescan Library"), Some("app.rescan"));
@@ -171,6 +222,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .hhomogeneous(false)
         .vhomogeneous(false)
         .build();
+    stack.add_named(&ui::home::build(&ui), Some("home"));
     stack.add_named(&ui::albums::build(&ui), Some("albums"));
     stack.add_named(&ui::songs::build(&ui), Some("songs"));
     stack.add_named(&ui::artists::build(&ui), Some("artists"));
@@ -185,33 +237,25 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .build();
     sidebar.add_css_class("navigation-sidebar");
     sidebar.add_css_class("flaccy-sidebar");
-    for (icon, label) in [
-        ("media-optical-symbolic", "Albums"),
-        ("audio-x-generic-symbolic", "Songs"),
-        ("system-users-symbolic", "Artists"),
-        ("view-list-symbolic", "Playlists"),
-        ("flaccy-stats-symbolic", "Stats"),
-        ("starred-symbolic", "Wantlist"),
-        ("folder-download-symbolic", "Downloads"),
-        ("dialog-information-symbolic", "Guide"),
-    ] {
-        sidebar.append(&sidebar_row(icon, label));
+    for page in &SIDEBAR_PAGES {
+        sidebar.append(&sidebar_row(page.icon, page.label));
     }
     attach_wantlist_badge(core, &sidebar);
     attach_downloads_badge(core, &sidebar);
+    let restoring_launch_page = Rc::new(Cell::new(true));
     {
         let sidebar = sidebar.clone();
-        let saved_index = core.config.borrow().sidebar_index.clamp(0, 7);
+        let wanted = launch_page(core);
+        let restoring_launch_page = Rc::clone(&restoring_launch_page);
         glib::idle_add_local_once(move || {
-            let index = if config::demo_mode() {
-                demo_start_view_index()
-            } else {
-                saved_index
-            };
+            let index = page_index(&wanted)
+                .or_else(|| page_index(config::DEFAULT_SIDEBAR_PAGE))
+                .unwrap_or(0);
             if let Some(row) = sidebar.row_at_index(index) {
                 sidebar.select_row(Some(&row));
                 row.grab_focus();
             }
+            restoring_launch_page.set(false);
         });
     }
 
@@ -255,26 +299,21 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         let library_split = library_split.clone();
         let sidebar_sync = Rc::clone(&sidebar_sync);
         let sidebar_toggle = sidebar_toggle.clone();
+        let restoring_launch_page = Rc::clone(&restoring_launch_page);
         sidebar.connect_row_selected(move |_, row| {
             let Some(row) = row else { return };
-            let names = [
-                "albums",
-                "songs",
-                "artists",
-                "playlists",
-                "stats",
-                "wantlist",
-                "downloads",
-                "guide",
-            ];
-            let index = row.index().clamp(0, 7) as usize;
-            core_for_rows.config.borrow_mut().sidebar_index = index as i32;
-            core_for_rows.save_config();
-            crate::logger::info("ui", &format!("sidebar selected: {}", names[index]));
+            let Some(page) = SIDEBAR_PAGES.get(row.index().max(0) as usize) else {
+                return;
+            };
+            if !restoring_launch_page.get() {
+                core_for_rows.config.borrow_mut().sidebar_page = page.name.to_string();
+                core_for_rows.save_config();
+            }
+            crate::logger::info("ui", &format!("sidebar selected: {}", page.name));
             if nav.visible_page().and_then(|p| p.tag()).as_deref() != Some("root") {
                 nav.pop_to_tag("root");
             }
-            stack.set_visible_child_name(names[index]);
+            stack.set_visible_child_name(page.name);
             // Drawer mode: pick a destination then get out of the way.
             if library_split.is_collapsed() && library_split.shows_sidebar() {
                 sidebar_sync.set(true);
@@ -407,10 +446,14 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     let toast_overlay = adw::ToastOverlay::new();
     toast_overlay.set_child(Some(&inner));
     let live_toast: Rc<RefCell<Option<adw::Toast>>> = Rc::new(RefCell::new(None));
+    let toast_core = Rc::clone(core);
     core.hub
         .subscribe_widget(&toast_overlay, move |overlay, event| {
             if let AppEvent::Toast(message) = event {
                 show_toast(overlay, &live_toast, message);
+            }
+            if let AppEvent::NewMixPlaying { rel_path, title } = event {
+                overlay.add_toast(new_mix_toast(&toast_core, rel_path, title));
             }
             if let AppEvent::ScanFinished { added, removed } = event {
                 let toast = if *added > 0 || *removed > 0 {
@@ -449,24 +492,34 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     register_actions(app, &ui, &search);
     {
+        let core = Rc::clone(core);
+        app.connect_shutdown(move |_| core.save_session_now(false));
+    }
+    {
         let downloads_action = gio::SimpleAction::new("downloads", None);
         let sidebar_for_action = sidebar.clone();
         downloads_action.connect_activate(move |_, _| {
-            if let Some(row) = sidebar_for_action.row_at_index(6) {
-                sidebar_for_action.select_row(Some(&row));
-            }
+            show_page(&sidebar_for_action, "downloads");
         });
         app.add_action(&downloads_action);
         app.set_accels_for_action("app.downloads", &["<Control>d"]);
+    }
+    {
+        let show_page_action = gio::SimpleAction::new("show-page", Some(glib::VariantTy::STRING));
+        let sidebar_for_action = sidebar.clone();
+        show_page_action.connect_activate(move |_, name| {
+            if let Some(name) = name.and_then(|name| name.str()) {
+                show_page(&sidebar_for_action, name);
+            }
+        });
+        window.add_action(&show_page_action);
     }
     {
         let locate_action = gio::SimpleAction::new("locate-current", None);
         let sidebar_for_action = sidebar.clone();
         let hub_core = Rc::clone(core);
         locate_action.connect_activate(move |_, _| {
-            if let Some(row) = sidebar_for_action.row_at_index(1) {
-                sidebar_for_action.select_row(Some(&row));
-            }
+            show_page(&sidebar_for_action, "songs");
             hub_core.hub.emit(&AppEvent::LocateCurrent);
         });
         app.add_action(&locate_action);
@@ -490,6 +543,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                 config.window_height = window.height();
             }
             core.save_config();
+            core.save_session_now(false);
             close_secondary_windows(window);
             crate::logger::info("lifecycle", "window closed, config saved");
             glib::Propagation::Proceed
@@ -755,7 +809,7 @@ fn install_shell_breakpoints(
 /// Keeps an unseen-count badge on the Wantlist sidebar row, cleared when the
 /// page is opened (WantlistSeen) and refreshed after every wantlist change.
 fn attach_wantlist_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
-    let Some(row) = sidebar.row_at_index(5) else {
+    let Some(row) = page_index("wantlist").and_then(|index| sidebar.row_at_index(index)) else {
         return;
     };
     let Some(row_box) = row.child().and_downcast::<gtk::Box>() else {
@@ -790,7 +844,7 @@ fn attach_wantlist_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
 /// Keeps an active-count badge on the Downloads sidebar row so queued work is
 /// visible from anywhere in the app.
 fn attach_downloads_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
-    let Some(row) = sidebar.row_at_index(6) else {
+    let Some(row) = page_index("downloads").and_then(|index| sidebar.row_at_index(index)) else {
         return;
     };
     let Some(row_box) = row.child().and_downcast::<gtk::Box>() else {
@@ -849,9 +903,7 @@ fn attach_paste_to_download(ui: &Rc<Ui>, sidebar: &gtk::ListBox) {
                 if !crate::downloads::looks_like_url(text.trim()) {
                     return;
                 }
-                if let Some(row) = sidebar.row_at_index(6) {
-                    sidebar.select_row(Some(&row));
-                }
+                show_page(&sidebar, "downloads");
                 crate::downloads::enqueue(&ui.core, text.trim());
             });
         glib::Propagation::Stop
@@ -916,6 +968,13 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     app.set_accels_for_action("win.focus-search", &["<Control>f"]);
     app.set_accels_for_action("app.preferences", &["<Control>comma"]);
 
+    let customize_home = gio::SimpleAction::new("customize-home", None);
+    {
+        let ui = Rc::clone(ui);
+        customize_home.connect_activate(move |_, _| ui::home_customize::present(&ui));
+    }
+    app.add_action(&customize_home);
+
     let equalizer = gio::SimpleAction::new("equalizer", None);
     {
         let ui = Rc::clone(ui);
@@ -930,6 +989,9 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     });
     add_string_action(ui, "shuffle-album", |ui, key| {
         ui.core.play_album_key(key, true);
+    });
+    add_string_action(ui, "home-jump-remove", |ui, key| {
+        ui.core.dismiss_jump_back_in(key);
     });
     add_string_action(ui, "album-play-next", |ui, key| {
         let library = ui.core.library.borrow().clone();
@@ -973,6 +1035,14 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
         if let Some(track) = library.track_by_rel_path(rel) {
             ui::delete::present_delete_tracks(ui, vec![track.clone()]);
         }
+    });
+    add_string_action(ui, "track-pin", |ui, rel| keep_songs(ui, vec![rel.to_string()], true));
+    add_string_action(ui, "track-unpin", |ui, rel| keep_songs(ui, vec![rel.to_string()], false));
+    add_string_action(ui, "album-pin", |ui, key| {
+        keep_songs(ui, album_song_paths(ui, key), true);
+    });
+    add_string_action(ui, "album-unpin", |ui, key| {
+        keep_songs(ui, album_song_paths(ui, key), false);
     });
     add_string_action(ui, "album-delete", |ui, key| {
         ui::delete::present_delete_album(ui, key);
@@ -1024,6 +1094,9 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
             ui::goto_artist(ui, &artist);
         }
     });
+    add_string_action(ui, "track-restore", |ui, rel| {
+        ui.core.restore_previous_version(rel);
+    });
     add_string_action(ui, "track-reveal", |ui, rel| {
         let path = ui
             .core
@@ -1041,7 +1114,12 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
             .library
             .borrow()
             .album_by_key(key)
-            .and_then(|album| album.tracks.first())
+            .and_then(|album| {
+                album
+                    .tracks
+                    .iter()
+                    .find(|track| !crate::remote::is_remote(&track.rel_path))
+            })
             .map(|track| track.abs_path(&ui.core.music_root()));
         if let Some(path) = path {
             reveal_in_files(ui, path);
@@ -1215,6 +1293,12 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_int64_action(ui, "playlist-rename", |ui, id| {
         ui::playlists::prompt_rename_playlist(ui, id);
     });
+    add_int64_action(ui, "playlist-pin", |ui, id| {
+        keep_songs(ui, playlist_song_paths(ui, id), true);
+    });
+    add_int64_action(ui, "playlist-unpin", |ui, id| {
+        keep_songs(ui, playlist_song_paths(ui, id), false);
+    });
     add_int64_action(ui, "playlist-delete", |ui, id| {
         ui::playlists::confirm_delete_playlist(ui, id);
     });
@@ -1224,6 +1308,45 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_int64_action(ui, "playlist-cover-reset", |ui, id| {
         ui::playlist_cover::confirm_reset(ui, id);
     });
+}
+
+/// The paths of an album's songs.
+fn album_song_paths(ui: &Rc<Ui>, key: &str) -> Vec<String> {
+    ui.core
+        .library
+        .borrow()
+        .album_by_key(key)
+        .map(|album| album.tracks.iter().map(|track| track.rel_path.clone()).collect())
+        .unwrap_or_default()
+}
+
+/// The paths of a playlist's songs.
+fn playlist_song_paths(ui: &Rc<Ui>, playlist_id: i64) -> Vec<String> {
+    ui.core
+        .db
+        .playlist_tracks(playlist_id)
+        .into_iter()
+        .map(|row| row.rel_path)
+        .collect()
+}
+
+/// Keeps the remote songs among `paths` on this computer, or stops keeping
+/// them. Local songs are left as they are.
+pub(crate) fn keep_songs(ui: &Rc<Ui>, paths: Vec<String>, keep: bool) {
+    let remote_paths = crate::remote::remote_paths(paths.iter().map(String::as_str));
+    let Some(remote) = crate::remote::handle().filter(|_| !remote_paths.is_empty()) else {
+        return;
+    };
+    if keep {
+        remote.pin(&remote_paths);
+    } else {
+        remote.unpin(&remote_paths);
+        let noun = if remote_paths.len() == 1 { "song" } else { "songs" };
+        ui.core.toast(&format!(
+            "Removed the download of {} {noun}. They stream from the server again.",
+            remote_paths.len()
+        ));
+    }
 }
 
 /// Opens the system file manager with the given file selected (portal
@@ -1255,7 +1378,8 @@ fn attach_file_drop(ui: &Rc<Ui>, host: &impl IsA<gtk::Widget>) {
             "library",
             &format!("drag-drop received {} item(s)", paths.len()),
         );
-        ui.core.import_dropped_paths(paths);
+        ui.core
+            .import_dropped_paths(paths, crate::ui::versions_dialog::confirm_replace(&ui));
         true
     });
     host.add_controller(drop);
@@ -1297,6 +1421,18 @@ fn present_about(window: &adw::ApplicationWindow) {
         )
         .build();
     dialog.present(Some(window));
+}
+
+/// Tells the person the song they are hearing has a new mix on disk, and
+/// offers to start it over so the player reads the new file.
+fn new_mix_toast(core: &Rc<AppCore>, rel_path: &str, title: &str) -> adw::Toast {
+    let toast = adw::Toast::new(&copy::fill(copy::NEW_MIX_OF, &[title]));
+    toast.set_button_label(Some(copy::PLAY_FROM_START));
+    toast.set_timeout(10);
+    let core = Rc::clone(core);
+    let rel_path = rel_path.to_string();
+    toast.connect_button_clicked(move |_| core.reopen_if_playing(&rel_path, true));
+    toast
 }
 
 /// One toast at a time: a new message retitles the one on screen instead of
@@ -1852,6 +1988,18 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
             glib::ControlFlow::Break
         });
     }
+    if std::env::var_os("FLACCY_DEMO_REEXPORT").is_some() {
+        let core = Rc::clone(&ui.core);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            crate::reexport_drill::run(&core);
+        });
+    }
+    if let Ok(spec) = std::env::var("FLACCY_DEMO_REMOTE") {
+        let core = Rc::clone(&ui.core);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            crate::remote_drill::run(&core, &spec);
+        });
+    }
     if let Ok(spec) = std::env::var("FLACCY_DEMO_ARTWORK") {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
@@ -1890,18 +2038,38 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
     }
 }
 
-/// Demo mode helper: FLACCY_DEMO_VIEW picks the initially selected sidebar view
-/// (albums, songs, artists, playlists, stats) so marketing screenshots can be
-/// captured without input automation. Defaults to albums.
-fn demo_start_view_index() -> i32 {
-    match std::env::var("FLACCY_DEMO_VIEW").ok().as_deref() {
-        Some("songs") => 1,
-        Some("artists") => 2,
-        Some("playlists") => 3,
-        Some("stats") => 4,
-        Some("wantlist") => 5,
-        Some("downloads") => 6,
-        Some("guide") => 7,
-        _ => 0,
+/// Demo mode helper: FLACCY_DEMO_VIEW picks the initially selected sidebar page
+/// (home, albums, songs, artists, playlists, stats, wantlist, downloads, guide)
+/// so marketing screenshots can be captured without input automation.
+/// FLACCY_DEMO_HOME opens Home. Defaults to albums.
+fn demo_start_page() -> &'static str {
+    if std::env::var_os("FLACCY_DEMO_HOME").is_some() {
+        return "home";
+    }
+    let wanted = std::env::var("FLACCY_DEMO_VIEW").unwrap_or_default();
+    SIDEBAR_PAGES
+        .iter()
+        .find(|page| page.name == wanted)
+        .map(|page| page.name)
+        .unwrap_or(config::DEFAULT_SIDEBAR_PAGE)
+}
+
+/// A narrow Home demo opens at phone width so the compact arrangement shows.
+fn demo_window_size() -> Option<(i32, i32)> {
+    if !config::demo_mode() {
+        return None;
+    }
+    if let Some((width, height)) = std::env::var("FLACCY_DEMO_SIZE")
+        .ok()
+        .and_then(|size| size.split_once('x').map(|(w, h)| (w.to_string(), h.to_string())))
+    {
+        if let (Ok(width), Ok(height)) = (width.parse(), height.parse()) {
+            return Some((width, height));
+        }
+    }
+    match std::env::var("FLACCY_DEMO_HOME").ok().as_deref() {
+        Some("narrow") => Some((420, 900)),
+        Some(_) => Some((1440, 900)),
+        None => None,
     }
 }

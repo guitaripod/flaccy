@@ -257,6 +257,9 @@ extension SettingsViewController {
             cell.accessibilityLabel = String(localized: "Library")
             cell.accessibilityValue = content.secondaryText
 
+        case .serversExplainer, .server, .addServer, .cacheLimit, .cacheUsage, .clearCache:
+            configureServerRow(row, cell: cell, content: &content)
+
         case .storage(let used):
             content.image = RowIcon.image(systemName: "internaldrive.fill", tint: .systemGray)
             content.text = String(localized: "Storage Used")
@@ -277,7 +280,7 @@ extension SettingsViewController {
     static func baseContent(for row: Row) -> UIListContentConfiguration {
         var content: UIListContentConfiguration
         switch row {
-        case .metadataReport, .libraryDebutSummary:
+        case .metadataReport, .libraryDebutSummary, .server:
             content = .subtitleCell()
             content.secondaryTextProperties.font = .preferredFont(forTextStyle: .footnote)
             content.secondaryTextProperties.numberOfLines = 0

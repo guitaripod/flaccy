@@ -24,7 +24,10 @@ protocol AudioPlaying: AnyObject {
     func startStation(seedTrack: Track)
     func playLibraryRadio()
     func playCrateDig()
+    var playbackContext: PlaybackContext { get }
+    var resumePoint: ResumePoint? { get }
     func play(_ tracks: [Track], startingAt index: Int)
+    func play(_ tracks: [Track], startingAt index: Int, context: PlaybackContext?)
     func togglePlayPause()
     func nextTrack()
     func previousTrack()
@@ -125,6 +128,9 @@ final class AudioPlayer: AudioPlaying {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleArtworkDidChange), name: AlbumArtworkCache.didChangeNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleTracksRevised(_:)), name: Library.tracksRevised, object: nil
         )
     }
 

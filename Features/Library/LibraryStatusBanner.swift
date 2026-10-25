@@ -14,6 +14,7 @@ final class LibraryStatusBanner: UIView {
     enum Content {
         case load(LibraryLoadProgress, Double)
         case job(EnrichmentJobProgress)
+        case server(RemoteSyncProgress)
     }
 
     static let expandedHeight: CGFloat = 34
@@ -107,8 +108,27 @@ final class LibraryStatusBanner: UIView {
             renderLoad(progress, fraction: fraction)
         case .job(let progress):
             renderJob(progress)
+        case .server(let progress):
+            renderServer(progress)
         }
         isShowing = true
+    }
+
+    /// A server's catalog sync reads pages until it has every song, so it gets a bar only while
+    /// the server has said how many songs it holds; otherwise a spinner and a running count.
+    private func renderServer(_ progress: RemoteSyncProgress) {
+        label.text = RemoteCopy.syncHeadline(for: progress)
+        countLabel.text = RemoteCopy.syncDetail(for: progress)
+        if let fraction = progress.fraction {
+            spinner.stopAnimating()
+            progressView.isHidden = false
+            progressView.setProgress(Float(fraction), animated: isShowing)
+        } else {
+            spinner.startAnimating()
+            progressView.isHidden = true
+            progressView.setProgress(0, animated: false)
+        }
+        accessibilityValue = RemoteCopy.syncAccessibilityValue(for: progress)
     }
 
     private func renderLoad(_ progress: LibraryLoadProgress, fraction: Double) {

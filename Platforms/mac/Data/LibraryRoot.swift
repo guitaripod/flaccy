@@ -14,7 +14,8 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
     static let shared = LibraryRoot()
     static let didChange = Notification.Name("LibraryRootDidChange")
 
-    private static let bookmarkKey = "flaccy.mac.libraryBookmark"
+    static let bookmarkKey = "flaccy.mac.libraryBookmark"
+    static let defaultFolderName = "Music"
 
     private let lock = NSLock()
     private var resolvedURL: URL?
@@ -69,17 +70,26 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
         url.standardizedFileURL == Self.defaultRoot.standardizedFileURL
     }
 
+    /// The path of the folder the person chose, nil while the library lives in the container's own folder or the
+    /// chosen folder is offline.
+    var chosenFolderPath: String? {
+        guard !isFallbackActive, !isUsingDefaultRoot else { return nil }
+        return url.path
+    }
+
     func chooseFolder(_ folder: URL) throws {
         let bookmark = try folder.bookmarkData(
             options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil
         )
         UserDefaults.standard.set(bookmark, forKey: Self.bookmarkKey)
+        HandoffFolderPrompt.clear()
         MidgarLog.info("Library root changed to \(folder.path)", category: .content)
         invalidateAndNotify()
     }
 
     func resetToDefault() {
         UserDefaults.standard.removeObject(forKey: Self.bookmarkKey)
+        HandoffFolderPrompt.clear()
         MidgarLog.info("Library root reset to default container folder", category: .content)
         invalidateAndNotify()
     }
@@ -106,7 +116,7 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
             observeMountsLocked()
             return Self.ensuredDefaultRoot()
         }
-        fallbackActive = false
+        fallbackActive = HandoffFolderPrompt.isPending
         return Self.ensuredDefaultRoot()
     }
 
@@ -155,7 +165,7 @@ nonisolated final class LibraryRoot: @unchecked Sendable {
     private static var defaultRoot: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("flaccy", isDirectory: true)
-            .appendingPathComponent("Music", isDirectory: true)
+            .appendingPathComponent(defaultFolderName, isDirectory: true)
             .standardizedFileURL
     }
 

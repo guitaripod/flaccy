@@ -159,6 +159,7 @@ extension PlaybackEngine {
             originalQueue.append(track)
         }
         resyncPreloadedItems()
+        refreshDerivedContext()
         host?.playFeedback(.light)
         postOnMain(PlaybackEngine.queueDidChange)
         if wasEmpty {
@@ -171,6 +172,7 @@ extension PlaybackEngine {
         queue.append(track)
         originalQueue.append(track)
         resyncPreloadedItems()
+        refreshDerivedContext()
         host?.playFeedback(.light)
         postOnMain(PlaybackEngine.queueDidChange)
         if wasEmpty {
@@ -192,7 +194,7 @@ extension PlaybackEngine {
         let halfLife: Double = 3 * 24 * 3600
         var map: [URL: Double] = [:]
         for entry in keys {
-            let url = docs.appendingPathComponent(entry.fileURL).standardizedFileURL
+            let url = RemoteTrackPath(path: entry.fileURL)?.assetURL ?? docs.appendingPathComponent(entry.fileURL).standardizedFileURL
             guard let lastPlayed = entry.lastPlayed else { map[url] = 1.0; continue }
             let age = max(0, now.timeIntervalSince(lastPlayed))
             map[url] = max(0.05, age / (age + halfLife))

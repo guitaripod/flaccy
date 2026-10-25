@@ -28,7 +28,7 @@ extension PlaybackEngine {
     /// Recovers the queue index for an item the preload bookkeeping no longer knows,
     /// e.g. after two back-to-back advances raced a single main-queue hop.
     func resolveQueueIndex(for item: AVPlayerItem) -> Int? {
-        guard let url = (item.asset as? AVURLAsset)?.url, !queue.isEmpty else { return nil }
+        guard let url = item.sourceTrackURL ?? (item.asset as? AVURLAsset)?.url, !queue.isEmpty else { return nil }
         let ordered = Array(queue.indices.dropFirst(currentIndex + 1)) + Array(queue.indices.prefix(currentIndex + 1))
         return ordered.first { queue[$0].fileURL == url }
     }

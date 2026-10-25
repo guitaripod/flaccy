@@ -81,7 +81,7 @@ impl SpectrumAnalyzer {
             let magnitude = (self.real[i] * self.real[i] + self.imaginary[i] * self.imaginary[i])
                 .sqrt()
                 * self.window_gain;
-            lines[i] = (20.0 * magnitude.max(1e-9).log10()).max(Self::FLOOR_DECIBELS);
+            lines[i] = ((20.0 * f64::from(magnitude.max(1e-9)).log10()) as f32).max(Self::FLOOR_DECIBELS);
         }
 
         let mut bins = vec![Self::FLOOR_DECIBELS; Self::BIN_COUNT];

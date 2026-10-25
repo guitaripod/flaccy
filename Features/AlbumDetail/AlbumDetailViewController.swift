@@ -53,6 +53,8 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(self, selector: #selector(playbackChanged), name: AudioPlayer.playbackStateDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(lovedChanged), name: LovedTracksService.didChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(artworkChanged), name: AlbumArtworkCache.didChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(tracksRevised), name: Library.tracksRevised, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(tracksRevised), name: RemoteAvailability.didChange, object: nil)
         loadEnrichment()
         repairMetadataIfNeeded()
     }
@@ -75,26 +77,32 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
 
     func setupOverflowMenu() {
         let album = self.album
+        let localTracks = album.tracks.filter { $0.remoteSong == nil }
         let delete = UIAction(title: String(localized: "Delete from Library"), image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
             guard let self else { return }
             TrackContextMenu.confirmDelete(
                 title: String(localized: "Delete \"\(album.title)\"?"),
-                message: String(localized: "All \(album.tracks.count) tracks will be removed from this device."),
+                message: String(localized: "All \(localTracks.count) tracks will be removed from this device."),
                 in: self
             ) { [weak self] in
                 Task { @MainActor in
                     let navigationController = self?.navigationController
                     navigationController?.popViewController(animated: true)
-                    await Library.shared.deleteTracks(album.tracks)
+                    await Library.shared.deleteTracks(localTracks)
                     if let navView = navigationController?.view {
                         ToastView.show(String(localized: "Deleted \(album.title)"), in: navView, style: .info)
                     }
                 }
             }
         }
+        var sections: [UIMenuElement] = [editArtworkAction()]
+        if let download = RemoteDownloadActions.action(for: album.tracks, in: self) {
+            sections.append(UIMenu(options: .displayInline, children: [download]))
+        }
+        if !localTracks.isEmpty { sections.append(UIMenu(options: .displayInline, children: [delete])) }
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             image: UIImage(systemName: "ellipsis.circle"),
-            menu: UIMenu(children: [editArtworkAction(), UIMenu(options: .displayInline, children: [delete])])
+            menu: UIMenu(children: sections)
         )
     }
 
@@ -134,6 +142,10 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     }
 
     @objc func lovedChanged() {
+        reconfigureAllRows()
+    }
+
+    @objc func tracksRevised() {
         reconfigureAllRows()
     }
 

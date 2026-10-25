@@ -21,6 +21,7 @@ pub fn present(ui: &Rc<Ui>) {
         .build();
 
     page.add(&hero_group(ui));
+    page.add(&startup_group(ui));
     page.add(&appearance_group(ui));
     page.add(&lyrics_group(ui));
     if musicvideo::available() {
@@ -34,6 +35,11 @@ pub fn present(ui: &Rc<Ui>) {
     page.add(&about_group());
 
     dialog.add(&page);
+    let servers_page = crate::ui::servers::page(ui);
+    dialog.add(&servers_page);
+    if std::env::var("FLACCY_DEMO_PREFS").as_deref() == Ok("servers") {
+        dialog.set_visible_page(&servers_page);
+    }
     dialog.present(Some(&ui.window));
     republish_job_progress(ui);
 }
@@ -229,6 +235,36 @@ fn group_thousands(n: u64) -> String {
         out.push(ch);
     }
     out
+}
+
+/// Which page a launch opens on: Home, or the page the last session ended on.
+fn startup_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
+    use flaccy_shared::home_copy;
+    let group = adw::PreferencesGroup::new();
+    let model = gtk::StringList::new(&[
+        home_copy::LAUNCH_HOME,
+        home_copy::LAUNCH_WHERE_YOU_LEFT_OFF,
+    ]);
+    let row = adw::ComboRow::builder()
+        .title(home_copy::OPEN_AT_LAUNCH)
+        .model(&model)
+        .build();
+    row.set_selected(if ui.core.config.borrow().opens_on_home() { 0 } else { 1 });
+    {
+        let ui = Rc::clone(ui);
+        row.connect_selected_notify(move |row| {
+            let launch = if row.selected() == 1 {
+                crate::config::LAUNCH_LAST
+            } else {
+                crate::config::LAUNCH_HOME
+            };
+            ui.core.config.borrow_mut().launch_page = launch.to_string();
+            ui.core.save_config();
+            crate::logger::info("ui", &format!("open at launch set to {launch}"));
+        });
+    }
+    group.add(&row);
+    group
 }
 
 fn appearance_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {

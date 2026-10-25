@@ -272,6 +272,10 @@ mod tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
+            disc_number: None,
         }
     }
 

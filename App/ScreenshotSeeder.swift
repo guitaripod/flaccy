@@ -19,6 +19,15 @@ enum ScreenshotSeeder {
 
     static let launchArgument = "--seed-screenshots"
 
+    /// True for a screenshot launch, whose fictional catalog has nothing to
+    /// enrich and whose captures must not show a background job counting down.
+    nonisolated static var isActive: Bool {
+        CommandLine.arguments.contains("--seed-screenshots")
+    }
+
+    /// Seeds the library but not the listening history, for a Home with nothing played yet.
+    static let noHistoryArgument = "--no-history"
+
     /// Captures the once-per-library Debut. It re-runs the fictional seed and
     /// then clears `libraryDebut`, so the showpiece is presentable again on a
     /// simulator that has already been through it. Nothing here ever reads a
@@ -110,12 +119,19 @@ enum ScreenshotSeeder {
         }
         #endif
         guard (try? db.fetchAllTrackRelativePaths())?.isEmpty ?? true else { return }
+        #if os(iOS)
+        if DemoMode.isEmptyLibrary { return }
+        #endif
 
         let documents = LibraryPaths.root
         writeAudioFiles(for: catalog, in: documents)
         insertTracks(for: catalog, db: db)
         insertAlbumInfo(for: catalog, db: db)
-        insertScrobbles(for: catalog, db: db)
+        let wantsNoHistory = CommandLine.arguments.contains(noHistoryArgument)
+            || ProcessInfo.processInfo.environment["FLACCY_ROUTE"] == "home-dayone"
+        if !wantsNoHistory {
+            insertScrobbles(for: catalog, db: db)
+        }
         insertLyrics(db: db)
         #if os(iOS)
         DemoMode.seedSupplements(db: db)
@@ -163,7 +179,8 @@ enum ScreenshotSeeder {
         DemoAlbum(artist: heroArtist, title: heroAlbum, year: "2023", genre: "Progressive",
                   bitDepth: 24, sampleRate: 96000, top: rgb(0x2B1A46), bottom: rgb(0x0C0714), accent: rgb(0xFF6B9D), motif: 0,
                   tracks: [track(1, "Cirrus", 224), track(2, heroTrack, 372, loved: true), track(3, "Ghost Harbor", 287),
-                           track(4, "The Long Way Down", 341), track(5, "Undertow", 259, loved: true), track(6, "Parallax", 405)]),
+                           track(4, "The Long Way Down", 341), track(5, "Undertow", 259, loved: true), track(6, "Parallax", 405),
+                           track(7, "Perihelion Waltz", 201), track(8, "Low Orbit", 163), track(9, "Afterlight", 176)]),
         DemoAlbum(artist: "Kestrel Vale", title: "Aurorae", year: "2024", genre: "Ambient",
                   bitDepth: 24, sampleRate: 48000, top: rgb(0x0E3B4A), bottom: rgb(0x061318), accent: rgb(0x6FE3C8), motif: 4,
                   tracks: [track(1, "Glass Horizon", 312, loved: true), track(2, "Polar Light", 268), track(3, "Ice Cartography", 349),

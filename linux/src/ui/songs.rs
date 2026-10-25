@@ -3,7 +3,7 @@ use crate::events::AppEvent;
 use crate::filters::{self, LibraryFilter};
 use crate::library::{format_last_played, format_time, format_total_duration, Track};
 use crate::recap::Period;
-use crate::ui::filter_chips::ChipBar;
+use crate::ui::filter_chips::{ChipBar, SourceBar};
 use crate::ui::{context, controls, Ui};
 use adw::prelude::*;
 use flaccy_shared::load_progress::group_digits;
@@ -58,12 +58,17 @@ struct Mode {
     filter: Cell<LibraryFilter>,
     range: Cell<Period>,
     allowed: RefCell<Option<HashSet<String>>>,
+    source: RefCell<String>,
     range_plays: RefCell<HashMap<String, i64>>,
     rank: RefCell<HashMap<i64, usize>>,
 }
 
 impl Mode {
     fn admits(&self, track: &Track) -> bool {
+        filters::source_admits(&self.source.borrow(), &track.rel_path) && self.admits_filter(track)
+    }
+
+    fn admits_filter(&self, track: &Track) -> bool {
         match self.filter.get() {
             LibraryFilter::All => true,
             LibraryFilter::MostPlayed => self.range_plays.borrow().contains_key(&track.rel_path),
@@ -143,6 +148,7 @@ struct View {
     status: gtk::Label,
     columns: Columns,
     chips: RefCell<Option<Rc<ChipBar>>>,
+    sources: RefCell<Option<Rc<SourceBar>>>,
     actions: RefCell<Vec<gtk::Button>>,
     epoch: Cell<u64>,
     applied_rows: RefCell<Vec<u64>>,
@@ -171,19 +177,21 @@ const PATCH_ROW_LIMIT: usize = 128;
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let store = gio::ListStore::new::<BoxedAnyObject>();
-    let (saved_filter, saved_range, saved_sort, saved_descending) = {
+    let (saved_filter, saved_range, saved_sort, saved_descending, saved_source) = {
         let config = ui.core.config.borrow();
         (
             LibraryFilter::from_id(&config.songs_filter),
             filters::range_from_id(&config.songs_range),
             config.songs_sort.clone(),
             config.songs_sort_descending,
+            config.songs_source.clone(),
         )
     };
     let mode = Rc::new(Mode {
         filter: Cell::new(LibraryFilter::All),
         range: Cell::new(saved_range),
         allowed: RefCell::new(None),
+        source: RefCell::new(saved_source),
         range_plays: RefCell::new(HashMap::new()),
         rank: RefCell::new(HashMap::new()),
     });
@@ -223,12 +231,29 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let selected = selected_tracks(&selection);
             let clicked_in_selection = selected.iter().any(|t| t.rel_path == track.rel_path);
             if selected.len() >= 2 && clicked_in_selection {
+                let local: Vec<Track> = selected
+                    .iter()
+                    .filter(|track| !crate::remote::is_remote(&track.rel_path))
+                    .cloned()
+                    .collect();
                 let has_duplicates =
-                    !crate::hygiene::find_duplicate_groups(&selected, &ui.core.music_root())
+                    !crate::hygiene::find_duplicate_groups(&local, &ui.core.music_root())
                         .is_empty();
-                context::popup_menu_at(anchor, &bulk_menu(selected.len(), has_duplicates), x, y);
+                let downloads = crate::remote::downloads_state(
+                    selected.iter().map(|track| track.rel_path.as_str()),
+                );
+                context::popup_menu_at(
+                    anchor,
+                    &bulk_menu(selected.len(), has_duplicates, downloads),
+                    x,
+                    y,
+                );
             } else {
-                let menu = context::track_menu(&track.rel_path, track.loved);
+                let menu = context::track_menu(
+                    &track.rel_path,
+                    track.loved,
+                    ui.core.has_previous_version(&track.rel_path),
+                );
                 context::popup_menu_at(anchor, &menu, x, y);
             }
         })
@@ -237,9 +262,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let track_column = track_number_column(ui);
     column_view.append_column(&track_column);
-    let title_column = string_column(
+    let title_column = title_column(
         ui,
-        "Title",
         true,
         |track| track.title.clone(),
         |a, b| filters::cmp_ignore_case(&a.title, &b.title),
@@ -427,6 +451,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         status,
         columns,
         chips: RefCell::new(None),
+        sources: RefCell::new(None),
         actions: RefCell::new(Vec::new()),
         epoch: Cell::new(0),
         applied_rows: RefCell::new(Vec::new()),
@@ -457,6 +482,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 AppEvent::LibraryReloaded => view.on_library_changed(true),
                 AppEvent::LovedChanged { .. } => view.on_library_changed(false),
                 AppEvent::NaturalEnd(_) => view.on_play_ended(),
+                AppEvent::RemoteChanged => view.refresh_sources(),
                 AppEvent::SearchChanged(_) => view.on_search_changed(),
                 AppEvent::LocateCurrent => view.locate_current(),
                 _ => {}
@@ -508,7 +534,17 @@ impl View {
             .hexpand(true)
             .child(&chips.widget)
             .build();
+        let sources = SourceBar::new({
+            let view = Rc::downgrade(self);
+            move |source| {
+                if let Some(view) = view.upgrade() {
+                    view.choose_source(source);
+                }
+            }
+        });
         *self.chips.borrow_mut() = Some(chips);
+        *self.sources.borrow_mut() = Some(sources);
+        self.refresh_sources();
 
         let actions = gtk::Box::builder()
             .orientation(gtk::Orientation::Horizontal)
@@ -548,7 +584,32 @@ impl View {
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         row.append(&scroller);
         row.append(&actions);
-        row.upcast()
+        let header = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        header.append(&row);
+        header.append(&self.source_row());
+        header.upcast()
+    }
+
+    /// The source chips on a row of their own under the filter chips, which
+    /// already fill a default-width window. The row only exists while a server
+    /// is saved.
+    fn source_row(&self) -> gtk::Widget {
+        let sources = self.sources.borrow().clone().expect("the source bar is built first");
+        sources.widget.set_margin_start(12);
+        sources.widget.set_margin_end(12);
+        sources.widget.set_margin_bottom(4);
+        let wrapper = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::External)
+            .vscrollbar_policy(gtk::PolicyType::Never)
+            .child(&sources.widget)
+            .visible(sources.widget.is_visible())
+            .build();
+        sources
+            .widget
+            .bind_property("visible", &wrapper, "visible")
+            .sync_create()
+            .build();
+        wrapper.upcast()
     }
 
     fn visible_tracks(self: &Rc<Self>) -> Vec<Track> {
@@ -603,6 +664,43 @@ impl View {
             &name,
             tracks.into_iter().map(|t| t.rel_path).collect(),
         );
+    }
+
+    /// Rebuilds the source chips from the saved servers, and widens the list
+    /// to every source when the one it was narrowed to is gone.
+    fn refresh_sources(self: &Rc<Self>) {
+        let Some(sources) = self.sources.borrow().clone() else {
+            return;
+        };
+        let servers: Vec<(String, String)> = crate::remote::handle()
+            .map(|remote| {
+                remote
+                    .servers()
+                    .into_iter()
+                    .map(|server| (server.id, server.name))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let wanted = self.mode.source.borrow().clone();
+        let lit = sources.refresh(&servers, &wanted);
+        if lit != wanted {
+            self.choose_source(lit);
+        }
+    }
+
+    /// Narrows the list to one source, or to all of them for an empty id.
+    fn choose_source(self: &Rc<Self>, source: String) {
+        {
+            let mut config = self.ui.core.config.borrow_mut();
+            if config.songs_source != source {
+                config.songs_source = source.clone();
+                drop(config);
+                self.ui.core.save_config();
+            }
+        }
+        *self.mode.source.borrow_mut() = source;
+        self.filter.changed(gtk::FilterChange::Different);
+        self.update_status(true);
     }
 
     /// Turns a chip on. `natural_sort` is true for a click: the chip then also
@@ -1078,6 +1176,24 @@ fn install_bulk_actions(ui: &Rc<Ui>, selection: &gtk::MultiSelection) {
     {
         let ui = Rc::clone(ui);
         add(
+            "bulk-download",
+            Box::new(move |tracks| {
+                crate::ui::window::keep_songs(&ui, paths_of(&tracks), true);
+            }),
+        );
+    }
+    {
+        let ui = Rc::clone(ui);
+        add(
+            "bulk-remove-download",
+            Box::new(move |tracks| {
+                crate::ui::window::keep_songs(&ui, paths_of(&tracks), false);
+            }),
+        );
+    }
+    {
+        let ui = Rc::clone(ui);
+        add(
             "bulk-dedup",
             Box::new(move |tracks| crate::ui::cleanup::present_selection_dedup(&ui, tracks)),
         );
@@ -1093,7 +1209,11 @@ fn install_bulk_actions(ui: &Rc<Ui>, selection: &gtk::MultiSelection) {
     ui.window.insert_action_group("songs", Some(&actions));
 }
 
-fn bulk_menu(count: usize, has_duplicates: bool) -> gio::Menu {
+fn paths_of(tracks: &[Track]) -> Vec<String> {
+    tracks.iter().map(|track| track.rel_path.clone()).collect()
+}
+
+fn bulk_menu(count: usize, has_duplicates: bool, downloads: Option<bool>) -> gio::Menu {
     let menu = gio::Menu::new();
     let play_section = gio::Menu::new();
     play_section.append(
@@ -1111,6 +1231,13 @@ fn bulk_menu(count: usize, has_duplicates: bool) -> gio::Menu {
     love_section.append(Some("Love on Last.fm"), Some("songs.bulk-love"));
     love_section.append(Some("Unlove"), Some("songs.bulk-unlove"));
     menu.append_section(None, &love_section);
+
+    if let Some(kept) = downloads {
+        let download_section = gio::Menu::new();
+        let (label, action) = context::download_entry(kept, "songs.bulk-remove-download", "songs.bulk-download");
+        download_section.append(Some(label), Some(action));
+        menu.append_section(None, &download_section);
+    }
 
     if has_duplicates {
         let dedup_section = gio::Menu::new();
@@ -1244,6 +1371,35 @@ pub(crate) fn apply_now_playing_cell(ui: &Rc<Ui>, widget: &gtk::Widget, item: &g
     }
 }
 
+/// Keeps a recycled cell's chip in step with the library: a reload that
+/// recognised a re-export lights it even when the row object it is bound to
+/// is a snapshot from before.
+fn watch_cell_chip(ui: &Rc<Ui>, chip: &gtk::Label, item: &gtk::ListItem) {
+    let item_weak = item.downgrade();
+    let ui = Rc::clone(ui);
+    let hub = Rc::clone(&ui.core.hub);
+    hub.subscribe_widget(chip, move |chip, event| {
+        if !matches!(event, AppEvent::LibraryReloaded) {
+            return;
+        }
+        let Some(boxed) = item_weak
+            .upgrade()
+            .and_then(|item| item.item())
+            .and_downcast::<BoxedAnyObject>()
+        else {
+            return;
+        };
+        let rel_path = boxed.borrow::<Track>().rel_path.clone();
+        let visible = ui
+            .core
+            .library
+            .borrow()
+            .track_by_rel_path(&rel_path)
+            .is_some_and(controls::shows_new_mix);
+        chip.set_visible(visible);
+    });
+}
+
 /// Keeps a recycled cell following the player for as long as the widget lives.
 pub(crate) fn watch_now_playing_cell(ui: &Rc<Ui>, widget: &gtk::Widget, item: &gtk::ListItem) {
     let ui_ref = Rc::clone(ui);
@@ -1310,6 +1466,93 @@ pub(crate) fn string_column(
     compare: impl Fn(&Track, &Track) -> Ordering + 'static,
     menu: Option<Rc<MenuHandler>>,
 ) -> gtk::ColumnViewColumn {
+    cell_column(ui, title, expand, false, text_for, compare, menu)
+}
+
+/// A title column: the text, and beside it the New mix chip while the song's
+/// latest re-export is recent.
+pub(crate) fn title_column(
+    ui: &Rc<Ui>,
+    expand: bool,
+    text_for: impl Fn(&Track) -> String + 'static,
+    compare: impl Fn(&Track, &Track) -> Ordering + 'static,
+    menu: Option<Rc<MenuHandler>>,
+) -> gtk::ColumnViewColumn {
+    cell_column(ui, "Title", expand, true, text_for, compare, menu)
+}
+
+/// The text label of a cell, whether the cell is the label itself or a box
+/// holding it beside a chip.
+fn cell_label(cell: &gtk::Widget) -> Option<gtk::Label> {
+    cell.clone()
+        .downcast::<gtk::Label>()
+        .ok()
+        .or_else(|| cell.first_child().and_downcast::<gtk::Label>())
+}
+
+/// The downloads mark beside a title, for a song kept on this computer.
+fn cell_mark(cell: &gtk::Widget) -> Option<gtk::Image> {
+    cell.first_child()?
+        .next_sibling()
+        .and_downcast::<gtk::Image>()
+        .filter(|mark| mark.has_css_class("kept-mark"))
+}
+
+fn kept_mark() -> gtk::Image {
+    let mark = gtk::Image::from_icon_name("folder-download-symbolic");
+    mark.add_css_class("kept-mark");
+    mark.add_css_class("dim");
+    mark.set_pixel_size(12);
+    mark.set_valign(gtk::Align::Center);
+    mark.set_tooltip_text(Some("Downloaded: plays without the server"));
+    mark.set_visible(false);
+    mark
+}
+
+/// Shows a remote song the way its source allows: dimmed while its server is
+/// out of reach and none of it is on this computer, marked while it is kept.
+fn apply_remote_state(cell: &gtk::Widget, rel_path: &str) {
+    cell.set_opacity(if crate::remote::is_dimmed(rel_path) { 0.45 } else { 1.0 });
+    if let Some(mark) = cell_mark(cell) {
+        mark.set_visible(crate::remote::is_downloaded(rel_path));
+    }
+}
+
+/// Keeps a recycled cell's dimming and download mark following the remote
+/// library for as long as the widget lives.
+fn watch_remote_state(ui: &Rc<Ui>, cell: &gtk::Widget, item: &gtk::ListItem) {
+    let item_weak = item.downgrade();
+    ui.core.hub.subscribe_widget(cell, move |cell, event| {
+        if !matches!(event, AppEvent::RemoteChanged) {
+            return;
+        }
+        let Some(boxed) = item_weak
+            .upgrade()
+            .and_then(|item| item.item())
+            .and_downcast::<BoxedAnyObject>()
+        else {
+            return;
+        };
+        let rel_path = boxed.borrow::<Track>().rel_path.clone();
+        apply_remote_state(cell, &rel_path);
+    });
+}
+
+fn cell_chip(cell: &gtk::Widget) -> Option<gtk::Label> {
+    cell.last_child()
+        .and_downcast::<gtk::Label>()
+        .filter(|chip| chip.has_css_class("new-mix-chip"))
+}
+
+fn cell_column(
+    ui: &Rc<Ui>,
+    title: &str,
+    expand: bool,
+    with_chip: bool,
+    text_for: impl Fn(&Track) -> String + 'static,
+    compare: impl Fn(&Track, &Track) -> Ordering + 'static,
+    menu: Option<Rc<MenuHandler>>,
+) -> gtk::ColumnViewColumn {
     let factory = gtk::SignalListItemFactory::new();
     let setup_ui = Rc::clone(ui);
     let text_for = Rc::new(text_for);
@@ -1322,15 +1565,28 @@ pub(crate) fn string_column(
             .xalign(0.0)
             .ellipsize(pango::EllipsizeMode::End)
             .build();
-        item.set_child(Some(&label));
-        watch_now_playing_cell(&setup_ui, label.upcast_ref::<gtk::Widget>(), item);
+        let cell: gtk::Widget = if with_chip {
+            label.set_hexpand(true);
+            let chip = controls::new_mix_chip();
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            row.append(&label);
+            row.append(&kept_mark());
+            row.append(&chip);
+            watch_cell_chip(&setup_ui, &chip, item);
+            row.upcast()
+        } else {
+            label.clone().upcast()
+        };
+        item.set_child(Some(&cell));
+        watch_now_playing_cell(&setup_ui, &cell, item);
+        watch_remote_state(&setup_ui, &cell, item);
         watch_cell_text(&setup_ui, &label, item, Rc::clone(&setup_text));
         if let Some(menu) = menu.clone() {
             let gesture = gtk::GestureClick::builder()
                 .button(gdk::BUTTON_SECONDARY)
                 .build();
             let item_weak = item.downgrade();
-            let label_ref = label.clone();
+            let anchor = cell.clone();
             gesture.connect_pressed(move |_, _, x, y| {
                 let Some(item) = item_weak.upgrade() else {
                     return;
@@ -1339,9 +1595,9 @@ pub(crate) fn string_column(
                     return;
                 };
                 let track = boxed.borrow::<Track>().clone();
-                menu(&track, label_ref.upcast_ref::<gtk::Widget>(), x, y);
+                menu(&track, &anchor, x, y);
             });
-            label.add_controller(gesture);
+            cell.add_controller(gesture);
         }
     });
     {
@@ -1351,7 +1607,10 @@ pub(crate) fn string_column(
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
                 return;
             };
-            let Some(label) = item.child().and_downcast::<gtk::Label>() else {
+            let Some(cell) = item.child() else {
+                return;
+            };
+            let Some(label) = cell_label(&cell) else {
                 return;
             };
             let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
@@ -1359,8 +1618,12 @@ pub(crate) fn string_column(
             };
             let track = boxed.borrow::<Track>();
             label.set_label(&text_for(&track));
+            if let Some(chip) = cell_chip(&cell) {
+                chip.set_visible(controls::shows_new_mix(&track));
+            }
+            apply_remote_state(&cell, &track.rel_path);
             drop(track);
-            apply_now_playing_cell(&bind_ui, label.upcast_ref::<gtk::Widget>(), item);
+            apply_now_playing_cell(&bind_ui, &cell, item);
         });
     }
 

@@ -3,7 +3,7 @@ pub use flaccy_shared::track_page_layout::{
     balance_columns, column_count, even_runs, page_mode, PageKind, PageMode, TrackLayout,
     FILTER_THRESHOLD, SONGS_PER_COLUMN,
 };
-use crate::ui::songs::{string_column, track_number_column, MenuHandler};
+use crate::ui::songs::{string_column, title_column, track_number_column, MenuHandler};
 use crate::ui::{resize, Ui};
 use adw::prelude::*;
 use gtk::gio;
@@ -375,9 +375,8 @@ impl TrackTable {
         number.set_fixed_width(64);
         column_view.append_column(&number);
 
-        let title = string_column(
+        let title = title_column(
             ui,
-            "Title",
             true,
             |track| track.title.clone(),
             |a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()),
@@ -615,6 +614,10 @@ mod tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
+            disc_number: None,
         }
     }
 

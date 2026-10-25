@@ -1,3 +1,4 @@
+import FlaccyCore
 import Foundation
 import MidgarCore
 
@@ -43,6 +44,13 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         lock.unlock()
     }
 
+    /// Re-reads the loved set after a change that bypassed this service, such as a sync that
+    /// followed the stars on a music server, and tells the screens.
+    func reloadFromDatabase() {
+        reloadCache()
+        postDidChange()
+    }
+
     func isLoved(track: Track) -> Bool {
         let path = relativePath(for: track.fileURL)
         lock.lock()
@@ -65,8 +73,10 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         let path = relativePath(for: track.fileURL)
         let newValue = !isLoved(track: track)
 
+        let remoteSong = track.remoteSong
+        let waitsForLastFM = lastFM.isAuthenticated || remoteSong == nil
         do {
-            try db.setLoved(fileURL: path, loved: newValue, pendingOp: newValue ? "love" : "unlove")
+            try db.setLoved(fileURL: path, loved: newValue, pendingOp: waitsForLastFM ? (newValue ? "love" : "unlove") : nil)
         } catch {
             MidgarLog.error("Failed to persist loved state: \(error.localizedDescription)", category: .database)
             return isLoved(track: track)
@@ -77,6 +87,8 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         }
 
         postDidChange(change: (fileURL: path, loved: newValue))
+
+        if let remoteSong { RemoteServerReports.setStarred(remoteSong, starred: newValue) }
 
         await flushPendingLoves()
         return newValue
@@ -153,6 +165,7 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
         .urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL.path
 
     private func relativePath(for url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return song.path }
         let docs = Self.documentsPath
         let path = url.standardizedFileURL.path
         guard path.hasPrefix(docs) else { return url.lastPathComponent }

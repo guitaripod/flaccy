@@ -1,3 +1,4 @@
+import FlaccyCore
 import UIKit
 import MidgarCore
 
@@ -5,7 +6,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
     private let playerContainer = PlayerContainerViewController()
-    private var navController: UINavigationController?
+    private var tabController: AppTabBarController?
     private var rootController: RootContainerViewController?
     private var deferredPaywallObserver: NSObjectProtocol?
 
@@ -22,30 +23,34 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         let window = UIWindow(windowScene: windowScene)
 
-        let nav = UINavigationController(rootViewController: LibraryViewController())
-        nav.navigationBar.prefersLargeTitles = false
-        self.navController = nav
+        let tabs = AppTabBarController()
+        self.tabController = tabs
+        connectPlayer(to: tabs)
 
-        playerContainer.onRequestPush = { [weak nav] vc in
-            nav?.pushViewController(vc, animated: true)
-        }
-
-        let rootVC = RootContainerViewController(navigation: nav, player: playerContainer)
+        let rootVC = RootContainerViewController(content: tabs, player: playerContainer)
         self.rootController = rootVC
+        rootVC.onSplitChange = { [weak tabs] isSplit in tabs?.suppressesMiniPlayer = isSplit }
+        tabs.library.debutHostProvider = { [weak rootVC] in rootVC?.view }
 
         window.overrideUserInterfaceStyle = AppAppearance.current.userInterfaceStyle
         window.rootViewController = rootVC
         window.makeKeyAndVisible()
         self.window = window
+        RemoteLaunch.start()
         #if DEBUG
+        RemoteExercise.runIfRequested()
+        RemoteShot.runIfRequested(tabs: tabs)
         PaywallShot.runIfRequested(in: window)
         SampleExercise.runIfRequested()
+        ReexportExercise.runIfRequested()
+        NewMixShot.runIfRequested(tabs: tabs, player: playerContainer)
         WatchSyncExercise.runIfRequested()
+        WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         EqualizerShots.runIfRequested(in: window)
         #endif
         #if DEBUG && targetEnvironment(simulator)
-        DemoRouter.runIfRequested(window: window, nav: nav, player: playerContainer)
+        DemoRouter.runIfRequested(window: window, tabs: tabs, player: playerContainer)
         #endif
 
         NotificationCenter.default.addObserver(
@@ -64,6 +69,55 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             self, selector: #selector(entitlementsDidLoad), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
         TrialReminderPrompt.observeOpportunities()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handlePlaybackUnavailable(_:)), name: RemoteAvailability.playbackUnavailable, object: nil
+        )
+        let launchLinks = connectionOptions.urlContexts.map(\.url)
+        if !launchLinks.isEmpty {
+            DispatchQueue.main.async { [weak self] in launchLinks.forEach { self?.openServerLink($0) } }
+        }
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        URLContexts.forEach { openServerLink($0.url) }
+    }
+
+    @objc private func handlePlaybackUnavailable(_ notification: Notification) {
+        guard let message = notification.userInfo?[RemoteAvailability.messageKey] as? String,
+              let top = TrialRunwayPresenter.topmostViewController(in: window) else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+        ToastView.show(message, in: top.view, style: .error)
+    }
+
+    /// Opens the Add Server sheet filled in from a `flaccy://server` link; any other link is left alone.
+    private func openServerLink(_ url: URL) {
+        guard let link = ServerLink(url: url), let top = TrialRunwayPresenter.topmostViewController(in: window) else { return }
+        MidgarLog.info("Opened a server link for \(link.name ?? "a server")", category: .ui)
+        AddServerViewController.present(from: top, servers: RemoteServersViewModel(), link: link)
+    }
+
+    /// Wires the mini player to the tab controller: pushes land on the selected
+    /// tab, and the dock either lives in the system's tab accessory (iOS 26) or
+    /// floats just above the tab bar.
+    private func connectPlayer(to tabs: AppTabBarController) {
+        playerContainer.onRequestPush = { [weak tabs] viewController in
+            tabs?.pushOnSelected(viewController)
+        }
+        tabs.onMiniPlayerTap = { [weak playerContainer] in playerContainer?.expand() }
+        guard #available(iOS 26.0, *) else {
+            playerContainer.dockObstruction = { [weak self, weak tabs] in
+                guard let tabs, let space = self?.playerContainer.view else { return .zero }
+                return tabs.barObstruction(in: space, safeArea: space.safeAreaInsets)
+            }
+            return
+        }
+        playerContainer.externalDockFrame = { [weak self, weak tabs] in
+            guard let space = self?.playerContainer.view else { return nil }
+            return tabs?.accessoryFrame(in: space)
+        }
+        playerContainer.onExternalDockHandoff = { [weak tabs] handedOff in
+            tabs?.setAccessoryHandedOff(handedOff)
+        }
     }
 
     /// The single place the paywall is presented from. A Debut on screen wins:
@@ -101,6 +155,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         TrialRunwayPresenter.refresh(in: window)
+        RemoteLaunch.becameActive()
         WatchSyncService.shared.resumeIfNeeded()
         Task {
             await RecapNotificationScheduler.shared.refreshSchedule()
@@ -122,6 +177,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func updateMiniPlayer() {
         let player = AudioPlayer.shared
         playerContainer.syncDock(track: player.currentTrack, isPlaying: player.isPlaying)
+        tabController?.updateMiniPlayer(track: player.currentTrack, isPlaying: player.isPlaying)
         rootController?.setHasCurrentTrack(player.currentTrack != nil)
     }
 }
@@ -134,7 +190,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 final class RootContainerViewController: UIViewController {
     weak var statusBarSource: UIViewController?
 
-    private let navigation: UINavigationController
+    private let navigation: UIViewController
     private let player: PlayerContainerViewController
     private let dimmingView = UIView()
     private var navigationTrailing: NSLayoutConstraint!
@@ -142,7 +198,13 @@ final class RootContainerViewController: UIViewController {
     private var playerLeading: NSLayoutConstraint!
     private var appliedGeometry: AdaptiveLayout.SplitGeometry?
     private var hasCurrentTrack = false
-    private(set) var isSplit = false
+    private(set) var isSplit = false {
+        didSet {
+            guard isSplit != oldValue else { return }
+            onSplitChange?(isSplit)
+        }
+    }
+    var onSplitChange: ((Bool) -> Void)?
     private var isPlayerFocused = false
 
     override var childForStatusBarStyle: UIViewController? { statusBarSource }
@@ -154,7 +216,7 @@ final class RootContainerViewController: UIViewController {
     }
     #endif
 
-    init(navigation: UINavigationController, player: PlayerContainerViewController) {
+    init(content navigation: UIViewController, player: PlayerContainerViewController) {
         self.navigation = navigation
         self.player = player
         navigation.view.translatesAutoresizingMaskIntoConstraints = false
@@ -208,6 +270,14 @@ final class RootContainerViewController: UIViewController {
             dimmingView.bottomAnchor.constraint(equalTo: navigation.view.bottomAnchor),
         ])
         applyCompactLayout()
+        raiseDebutAbovePlayer()
+    }
+
+    /// The Debut is added to this view while the content loads, before the
+    /// player overlay exists; it has to end up above both.
+    private func raiseDebutAbovePlayer() {
+        guard let debut = view.subviews.first(where: { $0 is LibraryDebutView }) else { return }
+        view.bringSubviewToFront(debut)
     }
 
     override func viewDidLayoutSubviews() {
@@ -250,8 +320,11 @@ final class RootContainerViewController: UIViewController {
         updateDockInset()
     }
 
+    /// Keeps scroll content clear of the floating dock. On iOS 26 the system's
+    /// tab accessory reserves its own space, so nothing is added there.
     private func updateDockInset() {
-        navigation.additionalSafeAreaInsets.bottom = (!isSplit && hasCurrentTrack) ? 72 : 0
+        guard #unavailable(iOS 26.0) else { return }
+        navigation.additionalSafeAreaInsets.bottom = (!isSplit && hasCurrentTrack) ? 68 : 0
     }
 
     private func applySplitLayout(_ geometry: AdaptiveLayout.SplitGeometry) {

@@ -49,6 +49,15 @@
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Flaccy connects to the music server on your home network.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Flaccy scans the QR code your Flaccy Server prints, so you don't have to type its address and key.</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>flaccy uses Apple Music to find your tracks on streaming platforms for sharing.</string>
 	<key>UIApplicationSceneManifest</key>

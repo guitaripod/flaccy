@@ -35,6 +35,7 @@ public protocol PlaybackEngineHost: AnyObject {
     var libraryRoot: URL { get }
     func isPlaybackGated() -> Bool
     func attachEqualizer(to item: AVPlayerItem)
+    func remoteAsset(for track: Track) -> AVURLAsset
     func activateAudioSession()
     func playFeedback(_ kind: PlaybackFeedbackKind)
     func playbackStateDidUpdate()

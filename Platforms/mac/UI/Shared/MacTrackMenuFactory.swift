@@ -57,6 +57,9 @@ enum MacTrackMenuFactory {
         playlistItem.image = NSImage(systemSymbolName: "music.note.list", accessibilityDescription: nil)
         playlistItem.submenu = PlaylistActions.addToPlaylistSubmenu(for: [track], in: window)
         menu.addItem(playlistItem)
+        if let download = MacRemoteDownloadActions.menuItem(for: [track], window: window) {
+            menu.addItem(download)
+        }
         menu.addItem(.separator())
 
         if options.includeGoToAlbum {
@@ -77,9 +80,14 @@ enum MacTrackMenuFactory {
         menu.addItem(shareSubmenuItem(
             subject: .track(title: track.title, artist: track.artist), anchor: anchor
         ))
-        menu.addItem(ClosureMenuItem(title: String(localized: "Show in Finder"), systemImage: "folder") {
-            NSWorkspace.shared.activateFileViewerSelecting([track.fileURL])
-        })
+        if track.remoteSong == nil, let file = RemoteStreamCache.shared.readableFile(for: track.fileURL) {
+            menu.addItem(ClosureMenuItem(title: String(localized: "Show in Finder"), systemImage: "folder") {
+                NSWorkspace.shared.activateFileViewerSelecting([file])
+            })
+        }
+        if PreviousMix.isAvailable(for: track) {
+            menu.addItem(restorePreviousMixItem(for: track, in: window))
+        }
 
         if let removeFromPlaylist = options.removeFromPlaylist {
             menu.addItem(.separator())
@@ -87,7 +95,7 @@ enum MacTrackMenuFactory {
                 removeFromPlaylist()
             })
         }
-        if options.includeDelete {
+        if options.includeDelete, track.fileURL.isFileURL {
             menu.addItem(.separator())
             menu.addItem(ClosureMenuItem(
                 title: LibraryRoot.shared.isUsingDefaultRoot ? String(localized: "Move to Trash…") : String(localized: "Remove from Library…"),
@@ -97,6 +105,27 @@ enum MacTrackMenuFactory {
             })
         }
         return menu
+    }
+
+    /// Swaps the song back to the version it had before it was last replaced.
+    private static func restorePreviousMixItem(for track: Track, in window: NSWindow?) -> NSMenuItem {
+        ClosureMenuItem(title: String(localized: "Restore Previous Mix"), systemImage: "arrow.uturn.backward.circle") {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            Task {
+                switch await PreviousMix.restore(track) {
+                case .success:
+                    MacToast.show(
+                        String(localized: "Restored the previous mix of \u{201C}\(track.title)\u{201D}"),
+                        style: .success, in: window
+                    )
+                case .failure(let error):
+                    MacToast.show(
+                        String(localized: "Couldn't restore the previous mix of \u{201C}\(track.title)\u{201D} — \(error.localizedDescription). Nothing was changed; try again."),
+                        style: .error, in: window
+                    )
+                }
+            }
+        }
     }
 
     static func menu(for album: Album, anchor: NSView?, includeViewAlbum: Bool = true) -> NSMenu {
@@ -139,6 +168,9 @@ enum MacTrackMenuFactory {
         playlistItem.image = NSImage(systemSymbolName: "music.note.list", accessibilityDescription: nil)
         playlistItem.submenu = PlaylistActions.addToPlaylistSubmenu(for: album.tracks, in: window)
         menu.addItem(playlistItem)
+        if let download = MacRemoteDownloadActions.menuItem(for: album.tracks, window: window) {
+            menu.addItem(download)
+        }
         menu.addItem(.separator())
 
         menu.addItem(shareSubmenuItem(
@@ -150,13 +182,15 @@ enum MacTrackMenuFactory {
         menu.addItem(ClosureMenuItem(title: String(localized: "Edit Artwork…"), systemImage: "photo") {
             MacArtworkEditor.present(for: album, from: window)
         })
-        menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(
-            title: LibraryRoot.shared.isUsingDefaultRoot ? "Move to Trash…" : "Remove from Library…",
-            systemImage: "trash"
-        ) {
-            TrackDeletion.confirmAndDelete(album.tracks, in: window)
-        })
+        if album.tracks.contains(where: { $0.fileURL.isFileURL }) {
+            menu.addItem(.separator())
+            menu.addItem(ClosureMenuItem(
+                title: LibraryRoot.shared.isUsingDefaultRoot ? "Move to Trash…" : "Remove from Library…",
+                systemImage: "trash"
+            ) {
+                TrackDeletion.confirmAndDelete(album.tracks, in: window)
+            })
+        }
         return menu
     }
 
@@ -225,7 +259,8 @@ enum MacTrackMenuFactory {
 /// get an explicit warning because Flaccy indexes them in place.
 enum TrackDeletion {
 
-    static func confirmAndDelete(_ tracks: [Track], in window: NSWindow?) {
+    static func confirmAndDelete(_ allTracks: [Track], in window: NSWindow?) {
+        let tracks = allTracks.filter { $0.fileURL.isFileURL }
         guard !tracks.isEmpty else { return }
         let usingDefaultRoot = LibraryRoot.shared.isUsingDefaultRoot
         let subject = tracks.count == 1

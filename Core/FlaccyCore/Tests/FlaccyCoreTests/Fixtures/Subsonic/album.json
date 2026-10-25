@@ -1,0 +1,197 @@
+{
+    "subsonic-response": {
+        "status": "ok",
+        "version": "1.16.1",
+        "type": "navidrome",
+        "serverVersion": "0.64.2 (10114574)",
+        "openSubsonic": true,
+        "album": {
+            "id": "3VJh1vLoeqzHRu7d7CGEO3",
+            "name": "First Light",
+            "artist": "Test Artist",
+            "artistId": "4kqFOAfzcbEE22Bin8jHjV",
+            "songCount": 3,
+            "duration": 60,
+            "created": "2026-10-25T14:48:14.043618202+02:00",
+            "year": 2026,
+            "userRating": 0,
+            "genres": [],
+            "musicBrainzId": "",
+            "isCompilation": false,
+            "sortName": "first light",
+            "discTitles": [],
+            "originalReleaseDate": {},
+            "releaseDate": {},
+            "releaseTypes": [],
+            "recordLabels": [],
+            "moods": [],
+            "artists": [
+                {
+                    "id": "4kqFOAfzcbEE22Bin8jHjV",
+                    "name": "Test Artist"
+                }
+            ],
+            "displayArtist": "Test Artist",
+            "explicitStatus": "",
+            "version": "",
+            "song": [
+                {
+                    "id": "4vVKvXswBtHVzMYeWVqhKo",
+                    "parent": "3VJh1vLoeqzHRu7d7CGEO3",
+                    "isDir": false,
+                    "title": "Opening",
+                    "album": "First Light",
+                    "artist": "Test Artist",
+                    "track": 1,
+                    "year": 2026,
+                    "size": 313276,
+                    "contentType": "audio/flac",
+                    "suffix": "flac",
+                    "duration": 20,
+                    "bitRate": 122,
+                    "path": "Test Artist/First Light/01 - Opening.flac",
+                    "created": "2026-10-25T14:48:23.521499828+02:00",
+                    "albumId": "3VJh1vLoeqzHRu7d7CGEO3",
+                    "artistId": "4kqFOAfzcbEE22Bin8jHjV",
+                    "type": "music",
+                    "bpm": 0,
+                    "comment": "",
+                    "sortName": "opening",
+                    "mediaType": "song",
+                    "musicBrainzId": "",
+                    "isrc": [],
+                    "genres": [],
+                    "replayGain": {},
+                    "channelCount": 2,
+                    "samplingRate": 44100,
+                    "bitDepth": 16,
+                    "moods": [],
+                    "artists": [
+                        {
+                            "id": "4kqFOAfzcbEE22Bin8jHjV",
+                            "name": "Test Artist"
+                        }
+                    ],
+                    "displayArtist": "Test Artist",
+                    "albumArtists": [
+                        {
+                            "id": "4kqFOAfzcbEE22Bin8jHjV",
+                            "name": "Test Artist"
+                        }
+                    ],
+                    "displayAlbumArtist": "Test Artist",
+                    "contributors": [],
+                    "displayComposer": "",
+                    "explicitStatus": "",
+                    "groupings": [],
+                    "works": [],
+                    "movements": []
+                },
+                {
+                    "id": "0XVvAOjpl7gVx8NZVuwjk4",
+                    "parent": "3VJh1vLoeqzHRu7d7CGEO3",
+                    "isDir": false,
+                    "title": "Middle",
+                    "album": "First Light",
+                    "artist": "Test Artist",
+                    "track": 2,
+                    "year": 2026,
+                    "size": 318465,
+                    "contentType": "audio/flac",
+                    "suffix": "flac",
+                    "duration": 20,
+                    "bitRate": 124,
+                    "path": "Test Artist/First Light/02 - Middle.flac",
+                    "created": "2026-10-25T14:48:23.522392401+02:00",
+                    "albumId": "3VJh1vLoeqzHRu7d7CGEO3",
+                    "artistId": "4kqFOAfzcbEE22Bin8jHjV",
+                    "type": "music",
+                    "bpm": 0,
+                    "comment": "",
+                    "sortName": "middle",
+                    "mediaType": "song",
+                    "musicBrainzId": "",
+                    "isrc": [],
+                    "genres": [],
+                    "replayGain": {},
+                    "channelCount": 2,
+                    "samplingRate": 44100,
+                    "bitDepth": 16,
+                    "moods": [],
+                    "artists": [
+                        {
+                            "id": "4kqFOAfzcbEE22Bin8jHjV",
+                            "name": "Test Artist"
+                        }
+                    ],
+                    "displayArtist": "Test Artist",
+                    "albumArtists": [
+                        {
+                            "id": "4kqFOAfzcbEE22Bin8jHjV",
+                            "name": "Test Artist"
+                        }
+                    ],
+                    "displayAlbumArtist": "Test Artist",
+                    "contributors": [],
+                    "displayComposer": "",
+                    "explicitStatus": "",
+                    "groupings": [],
+                    "works": [],
+                    "movements": []
+                },
+                {
+                    "id": "397JsNCmxVZH4esl0oRopR",
+                    "parent": "3VJh1vLoeqzHRu7d7CGEO3",
+                    "isDir": false,
+                    "title": "Closing",
+                    "album": "First Light",
+                    "artist": "Test Artist",
+                    "track": 3,
+                    "year": 2026,
+                    "size": 318319,
+                    "contentType": "audio/flac",
+                    "suffix": "flac",
+                    "duration": 20,
+                    "bitRate": 124,
+                    "path": "Test Artist/First Light/03 - Closing.flac",
+                    "created": "2026-10-25T14:48:23.522750895+02:00",
+                    "albumId": "3VJh1vLoeqzHRu7d7CGEO3",
+                    "artistId": "4kqFOAfzcbEE22Bin8jHjV",
+                    "type": "music",
+                    "bpm": 0,
+                    "comment": "",
+                    "sortName": "closing",
+                    "mediaType": "song",
+                    "musicBrainzId": "",
+                    "isrc": [],
+                    "genres": [],
+                    "replayGain": {},
+                    "channelCount": 2,
+                    "samplingRate": 44100,
+                    "bitDepth": 16,
+                    "moods": [],
+                    "artists": [
+                        {
+                            "id": "4kqFOAfzcbEE22Bin8jHjV",
+                            "name": "Test Artist"
+                        }
+                    ],
+                    "displayArtist": "Test Artist",
+                    "albumArtists": [
+                        {
+                            "id": "4kqFOAfzcbEE22Bin8jHjV",
+                            "name": "Test Artist"
+                        }
+                    ],
+                    "displayAlbumArtist": "Test Artist",
+                    "contributors": [],
+                    "displayComposer": "",
+                    "explicitStatus": "",
+                    "groupings": [],
+                    "works": [],
+                    "movements": []
+                }
+            ]
+        }
+    }
+}

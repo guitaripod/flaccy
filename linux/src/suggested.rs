@@ -8,10 +8,10 @@ const MIN_TRACKS: usize = 8;
 
 #[derive(Clone)]
 pub struct SuggestedPlaylist {
-    #[allow(dead_code)]
     pub id: &'static str,
     pub title: String,
     pub subtitle: String,
+    #[allow(dead_code)]
     pub icon_name: &'static str,
     pub tracks: Vec<Track>,
 }
@@ -319,6 +319,10 @@ mod tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
+            disc_number: None,
         }
     }
 

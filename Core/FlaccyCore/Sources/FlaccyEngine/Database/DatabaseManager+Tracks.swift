@@ -22,7 +22,7 @@ extension DatabaseManager {
     /// `artworkData` column untouched.
     public func updateTrackPreservingArtwork(_ track: TrackRecord) throws {
         try dbQueue.write { db in
-            try track.update(db, columns: Self.trackColumnsWithoutArtwork)
+            try track.update(db, columns: Self.trackColumnsWithoutArtworkOrVersion)
         }
     }
 
@@ -64,7 +64,7 @@ extension DatabaseManager {
         }
     }
 
-    private static let trackColumnsWithoutArtwork: [Column] = [
+    private static let trackColumnsWithoutArtworkOrVersion: [Column] = [
         Column("id"), Column("fileURL"), Column("title"), Column("artist"),
         Column("albumTitle"), Column("albumArtist"), Column("trackNumber"), Column("duration"),
         Column("lastFMArtworkURL"), Column("musicBrainzID"), Column("albumMusicBrainzID"),
@@ -74,9 +74,25 @@ extension DatabaseManager {
         Column("loved"), Column("lovedPendingOp"),
     ]
 
+    /// The lean read list: everything but the artwork BLOB. The version columns
+    /// ride along on reads only, so a row written back from an older snapshot
+    /// can never roll a newer revision back.
+    private static let trackColumnsWithoutArtwork: [Column] = trackColumnsWithoutArtworkOrVersion + [
+        Column("fileSize"), Column("fileModifiedMs"), Column("audioFingerprint"),
+        Column("revision"), Column("revisedAt"),
+        Column("remoteServer"), Column("remoteSuffix"), Column("remoteSize"),
+        Column("remoteCoverArt"), Column("remoteAlbumId"), Column("pinned"),
+    ]
+
+    private static let remoteRowPattern = RemoteTrackPath.scheme + "%"
+
+    /// The paths of the rows that stand for a file in the library folder. A song on a
+    /// server has no file to find there, so the folder scan must never see its row.
     public func fetchAllTrackRelativePaths() throws -> Set<String> {
         try dbQueue.read { db in
-            let paths = try String.fetchAll(db, sql: "SELECT fileURL FROM tracks")
+            let paths = try String.fetchAll(
+                db, sql: "SELECT fileURL FROM tracks WHERE remoteServer IS NULL"
+            )
             return Set(paths)
         }
     }
@@ -85,6 +101,14 @@ extension DatabaseManager {
         try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: "SELECT fileURL, lastPlayed FROM tracks")
             return rows.map { (fileURL: $0["fileURL"], lastPlayed: $0["lastPlayed"]) }
+        }
+    }
+
+    /// Every track's relative path with the date it entered the library.
+    public func fetchTrackDateAddedByPath() throws -> [(path: String, dateAdded: Date)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: "SELECT fileURL, dateAdded FROM tracks")
+            return rows.map { (path: $0["fileURL"], dateAdded: $0["dateAdded"]) }
         }
     }
 
@@ -103,14 +127,22 @@ extension DatabaseManager {
         }
     }
 
+    /// Drops the library-folder rows whose file is gone. Rows of songs on a server, and the
+    /// playlist places that hold them, stay: the folder scan knows nothing about them.
     public func deleteTracksNotIn(relativePaths: Set<String>) throws {
         try dbQueue.write { db in
+            let isLocalPlaylistPlace = !Column("trackFileURL").like(Self.remoteRowPattern)
+            let isLocalRow = Column("remoteServer") == nil
             if relativePaths.isEmpty {
-                _ = try PlaylistTrackRecord.deleteAll(db)
-                _ = try TrackRecord.deleteAll(db)
+                _ = try PlaylistTrackRecord.filter(isLocalPlaylistPlace).deleteAll(db)
+                _ = try TrackRecord.filter(isLocalRow).deleteAll(db)
             } else {
-                _ = try PlaylistTrackRecord.filter(!relativePaths.contains(Column("trackFileURL"))).deleteAll(db)
-                _ = try TrackRecord.filter(!relativePaths.contains(Column("fileURL"))).deleteAll(db)
+                _ = try PlaylistTrackRecord
+                    .filter(isLocalPlaylistPlace && !relativePaths.contains(Column("trackFileURL")))
+                    .deleteAll(db)
+                _ = try TrackRecord
+                    .filter(isLocalRow && !relativePaths.contains(Column("fileURL")))
+                    .deleteAll(db)
             }
             try Self.sweepOrphanedAlbumEnrichment(in: db)
         }
@@ -130,7 +162,7 @@ extension DatabaseManager {
     /// same transaction as the track delete so the two can never disagree. An
     /// AI retitle changes the key, so the renamed album arrives as a new pending
     /// entity instead of inheriting the old one's exhausted verdict.
-    private static func sweepOrphanedAlbumEnrichment(in db: Database) throws {
+    static func sweepOrphanedAlbumEnrichment(in db: Database) throws {
         try db.execute(sql: """
             DELETE FROM enrichmentState
             WHERE scope = 'album'

@@ -24,15 +24,16 @@ extension LibraryViewController {
             guard let self else { return }
             PaywallViewController.presentSheet(from: self)
         }
-        view.addSubview(debut)
+        let host = debutHost
+        host.addSubview(debut)
         debutView = debut
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         NSLayoutConstraint.activate([
-            debut.topAnchor.constraint(equalTo: view.topAnchor),
-            debut.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            debut.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            debut.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            debut.topAnchor.constraint(equalTo: host.topAnchor),
+            debut.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+            debut.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+            debut.bottomAnchor.constraint(equalTo: host.bottomAnchor),
         ])
     }
 
@@ -53,7 +54,7 @@ extension LibraryViewController {
     /// but from here it is reached through the banner or raised once for the
     /// summary, never left standing in the reader's way.
     func demoteDebutToSheet() {
-        guard let debut = debutView, debut.superview === view else { return }
+        guard let debut = debutView, debut.superview === debutHost else { return }
         debut.removeFromSuperview()
         navigationController?.setNavigationBarHidden(false, animated: true)
         noteDebutLeftScreen()
@@ -131,7 +132,7 @@ extension LibraryViewController {
         case .indexing, .finishing:
             break
         case .summary:
-            if debutView?.superview !== view { presentDebutSheet() }
+            if debutView?.superview !== debutHost { presentDebutSheet() }
             presentDebutSummary()
         case .done:
             viewModel.dismissDebut()
@@ -161,7 +162,7 @@ extension LibraryViewController {
     /// the nav bar to be restored by hand.
     func finishDebut() {
         guard let debut = debutView else { return }
-        guard debut.superview === view else {
+        guard debut.superview === debutHost else {
             debutView = nil
             if let debutSummary {
                 viewModel.completeDebut(with: debutSummary)
@@ -174,10 +175,11 @@ extension LibraryViewController {
             }
             return
         }
-        view.layoutIfNeeded()
-        let targets = UIAccessibility.isReduceMotionEnabled ? [] : albumGridTargetFrames(in: debut)
+        debutHost.layoutIfNeeded()
+        let gridIsOnScreen = view.window != nil
+        let targets = UIAccessibility.isReduceMotionEnabled || !gridIsOnScreen ? [] : albumGridTargetFrames(in: debut)
         debutView = nil
-        view.bringSubviewToFront(debut)
+        debutHost.bringSubviewToFront(debut)
         navigationController?.setNavigationBarHidden(false, animated: false)
         if let debutSummary {
             viewModel.completeDebut(with: debutSummary)
@@ -213,7 +215,7 @@ extension LibraryViewController {
         guard let debutView, debutView.isHidden || debutView.alpha < 1 else { return }
         debutView.isHidden = false
         debutView.alpha = 1
-        view.bringSubviewToFront(debutView)
+        debutHost.bringSubviewToFront(debutView)
         navigationController?.setNavigationBarHidden(true, animated: false)
     }
 
@@ -221,6 +223,12 @@ extension LibraryViewController {
     /// behind a library the person can already use. A live disk scan wins the
     /// line, because it is the thing that changes what is on screen; the job
     /// gets it the rest of the time.
+    func showRemoteSync(_ progress: RemoteSyncProgress, animated: Bool) {
+        if statusBannerHeight.constant == 0 { statusBanner.prepareForShow() }
+        statusBanner.update(.server(progress))
+        setStatusBanner(visible: true, animated: animated)
+    }
+
     func showAmbient(_ state: LibraryViewModel.LibraryLoadState, animated: Bool) {
         if statusBannerHeight.constant == 0 { statusBanner.prepareForShow() }
         statusBanner.update(

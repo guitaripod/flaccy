@@ -7,7 +7,9 @@ final class TrackGridCell: UICollectionViewCell {
     private let artworkContainer = UIView()
     private let artworkView = UIImageView()
     private let titleLabel = UILabel()
+    private lazy var titleRow = TitleWithChipView(titleLabel: titleLabel)
     private let artistLabel = UILabel()
+    private let downloadedMark = DownloadedMarkView()
     private let qualityBadge = QualityBadgeView(size: .compact)
     private let lovedBadge = UIImageView()
     private var currentArtworkKey: String?
@@ -58,10 +60,19 @@ final class TrackGridCell: UICollectionViewCell {
         artistLabel.numberOfLines = 1
         artistLabel.lineBreakMode = .byTruncatingTail
 
-        let stack = UIStackView(arrangedSubviews: [artworkContainer, titleLabel, artistLabel])
+        artistLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        downloadedMark.isHidden = true
+        let artistRow = UIStackView(arrangedSubviews: [artistLabel, downloadedMark, UIView()])
+        artistRow.axis = .horizontal
+        artistRow.alignment = .center
+        artistRow.spacing = 4
+        artistRow.arrangedSubviews[2].setContentHuggingPriority(.fittingSizeLevel, for: .horizontal)
+        artistRow.arrangedSubviews[2].setContentCompressionResistancePriority(.fittingSizeLevel, for: .horizontal)
+
+        let stack = UIStackView(arrangedSubviews: [artworkContainer, titleRow, artistRow])
         stack.axis = .vertical
         stack.spacing = 6
-        stack.setCustomSpacing(4, after: titleLabel)
+        stack.setCustomSpacing(4, after: titleRow)
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
 
@@ -108,6 +119,12 @@ final class TrackGridCell: UICollectionViewCell {
     func configure(with track: Track, loved: Bool) {
         titleLabel.text = track.title
         artistLabel.text = track.artist
+        let newMix = track.showsNewMix
+        let downloaded = track.isDownloadedRemote
+        titleRow.setNewMix(newMix)
+        downloadedMark.isHidden = !downloaded
+        accessibilityLabel = TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: newMix, downloaded: downloaded)
+        contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
         qualityBadge.configure(with: track)
         lovedBadge.isHidden = !loved
 
@@ -134,6 +151,10 @@ final class TrackGridCell: UICollectionViewCell {
         artworkView.image = nil
         titleLabel.text = nil
         artistLabel.text = nil
+        titleRow.setNewMix(false)
+        downloadedMark.isHidden = true
+        contentView.alpha = 1
+        accessibilityLabel = nil
         qualityBadge.isHidden = true
         lovedBadge.isHidden = true
         contentView.transform = .identity

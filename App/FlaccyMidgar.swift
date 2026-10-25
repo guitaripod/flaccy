@@ -83,30 +83,43 @@ nonisolated final class FlaccyMidgar: Sendable {
     }
 }
 
-/// What Flaccy sells on this platform. iOS and Mac are separate purchases with their own products, never a universal
-/// purchase; each platform has the yearly subscription, the lifetime unlock and the welcome-back lifetime, all granting
-/// `pro`.
+/// What Flaccy sells: one Universal Purchase app (D17), so the iOS products on every platform, all granting `pro`. The
+/// three product ids of the old separate Mac app are never sold again but still map to `pro`, so a Mac purchase the
+/// ledger already knows keeps unlocking Pro. The `LEGACY_MAC_HANDOFF` build of that old app keeps selling its own ids.
 nonisolated enum FlaccyProducts {
-    #if os(macOS)
-    static let yearly = "com.midgarcorp.flaccy.mac.pro.yearly"
-    static let lifetime = "com.midgarcorp.flaccy.mac.lifetime"
-    static let welcomeLifetime = "com.midgarcorp.flaccy.mac.lifetime.welcome"
+    static let universalYearly = "com.midgarcorp.flaccy.pro.yearly"
+    static let universalLifetime = "com.midgarcorp.flaccy.lifetime"
+    static let universalWelcomeLifetime = "com.midgarcorp.flaccy.lifetime.welcome"
+
+    static let legacyMacYearly = "com.midgarcorp.flaccy.mac.pro.yearly"
+    static let legacyMacLifetime = "com.midgarcorp.flaccy.mac.lifetime"
+    static let legacyMacWelcomeLifetime = "com.midgarcorp.flaccy.mac.lifetime.welcome"
+
+    #if LEGACY_MAC_HANDOFF
+    static let yearly = legacyMacYearly
+    static let lifetime = legacyMacLifetime
+    static let welcomeLifetime = legacyMacWelcomeLifetime
     #else
-    static let yearly = "com.midgarcorp.flaccy.pro.yearly"
-    static let lifetime = "com.midgarcorp.flaccy.lifetime"
-    static let welcomeLifetime = "com.midgarcorp.flaccy.lifetime.welcome"
+    static let yearly = universalYearly
+    static let lifetime = universalLifetime
+    static let welcomeLifetime = universalWelcomeLifetime
     #endif
 
     static let entitlement = "pro"
 
     static let all = [yearly, lifetime, welcomeLifetime]
 
+    static let grantingProductIDs = [
+        universalYearly, universalLifetime, universalWelcomeLifetime,
+        legacyMacYearly, legacyMacLifetime, legacyMacWelcomeLifetime,
+    ]
+
     /// The registry's `[commerce]` for this platform: MidgarStore buys and finishes.
     static func configuration(directory: URL? = nil) -> MidgarStoreConfiguration {
         MidgarStoreConfiguration(
             appID: FlaccyMidgar.appID,
             productIDs: all,
-            entitlementsByProduct: Dictionary(uniqueKeysWithValues: all.map { ($0, entitlement) }),
+            entitlementsByProduct: Dictionary(uniqueKeysWithValues: grantingProductIDs.map { ($0, entitlement) }),
             mode: .purchases,
             directory: directory
         )

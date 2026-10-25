@@ -17,6 +17,7 @@ final class MacStatusStripView: NSView {
     enum Content: Equatable {
         case load(LibraryLoadProgress, Double)
         case job(EnrichmentJobProgress)
+        case server(RemoteSyncProgress)
     }
 
     private static let coverSide: CGFloat = 28
@@ -135,7 +136,32 @@ final class MacStatusStripView: NSView {
             applyLoad(progress, fraction: fraction)
         case .job(let progress):
             applyJob(progress)
+        case .server(let progress):
+            applyServer(progress)
         }
+    }
+
+    /// A server's catalog sync gets a bar only while the server has said how many songs it
+    /// holds; otherwise a spinner beside a running count.
+    private func applyServer(_ progress: RemoteSyncProgress) {
+        coverKey = nil
+        cover.isHidden = true
+        headline.stringValue = RemoteCopy.syncHeadline(for: progress)
+        detail.stringValue = RemoteCopy.syncDetail(for: progress)
+        if let fraction = progress.fraction {
+            leading.isHidden = true
+            spinner.stopAnimation(nil)
+            bar.isHidden = false
+            bar.isIndeterminate = false
+            bar.stopAnimation(nil)
+            bar.doubleValue = fraction
+        } else {
+            bar.stopAnimation(nil)
+            bar.isHidden = true
+            leading.isHidden = false
+            spinner.startAnimation(nil)
+        }
+        setAccessibilityValueDescription(RemoteCopy.syncAccessibilityValue(for: progress))
     }
 
     private func applyLoad(_ progress: LibraryLoadProgress, fraction: Double) {

@@ -29,13 +29,14 @@ extension NowPlayingViewController {
         centerContainer.addSubview(stateContentContainer)
 
         NSLayoutConstraint.activate([
-            artworkGroup.topAnchor.constraint(equalTo: centerContainer.topAnchor),
             artworkGroup.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
             artworkGroup.bottomAnchor.constraint(lessThanOrEqualTo: centerContainer.bottomAnchor),
             compactHeader.topAnchor.constraint(equalTo: centerContainer.topAnchor),
             compactHeader.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
             compactHeader.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
         ])
+        artworkGroupTop = artworkGroup.topAnchor.constraint(equalTo: centerContainer.topAnchor)
+        artworkGroupTop.isActive = true
         artworkGroupTrailing = artworkGroup.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor)
         artworkGroupTrailing.isActive = true
     }
@@ -283,10 +284,39 @@ extension NowPlayingViewController {
     func makeTitleRow() -> UIStackView {
         loveButton.onToggle = { [weak self] in self?.toggleLove() }
 
-        let row = UIStackView(arrangedSubviews: [titleMarquee, qualityBadge, equalizerBadge, loveButton])
-        row.spacing = 8
-        row.alignment = .center
-        return row
+        badgeStrip.axis = .horizontal
+        badgeStrip.spacing = 8
+        badgeStrip.alignment = .center
+        for badge in [qualityBadge, equalizerBadge] { badgeStrip.addArrangedSubview(badge) }
+        badgeStrip.setContentHuggingPriority(.required, for: .horizontal)
+        badgeStrip.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        wrappedBadgeLine.axis = .horizontal
+        wrappedBadgeLine.alignment = .center
+        wrappedBadgeLine.addArrangedSubview(UIView())
+
+        for part in [titleMarquee, badgeStrip, loveButton] { titleRow.addArrangedSubview(part) }
+        titleRow.spacing = 8
+        titleRow.alignment = .center
+        return titleRow
+    }
+
+    /// Keeps the title readable in a narrow column: below the width that fits
+    /// the title beside the quality and equalizer badges, the badges drop to a
+    /// line of their own under it instead of squeezing the title into a scroll.
+    func placeBadgeStrip() {
+        let width = infoBlock.bounds.width
+        guard width > 1 else { return }
+        let wraps = width < AdaptiveLayout.badgesBesideTitleMinimumWidth
+        guard wraps != (badgeStrip.superview === wrappedBadgeLine) else { return }
+        badgeStrip.removeFromSuperview()
+        if wraps {
+            wrappedBadgeLine.insertArrangedSubview(badgeStrip, at: 0)
+            infoBlock.insertArrangedSubview(wrappedBadgeLine, at: 1)
+        } else {
+            wrappedBadgeLine.removeFromSuperview()
+            titleRow.insertArrangedSubview(badgeStrip, at: 1)
+        }
     }
 
     func toggleLove() {
@@ -299,9 +329,16 @@ extension NowPlayingViewController {
     func refreshTrackSignals() {
         let track = AudioPlayer.shared.currentTrack
         qualityBadge.configure(with: track)
+        versionRow.configure(with: track)
         loveButton.isEnabled = track != nil
         let loved = track.map { LovedTracksService.shared.isLoved(track: $0) } ?? false
         loveButton.setLoved(loved, animated: false)
+    }
+
+    /// Re-reads the playing song's versions when the library reports a new
+    /// mix, so the chip and the export time appear without a track change.
+    @objc func tracksRevised() {
+        versionRow.configure(with: AudioPlayer.shared.currentTrack)
     }
 
     @objc func lovedTracksDidChange() {

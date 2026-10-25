@@ -16,7 +16,16 @@ pub struct Config {
     pub autoplay_continuation: bool,
     pub group_album_editions: bool,
     pub import_page_cursor: u32,
-    pub sidebar_index: i32,
+    /// The sidebar page the library shell was left on (`PAGES` names). Replaces
+    /// the positional `sidebar_index`, which `load` migrates once.
+    pub sidebar_page: String,
+    /// Read only to migrate a config written before pages were saved by name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sidebar_index: Option<i32>,
+    /// Which page a launch opens on: `home` or `last`.
+    pub launch_page: String,
+    /// Home's section order and hidden sections (`home::Layout::encoded`).
+    pub home_layout: String,
     pub album_sort: String,
     pub playlist_sort: String,
     /// The Songs and Albums quick-pivot chips (`LibraryFilter::id`) and the
@@ -53,6 +62,44 @@ pub struct Config {
     /// Empty means "whichever installed Ollama model looks most suitable".
     pub music_video_llm_model: String,
     pub music_video_align: bool,
+    /// How much disk the remote songs' cache may use before the least recently
+    /// played go, in gigabytes. Kept downloads sit outside it.
+    pub remote_cache_cap_gb: u32,
+    /// Which source the Songs page is narrowed to: empty for all of them,
+    /// `local` for the music folder, or a server id.
+    pub songs_source: String,
+}
+
+/// The cache cap a fresh install starts with, and the smallest one offered.
+pub const REMOTE_CACHE_CAP_DEFAULT_GB: u32 = 2;
+pub const REMOTE_CACHE_CAP_MIN_GB: u32 = 1;
+pub const REMOTE_CACHE_CAP_MAX_GB: u32 = 500;
+
+pub const DEFAULT_SIDEBAR_PAGE: &str = "albums";
+pub const LAUNCH_HOME: &str = "home";
+pub const LAUNCH_LAST: &str = "last";
+
+/// The sidebar's order before Home joined it. A saved `sidebar_index` is
+/// positional, so it is read against this and never against today's list.
+const LEGACY_SIDEBAR_ORDER: [&str; 8] = [
+    "albums",
+    "songs",
+    "artists",
+    "playlists",
+    "stats",
+    "wantlist",
+    "downloads",
+    "guide",
+];
+
+/// The page name an old positional index stood for; out-of-range indexes land
+/// on the default page.
+pub fn legacy_sidebar_page(index: i32) -> &'static str {
+    usize::try_from(index)
+        .ok()
+        .and_then(|index| LEGACY_SIDEBAR_ORDER.get(index))
+        .copied()
+        .unwrap_or(DEFAULT_SIDEBAR_PAGE)
 }
 
 /// Bounds for the lyrics type scale, shared by Preferences and the panel's own
@@ -75,6 +122,28 @@ pub fn clamp_ui_scale(scale: f64) -> f64 {
 }
 
 impl Config {
+    /// The remote cache cap in bytes, kept inside the range Preferences offers.
+    pub fn remote_cache_cap_bytes(&self) -> u64 {
+        u64::from(
+            self.remote_cache_cap_gb
+                .clamp(REMOTE_CACHE_CAP_MIN_GB, REMOTE_CACHE_CAP_MAX_GB),
+        ) * 1024
+            * 1024
+            * 1024
+    }
+
+    /// Moves a pre-Home `sidebar_index` over to `sidebar_page`, once.
+    fn migrated(mut self) -> Config {
+        if let Some(index) = self.sidebar_index.take() {
+            self.sidebar_page = legacy_sidebar_page(index).to_string();
+        }
+        self
+    }
+
+    pub fn opens_on_home(&self) -> bool {
+        self.launch_page != LAUNCH_LAST
+    }
+
     pub fn ui_scale(&self) -> f64 {
         if self.ui_scale.is_finite() {
             clamp_ui_scale(self.ui_scale.clamp(UI_SCALE_MIN, UI_SCALE_MAX))
@@ -96,7 +165,10 @@ impl Default for Config {
             autoplay_continuation: true,
             group_album_editions: true,
             import_page_cursor: 1,
-            sidebar_index: 0,
+            sidebar_page: DEFAULT_SIDEBAR_PAGE.to_string(),
+            sidebar_index: None,
+            launch_page: LAUNCH_HOME.to_string(),
+            home_layout: String::new(),
             album_sort: "artist".to_string(),
             playlist_sort: "name".to_string(),
             songs_filter: "all".to_string(),
@@ -122,6 +194,8 @@ impl Default for Config {
             music_video_llm: true,
             music_video_llm_model: String::new(),
             music_video_align: true,
+            remote_cache_cap_gb: REMOTE_CACHE_CAP_DEFAULT_GB,
+            songs_source: String::new(),
         }
     }
 }
@@ -164,7 +238,8 @@ pub fn load() -> Config {
     let path = config_path();
     fs::read_to_string(&path)
         .ok()
-        .and_then(|text| toml::from_str(&text).ok())
+        .and_then(|text| toml::from_str::<Config>(&text).ok())
+        .map(Config::migrated)
         .unwrap_or_default()
 }
 
@@ -217,4 +292,52 @@ pub fn save_session(session: &Session) {
 
 pub fn delete_session() {
     let _ = fs::remove_file(session_path());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(text: &str) -> Config {
+        toml::from_str::<Config>(text).unwrap().migrated()
+    }
+
+    #[test]
+    fn an_old_sidebar_index_becomes_the_page_it_stood_for() {
+        assert_eq!(parse("sidebar_index = 0").sidebar_page, "albums");
+        assert_eq!(parse("sidebar_index = 1").sidebar_page, "songs");
+        assert_eq!(parse("sidebar_index = 4").sidebar_page, "stats");
+        assert_eq!(parse("sidebar_index = 6").sidebar_page, "downloads");
+        assert_eq!(parse("sidebar_index = 7").sidebar_page, "guide");
+    }
+
+    #[test]
+    fn a_stale_index_outside_the_old_list_lands_on_albums() {
+        assert_eq!(parse("sidebar_index = 9").sidebar_page, "albums");
+        assert_eq!(parse("sidebar_index = -1").sidebar_page, "albums");
+    }
+
+    #[test]
+    fn the_migration_runs_once_and_leaves_no_index_behind() {
+        let migrated = parse("sidebar_index = 3");
+        assert_eq!(migrated.sidebar_index, None);
+        let written = toml::to_string_pretty(&migrated).unwrap();
+        assert!(!written.contains("sidebar_index"));
+        assert_eq!(parse(&written).sidebar_page, "playlists");
+    }
+
+    #[test]
+    fn a_saved_page_name_wins_over_nothing_and_survives_a_round_trip() {
+        let config = parse("sidebar_page = \"stats\"");
+        assert_eq!(config.sidebar_page, "stats");
+        assert_eq!(config.launch_page, "home");
+        assert!(config.opens_on_home());
+    }
+
+    #[test]
+    fn where_you_left_off_is_the_only_launch_that_skips_home() {
+        assert!(!parse("launch_page = \"last\"").opens_on_home());
+        assert!(parse("launch_page = \"home\"").opens_on_home());
+        assert!(parse("launch_page = \"nonsense\"").opens_on_home());
+    }
 }

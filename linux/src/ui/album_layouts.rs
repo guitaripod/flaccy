@@ -303,10 +303,17 @@ impl AlbumBody {
                 .iter()
                 .any(|track| Some(&track.artist) != first_artist.as_ref()),
         };
-        let menu: Rc<crate::ui::songs::MenuHandler> = Rc::new(|track, anchor, x, y| {
-            let menu = context::track_menu(&track.rel_path, track.loved);
-            context::popup_menu_at(anchor, &menu, x, y);
-        });
+        let menu: Rc<crate::ui::songs::MenuHandler> = {
+            let ui = Rc::clone(&self.ui);
+            Rc::new(move |track, anchor, x, y| {
+                let menu = context::track_menu(
+                    &track.rel_path,
+                    track.loved,
+                    ui.core.has_previous_version(&track.rel_path),
+                );
+                context::popup_menu_at(anchor, &menu, x, y);
+            })
+        };
         let table = {
             let ui = Rc::clone(&self.ui);
             let frame = Rc::clone(&self.frame);
@@ -541,11 +548,14 @@ fn build_track_list(
         let track_title = gtk::Label::builder()
             .label(&track.title)
             .xalign(0.0)
-            .hexpand(true)
             .ellipsize(pango::EllipsizeMode::End)
             .tooltip_text(&track.title)
             .build();
-        row_box.append(&track_title);
+        let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        title_row.set_hexpand(true);
+        title_row.append(&track_title);
+        title_row.append(&crate::ui::controls::live_new_mix_chip(ui, track));
+        row_box.append(&title_row);
         let heart = gtk::Image::from_icon_name("emote-love-symbolic");
         heart.add_css_class("loved-heart");
         heart.set_visible(track.loved);

@@ -1,4 +1,5 @@
 import AppKit
+import FlaccyCore
 import MidgarCore
 import Combine
 import UniformTypeIdentifiers
@@ -27,12 +28,16 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         FlaccyMidgar.configureLogging()
+        #if !LEGACY_MAC_HANDOFF
+        UniversalMacHandoff.importIfNeeded()
+        #endif
         FlaccyMidgar.shared.start()
         ReviewPrompt.beginSession()
         MidgarLog.info("Flaccy for Mac launched (root: \(LibraryRoot.current.path))", category: .general)
         #if DEBUG
         ScreenshotSeeder.seedIfRequested()
         DebugLayoutFixtures.seedIfRequested()
+        DebugHomeDrive.seedIfRequested()
         #endif
 
         NSApp.mainMenu = MainMenu.build()
@@ -40,6 +45,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         EqualizerEngine.shared.start()
         #if DEBUG
         EqualizerExercise.runIfRequested()
+        RemoteExercise.runIfRequested()
         #endif
         MacLibrarySurfaceModel.shared.start()
 
@@ -66,12 +72,21 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         startLibraryPipeline()
+        RemoteLaunch.start()
+        #if LEGACY_MAC_HANDOFF
+        LegacyMacHandoff.exportAtLaunch()
+        LegacyMoveCardPresenter.presentOncePerLaunch(over: windowController)
+        #endif
         observeAppEvents()
         notifyLibraryRootFallbackIfNeeded()
         MacTrialRunwayPresenter.refresh(in: windowController.window)
         #if DEBUG
         DebugDrive.runIfRequested(window: windowController.window)
         runStageBDriveIfRequested()
+        ReexportExercise.runIfRequested()
+        HandoffExercise.runIfRequested(window: windowController.window)
+        DebugDrive.runNewMixShotIfRequested(window: windowController.window)
+        DebugDrive.runRemoteShotIfRequested(window: windowController.window)
         #endif
     }
 
@@ -145,9 +160,37 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(entitlementsDidLoad), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playbackUnavailable(_:)), name: RemoteAvailability.playbackUnavailable, object: nil
+        )
+    }
+
+    @objc private func playbackUnavailable(_ notification: Notification) {
+        guard let message = notification.userInfo?[RemoteAvailability.messageKey] as? String else { return }
+        MacToast.show(message, style: .error, in: mainWindowController?.window)
+    }
+
+    /// Opens the Add Server sheet filled in from a `flaccy://server` link; any other link is left alone.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            guard let link = ServerLink(url: url) else { continue }
+            MidgarLog.info("Opened a server link for \(link.name ?? "a server")", category: .ui)
+            showServersSettings(link: link)
+        }
+    }
+
+    func showServersSettings(link: ServerLink? = nil) {
+        showSettings(nil)
+        guard let tabs = settingsWindowController?.contentViewController as? SettingsTabViewController,
+              let index = tabs.tabViewItems.firstIndex(where: { $0.viewController is ServersSettingsPane })
+        else { return }
+        tabs.selectedTabViewItemIndex = index
+        guard let link, let pane = tabs.tabViewItems[index].viewController as? ServersSettingsPane else { return }
+        DispatchQueue.main.async { pane.presentAddServer(link: link) }
     }
 
     @objc private func appDidBecomeActive() {
+        RemoteLaunch.becameActive()
         LibraryRoot.shared.retryFallbackResolutionIfNeeded()
         Task {
             await MacRecapNotificationScheduler.shared.refreshSchedule()
@@ -169,7 +212,9 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func notifyLibraryRootFallbackIfNeeded() {
-        guard LibraryRoot.shared.isFallbackActive, let window = mainWindowController?.window else { return }
+        guard LibraryRoot.shared.isFallbackActive, !HandoffFolderPrompt.isPending,
+              let window = mainWindowController?.window
+        else { return }
         MidgarLog.notice("Library root offline at launch; prompting user", category: .content)
         let alert = NSAlert()
         alert.alertStyle = .warning
@@ -259,6 +304,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.allowsMultipleSelection = false
         panel.prompt = String(localized: "Use This Folder")
         panel.message = String(localized: "Flaccy indexes the folder in place — nothing is copied or moved.")
+        panel.directoryURL = HandoffFolderPrompt.suggestedFolder
         FunnelSignals.shared.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
@@ -288,7 +334,11 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             let urls = panel.urls
             let toast = MacToast.showImport(in: window)
             Task {
-                let outcome = await Library.shared.importFiles(from: urls) { toast.update($0) }
+                let outcome = await Library.shared.importFiles(
+                    from: urls,
+                    progress: { toast.update($0) },
+                    decideReplacements: { prompt in await ImportReplacementAlert.ask(prompt, in: window) }
+                )
                 toast.finish(reporting: outcome)
             }
         }
@@ -383,6 +433,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             userInfo: [SectionNotificationKey.section: sender.tag]
         )
+    }
+
+    @objc func customizeHome(_ sender: Any?) {
+        NotificationCenter.default.post(name: .flaccyCustomizeHome, object: nil)
     }
 
     @objc func toggleQueue(_ sender: Any?) {

@@ -113,7 +113,7 @@ targets:
           CODE_SIGN_STYLE: Manual
           PROVISIONING_PROFILE_SPECIFIER: flaccy AppStore 2026
 
-  flaccyMac:
+  flaccyMac: &macApp
     templates:
       - MidgarApp
     templateAttributes:
@@ -131,18 +131,23 @@ targets:
           - flaccy-ios.entitlements
           - Secrets.swift.example
           - AppDelegate.swift
+          - AppTabBarController.swift
           - SceneDelegate.swift
           - UI/AdaptiveLayout.swift
           - UI/AppAppearance.swift
           - UI/AsyncImageView.swift
+          - UI/DownloadedMarkView.swift
           - UI/FilterChipsView.swift
+          - UI/HairlineView.swift
           - UI/IdentifiedSegmentedControl.swift
           - UI/LiquidGlass.swift
           - UI/LoveButton.swift
           - UI/MarqueeLabel.swift
+          - UI/NewMixChipView.swift
           - UI/NowPlayingBarsView.swift
           - UI/QualityBadgeView.swift
           - UI/SectionIndexView.swift
+          - UI/SourceChipsView.swift
           - UI/SystemVolumeSlider.swift
           - UI/ToastView.swift
           - UI/TrackContextMenu.swift
@@ -177,6 +182,25 @@ targets:
           - Equalizer/EqualizerViewController+Layout.swift
           - Equalizer/EqualizerViewController+Presets.swift
           - Equalizer/EqualizerViewController.swift
+          - Home/EditHomeViewController.swift
+          - Home/HomeAlbumCardCell.swift
+          - Home/HomeArtView.swift
+          - Home/HomeBackdropView.swift
+          - Home/HomeChromeViews.swift
+          - Home/HomePromoCells.swift
+          - Home/HomeGlanceCards.swift
+          - Home/HomeHeroCell.swift
+          - Home/HomeJumpTileCell.swift
+          - Home/HomeMixCardCell.swift
+          - Home/HomeSegmentedProgressView.swift
+          - Home/HomeSnapshotPlan.swift
+          - Home/HomeTrackQuality.swift
+          - Home/HomeViewModel.swift
+          - Home/HomeSparkView.swift
+          - Home/HomeViewController+Actions.swift
+          - Home/HomeViewController+DataSource.swift
+          - Home/HomeViewController+Layout.swift
+          - Home/HomeViewController.swift
           - Library/AlbumCell.swift
           - Library/ComputerTransferGuideViewController.swift
           - Library/DuplicateCopiesViewController.swift
@@ -192,6 +216,7 @@ targets:
           - Library/LibraryViewController+Sample.swift
           - Library/LibraryViewController+Sorting.swift
           - Library/LibraryViewController.swift
+          - Library/NewMixShot.swift
           - Library/PlaylistDetailViewController.swift
           - Library/PlaylistListCells.swift
           - ListeningGuide/ListeningGuideViewController.swift
@@ -203,6 +228,7 @@ targets:
           - Lyrics/TimingNoteViews.swift
           - NowPlaying/MiniPlayerView.swift
           - NowPlaying/NowPlayingBackdropView.swift
+          - NowPlaying/NowPlayingVersionRow.swift
           - NowPlaying/NowPlayingViewController+Appearance.swift
           - NowPlaying/NowPlayingViewController+CenterState.swift
           - NowPlaying/NowPlayingViewController+Controls.swift
@@ -234,12 +260,19 @@ targets:
           - Recap/RecapSkeletonView.swift
           - Recap/YearInMusicStoryView.swift
           - Recap/YearInMusicViewController.swift
+          - Remote/RemoteDownloadActions.swift
+          - Remote/RemoteShot.swift
+          - Search/SearchResultCell.swift
+          - Search/SearchViewController.swift
+          - Settings/AddServerViewController.swift
+          - Settings/QRScannerViewController.swift
           - Settings/SettingsCells.swift
           - Settings/SettingsHeaderView.swift
           - Settings/SettingsViewController+Actions.swift
           - Settings/SettingsViewController+Cells.swift
           - Settings/SettingsViewController+Controls.swift
           - Settings/SettingsViewController+Model.swift
+          - Settings/SettingsViewController+Servers.swift
           - Settings/SettingsViewController.swift
           - Sharing/SonglinkShareable.swift
           - Sharing/StreamingLinksViewController.swift
@@ -248,6 +281,7 @@ targets:
           - WatchSync/WatchSyncBackgroundTask.swift
           - WatchSync/WatchSyncCells.swift
           - WatchSync/WatchSyncCopy.swift
+          - WatchSync/WatchRemoteExercise.swift
           - WatchSync/WatchSyncExercise.swift
           - WatchSync/WatchSyncHelpViewController.swift
           - WatchSync/WatchSyncMetrics.swift
@@ -284,6 +318,8 @@ targets:
         com.apple.security.network.client: true
         com.apple.security.files.user-selected.read-write: true
         com.apple.security.files.bookmarks.app-scope: true
+        com.apple.security.application-groups:
+          - $(TeamIdentifierPrefix)com.midgarcorp.flaccy.handoff
         keychain-access-groups: *midgarKeychainGroups
     scheme:
       testTargets:
@@ -291,7 +327,7 @@ targets:
     settings:
       groups:
         - MidgarMacApp
-      base:
+      base: &macBase
         <<: *appAssets
         COMBINE_HIDPI_IMAGES: YES
         ENABLE_HARDENED_RUNTIME: NO
@@ -301,10 +337,25 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/../Frameworks"]
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
-        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccy.mac
+        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccy
         PRODUCT_NAME: Flaccy
         SKIP_INSTALL: NO
         SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+      configs:
+        Release:
+          CODE_SIGN_IDENTITY: *distributionIdentity
+          CODE_SIGN_STYLE: Manual
+          PROVISIONING_PROFILE_SPECIFIER: flaccy-mac-universal-2026
+
+  flaccyMacLegacy:
+    <<: *macApp
+    settings:
+      groups:
+        - MidgarMacApp
+      base:
+        <<: *macBase
+        PRODUCT_BUNDLE_IDENTIFIER: com.midgarcorp.flaccy.mac
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: ["$(inherited)", LEGACY_MAC_HANDOFF]
       configs:
         Release:
           CODE_SIGN_IDENTITY: *distributionIdentity

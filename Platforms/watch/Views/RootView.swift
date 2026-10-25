@@ -9,20 +9,33 @@ enum Route: Hashable {
     case nowPlaying
 }
 
+/// The two vertical pages of the watch's home: what to play next, and what is on the watch.
+enum Page: Hashable {
+    case continuePlayback
+    case library
+}
+
 struct RootView: View {
 
     @Environment(WatchAudioPlayer.self) private var player
     @Environment(WatchLibraryStore.self) private var store
     @Environment(WatchSyncStatus.self) private var syncStatus
     @State private var path = NavigationPath()
+    @State private var page: Page = LibraryShots.startsOnLibraryPage ? .library : .continuePlayback
     @State private var pendingRemovals = PendingRemovals()
 
     var body: some View {
         NavigationStack(path: $path) {
-            LibraryView(
-                onOpen: { path.append($0) },
-                onShowNowPlaying: { path.append(Route.nowPlaying) }
-            )
+            TabView(selection: $page) {
+                ContinuePage(onShowNowPlaying: { path.append(Route.nowPlaying) })
+                    .tag(Page.continuePlayback)
+                LibraryView(
+                    onOpen: { path.append($0) },
+                    onShowNowPlaying: { path.append(Route.nowPlaying) }
+                )
+                .tag(Page.library)
+            }
+            .tabViewStyle(.verticalPage)
             .screenshotEnvironment()
             .navigationDestination(for: Route.self) { route in
                 destination(for: route)

@@ -1,4 +1,5 @@
 import FlaccyCore
+import FlaccyEngine
 import Foundation
 
 #if canImport(UIKit)
@@ -35,6 +36,24 @@ enum MetadataService {
             bitDepth: result.bitDepth,
             sampleRate: result.sampleRate,
             channels: result.channels
+        )
+    }
+
+    /// What a fresh read of the file says, shaped for refreshing its existing track row.
+    nonisolated static func refresh(from url: URL) async -> TrackMetadataRefresh {
+        let metadata = await extractMetadata(from: url)
+        return TrackMetadataRefresh(
+            title: metadata.title,
+            artist: metadata.artist,
+            albumTitle: metadata.albumTitle,
+            albumArtist: metadata.albumArtist,
+            trackNumber: metadata.trackNumber,
+            duration: metadata.duration,
+            artworkData: metadata.artwork?.jpegData(compressionQuality: 0.8),
+            codec: metadata.codec,
+            bitDepth: metadata.bitDepth,
+            sampleRate: metadata.sampleRate,
+            channels: metadata.channels
         )
     }
 

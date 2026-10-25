@@ -1,8 +1,10 @@
 use crate::events::AppEvent;
+use crate::library::Track;
 use crate::player::RepeatMode;
 use crate::ui::screen::is_watched;
 use crate::ui::slider::{Slider, SliderMetrics, Step};
 use crate::ui::Ui;
+use flaccy_shared::track_revision::{self, copy};
 use gtk::glib;
 use gtk::prelude::*;
 use std::cell::{Cell, RefCell};
@@ -545,4 +547,47 @@ pub fn set_adaptive_accent(color: Option<(u8, u8, u8)>) {
     if let Some(controller) = crate::theme::ThemeController::current() {
         controller.set_artwork_color(color);
     }
+}
+
+/// The pill beside a title while the song's latest re-export is recent. Hidden
+/// until a caller decides the song earns it.
+pub fn new_mix_chip() -> gtk::Label {
+    let chip = gtk::Label::new(Some(copy::NEW_MIX));
+    chip.add_css_class("new-mix-chip");
+    chip.set_valign(gtk::Align::Center);
+    chip.set_visible(false);
+    chip
+}
+
+/// Whether the song's latest re-export is recent enough to be called a new mix.
+pub fn shows_new_mix(track: &Track) -> bool {
+    track_revision::shows_new_mix(track.revised_at, crate::db::now_ms())
+}
+
+/// A chip that follows the library: it reads the song's row again every time
+/// the library reloads, so a scan that recognises a re-export lights it on a
+/// page that was built before.
+pub fn live_new_mix_chip(ui: &Rc<Ui>, track: &Track) -> gtk::Label {
+    let chip = new_mix_chip();
+    chip.set_visible(shows_new_mix(track));
+    follow_library(ui, &chip, track.rel_path.clone());
+    chip
+}
+
+/// Re-evaluates `chip` for `rel_path` on every library reload.
+fn follow_library(ui: &Rc<Ui>, chip: &gtk::Label, rel_path: String) {
+    let hub = Rc::clone(&ui.core.hub);
+    let ui = Rc::clone(ui);
+    hub.subscribe_widget(chip, move |chip, event| {
+        if !matches!(event, AppEvent::LibraryReloaded) {
+            return;
+        }
+        let visible = ui
+            .core
+            .library
+            .borrow()
+            .track_by_rel_path(&rel_path)
+            .is_some_and(shows_new_mix);
+        chip.set_visible(visible);
+    });
 }

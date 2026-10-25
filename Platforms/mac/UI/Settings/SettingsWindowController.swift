@@ -48,6 +48,7 @@ final class SettingsTabViewController: NSTabViewController {
         addPane(LastFMSettingsPane(), title: "Last.fm", symbol: "dot.radiowaves.left.and.right")
         addPane(NotificationsSettingsPane(), title: String(localized: "Recap"), symbol: "bell.badge")
         addPane(LibrarySettingsPane(), title: String(localized: "Library"), symbol: "folder")
+        addPane(ServersSettingsPane(), title: String(localized: "Servers"), symbol: "server.rack")
         addPane(AboutSettingsPane(), title: String(localized: "About"), symbol: "info.circle")
     }
 

@@ -83,23 +83,29 @@ extension LibraryViewController: UICollectionViewDelegate {
                     }
                 }
                 let shareMenu = UIMenu(options: .displayInline, children: [editArtwork, shareAlbum])
+                let localTracks = album.tracks.filter { $0.remoteSong == nil }
                 let deleteAlbum = UIAction(title: String(localized: "Delete from Library"), image: UIImage(systemName: "trash"), attributes: .destructive) { [weak self] _ in
                     guard let self else { return }
                     TrackContextMenu.confirmDelete(
                         title: String(localized: "Delete \"\(album.title)\"?"),
-                        message: String(localized: "All \(album.tracks.count) tracks will be removed from this device."),
+                        message: String(localized: "All \(localTracks.count) tracks will be removed from this device."),
                         in: self
                     ) { [weak self] in
                         Task { @MainActor in
-                            await Library.shared.deleteTracks(album.tracks)
+                            await Library.shared.deleteTracks(localTracks)
                             if let self {
                                 ToastView.show(String(localized: "Deleted \(album.title)"), in: self.view, style: .info)
                             }
                         }
                     }
                 }
-                let deleteMenu = UIMenu(options: .displayInline, children: [deleteAlbum])
-                return UIMenu(children: [playAction, shuffleAction, playNextAction, addToQueueAction, shareMenu, deleteMenu])
+                var sections: [UIMenuElement] = [playAction, shuffleAction, playNextAction, addToQueueAction]
+                if let self, let download = RemoteDownloadActions.action(for: album.tracks, in: self) {
+                    sections.append(UIMenu(options: .displayInline, children: [download]))
+                }
+                sections.append(shareMenu)
+                if !localTracks.isEmpty { sections.append(UIMenu(options: .displayInline, children: [deleteAlbum])) }
+                return UIMenu(children: sections)
             }
         case .song(let track):
             return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
@@ -159,7 +165,11 @@ extension LibraryViewController: UIDocumentPickerDelegate {
         guard !urls.isEmpty else { return }
         let toast = ToastView.showLive(ImportOutcomeCopy.scanning, in: view)
         Task {
-            let outcome = await viewModel.importFiles(from: urls) { toast.update(ImportOutcomeCopy.progress($0)) }
+            let outcome = await viewModel.importFiles(
+                from: urls,
+                progress: { toast.update(ImportOutcomeCopy.progress($0)) },
+                decideReplacements: { prompt in await ImportReplacementAlert.ask(prompt, from: self) }
+            )
             let report = ImportOutcomeCopy.report(outcome)
             UINotificationFeedbackGenerator().notificationOccurred(report.isFailure ? .error : (report.isNoOp ? .warning : .success))
             toast.finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))

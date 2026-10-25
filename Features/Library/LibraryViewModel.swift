@@ -108,6 +108,7 @@ final class LibraryViewModel {
     private(set) var artistSort: ArtistSort = ArtistSort(rawValue: UserDefaults.standard.string(forKey: "artistSort") ?? "") ?? .name
     private(set) var layoutMode: LibraryLayoutMode = .persisted
     private(set) var filter: LibraryFilter = .persisted
+    private(set) var source: LibrarySource? = LibrarySource.persisted(key: LibrarySource.iosStorageKey)
 
     struct TrackMeta {
         let track: Track
@@ -197,6 +198,7 @@ final class LibraryViewModel {
     #endif
 
     func relativePath(for url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return song.path }
         let docs = Self.documentsPath
         let path = url.standardizedFileURL.path
         guard path.hasPrefix(docs) else { return url.lastPathComponent }
@@ -337,6 +339,9 @@ final class LibraryViewModel {
         NotificationCenter.default.addObserver(
             self, selector: #selector(loadingStateChanged), name: Library.loadingStateChanged, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(tracksRevised(_:)), name: Library.tracksRevised, object: nil
+        )
 
         bindLibrarySurface()
     }
@@ -357,10 +362,10 @@ final class LibraryViewModel {
     @discardableResult
     func importFiles(
         from urls: [URL],
-        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void,
+        decideReplacements: @escaping ImportReplacementDecider
     ) async -> LibraryImportOutcome {
-        let outcome = await library.importFiles(from: urls, progress: progress)
-        return outcome
+        await library.importFiles(from: urls, progress: progress, decideReplacements: decideReplacements)
     }
 
     func setAlbumSort(_ sort: AlbumSort) {
@@ -415,6 +420,20 @@ final class LibraryViewModel {
         publishSnapshot()
     }
 
+    /// Narrows the songs and albums to one source, or to all of them for nil.
+    func setSource(_ source: LibrarySource?) {
+        guard self.source != source else { return }
+        self.source = source
+        LibrarySource.persist(source, key: LibrarySource.iosStorageKey)
+        publishSnapshot()
+    }
+
+    /// The source chips for the servers the person added, none while there are no servers.
+    func sourceChoices() -> [LibrarySourceChoice] {
+        let servers = ((try? DatabaseManager.shared.fetchRemoteServers()) ?? []).map { (id: $0.id, name: $0.name) }
+        return LibrarySourceChoice.choices(servers: servers)
+    }
+
     /// Rebuilds and republishes the current snapshot without changing state,
     /// e.g. after loved state changes while the Favorites pivot is active.
     func refilter() {
@@ -441,6 +460,7 @@ final class LibraryViewModel {
     private(set) var snapshotIntent: SnapshotIntent = .replaceList
     var cachedSongSearchKeys: [String: String]?
     var renderedAlbumSignatures = [String: String]()
+    var revisedSongPaths = Set<String>()
 
     /// Builds the next snapshot on the next turn of the main actor, after the
     /// segmented control / menu animation that asked for it has started. A

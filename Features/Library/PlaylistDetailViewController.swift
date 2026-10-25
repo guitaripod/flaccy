@@ -55,6 +55,12 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(
             self, selector: #selector(artworkChanged), name: AlbumArtworkCache.didChangeNotification, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(tracksRevised), name: Library.tracksRevised, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(tracksRevised), name: RemoteAvailability.didChange, object: nil
+        )
     }
 
     deinit {
@@ -73,6 +79,12 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
     @objc private func playbackChanged() {
         guard let visible = tableView.indexPathsForVisibleRows, !visible.isEmpty else { return }
         tableView.reloadRows(at: visible, with: .none)
+    }
+
+    /// Repaints the visible rows so a song re-exported while the playlist is
+    /// open gains its New mix chip.
+    @objc private func tracksRevised() {
+        playbackChanged()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -410,8 +422,13 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
             })
         }
         let coverMenu = UIMenu(options: .displayInline, children: coverActions)
+        var menuChildren: [UIMenuElement] = [coverMenu]
+        if let download = RemoteDownloadActions.action(for: tracks, in: self) {
+            menuChildren.append(UIMenu(options: .displayInline, children: [download]))
+        }
+        menuChildren.append(remove)
         let menuButton = UIBarButtonItem(
-            image: UIImage(systemName: "ellipsis.circle"), menu: UIMenu(children: [coverMenu, remove])
+            image: UIImage(systemName: "ellipsis.circle"), menu: UIMenu(children: menuChildren)
         )
         menuButton.accessibilityLabel = String(localized: "More")
         navigationItem.rightBarButtonItems = [editButtonItem, menuButton]
@@ -595,6 +612,7 @@ private final class PlaylistTrackCell: UITableViewCell {
     static let reuseID = "PlaylistTrackCell"
 
     private let titleLabel = UILabel()
+    private lazy var titleRow = TitleWithChipView(titleLabel: titleLabel)
     private let artistLabel = UILabel()
     private let durationLabel = UILabel()
     private let barsView = NowPlayingBarsView()
@@ -605,7 +623,6 @@ private final class PlaylistTrackCell: UITableViewCell {
 
         titleLabel.font = .preferredFont(forTextStyle: .body)
         titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         artistLabel.font = .preferredFont(forTextStyle: .caption1)
         artistLabel.adjustsFontForContentSizeCategory = true
@@ -617,7 +634,7 @@ private final class PlaylistTrackCell: UITableViewCell {
         durationLabel.textColor = .tertiaryLabel
         durationLabel.textAlignment = .right
 
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, artistLabel])
+        let infoStack = UIStackView(arrangedSubviews: [titleRow, artistLabel])
         infoStack.axis = .vertical
         infoStack.spacing = 2
 
@@ -647,6 +664,12 @@ private final class PlaylistTrackCell: UITableViewCell {
     func configure(with track: Track, isPlaying: Bool) {
         titleLabel.text = track.title
         artistLabel.text = track.artist
+        let newMix = track.showsNewMix
+        let downloaded = track.isDownloadedRemote
+        titleRow.setNewMix(newMix)
+        titleRow.setDownloaded(downloaded)
+        accessibilityLabel = TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: newMix, downloaded: downloaded)
+        contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
         let total = Int(track.duration)
         durationLabel.text = String(format: "%d:%02d", total / 60, total % 60)
         titleLabel.textColor = isPlaying ? .tintColor : .label

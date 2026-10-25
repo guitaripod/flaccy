@@ -12,7 +12,7 @@ final class QualityBadgeView: UIView {
 
     static let losslessTint = UIColor(red: 0.45, green: 0.86, blue: 0.92, alpha: 1)
 
-    private static let losslessDynamicTint = UIColor { traits in
+    static let losslessDynamicTint = UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? losslessTint
             : UIColor(red: 0.0, green: 0.42, blue: 0.5, alpha: 1)

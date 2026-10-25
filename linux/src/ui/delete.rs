@@ -7,7 +7,26 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+/// Drops the songs that live on a server, which have no file here to trash,
+/// and says so. What is left is what the Trash can take.
+fn without_remote(ui: &Rc<Ui>, tracks: Vec<Track>) -> Vec<Track> {
+    let (remote, local): (Vec<Track>, Vec<Track>) = tracks
+        .into_iter()
+        .partition(|track| crate::remote::is_remote(&track.rel_path));
+    if let Some(first) = remote.first() {
+        let server = crate::remote::server_of(&first.rel_path)
+            .map(|id| crate::remote::server_name(&id))
+            .unwrap_or_default();
+        ui.core.toast(&format!(
+            "\u{201c}{}\u{201d} lives on {server}, so Flaccy can't move it to the Trash. Delete it on the server, or remove the server in Preferences to take all its songs out of the library.",
+            first.title
+        ));
+    }
+    local
+}
+
 pub fn present_delete_tracks(ui: &Rc<Ui>, tracks: Vec<Track>) {
+    let tracks = without_remote(ui, tracks);
     if tracks.is_empty() {
         return;
     }
@@ -25,12 +44,11 @@ pub fn present_delete_album(ui: &Rc<Ui>, key: &str) {
         return;
     };
     let subject = format!("\u{201c}{}\u{201d}", album.title);
-    confirm(
-        ui,
-        &subject,
-        file_clause(album.tracks.len()),
-        album.tracks.clone(),
-    );
+    let tracks = without_remote(ui, album.tracks.clone());
+    if tracks.is_empty() {
+        return;
+    }
+    confirm(ui, &subject, file_clause(tracks.len()), tracks);
 }
 
 fn file_clause(count: usize) -> &'static str {

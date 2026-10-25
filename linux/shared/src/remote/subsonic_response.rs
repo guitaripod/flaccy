@@ -1,0 +1,547 @@
+//! Mirrors `Core/FlaccyCore/Sources/FlaccyCore/Remote/SubsonicResponse.swift`.
+//!
+//! What an OpenSubsonic server answers. Only the envelope's `status` is
+//! required; every other field is optional and unknown fields are ignored, so
+//! a newer server keeps decoding. The `flaccy*` fields on a song are present
+//! only when the server runs Flaccy's extension. Decode a body with
+//! `serde_json::from_str::<Root>` and read `response`. Every model also
+//! serializes, with absent fields left out, so a server can answer with the
+//! same types a client reads.
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct Root {
+    #[serde(rename = "subsonic-response")]
+    pub response: Envelope,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Envelope {
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_subsonic: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<ErrorBody>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_subsonic_extensions: Option<Vec<Extension>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music_folders: Option<MusicFolders>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artists: Option<Artists>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album_list2: Option<AlbumList2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album: Option<Album>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub song: Option<Child>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search_result3: Option<SearchResult3>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub playlists: Option<Playlists>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub playlist: Option<PlaylistWithEntries>,
+}
+
+impl Envelope {
+    /// The failure the server reported, `None` when the status is not "failed".
+    pub fn failure(&self) -> Option<SubsonicFailure> {
+        if self.status != "failed" {
+            return None;
+        }
+        let code = self
+            .error
+            .as_ref()
+            .and_then(|error| error.code)
+            .unwrap_or_default();
+        Some(SubsonicFailure::from_code(code))
+    }
+
+    /// Whether the server lists the OpenSubsonic extension called `name`.
+    pub fn supports(&self, name: &str) -> bool {
+        self.open_subsonic_extensions
+            .iter()
+            .flatten()
+            .any(|extension| extension.name.as_deref() == Some(name))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SubsonicFailure {
+    MissingParameter,
+    IncompatibleVersion,
+    WrongCredentials,
+    TokenAuthUnsupported,
+    AuthMechanismUnsupported,
+    ConflictingAuth,
+    InvalidApiKey,
+    NotAuthorized,
+    TrialExpired,
+    NotFound,
+    Other(i64),
+}
+
+impl SubsonicFailure {
+    /// The failure a Subsonic error code names. Codes 20 and 30 are both
+    /// version mismatches, one from each side.
+    pub fn from_code(code: i64) -> Self {
+        match code {
+            10 => Self::MissingParameter,
+            20 | 30 => Self::IncompatibleVersion,
+            40 => Self::WrongCredentials,
+            41 => Self::TokenAuthUnsupported,
+            42 => Self::AuthMechanismUnsupported,
+            43 => Self::ConflictingAuth,
+            44 => Self::InvalidApiKey,
+            50 => Self::NotAuthorized,
+            60 => Self::TrialExpired,
+            70 => Self::NotFound,
+            other => Self::Other(other),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct ErrorBody {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct Extension {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub versions: Option<Vec<i64>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MusicFolders {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music_folder: Option<Vec<MusicFolder>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct MusicFolder {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct Artists {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub index: Option<Vec<ArtistIndex>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct ArtistIndex {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist: Option<Vec<Artist>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Artist {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_art: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlbumId3 {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_art: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub song_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub year: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub genre: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_artist: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct AlbumList2 {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album: Option<Vec<AlbumId3>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct Album {
+    #[serde(flatten)]
+    pub info: AlbumId3,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub song: Option<Vec<Child>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Child {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent: Option<String>,
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub track: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disc_number: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub year: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub genre: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_art: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suffix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bit_rate: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bit_depth: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sampling_rate: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub channel_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist_id: Option<String>,
+    #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music_brainz_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_album_artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flaccy_fingerprint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flaccy_revision: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flaccy_revised_at: Option<String>,
+    /// When the song was starred (loved), as ISO 8601 text.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub starred: Option<String>,
+    /// How many times the server counted the song as played.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_count: Option<i64>,
+    /// When the song was last played, as ISO 8601 text.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub played: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchResult3 {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist: Option<Vec<Artist>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album: Option<Vec<AlbumId3>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub song: Option<Vec<Child>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct Playlists {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub playlist: Option<Vec<Playlist>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Playlist {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub song_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub changed: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_art: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub public: Option<bool>,
+}
+
+/// A playlist from `getPlaylist`: its `Playlist` fields beside its `entry` songs.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct PlaylistWithEntries {
+    #[serde(flatten)]
+    pub info: Playlist,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entry: Option<Vec<Child>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(json: &str) -> Envelope {
+        serde_json::from_str::<Root>(json).unwrap().response
+    }
+
+    #[test]
+    fn ping_reports_the_navidrome_server() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/ping.json"
+        ));
+        assert_eq!(envelope.status, "ok");
+        assert_eq!(envelope.server_type.as_deref(), Some("navidrome"));
+        assert_eq!(
+            envelope.server_version.as_deref(),
+            Some("0.64.2 (10114574)")
+        );
+        assert_eq!(envelope.open_subsonic, Some(true));
+        assert_eq!(envelope.failure(), None);
+    }
+
+    #[test]
+    fn extensions_are_listed_with_their_versions() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/extensions.json"
+        ));
+        let lyrics = envelope
+            .open_subsonic_extensions
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|extension| extension.name.as_deref() == Some("songLyrics"))
+            .unwrap();
+        assert_eq!(lyrics.versions, Some(vec![1, 2]));
+        assert!(envelope.supports("transcoding"));
+        assert!(!envelope.supports("apiKeyAuthentication"));
+    }
+
+    #[test]
+    fn music_folders_decode_their_numeric_id() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/musicFolders.json"
+        ));
+        let folder = &envelope.music_folders.unwrap().music_folder.unwrap()[0];
+        assert_eq!(folder.id, Some(1));
+        assert_eq!(folder.name.as_deref(), Some("Music Library"));
+    }
+
+    #[test]
+    fn artists_are_grouped_by_index() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/artists.json"
+        ));
+        let index = &envelope.artists.unwrap().index.unwrap()[0];
+        assert_eq!(index.name.as_deref(), Some("S"));
+        assert_eq!(
+            index.artist.as_ref().unwrap()[0].name.as_deref(),
+            Some("Second Band")
+        );
+    }
+
+    #[test]
+    fn album_list_has_three_albums() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/albumList2.json"
+        ));
+        let albums = envelope.album_list2.unwrap().album.unwrap();
+        assert_eq!(albums.len(), 3);
+        assert_eq!(albums[0].name, "First Light");
+    }
+
+    #[test]
+    fn album_carries_its_songs_in_track_order() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/album.json"
+        ));
+        let album = envelope.album.unwrap();
+        assert_eq!(album.info.id, "3VJh1vLoeqzHRu7d7CGEO3");
+        let songs = album.song.unwrap();
+        let tracks: Vec<Option<i64>> = songs.iter().map(|song| song.track).collect();
+        assert_eq!(tracks, vec![Some(1), Some(2), Some(3)]);
+        assert_eq!(songs[0].title, "Opening");
+    }
+
+    #[test]
+    fn song_decodes_its_audio_properties() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/song.json"
+        ));
+        let song = envelope.song.unwrap();
+        assert_eq!(song.title, "Opening");
+        assert_eq!(song.size, Some(313_276));
+        assert_eq!(song.suffix.as_deref(), Some("flac"));
+        assert_eq!(song.bit_depth, Some(16));
+        assert_eq!(song.sampling_rate, Some(44_100));
+        assert_eq!(song.channel_count, Some(2));
+        assert_eq!(song.duration, Some(20));
+        assert_eq!(song.flaccy_fingerprint, None);
+        assert_eq!(song.flaccy_revision, None);
+    }
+
+    #[test]
+    fn search_returns_six_songs() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/search3All.json"
+        ));
+        let songs = envelope.search_result3.unwrap().song.unwrap();
+        assert_eq!(songs.len(), 6);
+    }
+
+    #[test]
+    fn an_empty_playlist_list_decodes() {
+        let envelope = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/playlists.json"
+        ));
+        assert!(envelope.playlists.unwrap().playlist.is_none());
+    }
+
+    #[test]
+    fn wrong_credentials_and_missing_songs_map_to_their_failures() {
+        let wrong = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/errorWrongCredentials.json"
+        ));
+        let missing = parse(include_str!(
+            "../../../../Core/FlaccyCore/Tests/FlaccyCoreTests/Fixtures/Subsonic/errorNotFound.json"
+        ));
+        assert_eq!(wrong.failure(), Some(SubsonicFailure::WrongCredentials));
+        assert_eq!(missing.failure(), Some(SubsonicFailure::NotFound));
+    }
+
+    #[test]
+    fn error_codes_map_to_failures_and_unknown_codes_are_kept() {
+        assert_eq!(
+            SubsonicFailure::from_code(20),
+            SubsonicFailure::IncompatibleVersion
+        );
+        assert_eq!(
+            SubsonicFailure::from_code(30),
+            SubsonicFailure::IncompatibleVersion
+        );
+        assert_eq!(
+            SubsonicFailure::from_code(44),
+            SubsonicFailure::InvalidApiKey
+        );
+        assert_eq!(
+            SubsonicFailure::from_code(60),
+            SubsonicFailure::TrialExpired
+        );
+        assert_eq!(
+            SubsonicFailure::from_code(9999),
+            SubsonicFailure::Other(9999)
+        );
+    }
+
+    #[test]
+    fn a_song_with_flaccy_extension_fields_decodes_them() {
+        let envelope = parse(
+            r#"{"subsonic-response":{"status":"ok","song":{"id":"x","title":"t","flaccyFingerprint":"flac:ab","flaccyRevision":3,"flaccyRevisedAt":"2026-10-25T14:00:00Z","unknownField":{"nested":true}}}}"#,
+        );
+        let song = envelope.song.unwrap();
+        assert_eq!(song.flaccy_fingerprint.as_deref(), Some("flac:ab"));
+        assert_eq!(song.flaccy_revision, Some(3));
+        assert_eq!(
+            song.flaccy_revised_at.as_deref(),
+            Some("2026-10-25T14:00:00Z")
+        );
+    }
+
+    #[test]
+    fn a_song_decodes_its_love_and_play_state() {
+        let envelope = parse(
+            r#"{"subsonic-response":{"status":"ok","song":{"id":"x","title":"t","starred":"2026-10-24T09:30:00Z","playCount":7,"played":"2026-10-25T14:00:00Z"}}}"#,
+        );
+        let song = envelope.song.unwrap();
+        assert_eq!(song.starred.as_deref(), Some("2026-10-24T09:30:00Z"));
+        assert_eq!(song.play_count, Some(7));
+        assert_eq!(song.played.as_deref(), Some("2026-10-25T14:00:00Z"));
+    }
+
+    #[test]
+    fn a_song_without_love_or_play_state_leaves_those_fields_out() {
+        let envelope = parse(r#"{"subsonic-response":{"status":"ok","song":{"id":"x","title":"t"}}}"#);
+        let song = envelope.song.unwrap();
+        assert_eq!((song.starred.as_ref(), song.play_count, song.played.as_ref()), (None, None, None));
+        let text = serde_json::to_string(&song).unwrap();
+        assert!(!text.contains("starred") && !text.contains("playCount") && !text.contains("played"));
+    }
+
+    #[test]
+    fn a_get_playlist_answer_carries_its_fields_and_its_entries_in_order() {
+        let envelope = parse(
+            r#"{"subsonic-response":{"status":"ok","playlist":{"id":"pl-1","name":"Road Trip","songCount":2,"duration":60,"created":"2026-10-01T10:00:00Z","changed":"2026-10-20T10:00:00Z","owner":"ana","public":true,"entry":[{"id":"song-a","title":"First","artist":"Band","album":"Album","track":1,"duration":30,"suffix":"flac"},{"id":"song-b","title":"Second","artist":"Band","album":"Album","track":2,"duration":30,"suffix":"flac"}]}}}"#,
+        );
+        let playlist = envelope.playlist.clone().unwrap();
+        assert_eq!(playlist.info.id.as_deref(), Some("pl-1"));
+        assert_eq!(playlist.info.name.as_deref(), Some("Road Trip"));
+        assert_eq!(playlist.info.song_count, Some(2));
+        assert_eq!(playlist.info.duration, Some(60));
+        assert_eq!(playlist.info.owner.as_deref(), Some("ana"));
+        assert_eq!(playlist.info.public, Some(true));
+        let titles: Vec<&str> = playlist
+            .entry
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|song| song.title.as_str())
+            .collect();
+        assert_eq!(titles, vec!["First", "Second"]);
+        let text = serde_json::to_string(&Root { response: envelope.clone() }).unwrap();
+        assert_eq!(parse(&text), envelope);
+    }
+
+    #[test]
+    fn a_body_without_a_status_is_rejected() {
+        assert!(serde_json::from_str::<Root>(r#"{"subsonic-response":{}}"#).is_err());
+    }
+}

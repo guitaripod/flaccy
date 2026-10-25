@@ -113,12 +113,13 @@ extension NowPlayingViewController {
         titleRow.spacing = 10
         titleRow.alignment = .centerY
 
-        let content = NSStackView(views: [artworkContainer, titleRow, artistButton, albumLabel])
+        let content = NSStackView(views: [artworkContainer, titleRow, versionRow, artistButton, albumLabel])
         content.orientation = .vertical
         content.alignment = .centerX
         content.spacing = 10
         content.setCustomSpacing(24, after: artworkContainer)
         content.setCustomSpacing(4, after: titleRow)
+        content.setCustomSpacing(6, after: versionRow)
         content.setCustomSpacing(2, after: artistButton)
         content.translatesAutoresizingMaskIntoConstraints = false
 

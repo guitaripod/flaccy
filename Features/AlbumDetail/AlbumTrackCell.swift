@@ -11,6 +11,7 @@ final class AlbumTrackCell: UITableViewCell {
     let numberLabel = UILabel()
     let barsView = NowPlayingBarsView()
     let trackTitleLabel = UILabel()
+    private lazy var titleRow = TitleWithChipView(titleLabel: trackTitleLabel)
     let qualityLabel = UILabel()
     let lovedButton = UIButton(type: .system)
     let durationLabel = UILabel()
@@ -38,8 +39,6 @@ final class AlbumTrackCell: UITableViewCell {
 
         trackTitleLabel.font = .scaled(.body, size: 16, weight: .regular)
         trackTitleLabel.adjustsFontForContentSizeCategory = true
-        trackTitleLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        trackTitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         qualityLabel.font = UIFontMetrics(forTextStyle: .caption2)
             .scaledFont(for: .monospacedSystemFont(ofSize: 10, weight: .semibold), maximumPointSize: 16)
@@ -78,7 +77,7 @@ final class AlbumTrackCell: UITableViewCell {
             barsView.heightAnchor.constraint(equalToConstant: 14),
         ])
 
-        let stack = UIStackView(arrangedSubviews: [numberContainer, trackTitleLabel, qualityLabel, lovedButton, durationLabel])
+        let stack = UIStackView(arrangedSubviews: [numberContainer, titleRow, qualityLabel, lovedButton, durationLabel])
         stack.spacing = 10
         stack.alignment = .center
         stack.setCustomSpacing(4, after: lovedButton)
@@ -101,6 +100,12 @@ final class AlbumTrackCell: UITableViewCell {
     func configure(with track: Track, index: Int, isCurrent: Bool, isPlaying: Bool, loved: Bool, accent: UIColor) {
         numberLabel.text = track.trackNumber > 0 ? "\(track.trackNumber)" : "\(index + 1)"
         trackTitleLabel.text = track.title
+        let newMix = track.showsNewMix
+        let downloaded = track.isDownloadedRemote
+        titleRow.setNewMix(newMix)
+        titleRow.setDownloaded(downloaded)
+        accessibilityLabel = TrackVersionCopy.accessibilityLabel(track.title, newMix: newMix, downloaded: downloaded)
+        contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
         let minutes = Int(track.duration) / 60
         let seconds = Int(track.duration) % 60
         durationLabel.text = String(format: "%d:%02d", minutes, seconds)

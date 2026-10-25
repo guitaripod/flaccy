@@ -33,6 +33,7 @@ final class WatchSyncService: NSObject {
     }
 
     private static let requestedKey = "watchSync.requestedPaths"
+    private static let supersededKey = "watchSync.supersededPaths"
     private static let profileKey = "watchSync.audioProfile"
     private static let fitMargin: Int64 = 50 * 1_024 * 1_024
     private static let ackGrace: TimeInterval = 600
@@ -62,6 +63,7 @@ final class WatchSyncService: NSObject {
     var lastSentContext: [String: Data] = [:]
     var jobObserver: NSObjectProtocol?
     var libraryObserver: NSObjectProtocol?
+    var revisionObserver: NSObjectProtocol?
 
     private var trackIndex: [String: Track]?
     private var stemCache: [URL: String] = [:]
@@ -69,8 +71,10 @@ final class WatchSyncService: NSObject {
 
     override init() {
         let stored = UserDefaults.standard.stringArray(forKey: Self.requestedKey) ?? []
+        let superseded = UserDefaults.standard.stringArray(forKey: Self.supersededKey) ?? []
         ledger = WatchSyncLedger(
             requested: Set(stored.map(SyncStem.of)),
+            superseded: Set(superseded.map(SyncStem.of)),
             policy: WatchSyncLedger.Policy(ackGrace: Self.ackGrace)
         )
         profile = UserDefaults.standard.string(forKey: Self.profileKey)
@@ -79,6 +83,7 @@ final class WatchSyncService: NSObject {
         super.init()
         observeEnrichmentJob()
         observeLibrary()
+        observeRevisions()
         WatchSyncBackgroundTask.shared.onExpiration = { [weak self] in self?.suspendPreparation() }
     }
 
@@ -257,6 +262,7 @@ final class WatchSyncService: NSObject {
     }
 
     func removeAll() {
+        releaseRemoteFiles(of: ledger.requested.compactMap { track(forStem: $0) })
         cancelAllWork()
         ledger.reset()
         persistRequested()
@@ -313,9 +319,11 @@ final class WatchSyncService: NSObject {
 
     func persistRequested() {
         UserDefaults.standard.set(ledger.requested.sorted(), forKey: Self.requestedKey)
+        UserDefaults.standard.set(ledger.superseded.sorted(), forKey: Self.supersededKey)
     }
 
     func relativePath(for url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return Self.watchPath(of: song) }
         let documents = FileManager.default
             .urls(for: .documentDirectory, in: .userDomainMask)[0]
             .standardizedFileURL.path
@@ -323,6 +331,30 @@ final class WatchSyncService: NSObject {
         guard path.hasPrefix(documents) else { return canonicalSyncPath(url.lastPathComponent) }
         let relative = String(path.dropFirst(documents.count))
         return canonicalSyncPath(relative.hasPrefix("/") ? String(relative.dropFirst()) : relative)
+    }
+
+    /// Where a song from a server sits among the watch's files: one folder per server, the song's
+    /// id as the name, the server's suffix as the extension so the watch knows what it was handed.
+    private static func watchPath(of song: RemoteTrackPath) -> String {
+        let suffix = RemoteSongDirectory.shared.source(for: song)?.suffix
+        let name = suffix.map { "\(song.escapedSongID).\($0)" } ?? song.escapedSongID
+        return "Remote/\(song.escapedServerID)/\(name)"
+    }
+
+    /// The file a song is prepared from. A song on a server is downloaded whole first and pinned
+    /// for the watch, so the transcoder and the transfer read a file that will not be evicted.
+    private static func sourceFile(of track: Track) async throws -> URL {
+        guard let song = track.remoteSong else { return track.fileURL }
+        return try await RemoteStreamCache.shared.downloadComplete(song, pinnedFor: .watch)
+    }
+
+    /// Lets go of the files of songs on servers that the watch no longer wants.
+    private func releaseRemoteFiles(of tracks: [Track]) {
+        let songs = tracks.compactMap(\.remoteSong)
+        guard !songs.isEmpty else { return }
+        Task {
+            for song in songs { try? await RemoteStreamCache.shared.unpin(song, reason: .watch) }
+        }
     }
 
     func applyHeartbeat(used: Int64, total: Int64) {
@@ -344,17 +376,17 @@ final class WatchSyncService: NSObject {
             dropOrphan(stem)
             return
         }
-        guard FileManager.default.fileExists(atPath: track.fileURL.path) else {
+        guard track.remoteSong != nil || FileManager.default.fileExists(atPath: track.fileURL.path) else {
             MidgarLog.error("Sync source missing, dropping request: \(stem)", category: .connectivity)
             dropOrphan(stem)
             return
         }
         preparingStems.insert(stem)
-        let source = track.fileURL
         let profile = profile
         prepareTasks[stem] = Task { [weak self] in
             guard let self else { return }
             do {
+                let source = try await Self.sourceFile(of: track)
                 let output = try await self.transcoder.prepare(source: source, profile: profile)
                 self.finishPreparation(stem: stem, track: track, output: output)
             } catch is CancellationError {
@@ -437,7 +469,9 @@ final class WatchSyncService: NSObject {
         prepareTasks[stem] = nil
         preparingStems.remove(stem)
         if let track = track(forStem: stem) {
-            Task { await transcoder.cancel(source: track.fileURL) }
+            let source = track.remoteSong.flatMap { RemoteStreamCache.shared.fileURL(for: $0) } ?? track.fileURL
+            Task { await transcoder.cancel(source: source) }
+            releaseRemoteFiles(of: [track])
         }
         transfers[stem]?.cancel()
         settle(stem)
@@ -560,6 +594,32 @@ final class WatchSyncService: NSObject {
                 self?.pump()
             }
         }
+    }
+
+    private func observeRevisions() {
+        revisionObserver = NotificationCenter.default.addObserver(
+            forName: Library.tracksRevised,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            let paths = notification.userInfo?[Library.RevisionKey.paths] as? [String] ?? []
+            MainActor.assumeIsolated { self?.supersede(paths: paths) }
+        }
+    }
+
+    /// Sends the requested songs among `paths` to the watch again, since the
+    /// copy it holds is of a version the phone has since replaced.
+    func supersede(paths: [String]) {
+        let stems = paths.map(SyncStem.of).filter { ledger.requested.contains($0) }
+        guard !stems.isEmpty else { return }
+        ledger.supersede(stems)
+        for stem in stems where !ledger.isOnWatch(stem) { runStems.insert(stem) }
+        sizeCache.removeAll()
+        WatchSyncSizing.invalidate()
+        persistRequested()
+        MidgarLog.info("Sending \(stems.count) new versions to the watch", category: .connectivity)
+        startRun()
+        pump()
     }
 
     func publish(jobProgress: EnrichmentJobProgress) {

@@ -32,7 +32,8 @@ final class NowPlayingViewController: NSViewController {
     let artistButton = HoverUnderlineButton()
     let albumLabel = NSTextField(labelWithString: "")
     let badgeLabel = NSTextField(labelWithString: "")
-    let badgeContainer = NSView()
+    lazy var badgeContainer = MacQualityBadgeView(label: badgeLabel)
+    let versionRow = MacNowPlayingVersionRow()
     var loveButton: TransportButton!
 
     var shuffleButton: TransportButton!
@@ -116,6 +117,9 @@ final class NowPlayingViewController: NSViewController {
             self, selector: #selector(trackChangedForCount), name: AudioPlayer.trackDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
+            self, selector: #selector(tracksRevised), name: Library.tracksRevised, object: nil
+        )
+        NotificationCenter.default.addObserver(
             self, selector: #selector(volumeDidChangeExternally), name: AudioPlayer.volumeDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
@@ -136,6 +140,12 @@ final class NowPlayingViewController: NSViewController {
     }
 
     @objc func trackChangedForCount() { queueChanged() }
+
+    /// Re-reads the playing song's versions when the library reports a new
+    /// mix, so the chip and the export time appear without a track change.
+    @objc func tracksRevised() {
+        versionRow.configure(with: player.currentTrack)
+    }
 
     override func viewDidAppear() {
         super.viewDidAppear()
@@ -180,6 +190,7 @@ final class NowPlayingViewController: NSViewController {
         let badge = player.currentTrack?.qualityBadge
         badgeLabel.stringValue = badge ?? ""
         badgeContainer.isHidden = badge == nil
+        versionRow.configure(with: player.currentTrack)
         loveButton.isEnabled = player.currentTrack != nil
         lovedChanged()
 

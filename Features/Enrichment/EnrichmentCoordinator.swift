@@ -67,10 +67,22 @@ actor EnrichmentCoordinator {
 
     private init() {}
 
+    /// A DEBUG screenshot launch, whose fictional catalog has nothing to enrich
+    /// and whose captures must not show a countdown banner. Always false in a
+    /// release build, where the seeder does not exist.
+    private static var isScreenshotLaunch: Bool {
+        #if DEBUG && (targetEnvironment(simulator) || os(macOS))
+        ScreenshotSeeder.isActive
+        #else
+        false
+        #endif
+    }
+
     /// Starts a pass, or asks the one already running to go round again once it
     /// finishes. Cheap to call on every reload: a pass that finds nothing due
     /// costs one `count(*)` per scope and raises no surface at all.
     func resume() {
+        guard !Self.isScreenshotLaunch else { return }
         network.start()
         guard run == nil else {
             rerunRequested = true
@@ -289,7 +301,7 @@ actor EnrichmentCoordinator {
         case .aiBatch:
             let directories = (try? db.dueAIBatchDirectories(version: version, now: now, limit: Self.pageSize)) ?? []
             guard !directories.isEmpty else { return [] }
-            let unanalyzed = ((try? db.fetchAllTracks()) ?? []).filter { !$0.aiAnalyzed }
+            let unanalyzed = ((try? db.fetchAllTracks()) ?? []).filter { !$0.aiAnalyzed && $0.remoteServer == nil }
             let grouped = Dictionary(grouping: unanalyzed) { Self.directory(of: $0.fileURL) }
             return directories.compactMap { directory in
                 guard let tracks = grouped[directory], !tracks.isEmpty else { return nil }

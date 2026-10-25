@@ -724,7 +724,7 @@ pub fn meter_fraction(decibels: f32) -> f64 {
 /// A peak as a decibel figure; silence reads as -60.
 pub fn peak_decibels(peak: f32) -> f32 {
     if peak > 0.000_03 {
-        20.0 * peak.log10()
+        (20.0 * f64::from(peak).log10()) as f32
     } else {
         -60.0
     }

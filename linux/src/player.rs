@@ -28,6 +28,9 @@ pub const END_GUARD: f64 = 0.25;
 /// How long a pipeline that claims to be playing may sit on one position before
 /// it is reopened where it stopped.
 const STALL_THRESHOLD: Duration = Duration::from_millis(2500);
+/// How long a song streamed from a server may sit on one position before the
+/// same reopen: the network is allowed to be slow where a disk is not.
+const REMOTE_STALL_THRESHOLD: Duration = Duration::from_secs(12);
 /// Reopens attempted in a row before the watchdog stands down until playback
 /// moves again on its own, so slow storage never turns into a reopen loop.
 const STALL_RECOVERIES: u32 = 2;
@@ -130,6 +133,7 @@ pub fn clamp_seek(seconds: f64, duration: f64) -> f64 {
 
 pub struct QueueSnapshot {
     pub queue: Vec<Track>,
+    pub current: usize,
 }
 
 /// What the queue's headline numbers need, computed under the lock so no track
@@ -209,7 +213,12 @@ pub struct Player {
     server_paused: Cell<bool>,
 }
 
+/// What GStreamer opens for a track: the loopback proxy URL of a song from a
+/// server, the file URI of one from the music folder.
 fn uri_for(root: &Path, track: &Track) -> Option<String> {
+    if crate::remote::is_remote(&track.rel_path) {
+        return crate::remote::proxy_uri(&track.rel_path);
+    }
     let path = track.abs_path(root);
     glib::filename_to_uri(&path, None::<&str>)
         .map(|uri| uri.to_string())
@@ -273,6 +282,9 @@ impl Player {
                 }
                 if let Some(next) = gapless_next_index(&guard) {
                     let track = guard.queue[next].clone();
+                    if crate::remote::unplayable_message(&track.rel_path, &track.title).is_some() {
+                        return None;
+                    }
                     if let Some(uri) = uri_for(&guard.root, &track) {
                         playbin.set_property("uri", &uri);
                         guard.pending_advance = Some(track);
@@ -395,7 +407,15 @@ impl Player {
             .current_track()
             .map(|track| track.title)
             .unwrap_or_else(|| "this track".to_string());
-        let message = if error.matches(gst::CoreError::MissingPlugin) {
+        let remote_server = self
+            .current_track()
+            .and_then(|track| crate::remote::server_of(&track.rel_path))
+            .map(|id| crate::remote::server_name(&id));
+        let message = if let Some(server) = remote_server {
+            format!(
+                "Can't play “{title}” — {server} didn't deliver it ({error}). Check that the server is running and your network or Tailscale is up, then try again."
+            )
+        } else if error.matches(gst::CoreError::MissingPlugin) {
             format!(
                 "Can't play “{title}” — a codec is missing. Install gst-libav (AAC/M4A/ALAC and more) and restart Flaccy."
             )
@@ -489,7 +509,61 @@ impl Player {
         self.hub.emit(&AppEvent::QueueChanged);
     }
 
+    /// Stops the pipeline on a remote song whose server is out of reach and
+    /// whose bytes are not on this computer, and says why. True when it did.
+    fn refuse_unplayable(&self, track: &Track) -> bool {
+        let Some(message) = crate::remote::unplayable_message(&track.rel_path, &track.title) else {
+            return false;
+        };
+        crate::logger::warn("playback", &format!("{} is remote and offline", track.rel_path));
+        self.clear_seeks();
+        let _ = self.playbin.set_state(gst::State::Null);
+        self.playing.set(false);
+        self.progress.set(None);
+        self.hub.emit(&AppEvent::PlayingChanged(false));
+        self.hub.emit(&AppEvent::Toast(message));
+        true
+    }
+
+    /// Puts a queue back exactly as it was saved, in that order whatever the
+    /// shuffle mode says, and starts it `elapsed` seconds into the song at
+    /// `start`. The song is prerolled paused and seeked before it plays, so
+    /// the listener never hears its opening on the way.
+    pub fn restore_queue(&self, tracks: Vec<Track>, start: usize, elapsed: f64) {
+        if tracks.is_empty() {
+            return;
+        }
+        let track = {
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
+            guard.original = tracks.clone();
+            guard.queue = tracks;
+            guard.current = start.min(guard.queue.len() - 1);
+            guard.pending_advance = None;
+            guard.station_seed = None;
+            guard.scrubbing = false;
+            guard.queue[guard.current].clone()
+        };
+        self.eos_reset.set(false);
+        self.server_paused.set(false);
+        self.stall_recoveries.set(0);
+        if self.refuse_unplayable(&track) {
+            self.hub.emit(&AppEvent::TrackChanged(Some(track)));
+            self.hub.emit(&AppEvent::QueueChanged);
+            return;
+        }
+        self.playing.set(true);
+        self.reopen_at(clamp_seek(elapsed, track.duration));
+        self.hub.emit(&AppEvent::PlayingChanged(true));
+        self.hub.emit(&AppEvent::TrackChanged(Some(track)));
+        self.hub.emit(&AppEvent::QueueChanged);
+    }
+
     fn load_and_play(&self, track: &Track) {
+        if self.refuse_unplayable(track) {
+            return;
+        }
         let uri = {
             let Ok(guard) = self.shared.lock() else {
                 return;
@@ -1079,6 +1153,17 @@ impl Player {
         );
     }
 
+    /// Reads the playing song's file again, from the start or where playback
+    /// is, for when the file at its path was replaced while it was open.
+    pub fn reopen_current(&self, from_start: bool) {
+        let target = if from_start {
+            0.0
+        } else {
+            self.position().unwrap_or(0.0)
+        };
+        self.reopen_at(target);
+    }
+
     /// The stall watchdog, run on every playback tick. A pipeline that says it
     /// is playing but has not moved for `STALL_THRESHOLD` is reopened where it
     /// stopped — the only thing that revives a wedged audio stream.
@@ -1102,11 +1187,23 @@ impl Player {
                 self.progress.set(Some((position, now)));
             }
             Some((_, since)) => {
-                if now.duration_since(since) >= STALL_THRESHOLD {
+                if now.duration_since(since) >= self.stall_threshold() {
                     self.recover_from_stall(position);
                 }
             }
             None => self.progress.set(Some((position, now))),
+        }
+    }
+
+    /// How long the playing track may stand still before it is reopened.
+    fn stall_threshold(&self) -> Duration {
+        let remote = self
+            .current_track()
+            .is_some_and(|track| crate::remote::is_remote(&track.rel_path));
+        if remote {
+            REMOTE_STALL_THRESHOLD
+        } else {
+            STALL_THRESHOLD
         }
     }
 
@@ -1205,13 +1302,29 @@ impl Player {
             .unwrap_or(false)
     }
 
+    /// The playing track and the one queued after it, without copying the
+    /// whole queue.
+    pub fn current_and_next(&self) -> (Option<Track>, Option<Track>) {
+        let Ok(guard) = self.shared.lock() else {
+            return (None, None);
+        };
+        (
+            guard.queue.get(guard.current).cloned(),
+            guard.queue.get(guard.current + 1).cloned(),
+        )
+    }
+
     pub fn queue_snapshot(&self) -> QueueSnapshot {
         self.shared
             .lock()
             .map(|g| QueueSnapshot {
                 queue: g.queue.clone(),
+                current: g.current,
             })
-            .unwrap_or(QueueSnapshot { queue: Vec::new() })
+            .unwrap_or(QueueSnapshot {
+                queue: Vec::new(),
+                current: 0,
+            })
     }
 
     pub fn queue_summary(&self) -> QueueSummary {
@@ -1365,6 +1478,10 @@ mod tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
+            disc_number: None,
         }
     }
 

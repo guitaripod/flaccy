@@ -408,7 +408,11 @@ final class EqualizerEngine {
                 guard let item else { return }
                 let tracks = try? await item.asset.loadTracks(withMediaType: .audio)
                 attachment.isLoading = false
-                guard let self, self.needsTap, let track = tracks?.first else { return }
+                guard let self, self.needsTap else { return }
+                guard let track = tracks?.first else {
+                    MidgarLog.notice("Equalizer tap skipped: the item has no audio track to attach to", category: .playback)
+                    return
+                }
                 self.installTap(on: item, track: track, attachment: attachment)
             }
         } else if attachment.hasMix {

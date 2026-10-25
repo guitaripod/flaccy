@@ -2,17 +2,23 @@ use crate::config::{self, Config, Session};
 use crate::db::Db;
 use crate::eq::EqEngine;
 use crate::events::{AppEvent, EventHub};
+use crate::home_state::{self, SavedSession, SavedTrack};
 use crate::library::{self, Library, Track};
 use crate::load_progress::{LoadPhase, LoadProgress};
 use crate::player::Player;
 use crate::scanner::{self, ScanEvent};
 use crate::ui;
+use crate::versions;
 use adw::prelude::*;
 use flaccy_shared::enrichment_job::{Activity, JobProgress, Scope};
+use flaccy_shared::home::{self, ContextKind, PlaybackContext, RecentContexts};
+use flaccy_shared::home_copy;
 use flaccy_shared::import_plan;
 use flaccy_shared::library_debut::DebutSummary;
+use flaccy_shared::track_revision::copy;
 use gtk::glib;
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -36,6 +42,9 @@ pub struct AppCore {
     pub mpris: RefCell<Option<Rc<mpris_server::Player>>>,
     pub enrich_tx: RefCell<Option<async_channel::Sender<crate::enrichment::EnrichRequest>>>,
     pub import_in_flight: Cell<bool>,
+    /// Paths that have a version kept in Previous Versions, so a track's context
+    /// menu can offer to restore it without asking the database per row.
+    previous_versions: RefCell<HashSet<String>>,
     pub sample_in_flight: Cell<bool>,
     pub sleep_remaining: Cell<Option<i64>>,
     pub sleep_end_of_track: Cell<bool>,
@@ -71,12 +80,36 @@ pub struct AppCore {
     /// The level unmuting returns to.
     restore_volume: Cell<f64>,
     config_save_queued: Cell<bool>,
+    /// A refresh of the servers' catalogs is running, so another is not begun.
+    pub remote_syncing: Cell<bool>,
+    /// What the queue now playing was started from, for Home's Continue and
+    /// Jump Back In.
+    context: RefCell<PlaybackContext>,
+    /// The albums, playlists, mixes and radios the person started.
+    pub recents: RefCell<RecentContexts>,
+    /// The queue as it stood when playback was last touched, kept across
+    /// launches so Home can offer to carry on.
+    pub last_session: RefCell<Option<SavedSession>>,
+    session_save_queued: Cell<bool>,
+    session_saved_position: Cell<f64>,
 }
 
+/// How long after launch the servers are refreshed first, and how often after.
+const REMOTE_FIRST_REFRESH_DELAY: Duration = Duration::from_millis(800);
+const REMOTE_REFRESH_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 /// Below this the volume counts as muted.
 const MUTE_FLOOR: f64 = 0.005;
 /// Where unmuting lands when there is no earlier level to return to.
 const UNMUTE_DEFAULT: f64 = 0.6;
+/// The most songs a saved session keeps, so an endless station's queue never
+/// turns every track change into a megabyte write.
+const SESSION_MAX_TRACKS: usize = 1000;
+/// How many songs behind the current one a trimmed session keeps.
+const SESSION_TRAILING_TRACKS: usize = 100;
+/// How often playback progress is written while a song plays, in seconds.
+const SESSION_PROGRESS_INTERVAL: f64 = 15.0;
+/// How long queue and track changes wait to be written as one session.
+const SESSION_SAVE_DELAY: Duration = Duration::from_millis(300);
 /// How long a settled change waits before it is written to the config file, so
 /// a drag across the volume slider saves once rather than on every frame.
 const CONFIG_SAVE_DELAY: Duration = Duration::from_millis(400);
@@ -86,6 +119,7 @@ impl AppCore {
         let config = config::load();
         let db_path = crate::db::default_db_path();
         let db = Db::open_with_recovery(&db_path).expect("library database must open");
+        crate::remote::start(&config, &db_path);
         let hub = Rc::new(EventHub::new());
         let root = config.music_root();
         crate::logger::info("lifecycle", &format!("library root: {}", root.display()));
@@ -94,6 +128,9 @@ impl AppCore {
         player.set_volume(config.volume);
         player.set_shuffle(config.shuffle);
         player.set_repeat(crate::player::RepeatMode::from_id(&config.repeat_mode));
+        if config::demo_mode() && std::env::var("FLACCY_DEMO_HOME").as_deref() == Ok("dayone") {
+            db.delete_all_scrobbles();
+        }
         let session = config::load_session();
         if let Some(session) = &session {
             crate::logger::info(
@@ -125,6 +162,7 @@ impl AppCore {
             mpris: RefCell::new(None),
             enrich_tx: RefCell::new(None),
             import_in_flight: Cell::new(false),
+            previous_versions: RefCell::new(HashSet::new()),
             sample_in_flight: Cell::new(false),
             sleep_remaining: Cell::new(None),
             sleep_end_of_track: Cell::new(false),
@@ -143,14 +181,140 @@ impl AppCore {
             lyrics: RefCell::new(crate::lyrics::Lyrics::default()),
             restore_volume: Cell::new(restore_volume),
             config_save_queued: Cell::new(false),
+            remote_syncing: Cell::new(false),
+            context: RefCell::new(PlaybackContext::anonymous_queue()),
+            recents: RefCell::new(
+                Some(home_state::load_recents())
+                    .filter(|_| std::env::var("FLACCY_DEMO_HOME").as_deref() != Ok("dayone"))
+                    .unwrap_or_default(),
+            ),
+            last_session: RefCell::new(
+                home_state::load_session()
+                    .filter(|_| std::env::var("FLACCY_DEMO_HOME").as_deref() != Ok("dayone")),
+            ),
+            session_save_queued: Cell::new(false),
+            session_saved_position: Cell::new(0.0),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
+        core.wire_remote();
+        core.wire_session();
         core
     }
 
     pub fn music_root(&self) -> PathBuf {
         self.config.borrow().music_root()
+    }
+
+    fn refresh_previous_versions(&self) {
+        *self.previous_versions.borrow_mut() = self
+            .db
+            .fetch_previous_versions()
+            .into_iter()
+            .map(|version| version.rel_path)
+            .collect();
+    }
+
+    pub fn has_previous_version(&self, rel_path: &str) -> bool {
+        self.previous_versions.borrow().contains(rel_path)
+    }
+
+    /// Deletes the previous versions that have been kept past the retention,
+    /// off the main thread, then refreshes what the menus offer.
+    fn purge_expired_versions(self: &Rc<Self>) {
+        let db_path = self.db_path.clone();
+        let (tx, rx) = async_channel::bounded::<usize>(1);
+        std::thread::Builder::new()
+            .name("flaccy-purge".into())
+            .spawn(move || {
+                let purged = Db::open(&db_path)
+                    .map(|db| versions::purge_expired(&db, crate::db::now_ms()))
+                    .unwrap_or(0);
+                let _ = tx.send_blocking(purged);
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok(purged) = rx.recv().await else { return };
+            if purged > 0 {
+                crate::logger::info("library", &format!("purged {purged} expired previous versions"));
+                if let Some(core) = weak.upgrade() {
+                    core.refresh_previous_versions();
+                }
+            }
+        });
+    }
+
+    /// Swaps a song with the version kept for it, off the main thread, and
+    /// reloads the views from the same row.
+    pub fn restore_previous_version(self: &Rc<Self>, rel_path: &str) {
+        let Some(track) = self.library.borrow().track_by_rel_path(rel_path).cloned() else {
+            return;
+        };
+        let (db_path, root, rel) = (self.db_path.clone(), self.music_root(), rel_path.to_string());
+        let (tx, rx) = async_channel::bounded::<Result<(), versions::VersionFailure>>(1);
+        std::thread::Builder::new()
+            .name("flaccy-restore".into())
+            .spawn(move || {
+                let result = match Db::open(&db_path) {
+                    Ok(db) => versions::restore_previous(&db, &root, &rel),
+                    Err(err) => Err(versions::VersionFailure {
+                        step: "opening the library database",
+                        cause: err.to_string(),
+                    }),
+                };
+                let _ = tx.send_blocking(result);
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok(result) = rx.recv().await else { return };
+            let Some(core) = weak.upgrade() else { return };
+            match result {
+                Ok(()) => {
+                    crate::logger::info("library", &format!("restored the previous mix of {}", track.title));
+                    core.reload_library();
+                    core.reopen_if_playing(&track.rel_path, false);
+                    core.toast(&copy::fill(copy::RESTORED, &[&track.title]));
+                }
+                Err(failure) => {
+                    crate::logger::error(
+                        "library",
+                        &format!("restore failed for {}: {} — {}", track.rel_path, failure.step, failure.cause),
+                    );
+                    core.toast(&format!(
+                        "Couldn’t restore the previous mix of “{}” — {} failed: {}. Nothing was changed; check the folder’s permissions and try again.",
+                        track.title, failure.step, failure.cause
+                    ));
+                }
+            }
+        });
+    }
+
+    /// Reopens the playing song when it is `rel_path`, so the player reads the
+    /// file now at that path instead of the one it opened.
+    pub fn reopen_if_playing(&self, rel_path: &str, from_start: bool) {
+        let playing = self
+            .player
+            .current_track()
+            .is_some_and(|track| track.rel_path == rel_path);
+        if playing {
+            self.player.reopen_current(from_start);
+        }
+    }
+
+    /// Reloads the views for songs the scan recognised as new versions, and
+    /// offers the new mix from the start when one of them is playing.
+    pub(crate) fn note_new_versions(self: &Rc<Self>, rel_paths: &[String]) {
+        self.reload_library();
+        if let Some(track) = self.player.current_track() {
+            if rel_paths.contains(&track.rel_path) {
+                self.hub.emit(&AppEvent::NewMixPlaying {
+                    rel_path: track.rel_path,
+                    title: track.title,
+                });
+            }
+        }
     }
 
     /// Loads the library on a dedicated thread (own SQLite connection) and
@@ -207,6 +371,7 @@ impl AppCore {
                 ),
             );
             *core.library.borrow_mut() = Rc::new(library);
+            core.refresh_previous_versions();
             core.record_library_debut();
             if core.building_albums.replace(false) {
                 core.emit_build_completed();
@@ -392,6 +557,7 @@ impl AppCore {
 
     pub fn start(self: &Rc<Self>, _window: &adw::ApplicationWindow) {
         self.eq.start();
+        self.purge_expired_versions();
         self.reload_library();
         self.start_tick();
         crate::mpris::start(self);
@@ -401,11 +567,12 @@ impl AppCore {
         crate::musicvideo::start(self);
         self.wire_autoplay();
         self.rescan();
+        self.start_remote();
         self.schedule_periodic_drain();
         self.schedule_wantlist_refresh();
         self.schedule_history_import();
         self.wire_lastfm_sync();
-        if config::demo_mode() {
+        if config::demo_mode() && demo_autoplays() {
             self.schedule_demo_autoplay();
         }
         if self.smoke {
@@ -494,8 +661,9 @@ impl AppCore {
                         }
                         crate::enrichment::request_background_pass(&core);
                         core.hub.emit(&AppEvent::ScanFinished { added, removed });
-                        break;
                     }
+                    ScanEvent::Revised(rel_paths) => core.note_new_versions(&rel_paths),
+                    ScanEvent::Retagged => core.reload_library(),
                     ScanEvent::Failed(message) => {
                         crate::logger::error("library", &format!("scan failed: {message}"));
                         core.scanning.set(false);
@@ -511,9 +679,80 @@ impl AppCore {
         });
     }
 
+    /// Plays `tracks` from `start`, naming what they were started from by
+    /// looking at them (see `context_for`).
     pub fn play_tracks(self: &Rc<Self>, tracks: Vec<Track>, start: usize) {
+        self.play_tracks_in(tracks, start, None);
+    }
+
+    /// The one funnel every start of playback goes through. A caller that
+    /// knows what it is starting (a playlist, a mix, a radio) says so in
+    /// `context`; any other start is named from its songs.
+    pub fn play_tracks_in(
+        self: &Rc<Self>,
+        tracks: Vec<Track>,
+        start: usize,
+        context: Option<PlaybackContext>,
+    ) {
+        if tracks.is_empty() {
+            return;
+        }
+        let context = context.unwrap_or_else(|| self.context_for(&tracks));
         crate::scrobbler::checkpoint_skip(self);
+        *self.context.borrow_mut() = context.clone();
         self.player.play_queue(tracks, start);
+        self.note_context_started(context);
+    }
+
+    /// An album when every song belongs to one library album, else whatever the
+    /// shared rule makes of their (album, credit) pairs: usually a plain queue.
+    fn context_for(&self, tracks: &[Track]) -> PlaybackContext {
+        let library = self.library.borrow().clone();
+        let album = tracks.first().and_then(|first| {
+            library
+                .albums
+                .iter()
+                .find(|album| album.tracks.iter().any(|t| t.rel_path == first.rel_path))
+        });
+        if let Some(album) = album {
+            let members: std::collections::HashSet<&str> =
+                album.tracks.iter().map(|t| t.rel_path.as_str()).collect();
+            if tracks.iter().all(|t| members.contains(t.rel_path.as_str())) {
+                return album_context(&album.title, &album.artist);
+            }
+        }
+        let pairs: Vec<(String, String)> = tracks
+            .iter()
+            .map(|t| (t.album.clone(), t.credit().to_string()))
+            .collect();
+        PlaybackContext::derived(&pairs)
+    }
+
+    /// Remembers a started context for Jump Back In. A plain queue names
+    /// nothing to go back to, so the shared rule leaves it out.
+    fn note_context_started(&self, context: PlaybackContext) {
+        let updated = self
+            .recents
+            .borrow()
+            .recording(context, chrono::Utc::now().timestamp());
+        if *self.recents.borrow() == updated {
+            return;
+        }
+        home_state::save_recents(&updated);
+        *self.recents.borrow_mut() = updated;
+        self.hub.emit(&AppEvent::HomeChanged);
+    }
+
+    /// Takes a thing off Jump Back In, history-derived albums included, until
+    /// it is played again.
+    pub fn dismiss_jump_back_in(&self, key: &str) {
+        let updated = self
+            .recents
+            .borrow()
+            .dismissing(key, chrono::Utc::now().timestamp());
+        home_state::save_recents(&updated);
+        *self.recents.borrow_mut() = updated;
+        self.hub.emit(&AppEvent::HomeChanged);
     }
 
     pub fn play_album_key(self: &Rc<Self>, key: &str, shuffle: bool) {
@@ -521,7 +760,8 @@ impl AppCore {
         let Some(album) = library.album_by_key(key) else {
             return;
         };
-        self.play_list(album.tracks.clone(), shuffle, key);
+        let context = album_context(&album.title, &album.artist);
+        self.play_list_in(album.tracks.clone(), shuffle, key, Some(context));
     }
 
     /// Every library track `artist` is on, in album order.
@@ -536,6 +776,16 @@ impl AppCore {
     /// Plays `tracks` from the top, or shuffled from a seeded random start,
     /// leaving the player's shuffle mode matching the request.
     pub fn play_list(self: &Rc<Self>, tracks: Vec<Track>, shuffle: bool, seed: &str) {
+        self.play_list_in(tracks, shuffle, seed, None);
+    }
+
+    pub fn play_list_in(
+        self: &Rc<Self>,
+        tracks: Vec<Track>,
+        shuffle: bool,
+        seed: &str,
+        context: Option<PlaybackContext>,
+    ) {
         if tracks.is_empty() {
             return;
         }
@@ -548,7 +798,154 @@ impl AppCore {
         } else {
             0
         };
-        self.play_tracks(tracks, start);
+        self.play_tracks_in(tracks, start, context);
+    }
+
+    /// Library Radio: an endless mix of everything, weighted by how much each
+    /// song is played.
+    pub fn start_library_radio(self: &Rc<Self>) {
+        let pool = self.library.borrow().tracks.clone();
+        let db_path = self.db_path.clone();
+        let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
+        std::thread::Builder::new()
+            .name("flaccy-library-radio".into())
+            .spawn(move || {
+                let counts = crate::db::Db::open(&db_path)
+                    .map(|db| db.play_counts_by_track())
+                    .unwrap_or_default();
+                let station = crate::station::library_radio(
+                    &pool,
+                    &counts,
+                    &std::collections::HashSet::new(),
+                    crate::station::STATION_SIZE,
+                );
+                let _ = tx.send_blocking(station);
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok(station) = rx.recv().await else { return };
+            let Some(core) = weak.upgrade() else { return };
+            if station.is_empty() {
+                core.toast("Library Radio needs songs in the library. Add some music, then try again.");
+                return;
+            }
+            let context = PlaybackContext {
+                kind: ContextKind::Radio,
+                id: home_copy::LIBRARY_RADIO_ID.to_string(),
+                title: home_copy::LIBRARY_RADIO_TITLE.to_string(),
+                subtitle: String::new(),
+            };
+            core.play_tracks_in(station, 0, Some(context));
+        });
+    }
+
+    /// Puts the last session's queue back and plays it from where it stopped,
+    /// skipping songs whose files have left the library. `shuffle` plays the
+    /// same songs shuffled from the top instead.
+    pub fn resume_session(self: &Rc<Self>, shuffle: bool) -> bool {
+        let Some(saved) = self.last_session.borrow().clone() else {
+            return false;
+        };
+        let library = self.library.borrow().clone();
+        let by_path: std::collections::HashMap<&str, &Track> = library
+            .tracks
+            .iter()
+            .map(|track| (track.rel_path.as_str(), track))
+            .collect();
+        let Some(plan) = saved.surviving(|rel| by_path.get(rel).map(|track| track.duration)) else {
+            self.toast("None of the songs in your last session are in the library any more. Their files may have moved.");
+            return false;
+        };
+        let tracks: Vec<Track> = plan
+            .tracks
+            .iter()
+            .filter_map(|saved| by_path.get(saved.rel_path.as_str()).map(|t| (*t).clone()))
+            .collect();
+        if shuffle {
+            self.play_list_in(tracks, true, "session", Some(saved.context.clone()));
+            return true;
+        }
+        crate::scrobbler::checkpoint_skip(self);
+        *self.context.borrow_mut() = saved.context.clone();
+        self.player.restore_queue(tracks, plan.index, plan.elapsed);
+        true
+    }
+
+    /// Keeps the last session current: written a moment after the track, the
+    /// queue or play/pause changes, and every so often while a song plays.
+    fn wire_session(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.hub.subscribe(move |event| {
+            let Some(core) = weak.upgrade() else {
+                return false;
+            };
+            match event {
+                AppEvent::TrackChanged(Some(_))
+                | AppEvent::QueueChanged
+                | AppEvent::PlayingChanged(_) => core.save_session_soon(),
+                AppEvent::Tick { position, .. } => {
+                    if (position - core.session_saved_position.get()).abs()
+                        >= SESSION_PROGRESS_INTERVAL
+                    {
+                        core.save_session_now(false);
+                    }
+                }
+                _ => {}
+            }
+            true
+        });
+    }
+
+    fn save_session_soon(self: &Rc<Self>) {
+        if self.session_save_queued.replace(true) {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(SESSION_SAVE_DELAY, move || {
+            if let Some(core) = weak.upgrade() {
+                core.session_save_queued.set(false);
+                core.save_session_now(true);
+            }
+        });
+    }
+
+    /// Writes the session as it stands. A player with nothing queued leaves the
+    /// file alone: quitting after a launch that never played must not erase
+    /// what the last launch left behind.
+    pub fn save_session_now(&self, notify: bool) {
+        let snapshot = self.player.queue_snapshot();
+        if snapshot.queue.is_empty() {
+            return;
+        }
+        let position = self.player.position().unwrap_or(0.0);
+        self.session_saved_position.set(position);
+        let first = if snapshot.queue.len() > SESSION_MAX_TRACKS {
+            snapshot.current.saturating_sub(SESSION_TRAILING_TRACKS)
+        } else {
+            0
+        };
+        let session = SavedSession {
+            saved_at: chrono::Utc::now().timestamp(),
+            tracks: snapshot
+                .queue
+                .iter()
+                .skip(first)
+                .take(SESSION_MAX_TRACKS)
+                .map(|track| SavedTrack {
+                    rel_path: track.rel_path.clone(),
+                    duration: track.duration,
+                })
+                .collect(),
+            index: snapshot.current - first,
+            elapsed: position,
+            context: self.context.borrow().clone(),
+        };
+        home_state::save_session(&session);
+        *self.last_session.borrow_mut() = Some(session);
+        if notify {
+            self.hub.emit(&AppEvent::HomeChanged);
+        }
     }
 
     pub fn next(self: &Rc<Self>) {
@@ -691,6 +1088,140 @@ impl AppCore {
         self.save_config();
     }
 
+    /// Refreshes every server's catalog off the main thread, then reloads the
+    /// library when anything changed. `announce` is true when the person asked,
+    /// so a failure is a toast; a refresh nobody asked for only writes the log.
+    pub fn sync_remote_servers(self: &Rc<Self>, announce: bool) {
+        let Some(remote) = crate::remote::handle().cloned() else {
+            return;
+        };
+        let servers = remote.servers();
+        if servers.is_empty() || self.remote_syncing.replace(true) {
+            return;
+        }
+        self.hub.emit(&AppEvent::RemoteChanged);
+        let (tx, rx) = async_channel::unbounded::<(String, Result<flaccy_library::remote::sync::SyncReport, String>)>();
+        std::thread::Builder::new()
+            .name("flaccy-remote-refresh".into())
+            .spawn(move || {
+                for server in servers {
+                    let result = remote
+                        .sync(&server.id, &|_| {})
+                        .map_err(|failure| failure.message());
+                    let _ = tx.send_blocking((server.name, result));
+                }
+            })
+            .ok();
+        let core = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let mut changed = false;
+            while let Ok((name, result)) = rx.recv().await {
+                match result {
+                    Ok(report) => {
+                        let applied = &report.applied;
+                        let moved = applied.inserted
+                            + applied.updated
+                            + applied.new_versions.len()
+                            + applied.removed.len();
+                        changed |= moved > 0 || applied.listening_updated > 0;
+                        if announce {
+                            core.toast(&format!(
+                                "Refreshed {name}: {} songs, {moved} changed.",
+                                report.songs
+                            ));
+                        }
+                    }
+                    Err(message) => {
+                        crate::logger::warn("remote", &format!("refresh of {name} failed: {message}"));
+                        if announce {
+                            core.toast(&message);
+                        }
+                    }
+                }
+            }
+            core.remote_syncing.set(false);
+            if changed {
+                core.reload_library();
+            }
+            core.hub.emit(&AppEvent::RemoteChanged);
+        });
+    }
+
+    /// Hands the remote library's events to the main loop, and tells it which
+    /// remote song plays and which comes next so it can fetch ahead.
+    fn wire_remote(self: &Rc<Self>) {
+        let Some(remote) = crate::remote::handle().cloned() else {
+            return;
+        };
+        let (tx, rx) = async_channel::unbounded::<flaccy_library::remote::service::RemoteEvent>();
+        remote.set_listener(Arc::new(move |event| {
+            let _ = tx.send_blocking(event);
+        }));
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            use flaccy_library::remote::service::RemoteEvent;
+            while let Ok(event) = rx.recv().await {
+                let Some(core) = weak.upgrade() else { return };
+                match event {
+                    RemoteEvent::Changed => core.hub.emit(&AppEvent::RemoteChanged),
+                    RemoteEvent::Toast(message) => core.toast(&message),
+                    RemoteEvent::NewVersions(paths) => core.note_new_versions(&paths),
+                    RemoteEvent::CoversReady(keys) => {
+                        core.album_artwork_changed(&keys);
+                        core.hub.emit(&AppEvent::AlbumCoversHoisted(keys));
+                    }
+                }
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.hub.subscribe(move |event| {
+            let Some(core) = weak.upgrade() else {
+                return false;
+            };
+            if matches!(event, AppEvent::TrackChanged(_) | AppEvent::QueueChanged) {
+                core.prefetch_remote();
+            }
+            true
+        });
+    }
+
+    /// Asks the cache to fetch the rest of the playing remote song and the
+    /// start of the next queued one.
+    fn prefetch_remote(&self) {
+        let Some(remote) = crate::remote::handle() else {
+            return;
+        };
+        let (current, next) = self.player.current_and_next();
+        let remote_path = |track: &Option<Track>| {
+            track
+                .as_ref()
+                .map(|track| track.rel_path.clone())
+                .filter(|path| crate::remote::is_remote(path))
+        };
+        let (current, next) = (remote_path(&current), remote_path(&next));
+        if current.is_some() || next.is_some() {
+            remote.prefetch(current.as_deref(), next.as_deref());
+        }
+    }
+
+    /// Refreshes the servers a moment after launch and every six hours after,
+    /// and finishes any download an earlier run left half done.
+    fn start_remote(self: &Rc<Self>) {
+        let Some(remote) = crate::remote::handle() else {
+            return;
+        };
+        remote.start_background();
+        let core = Rc::clone(self);
+        glib::timeout_add_local_once(REMOTE_FIRST_REFRESH_DELAY, move || {
+            core.sync_remote_servers(false);
+        });
+        let core = Rc::clone(self);
+        glib::timeout_add_local(REMOTE_REFRESH_INTERVAL, move || {
+            core.sync_remote_servers(false);
+            glib::ControlFlow::Continue
+        });
+    }
+
     pub fn toggle_love(self: &Rc<Self>, rel_path: &str) {
         let Some(track) = self.library.borrow().track_by_rel_path(rel_path).cloned() else {
             return;
@@ -711,6 +1242,9 @@ impl AppCore {
             &format!("{} {} — {}", pending_op, track.title, track.artist),
         );
         crate::scrobbler::submit_love(self, rel_path, &track.title, &track.artist, loved);
+        if let Some(remote) = crate::remote::handle().filter(|_| crate::remote::is_remote(rel_path)) {
+            remote.set_starred(rel_path, loved);
+        }
     }
 
     /// Swaps in a copy of the library with the loved flag flipped. Pages note
@@ -915,6 +1449,7 @@ impl AppCore {
         let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());
         let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
         let seed_for_thread = seed_artist.clone();
+        let seed_track_is_none = seed_track.is_none();
         std::thread::Builder::new()
             .name("flaccy-station".into())
             .spawn(move || {
@@ -965,8 +1500,15 @@ impl AppCore {
                 ),
             );
             crate::scrobbler::checkpoint_skip(&core);
+            let context = seed_track_is_none.then(|| artist_radio_context(&seed_artist));
+            if let Some(context) = &context {
+                *core.context.borrow_mut() = context.clone();
+            }
             core.player
                 .play_queue_with_seed(station, 0, Some(seed_artist));
+            if let Some(context) = context {
+                core.note_context_started(context);
+            }
         });
     }
 
@@ -1076,35 +1618,74 @@ impl AppCore {
     /// Copies dropped audio files and folders into the library's `Imported`
     /// folder and rescans. A dropped folder keeps its own tree, a file already
     /// there is skipped rather than duplicated, and the result reads exactly
-    /// like the Apple clients' import sentence.
-    pub fn import_dropped_paths(self: &Rc<Self>, paths: Vec<std::path::PathBuf>) {
+    /// like the Apple clients' import sentence. A newer version of a song that
+    /// is already there asks `confirm` first: it replaces the file in place and
+    /// the one it replaces stays in Previous Versions, or both are kept.
+    pub fn import_dropped_paths(self: &Rc<Self>, paths: Vec<PathBuf>, confirm: ConfirmReplace) {
         let root = self.music_root();
+        self.toast("Looking for music…");
+        let (tx, rx) = async_channel::bounded::<PlannedImport>(1);
+        std::thread::Builder::new()
+            .name("flaccy-dnd-plan".into())
+            .spawn(move || {
+                let _ = tx.send_blocking(plan_drop_import(&paths, &root));
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok(planned) = rx.recv().await else { return };
+            let Some(core) = weak.upgrade() else { return };
+            match planned.replacement_prompt() {
+                None => core.execute_import(planned, ReplaceChoice::Replace),
+                Some(prompt) => {
+                    let weak = Rc::downgrade(&core);
+                    confirm(
+                        prompt,
+                        Box::new(move |choice| {
+                            if let Some(core) = weak.upgrade() {
+                                core.execute_import(planned, choice);
+                            }
+                        }),
+                    );
+                }
+            }
+        });
+    }
+
+    fn execute_import(self: &Rc<Self>, planned: PlannedImport, choice: ReplaceChoice) {
+        let environment = ImportEnvironment {
+            root: self.music_root(),
+            db_path: self.db_path.clone(),
+        };
         let (tx, rx) = async_channel::unbounded::<DropImport>();
         std::thread::Builder::new()
             .name("flaccy-dnd".into())
-            .spawn(move || run_drop_import(&paths, &root, &tx))
+            .spawn(move || run_drop_import(planned, choice, &environment, &tx))
             .ok();
         let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
             while let Ok(event) = rx.recv().await {
                 let Some(core) = weak.upgrade() else { return };
                 match event {
-                    DropImport::Scanning => core.toast("Looking for music…"),
                     DropImport::Copying { done, total } => core.toast(&format!(
                         "Copying {} of {}…",
                         crate::load_progress::group_digits(done),
                         crate::load_progress::group_digits(total)
                     )),
-                    DropImport::Finished(outcome) => {
+                    DropImport::Finished {
+                        outcome,
+                        replaced,
+                        failures,
+                    } => {
                         crate::logger::info(
                             "library",
                             &format!(
-                                "drag-drop import: {} imported, {} skipped, {} failed",
+                                "drag-drop import: {} imported, {replaced} replaced, {} skipped, {} failed",
                                 outcome.imported, outcome.skipped, outcome.failed
                             ),
                         );
-                        core.toast(&import_plan::report(&outcome).0);
-                        if outcome.imported > 0 {
+                        core.toast(&import_message(&outcome, replaced, &failures));
+                        if outcome.imported > 0 || replaced > 0 {
                             core.rescan();
                         }
                         return;
@@ -1135,6 +1716,35 @@ impl AppCore {
             }
             true
         });
+    }
+}
+
+/// A demo run starts playing on its own, except for the Home states that show
+/// a paused library (`FLACCY_DEMO_HOME` other than `playing`).
+fn demo_autoplays() -> bool {
+    matches!(
+        std::env::var("FLACCY_DEMO_HOME").ok().as_deref(),
+        None | Some("playing")
+    )
+}
+
+/// The context of an album started whole.
+pub fn album_context(title: &str, credit: &str) -> PlaybackContext {
+    PlaybackContext {
+        kind: ContextKind::Album,
+        id: home::album_key(title, credit),
+        title: title.to_string(),
+        subtitle: credit.to_string(),
+    }
+}
+
+/// The context of an artist station: "<Artist> Radio".
+pub fn artist_radio_context(artist: &str) -> PlaybackContext {
+    PlaybackContext {
+        kind: ContextKind::Radio,
+        id: format!("artist:{}", home::fold(artist)),
+        title: format!("{artist} {}", home_copy::RADIO),
+        subtitle: String::new(),
     }
 }
 
@@ -1181,61 +1791,105 @@ fn run_smoke(core: &Rc<AppCore>) {
     });
 }
 
-impl Library {
-    fn clone_with_loved(&self, rel_path: &str, loved: bool) -> Library {
-        let mut updated = Library {
-            tracks: self.tracks.clone(),
-            albums: self.albums.clone(),
-            artists: self.artists.clone(),
-            index: self.index.clone(),
-        };
-        updated.set_loved(rel_path, loved);
-        updated
+/// What the person decides when an import holds newer versions of songs that
+/// are already in the library.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReplaceChoice {
+    Replace,
+    KeepBoth,
+}
+
+/// What the replace question names: how many songs, and the title when it is one.
+pub struct ReplacePrompt {
+    pub count: usize,
+    pub title: Option<String>,
+}
+
+pub type ConfirmReplace = Rc<dyn Fn(ReplacePrompt, Box<dyn FnOnce(ReplaceChoice)>)>;
+
+const IMPORT_DIR: &str = "Imported";
+
+struct PlannedImport {
+    placed: Vec<import_plan::Placed>,
+    already_in_library: usize,
+}
+
+impl PlannedImport {
+    fn replacements(&self) -> Vec<&import_plan::Placed> {
+        self.placed
+            .iter()
+            .filter(|entry| matches!(entry.placement, import_plan::Placement::Replace(_)))
+            .collect()
     }
 
-    fn set_loved(&mut self, rel_path: &str, loved: bool) {
-        for track in &mut self.tracks {
-            if track.rel_path == rel_path {
-                track.loved = loved;
-            }
-        }
-        for album in &mut self.albums {
-            for track in &mut album.tracks {
-                if track.rel_path == rel_path {
-                    track.loved = loved;
-                }
-            }
-        }
+    fn replacement_prompt(&self) -> Option<ReplacePrompt> {
+        let replacements = self.replacements();
+        let first = replacements.first()?;
+        let title = (replacements.len() == 1).then(|| versions::display_title(&first.item.source));
+        Some(ReplacePrompt {
+            count: replacements.len(),
+            title,
+        })
     }
+}
+
+struct ImportEnvironment {
+    root: PathBuf,
+    db_path: PathBuf,
 }
 
 enum DropImport {
-    Scanning,
-    Copying { done: usize, total: usize },
-    Finished(import_plan::Outcome),
+    Copying {
+        done: usize,
+        total: usize,
+    },
+    Finished {
+        outcome: import_plan::Outcome,
+        replaced: usize,
+        failures: Vec<String>,
+    },
 }
 
-/// Plans the drop with the shared rules, then copies each file through a
-/// hidden `.part` beside its destination so an interrupted copy never leaves a
-/// truncated song under the real name for the next import to mistake for a
-/// different file.
+/// Plans the drop with the shared rules, asking the files themselves whether a
+/// name already taken holds a newer version of the same song.
+fn plan_drop_import(paths: &[PathBuf], root: &std::path::Path) -> PlannedImport {
+    let plan = import_plan::plan(paths, root, &scanner::SUPPORTED_EXTENSIONS);
+    let placed = import_plan::placements(&plan, &root.join(IMPORT_DIR), Some(&versions::TagInspector));
+    PlannedImport {
+        placed,
+        already_in_library: plan.already_in_library,
+    }
+}
+
+/// Carries out a plan. Each new file is copied through a hidden `.part` beside
+/// its destination so an interrupted copy never leaves a truncated song under
+/// the real name for the next import to mistake for a different file; a
+/// replacement goes through `versions::replace_in_place`, which keeps the song
+/// it replaces.
 fn run_drop_import(
-    paths: &[PathBuf],
-    root: &std::path::Path,
+    planned: PlannedImport,
+    choice: ReplaceChoice,
+    environment: &ImportEnvironment,
     tx: &async_channel::Sender<DropImport>,
 ) {
-    let _ = tx.send_blocking(DropImport::Scanning);
-    let plan = import_plan::plan(paths, root, &scanner::SUPPORTED_EXTENSIONS);
-    let import_root = root.join("Imported");
-    let placed = import_plan::placements(&plan, &import_root);
+    let import_root = environment.root.join(IMPORT_DIR);
+    let placed = match choice {
+        ReplaceChoice::Replace => planned.placed,
+        ReplaceChoice::KeepBoth => versions::keep_both(planned.placed, &import_root),
+    };
     let is_audio = |p: &&import_plan::Placed| p.item.kind == import_plan::Kind::Audio;
     let total = placed
         .iter()
         .filter(is_audio)
-        .filter(|p| matches!(p.placement, import_plan::Placement::Copy(_)))
+        .filter(|p| {
+            matches!(
+                p.placement,
+                import_plan::Placement::Copy(_) | import_plan::Placement::Replace(_)
+            )
+        })
         .count();
     let mut outcome = import_plan::Outcome {
-        skipped: plan.already_in_library
+        skipped: planned.already_in_library
             + placed
                 .iter()
                 .filter(is_audio)
@@ -1243,55 +1897,110 @@ fn run_drop_import(
                 .count(),
         ..Default::default()
     };
+    let database = Db::open(&environment.db_path);
+    let previous_root = versions::previous_root(&environment.db_path);
+    let mut replaced = 0;
+    let mut failures: Vec<String> = Vec::new();
     let mut last_report: Option<std::time::Instant> = None;
     for entry in &placed {
-        let import_plan::Placement::Copy(destination) = &entry.placement else {
-            continue;
+        let result: Result<bool, String> = match &entry.placement {
+            import_plan::Placement::Copy(destination) => {
+                copy_without_clobbering(&entry.item.source, &import_root.join(destination))
+                    .map(|()| false)
+                    .map_err(|err| err.to_string())
+            }
+            import_plan::Placement::Replace(destination) => {
+                replace_existing(&database, environment, &previous_root, destination, &entry.item.source)
+                    .map(|()| true)
+            }
+            import_plan::Placement::AlreadyPresent => continue,
         };
-        let result = copy_without_clobbering(&entry.item.source, &import_root.join(destination));
         if let Err(err) = &result {
             crate::logger::error(
                 "library",
-                &format!("import copy failed for {}: {err}", entry.item.source.display()),
+                &format!("import failed for {}: {err}", entry.item.source.display()),
             );
+            if matches!(entry.placement, import_plan::Placement::Replace(_)) {
+                failures.push(err.clone());
+            }
         }
         if entry.item.kind != import_plan::Kind::Audio {
             continue;
         }
-        if result.is_ok() {
-            outcome.imported += 1;
-        } else {
-            outcome.failed += 1;
+        match result {
+            Ok(true) => replaced += 1,
+            Ok(false) => outcome.imported += 1,
+            Err(_) => outcome.failed += 1,
         }
-        let done = outcome.imported + outcome.failed;
+        let done = outcome.imported + replaced + outcome.failed;
         let due = last_report.is_none_or(|at| at.elapsed() >= Duration::from_millis(150));
         if due || done == total {
             last_report = Some(std::time::Instant::now());
             let _ = tx.send_blocking(DropImport::Copying { done, total });
         }
     }
-    let _ = tx.send_blocking(DropImport::Finished(outcome));
+    let _ = tx.send_blocking(DropImport::Finished {
+        outcome,
+        replaced,
+        failures,
+    });
+}
+
+/// Replaces the song at `destination` with `source`, returning the sentence
+/// that names what failed when it cannot.
+fn replace_existing(
+    database: &Result<Db, rusqlite::Error>,
+    environment: &ImportEnvironment,
+    previous_root: &std::path::Path,
+    destination: &str,
+    source: &std::path::Path,
+) -> Result<(), String> {
+    let title = versions::display_title(source);
+    let failure = |step: &str, cause: String| {
+        format!(
+            "Couldn’t replace “{title}” — {step} failed: {cause}. The version you have is untouched; check the free space and permissions, then try again."
+        )
+    };
+    let db = database
+        .as_ref()
+        .map_err(|err| failure("opening the library database", err.to_string()))?;
+    let rel = std::path::Path::new(IMPORT_DIR)
+        .join(destination)
+        .to_string_lossy()
+        .into_owned();
+    versions::replace_in_place(db, &environment.root, previous_root, &rel, source)
+        .map_err(|err| failure(err.step, err.cause))
+}
+
+/// The toast that closes an import: the shared sentence, the songs replaced by
+/// newer versions, and the first replacement that could not be made.
+fn import_message(outcome: &import_plan::Outcome, replaced: usize, failures: &[String]) -> String {
+    let nothing_else = outcome.imported == 0 && outcome.skipped == 0 && outcome.failed == 0;
+    let mut parts: Vec<String> = Vec::new();
+    if !(replaced > 0 && nothing_else) {
+        parts.push(import_plan::report(outcome).0);
+    }
+    if replaced == 1 {
+        parts.push(copy::REPLACED_ONE.to_string());
+    } else if replaced > 1 {
+        parts.push(copy::fill(copy::REPLACED_COUNT, &[&replaced.to_string()]));
+    }
+    if let Some(first) = failures.first() {
+        parts.push(first.clone());
+    }
+    parts.join(" · ")
 }
 
 fn copy_without_clobbering(source: &std::path::Path, target: &std::path::Path) -> std::io::Result<()> {
-    let parent = target.parent().unwrap_or(target);
-    std::fs::create_dir_all(parent)?;
-    let name = target
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let staging = parent.join(format!(".{name}.flaccy-part"));
-    let _ = std::fs::remove_file(&staging);
-    let staged = std::fs::copy(source, &staging).and_then(|_| {
-        if target.exists() {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::AlreadyExists,
-                "destination appeared during the copy",
-            ))
-        } else {
-            std::fs::rename(&staging, target)
-        }
-    });
+    let staging = versions::stage_copy(source, target)?;
+    let staged = if target.exists() {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            "destination appeared during the copy",
+        ))
+    } else {
+        std::fs::rename(&staging, target)
+    };
     if staged.is_err() {
         let _ = std::fs::remove_file(&staging);
     }
@@ -1320,106 +2029,138 @@ fn main_window(app: &adw::Application) -> Option<gtk::Window> {
 
 #[cfg(test)]
 mod tests {
-    use super::{run_drop_import, DropImport};
-    use crate::library::{Album, Library, Track};
+    use super::{
+        import_message, plan_drop_import, run_drop_import, DropImport, ImportEnvironment,
+        ReplaceChoice,
+    };
+    use crate::db::Db;
+    use crate::fingerprint::fixtures::{info_tags, tone, wav_bytes, TempDir};
+    use flaccy_shared::import_plan::Outcome;
 
-    fn drain(rx: &async_channel::Receiver<DropImport>) -> flaccy_shared::import_plan::Outcome {
+    fn drain(
+        rx: &async_channel::Receiver<DropImport>,
+    ) -> (Outcome, usize, Vec<String>) {
         let mut finished = None;
         while let Ok(event) = rx.try_recv() {
-            if let DropImport::Finished(outcome) = event {
-                finished = Some(outcome);
+            if let DropImport::Finished {
+                outcome,
+                replaced,
+                failures,
+            } = event
+            {
+                finished = Some((outcome, replaced, failures));
             }
         }
         finished.expect("the import reports its outcome")
     }
 
-    fn loved_fixture_track(rel_path: &str) -> Track {
-        Track {
-            id: 1,
-            rel_path: rel_path.to_string(),
-            title: rel_path.to_string(),
-            artist: "Artist".to_string(),
-            album: "Album".to_string(),
-            album_artist: None,
-            track_number: 1,
-            duration: 10.0,
-            codec: None,
-            bit_depth: None,
-            sample_rate: None,
-            channels: None,
-            loved: false,
-            play_count: 0,
-            date_added: 0,
-            last_played: None,
+    fn run(
+        paths: &[std::path::PathBuf],
+        environment: &ImportEnvironment,
+        choice: ReplaceChoice,
+    ) -> (Outcome, usize, Vec<String>) {
+        let (tx, rx) = async_channel::unbounded();
+        run_drop_import(plan_drop_import(paths, &environment.root), choice, environment, &tx);
+        drain(&rx)
+    }
+
+    fn environment(temp: &std::path::Path) -> ImportEnvironment {
+        let root = temp.join("root");
+        std::fs::create_dir_all(&root).expect("mkdir root");
+        ImportEnvironment {
+            root,
+            db_path: temp.join("data/library.sqlite"),
         }
-    }
-
-    fn loved_fixture() -> Library {
-        let tracks = vec![loved_fixture_track("a.flac"), loved_fixture_track("b.flac")];
-        Library {
-            albums: vec![Album {
-                title: "Album".to_string(),
-                artist: "Artist".to_string(),
-                year: None,
-                genre: None,
-                tracks: tracks.clone(),
-            }],
-            tracks,
-            artists: Vec::new(),
-            index: Default::default(),
-        }
-    }
-
-    fn loved_flags(library: &Library) -> (Vec<bool>, Vec<bool>) {
-        (
-            library.tracks.iter().map(|track| track.loved).collect(),
-            library.albums[0].tracks.iter().map(|track| track.loved).collect(),
-        )
-    }
-
-    #[test]
-    fn loving_a_track_flips_it_in_the_track_list_and_its_album_only() {
-        let mut library = loved_fixture();
-        library.set_loved("b.flac", true);
-        assert_eq!(loved_flags(&library), (vec![false, true], vec![false, true]));
-        library.set_loved("b.flac", false);
-        assert_eq!(loved_flags(&library), (vec![false, false], vec![false, false]));
-    }
-
-    #[test]
-    fn a_copy_on_write_love_leaves_the_snapshot_untouched() {
-        let library = loved_fixture();
-        let updated = library.clone_with_loved("a.flac", true);
-        assert_eq!(loved_flags(&library), (vec![false, false], vec![false, false]));
-        assert_eq!(loved_flags(&updated), (vec![true, false], vec![true, false]));
     }
 
     #[test]
     fn a_dropped_folder_keeps_its_tree_and_a_second_drop_copies_nothing() {
-        let temp = std::env::temp_dir().join(format!("flaccy-dnd-test-{}", std::process::id()));
-        let source = temp.join("src/Album");
-        let root = temp.join("root");
+        let temp = TempDir::new("dnd");
+        let source = temp.path().join("src/Album");
+        let environment = environment(temp.path());
+        let root = environment.root.clone();
         std::fs::create_dir_all(source.join("CD2")).expect("mkdir");
-        std::fs::create_dir_all(&root).expect("mkdir root");
         std::fs::write(source.join("01.flac"), b"x").expect("write");
         std::fs::write(source.join("01.lrc"), b"[00:01]x").expect("write");
         std::fs::write(source.join("CD2/01.mp3"), b"y").expect("write");
         std::fs::write(source.join("notes.txt"), b"z").expect("write");
 
-        let (tx, rx) = async_channel::unbounded();
-        run_drop_import(std::slice::from_ref(&source), &root, &tx);
-        let first = drain(&rx);
-        assert_eq!((first.imported, first.skipped, first.failed), (2, 0, 0));
+        let (first, replaced, _) = run(std::slice::from_ref(&source), &environment, ReplaceChoice::Replace);
+        assert_eq!((first.imported, first.skipped, first.failed, replaced), (2, 0, 0, 0));
         assert!(root.join("Imported/Album/01.flac").exists());
         assert!(root.join("Imported/Album/01.lrc").exists());
         assert!(root.join("Imported/Album/CD2/01.mp3").exists());
         assert!(!root.join("Imported/Album/notes.txt").exists());
         assert!(!root.join("Imported/Album/.01.flac.flaccy-part").exists());
 
-        run_drop_import(&[source], &root, &tx);
-        let second = drain(&rx);
-        assert_eq!((second.imported, second.skipped, second.failed), (0, 2, 0));
+        let (second, replaced, _) = run(&[source], &environment, ReplaceChoice::Replace);
+        assert_eq!((second.imported, second.skipped, second.failed, replaced), (0, 2, 0, 0));
         assert!(!root.join("Imported/Album/01_1.flac").exists());
-        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    fn write_song(path: &std::path::Path, step: i16) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let tags = info_tags("Rough Mix", "Drill Band", "Rough Cuts");
+        std::fs::write(path, wav_bytes(&tone(4000, step), Some(&tags))).unwrap();
+    }
+
+    #[test]
+    fn a_newer_version_replaces_the_song_and_keeps_both_files_apart_when_asked() {
+        let temp = TempDir::new("dnd-replace");
+        let environment = environment(temp.path());
+        let in_library = environment.root.join("Imported/Rough Mix.wav");
+        write_song(&in_library, 7);
+        let db = Db::open(&environment.db_path).expect("db");
+        let mut track = crate::scanner::read_metadata(&in_library, "Imported/Rough Mix.wav").expect("tags");
+        track.signature = crate::fingerprint::signature(&in_library);
+        track.fingerprint = crate::fingerprint::fingerprint(&in_library);
+        db.insert_track(&track).expect("insert");
+        let newer = temp.path().join("elsewhere/Rough Mix.wav");
+        write_song(&newer, 11);
+        let newer_fingerprint = crate::fingerprint::fingerprint(&newer);
+
+        let (kept, replaced, _) = run(std::slice::from_ref(&newer), &environment, ReplaceChoice::KeepBoth);
+        assert_eq!((kept.imported, replaced), (1, 0));
+        assert!(environment.root.join("Imported/Rough Mix_1.wav").exists());
+        assert!(db.previous_version("Imported/Rough Mix.wav").is_none());
+        std::fs::remove_file(environment.root.join("Imported/Rough Mix_1.wav")).unwrap();
+
+        let (done, replaced, failures) = run(&[newer], &environment, ReplaceChoice::Replace);
+        assert_eq!((done.imported, done.failed, replaced), (0, 0, 1));
+        assert!(failures.is_empty());
+        assert_eq!(crate::fingerprint::fingerprint(&in_library), newer_fingerprint);
+        let previous = db.previous_version("Imported/Rough Mix.wav").expect("kept");
+        assert!(std::path::Path::new(&previous.stored_path).is_file());
+    }
+
+    #[test]
+    fn the_closing_toast_counts_replaced_songs() {
+        let none = Outcome::default();
+        assert_eq!(
+            import_message(&none, 2, &[]),
+            "2 songs replaced with newer versions"
+        );
+        assert_eq!(
+            import_message(&none, 1, &[]),
+            "1 song replaced with a newer version"
+        );
+        let some = Outcome {
+            imported: 3,
+            ..Default::default()
+        };
+        assert_eq!(
+            import_message(&some, 2, &[]),
+            "Imported 3 items · 2 songs replaced with newer versions"
+        );
+        assert_eq!(import_message(&some, 0, &[]), "Imported 3 items");
+        assert_eq!(import_message(&none, 0, &[]), "Nothing to import.");
+        let failed = Outcome {
+            failed: 1,
+            ..Default::default()
+        };
+        assert_eq!(
+            import_message(&failed, 0, &["Couldn’t replace “A” — x failed: y.".into()]),
+            "Import failed — the files couldn't be copied. · Couldn’t replace “A” — x failed: y."
+        );
     }
 }

@@ -27,20 +27,6 @@ extension NowPlayingViewController {
         albumLabel.setContentCompressionResistancePriority(.required, for: .vertical)
 
         badgeLabel.font = .systemFont(ofSize: 10, weight: .semibold)
-        badgeLabel.textColor = NSColor(red: 0.45, green: 0.86, blue: 0.92, alpha: 1)
-        badgeContainer.wantsLayer = true
-        badgeContainer.layer?.borderColor = NSColor(red: 0.45, green: 0.86, blue: 0.92, alpha: 0.6).cgColor
-        badgeContainer.layer?.borderWidth = 1
-        badgeContainer.layer?.cornerRadius = 7
-        badgeContainer.translatesAutoresizingMaskIntoConstraints = false
-        badgeLabel.translatesAutoresizingMaskIntoConstraints = false
-        badgeContainer.addSubview(badgeLabel)
-        NSLayoutConstraint.activate([
-            badgeLabel.leadingAnchor.constraint(equalTo: badgeContainer.leadingAnchor, constant: 6),
-            badgeLabel.trailingAnchor.constraint(equalTo: badgeContainer.trailingAnchor, constant: -6),
-            badgeLabel.topAnchor.constraint(equalTo: badgeContainer.topAnchor, constant: 3),
-            badgeLabel.bottomAnchor.constraint(equalTo: badgeContainer.bottomAnchor, constant: -3),
-        ])
 
         loveButton = TransportButton(
             symbolName: "heart", pointSize: 16, accessibilityLabel: String(localized: "Love on Last.fm"),

@@ -70,14 +70,14 @@ impl PlaylistSort {
 /// One playlist as the grid and the picker show it: its playable size and the
 /// first few distinct albums that give it a cover.
 #[derive(Clone)]
-struct PlaylistCard {
-    id: i64,
-    name: String,
+pub(crate) struct PlaylistCard {
+    pub(crate) id: i64,
+    pub(crate) name: String,
     name_key: String,
     created_at: i64,
-    tracks: usize,
+    pub(crate) tracks: usize,
     duration: f64,
-    covers: Vec<AlbumRef>,
+    pub(crate) covers: Vec<AlbumRef>,
 }
 
 impl PlaylistCard {
@@ -224,9 +224,15 @@ impl GridSource {
     }
 }
 
+/// The playlist cards for the live library, read on the spot (Home's shelf).
+pub(crate) fn load_cards(ui: &Rc<Ui>) -> Vec<PlaylistCard> {
+    let snapshot = PlaylistSnapshot::load(&ui.core.db);
+    load_cards_from(&snapshot, &ui.core.library.borrow())
+}
+
 /// Every playlist resolved against the live library: files that have left the
 /// library neither count nor play, matching what the detail page lists.
-fn load_cards(snapshot: &PlaylistSnapshot, library: &Library) -> Vec<PlaylistCard> {
+fn load_cards_from(snapshot: &PlaylistSnapshot, library: &Library) -> Vec<PlaylistCard> {
     let wanted: HashSet<&str> = snapshot.tracks.iter().map(|(_, rel)| rel.as_str()).collect();
     let by_path = tracks_among(library, &wanted);
     let album_of = album_index(library, &wanted);
@@ -336,7 +342,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                         return;
                     };
                     let has_cover = ui.core.db.has_playlist_cover(card.id);
-                    context::popup_menu_at(&anchor, &playlist_list_menu(card.id, has_cover), x, y);
+                    let downloads = context::playlist_downloads(&ui.core, card.id);
+                    context::popup_menu_at(
+                        &anchor,
+                        &playlist_list_menu(card.id, has_cover, downloads),
+                        x,
+                        y,
+                    );
                 });
             }
             cell.add_controller(menu_gesture);
@@ -537,7 +549,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 return;
             }
             *source.borrow_mut() = Some(read);
-            let mut loaded = load_cards(&snapshot, &library);
+            let mut loaded = load_cards_from(&snapshot, &library);
             sort_cards(&mut loaded, sort_mode.get());
             let fingerprint = cards_fingerprint(&loaded);
             if force {
@@ -794,7 +806,7 @@ fn install_list_breakpoints(
 /// playlist's cover, and marks the ones that already hold the song.
 pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
     let snapshot = PlaylistSnapshot::load(&ui.core.db);
-    let mut cards = load_cards(&snapshot, &ui.core.library.borrow());
+    let mut cards = load_cards_from(&snapshot, &ui.core.library.borrow());
     sort_cards(&mut cards, PlaylistSort::Name);
     let holding: HashSet<i64> = snapshot
         .tracks
@@ -1231,7 +1243,11 @@ impl DetailView {
                     .borrow()
                     .get((track.track_number.max(1) - 1) as usize)
                     .map(|(row_id, _)| *row_id);
-                let menu = context::track_menu(&track.rel_path, track.loved);
+                let menu = context::track_menu(
+                    &track.rel_path,
+                    track.loved,
+                    view.ui.core.has_previous_version(&track.rel_path),
+                );
                 if let Some(row_id) = row_id {
                     let remove_section = gio::Menu::new();
                     let remove_item = gio::MenuItem::new(Some("Remove from Playlist"), None);
@@ -1248,11 +1264,15 @@ impl DetailView {
         let table = {
             let ui = Rc::clone(&self.ui);
             let frame = Rc::clone(&self.frame);
+            let playlist_id = self.playlist_id;
             TrackTable::new(
                 &self.ui,
                 options,
                 menu,
-                move |tracks, index| ui.core.play_tracks(tracks, index),
+                move |tracks, index| {
+                    let context = playlist_context(&ui, playlist_id);
+                    ui.core.play_tracks_in(tracks, index, Some(context));
+                },
                 move || frame.scroll_to_top(),
             )
         };
@@ -1685,7 +1705,10 @@ impl DetailView {
             .ellipsize(pango::EllipsizeMode::End)
             .tooltip_text(&track.title)
             .build();
-        text_box.append(&title);
+        let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        title_row.append(&title);
+        title_row.append(&crate::ui::controls::live_new_mix_chip(ui, track));
+        text_box.append(&title_row);
         let artist = gtk::Label::builder()
             .label(&track.artist)
             .xalign(0.0)
@@ -1904,7 +1927,8 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         let ui = Rc::clone(ui);
         more.set_create_popup_func(move |button| {
             let has_cover = ui.core.db.has_playlist_cover(playlist_id);
-            button.set_menu_model(Some(&playlist_manage_menu(playlist_id, has_cover)));
+            let downloads = context::playlist_downloads(&ui.core, playlist_id);
+            button.set_menu_model(Some(&playlist_manage_menu(playlist_id, has_cover, downloads)));
         });
     }
     let buttons = gtk::Box::builder()
@@ -2089,7 +2113,8 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
                 .collect();
             let index = row.index().max(0) as usize;
             if index < tracks.len() {
-                ui.core.play_tracks(tracks, index);
+                let context = playlist_context(&ui, view.playlist_id);
+                ui.core.play_tracks_in(tracks, index, Some(context));
             }
         });
     }
@@ -2141,7 +2166,13 @@ fn attach_playlist_list_menu(row: &impl IsA<gtk::Widget>, ui: &Rc<Ui>, playlist_
     let ui = Rc::clone(ui);
     gesture.connect_pressed(move |_, _, x, y| {
         let has_cover = ui.core.db.has_playlist_cover(playlist_id);
-        context::popup_menu_at(&target, &playlist_list_menu(playlist_id, has_cover), x, y);
+        let downloads = context::playlist_downloads(&ui.core, playlist_id);
+        context::popup_menu_at(
+            &target,
+            &playlist_list_menu(playlist_id, has_cover, downloads),
+            x,
+            y,
+        );
     });
     row.add_controller(gesture);
 }
@@ -2175,7 +2206,11 @@ fn editable_cover(ui: &Rc<Ui>, art: &PlaylistArt, playlist_id: i64) -> gtk::Over
     host
 }
 
-fn playlist_list_menu(playlist_id: i64, has_cover: bool) -> gio::Menu {
+pub(crate) fn playlist_list_menu(
+    playlist_id: i64,
+    has_cover: bool,
+    downloads: Option<bool>,
+) -> gio::Menu {
     let menu = gio::Menu::new();
     let play_section = gio::Menu::new();
     play_section.append_item(&playlist_item("Play", "win.playlist-play", playlist_id));
@@ -2185,12 +2220,16 @@ fn playlist_list_menu(playlist_id: i64, has_cover: bool) -> gio::Menu {
         playlist_id,
     ));
     menu.append_section(None, &play_section);
-    menu.append_section(None, &playlist_manage_menu(playlist_id, has_cover));
+    menu.append_section(None, &playlist_manage_menu(playlist_id, has_cover, downloads));
     menu
 }
 
-fn playlist_manage_menu(playlist_id: i64, has_cover: bool) -> gio::Menu {
+fn playlist_manage_menu(playlist_id: i64, has_cover: bool, downloads: Option<bool>) -> gio::Menu {
     let manage_section = gio::Menu::new();
+    if let Some(kept) = downloads {
+        let (label, action) = context::download_entry(kept, "win.playlist-unpin", "win.playlist-pin");
+        manage_section.append_item(&playlist_item(label, action, playlist_id));
+    }
     manage_section.append_item(&playlist_item(
         "Rename…",
         "win.playlist-rename",
@@ -2277,7 +2316,18 @@ pub fn play_playlist(ui: &Rc<Ui>, playlist_id: i64, shuffle: bool) {
     if shuffle != ui.core.player.shuffle_enabled() {
         ui.core.player.toggle_shuffle();
     }
-    ui.core.play_tracks(tracks, 0);
+    let context = playlist_context(ui, playlist_id);
+    ui.core.play_tracks_in(tracks, 0, Some(context));
+}
+
+/// What a queue started from this playlist is called on Home.
+pub fn playlist_context(ui: &Rc<Ui>, playlist_id: i64) -> flaccy_shared::home::PlaybackContext {
+    flaccy_shared::home::PlaybackContext {
+        kind: flaccy_shared::home::ContextKind::Playlist,
+        id: playlist_id.to_string(),
+        title: ui.core.db.playlist_name(playlist_id).unwrap_or_default(),
+        subtitle: String::new(),
+    }
 }
 
 pub fn prompt_rename_playlist(ui: &Rc<Ui>, playlist_id: i64) {
@@ -2368,7 +2418,7 @@ fn attach_playlist_row_menu(
             .track_by_rel_path(&rel_path)
             .map(|t| t.loved)
             .unwrap_or(false);
-        let menu = context::track_menu(&rel_path, loved);
+        let menu = context::track_menu(&rel_path, loved, ui.core.has_previous_version(&rel_path));
         let remove_section = gio::Menu::new();
         let remove_item = gio::MenuItem::new(Some("Remove from Playlist"), None);
         remove_item.set_action_and_target_value(
@@ -2483,6 +2533,10 @@ mod tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
+            disc_number: None,
         }
     }
 
@@ -2600,7 +2654,7 @@ mod tests {
                 (1, "c".to_string()),
             ],
         };
-        let cards = load_cards(&snapshot, &library);
+        let cards = load_cards_from(&snapshot, &library);
         assert_eq!(cards.len(), 2);
         assert_eq!(cards[0].tracks, 2);
         assert_eq!(cards[0].duration, 120.0);

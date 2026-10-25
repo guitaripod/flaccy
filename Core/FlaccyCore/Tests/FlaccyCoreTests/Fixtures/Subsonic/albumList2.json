@@ -1,0 +1,105 @@
+{
+    "subsonic-response": {
+        "status": "ok",
+        "version": "1.16.1",
+        "type": "navidrome",
+        "serverVersion": "0.64.2 (10114574)",
+        "openSubsonic": true,
+        "albumList2": {
+            "album": [
+                {
+                    "id": "3VJh1vLoeqzHRu7d7CGEO3",
+                    "name": "First Light",
+                    "artist": "Test Artist",
+                    "artistId": "4kqFOAfzcbEE22Bin8jHjV",
+                    "songCount": 3,
+                    "duration": 60,
+                    "created": "2026-10-25T14:48:14.043618202+02:00",
+                    "year": 2026,
+                    "userRating": 0,
+                    "genres": [],
+                    "musicBrainzId": "",
+                    "isCompilation": false,
+                    "sortName": "first light",
+                    "discTitles": [],
+                    "originalReleaseDate": {},
+                    "releaseDate": {},
+                    "releaseTypes": [],
+                    "recordLabels": [],
+                    "moods": [],
+                    "artists": [
+                        {
+                            "id": "4kqFOAfzcbEE22Bin8jHjV",
+                            "name": "Test Artist"
+                        }
+                    ],
+                    "displayArtist": "Test Artist",
+                    "explicitStatus": "",
+                    "version": ""
+                },
+                {
+                    "id": "6X0BQ8yhIiAwITNNrYD2Yk",
+                    "name": "Rough Mixes",
+                    "artist": "Second Band",
+                    "artistId": "3sg1Ec7n48VD3IbpPp6c7T",
+                    "songCount": 2,
+                    "duration": 40,
+                    "created": "2026-10-25T14:48:14.187625263+02:00",
+                    "year": 2026,
+                    "userRating": 0,
+                    "genres": [],
+                    "musicBrainzId": "",
+                    "isCompilation": false,
+                    "sortName": "rough mixes",
+                    "discTitles": [],
+                    "originalReleaseDate": {},
+                    "releaseDate": {},
+                    "releaseTypes": [],
+                    "recordLabels": [],
+                    "moods": [],
+                    "artists": [
+                        {
+                            "id": "3sg1Ec7n48VD3IbpPp6c7T",
+                            "name": "Second Band"
+                        }
+                    ],
+                    "displayArtist": "Second Band",
+                    "explicitStatus": "",
+                    "version": ""
+                },
+                {
+                    "id": "25mN8yKGEaUMVgFtpDb7yI",
+                    "name": "Rough Mixes",
+                    "artist": "Second Band",
+                    "artistId": "3sg1Ec7n48VD3IbpPp6c7T",
+                    "songCount": 1,
+                    "duration": 20,
+                    "created": "2026-10-25T14:48:14.330632276+02:00",
+                    "year": 2026,
+                    "userRating": 0,
+                    "genres": [],
+                    "musicBrainzId": "",
+                    "isCompilation": false,
+                    "sortName": "rough mixes",
+                    "discTitles": [],
+                    "originalReleaseDate": {},
+                    "releaseDate": {
+                        "year": 2026
+                    },
+                    "releaseTypes": [],
+                    "recordLabels": [],
+                    "moods": [],
+                    "artists": [
+                        {
+                            "id": "3sg1Ec7n48VD3IbpPp6c7T",
+                            "name": "Second Band"
+                        }
+                    ],
+                    "displayArtist": "Second Band",
+                    "explicitStatus": "",
+                    "version": ""
+                }
+            ]
+        }
+    }
+}

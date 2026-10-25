@@ -28,6 +28,19 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
     public var channels: Int?
     public var loved: Bool = false
     public var lovedPendingOp: String?
+    public var fileSize: Int64?
+    public var fileModifiedMs: Int64?
+    public var audioFingerprint: String?
+    public var revision: Int = 1
+    public var revisedAt: Date?
+    /// The id of the `remoteServers` row this song lives on; nil for a file in the library folder.
+    public var remoteServer: String?
+    public var remoteSuffix: String?
+    public var remoteSize: Int64?
+    public var remoteCoverArt: String?
+    public var remoteAlbumId: String?
+    /// Whether the person asked to keep this remote song on the device.
+    public var pinned: Bool = false
 
     public init(
         id: Int64? = nil,
@@ -52,7 +65,18 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
         sampleRate: Int? = nil,
         channels: Int? = nil,
         loved: Bool = false,
-        lovedPendingOp: String? = nil
+        lovedPendingOp: String? = nil,
+        fileSize: Int64? = nil,
+        fileModifiedMs: Int64? = nil,
+        audioFingerprint: String? = nil,
+        revision: Int = 1,
+        revisedAt: Date? = nil,
+        remoteServer: String? = nil,
+        remoteSuffix: String? = nil,
+        remoteSize: Int64? = nil,
+        remoteCoverArt: String? = nil,
+        remoteAlbumId: String? = nil,
+        pinned: Bool = false
     ) {
         self.id = id
         self.fileURL = fileURL
@@ -77,6 +101,17 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
         self.channels = channels
         self.loved = loved
         self.lovedPendingOp = lovedPendingOp
+        self.fileSize = fileSize
+        self.fileModifiedMs = fileModifiedMs
+        self.audioFingerprint = audioFingerprint
+        self.revision = revision
+        self.revisedAt = revisedAt
+        self.remoteServer = remoteServer
+        self.remoteSuffix = remoteSuffix
+        self.remoteSize = remoteSize
+        self.remoteCoverArt = remoteCoverArt
+        self.remoteAlbumId = remoteAlbumId
+        self.pinned = pinned
     }
 }
 
@@ -98,6 +133,9 @@ public struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable
     public var bitDepth: Int?
     public var sampleRate: Int?
     public var channels: Int?
+    public var fileModifiedMs: Int64?
+    public var revision: Int = 1
+    public var revisedAt: Date?
 
     public init(
         id: Int64? = nil,
@@ -115,7 +153,10 @@ public struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable
         codec: String? = nil,
         bitDepth: Int? = nil,
         sampleRate: Int? = nil,
-        channels: Int? = nil
+        channels: Int? = nil,
+        fileModifiedMs: Int64? = nil,
+        revision: Int = 1,
+        revisedAt: Date? = nil
     ) {
         self.id = id
         self.fileURL = fileURL
@@ -133,6 +174,9 @@ public struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable
         self.bitDepth = bitDepth
         self.sampleRate = sampleRate
         self.channels = channels
+        self.fileModifiedMs = fileModifiedMs
+        self.revision = revision
+        self.revisedAt = revisedAt
     }
 }
 

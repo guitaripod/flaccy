@@ -1,4 +1,9 @@
 {
+  "home": {
+    "kicker": "Home",
+    "headline": "Pick up right\n*where you left off.*",
+    "sub": "Continue, mixes and memories from your library."
+  },
   "hero": {
     "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
     "headline": "Your collection,\nin *full quality.*"

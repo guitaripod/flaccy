@@ -34,6 +34,8 @@ final class QueueViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(self, selector: #selector(updateUpNextSummary), name: AudioPlayer.playbackProgressDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(reload), name: LovedTracksService.didChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(reload), name: AlbumArtworkCache.didChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(reload), name: Library.tracksRevised, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(reload), name: RemoteAvailability.didChange, object: nil)
     }
 
     override func viewDidLayoutSubviews() {
@@ -595,6 +597,7 @@ final class QueueTrackCell: UITableViewCell {
     private let highlightView = UIView()
     private let artworkView = UIImageView()
     private let trackTitleLabel = UILabel()
+    private lazy var titleRow = TitleWithChipView(titleLabel: trackTitleLabel)
     private let trackArtistLabel = UILabel()
     private let durationLabel = UILabel()
     private let playingBars = PlayingBarsView()
@@ -626,7 +629,6 @@ final class QueueTrackCell: UITableViewCell {
         trackTitleLabel.font = .preferredFont(forTextStyle: .body)
         trackTitleLabel.adjustsFontForContentSizeCategory = true
         trackTitleLabel.textColor = .white
-        trackTitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         trackArtistLabel.font = .preferredFont(forTextStyle: .caption1)
         trackArtistLabel.adjustsFontForContentSizeCategory = true
@@ -647,7 +649,7 @@ final class QueueTrackCell: UITableViewCell {
         lovedIndicator.isAccessibilityElement = false
         lovedIndicator.setContentHuggingPriority(.required, for: .horizontal)
 
-        let textStack = UIStackView(arrangedSubviews: [trackTitleLabel, trackArtistLabel])
+        let textStack = UIStackView(arrangedSubviews: [titleRow, trackArtistLabel])
         textStack.axis = .vertical
         textStack.spacing = 2
 
@@ -685,6 +687,10 @@ final class QueueTrackCell: UITableViewCell {
     func configure(with track: Track, style: Style) {
         trackTitleLabel.text = track.title
         trackArtistLabel.text = track.artist
+        let newMix = track.showsNewMix
+        let downloaded = track.isDownloadedRemote
+        titleRow.setNewMix(newMix)
+        titleRow.setDownloaded(downloaded)
         loadArtwork(for: track)
 
         let loved = LovedTracksService.shared.isLoved(track: track)
@@ -713,11 +719,12 @@ final class QueueTrackCell: UITableViewCell {
             highlightView.isHidden = true
             playingBars.isHidden = true
             playingBars.setPlaying(false)
-            contentView.alpha = 1
+            contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
             stateValue = nil
             accessibilityHint = String(localized: "Plays this track")
         }
-        accessibilityLabel = "\(track.title), \(track.artist)"
+        let spokenTitle = "\(track.title), \(track.artist)"
+        accessibilityLabel = TrackVersionCopy.accessibilityLabel(spokenTitle, newMix: newMix, downloaded: downloaded) ?? spokenTitle
         accessibilityValue = [stateValue, loved ? String(localized: "Loved") : nil]
             .compactMap { $0 }
             .joined(separator: ", ")

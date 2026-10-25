@@ -242,6 +242,9 @@ final class PaywallViewController: NSViewController {
         proofCard.isHidden = true
         proofCard.alphaValue = 0
 
+        #if LEGACY_MAC_HANDOFF
+        planPicker.isHidden = true
+        #endif
         let stack = NSStackView(views: [
             tile, kicker, title, planPicker, proofCard, featureCard, yearlyFootnote, statusLabel, legalRow,
         ])
@@ -288,11 +291,27 @@ final class PaywallViewController: NSViewController {
         buyRow.orientation = .horizontal
         buyRow.spacing = 8
 
-        let stack = NSStackView(views: [buyRow, purchaseSubline, restoreButton])
+        #if LEGACY_MAC_HANDOFF
+        let buyViews: [NSView] = [
+            LegacyMoveCardView(
+                width: Metrics.width - 2 * Metrics.inset,
+                onGetNewApp: { [weak self] in
+                    LegacyMacHandoff.openNewApp()
+                    self?.closeTapped()
+                },
+                onNotNow: { [weak self] in self?.closeTapped() }
+            ),
+        ]
+        #else
+        let buyViews: [NSView] = [buyRow, purchaseSubline]
+        #endif
+        let stack = NSStackView(views: buyViews + [restoreButton])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 4
-        stack.setCustomSpacing(8, after: purchaseSubline)
+        if let last = buyViews.last {
+            stack.setCustomSpacing(8, after: last)
+        }
         stack.edgeInsets = NSEdgeInsets(top: 14, left: Metrics.inset, bottom: 16, right: Metrics.inset)
 
         let footer = NSView()

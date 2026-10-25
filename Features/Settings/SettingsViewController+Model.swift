@@ -16,6 +16,8 @@ extension SettingsViewController {
         case playback
         case guide
         case watch
+        case servers
+        case serverCache
         case library
         case setup
         case about
@@ -30,6 +32,8 @@ extension SettingsViewController {
             case .playback: return String(localized: "Playback")
             case .guide: return nil
             case .watch: return String(localized: "Apple Watch")
+            case .servers: return String(localized: "Servers")
+            case .serverCache: return String(localized: "Server Cache")
             case .library: return String(localized: "Library")
             case .setup: return nil
             case .about: return String(localized: "About")
@@ -46,6 +50,8 @@ extension SettingsViewController {
             case .playback: return Self.playbackFooter
             case .guide: return String(localized: "How Bluetooth, AAC, and lossless files really affect what you hear.")
             case .watch: return nil
+            case .servers: return nil
+            case .serverCache: return RemoteCopy.cacheFooter
             case .library: return Self.libraryFooter
             case .setup: return LibraryDebutCopy.settingsCaveat
             case .about: return nil
@@ -87,6 +93,12 @@ extension SettingsViewController {
         case crateDig
         case listeningGuide
         case watchSync(syncedCount: Int, profile: WatchAudioProfile)
+        case serversExplainer
+        case server(RemoteServerRow)
+        case addServer
+        case cacheLimit
+        case cacheUsage(String)
+        case clearCache
         case importFiles
         case rescanLibrary
         case groupAlbumEditions

@@ -68,6 +68,7 @@ extension DatabaseManager {
                 Column("dateAdded"), Column("lastPlayed"), Column("playCount"),
                 Column("loved"), Column("codec"), Column("bitDepth"),
                 Column("sampleRate"), Column("channels"),
+                Column("fileModifiedMs"), Column("revision"), Column("revisedAt"),
             ]
 
             let allTracks = try LightTrackRecord.fetchAll(db,

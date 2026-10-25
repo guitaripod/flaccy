@@ -2,6 +2,12 @@
 
 Lossless music player. GTK4/libadwaita, gapless GStreamer playback, a built-in equalizer, MPRIS, Last.fm scrobbling.
 
+Home (the first page in the sidebar, and where Flaccy opens): resume the album or playlist
+you were in, jump back into what you played lately, start a mix built from your own
+listening or the endless Library Radio, see what's new in your library and what you were
+playing on this day in earlier years. Customize Home (main menu) reorders or hides any of
+it, and Preferences → Open at launch keeps opening where you left off instead.
+
 Equalizer (Ctrl+E): drag the curve or switch to Advanced for up to ten bands, 16 presets
 always in view beside the curve (hover one to hear it, click to keep it),
 Equalizer APO / AutoEq import, a profile per output (it follows your default sink) and a
@@ -42,6 +48,19 @@ SoundCloud / Bandcamp link — a song, an album, or a whole playlist — and Fla
 the best available audio, tags it (title, artist, album, track number, cover art), and
 drops it straight into your library. Requires `yt-dlp` and `ffmpeg`; the page walks you
 through the one-minute setup if they're missing.
+
+Servers (Preferences → Servers): add an OpenSubsonic server such as Navidrome, or Flaccy's own
+`flaccy-server`, with an address and a username and password or an API key. Test names the
+server type and version, or the exact failure: unreachable, a TLS problem, wrong credentials, or
+not an OpenSubsonic server. Its songs join your library beside the ones in your music folder —
+search, filters, playlists, stats, lyrics and the queue treat them alike — and the Songs page
+gets a source row (On this computer, one chip per server). They are pulled at launch and every
+six hours, and again on Refresh. Songs stream through a local proxy that caches what you play
+(2 GB by default, least recently played first) and fetches the rest of the playing song and the
+start of the next, so gapless playback and the equalizer work as they do for files. Download on
+an album, playlist or song keeps it on this computer; with the server out of reach, anything
+neither cached nor kept shows dimmed. Plays are reported to the server with `scrobble`, and Love
+stars the song there. Logins are stored in `~/.config/flaccy/servers.toml` (mode 0600).
 
 ## Install
 

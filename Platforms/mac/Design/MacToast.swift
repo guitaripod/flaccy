@@ -38,9 +38,34 @@ enum MacToast {
     static func show(_ message: String, style: Style = .info, in window: NSWindow?) {
         guard let toast = makeToast(message, style: style, in: window)?.toast else { return }
         present(toast)
+        dismiss(toast, after: 2.4)
+    }
 
+    /// A toast that stays long enough to act on and carries one button; pressing
+    /// it dismisses the toast and runs `handler`.
+    static func showAction(
+        _ message: String,
+        actionTitle: String,
+        style: Style = .info,
+        in window: NSWindow?,
+        handler: @escaping @MainActor () -> Void
+    ) {
+        guard let made = makeToast(message, style: style, in: window, action: actionTitle) else { return }
+        let toast = made.toast
+        made.button?.onPress = { [weak toast] in
+            if let toast, toast === currentToast {
+                toast.removeFromSuperview()
+                currentToast = nil
+            }
+            handler()
+        }
+        present(toast)
+        dismiss(toast, after: 10)
+    }
+
+    private static func dismiss(_ toast: NSView, after seconds: Double) {
         Task { [weak toast] in
-            try? await Task.sleep(for: .seconds(2.4))
+            try? await Task.sleep(for: .seconds(seconds))
             guard let toast, toast === currentToast else { return }
             NSAnimationContext.runAnimationGroup({ context in
                 context.duration = 0.3
@@ -115,8 +140,8 @@ enum MacToast {
     }
 
     private static func makeToast(
-        _ message: String, style: Style, in window: NSWindow?
-    ) -> (toast: NSView, label: NSTextField)? {
+        _ message: String, style: Style, in window: NSWindow?, action actionTitle: String? = nil
+    ) -> (toast: NSView, label: NSTextField, button: ActionButton?)? {
         guard let contentView = window?.contentView else { return nil }
         currentToast?.removeFromSuperview()
 
@@ -132,7 +157,8 @@ enum MacToast {
         label.lineBreakMode = .byTruncatingTail
         label.maximumNumberOfLines = 1
 
-        let stack = NSStackView(views: [icon, label])
+        let button = actionTitle.map(ActionButton.init(title:))
+        let stack = NSStackView(views: [icon, label] + (button.map { [$0] } ?? []))
         stack.orientation = .horizontal
         stack.spacing = 8
         stack.edgeInsets = NSEdgeInsets(top: 10, left: 16, bottom: 10, right: 16)
@@ -151,6 +177,23 @@ enum MacToast {
             toast.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor, constant: 12),
             toast.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, constant: -48),
         ])
-        return (toast, label)
+        return (toast, label, button)
+    }
+
+    private final class ActionButton: NSButton {
+        var onPress: (@MainActor () -> Void)?
+
+        convenience init(title: String) {
+            self.init(title: title, target: nil, action: nil)
+            target = self
+            action = #selector(pressed)
+            isBordered = false
+            font = .systemFont(ofSize: 13, weight: .bold)
+            contentTintColor = .labelColor
+        }
+
+        @objc private func pressed() {
+            onPress?()
+        }
     }
 }

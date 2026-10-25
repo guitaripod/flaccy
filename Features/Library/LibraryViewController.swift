@@ -18,7 +18,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     let impactLight = UIImpactFeedbackGenerator(style: .light)
     let sectionIndexView = SectionIndexView()
     let filterChipsView = FilterChipsView()
+    let sourceChipsView = SourceChipsView()
     var chipsHeightConstraint: NSLayoutConstraint!
+    var sourceChipsHeightConstraint: NSLayoutConstraint!
     var lastRenderedFilter: LibraryFilter?
     var lastRenderedLayout: LibraryLayoutMode?
     let selectionFeedback = UISelectionFeedbackGenerator()
@@ -32,6 +34,15 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     let runwayBanner = TrialRunwayBannerView()
     var runwayBannerHeight: NSLayoutConstraint!
     var runwayBannerRequested = false
+
+    /// Where the full-screen Debut lives. The root container supplies its own
+    /// view so the showpiece covers the tab bar, the mini player and the other
+    /// tabs too; on its own the Library hosts it.
+    var debutHostProvider: (() -> UIView?)?
+
+    var debutHost: UIView {
+        debutHostProvider?() ?? view
+    }
 
     /// Posted once the Debut is over for good — its summary read and the view
     /// retired, or the showpiece skipped — so anything that waited on it, the
@@ -47,7 +58,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     var debutOwnsScreen: Bool {
-        if let debutView, debutView.superview === view { return true }
+        if let debutView, debutView.superview === debutHost { return true }
         return presentedViewController is LibraryDebutSheetController
     }
     let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
@@ -182,12 +193,13 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         setupSearchController()
         setupSegmentedControl()
         setupFilterChips()
+        setupSourceChips()
         setupRunwayBanner()
         setupStatusBanner()
         setupCollectionView()
         setupSectionIndex()
         configureDataSource()
-        if let debutView { view.bringSubviewToFront(debutView) }
+        if let debutView { debutHost.bringSubviewToFront(debutView) }
         bindViewModel()
         updateRightBarButton(for: .albums)
         updateChips(for: .albums)
@@ -210,12 +222,34 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         observeWantlist()
     }
 
-    #if DEBUG
-    func demoSelect(segment: LibraryViewModel.Segment) {
+    /// Runs `action` with the Library on screen. Pickers, sheets and toasts the
+    /// Library raises need its view in a window, so from any other tab the
+    /// Library is brought forward first.
+    func performWhenVisible(_ action: @escaping () -> Void) {
+        guard view.window == nil, let tabs = tabBarController as? AppTabBarController else {
+            action()
+            return
+        }
+        tabs.show(.library)
+        DispatchQueue.main.async { action() }
+    }
+
+    func select(segment: LibraryViewModel.Segment) {
+        loadViewIfNeeded()
         segmentedControl.selectedSegmentIndex = segment.rawValue
         segmentedControl.sendActions(for: .valueChanged)
     }
-    #endif
+
+    /// Opens the Albums segment on its Recently Added pivot, the way Home's
+    /// "See All" asks for it.
+    func showRecentlyAdded() {
+        select(segment: .albums)
+        viewModel.setFilter(.recentlyAdded)
+    }
+
+    func demoSelect(segment: LibraryViewModel.Segment) {
+        select(segment: segment)
+    }
 
     func observeWantlist() {
         NotificationCenter.default.addObserver(
@@ -386,8 +420,48 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let showsChips = segment == .albums || segment == .songs
         filterChipsView.isHidden = !showsChips
         chipsHeightConstraint.constant = showsChips ? 46 : 0
+        updateSourceChips(for: segment)
         guard showsChips else { return }
         filterChipsView.configure(filters: viewModel.availableFilters(), selected: viewModel.filter)
+    }
+
+    func setupSourceChips() {
+        sourceChipsView.translatesAutoresizingMaskIntoConstraints = false
+        sourceChipsView.isHidden = true
+        sourceChipsView.accessibilityIdentifier = "library.sourceChips"
+        sourceChipsView.onSelect = { [weak self] source in
+            self?.viewModel.setSource(source)
+            self?.updateSectionIndex()
+        }
+        view.addSubview(sourceChipsView)
+        sourceChipsHeightConstraint = sourceChipsView.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            sourceChipsView.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
+            sourceChipsView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            sourceChipsView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            sourceChipsHeightConstraint,
+        ])
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(remoteServersDidChange), name: RemoteServers.didChange, object: nil
+        )
+    }
+
+    @objc func remoteServersDidChange() {
+        updateSourceChips(for: viewModel.currentSegment)
+    }
+
+    /// Shows the source row on Albums and Songs while a server is added, and widens the list to
+    /// every source when the one it was narrowed to is gone.
+    func updateSourceChips(for segment: LibraryViewModel.Segment) {
+        let choices = viewModel.sourceChoices()
+        if let source = viewModel.source, !choices.contains(where: { $0.source == source }) {
+            viewModel.setSource(nil)
+        }
+        let shows = (segment == .albums || segment == .songs) && !choices.isEmpty
+        sourceChipsView.isHidden = !shows
+        sourceChipsHeightConstraint.constant = shows ? 42 : 0
+        guard shows else { return }
+        sourceChipsView.configure(choices: choices, selected: viewModel.source)
     }
 
     func setupCollectionView() {
@@ -486,10 +560,18 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             setStatusBanner(visible: false, animated: false)
         case .ambient:
             demoteDebutToSheet()
-            showAmbient(state, animated: animated)
+            if let sync = RemoteSyncStatus.shared.current {
+                showRemoteSync(sync, animated: animated)
+            } else {
+                showAmbient(state, animated: animated)
+            }
         case .none:
             demoteDebutToSheet()
-            setStatusBanner(visible: false, animated: animated)
+            if let sync = RemoteSyncStatus.shared.current {
+                showRemoteSync(sync, animated: animated)
+            } else {
+                setStatusBanner(visible: false, animated: animated)
+            }
         }
         applyRunwayBannerVisibility(animated: animated)
     }
