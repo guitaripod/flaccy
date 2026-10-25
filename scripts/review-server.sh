@@ -12,7 +12,7 @@ PORT=4546
 case "${1:-}" in
     start)
         : "${FLACCY_REVIEW_PASSWORD:?set FLACCY_REVIEW_PASSWORD to the demo password for the review notes}"
-        command -v flaccy-server >/dev/null || { echo "install flaccy-server first (yay -S flaccy-server-bin)" >&2; exit 1; }
+        SERVER=$(command -v flaccy-server) || { echo "install flaccy-server first (yay -S flaccy-server-bin)" >&2; exit 1; }
         mkdir -p "$STATE/data"
         [[ -d "$STATE/music" ]] || bash "$HERE/linux/demo-seed.sh" "$STATE/music"
         cat > "$STATE/config.toml" <<EOF
@@ -22,10 +22,10 @@ port = $PORT
 data_dir = "$STATE/data"
 behind_proxy = true
 EOF
-        printf '%s\n' "$FLACCY_REVIEW_PASSWORD" | flaccy-server --config "$STATE/config.toml" password set --stdin
-        flaccy-server --config "$STATE/config.toml" scan
+        printf '%s\n' "$FLACCY_REVIEW_PASSWORD" | "$SERVER" --config "$STATE/config.toml" password set --stdin
+        "$SERVER" --config "$STATE/config.toml" scan
         systemd-run --user --unit=flaccy-review-server --collect --quiet \
-            flaccy-server --config "$STATE/config.toml" serve
+            "$SERVER" --config "$STATE/config.toml" serve
         tailscale funnel --bg "$PORT"
         tailscale funnel status
         echo "Review notes: the address above, user name flaccy, the demo password you set."
