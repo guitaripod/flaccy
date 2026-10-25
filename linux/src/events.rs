@@ -75,12 +75,12 @@ pub enum AppEvent {
     /// The durable enrichment job, reported as a countdown read from the
     /// database — never as a fraction, because the work is unbounded.
     EnrichmentProgress(JobProgress),
-    HistoryImport {
-        imported: usize,
-        page: u32,
-        total_pages: u32,
-        done: bool,
+    /// The Last.fm history sync stored new plays.
+    HistorySynced {
+        stored: usize,
     },
+    /// The history sync's status changed (`AppCore::history_status`).
+    HistorySyncStatus,
     SampleDownload {
         text: String,
         done: bool,

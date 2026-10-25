@@ -4,7 +4,7 @@
 //! "Sigur Rós", and plays, charts and dedup all agree on what one song is.
 
 use super::{string_from_unix, unix_from_string, Db};
-use crate::listen_history::{fold_spellings, ListenKeys, Spelling, StoredListen};
+use crate::listen_history::{fold_spellings, HistorySyncState, ListenKeyCache, Spelling, StoredListen};
 use rusqlite::params;
 use std::collections::HashMap;
 
@@ -22,34 +22,6 @@ pub struct PulledListen {
 pub struct ListenTally {
     pub plays: i64,
     pub last_unix: i64,
-}
-
-/// Keys computed once per distinct spelling: a history repeats the same few
-/// thousand titles and artists across a hundred thousand plays.
-#[derive(Default)]
-pub(crate) struct KeyCache {
-    titles: HashMap<String, String>,
-    artists: HashMap<String, String>,
-    albums: HashMap<String, String>,
-}
-
-impl KeyCache {
-    pub(crate) fn keys(&mut self, title: &str, artist: &str, album: &str) -> ListenKeys {
-        ListenKeys {
-            title: cached(&mut self.titles, title, crate::listen_history::title_key),
-            artist: cached(&mut self.artists, artist, crate::listen_history::artist_listen_key),
-            album: cached(&mut self.albums, album, crate::listen_history::album_listen_key),
-        }
-    }
-}
-
-fn cached(cache: &mut HashMap<String, String>, raw: &str, key: fn(&str) -> String) -> String {
-    if let Some(found) = cache.get(raw) {
-        return found.clone();
-    }
-    let computed = key(raw);
-    cache.insert(raw.to_string(), computed.clone());
-    computed
 }
 
 const LISTEN_KEY_COLUMNS: [&str; 3] = [
@@ -74,8 +46,36 @@ impl Db {
         }
         self.conn.execute_batch(
             "CREATE INDEX IF NOT EXISTS scrobbles_on_listen_key ON scrobbles(titleKey, artistKey);
-             CREATE INDEX IF NOT EXISTS scrobbles_on_artistKey ON scrobbles(artistKey);",
+             CREATE INDEX IF NOT EXISTS scrobbles_on_artistKey ON scrobbles(artistKey);
+             CREATE TABLE IF NOT EXISTS listenSync (
+                 account TEXT PRIMARY KEY,
+                 state TEXT NOT NULL
+             );",
         )
+    }
+
+    /// Where the history sync stands for `account` in this database, if it
+    /// ever ran here.
+    pub fn listen_sync_state(&self, account: &str) -> Option<HistorySyncState> {
+        let text: String = self
+            .conn
+            .query_row(
+                "SELECT state FROM listenSync WHERE account = ?1",
+                params![account],
+                |row| row.get(0),
+            )
+            .ok()?;
+        serde_json::from_str(&text).ok()
+    }
+
+    pub fn save_listen_sync_state(&self, state: &HistorySyncState) -> Result<(), rusqlite::Error> {
+        let text = serde_json::to_string(state).unwrap_or_default();
+        self.conn.execute(
+            "INSERT INTO listenSync (account, state) VALUES (?1, ?2)
+             ON CONFLICT(account) DO UPDATE SET state = excluded.state",
+            params![state.account, text],
+        )?;
+        Ok(())
     }
 
     /// Fills the listen keys of every stored scrobble, in one transaction.
@@ -94,7 +94,7 @@ impl Db {
             let mut update = tx.prepare(
                 "UPDATE scrobbles SET titleKey = ?1, artistKey = ?2, albumKey = ?3 WHERE id = ?4",
             )?;
-            let mut cache = KeyCache::default();
+            let mut cache = ListenKeyCache::default();
             for (id, title, artist, album) in &rows {
                 let keys = cache.keys(title, artist, album);
                 update.execute(params![keys.title, keys.artist, keys.album, id])?;
@@ -138,7 +138,7 @@ impl Db {
                  (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
                  VALUES (?1, ?2, ?3, ?4, 0, 1, ?5, ?6, ?7)",
             )?;
-            let mut cache = KeyCache::default();
+            let mut cache = ListenKeyCache::default();
             for listen in listens {
                 let keys = cache.keys(&listen.title, &listen.artist, &listen.album);
                 insert.execute(params![
@@ -211,6 +211,27 @@ impl Db {
             }
         }
         tallies
+    }
+
+    /// The plays in `[from, to)` stored without a length (pulled from
+    /// Last.fm), counted per listen key, so their minutes can be estimated
+    /// from the library.
+    pub fn unmeasured_listens_between(&self, from_unix: i64, to_unix: i64) -> Vec<(String, i64)> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT titleKey || char(0) || artistKey, COUNT(*) FROM scrobbles
+             WHERE duration = 0 AND timestamp >= ?1 AND timestamp < ?2
+             GROUP BY titleKey, artistKey",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map(
+            params![string_from_unix(from_unix), string_from_unix(to_unix)],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        );
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
     }
 
     /// Plays per song since `since_unix`, by listen key.
@@ -489,6 +510,21 @@ mod tests {
         assert!(stored.iter().any(|listen| listen.played_here && listen.title_key == "here"));
         assert!(stored.iter().any(|listen| !listen.played_here && listen.title_key == "there"));
         assert_eq!(db.newest_pulled_listen(), Some(1_700_000_100));
+    }
+
+    #[test]
+    fn the_sync_state_round_trips_per_account() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        assert_eq!(db.listen_sync_state("listener"), None);
+        let mut state = HistorySyncState::default().for_account("listener");
+        state.backfill_page = 7;
+        state.backfill_anchor = Some(1_800_000_000);
+        db.save_listen_sync_state(&state).unwrap();
+        state.backfill_page = 8;
+        db.save_listen_sync_state(&state).unwrap();
+        assert_eq!(db.listen_sync_state("listener"), Some(state));
+        assert_eq!(db.listen_sync_state("someone else"), None);
     }
 
     #[test]

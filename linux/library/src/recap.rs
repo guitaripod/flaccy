@@ -1,4 +1,5 @@
 use crate::db::{Db, ScrobbleRow};
+use crate::listen_history::{fold_spellings, ListenKeyCache, Spelling};
 use chrono::{Datelike, Local, NaiveDate, TimeZone};
 use std::collections::{HashMap, HashSet};
 
@@ -126,7 +127,7 @@ pub struct RecapData {
 /// Everything the Stats tab shows for one period, read with as little of the
 /// history as the period needs: a period seeks its index range, the streak
 /// walks back only to its first gap, and only All Time reads every row.
-pub fn load(db: &Db, period: Period, now: i64) -> RecapData {
+pub fn load(db: &Db, period: Period, now: i64, durations: &HashMap<String, i64>) -> RecapData {
     let rows = match fetch_floor(period, now) {
         Some(floor) => db.fetch_scrobble_rows_since(floor),
         None => db.fetch_all_scrobble_rows(),
@@ -136,13 +137,19 @@ pub fn load(db: &Db, period: Period, now: i64) -> RecapData {
         .cutoff_unix(now)
         .zip(period.span_days())
         .map(|(cutoff, days)| {
-            let (plays, seconds) = db.scrobble_totals_between(cutoff - days * 86_400, cutoff);
+            let from = cutoff - days * 86_400;
+            let (plays, measured) = db.scrobble_totals_between(from, cutoff);
+            let estimated: i64 = db
+                .unmeasured_listens_between(from, cutoff)
+                .iter()
+                .map(|(key, count)| count * durations.get(key).copied().unwrap_or(FALLBACK_TRACK_SECONDS))
+                .sum();
             PreviousTotals {
                 plays,
-                minutes: seconds / 60,
+                minutes: (measured + estimated) / 60,
             }
         });
-    let mut data = compute(&rows, period, now, streak, previous);
+    let mut data = compute(&rows, period, now, streak, previous, durations);
     data.has_history = data.has_history || db.has_scrobbles();
     data
 }
@@ -162,6 +169,7 @@ pub fn compute(
     now_unix: i64,
     streak_days: i64,
     previous: Option<PreviousTotals>,
+    durations: &HashMap<String, i64>,
 ) -> RecapData {
     let scoped: Vec<&ScrobbleRow> = match period.cutoff_unix(now_unix) {
         Some(cutoff) => rows.iter().filter(|r| r.timestamp_unix >= cutoff).collect(),
@@ -174,15 +182,21 @@ pub fn compute(
         .collect();
     let clock = listening_clock(&dated);
     let heatmap_start = heatmap_start(period, rows, now_unix);
+    let mut keys = ListenKeyCache::default();
+    let charts = Charts::of(&scoped, &mut keys, 10);
     RecapData {
         total_plays: scoped.len() as i64,
-        total_minutes: scoped.iter().map(|r| r.duration).sum::<i64>() / 60,
-        top_artists: top_by(&scoped, |r| r.artist.clone(), 10),
-        top_albums: top_by(&scoped, |r| format!("{} — {}", r.album, r.artist), 10),
-        top_tracks: top_by(&scoped, |r| format!("{} — {}", r.title, r.artist), 10),
+        total_minutes: scoped
+            .iter()
+            .map(|r| played_seconds(r, &mut keys, durations))
+            .sum::<i64>()
+            / 60,
+        top_artists: charts.artists,
+        top_albums: charts.albums,
+        top_tracks: charts.tracks,
         clock,
         streak_days,
-        persona: persona(&scoped, &clock),
+        persona: persona(&scoped, &clock, &mut keys),
         heatmap: day_heatmap(rows, heatmap_start),
         heatmap_start,
         period_start: dimmed_before(period, now_unix),
@@ -211,19 +225,78 @@ fn dimmed_before(period: Period, now_unix: i64) -> Option<NaiveDate> {
     }
 }
 
-fn top_by(
-    rows: &[&ScrobbleRow],
-    key: impl Fn(&ScrobbleRow) -> String,
-    limit: usize,
-) -> Vec<(String, i64)> {
-    let mut counts: HashMap<String, i64> = HashMap::new();
-    for row in rows {
-        *counts.entry(key(row)).or_insert(0) += 1;
+/// The three ranked lists of a set of plays, each entry one song, release or
+/// artist by listen key and named by the spelling heard most: `"Album —
+/// Artist"` and `"Title — Artist"` for releases and songs.
+struct Charts {
+    artists: Vec<(String, i64)>,
+    albums: Vec<(String, i64)>,
+    tracks: Vec<(String, i64)>,
+}
+
+impl Charts {
+    fn of(rows: &[&ScrobbleRow], keys: &mut ListenKeyCache, limit: usize) -> Self {
+        let mut artists = SpellingTally::default();
+        let mut albums = SpellingTally::default();
+        let mut tracks = SpellingTally::default();
+        for row in rows {
+            let artist = keys.artist(&row.artist).to_string();
+            artists.add(&artist, &row.artist, row.timestamp_unix);
+            let album = keys.album(&row.album);
+            if !album.is_empty() {
+                let key = format!("{album}\u{0}{artist}");
+                albums.add(&key, &format!("{} — {}", row.album, row.artist), row.timestamp_unix);
+            }
+            let track = format!("{}\u{0}{artist}", keys.title(&row.title));
+            tracks.add(&track, &format!("{} — {}", row.title, row.artist), row.timestamp_unix);
+        }
+        Self {
+            artists: artists.ranked(limit),
+            albums: albums.ranked(limit),
+            tracks: tracks.ranked(limit),
+        }
     }
-    let mut entries: Vec<(String, i64)> = counts.into_iter().collect();
-    entries.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
-    entries.truncate(limit);
-    entries
+}
+
+/// Plays counted per listen key and spelling, with the latest play of each
+/// spelling, ready to fold.
+#[derive(Default)]
+struct SpellingTally {
+    spellings: HashMap<String, HashMap<String, (i64, i64)>>,
+}
+
+impl SpellingTally {
+    fn add(&mut self, key: &str, name: &str, timestamp_unix: i64) {
+        let names = match self.spellings.get_mut(key) {
+            Some(names) => names,
+            None => self.spellings.entry(key.to_string()).or_default(),
+        };
+        let slot = match names.get_mut(name) {
+            Some(slot) => slot,
+            None => names.entry(name.to_string()).or_insert((0, i64::MIN)),
+        };
+        slot.0 += 1;
+        slot.1 = slot.1.max(timestamp_unix);
+    }
+
+    fn distinct(&self) -> usize {
+        self.spellings.len()
+    }
+
+    fn ranked(self, limit: usize) -> Vec<(String, i64)> {
+        let spellings = self.spellings.into_iter().flat_map(|(key, names)| {
+            names.into_iter().map(move |(name, (plays, latest_unix))| Spelling {
+                key: key.clone(),
+                name,
+                plays,
+                seconds: 0,
+                latest_unix,
+            })
+        });
+        let mut folded = fold_spellings(spellings);
+        folded.truncate(limit);
+        folded.into_iter().map(|(name, plays, _)| (name, plays)).collect()
+    }
 }
 
 fn local_date(unix: i64) -> NaiveDate {
@@ -309,13 +382,13 @@ fn day_heatmap(rows: &[ScrobbleRow], start: Option<NaiveDate>) -> HashMap<NaiveD
 /// Persona formula matching iOS LastFMStatsService.persona: night ratio (00–05
 /// plus 23) > 0.35 → Night Owl; artist diversity > 0.6 → Explorer; < 0.2 →
 /// Loyalist; else Devotee. Empty history → Newcomer.
-pub fn persona(rows: &[&ScrobbleRow], clock: &[i64; 24]) -> &'static str {
+pub fn persona(rows: &[&ScrobbleRow], clock: &[i64; 24], keys: &mut ListenKeyCache) -> &'static str {
     if rows.is_empty() {
         return "Newcomer";
     }
     let distinct_artists = rows
         .iter()
-        .map(|r| r.artist.to_lowercase())
+        .map(|r| keys.artist(&r.artist).to_string())
         .collect::<HashSet<_>>()
         .len();
     let plays = rows.len();
@@ -375,8 +448,10 @@ pub struct YearData {
 
 const FALLBACK_TRACK_SECONDS: i64 = 210;
 
+/// The key a song's plays are counted under, for scrobbles and library tracks
+/// alike: `listen_history::track_listen_key`.
 pub fn track_key(title: &str, artist: &str) -> String {
-    format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase())
+    crate::listen_history::track_listen_key(title, artist)
 }
 
 #[cfg(test)]
@@ -466,49 +541,36 @@ pub fn compute_year(
         .collect();
 
     let mut total_seconds = 0i64;
-    let mut artist_counts: HashMap<String, i64> = HashMap::new();
-    let mut album_counts: HashMap<(String, String), i64> = HashMap::new();
-    let mut track_counts: HashMap<(String, String), i64> = HashMap::new();
+    let mut keys = ListenKeyCache::default();
+    let mut artists = SpellingTally::default();
+    let mut albums = SpellingTally::default();
+    let mut tracks = SpellingTally::default();
     let mut day_counts: HashMap<NaiveDate, i64> = HashMap::new();
     let mut hour_counts = [0i64; 24];
 
     for row in &scoped {
-        if row.duration > 0 {
-            total_seconds += row.duration;
-        } else {
-            total_seconds += library_durations
-                .get(&track_key(&row.title, &row.artist))
-                .copied()
-                .unwrap_or(FALLBACK_TRACK_SECONDS);
+        total_seconds += played_seconds(row, &mut keys, library_durations);
+        let artist = keys.artist(&row.artist).to_string();
+        artists.add(&artist, &row.artist, row.timestamp_unix);
+        let album = keys.album(&row.album);
+        if !album.is_empty() {
+            let key = format!("{album}\u{0}{artist}");
+            albums.add(&key, &format!("{}\u{0}{}", row.album, row.artist), row.timestamp_unix);
         }
-        *artist_counts.entry(row.artist.clone()).or_insert(0) += 1;
-        *album_counts
-            .entry((row.album.clone(), row.artist.clone()))
-            .or_insert(0) += 1;
-        *track_counts
-            .entry((row.title.clone(), row.artist.clone()))
-            .or_insert(0) += 1;
+        let track = format!("{}\u{0}{artist}", keys.title(&row.title));
+        tracks.add(&track, &format!("{}\u{0}{}", row.title, row.artist), row.timestamp_unix);
         *day_counts
             .entry(local_date(row.timestamp_unix))
             .or_insert(0) += 1;
         hour_counts[local_hour(row.timestamp_unix) % 24] += 1;
     }
 
-    let mut top_artists: Vec<(String, i64)> = artist_counts.clone().into_iter().collect();
-    top_artists.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
-    top_artists.truncate(5);
-    let mut top_albums: Vec<(String, String, i64)> = album_counts
-        .iter()
-        .map(|((album, artist), count)| (album.clone(), artist.clone(), *count))
-        .collect();
-    top_albums.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.0.cmp(&b.0)));
-    top_albums.truncate(5);
-    let mut top_tracks: Vec<(String, String, i64)> = track_counts
-        .iter()
-        .map(|((title, artist), count)| (title.clone(), artist.clone(), *count))
-        .collect();
-    top_tracks.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.0.cmp(&b.0)));
-    top_tracks.truncate(5);
+    let distinct_artists = artists.distinct();
+    let distinct_albums = albums.distinct();
+    let distinct_tracks = tracks.distinct();
+    let top_artists = artists.ranked(5);
+    let top_albums = split_pairs(albums.ranked(5));
+    let top_tracks = split_pairs(tracks.ranked(5));
 
     let peak = day_counts.iter().max_by_key(|(_, count)| **count);
     let peak_hour = if hour_counts.iter().any(|c| *c > 0) {
@@ -521,15 +583,15 @@ pub fn compute_year(
         None
     };
 
-    let persona = year_persona(scoped.len(), artist_counts.len(), &hour_counts);
+    let persona = year_persona(scoped.len(), distinct_artists, &hour_counts);
 
     YearData {
         year,
         total_plays: scoped.len() as i64,
         total_minutes: total_seconds / 60,
-        distinct_artists: artist_counts.len(),
-        distinct_albums: album_counts.len(),
-        distinct_tracks: track_counts.len(),
+        distinct_artists,
+        distinct_albums,
+        distinct_tracks,
         top_artists,
         top_albums,
         top_tracks,
@@ -539,6 +601,29 @@ pub fn compute_year(
         longest_streak: longest_streak(&day_counts.keys().copied().collect()),
         persona,
     }
+}
+
+/// How long a play lasted: its own length when Flaccy played it, else the
+/// library song's length, else a typical song's.
+fn played_seconds(row: &ScrobbleRow, keys: &mut ListenKeyCache, durations: &HashMap<String, i64>) -> i64 {
+    if row.duration > 0 {
+        return row.duration;
+    }
+    durations
+        .get(&keys.track(&row.title, &row.artist))
+        .copied()
+        .unwrap_or(FALLBACK_TRACK_SECONDS)
+}
+
+/// `"first\0second"` names split back into their two halves.
+fn split_pairs(ranked: Vec<(String, i64)>) -> Vec<(String, String, i64)> {
+    ranked
+        .into_iter()
+        .map(|(name, plays)| match name.split_once('\u{0}') {
+            Some((first, second)) => (first.to_string(), second.to_string(), plays),
+            None => (name, String::new(), plays),
+        })
+        .collect()
 }
 
 fn year_persona(plays: usize, distinct_artists: usize, hour_counts: &[i64; 24]) -> &'static str {
@@ -606,8 +691,25 @@ mod tests {
     }
 
     #[test]
+    fn charts_fold_spellings_and_minutes_estimate_plays_without_a_length() {
+        let now = 1_800_000_000;
+        let rows = vec![
+            ScrobbleRow { duration: 0, ..row("Hoppípolla", "Sigur Rós", now - 100) },
+            ScrobbleRow { duration: 0, ..row("Hoppipolla - 2011 Remaster", "Sigur Ros", now - 90) },
+            row("Hoppípolla", "Sigur Rós", now - 80),
+            ScrobbleRow { duration: 0, ..row("Unknown", "Nobody", now - 70) },
+        ];
+        let mut durations = HashMap::new();
+        durations.insert(track_key("Hoppípolla", "Sigur Rós"), 268);
+        let data = compute(&rows, Period::Week, now, 0, None, &durations);
+        assert_eq!(data.top_artists[0], ("Sigur Rós".to_string(), 3));
+        assert_eq!(data.top_tracks[0], ("Hoppípolla — Sigur Rós".to_string(), 3));
+        assert_eq!(data.total_minutes, (268 * 2 + 240 + FALLBACK_TRACK_SECONDS) / 60);
+    }
+
+    #[test]
     fn persona_newcomer_on_empty() {
-        assert_eq!(persona(&[], &[0; 24]), "Newcomer");
+        assert_eq!(persona(&[], &[0; 24], &mut ListenKeyCache::default()), "Newcomer");
     }
 
     #[test]
@@ -619,7 +721,7 @@ mod tests {
         let mut clock = [0i64; 24];
         clock[1] = 6;
         clock[14] = 4;
-        assert_eq!(persona(&refs, &clock), "Night Owl");
+        assert_eq!(persona(&refs, &clock, &mut ListenKeyCache::default()), "Night Owl");
     }
 
     #[test]
@@ -632,13 +734,13 @@ mod tests {
         let clock = [0i64; 24];
         let explorer = make(10, 10);
         let refs: Vec<&ScrobbleRow> = explorer.iter().collect();
-        assert_eq!(persona(&refs, &clock), "Explorer");
+        assert_eq!(persona(&refs, &clock, &mut ListenKeyCache::default()), "Explorer");
         let loyalist = make(1, 10);
         let refs: Vec<&ScrobbleRow> = loyalist.iter().collect();
-        assert_eq!(persona(&refs, &clock), "Loyalist");
+        assert_eq!(persona(&refs, &clock, &mut ListenKeyCache::default()), "Loyalist");
         let devotee = make(4, 10);
         let refs: Vec<&ScrobbleRow> = devotee.iter().collect();
-        assert_eq!(persona(&refs, &clock), "Devotee");
+        assert_eq!(persona(&refs, &clock, &mut ListenKeyCache::default()), "Devotee");
     }
 
     fn streak_over(times: &[i64], now: i64) -> i64 {
@@ -715,9 +817,9 @@ mod tests {
             row("old", "x", now - 400 * 86_400),
             row("new", "x", now - 86_400),
         ];
-        let week = compute(&rows, Period::Week, now, 0, None);
+        let week = compute(&rows, Period::Week, now, 0, None, &HashMap::new());
         assert_eq!(week.total_plays, 1);
-        let all = compute(&rows, Period::AllTime, now, 0, None);
+        let all = compute(&rows, Period::AllTime, now, 0, None, &HashMap::new());
         assert_eq!(all.total_plays, 2);
         assert_eq!(all.total_minutes, 8);
     }
@@ -730,7 +832,7 @@ mod tests {
             row("b", "x", 2),
             row("c", "x", now - 86_400),
         ];
-        let all = compute(&rows, Period::AllTime, now, 0, None);
+        let all = compute(&rows, Period::AllTime, now, 0, None, &HashMap::new());
         assert_eq!(all.total_plays, 3, "Last.fm counts them, so do the totals");
         assert_eq!(all.top_tracks.len(), 3);
         assert_eq!(
@@ -754,7 +856,7 @@ mod tests {
             row("old", "x", now - 200 * 86_400),
             row("new", "x", now - 86_400),
         ];
-        let week = compute(&rows, Period::Week, now, 0, None);
+        let week = compute(&rows, Period::Week, now, 0, None, &HashMap::new());
         let grid = heatmap_grid(week.heatmap_start, now).expect("grid");
         assert_eq!(grid.weeks, 53);
         assert_eq!(grid.start_sunday.weekday().num_days_from_sunday(), 0);
@@ -765,12 +867,12 @@ mod tests {
         );
         assert_eq!(week.total_plays, 1);
         assert_eq!(week.period_start, Some(local_date(now - 7 * 86_400)));
-        let year = compute(&rows, Period::Year, now, 0, None);
+        let year = compute(&rows, Period::Year, now, 0, None, &HashMap::new());
         assert_eq!(
             year.period_start, None,
             "12 months fills the calendar, nothing to dim"
         );
-        let all = compute(&rows, Period::AllTime, now, 0, None);
+        let all = compute(&rows, Period::AllTime, now, 0, None, &HashMap::new());
         assert_eq!(all.period_start, None);
     }
 

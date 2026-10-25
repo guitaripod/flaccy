@@ -60,6 +60,20 @@ fn launch_page(core: &AppCore) -> String {
     }
 }
 
+/// Coming back to Flaccy pulls whatever was scrobbled elsewhere meanwhile, so
+/// the plays from a phone or another player are there on arrival.
+fn sync_history_when_focused(window: &adw::ApplicationWindow, core: &Rc<AppCore>) {
+    let weak = Rc::downgrade(core);
+    window.connect_is_active_notify(move |window| {
+        if !window.is_active() {
+            return;
+        }
+        if let Some(core) = weak.upgrade() {
+            crate::history_sync::start(&core, crate::history_sync::Trigger::Automatic);
+        }
+    });
+}
+
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
     ui::ui_scale::apply(core.config.borrow().ui_scale());
     register_icon_paths();
@@ -84,6 +98,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     // the desktop default without clipping into unusable chrome.
     window.set_size_request(320, 400);
     window.add_css_class("flaccy-window");
+    sync_history_when_focused(&window, core);
 
     let nav = adw::NavigationView::new();
     nav.set_hexpand(true);

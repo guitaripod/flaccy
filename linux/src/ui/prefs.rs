@@ -1,5 +1,6 @@
 use crate::config::{self, Session};
 use crate::events::AppEvent;
+use crate::history_sync::group_thousands;
 use crate::lastfm::{self, LastFmClient};
 use crate::musicvideo;
 use crate::ui::{ui_scale, Ui};
@@ -80,9 +81,9 @@ fn build_hero(ui: &Rc<Ui>) -> gtk::Box {
     };
     let plays = ui.core.db.scrobble_count().max(0) as u64;
 
-    let (albums_col, albums_value) = stat_column(&group_thousands(albums as u64), "Albums");
-    let (tracks_col, tracks_value) = stat_column(&group_thousands(tracks as u64), "Tracks");
-    let (plays_col, plays_value) = stat_column(&group_thousands(plays), "Plays");
+    let (albums_col, albums_value) = stat_column(&group_thousands(albums as i64), "Albums");
+    let (tracks_col, tracks_value) = stat_column(&group_thousands(tracks as i64), "Tracks");
+    let (plays_col, plays_value) = stat_column(&group_thousands(plays as i64), "Plays");
 
     let stats = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     stats.add_css_class("flaccy-hero-stats");
@@ -116,14 +117,14 @@ fn build_hero(ui: &Rc<Ui>) -> gtk::Box {
             AppEvent::LibraryReloaded
                 | AppEvent::ScanFinished { .. }
                 | AppEvent::NaturalEnd(_)
-                | AppEvent::HistoryImport { done: true, .. }
+                | AppEvent::HistorySynced { .. }
         );
         if !changed {
             return;
         }
         let library = hero_ui.core.library.borrow().clone();
-        albums_value.set_label(&group_thousands(library.albums.len() as u64));
-        tracks_value.set_label(&group_thousands(library.tracks.len() as u64));
+        albums_value.set_label(&group_thousands(library.albums.len() as i64));
+        tracks_value.set_label(&group_thousands(library.tracks.len() as i64));
         if hero.is_mapped() {
             counter.refresh();
         } else {
@@ -166,7 +167,7 @@ impl PlayCounter {
             let count = rx.recv().await.unwrap_or(0);
             counter.in_flight.set(false);
             if let Some(label) = counter.label.upgrade() {
-                label.set_label(&group_thousands(count.max(0) as u64));
+                label.set_label(&group_thousands(count.max(0) as i64));
             }
             if counter.stale.replace(false) {
                 counter.refresh();
@@ -224,18 +225,6 @@ fn hero_divider() -> gtk::Box {
 
 /// Formats an integer with thousands separators (locale-agnostic commas), so
 /// the dashboard reads "6,945" rather than "6945".
-fn group_thousands(n: u64) -> String {
-    let digits = n.to_string();
-    let len = digits.len();
-    let mut out = String::with_capacity(len + (len.saturating_sub(1)) / 3);
-    for (i, ch) in digits.chars().enumerate() {
-        if i > 0 && (len - i) % 3 == 0 {
-            out.push(',');
-        }
-        out.push(ch);
-    }
-    out
-}
 
 /// Which page a launch opens on: Home, or the page the last session ended on.
 fn startup_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
@@ -853,27 +842,38 @@ fn render_metadata_counts(ui: &Rc<Ui>, row: &adw::ActionRow, job: &JobProgress) 
     row.set_subtitle(&job_copy::settled(job.remaining, job.exhausted));
 }
 
+const LASTFM_CONNECTED_DESCRIPTION: &str = "Flaccy and Last.fm share one listening history. Every scrobble on your account, from Flaccy or any other app or device, flows into Stats, play counts and Most Played, and keeps flowing on its own.";
+
+const LASTFM_DISCONNECTED_DESCRIPTION: &str = "Connect a Last.fm account to scrobble your listens, sync loved tracks, and bring your whole listening history into Stats and play counts.";
+
 fn lastfm_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
-    let group = adw::PreferencesGroup::builder()
-        .title("Last.fm")
-        .description("Scrobble what you play")
-        .build();
+    let group = adw::PreferencesGroup::builder().title("Last.fm").build();
 
     let row = adw::ActionRow::builder().build();
     let button = gtk::Button::new();
     button.set_valign(gtk::Align::Center);
     row.add_suffix(&button);
     group.add(&row);
+    let sync_row = history_sync_row(ui);
+    group.add(&sync_row);
 
     let pending_token: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
 
     let refresh: Rc<dyn Fn()> = {
         let ui = Rc::clone(ui);
+        let group = group.clone();
         let row = row.clone();
+        let sync_row = sync_row.clone();
         let button = button.clone();
         let pending_token = Rc::clone(&pending_token);
         Rc::new(move || {
             let session = ui.core.session.borrow().clone();
+            group.set_description(Some(if session.is_some() {
+                LASTFM_CONNECTED_DESCRIPTION
+            } else {
+                LASTFM_DISCONNECTED_DESCRIPTION
+            }));
+            sync_row.set_visible(session.is_some());
             match session {
                 Some(session) => {
                     row.set_title(&format!("Connected as {}", session.username));
@@ -923,6 +923,60 @@ fn lastfm_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
 
     group
+}
+
+/// The "History Sync" row: how the Last.fm history sync stands, kept current
+/// while the row is on screen, and a button to sync now.
+fn history_sync_row(ui: &Rc<Ui>) -> adw::ActionRow {
+    let row = adw::ActionRow::builder().title("History Sync").build();
+    let spinner = gtk::Spinner::builder().valign(gtk::Align::Center).build();
+    let button = gtk::Button::builder()
+        .label("Sync Now")
+        .valign(gtk::Align::Center)
+        .build();
+    row.add_suffix(&spinner);
+    row.add_suffix(&button);
+    let render = {
+        let ui = Rc::clone(ui);
+        let row = row.downgrade();
+        let spinner = spinner.downgrade();
+        let button = button.downgrade();
+        move || -> bool {
+            let (Some(row), Some(spinner), Some(button)) = (row.upgrade(), spinner.upgrade(), button.upgrade()) else {
+                return false;
+            };
+            let status = ui.core.history_status.borrow().clone();
+            row.set_subtitle(&status.line(chrono::Utc::now().timestamp()));
+            let running = status.is_running();
+            spinner.set_visible(running);
+            spinner.set_spinning(running);
+            button.set_sensitive(!running);
+            true
+        }
+    };
+    render();
+    {
+        let ui = Rc::clone(ui);
+        button.connect_clicked(move |_| {
+            crate::history_sync::start(&ui.core, crate::history_sync::Trigger::Requested);
+        });
+    }
+    {
+        let render = render.clone();
+        ui.core.hub.subscribe_widget(&row, move |_, event| {
+            if matches!(event, AppEvent::HistorySyncStatus) {
+                render();
+            }
+        });
+    }
+    glib::timeout_add_seconds_local(30, move || {
+        if render() {
+            glib::ControlFlow::Continue
+        } else {
+            glib::ControlFlow::Break
+        }
+    });
+    row
 }
 
 fn begin_auth(ui: &Rc<Ui>, pending_token: &Rc<RefCell<Option<String>>>, refresh: &Rc<dyn Fn()>) {

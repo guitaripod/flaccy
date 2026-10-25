@@ -73,6 +73,18 @@ fn is_device_id(value: &str) -> bool {
             .all(|(group, len)| group.len() == len && group.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 
+/// One page of scrobbles as `(uts, title, artist, album)`, newest first, with
+/// the page count.
+pub type RecentPage = (Vec<(i64, String, String, String)>, u32);
+
+/// The stretch of history a `user.getRecentTracks` page reads, in Unix
+/// seconds; `None` leaves that end open.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RecentWindow {
+    pub from: Option<i64>,
+    pub to: Option<i64>,
+}
+
 #[derive(Clone)]
 pub struct LastFmClient {
     pub api_key: String,
@@ -385,16 +397,26 @@ impl LastFmClient {
     /// user.getRecentTracks for history import. Returns (tracks, totalPages)
     /// where each track is (uts, title, artist, album); now-playing rows carry
     /// no uts and are skipped.
+    /// One page of `user.getRecentTracks`, newest first, of the scrobbles
+    /// stamped in `[from, to]` (either end open), with the page count. The
+    /// track playing right now carries no date and is left out.
     pub fn fetch_recent_tracks(
         &self,
         username: &str,
         page: u32,
         limit: u32,
-    ) -> Result<(Vec<(i64, String, String, String)>, u32), String> {
+        window: RecentWindow,
+    ) -> Result<RecentPage, String> {
         let mut params = self.base_params("user.getRecentTracks");
         params.insert("user".to_string(), username.to_string());
         params.insert("page".to_string(), page.to_string());
         params.insert("limit".to_string(), limit.to_string());
+        if let Some(from) = window.from {
+            params.insert("from".to_string(), from.to_string());
+        }
+        if let Some(to) = window.to {
+            params.insert("to".to_string(), to.to_string());
+        }
         let json = self.unsigned_get(params)?;
         let recent = &json["recenttracks"];
         if recent.is_null() {
@@ -607,26 +629,6 @@ impl LastFmClient {
             .iter()
             .filter_map(|entry| Some(entry["name"].as_str()?.to_string()))
             .collect())
-    }
-
-    /// album.getInfo with username → the user's personal play count.
-    pub fn fetch_album_user_playcount(
-        &self,
-        artist: &str,
-        album: &str,
-        username: &str,
-    ) -> Result<Option<i64>, String> {
-        let mut params = self.base_params("album.getInfo");
-        params.insert("artist".to_string(), artist.to_string());
-        params.insert("album".to_string(), album.to_string());
-        params.insert("autocorrect".to_string(), "1".to_string());
-        params.insert("username".to_string(), username.to_string());
-        let json = self.unsigned_get(params)?;
-        let value = &json["album"]["userplaycount"];
-        if value.is_null() {
-            return Ok(None);
-        }
-        Ok(Some(int_value(value)))
     }
 
     pub fn set_love(&self, title: &str, artist: &str, love: bool) -> Result<(), String> {

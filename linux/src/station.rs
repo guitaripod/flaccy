@@ -246,8 +246,9 @@ pub fn history_weight(last_played_unix: Option<i64>, now_unix: i64) -> f64 {
     }
 }
 
+/// The key a song's plays are counted under: `recap::track_key`.
 pub fn track_key(title: &str, artist: &str) -> String {
-    format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase())
+    crate::recap::track_key(title, artist)
 }
 
 #[cfg(test)]

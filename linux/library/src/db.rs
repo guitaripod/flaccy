@@ -1471,7 +1471,7 @@ impl Db {
                  (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             )?;
-            let mut cache = listens::KeyCache::default();
+            let mut cache = crate::listen_history::ListenKeyCache::default();
             for (title, artist, album, timestamp_unix, duration, submitted) in rows {
                 let keys = cache.keys(title, artist, album);
                 stmt.execute(params![
@@ -2034,44 +2034,15 @@ impl Db {
         }
     }
 
-    /// Plays per track since `since_unix` (all of history when `None`), keyed by
-    /// the case-folded `title\0artist` the rest of the app matches on. Grouped
-    /// by the database, so the cost is the number of distinct songs, not plays.
+    /// Plays per song since `since_unix` (all of history when `None`), keyed by
+    /// `recap::track_key`, the listen key the rest of the app matches on.
     pub fn scrobble_counts_since(&self, since_unix: Option<i64>) -> HashMap<String, i64> {
-        let mut counts = HashMap::new();
-        let sql = if since_unix.is_some() {
-            "SELECT trackTitle, artist, COUNT(*) FROM scrobbles
-             WHERE timestamp >= ?1 GROUP BY trackTitle, artist"
-        } else {
-            "SELECT trackTitle, artist, COUNT(*) FROM scrobbles GROUP BY trackTitle, artist"
-        };
-        let Ok(mut stmt) = self.conn.prepare(sql) else {
-            return counts;
-        };
-        let map = |row: &rusqlite::Row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, i64>(2)?,
-            ))
-        };
-        let rows = match since_unix {
-            Some(since) => stmt.query_map(params![string_from_unix(since)], map),
-            None => stmt.query_map([], map),
-        };
-        if let Ok(rows) = rows {
-            for (title, artist, count) in rows.flatten() {
-                *counts
-                    .entry(crate::recap::track_key(&title, &artist))
-                    .or_insert(0) += count;
-            }
-        }
-        counts
+        self.listen_counts_since(since_unix)
     }
 
     pub fn play_counts_by_track(&self) -> Vec<(String, String, i64)> {
         let Ok(mut stmt) = self.conn.prepare(
-            "SELECT trackTitle, artist, COUNT(*) FROM scrobbles GROUP BY trackTitle, artist",
+            "SELECT MAX(trackTitle), MAX(artist), COUNT(*) FROM scrobbles GROUP BY titleKey, artistKey",
         ) else {
             return Vec::new();
         };
@@ -3675,7 +3646,7 @@ mod cleanup_tests {
                 ("Now", "B", now - 60, 180),
             ],
         );
-        let week = crate::recap::load(db, crate::recap::Period::Week, now);
+        let week = crate::recap::load(db, crate::recap::Period::Week, now, &HashMap::new());
         assert_eq!(week.total_plays, 2);
         assert_eq!(week.total_minutes, 6);
         assert_eq!(
@@ -3687,7 +3658,7 @@ mod cleanup_tests {
         );
         assert_eq!(week.streak_days, 1);
 
-        let all = crate::recap::load(db, crate::recap::Period::AllTime, now);
+        let all = crate::recap::load(db, crate::recap::Period::AllTime, now, &HashMap::new());
         assert_eq!(
             all.total_plays, 6,
             "All Time reads every row, undated included"

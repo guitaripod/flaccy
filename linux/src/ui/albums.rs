@@ -995,41 +995,49 @@ fn cover_host_with_pencil(ui: &Rc<Ui>, album: &Album, picture: &gtk::Picture) ->
     host
 }
 
-/// Personal Last.fm play count for this album ("You've played this N times"),
-/// fetched via album.getInfo with the username param when authenticated.
+/// How many times this album was played ("You've played this N times"),
+/// counted from the local listening history, which the Last.fm history sync
+/// keeps complete; refreshed when the sync brings in new plays.
 fn load_user_playcount(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
-    let Some(session) = ui.core.session.borrow().clone() else {
-        return;
-    };
-    let Some(client) = crate::lastfm::LastFmClient::new(Some(session.key.clone())) else {
-        return;
-    };
-    let artist = album.artist.clone();
+    show_album_plays(ui, album, label);
+    let ui_ref = Rc::clone(ui);
+    let album = album.clone();
+    ui.core.hub.subscribe_widget(label, move |label, event| {
+        if matches!(event, AppEvent::HistorySynced { .. } | AppEvent::ScrobbleRecorded) {
+            show_album_plays(&ui_ref, &album, label);
+        }
+    });
+}
+
+fn show_album_plays(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
+    let db_path = ui.core.db_path.clone();
     let title = album.title.clone();
-    let (tx, rx) = async_channel::bounded::<Option<i64>>(1);
+    let songs: Vec<(String, String)> = album
+        .tracks
+        .iter()
+        .map(|track| (track.title.clone(), track.artist.clone()))
+        .collect();
+    let (tx, rx) = async_channel::bounded::<i64>(1);
     std::thread::Builder::new()
         .name("flaccy-album-plays".into())
         .spawn(move || {
-            let count = client
-                .fetch_album_user_playcount(&artist, &title, &session.username)
-                .unwrap_or(None);
+            let count = crate::db::Db::open(&db_path)
+                .map(|db| db.album_listen_count(&title, &songs))
+                .unwrap_or(0);
             let _ = tx.send_blocking(count);
         })
         .ok();
     let weak = label.downgrade();
     gtk::glib::spawn_future_local(async move {
-        let Ok(Some(count)) = rx.recv().await else {
+        let Ok(count) = rx.recv().await else {
             return;
         };
-        if count <= 0 {
-            return;
-        }
         if let Some(label) = weak.upgrade() {
             label.set_label(&format!(
-                "You've played this {count} time{} on Last.fm",
+                "You've played this {count} time{}",
                 if count == 1 { "" } else { "s" }
             ));
-            label.set_visible(true);
+            label.set_visible(count > 0);
         }
     });
 }

@@ -129,19 +129,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .icon_name("flaccy-stats-symbolic")
         .title("No Listening History")
         .description(
-            "Play some music and your stats will build up here — or import your Last.fm history.",
+            "Play some music and your stats will build up here — or connect Last.fm and your whole listening history comes with it.",
         )
         .build();
     if crate::lastfm::keys_available() {
-        let import_button = gtk::Button::with_label("Import Last.fm History");
-        import_button.add_css_class("pill");
-        import_button.add_css_class("suggested-action");
-        import_button.set_halign(gtk::Align::Center);
-        {
-            let ui = Rc::clone(ui);
-            import_button.connect_clicked(move |_| crate::importer::start(&ui.core));
-        }
-        empty.set_child(Some(&import_button));
+        empty.set_child(Some(&empty_state_action(ui)));
     }
 
     let scroll = gtk::ScrolledWindow::builder()
@@ -245,10 +237,10 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                         library_dirty.set(true);
                     }
                 }
-                AppEvent::HistoryImport { done, .. } => {
-                    if *done && stack_ref.is_mapped() {
+                AppEvent::HistorySynced { .. } => {
+                    if stack_ref.is_mapped() {
                         page.invalidate();
-                    } else if *done {
+                    } else {
                         dirty.set(true);
                     }
                 }
@@ -411,6 +403,7 @@ impl Page {
         }
         let epoch = self.epoch.get();
         let db_path = self.ui.core.db_path.clone();
+        let durations = self.ui.core.library.borrow().track_durations();
         let (tx, rx) = async_channel::bounded::<Option<(RecapData, HistoryStamp)>>(1);
         std::thread::Builder::new()
             .name("flaccy-stats".into())
@@ -418,7 +411,7 @@ impl Page {
                 let started = Instant::now();
                 let data = Db::open(&db_path).ok().map(|db| {
                     let stamp = recap::history_stamp(&db);
-                    (recap::load(&db, period, chrono::Utc::now().timestamp()), stamp)
+                    (recap::load(&db, period, chrono::Utc::now().timestamp(), &durations), stamp)
                 });
                 crate::logger::info(
                     "charts",
@@ -483,21 +476,26 @@ impl Page {
         replace_child(&self.tiles, &tiles_row(&snapshot, period));
         let signed_in = self.ui.core.session.borrow().is_some();
         if self.import_signed_in.replace(Some(signed_in)) != Some(signed_in) {
-            replace_child(&self.import, &import_row(&self.ui));
+            replace_child(&self.import, &sync_status_row(&self.ui));
         }
         replace_child(&self.heatmap, &heatmap_widget(&snapshot));
         replace_child(&self.clock, &clock_widget(&snapshot));
         self.fill_lists();
-        self.fetch_remote_if_due(period);
+        if !crate::history_sync::history_complete(&self.ui.core) {
+            self.fetch_remote_if_due(period);
+        }
     }
 
-    /// The recap as the page shows it: the local snapshot with Last.fm's lists
-    /// laid over it when they have arrived.
+    /// The recap as the page shows it: the local snapshot, with Last.fm's lists
+    /// laid over it only while the history sync is still bringing the whole
+    /// history in. Once it is local, Flaccy's own counts are the answer.
     fn current(&self) -> Option<(RecapData, Period)> {
         let period = self.period.get();
         let mut data = (*self.snapshots.borrow().get(&period)?.0).clone();
-        if let Some(remote) = self.remote.borrow().get(&period) {
-            remote.apply(&mut data);
+        if !crate::history_sync::history_complete(&self.ui.core) {
+            if let Some(remote) = self.remote.borrow().get(&period) {
+                remote.apply(&mut data);
+            }
         }
         Some((data, period))
     }
@@ -826,54 +824,101 @@ fn present_share_options(ui: &Rc<Ui>, png: Vec<u8>) {
     dialog.present(Some(&window));
 }
 
-fn import_row(ui: &Rc<Ui>) -> gtk::Widget {
+/// What the empty Stats page offers: connecting Last.fm, or how the history
+/// sync bringing it in stands.
+fn empty_state_action(ui: &Rc<Ui>) -> gtk::Widget {
+    let slot = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .halign(gtk::Align::Center)
+        .build();
+    let connect = gtk::Button::with_label("Connect Last.fm…");
+    connect.add_css_class("pill");
+    connect.add_css_class("suggested-action");
+    connect.set_action_name(Some("app.preferences"));
+    slot.append(&connect);
+    slot.append(&sync_status_row(ui));
+    let render = {
+        let ui = Rc::clone(ui);
+        let connect = connect.downgrade();
+        move || {
+            if let Some(connect) = connect.upgrade() {
+                connect.set_visible(ui.core.session.borrow().is_none());
+            }
+        }
+    };
+    render();
+    ui.core.hub.subscribe_widget(&slot, move |_, event| {
+        if matches!(event, AppEvent::LastFmChanged) {
+            render();
+        }
+    });
+    slot.upcast()
+}
+
+/// The one line under the Stats header that says how the Last.fm history sync
+/// stands, with a way to try again when it stopped. Empty without Last.fm.
+fn sync_status_row(ui: &Rc<Ui>) -> gtk::Widget {
     let row = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(12)
         .build();
-    if !crate::lastfm::keys_available() || ui.core.session.borrow().is_none() {
-        return row.upcast();
-    }
-    let button = gtk::Button::with_label("Import Last.fm History");
-    button.add_css_class("pill");
-    let progress = gtk::Label::builder().xalign(0.0).build();
-    progress.add_css_class("dim");
-    progress.add_css_class("caption");
-    progress.set_valign(gtk::Align::Center);
+    let spinner = gtk::Spinner::builder().valign(gtk::Align::Center).build();
+    let line = gtk::Label::builder()
+        .xalign(0.0)
+        .wrap(true)
+        .valign(gtk::Align::Center)
+        .build();
+    line.add_css_class("dim");
+    line.add_css_class("caption");
+    let retry = gtk::Button::with_label("Try Again");
+    retry.add_css_class("flat");
+    retry.set_valign(gtk::Align::Center);
     {
         let ui = Rc::clone(ui);
-        let progress = progress.clone();
-        button.connect_clicked(move |button| {
-            button.set_sensitive(false);
-            progress.set_label("Starting import…");
-            crate::importer::start(&ui.core);
+        retry.connect_clicked(move |_| {
+            crate::history_sync::start(&ui.core, crate::history_sync::Trigger::Requested);
         });
     }
+    row.append(&spinner);
+    row.append(&line);
+    row.append(&retry);
+    let render = {
+        let ui = Rc::clone(ui);
+        let row = row.downgrade();
+        let spinner = spinner.downgrade();
+        let line = line.downgrade();
+        let retry = retry.downgrade();
+        move || -> bool {
+            let (Some(row), Some(spinner), Some(line), Some(retry)) =
+                (row.upgrade(), spinner.upgrade(), line.upgrade(), retry.upgrade())
+            else {
+                return false;
+            };
+            let status = ui.core.history_status.borrow().clone();
+            let connected = crate::lastfm::keys_available() && ui.core.session.borrow().is_some();
+            row.set_visible(connected);
+            line.set_label(&status.line(chrono::Utc::now().timestamp()));
+            spinner.set_visible(status.is_running());
+            spinner.set_spinning(status.is_running());
+            retry.set_visible(matches!(status, crate::history_sync::HistoryStatus::Failed { .. }));
+            true
+        }
+    };
+    render();
     {
-        let button = button.clone();
-        let progress_ref = progress.clone();
+        let render = render.clone();
         ui.core.hub.subscribe_widget(&row, move |_, event| {
-            if let AppEvent::HistoryImport {
-                imported,
-                page,
-                total_pages,
-                done,
-            } = event
-            {
-                if *done {
-                    button.set_sensitive(true);
-                    progress_ref.set_label(&format!("Imported {imported} plays"));
-                } else {
-                    button.set_sensitive(false);
-                    progress_ref.set_label(&format!(
-                        "Importing… page {page} of {total_pages} · {imported} plays"
-                    ));
-                }
+            if matches!(event, AppEvent::HistorySyncStatus | AppEvent::LastFmChanged) {
+                render();
             }
         });
     }
-    row.append(&button);
-    row.append(&progress);
+    {
+        let render = render.clone();
+        row.connect_map(move |_| {
+            render();
+        });
+    }
     row.upcast()
 }
 

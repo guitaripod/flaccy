@@ -88,6 +88,52 @@ impl ListenKeys {
     }
 }
 
+/// Keys computed once per distinct spelling: a history repeats the same few
+/// thousand titles and artists across a hundred thousand plays.
+#[derive(Default)]
+pub struct ListenKeyCache {
+    titles: HashMap<String, String>,
+    artists: HashMap<String, String>,
+    albums: HashMap<String, String>,
+}
+
+impl ListenKeyCache {
+    pub fn keys(&mut self, title: &str, artist: &str, album: &str) -> ListenKeys {
+        ListenKeys {
+            title: self.title(title).to_string(),
+            artist: self.artist(artist).to_string(),
+            album: self.album(album).to_string(),
+        }
+    }
+
+    pub fn title(&mut self, raw: &str) -> &str {
+        cached(&mut self.titles, raw, title_key)
+    }
+
+    pub fn artist(&mut self, raw: &str) -> &str {
+        cached(&mut self.artists, raw, artist_listen_key)
+    }
+
+    pub fn album(&mut self, raw: &str) -> &str {
+        cached(&mut self.albums, raw, album_listen_key)
+    }
+
+    /// `title ␀ artist`, as `track_listen_key` builds it.
+    pub fn track(&mut self, title: &str, artist: &str) -> String {
+        let mut key = self.title(title).to_string();
+        key.push('\u{0}');
+        key.push_str(self.artist(artist));
+        key
+    }
+}
+
+fn cached<'a>(cache: &'a mut HashMap<String, String>, raw: &str, key: fn(&str) -> String) -> &'a str {
+    if !cache.contains_key(raw) {
+        cache.insert(raw.to_string(), key(raw));
+    }
+    &cache[raw]
+}
+
 /// `title ␀ artist`: the key a song's plays are counted under, used alike for
 /// a scrobble and for a library track.
 pub fn track_listen_key(title: &str, artist: &str) -> String {
@@ -200,8 +246,9 @@ pub fn fold_spellings<K: std::hash::Hash + Eq>(
 }
 
 /// Where the history sync stands for one Last.fm account. Persisted by each
-/// client.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+/// client, in the database it describes.
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct HistorySyncState {
     pub account: String,
     pub backfill_complete: bool,

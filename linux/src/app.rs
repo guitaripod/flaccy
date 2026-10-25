@@ -41,7 +41,9 @@ pub struct AppCore {
     pub drain_in_flight: Rc<Cell<bool>>,
     pub mpris: RefCell<Option<Rc<mpris_server::Player>>>,
     pub enrich_tx: RefCell<Option<async_channel::Sender<crate::enrichment::EnrichRequest>>>,
-    pub import_in_flight: Cell<bool>,
+    pub history_sync_in_flight: Cell<bool>,
+    pub history_state: RefCell<Option<flaccy_library::listen_history::HistorySyncState>>,
+    pub history_status: RefCell<crate::history_sync::HistoryStatus>,
     /// Paths that have a version kept in Previous Versions, so a track's context
     /// menu can offer to restore it without asking the database per row.
     previous_versions: RefCell<HashSet<String>>,
@@ -161,7 +163,9 @@ impl AppCore {
             drain_in_flight: Rc::new(Cell::new(false)),
             mpris: RefCell::new(None),
             enrich_tx: RefCell::new(None),
-            import_in_flight: Cell::new(false),
+            history_sync_in_flight: Cell::new(false),
+            history_state: RefCell::new(None),
+            history_status: RefCell::new(crate::history_sync::HistoryStatus::Waiting),
             previous_versions: RefCell::new(HashSet::new()),
             sample_in_flight: Cell::new(false),
             sleep_remaining: Cell::new(None),
@@ -570,7 +574,7 @@ impl AppCore {
         self.start_remote();
         self.schedule_periodic_drain();
         self.schedule_wantlist_refresh();
-        self.schedule_history_import();
+        crate::history_sync::schedule(self);
         self.wire_lastfm_sync();
         if config::demo_mode() && demo_autoplays() {
             self.schedule_demo_autoplay();
@@ -1295,59 +1299,6 @@ impl AppCore {
         });
     }
 
-    /// One-shot Last.fm history pull a bit after launch: when authenticated and
-    /// the local scrobbles table is still essentially empty, imports the full
-    /// listening history so Stats (tiles, heatmap, clock, top lists) fills in
-    /// without the user hunting for the Import button.
-    fn schedule_history_import(self: &Rc<Self>) {
-        let weak = Rc::downgrade(self);
-        glib::timeout_add_local_once(Duration::from_secs(12), move || {
-            if let Some(core) = weak.upgrade() {
-                core.maybe_import_history();
-            }
-        });
-    }
-
-    /// Kicks off a full history import only when the local scrobbles table is
-    /// still below the seeded threshold. Count-gated rather than flag-gated so
-    /// it is a no-op once history is present and self-heals from an interrupted
-    /// pull (which resumes from the persisted page cursor) on the next attempt.
-    fn maybe_import_history(self: &Rc<Self>) {
-        const AUTO_IMPORT_THRESHOLD: i64 = 50;
-        if config::demo_mode()
-            || !crate::lastfm::keys_available()
-            || self.session.borrow().is_none()
-            || self.import_in_flight.get()
-        {
-            return;
-        }
-        let core = Rc::clone(self);
-        let db_path = self.db_path.clone();
-        let resume_cursor = self.config.borrow().import_page_cursor;
-        let (tx, rx) = async_channel::bounded::<i64>(1);
-        std::thread::Builder::new()
-            .name("flaccy-import-check".into())
-            .spawn(move || {
-                let count = Db::open(&db_path)
-                    .map(|db| db.scrobble_count())
-                    .unwrap_or(0);
-                let _ = tx.send_blocking(count);
-            })
-            .ok();
-        glib::spawn_future_local(async move {
-            let count = rx.recv().await.unwrap_or(i64::MAX);
-            if crate::importer::should_auto_import(resume_cursor, count, AUTO_IMPORT_THRESHOLD) {
-                crate::logger::info(
-                    "import",
-                    &format!(
-                        "auto-import: {count} local scrobbles, cursor at page {resume_cursor}; pulling Last.fm history"
-                    ),
-                );
-                crate::importer::start(&core);
-            }
-        });
-    }
-
     /// Re-runs loved down-sync and the wantlist refresh whenever the Last.fm
     /// session connects or disconnects.
     fn wire_lastfm_sync(self: &Rc<Self>) {
@@ -1359,7 +1310,10 @@ impl AppCore {
             if let crate::events::AppEvent::LastFmChanged = event {
                 if core.session.borrow().is_some() {
                     crate::scrobbler::sync_loved_from_lastfm(&core);
-                    core.maybe_import_history();
+                    crate::history_sync::load_state(&core);
+                    crate::history_sync::start(&core, crate::history_sync::Trigger::Requested);
+                } else {
+                    crate::history_sync::load_state(&core);
                 }
                 crate::wantlist::refresh(&core);
             }
