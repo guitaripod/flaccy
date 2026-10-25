@@ -379,6 +379,7 @@ pub fn track_key(title: &str, artist: &str) -> String {
     format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase())
 }
 
+#[cfg(test)]
 pub fn scrobble_years(rows: &[ScrobbleRow]) -> Vec<i32> {
     let mut years: Vec<i32> = rows
         .iter()
@@ -389,6 +390,69 @@ pub fn scrobble_years(rows: &[ScrobbleRow]) -> Vec<i32> {
         .collect();
     years.sort_by(|a, b| b.cmp(a));
     years
+}
+
+/// The latest instant `string_from_unix` can still format, past every scrobble.
+const END_OF_TIME_UNIX: i64 = 253_402_300_799;
+
+/// Every local calendar year that holds a dated play, newest first, found by
+/// hopping from year to year over the timestamp index instead of reading the
+/// whole history: one indexed lookup per year with plays.
+pub fn dated_years(db: &Db) -> Vec<i32> {
+    let mut years = Vec::new();
+    let mut before = END_OF_TIME_UNIX;
+    while let Some(newest) = db.scrobble_times_before(before, 1).first().copied() {
+        if newest < MIN_DATED_UNIX {
+            break;
+        }
+        let year = local_date(newest).year();
+        if years.last() != Some(&year) {
+            years.push(year);
+        }
+        before = local_year_start(year).map_or(newest, |start| start.min(newest));
+    }
+    years
+}
+
+/// The first instant of local calendar year `year`, `None` when the calendar
+/// cannot name it.
+fn local_year_start(year: i32) -> Option<i64> {
+    let midnight = NaiveDate::from_ymd_opt(year, 1, 1)?.and_hms_opt(0, 0, 0)?;
+    Local
+        .from_local_datetime(&midnight)
+        .earliest()
+        .map(|start| start.timestamp())
+}
+
+/// The scrobbles of local calendar year `year`, oldest first: the only rows
+/// `compute_year` reads, fetched from the year's start on rather than from the
+/// beginning of the history.
+pub fn year_rows(db: &Db, year: i32) -> Vec<ScrobbleRow> {
+    let from = local_year_start(year).map_or(0, |start| start - 86_400);
+    let mut rows = db.fetch_scrobble_rows_since(from);
+    rows.retain(|row| local_date(row.timestamp_unix).year() == year);
+    rows
+}
+
+/// How much play history there is, cheap enough to ask whether a cached recap
+/// is still current: the number of scrobbles and the newest one's time. Plays
+/// are only ever added (the scrobbler appends at the present, an import adds
+/// history), so either number moves whenever the history does.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct HistoryStamp {
+    count: i64,
+    newest_unix: i64,
+}
+
+pub fn history_stamp(db: &Db) -> HistoryStamp {
+    HistoryStamp {
+        count: db.scrobble_count(),
+        newest_unix: db
+            .scrobble_times_before(END_OF_TIME_UNIX, 1)
+            .first()
+            .copied()
+            .unwrap_or(0),
+    }
 }
 
 pub fn compute_year(
@@ -830,5 +894,145 @@ mod tests {
         assert!(grid.weeks >= 5 && grid.weeks <= 6, "weeks = {}", grid.weeks);
         assert_eq!(grid.start_sunday.weekday().num_days_from_sunday(), 0);
         assert!(heatmap_grid(None, now).is_none());
+    }
+
+    struct TempDb {
+        path: std::path::PathBuf,
+        db: Db,
+    }
+
+    impl TempDb {
+        fn with_scrobbles(unix_times: &[i64]) -> Self {
+            static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let unique = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let path = std::env::temp_dir().join(format!(
+                "flaccy-recap-test-{}-{unique}.sqlite",
+                std::process::id()
+            ));
+            let db = Db::open(&path).expect("temp db opens");
+            let rows: Vec<(String, String, String, i64, i64, bool)> = unix_times
+                .iter()
+                .enumerate()
+                .map(|(at, unix)| {
+                    (format!("t{at}"), "A".into(), "Alb".into(), *unix, 200, true)
+                })
+                .collect();
+            db.insert_scrobbles_batch(&rows).expect("seed scrobbles");
+            Self { path, db }
+        }
+    }
+
+    impl Drop for TempDb {
+        fn drop(&mut self) {
+            for suffix in ["", "-wal", "-shm"] {
+                let _ = std::fs::remove_file(format!("{}{suffix}", self.path.display()));
+            }
+        }
+    }
+
+    fn boundary_times() -> Vec<i64> {
+        let mut times = vec![0, 5, MIN_DATED_UNIX - 1, MIN_DATED_UNIX, MIN_DATED_UNIX + 3_600];
+        for year in [2003, 2010, 2024, 2025, 2026] {
+            let start = local_year_start(year).expect("year start");
+            times.extend([start - 1, start, start + 1, start + 86_400 * 200]);
+        }
+        times
+    }
+
+    fn counts_of(ranked: &[(String, String, i64)]) -> Vec<i64> {
+        ranked.iter().map(|(_, _, count)| *count).collect()
+    }
+
+    #[test]
+    fn dated_years_match_reading_every_row() {
+        let temp = TempDb::with_scrobbles(&boundary_times());
+        assert_eq!(
+            dated_years(&temp.db),
+            scrobble_years(&temp.db.fetch_all_scrobble_rows())
+        );
+    }
+
+    #[test]
+    fn dated_years_of_an_empty_history_are_empty() {
+        let temp = TempDb::with_scrobbles(&[]);
+        assert!(dated_years(&temp.db).is_empty());
+    }
+
+    #[test]
+    fn dated_years_skip_undated_plays() {
+        let temp = TempDb::with_scrobbles(&[0, 1_000, MIN_DATED_UNIX - 1]);
+        assert!(dated_years(&temp.db).is_empty());
+    }
+
+    #[test]
+    fn year_rows_feed_the_same_year_as_the_whole_history() {
+        let temp = TempDb::with_scrobbles(&boundary_times());
+        let everything = temp.db.fetch_all_scrobble_rows();
+        let durations = HashMap::new();
+        for year in dated_years(&temp.db) {
+            let narrowed = compute_year(&year_rows(&temp.db, year), year, &durations);
+            let whole = compute_year(&everything, year, &durations);
+            assert_eq!(narrowed.total_plays, whole.total_plays, "{year}");
+            assert_eq!(narrowed.total_minutes, whole.total_minutes, "{year}");
+            assert_eq!(
+                counts_of(&narrowed.top_tracks),
+                counts_of(&whole.top_tracks),
+                "{year}"
+            );
+            assert_eq!(narrowed.peak_day_plays, whole.peak_day_plays, "{year}");
+            assert_eq!(narrowed.longest_streak, whole.longest_streak, "{year}");
+        }
+    }
+
+    #[test]
+    fn the_history_stamp_moves_when_plays_are_added() {
+        let temp = TempDb::with_scrobbles(&[MIN_DATED_UNIX + 10]);
+        let before = history_stamp(&temp.db);
+        assert_eq!(before, history_stamp(&temp.db));
+        temp.db
+            .insert_scrobbles_batch(&[("x".into(), "A".into(), "Alb".into(), MIN_DATED_UNIX + 5, 1, true)])
+            .expect("older play");
+        assert_ne!(before, history_stamp(&temp.db));
+        let middle = history_stamp(&temp.db);
+        temp.db
+            .insert_scrobbles_batch(&[("y".into(), "A".into(), "Alb".into(), MIN_DATED_UNIX + 99, 1, true)])
+            .expect("newer play");
+        assert_ne!(middle, history_stamp(&temp.db));
+    }
+
+    #[test]
+    #[ignore]
+    fn dated_years_match_reading_every_row_on_the_real_history() {
+        let db = crate::library::perf_fixture::open();
+        let started = std::time::Instant::now();
+        let stamp = history_stamp(&db);
+        println!("history_stamp {stamp:?}: {:?}", started.elapsed());
+        let started = std::time::Instant::now();
+        let hopped = dated_years(&db);
+        println!("dated_years: {:?}", started.elapsed());
+        let started = std::time::Instant::now();
+        let rows = db.fetch_all_scrobble_rows();
+        println!("fetch_all_scrobble_rows {} rows: {:?}", rows.len(), started.elapsed());
+        assert_eq!(hopped, scrobble_years(&rows));
+        let durations = HashMap::new();
+        for year in hopped {
+            let started = std::time::Instant::now();
+            let narrowed = year_rows(&db, year);
+            println!("year_rows {year} {} rows: {:?}", narrowed.len(), started.elapsed());
+            let a = compute_year(&narrowed, year, &durations);
+            let b = compute_year(&rows, year, &durations);
+            assert_eq!(a.total_plays, b.total_plays, "{year}");
+            assert_eq!(a.total_minutes, b.total_minutes, "{year}");
+            assert_eq!(a.top_artists, b.top_artists, "{year}");
+            assert_eq!(a.distinct_artists, b.distinct_artists, "{year}");
+            assert_eq!(a.distinct_albums, b.distinct_albums, "{year}");
+            assert_eq!(a.distinct_tracks, b.distinct_tracks, "{year}");
+            assert_eq!(counts_of(&a.top_albums), counts_of(&b.top_albums), "{year}");
+            assert_eq!(counts_of(&a.top_tracks), counts_of(&b.top_tracks), "{year}");
+            assert_eq!(a.peak_day_plays, b.peak_day_plays, "{year}");
+            assert_eq!(a.peak_hour, b.peak_hour, "{year}");
+            assert_eq!(a.longest_streak, b.longest_streak, "{year}");
+            assert_eq!(a.persona, b.persona, "{year}");
+        }
     }
 }

@@ -2,7 +2,7 @@ use crate::chart_queue::ChartIndex;
 use crate::db::Db;
 use crate::events::AppEvent;
 use crate::library::Track;
-use crate::recap::{self, Period, RecapData};
+use crate::recap::{self, HistoryStamp, Period, RecapData};
 use crate::ui::Ui;
 use adw::prelude::*;
 use chrono::Datelike;
@@ -96,6 +96,8 @@ struct Page {
     ui: Rc<Ui>,
     period: Cell<Period>,
     snapshots: RefCell<HashMap<Period, (Rc<RecapData>, Instant)>>,
+    stamps: RefCell<HashMap<Period, HistoryStamp>>,
+    stamp_check_running: Cell<bool>,
     remote: RefCell<HashMap<Period, RemoteCharts>>,
     loading: RefCell<HashSet<Period>>,
     remote_loading: RefCell<HashSet<Period>>,
@@ -189,6 +191,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         ui: Rc::clone(ui),
         period: Cell::new(DEFAULT_PERIOD),
         snapshots: RefCell::new(HashMap::new()),
+        stamps: RefCell::new(HashMap::new()),
+        stamp_check_running: Cell::new(false),
         remote: RefCell::new(HashMap::new()),
         loading: RefCell::new(HashSet::new()),
         remote_loading: RefCell::new(HashSet::new()),
@@ -218,18 +222,27 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     page.sync_toggles();
 
     let dirty = Rc::new(Cell::new(true));
+    let library_dirty = Rc::new(Cell::new(false));
     {
         let page = Rc::clone(&page);
         let dirty = Rc::clone(&dirty);
+        let library_dirty = Rc::clone(&library_dirty);
         let stack_ref = stack.clone();
         ui.core
             .hub
             .subscribe_widget(&stack, move |_, event| match event {
-                AppEvent::NaturalEnd(_) | AppEvent::LibraryReloaded => {
+                AppEvent::NaturalEnd(_) => {
                     if stack_ref.is_mapped() {
                         page.invalidate();
                     } else {
                         dirty.set(true);
+                    }
+                }
+                AppEvent::LibraryReloaded => {
+                    if stack_ref.is_mapped() {
+                        page.library_reloaded();
+                    } else {
+                        library_dirty.set(true);
                     }
                 }
                 AppEvent::HistoryImport { done, .. } => {
@@ -245,8 +258,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let page = Rc::clone(&page);
         stack.connect_map(move |_| {
+            let library_changed = library_dirty.replace(false);
             if dirty.replace(false) {
                 page.invalidate();
+            } else if library_changed {
+                page.library_reloaded();
             }
         });
     }
@@ -338,7 +354,55 @@ impl Page {
     fn invalidate(self: &Rc<Self>) {
         self.epoch.set(self.epoch.get() + 1);
         self.snapshots.borrow_mut().clear();
+        self.stamps.borrow_mut().clear();
         self.present();
+    }
+
+    /// Reacts to the library being rebuilt (a scan, an enrichment pass, an edit
+    /// elsewhere). None of those touches the play history the snapshots were
+    /// read from, so they stay unless the history itself moved; what changes is
+    /// which chart rows the library can play, and that is redrawn from memory.
+    fn library_reloaded(self: &Rc<Self>) {
+        if !self.stamps.borrow().contains_key(&self.period.get()) {
+            self.invalidate();
+            return;
+        }
+        if self.stamp_check_running.replace(true) {
+            return;
+        }
+        let epoch = self.epoch.get();
+        let db_path = self.ui.core.db_path.clone();
+        let (tx, rx) = async_channel::bounded::<Option<HistoryStamp>>(1);
+        std::thread::Builder::new()
+            .name("flaccy-stats-stamp".into())
+            .spawn(move || {
+                let stamp = Db::open(&db_path).ok().map(|db| recap::history_stamp(&db));
+                let _ = tx.send_blocking(stamp);
+            })
+            .ok();
+        let page = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let current = rx.recv().await.ok().flatten();
+            page.stamp_check_running.set(false);
+            if page.epoch.get() != epoch {
+                return;
+            }
+            if current.is_some() && page.stamps.borrow().values().all(|known| Some(*known) == current) {
+                if page.shows_history() {
+                    page.fill_lists();
+                }
+            } else {
+                page.invalidate();
+            }
+        });
+    }
+
+    /// Whether the selected period is on screen with plays to list.
+    fn shows_history(&self) -> bool {
+        self.snapshots
+            .borrow()
+            .get(&self.period.get())
+            .is_some_and(|(data, _)| data.has_history)
     }
 
     fn load_local(self: &Rc<Self>, period: Period) {
@@ -347,14 +411,15 @@ impl Page {
         }
         let epoch = self.epoch.get();
         let db_path = self.ui.core.db_path.clone();
-        let (tx, rx) = async_channel::bounded::<Option<RecapData>>(1);
+        let (tx, rx) = async_channel::bounded::<Option<(RecapData, HistoryStamp)>>(1);
         std::thread::Builder::new()
             .name("flaccy-stats".into())
             .spawn(move || {
                 let started = Instant::now();
-                let data = Db::open(&db_path)
-                    .ok()
-                    .map(|db| recap::load(&db, period, chrono::Utc::now().timestamp()));
+                let data = Db::open(&db_path).ok().map(|db| {
+                    let stamp = recap::history_stamp(&db);
+                    (recap::load(&db, period, chrono::Utc::now().timestamp()), stamp)
+                });
                 crate::logger::info(
                     "charts",
                     &format!(
@@ -375,7 +440,8 @@ impl Page {
                 if wanted {
                     page.load_local(period);
                 }
-            } else if let Some(data) = data {
+            } else if let Some((data, stamp)) = data {
+                page.stamps.borrow_mut().insert(period, stamp);
                 page.snapshots
                     .borrow_mut()
                     .insert(period, (Rc::new(data), Instant::now()));
@@ -701,7 +767,7 @@ fn actions_row(page: &Rc<Page>) -> gtk::Widget {
                 .name("flaccy-yim-years".into())
                 .spawn(move || {
                     let years = Db::open(&db_path)
-                        .map(|db| recap::scrobble_years(&db.fetch_all_scrobble_rows()))
+                        .map(|db| recap::dated_years(&db))
                         .unwrap_or_default();
                     let _ = tx.send_blocking(years);
                 })

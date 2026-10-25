@@ -1187,6 +1187,7 @@ impl Library {
             tracks,
             albums,
             artists: self.artists.clone(),
+            index: self.index.clone(),
         }
     }
 }

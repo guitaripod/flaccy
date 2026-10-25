@@ -5,7 +5,6 @@ use adw::prelude::*;
 use gtk::glib;
 use gtk::{gio, pango};
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 pub fn present(ui: &Rc<Ui>, years: Vec<i32>) {
@@ -60,26 +59,13 @@ pub fn present(ui: &Rc<Ui>, years: Vec<i32>) {
                 return;
             };
             let db_path = ui.core.db_path.clone();
-            let durations: HashMap<String, i64> = ui
-                .core
-                .library
-                .borrow()
-                .tracks
-                .iter()
-                .filter(|t| t.duration > 0.0)
-                .map(|t| {
-                    (
-                        recap::track_key(&t.title, &t.artist),
-                        t.duration.round() as i64,
-                    )
-                })
-                .collect();
+            let durations = ui.core.library.borrow().track_durations();
             let (tx, rx) = async_channel::bounded::<YearData>(1);
             std::thread::Builder::new()
                 .name("flaccy-yim".into())
                 .spawn(move || {
                     let rows = Db::open(&db_path)
-                        .map(|db| db.fetch_all_scrobble_rows())
+                        .map(|db| recap::year_rows(&db, year))
                         .unwrap_or_default();
                     let _ = tx.send_blocking(recap::compute_year(&rows, year, &durations));
                 })
