@@ -128,9 +128,11 @@ fn ascii_separator_start(raw: &[u8]) -> usize {
 }
 
 /// The separator search for credits with non-ASCII text, run on a lowercased
-/// copy exactly as the original did, so the offsets it yields are unchanged.
+/// copy and mapped back to `raw`'s own offsets: a character whose lowercase
+/// has a different UTF-8 length (`İ`, `ẞ`, the Kelvin sign) must not shift
+/// the cut, or the slice lands mid-character.
 fn lowered_separator_start(raw: &str) -> usize {
-    let lower = raw.to_lowercase();
+    let (lower, origins) = lowercase_with_origins(raw);
     let mut cut = raw.len();
     for separator in ASCII_ARTIST_SEPARATORS
         .iter()
@@ -138,10 +140,24 @@ fn lowered_separator_start(raw: &str) -> usize {
         .chain(std::iter::once(CROSS_ARTIST_SEPARATOR))
     {
         if let Some(index) = lower.find(separator) {
-            cut = cut.min(index);
+            cut = cut.min(origins[index]);
         }
     }
     cut
+}
+
+/// `raw` lowercased, with the byte offset in `raw` of the character each byte
+/// of the lowercase came from.
+fn lowercase_with_origins(raw: &str) -> (String, Vec<usize>) {
+    let mut lower = String::with_capacity(raw.len());
+    let mut origins = Vec::with_capacity(raw.len());
+    for (at, ch) in raw.char_indices() {
+        for lowered in ch.to_lowercase() {
+            lower.push(lowered);
+            origins.resize(lower.len(), at);
+        }
+    }
+    (lower, origins)
 }
 
 /// Aggressive artist grouping key: the lead artist, diacritic-folded and
@@ -446,14 +462,34 @@ mod tests {
 
     use crate::wantlist::legacy_keys;
 
+    /// Whether lowercasing `text` changes some character's UTF-8 length, the
+    /// one case where the old offsets were wrong (or panicked) and the new
+    /// ones are meant to differ.
+    fn lowercase_shifts_offsets(text: &str) -> bool {
+        text.chars()
+            .any(|ch| ch.to_lowercase().map(char::len_utf8).sum::<usize>() != ch.len_utf8())
+    }
+
     fn assert_same_keys(text: &str) {
         let owned = text.to_string();
+        if lowercase_shifts_offsets(text) {
+            assert!(legacy_keys::outcome(|| artist_key(&owned)).is_some(), "artist_key {text:?}");
+            return;
+        }
         let old_lead = legacy_keys::outcome(|| legacy_keys::primary_artist(&owned));
         let new_lead = legacy_keys::outcome(|| primary_artist(&owned));
         assert_eq!(new_lead, old_lead, "primary_artist {text:?}");
         let old_key = legacy_keys::outcome(|| legacy_keys::artist_key(&owned));
         let new_key = legacy_keys::outcome(|| artist_key(&owned));
         assert_eq!(new_key, old_key, "artist_key {text:?}");
+    }
+
+    #[test]
+    fn a_lowercase_that_changes_length_cuts_at_the_separator() {
+        assert_eq!(primary_artist("İstanbul feat. Someone"), "İstanbul");
+        assert_eq!(primary_artist("GROẞ & Klein"), "GROẞ");
+        assert_eq!(primary_artist("\u{212A}ent ft. Guest"), "\u{212A}ent");
+        assert_eq!(primary_artist("İİİ × B"), "İİİ");
     }
 
     #[test]
