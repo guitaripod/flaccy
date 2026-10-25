@@ -19,6 +19,12 @@ enum ScreenshotSeeder {
 
     static let launchArgument = "--seed-screenshots"
 
+    /// True for a screenshot launch, whose fictional catalog has nothing to
+    /// enrich and whose captures must not show a background job counting down.
+    nonisolated static var isActive: Bool {
+        CommandLine.arguments.contains("--seed-screenshots")
+    }
+
     /// Seeds the library but not the listening history, for a Home with nothing played yet.
     static let noHistoryArgument = "--no-history"
 

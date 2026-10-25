@@ -71,6 +71,7 @@ actor EnrichmentCoordinator {
     /// finishes. Cheap to call on every reload: a pass that finds nothing due
     /// costs one `count(*)` per scope and raises no surface at all.
     func resume() {
+        guard !ScreenshotSeeder.isActive else { return }
         network.start()
         guard run == nil else {
             rerunRequested = true
