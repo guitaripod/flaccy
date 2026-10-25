@@ -197,6 +197,7 @@ final class LibraryViewModel {
     #endif
 
     func relativePath(for url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return song.path }
         let docs = Self.documentsPath
         let path = url.standardizedFileURL.path
         guard path.hasPrefix(docs) else { return url.lastPathComponent }

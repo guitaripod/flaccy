@@ -293,7 +293,7 @@ extension DatabaseManager {
     private static let aiBatchDueSource = """
         FROM (
             SELECT rtrim(rtrim(fileURL, replace(fileURL, '/', '')), '/') AS directory
-            FROM tracks WHERE aiAnalyzed = 0 GROUP BY 1
+            FROM tracks WHERE aiAnalyzed = 0 AND remoteServer IS NULL GROUP BY 1
         ) a
         LEFT JOIN enrichmentState e
                ON e.scope = 'aiBatch'

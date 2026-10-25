@@ -15,7 +15,7 @@ final class SongsTableViewModel {
         var plays: Int
         var lastPlayed: Date?
 
-        nonisolated var id: String { track.fileURL.path }
+        nonisolated var id: String { track.fileURL.absoluteString }
     }
 
     /// The quick pivots above the table. `mostPlayed` is the only one that
@@ -265,7 +265,7 @@ final class SongsTableViewModel {
 
     @objc private func trackChanged() {
         guard let track = AudioPlayer.shared.currentTrack else { return }
-        let path = track.fileURL.path
+        let path = track.fileURL.absoluteString
         let relativePath = relativePath(for: track.fileURL)
         trackUpdateTask?.cancel()
         trackUpdateTask = Task.detached(priority: .utility) {
@@ -302,6 +302,7 @@ final class SongsTableViewModel {
     }
 
     private func relativePath(for url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return song.path }
         let root = LibraryPaths.root.path
         let path = url.standardizedFileURL.path
         guard path.hasPrefix(root) else { return url.lastPathComponent }
@@ -425,7 +426,7 @@ final class SongsTableViewModel {
             }
             let byTitle = lhs.track.title.localizedCaseInsensitiveCompare(rhs.track.title)
             if byTitle != .orderedSame { return byTitle == .orderedAscending }
-            return lhs.track.fileURL.path < rhs.track.fileURL.path
+            return lhs.track.fileURL.absoluteString < rhs.track.fileURL.absoluteString
         }
     }
 

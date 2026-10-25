@@ -191,7 +191,7 @@ extension LibraryViewModel {
         let tracks = library.allTracks
         map.reserveCapacity(tracks.count)
         for track in tracks {
-            map[track.fileURL.path] = Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)")
+            map[track.fileURL.absoluteString] = Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)")
         }
         cachedSongSearchKeys = map
         return map

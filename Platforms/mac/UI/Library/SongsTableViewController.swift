@@ -279,7 +279,7 @@ final class SongsTableViewController: NSViewController {
     #endif
 
     @objc private func jumpToCurrentSong() {
-        guard let path = AudioPlayer.shared.currentTrack?.fileURL.path else {
+        guard let path = AudioPlayer.shared.currentTrack?.fileURL.absoluteString else {
             MidgarLog.info("Jump to current song: nothing is playing", category: .ui)
             return
         }
@@ -320,7 +320,7 @@ final class SongsTableViewController: NSViewController {
     }
 
     @objc private func playbackChanged() {
-        let newPath = AudioPlayer.shared.currentTrack?.fileURL.path
+        let newPath = AudioPlayer.shared.currentTrack?.fileURL.absoluteString
         guard newPath != playingPath else { return }
         playingPath = newPath
         guard let titleIndex = tableView.tableColumns.firstIndex(where: {

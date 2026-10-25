@@ -26,6 +26,7 @@ public enum SubsonicResponse {
         public let song: Child?
         public let searchResult3: SearchResult3?
         public let playlists: PlaylistsPayload?
+        public let playlist: PlaylistWithEntries?
 
         /// The typed failure when the server answered `failed`; nil for a successful answer.
         public var failure: SubsonicFailure? {
@@ -107,7 +108,8 @@ public enum SubsonicResponse {
         }
     }
 
-    /// A song, as `song`, `search3` and album listings describe it. The three `flaccy*` fields
+    /// A song, as `song`, `search3` and album listings describe it. `starred`, `playCount` and `played`
+    /// are the person's own state on that server. The three `flaccy*` fields
     /// come from Flaccy's own server and are absent on a server that does not run it.
     public struct Child: Decodable, Equatable, Sendable {
         public let id: String
@@ -136,6 +138,11 @@ public enum SubsonicResponse {
         public let musicBrainzId: String?
         public let displayArtist: String?
         public let displayAlbumArtist: String?
+        /// When the person starred the song on the server; absent when they have not.
+        public let starred: String?
+        public let playCount: Int?
+        /// When the song was last played, as the server records it (ISO 8601).
+        public let played: String?
         public let flaccyFingerprint: String?
         public let flaccyRevision: Int?
         public let flaccyRevisedAt: String?
@@ -165,6 +172,22 @@ public enum SubsonicResponse {
         private enum CodingKeys: String, CodingKey {
             case id, name, songCount, duration, created, changed, coverArt, owner
             case isPublic = "public"
+        }
+    }
+
+    /// A playlist from `getPlaylist`: its `Playlist` fields beside its `entry` songs.
+    /// The Rust mirror has no `getPlaylist` payload yet.
+    public struct PlaylistWithEntries: Decodable, Equatable, Sendable {
+        public let playlist: Playlist
+        public let entry: [Child]?
+
+        public init(from decoder: Decoder) throws {
+            playlist = try Playlist(from: decoder)
+            entry = try decoder.container(keyedBy: EntryKey.self).decodeIfPresent([Child].self, forKey: .entry)
+        }
+
+        private enum EntryKey: String, CodingKey {
+            case entry
         }
     }
 

@@ -2,11 +2,36 @@ import AVFoundation
 import MidgarCore
 import FlaccyCore
 
+/// A player item that remembers the `Track.fileURL` it was built for, because the asset behind
+/// a song on a server is a cached file or a resource-loader URL, never the track's own URL.
+final class TrackPlayerItem: AVPlayerItem {
+
+    let trackURL: URL
+
+    init(asset: AVAsset, trackURL: URL) {
+        self.trackURL = trackURL
+        super.init(asset: asset, automaticallyLoadedAssetKeys: nil)
+    }
+}
+
+extension AVPlayerItem {
+
+    var sourceTrackURL: URL? { (self as? TrackPlayerItem)?.trackURL }
+}
+
 extension PlaybackEngine {
 
     /// The single place an item is built, so the equalizer can attach its tap to every one.
+    /// A song on a server gets its asset from the host, which plays the cached file when it
+    /// is complete and streams through a resource loader when it is not.
     func makePlayerItem(for track: Track) -> AVPlayerItem {
-        let item = AVPlayerItem(url: track.fileURL)
+        let asset: AVAsset
+        if RemoteTrackPath.isRemote(assetURL: track.fileURL), let host {
+            asset = host.remoteAsset(for: track)
+        } else {
+            asset = AVURLAsset(url: track.fileURL)
+        }
+        let item = TrackPlayerItem(asset: asset, trackURL: track.fileURL)
         host?.attachEqualizer(to: item)
         return item
     }
@@ -127,7 +152,7 @@ extension PlaybackEngine {
     func preloadedItemIsCurrent() -> Bool {
         guard let player, let preloadedItem, let preloadedIndex else { return false }
         guard preloadedIndex == preloadTargetIndex(after: currentIndex) else { return false }
-        guard (preloadedItem.asset as? AVURLAsset)?.url == queue[preloadedIndex].fileURL else { return false }
+        guard preloadedItem.sourceTrackURL == queue[preloadedIndex].fileURL else { return false }
         let queued = Array(player.items().dropFirst())
         return queued.count == 1 && queued[0] === preloadedItem
     }

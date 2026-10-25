@@ -48,6 +48,7 @@ extension AudioPlayer {
     func performScrobble(submitToLastFM: Bool = true) {
         guard let track = currentTrack else { return }
         hasScrobbled = true
+        if let song = track.remoteSong { RemoteServerReports.listened(song, startedAt: trackStartTime ?? Date()) }
         Task { @MainActor in
             NotificationCenter.default.post(name: TrialReminderScheduler.optInOpportunity, object: nil)
         }

@@ -37,7 +37,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = rootVC
         window.makeKeyAndVisible()
         self.window = window
+        RemoteLaunch.start()
         #if DEBUG
+        RemoteExercise.runIfRequested()
         PaywallShot.runIfRequested(in: window)
         SampleExercise.runIfRequested()
         ReexportExercise.runIfRequested()

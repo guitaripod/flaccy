@@ -1,4 +1,5 @@
 import AppKit
+import FlaccyCore
 
 extension Notification.Name {
     static let flaccyRevealAlbum = Notification.Name("flaccy.mac.revealAlbum")
@@ -63,6 +64,7 @@ nonisolated enum LibraryPathResolver {
     /// The library-root-relative path used as the track's identity in the
     /// database (playlists, loved state, playback restore all key on it).
     static func relativePath(for url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return song.path }
         let rootPath = LibraryPaths.root.standardizedFileURL.path
         let path = url.standardizedFileURL.path
         guard path.hasPrefix(rootPath) else { return canonicalSyncPath(url.lastPathComponent) }

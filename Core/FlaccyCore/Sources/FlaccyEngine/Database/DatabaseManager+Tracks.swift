@@ -80,11 +80,19 @@ extension DatabaseManager {
     private static let trackColumnsWithoutArtwork: [Column] = trackColumnsWithoutArtworkOrVersion + [
         Column("fileSize"), Column("fileModifiedMs"), Column("audioFingerprint"),
         Column("revision"), Column("revisedAt"),
+        Column("remoteServer"), Column("remoteSuffix"), Column("remoteSize"),
+        Column("remoteCoverArt"), Column("remoteAlbumId"), Column("pinned"),
     ]
 
+    private static let remoteRowPattern = RemoteTrackPath.scheme + "%"
+
+    /// The paths of the rows that stand for a file in the library folder. A song on a
+    /// server has no file to find there, so the folder scan must never see its row.
     public func fetchAllTrackRelativePaths() throws -> Set<String> {
         try dbQueue.read { db in
-            let paths = try String.fetchAll(db, sql: "SELECT fileURL FROM tracks")
+            let paths = try String.fetchAll(
+                db, sql: "SELECT fileURL FROM tracks WHERE remoteServer IS NULL"
+            )
             return Set(paths)
         }
     }
@@ -111,14 +119,22 @@ extension DatabaseManager {
         }
     }
 
+    /// Drops the library-folder rows whose file is gone. Rows of songs on a server, and the
+    /// playlist places that hold them, stay: the folder scan knows nothing about them.
     public func deleteTracksNotIn(relativePaths: Set<String>) throws {
         try dbQueue.write { db in
+            let isLocalPlaylistPlace = !Column("trackFileURL").like(Self.remoteRowPattern)
+            let isLocalRow = Column("remoteServer") == nil
             if relativePaths.isEmpty {
-                _ = try PlaylistTrackRecord.deleteAll(db)
-                _ = try TrackRecord.deleteAll(db)
+                _ = try PlaylistTrackRecord.filter(isLocalPlaylistPlace).deleteAll(db)
+                _ = try TrackRecord.filter(isLocalRow).deleteAll(db)
             } else {
-                _ = try PlaylistTrackRecord.filter(!relativePaths.contains(Column("trackFileURL"))).deleteAll(db)
-                _ = try TrackRecord.filter(!relativePaths.contains(Column("fileURL"))).deleteAll(db)
+                _ = try PlaylistTrackRecord
+                    .filter(isLocalPlaylistPlace && !relativePaths.contains(Column("trackFileURL")))
+                    .deleteAll(db)
+                _ = try TrackRecord
+                    .filter(isLocalRow && !relativePaths.contains(Column("fileURL")))
+                    .deleteAll(db)
             }
             try Self.sweepOrphanedAlbumEnrichment(in: db)
         }

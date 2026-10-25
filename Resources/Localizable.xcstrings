@@ -1281,6 +1281,134 @@
         }
       }
     },
+    "%@ answered with an HTTP %lld error. A proxy in front of the server, or the server itself, is failing. Try again in a moment, or check the server’s log.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat mit einem HTTP-Fehler %lld geantwortet. Ein Proxy vor dem Server oder der Server selbst hat ein Problem. Versuche es gleich noch einmal oder sieh im Protokoll des Servers nach."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ respondió con un error HTTP %lld. Falla un proxy delante del servidor o el propio servidor. Inténtalo de nuevo en un momento o revisa el registro del servidor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a répondu par une erreur HTTP %lld. Un proxy placé devant le serveur, ou le serveur lui-même, est en panne. Réessaie dans un instant ou consulte le journal du serveur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha risposto con un errore HTTP %lld. Un proxy davanti al server, o il server stesso, ha un problema. Riprova tra poco o controlla il log del server."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ が HTTP エラー %lld を返しました。サーバーの前段のプロキシ、またはサーバー自体に問題があります。しばらくしてからもう一度お試しいただくか、サーバーのログを確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 HTTP %lld 오류가 반환되었습니다. 서버 앞단의 프록시 또는 서버 자체에 문제가 있습니다. 잠시 후 다시 시도하거나 서버 로그를 확인하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ odpowiedział błędem HTTP %lld. Awaria dotyczy serwera proxy przed serwerem albo samego serwera. Spróbuj ponownie za chwilę lub sprawdź dziennik serwera."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ respondeu com um erro HTTP %lld. Um proxy na frente do servidor, ou o próprio servidor, está com problema. Tente novamente em instantes ou confira o log do servidor."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 返回了 HTTP %lld 错误。服务器前的代理或服务器本身出现故障。请稍后重试，或查看服务器日志。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 回傳了 HTTP %lld 錯誤。伺服器前方的代理或伺服器本身發生故障。請稍後再試，或查看伺服器記錄。"
+          }
+        }
+      }
+    },
+    "%@ answered, but it isn’t a Subsonic or OpenSubsonic server. Check the address and the port, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat geantwortet, ist aber kein Subsonic- oder OpenSubsonic-Server. Prüfe Adresse und Port und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ respondió, pero no es un servidor Subsonic ni OpenSubsonic. Revisa la dirección y el puerto, y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a répondu, mais ce n’est pas un serveur Subsonic ou OpenSubsonic. Vérifie l’adresse et le port, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha risposto, ma non è un server Subsonic o OpenSubsonic. Controlla l’indirizzo e la porta, poi riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ は応答しましたが、Subsonic または OpenSubsonic サーバーではありません。アドレスとポートを確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 응답했지만 Subsonic 또는 OpenSubsonic 서버가 아닙니다. 주소와 포트를 확인한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ odpowiedział, ale nie jest serwerem Subsonic ani OpenSubsonic. Sprawdź adres i port, a potem spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ respondeu, mas não é um servidor Subsonic ou OpenSubsonic. Confira o endereço e a porta e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 有响应，但它不是 Subsonic 或 OpenSubsonic 服务器。请检查地址和端口，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 有回應，但它不是 Subsonic 或 OpenSubsonic 伺服器。請檢查位址和連接埠，然後再試一次。"
+          }
+        }
+      }
+    },
     "%@ artists this year": {
       "localizations": {
         "de": {
@@ -1539,6 +1667,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 分貝"
+          }
+        }
+      }
+    },
+    "%@ doesn’t accept password sign-in from apps. Use an API key instead: create one in the server’s settings and enter it here.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ erlaubt die Anmeldung per Passwort aus Apps nicht. Verwende stattdessen einen API-Schlüssel: Erstelle einen in den Servereinstellungen und gib ihn hier ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ no admite el inicio de sesión con contraseña desde apps. Usa una clave de API: crea una en los ajustes del servidor e introdúcela aquí."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n’accepte pas la connexion par mot de passe depuis des apps. Utilise plutôt une clé d’API : crée-en une dans les réglages du serveur et saisis-la ici."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ non accetta l’accesso con password dalle app. Usa invece una chiave API: creane una nelle impostazioni del server e inseriscila qui."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ はアプリからのパスワードによるサインインを受け付けません。代わりに API キーを使ってください。サーバーの設定でキーを作成し、ここに入力します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@은(는) 앱의 비밀번호 로그인을 허용하지 않습니다. 대신 API 키를 사용하세요. 서버 설정에서 키를 만들어 여기에 입력하면 됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ nie przyjmuje logowania hasłem z aplikacji. Użyj zamiast tego klucza API: utwórz go w ustawieniach serwera i wpisz tutaj."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ não aceita login com senha em apps. Use uma chave de API: crie uma nas configurações do servidor e informe aqui."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 不接受应用使用密码登录。请改用 API 密钥：在服务器设置中创建一个，然后在此输入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 不接受 App 以密碼登入。請改用 API 金鑰：在伺服器設定中建立一組，然後在此輸入。"
           }
         }
       }
@@ -2965,6 +3157,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 次播放 · 前 %3$lld 天為 %2$@ 次"
+          }
+        }
+      }
+    },
+    "%@ refused the API key. Create a new key in the server’s settings and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat den API-Schlüssel abgelehnt. Erstelle in den Servereinstellungen einen neuen Schlüssel und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ rechazó la clave de API. Crea una clave nueva en los ajustes del servidor y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a refusé la clé d’API. Crée une nouvelle clé dans les réglages du serveur, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha rifiutato la chiave API. Crea una nuova chiave nelle impostazioni del server e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ が API キーを受け付けませんでした。サーバーの設定で新しいキーを作成して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 API 키를 거부했습니다. 서버 설정에서 새 키를 만든 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ odrzucił klucz API. Utwórz nowy klucz w ustawieniach serwera i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ recusou a chave de API. Crie uma nova chave nas configurações do servidor e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 拒绝了 API 密钥。请在服务器设置中创建新密钥，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 拒絕了 API 金鑰。請在伺服器設定中建立新金鑰，然後再試一次。"
+          }
+        }
+      }
+    },
+    "%@ refused the username or password. Check both and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat den Benutzernamen oder das Passwort abgelehnt. Prüfe beides und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ rechazó el nombre de usuario o la contraseña. Revisa ambos y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a refusé le nom d’utilisateur ou le mot de passe. Vérifie les deux, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha rifiutato il nome utente o la password. Controlla entrambi e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ がユーザー名またはパスワードを受け付けませんでした。両方を確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 사용자 이름 또는 비밀번호를 거부했습니다. 둘 다 확인한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ odrzucił nazwę użytkownika lub hasło. Sprawdź oba i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ recusou o nome de usuário ou a senha. Confira os dois e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 拒绝了用户名或密码。请检查两者后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 拒絕了使用者名稱或密碼。請檢查兩者後再試一次。"
           }
         }
       }
@@ -42231,6 +42551,70 @@
         }
       }
     },
+    "Flaccy can’t reach %@. The server didn’t answer. Check that it is running and that this device is on the same network or Tailscale, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy kann %@ nicht erreichen. Der Server antwortet nicht. Prüfe, ob er läuft und ob dieses Gerät im selben Netzwerk oder in Tailscale ist, und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy no puede conectar con %@. El servidor no respondió. Comprueba que esté en marcha y que este dispositivo esté en la misma red o en Tailscale, y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy ne parvient pas à joindre %@. Le serveur n’a pas répondu. Vérifie qu’il est démarré et que cet appareil est sur le même réseau ou sur Tailscale, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy non riesce a raggiungere %@. Il server non ha risposto. Controlla che sia in esecuzione e che questo dispositivo sia sulla stessa rete o su Tailscale, poi riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy は %@ に接続できません。サーバーが応答しませんでした。サーバーが起動していること、このデバイスが同じネットワークまたは Tailscale 上にあることを確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy가 %@에 연결할 수 없습니다. 서버가 응답하지 않았습니다. 서버가 실행 중이고 이 기기가 같은 네트워크 또는 Tailscale에 있는지 확인한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy nie może połączyć się z %@. Serwer nie odpowiedział. Sprawdź, czy działa i czy to urządzenie jest w tej samej sieci lub w Tailscale, a potem spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy não consegue acessar %@. O servidor não respondeu. Verifique se ele está em execução e se este dispositivo está na mesma rede ou no Tailscale e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 无法连接到 %@。服务器没有响应。请确认服务器正在运行，并且此设备与它处于同一网络或 Tailscale 中，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 無法連線到 %@。伺服器沒有回應。請確認伺服器正在執行，且此裝置與它位於同一網路或 Tailscale 中，然後再試一次。"
+          }
+        }
+      }
+    },
     "Flaccy checked the file's own tags, looked for a .lrc or .elrc file next to the song, and asked lrclib.net. None of them have words for it. lrclib is written by its community, so Flaccy asks again in 30 days. A .lrc file saved next to the song shows up straight away.": {
       "localizations": {
         "de": {
@@ -42355,6 +42739,198 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy 無法建立連線。請確認已連上網路；一連上就會載入歌詞。"
+          }
+        }
+      }
+    },
+    "Flaccy couldn’t make a secure connection to %@. Its certificate isn’t trusted. Use the server’s http:// address on your own network, or give it a valid certificate, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy konnte keine sichere Verbindung zu %@ herstellen. Das Zertifikat wird nicht als vertrauenswürdig eingestuft. Verwende in deinem eigenen Netzwerk die http://-Adresse des Servers oder gib ihm ein gültiges Zertifikat und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy no pudo establecer una conexión segura con %@. Su certificado no es de confianza. Usa la dirección http:// del servidor en tu propia red, o dale un certificado válido, y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy n’a pas pu établir de connexion sécurisée avec %@. Son certificat n’est pas approuvé. Utilise l’adresse http:// du serveur sur ton propre réseau, ou donne-lui un certificat valide, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy non è riuscito a stabilire una connessione sicura con %@. Il suo certificato non è attendibile. Usa l’indirizzo http:// del server sulla tua rete, oppure dagli un certificato valido, poi riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy は %@ とのセキュアな接続を確立できませんでした。証明書が信頼されていません。自分のネットワーク内ではサーバーの http:// アドレスを使うか、有効な証明書を設定して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy가 %@와(과) 보안 연결을 만들 수 없습니다. 인증서를 신뢰할 수 없습니다. 내 네트워크에서는 서버의 http:// 주소를 사용하거나 유효한 인증서를 설정한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy nie mogło nawiązać bezpiecznego połączenia z %@. Jego certyfikat nie jest zaufany. We własnej sieci użyj adresu serwera zaczynającego się od http:// albo ustaw prawidłowy certyfikat i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy não conseguiu fazer uma conexão segura com %@. O certificado dele não é confiável. Use o endereço http:// do servidor na sua própria rede, ou dê a ele um certificado válido, e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 无法与 %@ 建立安全连接。其证书不受信任。请在自己的网络中使用服务器的 http:// 地址，或为它配置有效证书，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 無法與 %@ 建立安全連線。其憑證不受信任。請在自己的網路中使用伺服器的 http:// 位址，或為它設定有效憑證，然後再試一次。"
+          }
+        }
+      }
+    },
+    "Flaccy couldn’t save the song on this device. Free some space and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy konnte den Song nicht auf diesem Gerät speichern. Gib etwas Speicherplatz frei und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy no pudo guardar la canción en este dispositivo. Libera algo de espacio y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy n’a pas pu enregistrer le morceau sur cet appareil. Libère de l’espace, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy non è riuscito a salvare il brano su questo dispositivo. Libera dello spazio e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy はこのデバイスに曲を保存できませんでした。空き容量を確保して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy가 이 기기에 곡을 저장하지 못했습니다. 저장 공간을 확보한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy nie mogło zapisać utworu na tym urządzeniu. Zwolnij trochę miejsca i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy não conseguiu salvar a música neste dispositivo. Libere espaço e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 无法将歌曲保存到此设备。请释放一些存储空间，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 無法將歌曲儲存到此裝置。請釋出一些儲存空間，然後再試一次。"
+          }
+        }
+      }
+    },
+    "Flaccy couldn’t store the sign-in in this device’s Keychain. Unlock the device and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy konnte die Anmeldedaten nicht im Schlüsselbund dieses Geräts speichern. Entsperre das Gerät und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy no pudo guardar el inicio de sesión en el llavero de este dispositivo. Desbloquea el dispositivo y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy n’a pas pu enregistrer l’identifiant dans le trousseau de cet appareil. Déverrouille l’appareil, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy non è riuscito a salvare l’accesso nel portachiavi di questo dispositivo. Sblocca il dispositivo e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy はサインイン情報をこのデバイスのキーチェーンに保存できませんでした。デバイスのロックを解除して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy가 로그인 정보를 이 기기의 키체인에 저장하지 못했습니다. 기기 잠금을 해제한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy nie mogło zapisać danych logowania w pęku kluczy tego urządzenia. Odblokuj urządzenie i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy não conseguiu guardar o login no Chaveiro deste dispositivo. Desbloqueie o dispositivo e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 无法将登录信息存入此设备的钥匙串。请解锁设备，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 無法將登入資訊儲存到此裝置的鑰匙圈。請解鎖裝置，然後再試一次。"
           }
         }
       }
@@ -92681,6 +93257,70 @@
         }
       }
     },
+    "That server address can’t be read. Type it like music.example.com or http://192.168.1.20:4533, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Serveradresse lässt sich nicht lesen. Gib sie z. B. als music.example.com oder http://192.168.1.20:4533 ein und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se puede leer esa dirección de servidor. Escríbela como music.example.com o http://192.168.1.20:4533 y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette adresse de serveur est illisible. Saisis-la sous la forme music.example.com ou http://192.168.1.20:4533, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere questo indirizzo del server. Scrivilo come music.example.com o http://192.168.1.20:4533 e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバーアドレスを読み取れません。music.example.com や http://192.168.1.20:4533 のように入力して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 주소를 읽을 수 없습니다. music.example.com 또는 http://192.168.1.20:4533 형식으로 입력한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie można odczytać adresu serwera. Wpisz go w postaci music.example.com lub http://192.168.1.20:4533 i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler esse endereço de servidor. Digite-o como music.example.com ou http://192.168.1.20:4533 e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法识别此服务器地址。请按 music.example.com 或 http://192.168.1.20:4533 的格式输入，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法辨識此伺服器位址。請依 music.example.com 或 http://192.168.1.20:4533 的格式輸入，然後再試一次。"
+          }
+        }
+      }
+    },
     "The App Store couldn't verify this purchase. Try again, or choose Restore Purchases.": {
       "localizations": {
         "de": {
@@ -94293,6 +94933,70 @@
         }
       }
     },
+    "The server reported error %lld: %@. Check its settings and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Server meldete Fehler %lld: %@. Prüfe seine Einstellungen und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El servidor informó del error %lld: %@. Revisa sus ajustes y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le serveur a signalé l’erreur %lld : %@. Vérifie ses réglages, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il server ha segnalato l’errore %lld: %@. Controlla le sue impostazioni e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーがエラー %lld を報告しました: %@。サーバーの設定を確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버에서 오류 %lld이(가) 보고되었습니다: %@. 서버 설정을 확인한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serwer zgłosił błąd %lld: %@. Sprawdź jego ustawienia i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O servidor informou o erro %lld: %@. Confira as configurações dele e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器报告了错误 %lld：%@。请检查其设置，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器回報了錯誤 %lld：%@。請檢查其設定，然後再試一次。"
+          }
+        }
+      }
+    },
     "The setup summary belongs to this library. Reinstalling or resetting builds a new one.": {
       "localizations": {
         "de": {
@@ -95249,6 +95953,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "這首歌有歌詞但沒有計時，因此無法跟隨音樂。計時來自 lrclib 上貢獻者的新增，或來自存放在歌曲旁邊的 .lrc 或 .elrc 檔案。"
+          }
+        }
+      }
+    },
+    "This song is no longer in your library. Refresh the library to update the list.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Song ist nicht mehr in deiner Mediathek. Aktualisiere die Mediathek, um die Liste zu erneuern."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta canción ya no está en tu biblioteca. Actualiza la biblioteca para renovar la lista."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce morceau n’est plus dans ta bibliothèque. Actualise la bibliothèque pour mettre la liste à jour."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo brano non è più nella tua libreria. Aggiorna la libreria per rinnovare l’elenco."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この曲はライブラリにもうありません。ライブラリを更新してリストを最新にしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 곡은 더 이상 보관함에 없습니다. 보관함을 새로 고쳐 목록을 업데이트하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tego utworu nie ma już w Twojej bibliotece. Odśwież bibliotekę, aby zaktualizować listę."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta música não está mais na sua biblioteca. Atualize a biblioteca para renovar a lista."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此歌曲已不在你的资料库中。请刷新资料库以更新列表。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此歌曲已不在你的資料庫中。請重新整理資料庫以更新列表。"
           }
         }
       }

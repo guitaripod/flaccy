@@ -275,6 +275,7 @@ enum TrackContextMenu {
     }
 
     static func relativePath(for track: Track) -> String {
+        if let song = track.remoteSong { return song.path }
         let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
         let trackPath = track.fileURL.standardizedFileURL.path
         let docsPath = docsDir.path

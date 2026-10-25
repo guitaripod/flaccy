@@ -77,9 +77,11 @@ enum MacTrackMenuFactory {
         menu.addItem(shareSubmenuItem(
             subject: .track(title: track.title, artist: track.artist), anchor: anchor
         ))
-        menu.addItem(ClosureMenuItem(title: String(localized: "Show in Finder"), systemImage: "folder") {
-            NSWorkspace.shared.activateFileViewerSelecting([track.fileURL])
-        })
+        if let file = RemoteStreamCache.shared.readableFile(for: track.fileURL) {
+            menu.addItem(ClosureMenuItem(title: String(localized: "Show in Finder"), systemImage: "folder") {
+                NSWorkspace.shared.activateFileViewerSelecting([file])
+            })
+        }
         if PreviousMix.isAvailable(for: track) {
             menu.addItem(restorePreviousMixItem(for: track, in: window))
         }
@@ -90,7 +92,7 @@ enum MacTrackMenuFactory {
                 removeFromPlaylist()
             })
         }
-        if options.includeDelete {
+        if options.includeDelete, track.fileURL.isFileURL {
             menu.addItem(.separator())
             menu.addItem(ClosureMenuItem(
                 title: LibraryRoot.shared.isUsingDefaultRoot ? String(localized: "Move to Trash…") : String(localized: "Remove from Library…"),
@@ -249,7 +251,8 @@ enum MacTrackMenuFactory {
 /// get an explicit warning because Flaccy indexes them in place.
 enum TrackDeletion {
 
-    static func confirmAndDelete(_ tracks: [Track], in window: NSWindow?) {
+    static func confirmAndDelete(_ allTracks: [Track], in window: NSWindow?) {
+        let tracks = allTracks.filter { $0.fileURL.isFileURL }
         guard !tracks.isEmpty else { return }
         let usingDefaultRoot = LibraryRoot.shared.isUsingDefaultRoot
         let subject = tracks.count == 1

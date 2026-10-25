@@ -83,6 +83,7 @@ extension LibraryViewController {
     }
 
     func relativePath(for track: Track) -> String {
+        if let song = track.remoteSong { return song.path }
         let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
         let trackPath = track.fileURL.standardizedFileURL.path
         guard trackPath.hasPrefix(docsDir.path) else { return track.fileURL.lastPathComponent }

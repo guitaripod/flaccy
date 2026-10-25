@@ -18,6 +18,7 @@ nonisolated enum LibraryPaths {
     /// The slash-separated path of `url` under the root, the key a track is
     /// stored and synced under, in the Unicode form the watch sync uses on the Mac.
     static func relativePath(of url: URL) -> String {
+        if let song = RemoteTrackPath(assetURL: url) { return song.path }
         let rootPath = root.standardizedFileURL.path
         let filePath = url.standardizedFileURL.path
         var relative = url.lastPathComponent

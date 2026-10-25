@@ -92,6 +92,7 @@
 - **Architecture**: MVVM pattern throughout
 - **Target**: iOS 18, iPhone only
 - **Scene Management**: Root view controller set programmatically in `SceneDelegate.scene(_:willConnectTo:options:)`
+- **Music servers (OpenSubsonic)**: `Info.plist` sets `NSAllowsArbitraryLoads` on iOS and the Mac because people point Flaccy at their own server on a home network or a Tailscale address, usually plain HTTP, which ATS would refuse; iOS also carries `NSLocalNetworkUsageDescription` for the first connection to a LAN server.
 
 ## Development Patterns
 - Follow the existing programmatic UI approach - no Interface Builder

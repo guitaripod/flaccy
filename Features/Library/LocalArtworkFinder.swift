@@ -72,7 +72,8 @@ nonisolated enum LocalArtworkFinder {
         }
         for (index, track) in ordered.enumerated() {
             if Task.isCancelled || items.count >= maximumEmbedded { break }
-            for data in await embeddedPictures(in: track.fileURL) {
+            guard let readable = RemoteStreamCache.shared.readableFile(for: track.fileURL) else { continue }
+            for data in await embeddedPictures(in: readable) {
                 guard items.count < maximumEmbedded, seen.insert(contentHash(of: data)).inserted else { continue }
                 let number = track.trackNumber > 0 ? track.trackNumber : index + 1
                 guard let item = item(

@@ -10,7 +10,10 @@ import os
 nonisolated enum WatchSyncSizing {
 
     /// Replaced once at launch by the screenshot demo, before any sync reads it.
-    nonisolated(unsafe) static var sourceBytes: @Sendable (Track) -> Int64 = { diskBytes(of: $0.fileURL) }
+    nonisolated(unsafe) static var sourceBytes: @Sendable (Track) -> Int64 = { track in
+        if let song = track.remoteSong { return RemoteSongDirectory.shared.source(for: song)?.size ?? 0 }
+        return diskBytes(of: track.fileURL)
+    }
 
     private static let diskSizes = OSAllocatedUnfairLock(initialState: [String: Int64]())
 
@@ -23,7 +26,7 @@ nonisolated enum WatchSyncSizing {
         profile.estimatedBytes(
             durationSeconds: track.duration,
             sourceBytes: sourceBytes(track),
-            sourceKind: SyncStem.kind(ofExtension: track.fileURL.pathExtension)
+            sourceKind: SyncStem.kind(ofExtension: track.audioExtension)
         )
     }
 
@@ -36,7 +39,7 @@ nonisolated enum WatchSyncSizing {
         var totals: [WatchAudioProfile: Int64] = [:]
         for track in tracks {
             let source = sourceBytes(track)
-            let kind = SyncStem.kind(ofExtension: track.fileURL.pathExtension)
+            let kind = SyncStem.kind(ofExtension: track.audioExtension)
             for profile in WatchAudioProfile.allCases {
                 totals[profile, default: 0] += profile.estimatedBytes(
                     durationSeconds: track.duration,

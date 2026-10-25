@@ -315,6 +315,10 @@ final class Library: LibraryProviding {
     func deleteTracks(_ tracks: [Track]) async {
         guard !tracks.isEmpty else { return }
         for track in tracks {
+            guard track.fileURL.isFileURL else {
+                MidgarLog.notice("Not deleting a song that lives on a server: \(track.title)", category: .content)
+                continue
+            }
             do {
                 try FileManager.default.removeItem(at: track.fileURL)
                 MidgarLog.info("Deleted: \(track.fileURL.lastPathComponent)", category: .content)
@@ -322,7 +326,7 @@ final class Library: LibraryProviding {
                 MidgarLog.error("Delete failed for \(track.fileURL.lastPathComponent): \(error.localizedDescription)", category: .content)
             }
         }
-        AudioPlayer.shared.handleDeletedTracks(Set(tracks.map(\.fileURL)))
+        AudioPlayer.shared.handleDeletedTracks(Set(tracks.map(\.fileURL).filter(\.isFileURL)))
         await reload()
     }
 

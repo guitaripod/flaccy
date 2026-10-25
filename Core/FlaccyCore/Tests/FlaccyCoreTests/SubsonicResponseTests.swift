@@ -138,4 +138,39 @@ final class SubsonicResponseTests: XCTestCase {
         XCTAssertEqual(SubsonicFailure(code: 60), .trialExpired)
         XCTAssertEqual(SubsonicFailure(code: 99), .other(99))
     }
+
+    func testPlaylistDecodesItsFieldsAndEntries() throws {
+        let json = """
+        {"subsonic-response": {"status": "ok", "version": "1.16.1", "playlist": {
+            "id": "p1", "name": "Road", "songCount": 2, "duration": 40, "public": false, "owner": "flaccy",
+            "entry": [{"id": "s1", "title": "Opening"}, {"id": "s2", "title": "Middle"}]
+        }}}
+        """
+
+        let playlist = try XCTUnwrap(SubsonicResponse.decode(Data(json.utf8)).playlist)
+
+        XCTAssertEqual(playlist.playlist.name, "Road")
+        XCTAssertEqual(playlist.playlist.isPublic, false)
+        XCTAssertEqual(playlist.entry?.map(\.id), ["s1", "s2"])
+    }
+
+    func testPlaylistWithoutEntriesDecodesWithNone() throws {
+        let json = #"{"subsonic-response": {"status": "ok", "version": "1.16.1", "playlist": {"id": "p1", "name": "Empty"}}}"#
+
+        let playlist = try XCTUnwrap(SubsonicResponse.decode(Data(json.utf8)).playlist)
+
+        XCTAssertNil(playlist.entry)
+    }
+
+    func testSongCarriesThePersonsStateOnTheServer() throws {
+        let envelope = try decodeFixture("search3State")
+
+        let songs = try XCTUnwrap(envelope.searchResult3?.song)
+        XCTAssertEqual(songs[0].starred, "2026-10-25T15:40:34.817723644+02:00")
+        XCTAssertEqual(songs[0].playCount, 3)
+        XCTAssertEqual(songs[0].played, "2026-10-24T09:15:00Z")
+        XCTAssertNil(songs[1].starred)
+        XCTAssertNil(songs[1].playCount)
+        XCTAssertNil(songs[1].played)
+    }
 }

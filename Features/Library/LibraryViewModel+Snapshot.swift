@@ -39,7 +39,7 @@ extension LibraryViewModel {
             if !query.isEmpty {
                 let keys = songSearchKeys()
                 songs = songs.filter { track in
-                    if let key = keys[track.fileURL.path] { return key.contains(query) }
+                    if let key = keys[track.fileURL.absoluteString] { return key.contains(query) }
                     return Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)").contains(query)
                 }
             }

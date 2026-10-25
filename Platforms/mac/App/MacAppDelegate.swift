@@ -40,6 +40,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         EqualizerEngine.shared.start()
         #if DEBUG
         EqualizerExercise.runIfRequested()
+        RemoteExercise.runIfRequested()
         #endif
         MacLibrarySurfaceModel.shared.start()
 
@@ -66,6 +67,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         startLibraryPipeline()
+        RemoteLaunch.start()
         observeAppEvents()
         notifyLibraryRootFallbackIfNeeded()
         MacTrialRunwayPresenter.refresh(in: windowController.window)

@@ -289,7 +289,7 @@ actor EnrichmentCoordinator {
         case .aiBatch:
             let directories = (try? db.dueAIBatchDirectories(version: version, now: now, limit: Self.pageSize)) ?? []
             guard !directories.isEmpty else { return [] }
-            let unanalyzed = ((try? db.fetchAllTracks()) ?? []).filter { !$0.aiAnalyzed }
+            let unanalyzed = ((try? db.fetchAllTracks()) ?? []).filter { !$0.aiAnalyzed && $0.remoteServer == nil }
             let grouped = Dictionary(grouping: unanalyzed) { Self.directory(of: $0.fileURL) }
             return directories.compactMap { directory in
                 guard let tracks = grouped[directory], !tracks.isEmpty else { return nil }

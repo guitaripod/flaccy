@@ -309,6 +309,30 @@ extension DatabaseManager {
             }
         }
 
+        migrator.registerMigration("v16") { db in
+            try db.create(table: "remoteServers") { t in
+                t.column("id", .text).primaryKey()
+                t.column("name", .text).notNull()
+                t.column("baseURL", .text).notNull()
+                t.column("username", .text).notNull().defaults(to: "")
+                t.column("authKind", .text).notNull()
+                t.column("serverType", .text)
+                t.column("serverVersion", .text)
+                t.column("extensions", .text).notNull().defaults(to: "[]")
+                t.column("addedAt", .datetime).notNull()
+                t.column("lastSyncedAt", .datetime)
+            }
+            try db.alter(table: "tracks") { t in
+                t.add(column: "remoteServer", .text)
+                t.add(column: "remoteSuffix", .text)
+                t.add(column: "remoteSize", .integer)
+                t.add(column: "remoteCoverArt", .text)
+                t.add(column: "remoteAlbumId", .text)
+                t.add(column: "pinned", .integer).notNull().defaults(to: 0)
+            }
+            try db.create(index: "tracks_on_remoteServer", on: "tracks", columns: ["remoteServer"])
+        }
+
         return migrator
     }
 }

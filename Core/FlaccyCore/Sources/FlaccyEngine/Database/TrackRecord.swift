@@ -33,6 +33,14 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
     public var audioFingerprint: String?
     public var revision: Int = 1
     public var revisedAt: Date?
+    /// The id of the `remoteServers` row this song lives on; nil for a file in the library folder.
+    public var remoteServer: String?
+    public var remoteSuffix: String?
+    public var remoteSize: Int64?
+    public var remoteCoverArt: String?
+    public var remoteAlbumId: String?
+    /// Whether the person asked to keep this remote song on the device.
+    public var pinned: Bool = false
 
     public init(
         id: Int64? = nil,
@@ -62,7 +70,13 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
         fileModifiedMs: Int64? = nil,
         audioFingerprint: String? = nil,
         revision: Int = 1,
-        revisedAt: Date? = nil
+        revisedAt: Date? = nil,
+        remoteServer: String? = nil,
+        remoteSuffix: String? = nil,
+        remoteSize: Int64? = nil,
+        remoteCoverArt: String? = nil,
+        remoteAlbumId: String? = nil,
+        pinned: Bool = false
     ) {
         self.id = id
         self.fileURL = fileURL
@@ -92,6 +106,12 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
         self.audioFingerprint = audioFingerprint
         self.revision = revision
         self.revisedAt = revisedAt
+        self.remoteServer = remoteServer
+        self.remoteSuffix = remoteSuffix
+        self.remoteSize = remoteSize
+        self.remoteCoverArt = remoteCoverArt
+        self.remoteAlbumId = remoteAlbumId
+        self.pinned = pinned
     }
 }
 
