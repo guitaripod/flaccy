@@ -21,7 +21,7 @@ use flaccy_shared::home::{
 use flaccy_shared::home_copy;
 use flaccy_shared::playlist_cover;
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::Path;
 
 /// How many contexts are asked of the shared Jump Back In rule before the
 /// ones the library can no longer open are dropped, so a few stale entries
@@ -146,7 +146,7 @@ pub struct Fetched {
 /// and are only recomputed when `with_mixes` says the library or the history
 /// changed.
 pub fn fetch(
-    db_path: &PathBuf,
+    db_path: &Path,
     pool: Vec<Track>,
     previous_mixes: Vec<SuggestedPlaylist>,
     with_mixes: bool,

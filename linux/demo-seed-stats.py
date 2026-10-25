@@ -110,16 +110,16 @@ def seed_home(db: sqlite3.Connection, now: datetime.datetime) -> None:
         entries.append({
             "context": {"kind": "playlist", "id": str(playlist[0]),
                         "title": "Late Night Drive", "subtitle": ""},
-            "played_at": stamp - 5400,
+            "played_at": stamp - 1500,
         })
     entries.append({
         "context": {"kind": "mix", "id": "on-repeat", "title": "On Repeat", "subtitle": ""},
-        "played_at": stamp - 3600 * 30,
+        "played_at": stamp - 2700,
     })
     entries.append({
         "context": {"kind": "radio", "id": "library",
                     "title": "Library Radio", "subtitle": ""},
-        "played_at": stamp - 3600 * 50,
+        "played_at": stamp - 3600 * 5,
     })
     with open(os.path.join(data_dir, "recent-contexts.json"), "w") as handle:
         json.dump({"entries": entries}, handle)
@@ -151,6 +151,8 @@ def main() -> None:
             ts = date.replace(
                 hour=hour, minute=random.randint(0, 59), second=random.randint(0, 59)
             )
+            if ts > now:
+                ts = now - datetime.timedelta(minutes=random.randint(5, 600))
             duration = int(t[3]) if random.random() > 0.25 else 0
             rows.append(
                 (t[0], t[1], t[2], ts.strftime("%Y-%m-%d %H:%M:%S.000"), duration, 1)

@@ -4,6 +4,7 @@
 //! progress bar and the spark are drawn once, and no tick callback is ever
 //! added, so a resting Home costs the frame clock nothing.
 
+use crate::events::AppEvent;
 use crate::home_data::{
     AlbumCard, Cover, DayOneHero, JumpItem, MixCard, MixHero, MixKind, OtdCard, ResumeHero, Target,
 };
@@ -145,29 +146,34 @@ pub fn play(ui: &Rc<Ui>, target: &Target, context: &PlaybackContext) {
 pub fn cover(ui: &Rc<Ui>, cover: &Cover, side: i32, on_color: Option<OnColor>) -> gtk::Widget {
     match cover {
         Cover::Album((title, artist)) => {
-            let picture = gtk::Picture::builder()
-                .width_request(side)
-                .height_request(side)
-                .content_fit(gtk::ContentFit::Cover)
-                .halign(gtk::Align::Start)
-                .valign(gtk::Align::Start)
-                .build();
-            picture.set_overflow(gtk::Overflow::Hidden);
-            picture.add_css_class("cover");
-            picture.set_paintable(Some(
-                &ui.core.artwork.placeholder(&format!("{title}|{artist}")),
-            ));
-            crate::ui::artwork::follow_picture(&ui.core, &picture, title, artist, side as u32);
-            if let Some(on_color) = on_color {
-                ui.core
-                    .artwork
-                    .request(title, artist, side as u32, move |_, color| {
-                        if let Some(color) = color {
-                            on_color(color);
-                        }
-                    });
-            }
-            picture.upcast()
+            let album = vec![(title.clone(), artist.clone())];
+            let seed = format!("{title}|{artist}");
+            let mosaic = Mosaic::new();
+            mosaic.set_fixed_size(side);
+            mosaic.widget().add_css_class("cover");
+            mosaic.widget().set_halign(gtk::Align::Start);
+            mosaic.widget().set_valign(gtk::Align::Start);
+            mosaic.set_covers(ui, &seed, &album, on_color.clone());
+            let ui = Rc::clone(ui);
+            ui.core
+                .hub
+                .clone()
+                .subscribe_widget(mosaic.widget(), move |root, event| {
+                    let AppEvent::AlbumArtworkChanged {
+                        title: changed_title,
+                        artist: changed_artist,
+                    } = event
+                    else {
+                        return;
+                    };
+                    if *changed_title != album[0].0 || *changed_artist != album[0].1 {
+                        return;
+                    }
+                    if let Some(mosaic) = Mosaic::from_root(root) {
+                        mosaic.set_covers(&ui, &seed, &album, on_color.clone());
+                    }
+                });
+            mosaic.widget().clone().upcast()
         }
         Cover::Playlist { id, name, albums } => {
             let art = PlaylistArt::new(ui, *id, name, side, "cover", albums.clone());
@@ -296,23 +302,24 @@ struct HeroText {
     column: gtk::Box,
 }
 
-/// Kicker, big title, the line under it, and an optional badge and meta line.
-fn hero_text(
-    ui: &Rc<Ui>,
-    kicker: &str,
-    title: &str,
-    line: &str,
+/// The words of a hero: the kicker, the big title, the line under it (with
+/// the artist to open when it names one), and an optional badge and meta line.
+struct HeroLines<'a> {
+    kicker: &'a str,
+    title: &'a str,
+    line: &'a str,
     artist_link: Option<String>,
-    badge: Option<&str>,
-    meta: Option<&str>,
-    compact: bool,
-) -> HeroText {
+    badge: Option<&'a str>,
+    meta: Option<&'a str>,
+}
+
+fn hero_text(ui: &Rc<Ui>, lines: HeroLines, compact: bool) -> HeroText {
     let column = gtk::Box::new(gtk::Orientation::Vertical, 4);
     column.set_valign(gtk::Align::Center);
     column.set_hexpand(true);
-    column.append(&text(kicker, &["home-kicker"]));
+    column.append(&text(lines.kicker, &["home-kicker"]));
     let title = gtk::Label::builder()
-        .label(title)
+        .label(lines.title)
         .xalign(0.0)
         .wrap(true)
         .wrap_mode(pango::WrapMode::WordChar)
@@ -324,9 +331,9 @@ fn hero_text(
         title.add_css_class("home-title-compact");
     }
     column.append(&title);
-    if !line.is_empty() {
-        let artist = text(line, &["home-artist"]);
-        match artist_link {
+    if !lines.line.is_empty() {
+        let artist = text(lines.line, &["home-artist"]);
+        match lines.artist_link {
             Some(name) => {
                 artist.set_halign(gtk::Align::Start);
                 controls::attach_label_nav(ui, &artist, "Go to Artist", move |ui| {
@@ -337,16 +344,16 @@ fn hero_text(
         }
         column.append(&artist);
     }
-    if badge.is_some() || meta.is_some() {
+    if lines.badge.is_some() || lines.meta.is_some() {
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         row.set_margin_top(2);
-        if let Some(badge) = badge {
+        if let Some(badge) = lines.badge {
             let chip = gtk::Label::new(Some(badge));
             chip.add_css_class("quality-badge");
             chip.set_valign(gtk::Align::Center);
             row.append(&chip);
         }
-        if let Some(meta) = meta {
+        if let Some(meta) = lines.meta {
             row.append(&text(meta, &["dim", "caption"]));
         }
         column.append(&row);
@@ -415,12 +422,14 @@ pub fn resume_hero(
     let cover = cover(ui, &hero.cover, cover_side(mode), Some(on_color));
     let text_column = hero_text(
         ui,
-        &hero.kicker,
-        &hero.title,
-        &hero.subtitle,
-        hero.artist.clone(),
-        hero.quality.as_deref(),
-        hero.meta.as_deref(),
+        HeroLines {
+            kicker: &hero.kicker,
+            title: &hero.title,
+            line: &hero.subtitle,
+            artist_link: hero.artist.clone(),
+            badge: hero.quality.as_deref(),
+            meta: hero.meta.as_deref(),
+        },
         compact,
     );
 
@@ -484,12 +493,14 @@ pub fn mix_hero(ui: &Rc<Ui>, hero: &MixHero, mode: PageMode, on_color: OnColor) 
     let cover = cover(ui, &hero.cover, cover_side(mode), Some(on_color));
     let text_column = hero_text(
         ui,
-        &hero.kicker,
-        &hero.title,
-        &hero.subtitle,
-        None,
-        None,
-        Some(&hero.meta),
+        HeroLines {
+            kicker: &hero.kicker,
+            title: &hero.title,
+            line: &hero.subtitle,
+            artist_link: None,
+            badge: None,
+            meta: Some(&hero.meta),
+        },
         compact,
     );
     let mut body: Vec<gtk::Widget> = Vec::new();
@@ -559,12 +570,14 @@ pub fn day_one_hero(
     let cover = cover(ui, &hero.cover, cover_side(mode), Some(on_color));
     let text_column = hero_text(
         ui,
-        home_copy::DAY_ONE_KICKER,
-        home_copy::DAY_ONE_TITLE,
-        &hero.counts,
-        None,
-        None,
-        hero.hi_res.as_deref(),
+        HeroLines {
+            kicker: home_copy::DAY_ONE_KICKER,
+            title: home_copy::DAY_ONE_TITLE,
+            line: &hero.counts,
+            artist_link: None,
+            badge: None,
+            meta: hero.hi_res.as_deref(),
+        },
         compact,
     );
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -583,7 +596,7 @@ pub fn day_one_hero(
         });
     }
     buttons.append(&shuffle);
-    let radio = pill(Some("network-wireless-symbolic"), home_copy::RADIO, false);
+    let radio = pill(None, home_copy::RADIO, false);
     {
         let ui = Rc::clone(ui);
         radio.connect_clicked(move |_| ui.core.start_library_radio());
@@ -592,7 +605,10 @@ pub fn day_one_hero(
     arrange_hero(cover, text_column, vec![buttons.upcast()], mode)
 }
 
-pub fn section_heading(title: &str, link: Option<(&str, Box<dyn Fn()>)>) -> gtk::Box {
+/// A heading's optional link: its label and what it does.
+pub type HeadingLink<'a> = (&'a str, Box<dyn Fn()>);
+
+pub fn section_heading(title: &str, link: Option<HeadingLink>) -> gtk::Box {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     let heading = text(title, &["title-2", "home-heading"]);
     heading.set_hexpand(true);
@@ -663,6 +679,7 @@ fn jump_row(ui: &Rc<Ui>, item: &JumpItem) -> gtk::ListBoxRow {
     let art = cover(ui, &item.cover, JUMP_ROW_COVER, None);
     art.add_css_class("home-jump-cover");
     art.set_valign(gtk::Align::Center);
+    art.set_halign(gtk::Align::Start);
     row_box.append(&art);
     let labels = gtk::Box::new(gtk::Orientation::Vertical, 1);
     labels.set_valign(gtk::Align::Center);
@@ -696,18 +713,28 @@ fn play_target(ui: &Rc<Ui>, target: &Target, context: &PlaybackContext) {
     play(ui, target, context);
 }
 
+/// What a tile says under its cover, and the badge laid over a corner of it.
+struct TileWords<'a> {
+    title: &'a str,
+    subtitle: &'a str,
+    badge: Option<&'a str>,
+}
+
 /// A square cover over a title and subtitle: clicking opens, the round button
 /// that appears on hover or focus plays.
 fn tile(
     ui: &Rc<Ui>,
     cover_model: &Cover,
     side: i32,
-    title: &str,
-    subtitle: &str,
-    badge: Option<&str>,
+    words: TileWords,
     open_it: impl Fn() + 'static,
     play_it: impl Fn() + 'static,
 ) -> gtk::Overlay {
+    let TileWords {
+        title,
+        subtitle,
+        badge,
+    } = words;
     let art = cover(ui, cover_model, side, None);
     let art_host = gtk::Overlay::new();
     art_host.set_child(Some(&art));
@@ -781,9 +808,11 @@ pub fn mix_tile(ui: &Rc<Ui>, card: &MixCard, side: i32) -> gtk::Widget {
         ui,
         &card.cover,
         side,
-        &card.title,
-        &subtitle,
-        None,
+        TileWords {
+            title: &card.title,
+            subtitle: &subtitle,
+            badge: None,
+        },
         {
             let (ui, target, context) = (Rc::clone(ui), target.clone(), context.clone());
             move || open(&ui, &target, &context)
@@ -829,9 +858,11 @@ pub fn album_tile(ui: &Rc<Ui>, card: &AlbumCard) -> gtk::Widget {
         ui,
         &Cover::Album((album.title.clone(), album.artist.clone())),
         ALBUM_TILE,
-        &album.title,
-        &album.artist,
-        card.badge.as_deref(),
+        TileWords {
+            title: &album.title,
+            subtitle: &album.artist,
+            badge: card.badge.as_deref(),
+        },
         {
             let (ui, album) = (Rc::clone(ui), album.clone());
             move || albums::push_album_detail(&ui, &album)

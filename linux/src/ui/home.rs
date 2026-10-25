@@ -123,7 +123,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 AppEvent::LibraryReloaded | AppEvent::HistoryImport { done: true, .. } => {
                     state.refresh(true)
                 }
-                AppEvent::NaturalEnd(_) => state.refresh(false),
+                AppEvent::ScrobbleRecorded => state.refresh(false),
                 AppEvent::TrackChanged(_)
                 | AppEvent::PlayingChanged(_)
                 | AppEvent::HomeChanged
@@ -225,7 +225,8 @@ impl State {
             layout,
             has_history: ui.core.db.has_scrobbles(),
             is_playing: ui.core.player.is_playing(),
-            downloads: ui.core.db.active_download_count().max(0) as usize,
+            downloads: demo_downloads()
+                .unwrap_or_else(|| ui.core.db.active_download_count().max(0) as usize),
             now: chrono::Utc::now().timestamp(),
             offset: local_offset(),
         })
@@ -283,10 +284,7 @@ impl State {
             .any(|block| matches!(block, Block::Single(Section::Resume)));
         if model.downloads > 0 {
             let card = self.downloads_card(model.downloads);
-            let strip_beside_hero = sections
-                .iter_mut()
-                .take(2)
-                .find(|section| section.is_strip);
+            let strip_beside_hero = sections.iter_mut().take(2).find(|section| section.is_strip);
             match strip_beside_hero {
                 Some(strip) => strip.cards.push(card),
                 None => {
@@ -317,6 +315,9 @@ impl State {
     }
 
     fn download_fraction(&self) -> f64 {
+        if demo_downloads().is_some() {
+            return 0.42;
+        }
         let fractions = self.download_fractions.borrow();
         if fractions.is_empty() {
             return 0.0;
@@ -438,6 +439,7 @@ impl State {
                         row.append(&hero);
                         let jump = self.jump_section(model, mode);
                         jump.set_size_request(parts::JUMP_BACK_IN_WIDTH, -1);
+                        jump.set_hexpand(false);
                         jump.set_valign(gtk::Align::Start);
                         row.append(&jump);
                         sections.push(Slot::widget(row.upcast()));
@@ -588,6 +590,17 @@ impl Slot {
         }
         flow.upcast()
     }
+}
+
+/// Demo only: `FLACCY_DEMO_HOME_DOWNLOADS=2` shows the Downloads card as if two
+/// songs were 42% done, since a headless run has no real download to show.
+fn demo_downloads() -> Option<usize> {
+    if !crate::config::demo_mode() {
+        return None;
+    }
+    std::env::var("FLACCY_DEMO_HOME_DOWNLOADS")
+        .ok()
+        .and_then(|count| count.parse().ok())
 }
 
 /// Seconds east of UTC for the local zone, now.

@@ -1946,7 +1946,7 @@ fn demo_window_size() -> Option<(i32, i32)> {
     }
     match std::env::var("FLACCY_DEMO_HOME").ok().as_deref() {
         Some("narrow") => Some((420, 900)),
-        Some("wide") => Some((1440, 900)),
-        _ => None,
+        Some(_) => Some((1440, 900)),
+        None => None,
     }
 }

@@ -81,6 +81,12 @@ glib::wrapper! {
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
+impl Default for HomeBackdrop {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HomeBackdrop {
     pub fn new() -> Self {
         glib::Object::new()

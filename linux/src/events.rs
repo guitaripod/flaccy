@@ -81,6 +81,9 @@ pub enum AppEvent {
     WantlistChanged,
     WantlistSeen,
     DownloadsChanged,
+    /// A play was written to the scrobble table, so everything built from the
+    /// history (Home's This Week and Jump Back In) can be read again.
+    ScrobbleRecorded,
     /// Home's inputs changed: the last session or the recent contexts.
     HomeChanged,
     DownloadProgress {
