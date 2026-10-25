@@ -1,5 +1,10 @@
 {
   "de": {
+    "home": {
+      "kicker": "Home",
+      "headline": "Da weitermachen,\n*wo du aufgehört hast.*",
+      "sub": "Weiterhören, Mixe und Erinnerungen aus deiner Mediathek."
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "Deine Sammlung,\nin *voller Qualität.*"
@@ -66,6 +71,11 @@
     }
   },
   "es": {
+    "home": {
+      "kicker": "Inicio",
+      "headline": "Retoma justo\n*donde lo dejaste.*",
+      "sub": "Seguir escuchando, mezclas y recuerdos de tu biblioteca."
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "Tu colección,\nen *calidad total.*"
@@ -132,6 +142,11 @@
     }
   },
   "fr": {
+    "home": {
+      "kicker": "Accueil",
+      "headline": "Reprenez là où\n*vous vous étiez arrêté.*",
+      "sub": "Reprendre, mix et souvenirs de votre bibliothèque."
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "Votre collection,\nen *qualité totale.*"
@@ -198,6 +213,11 @@
     }
   },
   "it": {
+    "home": {
+      "kicker": "Home",
+      "headline": "Ricomincia da\n*dove eri rimasto.*",
+      "sub": "Riprendi, mix e ricordi dalla tua libreria."
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "La tua collezione,\nin *piena qualità.*"
@@ -264,6 +284,11 @@
     }
   },
   "ja": {
+    "home": {
+      "kicker": "ホーム",
+      "headline": "続きから、\n*そのまま聴こう。*",
+      "sub": "続きの曲、ミックス、ライブラリからの思い出。"
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "コレクションを、\n*フル品質で。*"
@@ -330,6 +355,11 @@
     }
   },
   "ko": {
+    "home": {
+      "kicker": "홈",
+      "headline": "멈춘 곳부터\n*바로 이어 듣기.*",
+      "sub": "보관함에서 고른 계속 듣기, 믹스, 추억."
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "나만의 컬렉션을,\n*최고 음질로.*"
@@ -396,6 +426,11 @@
     }
   },
   "pl": {
+    "home": {
+      "kicker": "Strona główna",
+      "headline": "Wracaj dokładnie\n*tam, gdzie skończyłeś.*",
+      "sub": "Kontynuuj, miksy i wspomnienia z Twojej biblioteki."
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "Twoja kolekcja,\nw *pełnej jakości.*"
@@ -462,6 +497,11 @@
     }
   },
   "pt-BR": {
+    "home": {
+      "kicker": "Início",
+      "headline": "Continue exatamente\n*de onde parou.*",
+      "sub": "Continuar, mixes e memórias da sua biblioteca."
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "Sua coleção,\nem *qualidade total.*"
@@ -528,6 +568,11 @@
     }
   },
   "zh-Hans": {
+    "home": {
+      "kicker": "主页",
+      "headline": "从上次停下的地方\n*接着听。*",
+      "sub": "继续播放、混音和资料库里的回忆。"
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "你的音乐收藏，\n*全音质呈现。*"
@@ -594,6 +639,11 @@
     }
   },
   "zh-Hant": {
+    "home": {
+      "kicker": "首頁",
+      "headline": "從上次停下的地方\n*接著聽。*",
+      "sub": "繼續播放、混音與資料庫中的回憶。"
+    },
     "hero": {
       "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
       "headline": "你的音樂收藏，\n*全音質呈現。*"
