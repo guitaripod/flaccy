@@ -30,6 +30,14 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 
 ## Features
 
+### Home
+- **Opens where you left off** — Continue resumes the album or playlist you were in, with a track-by-track progress bar and the time left
+- **Jump Back In** — the albums, playlists, mixes and radios you started lately, one tap from playing
+- **Made for You** — Heavy Rotation, Crate Dig, On Repeat, Rediscover, Tonight's Spin and an endless Library Radio, built from your own listening
+- **On This Day** — the album you played most on this date in an earlier year, beside This Week's listening at a glance
+- **Yours to arrange** — reorder or hide any section (Edit Home on iPhone, Customize Home on Mac and Linux); the desktop apps can keep opening where you left off
+- **Worked out on your device** from your library and play history, offline
+
 ### Playback
 - **Gapless playback** across all supported formats — FLAC, M4A, AAC, ALAC, MP3, WAV, AIFF, CAF
 - **Quality badges** — codec, bit depth, and sample rate on every track (FLAC · 24/96)
