@@ -1,10 +1,12 @@
+use crate::db::{Db, PlaylistRow, PlaylistTrackRow};
 use crate::events::AppEvent;
 use crate::library::{format_time, Library, Track};
+use crate::ui::controls::TrackIndexCell;
 use crate::ui::mosaic::{AlbumRef, Mosaic};
 use crate::ui::playlist_cover::PlaylistArt;
 use crate::ui::track_page::{
-    matches, reveal, reveal_row, ControlBar, Frame, PageKind, PageMode, TableOptions, TrackLayout,
-    TrackTable, FILTER_THRESHOLD,
+    matches_text, reveal, reveal_row, search_text, ControlBar, Frame, PageKind, PageMode,
+    TableOptions, TrackLayout, TrackTable, FILTER_THRESHOLD,
 };
 use crate::ui::{artwork_editor, context, Ui};
 use adw::prelude::*;
@@ -13,7 +15,7 @@ use gtk::glib::BoxedAnyObject;
 use gtk::{gdk, gio, glib, pango};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 const PICKER_COVER_SIDE: i32 = 48;
 const THUMB_PX: i32 = 40;
@@ -71,6 +73,7 @@ impl PlaylistSort {
 struct PlaylistCard {
     id: i64,
     name: String,
+    name_key: String,
     created_at: i64,
     tracks: usize,
     duration: f64,
@@ -120,16 +123,33 @@ fn created_text(created_at: i64) -> String {
         .unwrap_or_default()
 }
 
-/// Maps every library track to the (title, artist) key its album's artwork is
-/// cached under, which is the album grouping and not the track's own tags.
-fn album_index(library: &Library) -> HashMap<&str, (&str, &str)> {
+/// The library's songs among `wanted`, by relative path. A path the library
+/// lists twice keeps its last entry, as a map of the whole library would.
+fn tracks_among<'a>(library: &'a Library, wanted: &HashSet<&str>) -> HashMap<&'a str, &'a Track> {
+    library
+        .tracks
+        .iter()
+        .filter(|track| wanted.contains(track.rel_path.as_str()))
+        .map(|track| (track.rel_path.as_str(), track))
+        .collect()
+}
+
+/// Maps the `wanted` library tracks to the (title, artist) key their album's
+/// artwork is cached under, which is the album grouping and not the track's own
+/// tags.
+fn album_index<'a>(
+    library: &'a Library,
+    wanted: &HashSet<&str>,
+) -> HashMap<&'a str, (&'a str, &'a str)> {
     let mut index = HashMap::new();
     for album in &library.albums {
         for track in &album.tracks {
-            index.insert(
-                track.rel_path.as_str(),
-                (album.title.as_str(), album.artist.as_str()),
-            );
+            if wanted.contains(track.rel_path.as_str()) {
+                index.insert(
+                    track.rel_path.as_str(),
+                    (album.title.as_str(), album.artist.as_str()),
+                );
+            }
         }
     }
     index
@@ -149,33 +169,84 @@ fn cover_albums<'a>(
     playlist_cover::mosaic_albums(&albums)
 }
 
+/// Everything the playlists grid reads from the database, in one pass.
+struct PlaylistSnapshot {
+    rows: Vec<PlaylistRow>,
+    tracks: Vec<(i64, String)>,
+}
+
+impl PlaylistSnapshot {
+    fn load(db: &Db) -> Self {
+        Self {
+            rows: db.fetch_playlists(),
+            tracks: db.all_playlist_tracks(),
+        }
+    }
+
+    /// Changes whenever a playlist is created, renamed, deleted or has a song
+    /// added, removed or moved.
+    fn digest(&self) -> u64 {
+        let mut hash = 0xcbf2_9ce4_8422_2325u64;
+        for row in &self.rows {
+            hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row.name);
+            hash = hash.rotate_left(5) ^ (row.id as u64);
+            hash = hash.rotate_left(5) ^ (row.created_at as u64);
+        }
+        for (playlist_id, rel) in &self.tracks {
+            hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(rel);
+            hash = hash.rotate_left(5) ^ (*playlist_id as u64);
+        }
+        hash
+    }
+}
+
+/// What the last grid rebuild read: when the library, the playlists and the
+/// sort are all still the same, nothing the grid shows can have changed.
+struct GridSource {
+    library: Weak<Library>,
+    playlists: u64,
+    sort: PlaylistSort,
+}
+
+impl GridSource {
+    fn new(library: &Rc<Library>, snapshot: &PlaylistSnapshot, sort: PlaylistSort) -> Self {
+        Self {
+            library: Rc::downgrade(library),
+            playlists: snapshot.digest(),
+            sort,
+        }
+    }
+
+    fn same_as(&self, other: &GridSource) -> bool {
+        self.library.ptr_eq(&other.library)
+            && self.playlists == other.playlists
+            && self.sort == other.sort
+    }
+}
+
 /// Every playlist resolved against the live library: files that have left the
 /// library neither count nor play, matching what the detail page lists.
-fn load_cards(ui: &Rc<Ui>) -> Vec<PlaylistCard> {
-    let library = ui.core.library.borrow().clone();
-    let by_path: HashMap<&str, &Track> = library
-        .tracks
-        .iter()
-        .map(|track| (track.rel_path.as_str(), track))
-        .collect();
-    let album_of = album_index(&library);
-    let mut grouped: HashMap<i64, Vec<String>> = HashMap::new();
-    for (playlist_id, rel) in ui.core.db.all_playlist_tracks() {
-        grouped.entry(playlist_id).or_default().push(rel);
+fn load_cards(snapshot: &PlaylistSnapshot, library: &Library) -> Vec<PlaylistCard> {
+    let wanted: HashSet<&str> = snapshot.tracks.iter().map(|(_, rel)| rel.as_str()).collect();
+    let by_path = tracks_among(library, &wanted);
+    let album_of = album_index(library, &wanted);
+    let mut grouped: HashMap<i64, Vec<&str>> = HashMap::new();
+    for (playlist_id, rel) in &snapshot.tracks {
+        grouped.entry(*playlist_id).or_default().push(rel);
     }
-    ui.core
-        .db
-        .fetch_playlists()
-        .into_iter()
+    snapshot
+        .rows
+        .iter()
         .map(|row| {
             let rels = grouped.remove(&row.id).unwrap_or_default();
             let playable: Vec<&Track> = rels
                 .iter()
-                .filter_map(|rel| by_path.get(rel.as_str()).copied())
+                .filter_map(|rel| by_path.get(rel).copied())
                 .collect();
             PlaylistCard {
                 id: row.id,
-                name: row.name,
+                name: row.name.clone(),
+                name_key: row.name.to_lowercase(),
                 created_at: row.created_at,
                 tracks: playable.len(),
                 duration: playable.iter().map(|track| track.duration).sum(),
@@ -189,18 +260,22 @@ fn load_cards(ui: &Rc<Ui>) -> Vec<PlaylistCard> {
 }
 
 fn sort_cards(cards: &mut [PlaylistCard], sort: PlaylistSort) {
-    let name_key = |card: &PlaylistCard| card.name.to_lowercase();
+    let by_name = |a: &PlaylistCard, b: &PlaylistCard| {
+        a.name_key.cmp(&b.name_key).then(a.id.cmp(&b.id))
+    };
     match sort {
-        PlaylistSort::Name => cards.sort_by_key(|card| (name_key(card), card.id)),
+        PlaylistSort::Name => cards.sort_by(by_name),
         PlaylistSort::RecentlyCreated => {
-            cards.sort_by_key(|card| (-card.created_at, name_key(card), card.id))
+            cards.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| by_name(a, b)))
         }
         PlaylistSort::MostSongs => {
-            cards.sort_by_key(|card| (std::cmp::Reverse(card.tracks), name_key(card), card.id))
+            cards.sort_by(|a, b| b.tracks.cmp(&a.tracks).then_with(|| by_name(a, b)))
         }
-        PlaylistSort::Longest => {
-            cards.sort_by_key(|card| (-(card.duration as i64), name_key(card), card.id))
-        }
+        PlaylistSort::Longest => cards.sort_by(|a, b| {
+            (b.duration as i64)
+                .cmp(&(a.duration as i64))
+                .then_with(|| by_name(a, b))
+        }),
     }
 }
 
@@ -227,21 +302,15 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     )));
     let cards: Rc<RefCell<Vec<PlaylistCard>>> = Rc::new(RefCell::new(Vec::new()));
 
+    let needle = Rc::new(RefCell::new(ui.query.borrow().to_lowercase()));
     let filter = {
-        let query = Rc::clone(&ui.query);
+        let needle = Rc::clone(&needle);
         gtk::CustomFilter::new(move |obj| {
             let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
                 return true;
             };
-            let query = query.borrow();
-            if query.is_empty() {
-                return true;
-            }
-            boxed
-                .borrow::<PlaylistCard>()
-                .name
-                .to_lowercase()
-                .contains(&query.to_lowercase())
+            let needle = needle.borrow();
+            needle.is_empty() || boxed.borrow::<PlaylistCard>().name_key.contains(needle.as_str())
         })
     };
     let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
@@ -459,8 +528,16 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let sort_mode = Rc::clone(&sort_mode);
         let cards = Rc::clone(&cards);
         let applied = Cell::new(0u64);
+        let source: RefCell<Option<GridSource>> = RefCell::new(None);
         Rc::new(move |force| {
-            let mut loaded = load_cards(&ui);
+            let snapshot = PlaylistSnapshot::load(&ui.core.db);
+            let library = ui.core.library.borrow().clone();
+            let read = GridSource::new(&library, &snapshot, sort_mode.get());
+            if !force && source.borrow().as_ref().is_some_and(|last| last.same_as(&read)) {
+                return;
+            }
+            *source.borrow_mut() = Some(read);
+            let mut loaded = load_cards(&snapshot, &library);
             sort_cards(&mut loaded, sort_mode.get());
             let fingerprint = cards_fingerprint(&loaded);
             if force {
@@ -491,12 +568,40 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             *cards.borrow_mut() = loaded;
         })
     };
-    rebuild(false);
+
+    let stale = Rc::new(Cell::new(true));
+    let stale_forced = Rc::new(Cell::new(false));
+    let request: Rc<dyn Fn(bool)> = {
+        let rebuild = Rc::clone(&rebuild);
+        let stack = stack.clone();
+        let stale = Rc::clone(&stale);
+        let stale_forced = Rc::clone(&stale_forced);
+        Rc::new(move |force| {
+            if stack.is_mapped() {
+                rebuild(force);
+            } else {
+                stale.set(true);
+                if force {
+                    stale_forced.set(true);
+                }
+            }
+        })
+    };
+    {
+        let rebuild = Rc::clone(&rebuild);
+        let stale = Rc::clone(&stale);
+        let stale_forced = Rc::clone(&stale_forced);
+        stack.connect_map(move |_| {
+            if stale.replace(false) {
+                rebuild(stale_forced.replace(false));
+            }
+        });
+    }
 
     {
         let ui = Rc::clone(ui);
         let sort_mode = Rc::clone(&sort_mode);
-        let rebuild = Rc::clone(&rebuild);
+        let request = Rc::clone(&request);
         let scroll = scroll.clone();
         sort_dropdown.connect_selected_notify(move |dropdown| {
             let sort =
@@ -507,20 +612,24 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             ui.core.config.borrow_mut().playlist_sort = sort.id().to_string();
             ui.core.save_config();
             scroll.vadjustment().set_value(0.0);
-            rebuild(false);
+            request(false);
         });
     }
 
     {
-        let rebuild = Rc::clone(&rebuild);
+        let request = Rc::clone(&request);
         let filter = filter.clone();
+        let needle = Rc::clone(&needle);
         let cards = Rc::clone(&cards);
         let refresh_pending = Rc::new(Cell::new(false));
         ui.core
             .hub
             .subscribe_widget(&stack, move |_, event| match event {
-                AppEvent::LibraryReloaded => rebuild(false),
-                AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
+                AppEvent::LibraryReloaded => request(false),
+                AppEvent::SearchChanged(query) => {
+                    *needle.borrow_mut() = query.to_lowercase();
+                    filter.changed(gtk::FilterChange::Different);
+                }
                 AppEvent::AlbumEnriched { title, artist }
                 | AppEvent::AlbumArtworkChanged { title, artist } => {
                     let shown = cards
@@ -528,13 +637,13 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                         .iter()
                         .any(|card| card.covers.iter().any(|(t, a)| t == title && a == artist));
                     if shown && !refresh_pending.replace(true) {
-                        let rebuild = Rc::clone(&rebuild);
+                        let request = Rc::clone(&request);
                         let refresh_pending = Rc::clone(&refresh_pending);
                         glib::timeout_add_local_once(
                             std::time::Duration::from_millis(600),
                             move || {
                                 refresh_pending.set(false);
-                                rebuild(true);
+                                request(true);
                             },
                         );
                     }
@@ -542,6 +651,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 _ => {}
             });
     }
+
+    request(false);
 
     stack.upcast()
 }
@@ -682,15 +793,14 @@ fn install_list_breakpoints(
 /// menus that embed submenu sections. Searchable once the list grows, with each
 /// playlist's cover, and marks the ones that already hold the song.
 pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
-    let mut cards = load_cards(ui);
+    let snapshot = PlaylistSnapshot::load(&ui.core.db);
+    let mut cards = load_cards(&snapshot, &ui.core.library.borrow());
     sort_cards(&mut cards, PlaylistSort::Name);
-    let holding: HashSet<i64> = ui
-        .core
-        .db
-        .all_playlist_tracks()
-        .into_iter()
+    let holding: HashSet<i64> = snapshot
+        .tracks
+        .iter()
         .filter(|(_, rel)| rel == rel_path)
-        .map(|(playlist_id, _)| playlist_id)
+        .map(|(playlist_id, _)| *playlist_id)
         .collect();
 
     let list = gtk::ListBox::builder()
@@ -768,7 +878,7 @@ pub fn present_add_to_playlist(ui: &Rc<Ui>, rel_path: &str) {
     }
 
     let names: Rc<Vec<String>> =
-        Rc::new(cards.iter().map(|card| card.name.to_lowercase()).collect());
+        Rc::new(cards.iter().map(|card| card.name_key.clone()).collect());
     let query = Rc::new(RefCell::new(String::new()));
     {
         let names = Rc::clone(&names);
@@ -956,10 +1066,108 @@ struct DetailView {
     empty: adw::StatusPage,
     hint: gtk::Label,
     entries: Rc<RefCell<Vec<(i64, Track)>>>,
+    albums: RefCell<Vec<Option<AlbumRef>>>,
+    search: RefCell<Vec<String>>,
     query: Rc<RefCell<String>>,
-    album_labels: RefCell<Vec<gtk::Label>>,
+    rows: RefCell<Vec<RowSlot>>,
+    row_pool: RefCell<HashMap<i64, RowSlot>>,
+    list_current: Cell<bool>,
+    table_current: Cell<bool>,
+    build_generation: Cell<u64>,
+    stale: Cell<bool>,
     show_albums: Cell<bool>,
     applied: Cell<u64>,
+    source: RefCell<Option<DetailSource>>,
+}
+
+/// Rows built before the first frame of a long list; the rest follow while the
+/// window stays responsive.
+const FIRST_ROWS: usize = 60;
+/// Rows built per idle callback after that.
+const ROWS_PER_IDLE: usize = 24;
+
+/// One built row of the list layout and the handles that renumber it.
+struct RowSlot {
+    row_id: i64,
+    rel_path: String,
+    look: u64,
+    number: Cell<usize>,
+    row: gtk::ListBoxRow,
+    index_cell: TrackIndexCell,
+    album_label: gtk::Label,
+}
+
+impl RowSlot {
+    fn set_number(&self, number: usize) {
+        if self.number.replace(number) != number {
+            self.index_cell.set_text(&number.to_string());
+        }
+    }
+}
+
+/// What a row shows of its song, so a row is only reused while it still says
+/// the same thing.
+fn row_look(track: &Track, album: &Option<AlbumRef>) -> u64 {
+    let mut hash = crate::palette::fnv1a_64(&track.title);
+    hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&track.artist);
+    hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&track.album);
+    hash = hash.rotate_left(5) ^ track.duration.to_bits();
+    if let Some((title, artist)) = album {
+        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(title);
+        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(artist);
+    }
+    hash
+}
+
+/// A row's identity: its place in the stored playlist, its song, and what it
+/// shows of it.
+type RowKey<'a> = (i64, &'a str, u64);
+
+/// How the rows on screen line up with the rows wanted: the leading and
+/// trailing rows that are the same song in the same place stay untouched, and
+/// only what lies between them is replaced.
+#[derive(Debug, PartialEq)]
+struct RowPlan {
+    prefix: usize,
+    suffix: usize,
+}
+
+fn plan_rows(old: &[RowKey], new: &[RowKey]) -> RowPlan {
+    let prefix = old.iter().zip(new).take_while(|(a, b)| a == b).count();
+    let room = old.len().min(new.len()) - prefix;
+    let suffix = old
+        .iter()
+        .rev()
+        .zip(new.iter().rev())
+        .take(room)
+        .take_while(|(a, b)| a == b)
+        .count();
+    RowPlan { prefix, suffix }
+}
+
+/// What the last detail refresh read: while the library, the name and the
+/// stored rows are all still the same, there is nothing to resolve again.
+struct DetailSource {
+    library: Weak<Library>,
+    digest: u64,
+}
+
+impl DetailSource {
+    fn new(library: &Rc<Library>, name: &str, rows: &[PlaylistTrackRow]) -> Self {
+        let mut digest = crate::palette::fnv1a_64(name);
+        for row in rows {
+            digest = digest.rotate_left(5) ^ crate::palette::fnv1a_64(&row.rel_path);
+            digest = digest.rotate_left(5) ^ (row.row_id as u64);
+        }
+        Self {
+            library: Rc::downgrade(library),
+            digest,
+        }
+    }
+
+    fn same_as(&self, other: &DetailSource) -> bool {
+        self.library.ptr_eq(&other.library) && self.digest == other.digest
+    }
 }
 
 impl DetailView {
@@ -967,8 +1175,8 @@ impl DetailView {
     /// for it beside the titles.
     fn set_show_albums(&self, shown: bool) {
         self.show_albums.set(shown);
-        for label in self.album_labels.borrow().iter() {
-            label.set_visible(shown);
+        for slot in self.rows.borrow().iter() {
+            slot.album_label.set_visible(shown);
         }
     }
 
@@ -991,6 +1199,9 @@ impl DetailView {
             self.hint
                 .set_label("A table is a view of the playlist: switch to List to reorder · right-click to remove");
         } else {
+            if !self.list_current.get() {
+                self.sync_rows();
+            }
             self.stack.set_visible_child_name("list");
             self.hint
                 .set_label("Drag rows to reorder · right-click to remove");
@@ -999,9 +1210,13 @@ impl DetailView {
     }
 
     fn ensure_table(self: &Rc<Self>) {
-        if self.table.borrow().is_some() {
+        if let Some(table) = self.table.borrow().as_ref() {
+            if !self.table_current.replace(true) {
+                table.set_tracks(&self.numbered_tracks());
+            }
             return;
         }
+        self.table_current.set(true);
         let options = TableOptions {
             kind: Some(PageKind::Playlist),
             disc_of: None,
@@ -1069,7 +1284,7 @@ impl DetailView {
         self.update_filter_status();
     }
 
-    fn locate_playing(&self) {
+    fn locate_playing(self: &Rc<Self>) {
         let Some(current) = self.ui.core.player.current_track() else {
             self.ui.core.toast("Nothing is playing");
             return;
@@ -1094,6 +1309,7 @@ impl DetailView {
         let scroll = self.frame.scroll.clone();
         let table = self.table.borrow().clone();
         let layout = self.layout.get();
+        self.build_through(index);
         let row = self.list.row_at_index(index as i32);
         let rel_path = current.rel_path.clone();
         glib::idle_add_local_once(move || match (layout, table) {
@@ -1123,32 +1339,60 @@ impl DetailView {
         }
     }
 
+    /// Brings the page up to date with the database and the library. A page
+    /// that is not on screen only notes that it is stale: it catches up when
+    /// it is shown again, so a library reload never rebuilds a hidden list.
     fn refresh(self: &Rc<Self>) {
-        let ui = &self.ui;
-        let Some(name) = ui.core.db.playlist_name(self.playlist_id) else {
+        let Some(name) = self.ui.core.db.playlist_name(self.playlist_id) else {
             self.close();
             return;
         };
+        if !self.is_shown() {
+            self.stale.set(true);
+            return;
+        }
+        self.reload(&name);
+    }
+
+    fn is_shown(&self) -> bool {
+        self.page.upgrade().is_some_and(|page| page.is_mapped())
+    }
+
+    /// Runs the pending refresh, if any, once the page is on screen again.
+    fn catch_up(self: &Rc<Self>) {
+        if self.stale.replace(false) {
+            self.refresh();
+        }
+    }
+
+    fn reload(self: &Rc<Self>, name: &str) {
+        let ui = &self.ui;
         let library = ui.core.library.borrow().clone();
-        let by_path: HashMap<&str, &Track> = library
-            .tracks
+        let rows = ui.core.db.playlist_tracks(self.playlist_id);
+        let read = DetailSource::new(&library, name, &rows);
+        if self
+            .source
+            .borrow()
+            .as_ref()
+            .is_some_and(|last| last.same_as(&read))
+        {
+            return;
+        }
+        *self.source.borrow_mut() = Some(read);
+
+        let wanted: HashSet<&str> = rows.iter().map(|row| row.rel_path.as_str()).collect();
+        let by_path = tracks_among(&library, &wanted);
+        let found: Vec<(i64, &Track)> = rows
             .iter()
-            .map(|track| (track.rel_path.as_str(), track))
-            .collect();
-        let resolved: Vec<(i64, Track)> = ui
-            .core
-            .db
-            .playlist_tracks(self.playlist_id)
-            .into_iter()
             .filter_map(|row| {
                 by_path
                     .get(row.rel_path.as_str())
-                    .map(|track| (row.row_id, (*track).clone()))
+                    .map(|track| (row.row_id, *track))
             })
             .collect();
 
-        let mut fingerprint = crate::palette::fnv1a_64(&name);
-        for (row_id, track) in &resolved {
+        let mut fingerprint = crate::palette::fnv1a_64(name);
+        for (row_id, track) in &found {
             fingerprint = fingerprint.rotate_left(5)
                 ^ crate::palette::fnv1a_64(&format!("{row_id}|{}", track.rel_path));
         }
@@ -1156,45 +1400,56 @@ impl DetailView {
             return;
         }
 
-        self.title.set_label(&name);
+        self.title.set_label(name);
         if let Some(page) = self.page.upgrade() {
-            page.set_title(&name);
+            page.set_title(name);
         }
-        let duration: f64 = resolved.iter().map(|(_, track)| track.duration).sum();
+        let duration: f64 = found.iter().map(|(_, track)| track.duration).sum();
         let created = created_text(self.created_at);
-        let mut info_parts = if resolved.is_empty() {
+        let mut info_parts = if found.is_empty() {
             vec!["No songs yet".to_string()]
         } else {
-            vec![songs_text(resolved.len()), span_text(duration)]
+            vec![songs_text(found.len()), span_text(duration)]
         };
         if !created.is_empty() {
             info_parts.push(format!("Created {created}"));
         }
         self.info.set_label(&info_parts.join(" · "));
 
-        let album_of = album_index(&library);
+        let album_of = album_index(&library, &wanted);
         let covers = cover_albums(
-            resolved.iter().map(|(_, track)| track.rel_path.as_str()),
+            found.iter().map(|(_, track)| track.rel_path.as_str()),
             &album_of,
         );
-        self.art.bind(self.playlist_id, &name, covers);
-        if resolved.is_empty() {
+        self.art.bind(self.playlist_id, name, covers);
+        if found.is_empty() {
             *self.dominant.borrow_mut() = None;
             self.backdrop.queue_draw();
         }
 
+        *self.albums.borrow_mut() = found
+            .iter()
+            .map(|(_, track)| {
+                album_of
+                    .get(track.rel_path.as_str())
+                    .map(|(title, artist)| (title.to_string(), artist.to_string()))
+            })
+            .collect();
+        *self.search.borrow_mut() = found.iter().map(|(_, track)| search_text(track)).collect();
+        *self.entries.borrow_mut() = found
+            .into_iter()
+            .map(|(row_id, track)| (row_id, track.clone()))
+            .collect();
+
         let saved = self.scroll.vadjustment().value();
-        while let Some(child) = self.list.first_child() {
-            self.list.remove(&child);
+        self.build_generation.set(self.build_generation.get() + 1);
+        self.list_current.set(false);
+        self.table_current.set(false);
+        if self.layout.get() == TrackLayout::Table {
+            self.ensure_table();
+        } else {
+            self.sync_rows();
         }
-        let mut labels = Vec::with_capacity(resolved.len());
-        for (index, (row_id, track)) in resolved.iter().enumerate() {
-            let (row, album_label) = self.build_row(index + 1, *row_id, track, &album_of);
-            self.list.append(&row);
-            labels.push(album_label);
-        }
-        *self.album_labels.borrow_mut() = labels;
-        *self.entries.borrow_mut() = resolved;
 
         let has_tracks = !self.entries.borrow().is_empty();
         self.play.set_sensitive(has_tracks);
@@ -1204,14 +1459,87 @@ impl DetailView {
         self.hint.set_visible(has_tracks);
         self.bar
             .show_filter(self.entries.borrow().len() >= FILTER_THRESHOLD);
-        if let Some(table) = self.table.borrow().as_ref() {
-            table.set_tracks(&self.numbered_tracks());
-        }
         self.apply_query();
         if saved > 0.0 {
             let adj = self.scroll.vadjustment();
             glib::idle_add_local_once(move || adj.set_value(saved));
         }
+    }
+
+    /// Makes the list rows match the entries. Rows that are already the right
+    /// song in the right place stay as they are, moved songs keep their row,
+    /// and only new songs get a row built; when many are new, the first
+    /// screenful is built now and the rest in idle callbacks.
+    fn sync_rows(self: &Rc<Self>) {
+        self.list_current.set(true);
+        self.build_generation.set(self.build_generation.get() + 1);
+        let entries = self.entries.borrow();
+        let mut kept = std::mem::take(&mut *self.rows.borrow_mut());
+        let mut pool = std::mem::take(&mut *self.row_pool.borrow_mut());
+
+        let albums = self.albums.borrow();
+        let looks: Vec<u64> = entries
+            .iter()
+            .zip(albums.iter())
+            .map(|((_, track), album)| row_look(track, album))
+            .collect();
+        let plan = {
+            let old: Vec<RowKey> = kept
+                .iter()
+                .map(|slot| (slot.row_id, slot.rel_path.as_str(), slot.look))
+                .collect();
+            let new: Vec<RowKey> = entries
+                .iter()
+                .zip(&looks)
+                .map(|((row_id, track), look)| (*row_id, track.rel_path.as_str(), *look))
+                .collect();
+            plan_rows(&old, &new)
+        };
+        let mut tail = kept.split_off(kept.len() - plan.suffix);
+        for slot in kept.split_off(plan.prefix) {
+            self.list.remove(&slot.row);
+            pool.insert(slot.row_id, slot);
+        }
+
+        let wanted_end = |tail_len: usize| entries.len() - tail_len;
+        let to_build = (plan.prefix..wanted_end(tail.len()))
+            .filter(|&position| {
+                let (row_id, track) = &entries[position];
+                pool.get(row_id).is_none_or(|slot| {
+                    slot.rel_path != track.rel_path || slot.look != looks[position]
+                })
+            })
+            .count();
+        if to_build > FIRST_ROWS && !tail.is_empty() {
+            for slot in tail.drain(..) {
+                self.list.remove(&slot.row);
+                pool.insert(slot.row_id, slot);
+            }
+        }
+
+        let end = wanted_end(tail.len());
+        let mut built = 0;
+        while kept.len() < end && (!tail.is_empty() || built < FIRST_ROWS) {
+            let (slot, fresh) = self.take_or_build(&mut pool, kept.len(), &entries, &albums);
+            self.list.insert(&slot.row, kept.len() as i32);
+            kept.push(slot);
+            built += usize::from(fresh);
+        }
+        let finished = kept.len() >= end;
+        let placed = kept.len();
+        for (offset, slot) in tail.iter().enumerate() {
+            slot.set_number(placed + offset + 1);
+        }
+        kept.extend(tail);
+        drop(albums);
+        drop(entries);
+        *self.rows.borrow_mut() = kept;
+        if finished {
+            pool.clear();
+        } else {
+            self.schedule_build();
+        }
+        *self.row_pool.borrow_mut() = pool;
     }
 
     fn update_filter_status(&self) {
@@ -1220,16 +1548,85 @@ impl DetailView {
             self.bar.set_status(None);
             return;
         }
-        let entries = self.entries.borrow();
-        let shown = entries
+        let search = self.search.borrow();
+        let shown = search
             .iter()
-            .filter(|(_, track)| matches(track, &query))
+            .filter(|text| matches_text(text, &query))
             .count();
         self.bar.set_status(Some(&if shown == 0 {
             "No songs match".to_string()
         } else {
-            format!("{shown} of {}", entries.len())
+            format!("{shown} of {}", search.len())
         }));
+    }
+
+    /// The row for the entry at `position`: the one already built for that
+    /// very song if the pool still holds it, a new one otherwise. The flag
+    /// says whether it had to be built.
+    fn take_or_build(
+        self: &Rc<Self>,
+        pool: &mut HashMap<i64, RowSlot>,
+        position: usize,
+        entries: &[(i64, Track)],
+        albums: &[Option<AlbumRef>],
+    ) -> (RowSlot, bool) {
+        let (row_id, track) = &entries[position];
+        let look = row_look(track, &albums[position]);
+        if let Some(slot) = pool.remove(row_id) {
+            if slot.rel_path == track.rel_path && slot.look == look {
+                slot.set_number(position + 1);
+                return (slot, false);
+            }
+        }
+        let slot = self.build_row(position + 1, *row_id, track, albums[position].clone(), look);
+        (slot, true)
+    }
+
+    /// Builds the next `count` rows of a list that is still being filled in.
+    /// Returns whether every entry now has its row.
+    fn build_more(self: &Rc<Self>, count: usize) -> bool {
+        let entries = self.entries.borrow();
+        let albums = self.albums.borrow();
+        let mut rows = self.rows.borrow_mut();
+        let mut pool = self.row_pool.borrow_mut();
+        let end = entries.len().min(rows.len() + count);
+        while rows.len() < end {
+            let (slot, _) = self.take_or_build(&mut pool, rows.len(), &entries, &albums);
+            self.list.insert(&slot.row, rows.len() as i32);
+            rows.push(slot);
+        }
+        let finished = rows.len() >= entries.len();
+        if finished {
+            pool.clear();
+        }
+        finished
+    }
+
+    /// Makes sure the list has a row for the entry at `index`, finishing the
+    /// idle build early when something needs that row now.
+    fn build_through(self: &Rc<Self>, index: usize) {
+        if self.layout.get() != TrackLayout::List || !self.list_current.get() {
+            return;
+        }
+        let built = self.rows.borrow().len();
+        if built <= index {
+            self.build_more(index + 1 - built);
+        }
+    }
+
+    fn schedule_build(self: &Rc<Self>) {
+        let generation = self.build_generation.get();
+        let view = Rc::downgrade(self);
+        glib::idle_add_local_full(glib::Priority::DEFAULT_IDLE, move || {
+            let Some(view) = view.upgrade() else {
+                return glib::ControlFlow::Break;
+            };
+            if view.build_generation.get() != generation || view.build_more(ROWS_PER_IDLE) {
+                glib::ControlFlow::Break
+            } else {
+                glib::ControlFlow::Continue
+            }
+        });
     }
 
     fn build_row(
@@ -1237,8 +1634,9 @@ impl DetailView {
         index: usize,
         row_id: i64,
         track: &Track,
-        album_of: &HashMap<&str, (&str, &str)>,
-    ) -> (gtk::ListBoxRow, gtk::Label) {
+        album: Option<AlbumRef>,
+        look: u64,
+    ) -> RowSlot {
         let ui = &self.ui;
         let row_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Horizontal)
@@ -1255,9 +1653,6 @@ impl DetailView {
         thumb.set_fixed_size(THUMB_PX);
         thumb.widget().set_valign(gtk::Align::Center);
         thumb.widget().add_css_class("cover-thumb");
-        let album: Option<AlbumRef> = album_of
-            .get(track.rel_path.as_str())
-            .map(|(title, artist)| (title.to_string(), artist.to_string()));
         let seed = album
             .as_ref()
             .map(|(title, artist)| format!("{title}|{artist}"))
@@ -1348,7 +1743,15 @@ impl DetailView {
             &title,
             track.rel_path.clone(),
         );
-        (row, album_label)
+        RowSlot {
+            row_id,
+            rel_path: track.rel_path.clone(),
+            look,
+            number: Cell::new(index),
+            row,
+            index_cell,
+            album_label,
+        }
     }
 
     /// Drag a row onto another to take that row's place; a highlight line shows
@@ -1642,10 +2045,18 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         empty,
         hint: hint.clone(),
         entries: Rc::new(RefCell::new(Vec::new())),
+        albums: RefCell::new(Vec::new()),
+        search: RefCell::new(Vec::new()),
         query: Rc::new(RefCell::new(String::new())),
-        album_labels: RefCell::new(Vec::new()),
+        rows: RefCell::new(Vec::new()),
+        row_pool: RefCell::new(HashMap::new()),
+        list_current: Cell::new(false),
+        table_current: Cell::new(false),
+        build_generation: Cell::new(0),
+        stale: Cell::new(false),
         show_albums: Cell::new(true),
         applied: Cell::new(0),
+        source: RefCell::new(None),
     });
     *slot.borrow_mut() = Some(Rc::downgrade(&view));
 
@@ -1659,10 +2070,10 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
             if query.is_empty() {
                 return true;
             }
-            let entries = view.entries.borrow();
-            entries
+            let search = view.search.borrow();
+            search
                 .get(row.index().max(0) as usize)
-                .is_none_or(|(_, track)| matches(track, &query))
+                .is_none_or(|text| matches_text(text, &query))
         });
     }
     {
@@ -1691,7 +2102,10 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
         });
     }
 
-    view.refresh();
+    match ui.core.db.playlist_name(playlist_id) {
+        Some(name) => view.reload(&name),
+        None => view.close(),
+    }
     view.show_layout(saved);
 
     {
@@ -1703,6 +2117,14 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
                     view.refresh();
                 }
             });
+    }
+    {
+        let view = Rc::downgrade(&view);
+        page.connect_map(move |_| {
+            if let Some(view) = view.upgrade() {
+                view.catch_up();
+            }
+        });
     }
 
     unsafe {
@@ -1800,15 +2222,10 @@ fn playlist_item(label: &str, action: &str, playlist_id: i64) -> gio::MenuItem {
 /// rows whose file has since left the library.
 fn resolve_playlist_tracks(ui: &Rc<Ui>, playlist_id: i64) -> Vec<Track> {
     let library = ui.core.library.borrow().clone();
-    let by_rel_path: HashMap<&str, &Track> = library
-        .tracks
-        .iter()
-        .map(|track| (track.rel_path.as_str(), track))
-        .collect();
-    ui.core
-        .db
-        .playlist_tracks(playlist_id)
-        .into_iter()
+    let rows = ui.core.db.playlist_tracks(playlist_id);
+    let wanted: HashSet<&str> = rows.iter().map(|row| row.rel_path.as_str()).collect();
+    let by_rel_path = tracks_among(&library, &wanted);
+    rows.iter()
         .filter_map(|row| {
             by_rel_path
                 .get(row.rel_path.as_str())
@@ -1973,6 +2390,7 @@ mod tests {
         PlaylistCard {
             id,
             name: name.to_string(),
+            name_key: name.to_lowercase(),
             created_at,
             tracks,
             duration,
@@ -2045,5 +2463,171 @@ mod tests {
         assert_eq!(covers.len(), 4);
         assert_eq!(covers[0], ("A".to_string(), "x".to_string()));
         assert_eq!(covers[3], ("D".to_string(), "y".to_string()));
+    }
+
+    fn song(rel: &str) -> Track {
+        Track {
+            id: 0,
+            rel_path: rel.to_string(),
+            title: rel.to_string(),
+            artist: "artist".to_string(),
+            album: "album".to_string(),
+            album_artist: None,
+            track_number: 1,
+            duration: 60.0,
+            codec: None,
+            bit_depth: None,
+            sample_rate: None,
+            channels: None,
+            loved: false,
+            play_count: 0,
+            date_added: 0,
+            last_played: None,
+        }
+    }
+
+    fn library_of(albums: &[(&str, &[&str])]) -> Library {
+        let albums: Vec<crate::library::Album> = albums
+            .iter()
+            .map(|(title, rels)| crate::library::Album {
+                title: title.to_string(),
+                artist: "artist".to_string(),
+                year: None,
+                genre: None,
+                tracks: rels.iter().map(|rel| song(rel)).collect(),
+            })
+            .collect();
+        Library {
+            tracks: albums
+                .iter()
+                .flat_map(|album| album.tracks.iter().cloned())
+                .collect(),
+            albums,
+            artists: Vec::new(),
+        }
+    }
+
+    fn keys<'a>(rows: &'a [(i64, &'a str)]) -> Vec<RowKey<'a>> {
+        rows.iter().map(|(id, rel)| (*id, *rel, 0)).collect()
+    }
+
+    fn plan(old: &[(i64, &str)], new: &[(i64, &str)]) -> (usize, usize) {
+        let plan = plan_rows(&keys(old), &keys(new));
+        (plan.prefix, plan.suffix)
+    }
+
+    #[test]
+    fn identical_rows_all_stay() {
+        let rows = [(1, "a"), (2, "b"), (3, "c")];
+        assert_eq!(plan(&rows, &rows), (3, 0));
+        assert_eq!(plan(&[], &[]), (0, 0));
+    }
+
+    #[test]
+    fn an_appended_row_keeps_every_existing_one() {
+        let old = [(1, "a"), (2, "b")];
+        let new = [(1, "a"), (2, "b"), (3, "c")];
+        assert_eq!(plan(&old, &new), (2, 0));
+    }
+
+    #[test]
+    fn a_removed_row_in_the_middle_keeps_both_sides() {
+        let old = [(1, "a"), (2, "b"), (3, "c"), (4, "d")];
+        let new = [(1, "a"), (3, "c"), (4, "d")];
+        assert_eq!(plan(&old, &new), (1, 2));
+    }
+
+    #[test]
+    fn a_move_replaces_only_the_span_it_crosses() {
+        let old = [(1, "a"), (2, "b"), (3, "c"), (4, "d"), (5, "e")];
+        let new = [(1, "a"), (3, "c"), (4, "d"), (2, "b"), (5, "e")];
+        assert_eq!(plan(&old, &new), (1, 1));
+    }
+
+    #[test]
+    fn prefix_and_suffix_never_overlap() {
+        let old = [(1, "a"), (2, "b")];
+        let new = [(1, "a")];
+        assert_eq!(plan(&old, &new), (1, 0));
+        let old = [(7, "x"), (7, "x")];
+        let new = [(7, "x")];
+        let (prefix, suffix) = plan(&old, &new);
+        assert!(prefix + suffix <= new.len());
+    }
+
+    #[test]
+    fn a_row_that_now_shows_something_else_is_replaced() {
+        let old: Vec<RowKey> = vec![(1, "a", 10), (2, "b", 20), (3, "c", 30)];
+        let new: Vec<RowKey> = vec![(1, "a", 10), (2, "b", 21), (3, "c", 30)];
+        let plan = plan_rows(&old, &new);
+        assert_eq!((plan.prefix, plan.suffix), (1, 1));
+    }
+
+    #[test]
+    fn only_wanted_songs_are_looked_up() {
+        let library = library_of(&[("One", &["a", "b"]), ("Two", &["c", "d"])]);
+        let wanted: HashSet<&str> = ["b", "c", "gone"].into_iter().collect();
+        let found = tracks_among(&library, &wanted);
+        let mut found_paths: Vec<&str> = found.keys().copied().collect();
+        found_paths.sort();
+        assert_eq!(found_paths, ["b", "c"]);
+        let albums = album_index(&library, &wanted);
+        assert_eq!(albums.get("b"), Some(&("One", "artist")));
+        assert_eq!(albums.get("c"), Some(&("Two", "artist")));
+        assert_eq!(albums.len(), 2);
+    }
+
+    #[test]
+    fn cards_count_only_songs_the_library_still_has() {
+        let library = library_of(&[("One", &["a", "b"]), ("Two", &["c"])]);
+        let snapshot = PlaylistSnapshot {
+            rows: vec![
+                PlaylistRow {
+                    id: 1,
+                    name: "Mix".to_string(),
+                    created_at: 5,
+                },
+                PlaylistRow {
+                    id: 2,
+                    name: "Empty".to_string(),
+                    created_at: 6,
+                },
+            ],
+            tracks: vec![
+                (1, "a".to_string()),
+                (1, "gone".to_string()),
+                (1, "c".to_string()),
+            ],
+        };
+        let cards = load_cards(&snapshot, &library);
+        assert_eq!(cards.len(), 2);
+        assert_eq!(cards[0].tracks, 2);
+        assert_eq!(cards[0].duration, 120.0);
+        assert_eq!(
+            cards[0].covers,
+            vec![
+                ("One".to_string(), "artist".to_string()),
+                ("Two".to_string(), "artist".to_string())
+            ]
+        );
+        assert_eq!(cards[1].tracks, 0);
+        assert!(cards[1].covers.is_empty());
+    }
+
+    #[test]
+    fn the_playlist_digest_follows_names_and_songs() {
+        let make = |name: &str, rels: &[&str]| PlaylistSnapshot {
+            rows: vec![PlaylistRow {
+                id: 1,
+                name: name.to_string(),
+                created_at: 5,
+            }],
+            tracks: rels.iter().map(|rel| (1, rel.to_string())).collect(),
+        };
+        let base = make("Mix", &["a", "b"]).digest();
+        assert_eq!(base, make("Mix", &["a", "b"]).digest());
+        assert_ne!(base, make("Mix 2", &["a", "b"]).digest());
+        assert_ne!(base, make("Mix", &["b", "a"]).digest());
+        assert_ne!(base, make("Mix", &["a"]).digest());
     }
 }
