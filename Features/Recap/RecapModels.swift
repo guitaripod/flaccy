@@ -1,3 +1,4 @@
+import FlaccyCore
 import Foundation
 
 /// The immutable snapshot the Recap dashboard renders. Computed off the main
@@ -27,36 +28,10 @@ nonisolated struct RecapData: Sendable {
     var hasContent: Bool { hasScrobbles || !topArtists.isEmpty || !topTracks.isEmpty || !topAlbums.isEmpty }
 }
 
-/// One-time backfill state for the "Import Last.fm history" affordance. The
-/// associated counts carry live import progress (`importing`) and the final
-/// summary (`done`) so the banner can communicate how many scrobbles landed.
-nonisolated enum RecapImportState: Hashable, Sendable {
-    case available
-    case importing(imported: Int)
-    case done(imported: Int)
-    case unavailable
-
-    var isImporting: Bool { if case .importing = self { true } else { false } }
-    var isDone: Bool { if case .done = self { true } else { false } }
-
-    /// Whether the import banner should remain on screen. A freshly-completed
-    /// import keeps its "Imported N scrobbles" summary; a persisted-done state
-    /// restored on a later launch (`imported == 0`) hides the banner entirely,
-    /// as does `unavailable` — without a Last.fm account the Recap is purely
-    /// local and shows no Last.fm chrome.
-    var showsBanner: Bool {
-        switch self {
-        case .done(let imported): return imported > 0
-        case .unavailable: return false
-        case .available, .importing: return true
-        }
-    }
-}
-
 /// Diffable sections, one per dashboard row-group.
 nonisolated enum RecapSection: Int, Hashable, CaseIterable {
     case profile
-    case importBanner
+    case syncBanner
     case period
     case artists
     case albums
@@ -146,7 +121,7 @@ nonisolated struct PersonaItem: Hashable, Sendable {
 /// Heterogeneous diffable item; equality drives per-cell reconfiguration.
 nonisolated enum RecapItem: Hashable {
     case profile(ProfileItem)
-    case importBanner(RecapImportState)
+    case syncBanner(ListenHistoryStatus)
     case period(ChartPeriod)
     case artist(RecapArtistItem)
     case album(AlbumItem)
@@ -207,20 +182,20 @@ nonisolated struct RecapLibraryIndex {
         var albumMap: [String: Album] = [:]
         var artistMap: [String: Album] = [:]
         for album in albums {
-            albumMap[Self.key(album.title, album.artist)] = album
-            let artistKey = Self.normalize(album.artist)
+            albumMap[Self.albumKey(album.title, album.artist)] = album
+            let artistKey = ListenHistory.artistKey(album.artist)
             if !artistKey.isEmpty, artistMap[artistKey] == nil { artistMap[artistKey] = album }
         }
         var trackMap: [String: Track] = [:]
-        for track in tracks { trackMap[Self.key(track.title, track.artist)] = track }
+        for track in tracks { trackMap[ListenHistory.trackKey(title: track.title, artist: track.artist)] = track }
         albumsByKey = albumMap
         tracksByKey = trackMap
         albumByArtist = artistMap
     }
 
-    func album(name: String, artist: String) -> Album? { albumsByKey[Self.key(name, artist)] }
-    func track(title: String, artist: String) -> Track? { tracksByKey[Self.key(title, artist)] }
-    func representativeAlbum(forArtist artist: String) -> Album? { albumByArtist[Self.normalize(artist)] }
+    func album(name: String, artist: String) -> Album? { albumsByKey[Self.albumKey(name, artist)] }
+    func track(title: String, artist: String) -> Track? { tracksByKey[ListenHistory.trackKey(title: title, artist: artist)] }
+    func representativeAlbum(forArtist artist: String) -> Album? { albumByArtist[ListenHistory.artistKey(artist)] }
 
     /// The owned songs behind a top-tracks chart, in rank order. Entries the
     /// library does not hold are skipped, so the queue is whatever can play.
@@ -256,16 +231,7 @@ nonisolated struct RecapLibraryIndex {
         return tracks.filter { seen.insert($0.fileURL).inserted }
     }
 
-    private static func key(_ a: String, _ b: String) -> String {
-        normalize(a) + "\u{0}" + normalize(b)
-    }
-
-    private static func normalize(_ value: String) -> String {
-        let folded = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
-        var result = String.UnicodeScalarView()
-        for scalar in folded.unicodeScalars where CharacterSet.alphanumerics.contains(scalar) {
-            result.append(scalar)
-        }
-        return String(result)
+    private static func albumKey(_ title: String, _ artist: String) -> String {
+        ListenHistory.albumKey(title) + "\u{0}" + ListenHistory.artistKey(artist)
     }
 }

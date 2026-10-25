@@ -333,6 +333,21 @@ extension DatabaseManager {
             try db.create(index: "tracks_on_remoteServer", on: "tracks", columns: ["remoteServer"])
         }
 
+        migrator.registerMigration("v17") { db in
+            try db.alter(table: "scrobbles") { t in
+                t.add(column: "titleKey", .text).notNull().defaults(to: "")
+                t.add(column: "artistKey", .text).notNull().defaults(to: "")
+                t.add(column: "albumKey", .text).notNull().defaults(to: "")
+            }
+            try db.create(index: "scrobbles_on_listen_key", on: "scrobbles", columns: ["titleKey", "artistKey"])
+            try db.create(index: "scrobbles_on_artistKey", on: "scrobbles", columns: ["artistKey"])
+            try db.create(table: "listenSync") { t in
+                t.column("account", .text).primaryKey()
+                t.column("state", .text).notNull()
+            }
+            try Self.fillListenKeys(db)
+        }
+
         return migrator
     }
 }

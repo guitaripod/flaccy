@@ -75,12 +75,12 @@ nonisolated enum SuggestedPlaylistService {
     /// Underplayed tracks from albums you already love — the crate-digging
     /// privilege of owning full albums instead of streaming singles.
     private static func crateDig(pool: [Track], allCounts: [String: Int]) -> SuggestedPlaylist? {
-        var pairs: [(trackTitle: String, artist: String, count: Int)] = []
+        var pairs: [(key: String, count: Int)] = []
         var seen = Set<String>()
         for track in pool {
             let k = key(track.title, track.artist)
             guard seen.insert(k).inserted else { continue }
-            pairs.append((track.title, track.artist, allCounts[k] ?? track.playCount))
+            pairs.append((k, allCounts[k] ?? track.playCount))
         }
         let tracks = StationBuilder.crateDig(
             pool: pool, playCounts: pairs, excluding: [], limit: maxTracks

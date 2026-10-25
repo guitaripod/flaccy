@@ -1,4 +1,5 @@
 import AuthenticationServices
+import Combine
 import MidgarCore
 import FlaccyCore
 import StoreKit
@@ -20,7 +21,7 @@ final class SettingsViewController: UITableViewController {
     var dataSource: DataSource!
     var storageUsed: String?
     var playsCount: Int?
-    var lastFMImportProgress: Int?
+    var syncStatusObserver: AnyCancellable?
     var isRescanning = false
     let metadataViewModel = EnrichmentReportViewModel()
     var libraryDebut: LibraryDebutSummary?
@@ -52,6 +53,7 @@ final class SettingsViewController: UITableViewController {
         loadPriceIfNeeded()
         observeMetadata()
         observeServers()
+        observeHistorySync()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateChanged),
@@ -226,7 +228,7 @@ final class SettingsViewController: UITableViewController {
             if pending > 0 {
                 lastFMRows.append(.pendingScrobbles(count: pending))
             }
-            lastFMRows.append(.importLastFM)
+            lastFMRows.append(.historySync)
         }
         snapshot.appendItems(lastFMRows, toSection: .lastFM)
         snapshot.appendItems(
@@ -288,7 +290,7 @@ final class SettingsViewController: UITableViewController {
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .serversExplainer, .server, .cacheLimit, .cacheUsage:
             return false
-        case .importLastFM: return lastFMImportProgress == nil
+        case .historySync: return !ListenHistorySync.shared.status.isBusy
         case .rescanLibrary: return !isRescanning
         default: return true
         }
@@ -300,7 +302,7 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .lastFMAccount: handleLastFMTap()
         case .pendingScrobbles: handleRetryScrobbles()
-        case .importLastFM: handleImportLastFM()
+        case .historySync: handleHistorySync()
         case .yearInMusic: handleYearInMusicTap()
         case .recapNotifications: handleRecapNotificationsTap()
         case .libraryRadio: handleLibraryRadio()

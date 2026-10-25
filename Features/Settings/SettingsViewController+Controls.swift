@@ -166,8 +166,8 @@ extension SettingsViewController {
 
     func lastFMFooter() -> String {
         if LastFMService.shared.isAuthenticated {
-            return String(localized: "Your listens are scrobbled to Last.fm and your loved tracks stay in sync.")
+            return String(localized: "Flaccy and Last.fm share one listening history. Every scrobble on your account, from Flaccy or any other app or device, flows into Stats, play counts and Most Played, and keeps flowing on its own.")
         }
-        return String(localized: "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and import your listening history. Everything else works without it.")
+        return String(localized: "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and bring your whole listening history into Stats and play counts. Everything else works without it.")
     }
 }

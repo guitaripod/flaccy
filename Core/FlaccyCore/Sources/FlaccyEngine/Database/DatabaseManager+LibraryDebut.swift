@@ -43,7 +43,7 @@ extension DatabaseManager {
     /// visible. Reachable only from the DEBUG simulator demo.
     public func eraseDemoContent() throws {
         let tables = [
-            "playlistTracks", "playlists", "lyrics", "scrobbles", "wantlist", "newReleaseCache",
+            "playlistTracks", "playlists", "lyrics", "scrobbles", "listenSync", "wantlist", "newReleaseCache",
             "enrichmentState", "weeklyChartCache", "similarArtistCache", "albumInfo", "artists", "tracks",
         ]
         try dbQueue.write { db in

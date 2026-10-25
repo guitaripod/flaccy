@@ -31,23 +31,67 @@ extension DatabaseManager {
         scrobbleRevisionCounter.value
     }
 
-    /// Identity of every stored scrobble (`timestamp NUL lowercased title`),
-    /// read as two columns instead of decoding whole records.
-    public func scrobbleIdentities() throws -> Set<String> {
+    /// The stored plays from `since` on, as the dedup ledger reads them: two
+    /// narrow columns and the keys, with no record decoded.
+    public func storedListens(since: Date) throws -> [ListenHistory.StoredListen] {
         try dbQueue.read { db in
-            var identities = Set<String>()
-            let rows = try Row.fetchCursor(db, sql: "SELECT timestamp, trackTitle FROM scrobbles")
+            var listens: [ListenHistory.StoredListen] = []
+            let rows = try Row.fetchCursor(db, sql: """
+                SELECT CAST(strftime('%s', timestamp) AS INTEGER) AS ts, titleKey, artistKey, duration > 0 AS playedHere
+                FROM scrobbles WHERE timestamp >= ?
+            """, arguments: [since])
             while let row = try rows.next() {
-                let timestamp: Date = row["timestamp"]
-                let title: String = row["trackTitle"]
-                identities.insert(Self.scrobbleIdentity(timestamp: timestamp, title: title))
+                listens.append(ListenHistory.StoredListen(
+                    timestamp: row["ts"], titleKey: row["titleKey"], artistKey: row["artistKey"], playedHere: row["playedHere"]
+                ))
             }
-            return identities
+            return listens
         }
     }
 
-    public static func scrobbleIdentity(timestamp: Date, title: String) -> String {
-        "\(Int(timestamp.timeIntervalSince1970))\u{0}\(title.lowercased())"
+    /// One scrobble pulled from Last.fm.
+    public struct PulledListen: Sendable {
+        public let title: String
+        public let artist: String
+        public let album: String
+        public let timestamp: Date
+
+        public init(title: String, artist: String, album: String, timestamp: Date) {
+            self.title = title
+            self.artist = artist
+            self.album = album
+            self.timestamp = timestamp
+        }
+    }
+
+    /// Stores scrobbles pulled from Last.fm, already deduplicated, in one
+    /// transaction as submitted plays of unknown length.
+    @discardableResult
+    public func insertPulledListens(_ listens: [PulledListen]) throws -> Int {
+        guard !listens.isEmpty else { return 0 }
+        try dbQueue.write { db in
+            let insert = try db.cachedStatement(sql: """
+                INSERT INTO scrobbles
+                    (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
+                VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?)
+            """)
+            var memo = ListenKeyMemo()
+            for listen in listens {
+                let keys = memo.keys(title: listen.title, artist: listen.artist, album: listen.album)
+                try insert.execute(arguments: [
+                    listen.title, listen.artist, listen.album, listen.timestamp, keys.title, keys.artist, keys.album,
+                ])
+            }
+        }
+        scrobbleRevisionCounter.bump()
+        return listens.count
+    }
+
+    /// The newest play that came from Last.fm rather than from this device.
+    public func newestPulledListen() throws -> Date? {
+        try dbQueue.read { db in
+            try Date.fetchOne(db, sql: "SELECT MAX(timestamp) FROM scrobbles WHERE duration = 0")
+        }
     }
 
     public func fetchPendingScrobbles() throws -> [ScrobbleRecord] {
@@ -94,24 +138,57 @@ extension DatabaseManager {
         }
     }
 
-    /// Backfills each track's play count and last-played time from the scrobble
-    /// history (which includes imported Last.fm plays), so the Plays column and
-    /// every play-based sort reflect a freshly imported history rather than only
-    /// local playback.
-    public func reconcilePlayCountsFromScrobbles() throws {
+    /// Rewrites each library song's play count and last-played time from the
+    /// whole history, matched by listen key so a "feat." credit, a remaster
+    /// tag or different casing counts toward the song the library holds. Only
+    /// rows whose numbers change are written, in one transaction; songs a
+    /// server supplies keep the counts that server keeps. Returns how many
+    /// rows changed.
+    @discardableResult
+    public func reconcilePlayCountsFromScrobbles() throws -> Int {
         try dbQueue.write { db in
-            try db.execute(sql: """
-                UPDATE tracks SET
-                    playCount = totals.plays,
-                    lastPlayed = totals.last
-                FROM (
-                    SELECT trackTitle, artist, COUNT(*) AS plays, MAX(timestamp) AS last
-                    FROM scrobbles
-                    GROUP BY trackTitle, artist
-                ) AS totals
-                WHERE totals.trackTitle = tracks.title AND totals.artist = tracks.artist
+            let tallies = try Self.listenTallies(db)
+            guard !tallies.isEmpty else { return 0 }
+            let tracks = try Row.fetchAll(db, sql: """
+                SELECT id, title, artist, playCount, lastPlayed FROM tracks WHERE remoteServer IS NULL
             """)
+            let update = try db.cachedStatement(sql: "UPDATE tracks SET playCount = ?, lastPlayed = ? WHERE id = ?")
+            var changed = 0
+            for track in tracks {
+                let id: Int64 = track["id"]
+                let title: String = track["title"]
+                let artist: String = track["artist"]
+                let playCount: Int = track["playCount"]
+                let lastPlayed: Date? = track["lastPlayed"]
+                guard let tally = tallies[ListenHistory.trackKey(title: title, artist: artist)] else { continue }
+                if tally.plays == playCount, lastPlayed == tally.latest { continue }
+                try update.execute(arguments: [tally.plays, tally.latest, id])
+                changed += 1
+            }
+            return changed
         }
+    }
+
+    private struct ListenTally {
+        let plays: Int
+        let latest: Date
+    }
+
+    /// Plays and latest play per song across the whole history, keyed like
+    /// `ListenHistory.trackKey`. The database groups on the key columns, so
+    /// the cost is the number of distinct songs, not of plays.
+    private static func listenTallies(_ db: Database) throws -> [String: ListenTally] {
+        var tallies: [String: ListenTally] = [:]
+        let rows = try Row.fetchCursor(db, sql: """
+            SELECT titleKey, artistKey, COUNT(*) AS plays, MAX(timestamp) AS latest FROM scrobbles
+            GROUP BY titleKey, artistKey
+        """)
+        while let row = try rows.next() {
+            let title: String = row["titleKey"]
+            let artist: String = row["artistKey"]
+            tallies[title + "\u{0}" + artist] = ListenTally(plays: row["plays"], latest: row["latest"])
+        }
+        return tallies
     }
 
     public func incrementPlayCount(trackId: Int64) throws {

@@ -1,4 +1,5 @@
 import Foundation
+import FlaccyCore
 import MidgarCore
 
 nonisolated extension ChartPeriod {
@@ -35,8 +36,8 @@ nonisolated struct RecapMetrics: Sendable {
 }
 
 /// Local listening statistics computed entirely from the `scrobbles` table so
-/// they work offline. `importHistory()` backfills that table from Last.fm; every
-/// other method reads only local rows.
+/// they work offline. `ListenHistorySync` fills that table from Last.fm; every
+/// method here reads only local rows.
 nonisolated final class LastFMStatsService: @unchecked Sendable {
 
     static let shared = LastFMStatsService()
@@ -56,6 +57,23 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
 
     var scrobbleRevision: Int { db.scrobbleRevision }
 
+    private let lengthsLock = NSLock()
+    private var lengthsStamp: String?
+    private var lengthsCache: [String: Int] = [:]
+
+    /// The library's song lengths by `ListenHistory.trackKey`, which price a
+    /// play Last.fm reported without one. Rebuilt only when the library's
+    /// fingerprint changes, because deriving a key per song is the costly part.
+    func libraryLengths() -> [String: Int] {
+        guard let stamp = try? db.libraryPlayLengthsStamp() else { return [:] }
+        lengthsLock.lock()
+        defer { lengthsLock.unlock() }
+        if lengthsStamp == stamp { return lengthsCache }
+        lengthsCache = (try? db.libraryPlayLengths()) ?? [:]
+        lengthsStamp = stamp
+        return lengthsCache
+    }
+
     /// Computes every Recap metric from aggregates the database folds itself,
     /// so no scrobble row is ever decoded: the totals and the three top lists
     /// are `GROUP BY` results (the totals are the sums of the per-artist groups), and the clock, heatmap, streak and persona's night
@@ -64,7 +82,8 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
     /// so a short period never pays for the long calendar around it.
     func recapMetrics(period: ChartPeriod, now: Date = Date(), calendar: Calendar = .current) -> RecapMetrics {
         let cutoff = period.cutoff(now: now, calendar: calendar)
-        let artistCounts = (try? db.scrobbleArtistCounts(from: cutoff, to: .distantFuture)) ?? []
+        let lengths = libraryLengths()
+        let artistCounts = (try? db.scrobbleArtistCounts(from: cutoff, to: .distantFuture, libraryLengths: lengths)) ?? []
         let totals = (plays: artistCounts.reduce(0) { $0 + $1.count }, seconds: artistCounts.reduce(0) { $0 + $1.seconds })
         let albums = (try? db.scrobbleTopAlbums(from: cutoff, to: .distantFuture, limit: 9)) ?? []
         let tracks = (try? db.scrobbleTopTracks(from: cutoff, to: .distantFuture, limit: 10)) ?? []
@@ -80,7 +99,7 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
         }
 
         let streak = streakDays(calendarDays: calendarTally.days, wideFrom: wideFrom, now: now, calendar: calendar)
-        let previous = previousWindowTotals(period: period, cutoff: cutoff, now: now)
+        let previous = previousWindowTotals(period: period, cutoff: cutoff, now: now, lengths: lengths)
         return RecapMetrics(
             totalPlays: totals.plays,
             totalMinutes: totals.seconds / 60,
@@ -97,7 +116,7 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
             calendarHeatmap: calendarTally.heatmap(calendar: calendar),
             persona: Self.persona(
                 plays: totals.plays,
-                distinctArtists: Set(artistCounts.map { $0.artist.lowercased() }).count,
+                distinctArtists: Set(artistCounts.map { ListenHistory.artistKey($0.artist) }).count,
                 clock: during.clock
             ),
             previousPlays: previous?.plays,
@@ -111,20 +130,20 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
         return Self.topArtists(from: counts, limit: limit)
     }
 
-    /// Per-track scrobble counts over the period, keyed by a lowercased
-    /// `title\0artist` composite matching `StationBuilder`/`LovedTracksService`.
-    /// Folded by the database, so a library with a hundred thousand scrobbles
-    /// costs a `GROUP BY` instead of a full-table decode.
+    /// Per-track scrobble counts over the period, keyed by
+    /// `ListenHistory.trackKey` like every other play count. Folded by the
+    /// database, so a library with a hundred thousand scrobbles costs a
+    /// `GROUP BY` instead of a full-table decode.
     func scrobbleCounts(period: ChartPeriod) -> [String: Int] {
         var counts: [String: Int] = [:]
         for row in (try? db.scrobbleTrackCounts(from: period.cutoffDate, to: .distantFuture)) ?? [] {
-            counts[Self.trackKey(row.title, row.artist), default: 0] += row.count
+            counts[row.key, default: 0] += row.count
         }
         return counts
     }
 
     static func trackKey(_ title: String, _ artist: String) -> String {
-        "\(title.lowercased())\u{0}\(artist.lowercased())"
+        ListenHistory.trackKey(title: title, artist: artist)
     }
 
     /// Where the heatmap's data starts: this week's Sunday minus 52 weeks, or
@@ -174,11 +193,11 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
     /// The same totals over the window of equal length just before the period,
     /// so a tile can say whether this stretch beat the last one.
     private func previousWindowTotals(
-        period: ChartPeriod, cutoff: Date, now: Date
+        period: ChartPeriod, cutoff: Date, now: Date, lengths: [String: Int]
     ) -> (plays: Int, minutes: Int, spanDays: Int)? {
         guard period != .allTime else { return nil }
         let span = now.timeIntervalSince(cutoff)
-        let totals = (try? db.scrobbleTotals(from: cutoff.addingTimeInterval(-span), to: cutoff)) ?? (plays: 0, seconds: 0)
+        let totals = (try? db.scrobbleTotals(from: cutoff.addingTimeInterval(-span), to: cutoff, libraryLengths: lengths)) ?? (plays: 0, seconds: 0)
         return (totals.plays, totals.seconds / 60, Int((span / TimeInterval(Self.secondsPerDay)).rounded()))
     }
 
@@ -244,53 +263,5 @@ nonisolated final class LastFMStatsService: @unchecked Sendable {
         if diversity > 0.6 { return "Explorer" }
         if diversity < 0.2 { return "Loyalist" }
         return "Devotee"
-    }
-
-    /// Backfills the local `scrobbles` table from Last.fm recent-tracks pages,
-    /// deduplicating against existing rows by timestamp+track. The page bound
-    /// only guards against a runaway pagination loop; at 200 rows per page it
-    /// admits two million scrobbles, so any real account imports completely.
-    @concurrent
-    func importHistory(maxPages: Int = 10_000) async {
-        guard lastFM.isAuthenticated else { return }
-
-        var seen = (try? db.scrobbleIdentities()) ?? []
-
-        var page = 1
-        var totalPages = 1
-        var imported = 0
-        repeat {
-            let result = await lastFM.fetchRecentTracks(page: page, limit: 200)
-            totalPages = result.totalPages
-            var batch: [ScrobbleRecord] = []
-            for track in result.tracks {
-                guard let uts = track.uts else { continue }
-                let timestamp = Date(timeIntervalSince1970: TimeInterval(uts))
-                guard seen.insert(DatabaseManager.scrobbleIdentity(timestamp: timestamp, title: track.name)).inserted else { continue }
-                batch.append(ScrobbleRecord(
-                    id: nil,
-                    trackTitle: track.name,
-                    artist: track.artist,
-                    albumTitle: track.album,
-                    timestamp: timestamp,
-                    duration: 0,
-                    submitted: true
-                ))
-            }
-            do {
-                try db.insertScrobbles(batch)
-                imported += batch.count
-            } catch {
-                MidgarLog.error("Import scrobble page \(page) failed: \(error.localizedDescription)", category: .database)
-            }
-            page += 1
-        } while page <= totalPages && page <= maxPages
-
-        do {
-            try db.reconcilePlayCountsFromScrobbles()
-        } catch {
-            MidgarLog.error("Play-count reconcile failed: \(error.localizedDescription)", category: .database)
-        }
-        MidgarLog.info("Imported \(imported) historical scrobbles", category: .sync)
     }
 }
