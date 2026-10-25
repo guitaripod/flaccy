@@ -414,12 +414,6 @@ impl Db {
             self.conn.execute(job::SEED_ARTIST_STATE_SQL, [])?;
             self.conn.pragma_update(None, "user_version", 2)?;
         }
-
-        if version < listens::LISTEN_KEYS_STAGE {
-            self.backfill_listen_keys()?;
-            self.conn
-                .pragma_update(None, "user_version", listens::LISTEN_KEYS_STAGE)?;
-        }
         Ok(())
     }
 

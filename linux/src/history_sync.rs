@@ -25,6 +25,19 @@ const MAX_PAGE_RETRIES: u32 = 4;
 const RETRY_BACKOFF_MS: u64 = 800;
 const LEGACY_SEEDED_THRESHOLD: i64 = 50;
 
+/// How long after launch automatic triggers wait, so the first sync never
+/// competes with the library loading and the first frames.
+const LAUNCH_GRACE: Duration = Duration::from_secs(12);
+
+static SCHEDULED_AT: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+
+/// Whether launch is far enough behind for an automatic sync.
+fn past_launch_grace() -> bool {
+    SCHEDULED_AT
+        .get()
+        .is_some_and(|at| at.elapsed() >= LAUNCH_GRACE)
+}
+
 /// How the history sync stands, for the Last.fm settings and Stats.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HistoryStatus {
@@ -153,7 +166,8 @@ pub fn start(core: &Rc<AppCore>, trigger: Trigger) {
         .clone()
         .filter(|state| state.account == session.username);
     if trigger == Trigger::Automatic
-        && known.as_ref().is_some_and(|state| !state.automatic_sync_due(unix_now()))
+        && (!past_launch_grace()
+            || known.as_ref().is_some_and(|state| !state.automatic_sync_due(unix_now())))
     {
         return;
     }
@@ -264,9 +278,11 @@ pub fn load_state(core: &Rc<AppCore>) {
 /// Syncs a while after launch, whenever the window comes forward, and every
 /// `PERIODIC_SYNC_SECONDS` while Flaccy runs.
 pub fn schedule(core: &Rc<AppCore>) {
+    let _ = SCHEDULED_AT.set(Instant::now());
     load_state(core);
+    fill_listen_keys(core);
     let weak = Rc::downgrade(core);
-    glib::timeout_add_local_once(Duration::from_secs(12), move || {
+    glib::timeout_add_local_once(LAUNCH_GRACE, move || {
         if let Some(core) = weak.upgrade() {
             start(&core, Trigger::Automatic);
         }
@@ -278,6 +294,54 @@ pub fn schedule(core: &Rc<AppCore>) {
         };
         start(&core, Trigger::Automatic);
         glib::ControlFlow::Continue
+    });
+}
+
+/// Gives the plays stored before listen keys existed their keys, on a worker
+/// thread (a long history takes a few hundred milliseconds, once), then
+/// recounts play counts by them and refreshes what shows counts.
+fn fill_listen_keys(core: &Rc<AppCore>) {
+    let db_path = core.db_path.clone();
+    let (tx, rx) = async_channel::bounded::<usize>(1);
+    let spawned = std::thread::Builder::new()
+        .name("flaccy-listen-keys".into())
+        .spawn(move || {
+            let Ok(db) = Db::open(&db_path) else {
+                return;
+            };
+            let started = Instant::now();
+            let filled = db.fill_listen_keys().unwrap_or_else(|err| {
+                crate::logger::error("history", &format!("filling listen keys failed: {err}"));
+                0
+            });
+            if filled == 0 {
+                return;
+            }
+            let reconciled = db.reconcile_play_counts_from_scrobbles();
+            crate::logger::info(
+                "history",
+                &format!(
+                    "listen keys filled for {filled} plays, {reconciled} play counts moved, {} ms",
+                    started.elapsed().as_millis()
+                ),
+            );
+            let _ = tx.send_blocking(reconciled);
+        });
+    if spawned.is_err() {
+        return;
+    }
+    let weak = Rc::downgrade(core);
+    glib::spawn_future_local(async move {
+        let Ok(reconciled) = rx.recv().await else {
+            return;
+        };
+        let Some(core) = weak.upgrade() else {
+            return;
+        };
+        core.hub.emit(&AppEvent::HistorySynced { stored: 0 });
+        if reconciled > 0 {
+            core.reload_library();
+        }
     });
 }
 
@@ -307,6 +371,9 @@ fn run(
             };
         }
     };
+    if let Err(err) = db.fill_listen_keys() {
+        crate::logger::error("history", &format!("filling listen keys failed: {err}"));
+    }
     let mut state = db
         .listen_sync_state(username)
         .unwrap_or_else(|| adopted_state(&db, username, legacy_page));

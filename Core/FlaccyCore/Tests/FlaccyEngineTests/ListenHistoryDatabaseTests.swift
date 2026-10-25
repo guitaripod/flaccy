@@ -59,7 +59,7 @@ final class ListenHistoryDatabaseTests: XCTestCase {
         }
     }
 
-    func testMigrationFillsTheKeysOfRowsStoredBeforeTheColumnsExisted() throws {
+    func testTheKeyFillCoversRowsStoredBeforeTheColumnsExistedOnce() throws {
         db = nil
         try? FileManager.default.removeItem(at: directory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -75,6 +75,8 @@ final class ListenHistoryDatabaseTests: XCTestCase {
         try queue.close()
 
         db = try DatabaseManager(path: databasePath)
+        XCTAssertEqual(try db.fillListenKeys(), 2)
+        XCTAssertEqual(try db.fillListenKeys(), 0)
 
         XCTAssertEqual(try storedKeys(), [["song", "beyonce", "lemonade"], ["song", "beyonce", "lemonade"]])
     }

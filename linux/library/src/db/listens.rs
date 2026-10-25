@@ -24,6 +24,16 @@ pub struct ListenTally {
     pub last_unix: i64,
 }
 
+/// Scrobbles keyed per transaction while filling.
+const LISTEN_KEY_FILL_CHUNK: usize = 5_000;
+
+/// The key indexes. The song index carries the timestamp so per-song counts
+/// with their latest play, all time or over a window, read the index alone.
+const LISTEN_KEY_INDEXES: &str =
+    "DROP INDEX IF EXISTS scrobbles_on_listen_key;
+     CREATE INDEX IF NOT EXISTS scrobbles_on_listen_play ON scrobbles(titleKey, artistKey, timestamp);
+     CREATE INDEX IF NOT EXISTS scrobbles_on_artistKey ON scrobbles(artistKey);";
+
 const LISTEN_KEY_COLUMNS: [&str; 3] = [
     "titleKey TEXT NOT NULL DEFAULT ''",
     "artistKey TEXT NOT NULL DEFAULT ''",
@@ -33,10 +43,6 @@ const LISTEN_KEY_COLUMNS: [&str; 3] = [
 /// The start of year 1, below every stored timestamp.
 const EARLIEST_UNIX: i64 = -62_135_596_800;
 
-/// The `user_version` stage that fills the listen keys of rows stored before
-/// the columns existed.
-pub(crate) const LISTEN_KEYS_STAGE: i64 = 3;
-
 impl Db {
     pub(crate) fn migrate_listen_key_columns(&self) -> Result<(), rusqlite::Error> {
         for column in LISTEN_KEY_COLUMNS {
@@ -45,9 +51,7 @@ impl Db {
                 .execute(&format!("ALTER TABLE scrobbles ADD COLUMN {column}"), []);
         }
         self.conn.execute_batch(
-            "CREATE INDEX IF NOT EXISTS scrobbles_on_listen_key ON scrobbles(titleKey, artistKey);
-             CREATE INDEX IF NOT EXISTS scrobbles_on_artistKey ON scrobbles(artistKey);
-             CREATE TABLE IF NOT EXISTS listenSync (
+            "CREATE TABLE IF NOT EXISTS listenSync (
                  account TEXT PRIMARY KEY,
                  state TEXT NOT NULL
              );",
@@ -78,30 +82,60 @@ impl Db {
         Ok(())
     }
 
-    /// Fills the listen keys of every stored scrobble, in one transaction.
-    pub(crate) fn backfill_listen_keys(&self) -> Result<usize, rusqlite::Error> {
-        let rows: Vec<(i64, String, String, String)> = {
-            let mut stmt = self
-                .conn
-                .prepare("SELECT id, trackTitle, artist, albumTitle FROM scrobbles")?;
-            let rows = stmt.query_map([], |row| {
-                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
-            })?;
-            rows.flatten().collect()
-        };
-        let tx = self.conn.unchecked_transaction()?;
-        {
-            let mut update = tx.prepare(
-                "UPDATE scrobbles SET titleKey = ?1, artistKey = ?2, albumKey = ?3 WHERE id = ?4",
-            )?;
-            let mut cache = ListenKeyCache::default();
-            for (id, title, artist, album) in &rows {
-                let keys = cache.keys(title, artist, album);
-                update.execute(params![keys.title, keys.artist, keys.album, id])?;
+    /// Fills the listen keys of the scrobbles stored before the key columns
+    /// existed, in one transaction, then builds the key indexes (after the
+    /// fill, so it does not maintain them row by row), and answers how many
+    /// it filled. Rows
+    /// still waiting are the ones with an empty title key and a title, found
+    /// through the key index, so asking again once they are filled costs one
+    /// index seek. Run off the main thread: a first fill of a long history
+    /// takes a few hundred milliseconds. Concurrent callers in one process
+    /// wait for the first instead of filling twice.
+    pub fn fill_listen_keys(&self) -> Result<usize, rusqlite::Error> {
+        static FILLING: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _filling = FILLING.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let filled = self.fill_missing_listen_keys()?;
+        self.conn.execute_batch(LISTEN_KEY_INDEXES)?;
+        Ok(filled)
+    }
+
+    /// Fills waiting rows a chunk per transaction, so a long history never
+    /// holds the write lock for more than a few tens of milliseconds.
+    fn fill_missing_listen_keys(&self) -> Result<usize, rusqlite::Error> {
+        let mut cache = ListenKeyCache::default();
+        let mut filled = 0;
+        let mut after_id = i64::MIN;
+        loop {
+            let rows: Vec<(i64, String, String, String)> = {
+                let mut stmt = self.conn.prepare_cached(
+                    "SELECT id, trackTitle, artist, albumTitle FROM scrobbles
+                     WHERE id > ?1 AND titleKey = '' AND trackTitle <> '' ORDER BY id LIMIT ?2",
+                )?;
+                let rows = stmt.query_map(params![after_id, LISTEN_KEY_FILL_CHUNK as i64], |row| {
+                    Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+                })?;
+                rows.flatten().collect()
+            };
+            let Some(last) = rows.last() else {
+                return Ok(filled);
+            };
+            after_id = last.0;
+            let tx = self.conn.unchecked_transaction()?;
+            {
+                let mut update = tx.prepare_cached(
+                    "UPDATE scrobbles SET titleKey = ?1, artistKey = ?2, albumKey = ?3 WHERE id = ?4",
+                )?;
+                for (id, title, artist, album) in &rows {
+                    let keys = cache.keys(title, artist, album);
+                    update.execute(params![keys.title, keys.artist, keys.album, id])?;
+                }
+            }
+            tx.commit()?;
+            filled += rows.len();
+            if rows.len() < LISTEN_KEY_FILL_CHUNK {
+                return Ok(filled);
             }
         }
-        tx.commit()?;
-        Ok(rows.len())
     }
 
     /// The stored plays from `since_unix` on, as dedup reads them.
@@ -556,7 +590,8 @@ mod tests {
                 [],
             )
             .unwrap();
-        assert_eq!(db.backfill_listen_keys().unwrap(), 1);
+        assert_eq!(db.fill_listen_keys().unwrap(), 1);
+        assert_eq!(db.fill_listen_keys().unwrap(), 0);
         let keys: (String, String, String) = db
             .conn
             .query_row("SELECT titleKey, artistKey, albumKey FROM scrobbles", [], |row| {
@@ -566,4 +601,5 @@ mod tests {
         assert_eq!(keys, ("song".to_string(), "beyonce".to_string(), "lemonade".to_string()));
     }
 }
+
 

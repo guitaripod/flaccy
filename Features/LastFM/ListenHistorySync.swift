@@ -75,6 +75,7 @@ nonisolated enum ListenHistoryPuller {
         var outcome = ListenHistoryOutcome(state: start)
         let began = DispatchTime.now().uptimeNanoseconds
         do {
+            try db.fillListenKeys()
             try await pull(&outcome, db: db, lastFM: lastFM, progress: progress)
             if outcome.stored > 0 || outcome.finishedBackfill {
                 outcome.reconciledRows = (try? db.reconcilePlayCountsFromScrobbles()) ?? 0
@@ -261,10 +262,46 @@ final class ListenHistorySync {
     func start() {
         guard !started else { return }
         started = true
+        fillListenKeys()
         observeTriggers()
         if isApplicationActive { schedulePeriodicSync() }
         refreshForAccount()
         syncIfDue()
+    }
+
+    /// Gives the plays stored before listen keys existed their keys, off the
+    /// main actor (a long history takes a second or so, once), then recounts
+    /// play counts by them and tells the screens that show counts.
+    private func fillListenKeys() {
+        let db = self.db
+        Task {
+            let reconciled = await Self.fillAndReconcile(db: db)
+            guard let reconciled else { return }
+            if reconciled > 0 {
+                await Library.shared.reloadFromDatabase()
+            }
+            NotificationCenter.default.post(name: Self.didChange, object: nil)
+        }
+    }
+
+    /// The rows of play counts the fill moved, or nil when nothing needed keys.
+    @concurrent
+    private nonisolated static func fillAndReconcile(db: DatabaseManager) async -> Int? {
+        let began = DispatchTime.now().uptimeNanoseconds
+        do {
+            let filled = try db.fillListenKeys()
+            guard filled > 0 else { return nil }
+            let reconciled = try db.reconcilePlayCountsFromScrobbles()
+            let milliseconds = (DispatchTime.now().uptimeNanoseconds - began) / 1_000_000
+            MidgarLog.info(
+                "Listen keys filled for \(filled) plays, \(reconciled) play counts moved, \(milliseconds) ms",
+                category: .sync
+            )
+            return reconciled
+        } catch {
+            MidgarLog.error("Filling listen keys failed: \(error.localizedDescription)", category: .sync)
+            return nil
+        }
     }
 
     /// An automatic trigger: launch, focus or the timer. Skips when a sync ran

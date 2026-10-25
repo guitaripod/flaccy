@@ -120,10 +120,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         ui.core
             .hub
             .subscribe_widget(&scroll, move |_, event| match event {
-                AppEvent::LibraryReloaded | AppEvent::HistorySynced { .. } => {
-                    state.refresh(true)
-                }
-                AppEvent::ScrobbleRecorded => state.refresh(false),
+                AppEvent::LibraryReloaded => state.refresh(true),
+                AppEvent::ScrobbleRecorded | AppEvent::HistorySynced { .. } => state.refresh(false),
                 AppEvent::TrackChanged(_)
                 | AppEvent::PlayingChanged(_)
                 | AppEvent::HomeChanged
