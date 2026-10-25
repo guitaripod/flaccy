@@ -33,6 +33,15 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     var runwayBannerHeight: NSLayoutConstraint!
     var runwayBannerRequested = false
 
+    /// Where the full-screen Debut lives. The root container supplies its own
+    /// view so the showpiece covers the tab bar, the mini player and the other
+    /// tabs too; on its own the Library hosts it.
+    var debutHostProvider: (() -> UIView?)?
+
+    var debutHost: UIView {
+        debutHostProvider?() ?? view
+    }
+
     /// Posted once the Debut is over for good — its summary read and the view
     /// retired, or the showpiece skipped — so anything that waited on it, the
     /// paywall above all, can go ahead. A demotion to the banner is not the end:
@@ -47,7 +56,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     }
 
     var debutOwnsScreen: Bool {
-        if let debutView, debutView.superview === view { return true }
+        if let debutView, debutView.superview === debutHost { return true }
         return presentedViewController is LibraryDebutSheetController
     }
     let emptyStateIconView = UIImageView(image: UIImage(systemName: "music.note.list"))
@@ -187,7 +196,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         setupCollectionView()
         setupSectionIndex()
         configureDataSource()
-        if let debutView { view.bringSubviewToFront(debutView) }
+        if let debutView { debutHost.bringSubviewToFront(debutView) }
         bindViewModel()
         updateRightBarButton(for: .albums)
         updateChips(for: .albums)
@@ -210,12 +219,34 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         observeWantlist()
     }
 
-    #if DEBUG
-    func demoSelect(segment: LibraryViewModel.Segment) {
+    /// Runs `action` with the Library on screen. Pickers, sheets and toasts the
+    /// Library raises need its view in a window, so from any other tab the
+    /// Library is brought forward first.
+    func performWhenVisible(_ action: @escaping () -> Void) {
+        guard view.window == nil, let tabs = tabBarController as? AppTabBarController else {
+            action()
+            return
+        }
+        tabs.show(.library)
+        DispatchQueue.main.async { action() }
+    }
+
+    func select(segment: LibraryViewModel.Segment) {
+        loadViewIfNeeded()
         segmentedControl.selectedSegmentIndex = segment.rawValue
         segmentedControl.sendActions(for: .valueChanged)
     }
-    #endif
+
+    /// Opens the Albums segment on its Recently Added pivot, the way Home's
+    /// "See All" asks for it.
+    func showRecentlyAdded() {
+        select(segment: .albums)
+        viewModel.setFilter(.recentlyAdded)
+    }
+
+    func demoSelect(segment: LibraryViewModel.Segment) {
+        select(segment: segment)
+    }
 
     func observeWantlist() {
         NotificationCenter.default.addObserver(

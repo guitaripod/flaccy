@@ -69,3 +69,27 @@ struct AlbumListRow: View {
         }
     }
 }
+
+/// The most recently received album, marked New and kept above the full list.
+struct NewAlbumRow: View {
+
+    @Environment(\.isLuminanceReduced) private var isDimmed
+
+    let album: MediaAlbum
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("New")
+                    .font(.caption2.weight(.bold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(isDimmed ? Color.secondary : WatchTheme.accent)
+                AlbumRow(album: album)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+    }
+}

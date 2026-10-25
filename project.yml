@@ -131,6 +131,7 @@ targets:
           - flaccy-ios.entitlements
           - Secrets.swift.example
           - AppDelegate.swift
+          - AppTabBarController.swift
           - SceneDelegate.swift
           - UI/AdaptiveLayout.swift
           - UI/AppAppearance.swift
@@ -177,6 +178,25 @@ targets:
           - Equalizer/EqualizerViewController+Layout.swift
           - Equalizer/EqualizerViewController+Presets.swift
           - Equalizer/EqualizerViewController.swift
+          - Home/EditHomeViewController.swift
+          - Home/HomeAlbumCardCell.swift
+          - Home/HomeArtView.swift
+          - Home/HomeBackdropView.swift
+          - Home/HomeChromeViews.swift
+          - Home/HomeEmptyCell.swift
+          - Home/HomeGlanceCards.swift
+          - Home/HomeHeroCell.swift
+          - Home/HomeJumpTileCell.swift
+          - Home/HomeMixCardCell.swift
+          - Home/HomeSegmentedProgressView.swift
+          - Home/HomeSnapshotPlan.swift
+          - Home/HomeTrackQuality.swift
+          - Home/HomeViewModel.swift
+          - Home/HomeSparkView.swift
+          - Home/HomeViewController+Actions.swift
+          - Home/HomeViewController+DataSource.swift
+          - Home/HomeViewController+Layout.swift
+          - Home/HomeViewController.swift
           - Library/AlbumCell.swift
           - Library/ComputerTransferGuideViewController.swift
           - Library/DuplicateCopiesViewController.swift
@@ -234,6 +254,8 @@ targets:
           - Recap/RecapSkeletonView.swift
           - Recap/YearInMusicStoryView.swift
           - Recap/YearInMusicViewController.swift
+          - Search/SearchResultCell.swift
+          - Search/SearchViewController.swift
           - Settings/SettingsCells.swift
           - Settings/SettingsHeaderView.swift
           - Settings/SettingsViewController+Actions.swift

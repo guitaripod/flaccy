@@ -22,6 +22,15 @@ enum AdaptiveLayout {
 
     static let playerLandscapeMaximumHeight: CGFloat = 560
 
+    static let homeWideMinimumWidth: CGFloat = 600
+    static let homeWideJumpColumns = 3
+
+    /// Whether Home has room for its iPad-class arrangement, judged from the
+    /// width its own content area was given, never from the device.
+    static func homeIsWide(contentWidth: CGFloat) -> Bool {
+        contentWidth >= homeWideMinimumWidth
+    }
+
     /// Whether the window is big enough to hold the library beside Now Playing.
     /// Both sides are required so a Pro Max held sideways, which is wide but
     /// short, keeps the single-pane player.
