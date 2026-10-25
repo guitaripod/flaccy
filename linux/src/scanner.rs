@@ -78,12 +78,15 @@ fn run_scan(
     let mut hoisted: Vec<(String, String)> = Vec::new();
     let mut announced: HashSet<String> = HashSet::new();
 
+    let mut batch = InsertBatch::new(&db);
+
     for (index, path) in to_add.iter().enumerate() {
         if index % 25 == 0 || index + 1 == total {
             progress.completed = index + 1;
             progress.tracks_indexed = already_indexed + added;
             let _ = tx.send_blocking(ScanEvent::Progress(progress));
             if !hoisted.is_empty() {
+                batch.commit();
                 let _ = tx.send_blocking(ScanEvent::CoversHoisted(std::mem::take(&mut hoisted)));
             }
         }
@@ -91,7 +94,7 @@ fn run_scan(
         match read_track(path, &rel) {
             Some(track) => {
                 let cover = track.artwork.is_some() && !track.album.is_empty();
-                if let Err(err) = db.insert_track(&track) {
+                if let Err(err) = batch.insert(&track) {
                     crate::logger::error("library", &format!("insert failed for {rel}: {err}"));
                 } else {
                     added += 1;
@@ -105,6 +108,7 @@ fn run_scan(
             }
         }
     }
+    batch.commit();
     if !hoisted.is_empty() {
         let _ = tx.send_blocking(ScanEvent::CoversHoisted(hoisted));
     }
@@ -120,6 +124,45 @@ fn run_scan(
         ),
     );
     Ok((added, removed))
+}
+
+const INSERT_BATCH_SIZE: usize = 200;
+
+/// Groups a scan's inserts into transactions of `INSERT_BATCH_SIZE` rows, so a
+/// first import of thousands of files commits dozens of times instead of once
+/// per statement. A reader told about hoisted covers must find them, so the
+/// scan commits before announcing a chunk.
+struct InsertBatch<'a> {
+    db: &'a Db,
+    open_rows: Option<usize>,
+}
+
+impl<'a> InsertBatch<'a> {
+    fn new(db: &'a Db) -> Self {
+        Self { db, open_rows: None }
+    }
+
+    fn insert(&mut self, track: &NewTrack) -> Result<(), rusqlite::Error> {
+        if self.open_rows.is_none() && self.db.begin_inserts().is_ok() {
+            self.open_rows = Some(0);
+        }
+        let result = self.db.insert_track(track);
+        if let Some(rows) = self.open_rows.as_mut() {
+            *rows += 1;
+            if *rows >= INSERT_BATCH_SIZE {
+                self.commit();
+            }
+        }
+        result
+    }
+
+    fn commit(&mut self) {
+        if self.open_rows.take().is_some() {
+            if let Err(err) = self.db.commit_inserts() {
+                crate::logger::error("library", &format!("batch commit failed: {err}"));
+            }
+        }
+    }
 }
 
 fn collect_audio_files(root: &Path) -> Vec<PathBuf> {
@@ -397,5 +440,48 @@ mod tests {
         let parsed = parse_filename("12. Twelfth");
         assert_eq!(parsed.track_number, 12);
         assert_eq!(parsed.title, "Twelfth");
+    }
+
+    fn sample_track(index: usize) -> NewTrack {
+        NewTrack {
+            rel_path: format!("Album/{index:04}.flac"),
+            title: format!("Song {index}"),
+            artist: "Artist".to_string(),
+            album: "Album".to_string(),
+            album_artist: None,
+            track_number: index as i32,
+            duration: 60.0,
+            codec: None,
+            bit_depth: None,
+            sample_rate: None,
+            channels: None,
+            artwork: (index == 0).then(|| vec![1, 2, 3]),
+        }
+    }
+
+    #[test]
+    fn a_batched_scan_stores_every_row_and_publishes_them_on_commit() {
+        let dir = std::env::temp_dir().join(format!("flaccy-batch-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = dir.join("library.sqlite");
+        let db = Db::open(&path).expect("db opens");
+        let reader = Db::open(&path).expect("reader opens");
+        let mut batch = InsertBatch::new(&db);
+
+        for index in 0..(INSERT_BATCH_SIZE * 2 + 50) {
+            batch.insert(&sample_track(index)).expect("insert");
+        }
+        assert_eq!(reader.fetch_relative_paths().len(), INSERT_BATCH_SIZE * 2);
+        assert!(reader.fetch_album_artwork("Album", "Artist").is_some());
+
+        batch.commit();
+        assert_eq!(reader.fetch_relative_paths().len(), INSERT_BATCH_SIZE * 2 + 50);
+        batch.insert(&sample_track(9999)).expect("insert after commit");
+        batch.commit();
+        assert_eq!(reader.fetch_relative_paths().len(), INSERT_BATCH_SIZE * 2 + 51);
+        drop(batch);
+        drop(db);
+        drop(reader);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
