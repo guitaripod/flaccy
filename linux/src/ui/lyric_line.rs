@@ -62,11 +62,21 @@ pub fn edge_inside(start: f32, end: f32, fraction: f64) -> f32 {
     start + (end - start) * fraction.clamp(0.0, 1.0) as f32
 }
 
+/// Stands for "no wrap width": the line is laid out on one row.
+const UNWRAPPED: i32 = -1;
+
+/// The one layout a line keeps, shared by measuring and drawing. It is rebuilt
+/// only when the font, the scale factor or the text direction it was built
+/// under changes, and re-wrapped only when it is asked for another width.
 pub struct Cached {
-    width: i32,
-    font: String,
+    font: Option<pango::FontDescription>,
+    scale_factor: i32,
+    direction: gtk::TextDirection,
     layout: pango::Layout,
+    width: i32,
     rows: Vec<VisualLine>,
+    rows_valid: bool,
+    natural_width: Option<i32>,
 }
 
 mod imp {
@@ -98,32 +108,15 @@ mod imp {
 
         fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
             let obj = self.obj();
-            let text = self.text.borrow();
-            let layout = obj.create_pango_layout(Some(text.as_str()));
             match orientation {
                 gtk::Orientation::Horizontal => {
-                    let (width, _) = layout.pixel_size();
+                    let width = obj.natural_text_width();
                     (MIN_WIDTH.min(width), width.max(MIN_WIDTH), -1, -1)
                 }
                 _ => {
-                    if for_size > 0 {
-                        layout.set_width(for_size * pango::SCALE);
-                        layout.set_wrap(pango::WrapMode::WordChar);
-                    }
-                    let (_, height) = layout.pixel_size();
+                    let height = obj.wrapped_text_height(for_size);
                     (height, height, -1, -1)
                 }
-            }
-        }
-
-        fn size_allocate(&self, width: i32, _height: i32, _baseline: i32) {
-            let stale = self
-                .cached
-                .borrow()
-                .as_ref()
-                .is_some_and(|cached| cached.width != width);
-            if stale {
-                self.cached.borrow_mut().take();
             }
         }
 
@@ -237,36 +230,77 @@ impl LyricLine {
         }
     }
 
-    /// The font the widget's style currently resolves to, so a layout built
-    /// under another weight or size is known to be stale.
-    fn font_key(&self) -> String {
-        self.pango_context()
-            .font_description()
-            .map(|font| font.to_string())
-            .unwrap_or_default()
+    /// Makes the cached layout current: built under the font, scale factor and
+    /// direction the widget resolves to now, and wrapped at `width`
+    /// (`UNWRAPPED` for none). Nothing is rebuilt or re-wrapped when it already
+    /// is.
+    fn prepare_layout(&self, width: i32) {
+        let imp = self.imp();
+        let font = self.pango_context().font_description();
+        let scale_factor = self.scale_factor();
+        let direction = self.direction();
+        let mut cached = imp.cached.borrow_mut();
+        let current = cached.as_ref().is_some_and(|cached| {
+            cached.font == font
+                && cached.scale_factor == scale_factor
+                && cached.direction == direction
+        });
+        if !current {
+            let layout = self.create_pango_layout(Some(imp.text.borrow().as_str()));
+            layout.set_wrap(pango::WrapMode::WordChar);
+            *cached = Some(Cached {
+                font,
+                scale_factor,
+                direction,
+                layout,
+                width: UNWRAPPED,
+                rows: Vec::new(),
+                rows_valid: false,
+                natural_width: None,
+            });
+        }
+        let Some(cached) = cached.as_mut() else { return };
+        if cached.width != width {
+            cached.layout.set_width(if width == UNWRAPPED {
+                -1
+            } else {
+                width * pango::SCALE
+            });
+            cached.width = width;
+            cached.rows_valid = false;
+        }
     }
 
-    fn ensure_layout(&self, width: i32) {
-        let imp = self.imp();
-        let font = self.font_key();
-        if imp
+    /// The width the text asks for on one row.
+    fn natural_text_width(&self) -> i32 {
+        self.prepare_layout(UNWRAPPED);
+        let mut cached = self.imp().cached.borrow_mut();
+        let Some(cached) = cached.as_mut() else { return MIN_WIDTH };
+        let layout = &cached.layout;
+        *cached
+            .natural_width
+            .get_or_insert_with(|| layout.pixel_size().0)
+    }
+
+    /// The height the text needs when wrapped to `for_size`, or on one row
+    /// when no width is given.
+    fn wrapped_text_height(&self, for_size: i32) -> i32 {
+        self.prepare_layout(if for_size > 0 { for_size } else { UNWRAPPED });
+        self.imp()
             .cached
             .borrow()
             .as_ref()
-            .is_some_and(|cached| cached.width == width && cached.font == font)
-        {
-            return;
+            .map_or(0, |cached| cached.layout.pixel_size().1)
+    }
+
+    fn ensure_layout(&self, width: i32) {
+        self.prepare_layout(width);
+        let mut cached = self.imp().cached.borrow_mut();
+        let Some(cached) = cached.as_mut() else { return };
+        if !cached.rows_valid {
+            cached.rows = visual_rows(&cached.layout);
+            cached.rows_valid = true;
         }
-        let layout = self.create_pango_layout(Some(imp.text.borrow().as_str()));
-        layout.set_width(width * pango::SCALE);
-        layout.set_wrap(pango::WrapMode::WordChar);
-        let rows = visual_rows(&layout);
-        *imp.cached.borrow_mut() = Some(Cached {
-            width,
-            font,
-            layout,
-            rows,
-        });
     }
 
     fn edge_for(&self, cached: &Cached, progress: LineProgress) -> SungEdge {

@@ -26,6 +26,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 
         Task {
             await AudioPlayer.shared.retryPendingScrobbles()
+            ListenHistorySync.shared.start()
         }
 
         return true

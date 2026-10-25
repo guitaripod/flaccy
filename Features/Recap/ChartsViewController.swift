@@ -19,7 +19,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
 
     private var currentPalette = ArtworkPaletteExtractor.fallbackPalette(seed: "flaccy")
     private var currentTint = UIColor.systemIndigo
-    private var importState: RecapImportState = .available
+    private var syncStatus: ListenHistoryStatus = .notConnected
     private var libraryIndex = RecapLibraryIndex()
     private var playQueues: [RecapSection: [Track]] = [:]
     private var cancellables = Set<AnyCancellable>()
@@ -89,7 +89,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         collectionView.refreshControl = refresh
 
         collectionView.register(ProfileCell.self, forCellWithReuseIdentifier: ProfileCell.reuseID)
-        collectionView.register(ImportBannerCell.self, forCellWithReuseIdentifier: ImportBannerCell.reuseID)
+        collectionView.register(SyncBannerCell.self, forCellWithReuseIdentifier: SyncBannerCell.reuseID)
         collectionView.register(PeriodSelectorCell.self, forCellWithReuseIdentifier: PeriodSelectorCell.reuseID)
         collectionView.register(ArtistCardCell.self, forCellWithReuseIdentifier: ArtistCardCell.reuseID)
         collectionView.register(AlbumCoverCell.self, forCellWithReuseIdentifier: AlbumCoverCell.reuseID)
@@ -113,7 +113,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
     }
 
     private func setupOverlays() {
-        emptyLabel.text = String(localized: "No listening history yet.\nPlay something, or import your\nLast.fm history above.")
+        emptyLabel.text = String(localized: "No listening history yet.\nPlay something to build your Recap.")
         emptyLabel.font = .scaled(.body, size: 16, weight: .medium)
         emptyLabel.adjustsFontForContentSizeCategory = true
         emptyLabel.textColor = UIColor.white.withAlphaComponent(0.6)
@@ -174,7 +174,7 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
 
         let result: NSCollectionLayoutSection
         switch section {
-        case .profile, .importBanner, .persona:
+        case .profile, .syncBanner, .persona:
             let item = NSCollectionLayoutItem(layoutSize: full)
             let group = NSCollectionLayoutGroup.vertical(layoutSize: full, subitems: [item])
             result = NSCollectionLayoutSection(group: group)
@@ -279,10 +279,9 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ProfileCell.reuseID, for: indexPath) as! ProfileCell
             cell.configure(profile)
             return cell
-        case .importBanner(let state):
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ImportBannerCell.reuseID, for: indexPath) as! ImportBannerCell
-            cell.configure(state: state)
-            cell.onTap = { [weak self] in self?.importTapped() }
+        case .syncBanner(let status):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: SyncBannerCell.reuseID, for: indexPath) as! SyncBannerCell
+            cell.configure(status: status)
             return cell
         case .period(let period):
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: PeriodSelectorCell.reuseID, for: indexPath) as! PeriodSelectorCell
@@ -331,12 +330,12 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
             }
             .store(in: &cancellables)
 
-        viewModel.importStatePublisher
+        viewModel.syncStatusPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
+            .sink { [weak self] status in
                 guard let self else { return }
-                self.importState = state
-                self.reapplyImportBanner()
+                self.syncStatus = status
+                self.reapplySyncBanner()
             }
             .store(in: &cancellables)
     }
@@ -421,9 +420,9 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         snapshot.appendSections([.profile])
         snapshot.appendItems([.profile(profile)], toSection: .profile)
 
-        if importState.showsBanner {
-            snapshot.appendSections([.importBanner])
-            snapshot.appendItems([.importBanner(importState)], toSection: .importBanner)
+        if syncStatus.isBackfilling {
+            snapshot.appendSections([.syncBanner])
+            snapshot.appendItems([.syncBanner(syncStatus)], toSection: .syncBanner)
         }
 
         snapshot.appendSections([.period])
@@ -464,9 +463,9 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
 
         emptyLabel.isHidden = data.hasContent
         if !data.hasContent {
-            emptyLabel.text = importState == .unavailable
+            emptyLabel.text = syncStatus == .notConnected
                 ? String(localized: "Connect Last.fm in Settings, or play\nsomething to build your Recap.")
-                : String(localized: "No listening history yet.\nPlay something, or import your\nLast.fm history above.")
+                : String(localized: "No listening history yet.\nPlay something to build your Recap.")
         }
     }
 
@@ -582,19 +581,22 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         return item
     }
 
-    private func reapplyImportBanner() {
+    private func reapplySyncBanner() {
         var snapshot = dataSource.snapshot()
-        guard importState.showsBanner else {
-            if snapshot.sectionIdentifiers.contains(.importBanner) {
-                snapshot.deleteSections([.importBanner])
+        guard syncStatus.isBackfilling else {
+            if snapshot.sectionIdentifiers.contains(.syncBanner) {
+                snapshot.deleteSections([.syncBanner])
                 dataSource.apply(snapshot, animatingDifferences: !UIAccessibility.isReduceMotionEnabled)
             }
             return
         }
-        guard snapshot.sectionIdentifiers.contains(.importBanner) else { return }
-        let items = snapshot.itemIdentifiers(inSection: .importBanner)
+        guard snapshot.sectionIdentifiers.contains(.syncBanner) else {
+            if let data = viewModel.data { render(data) }
+            return
+        }
+        let items = snapshot.itemIdentifiers(inSection: .syncBanner)
         snapshot.deleteItems(items)
-        snapshot.appendItems([.importBanner(importState)], toSection: .importBanner)
+        snapshot.appendItems([.syncBanner(syncStatus)], toSection: .syncBanner)
         dataSource.apply(snapshot, animatingDifferences: false)
     }
 
@@ -602,12 +604,6 @@ final class ChartsViewController: UIViewController, SonglinkShareable {
         guard period != viewModel.selectedPeriod else { return }
         wantsSkeletonOnLoad = true
         viewModel.load(period: period)
-    }
-
-    private func importTapped() {
-        guard importState == .available else { return }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        viewModel.importHistory()
     }
 
     private func shareRecap() {

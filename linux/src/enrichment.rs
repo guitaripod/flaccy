@@ -6,7 +6,7 @@ use flaccy_shared::enrichment_job::{self as job, EnrichmentRecord, Failure, Fiel
 use gtk::gio;
 use gtk::glib;
 use gtk::prelude::*;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
@@ -200,7 +200,7 @@ fn watch_network(core: &Rc<AppCore>) {
 
 fn drain_completions(core: &Rc<AppCore>, done_rx: async_channel::Receiver<Outcome>) {
     let weak = Rc::downgrade(core);
-    let reload_scheduled = Rc::new(Cell::new(false));
+    let reload = Rc::new(ReloadDebounce::default());
     let publish_scheduled = Rc::new(Cell::new(false));
     let unpark_scheduled = Rc::new(Cell::new(false));
     glib::spawn_future_local(async move {
@@ -217,28 +217,74 @@ fn drain_completions(core: &Rc<AppCore>, done_rx: async_channel::Receiver<Outcom
             schedule_unpark(&core, &unpark_scheduled);
             schedule_publish(&core, &publish_scheduled);
             drain_rerun(&core);
-            if !outcome.changed {
-                continue;
+            if outcome.changed {
+                if !outcome.title.is_empty() {
+                    core.artwork.invalidate(&outcome.title, &outcome.artist);
+                    core.hub.emit(&AppEvent::AlbumEnriched {
+                        title: outcome.title.clone(),
+                        artist: outcome.artist.clone(),
+                    });
+                }
+                reload.note_change(&core);
             }
-            if !outcome.title.is_empty() {
-                core.artwork.invalidate(&outcome.title, &outcome.artist);
-                core.hub.emit(&AppEvent::AlbumEnriched {
-                    title: outcome.title.clone(),
-                    artist: outcome.artist.clone(),
-                });
-            }
-            if !reload_scheduled.replace(true) {
-                let weak_inner = Rc::downgrade(&core);
-                let flag = Rc::clone(&reload_scheduled);
-                glib::timeout_add_local_once(Duration::from_secs(15), move || {
-                    flag.set(false);
-                    if let Some(core) = weak_inner.upgrade() {
-                        core.reload_library();
-                    }
-                });
+            if core.enrich_in_flight.get() == 0 && !queue_is_draining(&core) {
+                reload.note_idle(&core);
             }
         }
     });
+}
+
+/// How long the library may go without a reload after enrichment starts
+/// changing it: a reload fans out to every page, so a pass that changes an
+/// album every few seconds must not reload on each one.
+const RELOAD_QUIET: Duration = Duration::from_secs(15);
+const RELOAD_MAX_WAIT: Duration = Duration::from_secs(60);
+const RELOAD_IDLE_FLUSH: Duration = Duration::from_secs(1);
+
+/// When the next reload is due, given how long a change has been waiting: a
+/// quiet stretch after the latest change, but never past the cap measured from
+/// the first one, so a long pass still shows its progress.
+fn reload_delay(waiting_for: Duration) -> Duration {
+    RELOAD_QUIET.min(RELOAD_MAX_WAIT.saturating_sub(waiting_for))
+}
+
+/// Trailing debounce for the library reload enrichment owes the UI. The timer
+/// is re-armed by every change, bounded by `RELOAD_MAX_WAIT` from the first
+/// pending one, and the pass going idle flushes what is left almost at once.
+#[derive(Default)]
+struct ReloadDebounce {
+    first_pending: Cell<Option<Instant>>,
+    timer: RefCell<Option<glib::SourceId>>,
+}
+
+impl ReloadDebounce {
+    fn note_change(self: &Rc<Self>, core: &Rc<AppCore>) {
+        let first = self.first_pending.get().unwrap_or_else(Instant::now);
+        self.first_pending.set(Some(first));
+        self.arm(core, reload_delay(first.elapsed()));
+    }
+
+    fn note_idle(self: &Rc<Self>, core: &Rc<AppCore>) {
+        if let Some(first) = self.first_pending.get() {
+            self.arm(core, RELOAD_IDLE_FLUSH.min(reload_delay(first.elapsed())));
+        }
+    }
+
+    fn arm(self: &Rc<Self>, core: &Rc<AppCore>, delay: Duration) {
+        if let Some(previous) = self.timer.borrow_mut().take() {
+            previous.remove();
+        }
+        let debounce = Rc::clone(self);
+        let weak = Rc::downgrade(core);
+        let source = glib::timeout_add_local_once(delay, move || {
+            debounce.timer.borrow_mut().take();
+            debounce.first_pending.set(None);
+            if let Some(core) = weak.upgrade() {
+                core.reload_library();
+            }
+        });
+        *self.timer.borrow_mut() = Some(source);
+    }
 }
 
 /// Runs the pass a scan asked for while the previous one was still draining,
@@ -967,4 +1013,23 @@ fn url_encode(input: &str) -> String {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{reload_delay, RELOAD_MAX_WAIT, RELOAD_QUIET};
+    use std::time::Duration;
+
+    #[test]
+    fn a_fresh_change_waits_the_full_quiet_stretch() {
+        assert_eq!(reload_delay(Duration::ZERO), RELOAD_QUIET);
+        assert_eq!(reload_delay(Duration::from_secs(30)), RELOAD_QUIET);
+    }
+
+    #[test]
+    fn the_wait_shrinks_so_the_first_change_is_never_held_past_the_cap() {
+        assert_eq!(reload_delay(Duration::from_secs(50)), Duration::from_secs(10));
+        assert_eq!(reload_delay(RELOAD_MAX_WAIT), Duration::ZERO);
+        assert_eq!(reload_delay(RELOAD_MAX_WAIT + Duration::from_secs(5)), Duration::ZERO);
+    }
 }

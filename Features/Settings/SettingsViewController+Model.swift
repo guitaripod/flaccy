@@ -83,7 +83,7 @@ extension SettingsViewController {
         case trialReminders(enabled: Bool)
         case lastFMAccount(username: String?)
         case pendingScrobbles(count: Int)
-        case importLastFM
+        case historySync
         case yearInMusic
         case recapNotifications(frequency: String)
         case equalizer(summary: String)

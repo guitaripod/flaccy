@@ -7,7 +7,7 @@ use crate::ui::Ui;
 use flaccy_shared::track_revision::{self, copy};
 use gtk::glib;
 use gtk::prelude::*;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -490,11 +490,15 @@ pub fn attach_now_playing_row(
     title: &gtk::Label,
     rel_path: String,
 ) {
+    let applied: Cell<Option<(bool, bool)>> = Cell::new(None);
     let apply = {
         let row = row.clone();
         let cell = cell.clone();
         let title = title.clone();
         move |current: bool, playing: bool| {
+            if applied.replace(Some((current, playing))) == Some((current, playing)) {
+                return;
+            }
             if current {
                 row.add_css_class("now-playing-row");
                 title.add_css_class("now-playing-title");
@@ -530,11 +534,7 @@ pub fn attach_now_playing_row(
                 ui_ref.core.player.is_playing(),
             ),
             AppEvent::PlayingChanged(playing) => apply(
-                ui_ref
-                    .core
-                    .player
-                    .current_track()
-                    .is_some_and(|track| track.rel_path == rel_path),
+                ui_ref.core.player.is_current_path(&rel_path),
                 *playing,
             ),
             _ => {}

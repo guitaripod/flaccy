@@ -7,7 +7,11 @@
 use flaccy_shared::equalizer::graphic::GraphicSolver;
 use flaccy_shared::equalizer::plot::EqualizerPlot;
 use flaccy_shared::equalizer::plot_model::{PlotMode, PlotModel, Point, Rect};
-use gtk::cairo::{self, Context, FontSlant, FontWeight, LinearGradient, RadialGradient};
+use flaccy_shared::equalizer::profile::EqualizerBand;
+use gtk::cairo::{
+    self, Content, Context, FontSlant, FontWeight, LinearGradient, RadialGradient, RecordingSurface,
+};
+use std::cell::RefCell;
 use std::f64::consts::PI;
 
 use super::copy;
@@ -128,6 +132,108 @@ pub fn draw_text(
     let _ = cr.show_text(text);
 }
 
+/// How many points a response curve is sampled at.
+const CURVE_SAMPLES: usize = 160;
+
+/// A curve's points, kept for as long as the bands and the plot rectangle they
+/// were computed for are unchanged, so a frame that only moved the spectrum
+/// does not evaluate every filter at every sample again.
+#[derive(Default)]
+pub struct CurveMemo {
+    bands: Vec<EqualizerBand>,
+    plot: Option<Rect>,
+    points: Vec<Point>,
+}
+
+impl CurveMemo {
+    pub fn points(&mut self, model: &PlotModel, bands: &[EqualizerBand], plot: Rect) -> &[Point] {
+        if self.plot != Some(plot) || self.bands.as_slice() != bands {
+            self.points = model.curve_points(bands, plot, CURVE_SAMPLES);
+            self.bands = bands.to_vec();
+            self.plot = Some(plot);
+        }
+        &self.points
+    }
+}
+
+/// What the static layers were recorded for; any change re-records them.
+#[derive(Clone, Copy, PartialEq)]
+struct LayerKey {
+    plot: Rect,
+    scale: f64,
+    ink: Rgb,
+    active_band: Option<usize>,
+}
+
+/// The grid with its decibel labels, which sit under the curve, and the
+/// frequency labels, which sit over everything. Recorded once as vector
+/// drawing and replayed, so the text is laid out when the plot is resized or
+/// restyled rather than on every frame, and nothing is rasterised differently.
+struct StaticLayers {
+    key: LayerKey,
+    under: RecordingSurface,
+    over: RecordingSurface,
+}
+
+/// What survives from one frame of the plot to the next.
+#[derive(Default)]
+pub struct PlotCache {
+    layers: Option<StaticLayers>,
+    kept: CurveMemo,
+    selected: CurveMemo,
+}
+
+impl PlotCache {
+    fn refresh_layers(&mut self, plot: Rect, model: &PlotModel, style: &Style) {
+        let active_band = (model.content().mode == PlotMode::Simple)
+            .then_some(model.content().selected_index);
+        let key = LayerKey { plot, scale: style.scale, ink: style.ink, active_band };
+        if self.layers.as_ref().map(|layers| layers.key) != Some(key) {
+            self.layers = record_layers(key, plot, model, style);
+        }
+    }
+}
+
+fn record(draw: impl FnOnce(&Context)) -> Option<RecordingSurface> {
+    let surface = RecordingSurface::create(Content::ColorAlpha, None).ok()?;
+    let cr = Context::new(&surface).ok()?;
+    draw(&cr);
+    Some(surface)
+}
+
+fn record_layers(
+    key: LayerKey,
+    plot: Rect,
+    model: &PlotModel,
+    style: &Style,
+) -> Option<StaticLayers> {
+    let under = record(|cr| draw_grid(cr, plot, style))?;
+    let over = record(|cr| draw_frequency_labels(cr, plot, model, style))?;
+    Some(StaticLayers { key, under, over })
+}
+
+fn replay(cr: &Context, layer: &RecordingSurface) {
+    if cr.set_source_surface(layer, 0.0, 0.0).is_ok() {
+        let _ = cr.paint();
+    }
+}
+
+/// Runs `draw` straight onto the canvas when it is to be fully opaque, and as
+/// one translucent group otherwise, which is the only case that needs the
+/// group's offscreen surface.
+fn with_opacity(cr: &Context, alpha: f64, draw: impl FnOnce(&Context)) {
+    let _ = cr.save();
+    if alpha >= 1.0 {
+        draw(cr);
+    } else {
+        cr.push_group();
+        draw(cr);
+        let _ = cr.pop_group_to_source();
+        let _ = cr.paint_with_alpha(alpha);
+    }
+    let _ = cr.restore();
+}
+
 /// Everything the renderer needs besides the model.
 pub struct PlotFrame<'a> {
     pub width: f64,
@@ -140,42 +246,46 @@ pub struct PlotFrame<'a> {
     /// is drawn as the line being heard, with the curve in force left behind
     /// as a thin dashed reference.
     pub preview: Option<&'a [Point]>,
+    pub cache: &'a RefCell<PlotCache>,
 }
 
 pub fn draw(cr: &Context, frame: &PlotFrame) {
     let PlotFrame { plot, model, style, .. } = *frame;
-    draw_grid(cr, plot, &style);
-
-    let _ = cr.save();
-    cr.push_group();
-    draw_spectrum(cr, plot, model, &style);
-    if model.content().mode == PlotMode::Advanced {
-        draw_selected_band(cr, plot, model);
+    let mut cache = frame.cache.borrow_mut();
+    let cache = &mut *cache;
+    cache.refresh_layers(plot, model, &style);
+    match cache.layers.as_ref() {
+        Some(layers) => replay(cr, &layers.under),
+        None => draw_grid(cr, plot, &style),
     }
-    draw_curve(cr, plot, model, &style, frame.preview);
-    let _ = cr.pop_group_to_source();
-    let _ = cr.paint_with_alpha(if style.is_enabled || frame.preview.is_some() { 1.0 } else { 0.45 });
-    let _ = cr.restore();
+
+    let curve_alpha = if style.is_enabled || frame.preview.is_some() { 1.0 } else { 0.45 };
+    with_opacity(cr, curve_alpha, |cr| {
+        draw_spectrum(cr, plot, model, &style);
+        if model.content().mode == PlotMode::Advanced {
+            draw_selected_band(cr, plot, model, &mut cache.selected);
+        }
+        draw_curve(cr, plot, model, &style, frame.preview, &mut cache.kept);
+    });
 
     if model.content().mode == PlotMode::Simple {
         draw_active_column(cr, plot, model, &style);
     }
-    let _ = cr.save();
-    cr.push_group();
-    draw_nodes(cr, plot, model, &style, frame.hover);
-    let _ = cr.pop_group_to_source();
-    let _ = cr.paint_with_alpha(if frame.preview.is_some() {
+    let node_alpha = if frame.preview.is_some() {
         0.22
     } else if style.is_enabled {
         1.0
     } else {
         0.5
-    });
-    let _ = cr.restore();
+    };
+    with_opacity(cr, node_alpha, |cr| draw_nodes(cr, plot, model, &style, frame.hover));
     if model.is_dragging {
         draw_bubble(cr, frame);
     }
-    draw_frequency_labels(cr, plot, model, &style);
+    match cache.layers.as_ref() {
+        Some(layers) => replay(cr, &layers.over),
+        None => draw_frequency_labels(cr, plot, model, &style),
+    }
     if frame.shows_focus {
         draw_focus_ring(cr, plot, model, &style);
     }
@@ -260,15 +370,15 @@ fn draw_spectrum(cr: &Context, plot: Rect, model: &PlotModel, style: &Style) {
     let _ = cr.restore();
 }
 
-fn draw_selected_band(cr: &Context, plot: Rect, model: &PlotModel) {
+fn draw_selected_band(cr: &Context, plot: Rect, model: &PlotModel, memo: &mut CurveMemo) {
     let index = model.content().selected_index;
     let Some(band) = model.content().bands.get(index) else {
         return;
     };
-    let points = model.curve_points(std::slice::from_ref(band), plot, 160);
+    let points = memo.points(model, std::slice::from_ref(band), plot);
     let zero = plot.min_y() + plot.height / 2.0;
     cr.move_to(plot.min_x(), zero);
-    for point in &points {
+    for point in points {
         cr.line_to(point.x, point.y);
     }
     cr.line_to(plot.max_x(), zero);
@@ -277,15 +387,22 @@ fn draw_selected_band(cr: &Context, plot: Rect, model: &PlotModel) {
     let _ = cr.fill();
 }
 
-fn draw_curve(cr: &Context, plot: Rect, model: &PlotModel, style: &Style, preview: Option<&[Point]>) {
-    let bands = if style.is_enabled { model.resolved_bands().to_vec() } else { Vec::new() };
-    let kept = model.curve_points(&bands, plot, 160);
+fn draw_curve(
+    cr: &Context,
+    plot: Rect,
+    model: &PlotModel,
+    style: &Style,
+    preview: Option<&[Point]>,
+    memo: &mut CurveMemo,
+) {
+    let bands: &[EqualizerBand] = if style.is_enabled { model.resolved_bands() } else { &[] };
+    let kept = memo.points(model, bands, plot);
     match preview {
         Some(points) => {
-            draw_reference_curve(cr, &kept, style);
+            draw_reference_curve(cr, kept, style);
             draw_hero_curve(cr, plot, points, style, false);
         }
-        None => draw_hero_curve(cr, plot, &kept, style, style.is_comparing && style.is_enabled),
+        None => draw_hero_curve(cr, plot, kept, style, style.is_comparing && style.is_enabled),
     }
 }
 

@@ -76,22 +76,18 @@ extension SettingsViewController {
             cell.accessibilityLabel = String(localized: "Retry pending scrobbles")
             cell.accessibilityValue = String(localized: "\(count) pending scrobbles")
 
-        case .importLastFM:
-            content.image = RowIcon.image(systemName: "square.and.arrow.down.on.square", tint: .systemPink)
-            if let imported = lastFMImportProgress {
-                content.text = String(localized: "Importing Last.fm History")
-                if imported > 0 { content.secondaryText = "\(imported)" }
+        case .historySync:
+            let status = ListenHistorySync.shared.status
+            content.image = RowIcon.image(systemName: "arrow.triangle.2.circlepath", tint: .systemPink)
+            content.text = String(localized: "History Sync")
+            content.secondaryText = status.summary
+            cell.accessibilityLabel = String(localized: "History Sync")
+            cell.accessibilityValue = status.summary
+            if status.isBusy {
                 cell.accessoryView = makeSpinnerAccessory()
                 cell.selectionStyle = .none
-                cell.accessibilityLabel = String(localized: "Importing Last.fm History")
-                if imported > 0 {
-                    cell.accessibilityValue = String(localized: "\(imported) scrobbles imported")
-                }
             } else {
-                content.text = String(localized: "Import Last.fm History")
-                content.textProperties.color = .tintColor
-                cell.accessibilityLabel = String(localized: "Import Last.fm History")
-                cell.accessibilityHint = String(localized: "Backfills your listening stats from Last.fm")
+                cell.accessibilityHint = String(localized: "Syncs your Last.fm listening history now")
             }
 
         case .yearInMusic:

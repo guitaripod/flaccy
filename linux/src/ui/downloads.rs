@@ -5,9 +5,13 @@ use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::glib;
 use gtk::pango;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
+
+/// Rows appended in the same turn the queue is shown; the rest follow in idle
+/// chunks of this size, so a long history never holds up the page.
+const ROWS_PER_CHUNK: usize = 40;
 
 struct StepCard {
     icon: &'static str,
@@ -164,33 +168,42 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     }
 
     let bars: Rc<RefCell<HashMap<i64, gtk::ProgressBar>>> = Rc::new(RefCell::new(HashMap::new()));
+    let generation = Rc::new(Cell::new(0u64));
+    let clear = {
+        let list = list.clone();
+        let bars = Rc::clone(&bars);
+        let generation = Rc::clone(&generation);
+        Rc::new(move || {
+            generation.set(generation.get() + 1);
+            while let Some(child) = list.first_child() {
+                list.remove(&child);
+            }
+            bars.borrow_mut().clear();
+        })
+    };
     let rebuild = {
         let ui = Rc::clone(ui);
         let list = list.clone();
         let queue_section = queue_section.clone();
         let clear_button = clear_button.clone();
         let bars = Rc::clone(&bars);
+        let generation = Rc::clone(&generation);
+        let clear = Rc::clone(&clear);
         Rc::new(move || {
-            while let Some(child) = list.first_child() {
-                list.remove(&child);
-            }
-            bars.borrow_mut().clear();
+            clear();
             let rows = ui.core.db.download_rows();
             queue_section.set_visible(!rows.is_empty());
             clear_button.set_visible(ui.core.db.finished_download_count() > 0);
-            for row in &rows {
-                list.append(&queue_row(&ui, row, &bars));
-            }
+            append_rows(&ui, &list, &bars, &generation, Rc::new(rows), 0);
         })
     };
-    rebuild();
     {
         let rebuild = Rc::clone(&rebuild);
         let bars = Rc::clone(&bars);
         ui.core
             .hub
-            .subscribe_widget(&list, move |_, event| match event {
-                AppEvent::DownloadsChanged => rebuild(),
+            .subscribe_widget(&list, move |list, event| match event {
+                AppEvent::DownloadsChanged if list.is_mapped() => rebuild(),
                 AppEvent::DownloadProgress { id, fraction } => {
                     if let Some(bar) = bars.borrow().get(id) {
                         bar.set_fraction(*fraction);
@@ -199,6 +212,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 _ => {}
             });
     }
+    {
+        let rebuild = Rc::clone(&rebuild);
+        list.connect_map(move |_| rebuild());
+    }
+    list.connect_unmap(move |_| clear());
 
     let scroll = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
@@ -422,6 +440,37 @@ fn install_command() -> String {
     } else {
         "pipx install yt-dlp   # and install ffmpeg from your package manager".to_string()
     }
+}
+
+/// Appends the queue rows from `start` on, a chunk now and the rest at idle
+/// priority, until a newer rebuild or a clear moves `generation` on. The rows
+/// only exist while the page is on screen: thousands of hidden rows would each
+/// be restyled whenever the adaptive palette changes.
+fn append_rows(
+    ui: &Rc<Ui>,
+    list: &gtk::ListBox,
+    bars: &Rc<RefCell<HashMap<i64, gtk::ProgressBar>>>,
+    generation: &Rc<Cell<u64>>,
+    rows: Rc<Vec<DownloadRow>>,
+    start: usize,
+) {
+    let end = (start + ROWS_PER_CHUNK).min(rows.len());
+    for row in &rows[start..end] {
+        list.append(&queue_row(ui, row, bars));
+    }
+    if end == rows.len() {
+        return;
+    }
+    let ui = Rc::clone(ui);
+    let list = list.clone();
+    let bars = Rc::clone(bars);
+    let generation = Rc::clone(generation);
+    let expected = generation.get();
+    glib::idle_add_local_once(move || {
+        if generation.get() == expected {
+            append_rows(&ui, &list, &bars, &generation, rows, end);
+        }
+    });
 }
 
 fn queue_row(

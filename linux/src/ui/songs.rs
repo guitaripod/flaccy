@@ -60,7 +60,7 @@ struct Mode {
     allowed: RefCell<Option<HashSet<String>>>,
     source: RefCell<String>,
     range_plays: RefCell<HashMap<String, i64>>,
-    rank: RefCell<HashMap<String, usize>>,
+    rank: RefCell<HashMap<i64, usize>>,
 }
 
 impl Mode {
@@ -106,7 +106,7 @@ impl Mode {
     fn plays_order(&self, a: &Track, b: &Track) -> Ordering {
         if self.counts_in_range() {
             let rank = self.rank.borrow();
-            let position = |track: &Track| rank.get(&track.rel_path).copied().unwrap_or(usize::MAX);
+            let position = |track: &Track| rank.get(&track.id).copied().unwrap_or(usize::MAX);
             return position(b).cmp(&position(a));
         }
         a.play_count
@@ -151,8 +151,29 @@ struct View {
     sources: RefCell<Option<Rc<SourceBar>>>,
     actions: RefCell<Vec<gtk::Button>>,
     epoch: Cell<u64>,
-    applied: Cell<u64>,
+    applied_rows: RefCell<Vec<u64>>,
+    total_seconds: Cell<f64>,
+    pending: Pending,
 }
+
+/// What happened to the table while its page was off screen. Nothing is done
+/// about it until the page is shown, or until something reads the table.
+#[derive(Default)]
+struct Pending {
+    library: Cell<bool>,
+    counts: Cell<bool>,
+    search: Cell<bool>,
+}
+
+/// How a library change reached the rows of the table.
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum RowChange {
+    Untouched,
+    Patched,
+    Replaced,
+}
+
+const PATCH_ROW_LIMIT: usize = 128;
 
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let store = gio::ListStore::new::<BoxedAnyObject>();
@@ -178,6 +199,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let filter = {
         let query = Rc::clone(&ui.query);
         let mode = Rc::clone(&mode);
+        let needle = filters::SearchNeedle::default();
         gtk::CustomFilter::new(move |obj| {
             let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
                 return true;
@@ -187,13 +209,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 return false;
             }
             let query = query.borrow();
-            if query.is_empty() {
-                return true;
-            }
-            let needle = query.to_lowercase();
-            track.title.to_lowercase().contains(&needle)
-                || track.artist.to_lowercase().contains(&needle)
-                || track.album.to_lowercase().contains(&needle)
+            needle.matches(&query, &[&track.title, &track.artist, &track.album])
         })
     };
     let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
@@ -250,7 +266,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         ui,
         true,
         |track| track.title.clone(),
-        |a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()),
+        |a, b| filters::cmp_ignore_case(&a.title, &b.title),
         Some(Rc::clone(&menu_handler)),
     );
     column_view.append_column(&title_column);
@@ -259,7 +275,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         "Artist",
         true,
         |track| track.artist.clone(),
-        |a, b| a.artist.to_lowercase().cmp(&b.artist.to_lowercase()),
+        |a, b| filters::cmp_ignore_case(&a.artist, &b.artist),
         None,
     );
     column_view.append_column(&artist_column);
@@ -268,7 +284,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         "Album",
         true,
         |track| track.album.clone(),
-        |a, b| a.album.to_lowercase().cmp(&b.album.to_lowercase()),
+        |a, b| filters::cmp_ignore_case(&a.album, &b.album),
         None,
     );
     column_view.append_column(&album_column);
@@ -438,7 +454,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         sources: RefCell::new(None),
         actions: RefCell::new(Vec::new()),
         epoch: Cell::new(0),
-        applied: Cell::new(0),
+        applied_rows: RefCell::new(Vec::new()),
+        total_seconds: Cell::new(0.0),
+        pending: Pending::default(),
     });
 
     let header = view.header_row(saved_filter);
@@ -446,14 +464,14 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     view.install_scroll_reset_and_sort_memory();
     {
         let view = Rc::clone(&view);
-        selection.connect_items_changed(move |_, _, _, _| view.update_status());
+        selection.connect_items_changed(move |_, _, _, _| view.update_status(true));
     }
     {
         let view = Rc::clone(&view);
-        selection.connect_selection_changed(move |_, _, _| view.update_status());
+        selection.connect_selection_changed(move |_, _, _| view.update_status(false));
     }
 
-    view.rebuild();
+    view.sync_library(true);
     view.choose(saved_filter, false);
 
     {
@@ -461,14 +479,18 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         ui.core
             .hub
             .subscribe_widget(&stack, move |_, event| match event {
-                AppEvent::LibraryReloaded
-                | AppEvent::LovedChanged { .. }
-                | AppEvent::NaturalEnd(_) => view.rebuild(),
+                AppEvent::LibraryReloaded => view.on_library_changed(true),
+                AppEvent::LovedChanged { .. } => view.on_library_changed(false),
+                AppEvent::NaturalEnd(_) => view.on_play_ended(),
                 AppEvent::RemoteChanged => view.refresh_sources(),
-                AppEvent::SearchChanged(_) => view.filter.changed(gtk::FilterChange::Different),
+                AppEvent::SearchChanged(_) => view.on_search_changed(),
                 AppEvent::LocateCurrent => view.locate_current(),
                 _ => {}
             });
+    }
+    {
+        let view = Rc::clone(&view);
+        stack.connect_map(move |_| view.flush_pending());
     }
 
     stack.upcast()
@@ -590,7 +612,8 @@ impl View {
         wrapper.upcast()
     }
 
-    fn visible_tracks(&self) -> Vec<Track> {
+    fn visible_tracks(self: &Rc<Self>) -> Vec<Track> {
+        self.flush_pending();
         tracks_of(self.selection.upcast_ref())
     }
 
@@ -677,7 +700,7 @@ impl View {
         }
         *self.mode.source.borrow_mut() = source;
         self.filter.changed(gtk::FilterChange::Different);
-        self.update_status();
+        self.update_status(true);
     }
 
     /// Turns a chip on. `natural_sort` is true for a click: the chip then also
@@ -745,8 +768,8 @@ impl View {
             }
             let library = view.ui.core.library.borrow().clone();
             let (plays, rank) = filters::most_played_ranking(&library.tracks, &counts);
+            *view.mode.rank.borrow_mut() = rank_by_track_id(&library.tracks, &rank);
             *view.mode.range_plays.borrow_mut() = plays;
-            *view.mode.rank.borrow_mut() = rank;
             view.mode.filter.set(LibraryFilter::MostPlayed);
             view.finish(natural_sort);
         });
@@ -776,7 +799,7 @@ impl View {
         if natural_sort {
             self.scroll_to_top();
         }
-        self.update_status();
+        self.update_status(true);
     }
 
     fn natural_sort(
@@ -807,33 +830,63 @@ impl View {
     }
 
     /// Reloads the library into the table when something it shows changed, then
-    /// brings the chip's membership up to date with it.
-    fn rebuild(self: &Rc<Self>) {
+    /// brings the chip's membership up to date with it. `refresh_counts` is
+    /// whether a Most Played range must be counted again even when no row
+    /// changed, because the plays behind it may have.
+    fn sync_library(self: &Rc<Self>, refresh_counts: bool) {
         let library = self.ui.core.library.borrow().clone();
-        let fingerprint = tracks_fingerprint(&library.tracks);
-        let changed = self.applied.replace(fingerprint) != fingerprint;
-        if changed {
-            let items: Vec<BoxedAnyObject> = library
-                .tracks
-                .iter()
-                .map(|track| BoxedAnyObject::new(track.clone()))
-                .collect();
-            self.store.splice(0, self.store.n_items(), &items);
-        }
+        let signature = filters::library_signature(&library);
+        let change = self.apply_rows(&library, &signature);
         self.stack
             .set_visible_child_name(if library.tracks.is_empty() {
                 "empty"
             } else {
                 "list"
             });
-        if changed || self.mode.counts_in_range() {
-            self.refresh_membership(&library);
+        if change != RowChange::Untouched || (refresh_counts && self.mode.counts_in_range()) {
+            self.refresh_membership(&library, change);
         }
     }
 
-    fn refresh_membership(self: &Rc<Self>, library: &crate::library::Library) {
+    /// Brings the table's rows in line with the library. A handful of rows that
+    /// differ (a play counted, a song loved) are swapped one by one, which keeps
+    /// the selection and the scroll position; anything bigger replaces the lot.
+    fn apply_rows(
+        &self,
+        library: &crate::library::Library,
+        signature: &filters::LibrarySignature,
+    ) -> RowChange {
+        let mut applied = self.applied_rows.borrow_mut();
+        if *applied == signature.track_rows {
+            return RowChange::Untouched;
+        }
+        let patch = differing_rows(&applied, &signature.track_rows);
+        *applied = signature.track_rows.clone();
+        drop(applied);
+        match patch {
+            Some(rows) => {
+                for row in rows {
+                    let replacement = BoxedAnyObject::new(library.tracks[row].clone());
+                    self.store.splice(row as u32, 1, &[replacement]);
+                }
+                RowChange::Patched
+            }
+            None => {
+                let items: Vec<BoxedAnyObject> = library
+                    .tracks
+                    .iter()
+                    .map(|track| BoxedAnyObject::new(track.clone()))
+                    .collect();
+                self.store.splice(0, self.store.n_items(), &items);
+                RowChange::Replaced
+            }
+        }
+    }
+
+    fn refresh_membership(self: &Rc<Self>, library: &crate::library::Library, change: RowChange) {
         match self.mode.filter.get() {
             LibraryFilter::MostPlayed => self.fetch_most_played(false),
+            LibraryFilter::All if change == RowChange::Patched => {}
             LibraryFilter::All | LibraryFilter::Favorites | LibraryFilter::Lossless => {
                 self.filter.changed(gtk::FilterChange::Different);
             }
@@ -846,19 +899,80 @@ impl View {
         }
     }
 
+    fn is_shown(&self) -> bool {
+        self.stack.is_mapped()
+    }
+
+    fn on_library_changed(self: &Rc<Self>, refresh_counts: bool) {
+        if !self.is_shown() {
+            self.pending.library.set(true);
+            if refresh_counts {
+                self.pending.counts.set(true);
+            }
+            return;
+        }
+        self.sync_library(refresh_counts);
+    }
+
+    /// A finished song only matters to the table while a Most Played range is
+    /// showing: the plays it counts come from the scrobble table, which has
+    /// just grown. Every other chip hears about the play through the library.
+    fn on_play_ended(self: &Rc<Self>) {
+        if !self.mode.counts_in_range() {
+            return;
+        }
+        if !self.is_shown() {
+            self.pending.counts.set(true);
+            return;
+        }
+        self.fetch_most_played(false);
+    }
+
+    fn on_search_changed(&self) {
+        if !self.is_shown() {
+            self.pending.search.set(true);
+            return;
+        }
+        self.filter.changed(gtk::FilterChange::Different);
+    }
+
+    /// Catches the table up with everything that happened while it was off
+    /// screen. Runs when the page is shown and before anything reads the table
+    /// from outside, so none of them can see rows from before the change.
+    fn flush_pending(self: &Rc<Self>) {
+        let library = self.pending.library.replace(false);
+        let counts = self.pending.counts.replace(false);
+        let search = self.pending.search.replace(false);
+        if library {
+            self.sync_library(counts);
+        } else if counts && self.mode.counts_in_range() {
+            self.fetch_most_played(false);
+        }
+        if search {
+            self.filter.changed(gtk::FilterChange::Different);
+        }
+    }
+
     /// "1,234 songs · 3 d 4 hr", or the same for the selection while rows are
-    /// selected.
-    fn update_status(&self) {
+    /// selected. The whole list's duration is summed only when its rows
+    /// changed; picking rows costs what the picked rows cost.
+    fn update_status(&self, rows_changed: bool) {
+        if rows_changed {
+            self.total_seconds.set(self.duration_of_all());
+        }
         let selected = self.selection.selection();
         let (count, seconds, noun) = if selected.size() > 0 {
             (
                 selected.size() as usize,
-                self.duration_of(|i| selected.contains(i)),
+                self.duration_of_selected(&selected),
                 "selected",
             )
         } else {
-            let total = self.selection.n_items();
-            (total as usize, self.duration_of(|_| true), "")
+            (
+                self.selection.n_items() as usize,
+                self.total_seconds.get(),
+                "",
+            )
         };
         let text = if noun.is_empty() {
             let word = if count == 1 { "song" } else { "songs" };
@@ -881,9 +995,19 @@ impl View {
         }
     }
 
-    fn duration_of(&self, include: impl Fn(u32) -> bool) -> f64 {
+    fn duration_of_all(&self) -> f64 {
         (0..self.selection.n_items())
-            .filter(|i| include(*i))
+            .filter_map(|i| self.selection.item(i).and_downcast::<BoxedAnyObject>())
+            .map(|boxed| boxed.borrow::<Track>().duration)
+            .sum()
+    }
+
+    fn duration_of_selected(&self, selected: &gtk::Bitset) -> f64 {
+        let Some((positions, first)) = gtk::BitsetIter::init_first(selected) else {
+            return 0.0;
+        };
+        std::iter::once(first)
+            .chain(positions)
             .filter_map(|i| self.selection.item(i).and_downcast::<BoxedAnyObject>())
             .map(|boxed| boxed.borrow::<Track>().duration)
             .sum()
@@ -892,6 +1016,7 @@ impl View {
     /// Ctrl+J: scrolls to the playing song and selects it, first widening the
     /// list to everything when the active chip is what hides it.
     fn locate_current(self: &Rc<Self>) {
+        self.flush_pending();
         let Some(current) = self.ui.core.player.current_track() else {
             self.ui.core.toast("Nothing is playing");
             return;
@@ -1132,32 +1257,35 @@ fn bulk_menu(count: usize, has_duplicates: bool, downloads: Option<bool>) -> gio
     menu
 }
 
-/// Order-sensitive digest of every field the songs table renders or filters
-/// on, so redundant LibraryReloaded emissions (e.g. from enrichment passes
-/// that only touch album metadata) skip the expensive model rebuild.
-fn tracks_fingerprint(tracks: &[Track]) -> u64 {
-    let mut hash = 0xcbf2_9ce4_8422_2325u64;
-    for track in tracks {
-        let row = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{:?}|{:?}|{:?}|{:?}|{:?}",
-            track.rel_path,
-            track.title,
-            track.artist,
-            track.album,
-            track.loved,
-            track.duration,
-            track.track_number,
-            track.play_count,
-            track.date_added,
-            track.codec,
-            track.bit_depth,
-            track.sample_rate,
-            track.last_played,
-            track.revised_at
-        );
-        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
+/// The rows whose digest differs between two builds of the same-sized list, or
+/// `None` when the list changed size or too much of it changed to swap row by
+/// row.
+fn differing_rows(applied: &[u64], next: &[u64]) -> Option<Vec<usize>> {
+    if applied.len() != next.len() {
+        return None;
     }
-    hash
+    let mut rows = Vec::new();
+    for (row, (old, new)) in applied.iter().zip(next).enumerate() {
+        if old != new {
+            if rows.len() >= PATCH_ROW_LIMIT {
+                return None;
+            }
+            rows.push(row);
+        }
+    }
+    (rows.len() * 8 <= next.len()).then_some(rows)
+}
+
+/// The Most Played ranking keyed by track id, which hashes in a fraction of
+/// the time a path does and is looked up twice per comparison of a sort.
+fn rank_by_track_id(
+    tracks: &[Track],
+    rank_by_path: &HashMap<String, usize>,
+) -> HashMap<i64, usize> {
+    tracks
+        .iter()
+        .filter_map(|track| Some((track.id, *rank_by_path.get(&track.rel_path)?)))
+        .collect()
 }
 
 fn format_date_added(unix: i64) -> String {
@@ -1509,4 +1637,40 @@ fn cell_column(
         .expand(expand)
         .resizable(true)
         .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_few_changed_rows_are_swapped_in_place() {
+        let applied: Vec<u64> = (0..200).collect();
+        let mut next = applied.clone();
+        next[3] = 900;
+        next[150] = 901;
+        assert_eq!(differing_rows(&applied, &next), Some(vec![3, 150]));
+    }
+
+    #[test]
+    fn a_resized_or_mostly_changed_list_is_replaced_whole() {
+        let applied: Vec<u64> = (0..200).collect();
+        assert_eq!(differing_rows(&applied, &applied[..199]), None);
+        let churned: Vec<u64> = (1000..1200).collect();
+        assert_eq!(differing_rows(&applied, &churned), None);
+        let small: Vec<u64> = (0..4).collect();
+        let mut small_next = small.clone();
+        small_next[1] = 99;
+        assert_eq!(differing_rows(&small, &small_next), None);
+    }
+
+    #[test]
+    fn the_row_limit_caps_how_many_rows_are_patched() {
+        let applied: Vec<u64> = (0..10_000).collect();
+        let mut next = applied.clone();
+        for row in 0..=PATCH_ROW_LIMIT {
+            next[row] += 50_000;
+        }
+        assert_eq!(differing_rows(&applied, &next), None);
+    }
 }

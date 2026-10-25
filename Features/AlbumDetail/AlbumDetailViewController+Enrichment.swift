@@ -44,33 +44,37 @@ extension AlbumDetailViewController {
         metaLabel.isHidden = parts.isEmpty
     }
 
-    /// Fetches Last.fm genre tags and the personal album play count off-main,
-    /// caching results, then folds them into the header without blocking UI.
+    /// Fetches Last.fm genre tags off-main, caching them, then folds them into
+    /// the header without blocking UI, and counts the album's plays locally.
     func loadEnrichment() {
         let artist = album.artist
-        let title = album.title
-        let authenticated = LastFMService.shared.isAuthenticated
+        refreshPlayCount()
 
         let cachedTags = DetailEnrichmentCache.shared.cachedTopTags(artist: artist)
-        if let cachedTags { applyGenreChips(cachedTags, animated: false) }
-        let cachedPlays = authenticated
-            ? DetailEnrichmentCache.shared.cachedAlbumPlayCount(artist: artist, album: title)
-            : nil
-        if let cachedPlays, cachedPlays > 0 { applyPlayCount(cachedPlays, animated: false) }
-
-        let tagsResolved = cachedTags != nil
-        let playsResolved = !authenticated || cachedPlays != nil
-        guard !tagsResolved || !playsResolved else { return }
+        if let cachedTags {
+            applyGenreChips(cachedTags, animated: false)
+            return
+        }
 
         enrichmentTask = Task { [weak self] in
-            if !tagsResolved {
-                let tags = await DetailEnrichmentCache.shared.topTags(artist: artist)
-                if !Task.isCancelled { self?.applyGenreChips(tags, animated: true) }
-            }
-            guard authenticated, !playsResolved else { return }
-            let plays = await DetailEnrichmentCache.shared.albumPlayCount(artist: artist, album: title)
-            if !Task.isCancelled, plays > 0 { self?.applyPlayCount(plays, animated: true) }
+            let tags = await DetailEnrichmentCache.shared.topTags(artist: artist)
+            if !Task.isCancelled { self?.applyGenreChips(tags, animated: true) }
         }
+    }
+
+    /// Counts the album's plays in the local listening history and shows the
+    /// line when there are any.
+    func refreshPlayCount() {
+        playCountTask?.cancel()
+        let album = self.album
+        playCountTask = Task { [weak self] in
+            let plays = await AlbumListenCount.count(for: album)
+            if !Task.isCancelled, plays > 0 { self?.applyPlayCount(plays, animated: self?.playCountLabel.isHidden ?? true) }
+        }
+    }
+
+    @objc func historyDidChange() {
+        refreshPlayCount()
     }
 
     func applyGenreChips(_ tags: [String], animated: Bool) {

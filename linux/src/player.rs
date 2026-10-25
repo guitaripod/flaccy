@@ -136,6 +136,52 @@ pub struct QueueSnapshot {
     pub current: usize,
 }
 
+/// What the queue's headline numbers need, computed under the lock so no track
+/// is cloned to count them.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct QueueSummary {
+    pub len: usize,
+    pub current: usize,
+    pub remaining_seconds: f64,
+}
+
+impl QueueSummary {
+    pub fn up_next(&self) -> usize {
+        self.len.saturating_sub(self.current + 1)
+    }
+}
+
+/// The slice of the queue around the current track that a panel renders, with
+/// the headline numbers for the whole queue. `start` is the queue index of
+/// `tracks[0]`.
+pub struct QueueWindow {
+    pub summary: QueueSummary,
+    pub start: usize,
+    pub tracks: Vec<Track>,
+}
+
+fn summarize_queue(queue: &[Track], current: usize) -> QueueSummary {
+    let upcoming = queue.get(current + 1..).unwrap_or(&[]);
+    QueueSummary {
+        len: queue.len(),
+        current,
+        remaining_seconds: upcoming.iter().map(|t| t.duration).sum(),
+    }
+}
+
+/// The queue indices a panel renders: up to `history` entries before the
+/// current track through up to `up_next` entries after it.
+fn queue_window_range(
+    len: usize,
+    current: usize,
+    history: usize,
+    up_next: usize,
+) -> std::ops::Range<usize> {
+    let start = current.saturating_sub(history).min(len);
+    let end = current.saturating_add(1).saturating_add(up_next).min(len);
+    start..end.max(start)
+}
+
 /// Resolves the queue index of a gapless-committed track after possible queue
 /// mutations, searching forward from the current position and wrapping so
 /// duplicates resolve to the nearest upcoming occurrence.
@@ -1230,6 +1276,13 @@ impl Player {
             .and_then(|g| g.queue.get(g.current).cloned())
     }
 
+    pub fn is_current_path(&self, rel_path: &str) -> bool {
+        self.shared
+            .lock()
+            .map(|g| g.queue.get(g.current).is_some_and(|t| t.rel_path == rel_path))
+            .unwrap_or(false)
+    }
+
     #[allow(dead_code)]
     pub fn has_next(&self) -> bool {
         self.shared
@@ -1271,6 +1324,39 @@ impl Player {
             .unwrap_or(QueueSnapshot {
                 queue: Vec::new(),
                 current: 0,
+            })
+    }
+
+    pub fn queue_summary(&self) -> QueueSummary {
+        self.shared
+            .lock()
+            .map(|g| summarize_queue(&g.queue, g.current))
+            .unwrap_or(QueueSummary {
+                len: 0,
+                current: 0,
+                remaining_seconds: 0.0,
+            })
+    }
+
+    pub fn queue_window(&self, history: usize, up_next: usize) -> QueueWindow {
+        self.shared
+            .lock()
+            .map(|g| {
+                let range = queue_window_range(g.queue.len(), g.current, history, up_next);
+                QueueWindow {
+                    summary: summarize_queue(&g.queue, g.current),
+                    start: range.start,
+                    tracks: g.queue[range].to_vec(),
+                }
+            })
+            .unwrap_or(QueueWindow {
+                summary: QueueSummary {
+                    len: 0,
+                    current: 0,
+                    remaining_seconds: 0.0,
+                },
+                start: 0,
+                tracks: Vec::new(),
             })
     }
 
@@ -1371,7 +1457,65 @@ impl Player {
 
 #[cfg(test)]
 mod tests {
-    use super::{clamp_seek, END_GUARD};
+    use super::{clamp_seek, queue_window_range, summarize_queue, END_GUARD};
+    use crate::library::Track;
+
+    fn track(duration: f64) -> Track {
+        Track {
+            id: 0,
+            rel_path: String::new(),
+            title: String::new(),
+            artist: String::new(),
+            album: String::new(),
+            album_artist: None,
+            track_number: 1,
+            duration,
+            codec: None,
+            bit_depth: None,
+            sample_rate: None,
+            channels: None,
+            loved: false,
+            play_count: 0,
+            date_added: 0,
+            last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
+            disc_number: None,
+        }
+    }
+
+    #[test]
+    fn the_summary_counts_only_what_is_after_the_current_track() {
+        let queue = vec![track(10.0), track(20.0), track(30.0), track(40.0)];
+        let summary = summarize_queue(&queue, 1);
+        assert_eq!(summary.len, 4);
+        assert_eq!(summary.up_next(), 2);
+        assert_eq!(summary.remaining_seconds, 70.0);
+    }
+
+    #[test]
+    fn the_summary_of_an_empty_or_finished_queue_is_zero() {
+        assert_eq!(summarize_queue(&[], 0).up_next(), 0);
+        let queue = vec![track(10.0)];
+        let summary = summarize_queue(&queue, 0);
+        assert_eq!(summary.up_next(), 0);
+        assert_eq!(summary.remaining_seconds, 0.0);
+        assert_eq!(summarize_queue(&queue, 5).remaining_seconds, 0.0);
+    }
+
+    #[test]
+    fn the_window_is_bounded_on_both_sides_of_the_current_track() {
+        assert_eq!(queue_window_range(1000, 500, 20, 120), 480..621);
+        assert_eq!(queue_window_range(1000, 5, 20, 120), 0..126);
+        assert_eq!(queue_window_range(100, 90, 20, 120), 70..100);
+    }
+
+    #[test]
+    fn the_window_never_leaves_the_queue() {
+        assert_eq!(queue_window_range(0, 0, 20, 120), 0..0);
+        assert_eq!(queue_window_range(3, 9, 20, 120), 0..3);
+    }
 
     #[test]
     fn a_seek_past_the_end_stops_short_of_it() {

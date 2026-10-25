@@ -3283,6 +3283,70 @@
         }
       }
     },
+    "%@ plays so far…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bisher %@ Wiedergaben…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ reproducciones hasta ahora…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ lectures pour l'instant…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ riproduzioni finora…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これまでに%@回再生…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금까지 재생 %@회…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dotąd %@ odtworzeń…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ reproduções até agora…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有 %@ 次播放…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有 %@ 次播放…"
+          }
+        }
+      }
+    },
     "%@ plays · %@ artists": {
       "localizations": {
         "de": {
@@ -3541,70 +3605,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 拒絕了使用者名稱或密碼。請檢查兩者後再試一次。"
-          }
-        }
-      }
-    },
-    "%@ scrobbles imported so far…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ Scrobbles bisher importiert…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importados hasta ahora…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importés pour l'instant…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobble importati finora…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "これまでに%@件のスクロブルをインポート…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금까지 스크로블 %@개 가져옴…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbli zaimportowanych do tej pory…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importados até agora…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已导入 %@ 条 Scrobble…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已匯入 %@ 筆 Scrobble…"
           }
         }
       }
@@ -11309,242 +11309,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 筆 Scrobble"
-          }
-        }
-      }
-    },
-    "%lld scrobbles imported": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg Scrobble importiert"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg Scrobbles importiert"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble imported"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobbles imported"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble importado"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobbles importados"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble importé"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobbles importés"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble importato"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble importati"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld件のスクロブルをインポート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스크로블 %lld개 가져옴"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaimportowano %1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "few": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble"
-                    }
-                  },
-                  "many": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobbli"
-                    }
-                  },
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$#@arg1@"
-          },
-          "substitutions": {
-            "arg1": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobble importado"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg scrobbles importados"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已导入 %lld 条 Scrobble"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已匯入 %lld 筆 Scrobble"
           }
         }
       }
@@ -25357,134 +25121,6 @@
         }
       }
     },
-    "Backfill your stats with everything you scrobbled before installing.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ergänze deine Statistiken um alles, was du vor der Installation gescrobbelt hast."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Completa tus estadísticas con todo lo que scrobbleaste antes de instalar la app."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Complétez vos statistiques avec tout ce que vous avez scrobblé avant l'installation."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Completa le tue statistiche con tutto ciò che hai scrobblato prima di installare l'app."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "インストール前にスクロブルした分もすべて統計に取り込みます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱을 설치하기 전에 스크로블한 기록까지 통계에 채웁니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uzupełnij statystyki o wszystko, co scrobblowano przed instalacją."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Complete suas estatísticas com tudo o que você scrobblou antes de instalar o app."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把你安装本 App 之前 Scrobble 过的记录补进统计。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把你安裝這個 App 之前 Scrobble 過的記錄補進統計。"
-          }
-        }
-      }
-    },
-    "Backfills your listening stats from Last.fm": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ergänzt deine Hörstatistiken von Last.fm"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Completa tus estadísticas de escucha desde Last.fm"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Complète vos statistiques d'écoute depuis Last.fm"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Completa le tue statistiche di ascolto da Last.fm"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fmから再生統計を補完します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm에서 감상 통계를 채웁니다"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uzupełnia twoje statystyki słuchania z Last.fm"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Completa suas estatísticas de audição a partir do Last.fm"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从 Last.fm 补全你的收听统计"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從 Last.fm 補齊你的聆聽統計"
-          }
-        }
-      }
-    },
     "Balanced": {
       "localizations": {
         "de": {
@@ -26255,6 +25891,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯入你的音樂"
+          }
+        }
+      }
+    },
+    "Bringing in your Last.fm history": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Last.fm-Verlauf wird übernommen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importando tu historial de Last.fm"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupération de votre historique Last.fm"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero della cronologia di Last.fm"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last.fmの履歴を取り込み中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last.fm 기록을 가져오는 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobieranie historii z Last.fm"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trazendo seu histórico do Last.fm"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入你的 Last.fm 历史记录"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入你的 Last.fm 歷史記錄"
+          }
+        }
+      }
+    },
+    "Bringing in your history… %@ plays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlauf wird übernommen… %@ Wiedergaben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importando tu historial… %@ reproducciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupération de votre historique… %@ lectures"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero della cronologia… %@ riproduzioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "履歴を取り込み中… %@回再生"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록을 가져오는 중… 재생 %@회"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobieranie historii… %@ odtworzeń"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trazendo seu histórico… %@ reproduções"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入你的历史记录… %@ 次播放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入你的歷史記錄… %@ 次播放"
           }
         }
       }
@@ -30015,70 +29779,6 @@
         }
       }
     },
-    "Connect Last.fm first": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verbinde zuerst Last.fm"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conecta antes Last.fm"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connectez d'abord Last.fm"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Collega prima Last.fm"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "先にLast.fmを接続してください"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "먼저 Last.fm을 연결하세요"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Najpierw połącz z Last.fm"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conecte o Last.fm primeiro"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请先连接 Last.fm"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "請先連接 Last.fm"
-          }
-        }
-      }
-    },
     "Connect Last.fm in Settings for suggestions from your history, or add wanted albums manually.": {
       "localizations": {
         "de": {
@@ -30267,70 +29967,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在「設定」中連接 Last.fm，或者\n播放一些音樂來產生你的回顧。"
-          }
-        }
-      }
-    },
-    "Connect Last.fm to import": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm verbinden zum Importieren"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conecta Last.fm para importar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connecter Last.fm pour importer"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Collega Last.fm per importare"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "インポートにはLast.fmの接続が必要"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "가져오려면 Last.fm 연결 필요"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Połącz z Last.fm, aby zaimportować"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conecte o Last.fm para importar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "连接 Last.fm 后可导入"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "連接 Last.fm 後即可匯入"
           }
         }
       }
@@ -46519,6 +46155,70 @@
         }
       }
     },
+    "Flaccy and Last.fm share one listening history. Every scrobble on your account, from Flaccy or any other app or device, flows into Stats, play counts and Most Played, and keeps flowing on its own.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy und Last.fm teilen sich einen Hörverlauf. Jeder Scrobble deines Kontos, ob von Flaccy oder einer anderen App oder einem anderen Gerät, fließt in Statistiken, Wiedergabezähler und Meistgespielt ein – und das ganz von selbst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy y Last.fm comparten un único historial de escucha. Cada scrobble de tu cuenta, de Flaccy o de cualquier otra app o dispositivo, llega a las estadísticas, los contadores de reproducciones y lo más escuchado, y sigue llegando solo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy et Last.fm partagent un seul historique d'écoute. Chaque scrobble de votre compte, venu de Flaccy ou de toute autre app ou appareil, alimente les statistiques, les compteurs de lectures et les plus écoutés, et continue de le faire tout seul."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy e Last.fm condividono un'unica cronologia di ascolto. Ogni scrobble del tuo account, da Flaccy o da qualsiasi altra app o dispositivo, confluisce in statistiche, conteggi delle riproduzioni e più ascoltati, e continua a farlo da solo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FlaccyとLast.fmは1つの再生履歴を共有します。Flaccyや他のアプリ・デバイスからのアカウント上のすべてのスクロブルが、統計、再生回数、よく聴く曲に反映され、自動的に更新され続けます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy와 Last.fm은 하나의 감상 기록을 공유합니다. Flaccy나 다른 앱·기기에서 계정에 기록된 모든 스크로블이 통계, 재생 횟수, 가장 많이 재생한 항목에 반영되며 자동으로 계속 업데이트됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy i Last.fm mają jedną wspólną historię odsłuchań. Każdy scrobble na Twoim koncie, z Flaccy lub z innej aplikacji czy urządzenia, trafia do statystyk, liczników odtworzeń i najczęściej odtwarzanych i napływa dalej samoczynnie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy e o Last.fm compartilham um único histórico de reprodução. Cada scrobble da sua conta, do Flaccy ou de qualquer outro app ou dispositivo, chega às estatísticas, às contagens de reproduções e aos mais tocados, e continua chegando sozinho."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 和 Last.fm 共用同一份收听记录。你账户上的每一条 Scrobble，无论来自 Flaccy 还是其他应用或设备，都会汇入统计、播放次数和最常播放，并持续自动更新。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 和 Last.fm 共用同一份收聽記錄。你帳號上的每一筆 Scrobble，無論來自 Flaccy 或其他 App 或裝置，都會匯入統計、播放次數和最常播放，並持續自動更新。"
+          }
+        }
+      }
+    },
     "Flaccy asks Apple Music for covers it can't find anywhere else. Turning this on asks for permission once.": {
       "localizations": {
         "de": {
@@ -52181,130 +51881,66 @@
         }
       }
     },
-    "History already imported": {
+    "History Sync": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verlauf bereits importiert"
+            "value": "Verlaufssynchronisierung"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Historial ya importado"
+            "value": "Sincronización del historial"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Historique déjà importé"
+            "value": "Synchronisation de l'historique"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cronologia già importata"
+            "value": "Sincronizzazione cronologia"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "履歴はインポート済みです"
+            "value": "履歴の同期"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "기록을 이미 가져왔습니다"
+            "value": "기록 동기화"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Historia już zaimportowana"
+            "value": "Synchronizacja historii"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Histórico já importado"
+            "value": "Sincronização do histórico"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "历史记录已导入"
+            "value": "历史记录同步"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "記錄已匯入過"
-          }
-        }
-      }
-    },
-    "History imported": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verlauf importiert"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Historial importado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Historique importé"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cronologia importata"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "履歴をインポートしました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기록 가져옴"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Historia zaimportowana"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Histórico importado"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "记录已导入"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記錄已匯入"
+            "value": "歷史記錄同步"
           }
         }
       }
@@ -53269,198 +52905,6 @@
         }
       }
     },
-    "Import History": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verlauf importieren"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar historial"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importer l'historique"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa cronologia"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "履歴をインポート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기록 가져오기"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importuj historię"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar Histórico"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入记录"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯入記錄"
-          }
-        }
-      }
-    },
-    "Import Last.fm History": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm-Verlauf importieren"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar historial de Last.fm"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importer l'historique Last.fm"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa la cronologia Last.fm"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fmの履歴をインポート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm 기록 가져오기"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importuj historię z Last.fm"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar Histórico do Last.fm"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入 Last.fm 记录"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯入 Last.fm 記錄"
-          }
-        }
-      }
-    },
-    "Import Last.fm history": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm-Verlauf importieren"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar historial de Last.fm"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importer l'historique Last.fm"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa la cronologia Last.fm"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fmの履歴をインポート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm 기록 가져오기"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importuj historię z Last.fm"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar histórico do Last.fm"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入 Last.fm 记录"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯入 Last.fm 記錄"
-          }
-        }
-      }
-    },
     "Import a Profile": {
       "localizations": {
         "de": {
@@ -53713,262 +53157,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "從文字匯入…"
-          }
-        }
-      }
-    },
-    "Import your full Last.fm history to power the Recap and Year in Music.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importiere deinen kompletten Last.fm-Verlauf für Rückblick und Musikjahr."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa todo tu historial de Last.fm para alimentar el resumen y el Año en música."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importez tout votre historique Last.fm pour alimenter le récap et l'Année en musique."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa tutta la tua cronologia Last.fm per alimentare il riepilogo e l'Anno in musica."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fmの全履歴をインポートして、リキャップと音楽の1年を充実させましょう。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm 기록 전체를 가져와 리캡과 음악 결산을 채우세요."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaimportuj pełną historię z Last.fm, aby zasilić Podsumowanie i Rok w muzyce."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importe todo o seu histórico do Last.fm para alimentar a retrospectiva e o Ano em música."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入完整的 Last.fm 记录，为回顾和年度音乐提供数据。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯入完整的 Last.fm 記錄，為回顧與年度音樂提供資料。"
-          }
-        }
-      }
-    },
-    "Imported %@ scrobbles": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ Scrobbles importiert"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importados"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importés"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobble importati"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@件のスクロブルをインポートしました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스크로블 %@개 가져옴"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaimportowano %@ scrobbli"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importados"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已导入 %@ 条 Scrobble"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已匯入 %@ 筆 Scrobble"
-          }
-        }
-      }
-    },
-    "Imported %@ scrobbles from Last.fm.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ Scrobbles von Last.fm importiert."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importados desde Last.fm."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importés depuis Last.fm."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobble importati da Last.fm."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fmから%@件のスクロブルをインポートしました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm에서 스크로블 %@개를 가져왔습니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaimportowano %@ scrobbli z Last.fm."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importados do Last.fm."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已从 Last.fm 导入 %@ 条 Scrobble。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已從 Last.fm 匯入 %@ 筆 Scrobble。"
-          }
-        }
-      }
-    },
-    "Imported %@ scrobbles.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ Scrobbles importiert."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importados."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importés."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobble importati."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@件のスクロブルをインポートしました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스크로블 %@개를 가져왔습니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaimportowano %@ scrobbli."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scrobbles importados."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已导入 %@ 条 Scrobble。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已匯入 %@ 筆 Scrobble。"
           }
         }
       }
@@ -54467,390 +53655,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "已匯入的設定檔"
-          }
-        }
-      }
-    },
-    "Importing Last.fm History": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm-Verlauf wird importiert"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando historial de Last.fm"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import de l'historique Last.fm"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importazione della cronologia Last.fm"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fmの履歴をインポート中"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm 기록 가져오는 중"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importowanie historii z Last.fm"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando histórico do Last.fm"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在导入 Last.fm 记录"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在匯入 Last.fm 記錄"
-          }
-        }
-      }
-    },
-    "Importing history…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verlauf wird importiert…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando historial…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import de l'historique…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importazione della cronologia…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "履歴をインポート中…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기록을 가져오는 중…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importowanie historii…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando histórico…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在导入记录…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在匯入記錄…"
-          }
-        }
-      }
-    },
-    "Importing history… %@ scrobbles so far": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verlauf wird importiert… bisher %@ Scrobbles"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando historial… %@ scrobbles hasta ahora"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import de l'historique… %@ scrobbles pour l'instant"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importazione della cronologia… %@ scrobble finora"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "履歴をインポート中… これまでに%@件"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기록을 가져오는 중… 지금까지 스크로블 %@개"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importowanie historii… %@ scrobbli do tej pory"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando histórico… %@ scrobbles até agora"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在导入记录…已有 %@ 条 Scrobble"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在匯入記錄…已有 %@ 筆 Scrobble"
-          }
-        }
-      }
-    },
-    "Importing…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird importiert…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importation…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importazione…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "インポート中…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "가져오는 중…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importowanie…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在导入…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在匯入…"
-          }
-        }
-      }
-    },
-    "Importing… %@ scrobbles": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import läuft… %@ Scrobbles"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando… %@ scrobbles"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import… %@ scrobbles"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importazione… %@ scrobble"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "インポート中… %@件のスクロブル"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "가져오는 중… 스크로블 %@개"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importowanie… %@ scrobbli"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importando… %@ scrobbles"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在导入…%@ 条 Scrobble"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在匯入…%@ 筆 Scrobble"
-          }
-        }
-      }
-    },
-    "Imports your full Last.fm scrobble history into the local database so the Recap and Year in Music cover everything you've ever played.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importiert deinen kompletten Last.fm-Scrobble-Verlauf in die lokale Datenbank, damit Rückblick und Musikjahr alles abdecken, was du je gehört hast."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa todo tu historial de scrobbles de Last.fm a la base de datos local para que el resumen y el Año en música cubran todo lo que has escuchado."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importe tout votre historique de scrobbles Last.fm dans la base locale pour que le récap et l'Année en musique couvrent tout ce que vous avez écouté."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa tutta la tua cronologia di scrobble di Last.fm nel database locale, così il riepilogo e l'Anno in musica coprono tutto ciò che hai ascoltato."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fmのスクロブル履歴をすべてローカルデータベースに取り込み、リキャップと音楽の1年がこれまでの再生をすべてカバーできるようにします。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Last.fm 스크로블 기록 전체를 로컬 데이터베이스로 가져와, 리캡과 음악 결산이 지금까지 들은 모든 곡을 담게 합니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importuje pełną historię scrobbli z Last.fm do lokalnej bazy danych, dzięki czemu Podsumowanie i Rok w muzyce obejmują wszystko, co kiedykolwiek odtworzono."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa todo o seu histórico de scrobbles do Last.fm para o banco de dados local, para que a retrospectiva e o Ano em música cubram tudo o que você já ouviu."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把完整的 Last.fm Scrobble 记录导入本地数据库，让回顾和年度音乐涵盖你听过的每一首。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把完整的 Last.fm Scrobble 記錄匯入本機資料庫，讓回顧與年度音樂涵蓋你聽過的每一首。"
           }
         }
       }
@@ -66929,66 +65733,66 @@
         }
       }
     },
-    "No listening history yet.\nPlay something, or import your\nLast.fm history above.": {
+    "No listening history yet.\nPlay something to build your Recap.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noch kein Hörverlauf.\nSpiele etwas ab oder importiere oben\ndeinen Last.fm-Verlauf."
+            "value": "Noch kein Hörverlauf.\nSpiel etwas ab, um deinen Rückblick aufzubauen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aún no hay historial de escucha.\nReproduce algo o importa tu\nhistorial de Last.fm arriba."
+            "value": "Aún no hay historial de escucha.\nReproduce algo para crear tu resumen."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aucun historique d'écoute.\nLancez un morceau, ou importez votre\nhistorique Last.fm ci-dessus."
+            "value": "Pas encore d'historique d'écoute.\nLancez un morceau pour construire votre bilan."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ancora nessuna cronologia di ascolto.\nAscolta qualcosa oppure importa la tua\ncronologia Last.fm qui sopra."
+            "value": "Ancora nessuna cronologia di ascolto.\nRiproduci qualcosa per creare il tuo riepilogo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "再生履歴がまだありません。\n何か再生するか、上のボタンで\nLast.fmの履歴をインポートしてください。"
+            "value": "まだ再生履歴がありません。\n何かを再生してリキャップを作りましょう。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "아직 감상 기록이 없습니다.\n무언가를 재생하거나 위에서\nLast.fm 기록을 가져오세요."
+            "value": "아직 감상 기록이 없습니다.\n무언가를 재생해 리캡을 만들어 보세요."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Brak historii odsłuchów.\nOdtwórz coś albo zaimportuj historię\nz Last.fm powyżej."
+            "value": "Brak historii odsłuchań.\nOdtwórz coś, aby zbudować podsumowanie."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nenhum histórico de audição ainda.\nToque alguma coisa, ou importe seu\nhistórico do Last.fm acima."
+            "value": "Ainda não há histórico de reprodução.\nToque algo para montar seu resumo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还没有收听记录。\n播放一些音乐，或在上方导入\n你的 Last.fm 记录。"
+            "value": "还没有收听记录。\n播放一些音乐来生成你的回顾。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "還沒有聆聽記錄。\n播放一些音樂，或在上方匯入\n你的 Last.fm 記錄。"
+            "value": "還沒有收聽記錄。\n播放一些音樂來產生你的回顧。"
           }
         }
       }
@@ -72787,66 +71591,66 @@
         }
       }
     },
-    "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and import your listening history. Everything else works without it.": {
+    "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and bring your whole listening history into Stats and play counts. Everything else works without it.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Optional. Verbinde einen Last.fm-Account, um deine Hördurchgänge zu scrobbeln, Favoriten zu synchronisieren und deinen Hörverlauf zu importieren. Alles andere funktioniert auch ohne."
+            "value": "Optional. Verbinde ein Last.fm-Konto, um deine Wiedergaben zu scrobbeln, Lieblingstitel zu synchronisieren und deinen gesamten Hörverlauf in Statistiken und Wiedergabezähler zu übernehmen. Alles andere funktioniert auch ohne."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opcional. Conecta una cuenta de Last.fm para scrobblear tus escuchas, sincronizar tus favoritas e importar tu historial. Todo lo demás funciona sin ella."
+            "value": "Opcional. Conecta una cuenta de Last.fm para hacer scrobble de lo que escuchas, sincronizar tus favoritas y traer todo tu historial de escucha a las estadísticas y los contadores de reproducciones. Todo lo demás funciona sin ella."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Facultatif. Connectez un compte Last.fm pour scrobbler vos écoutes, synchroniser vos morceaux aimés et importer votre historique. Tout le reste fonctionne sans."
+            "value": "Facultatif. Connectez un compte Last.fm pour scrobbler vos écoutes, synchroniser vos titres aimés et intégrer tout votre historique d'écoute aux statistiques et aux compteurs de lectures. Tout le reste fonctionne sans."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Facoltativo. Collega un account Last.fm per scrobblare i tuoi ascolti, sincronizzare i preferiti e importare la cronologia. Tutto il resto funziona anche senza."
+            "value": "Facoltativo. Collega un account Last.fm per fare scrobble degli ascolti, sincronizzare i brani preferiti e portare tutta la cronologia di ascolto in statistiche e conteggi delle riproduzioni. Tutto il resto funziona anche senza."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "任意です。Last.fmアカウントを接続すると、再生をスクロブルし、お気に入りを同期し、再生履歴をインポートできます。ほかの機能は接続しなくても使えます。"
+            "value": "任意です。Last.fmアカウントを接続すると、再生をスクロブルし、お気に入りの曲を同期し、再生履歴をすべて統計や再生回数に取り込めます。それ以外の機能は接続なしでも使えます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "선택 사항입니다. Last.fm 계정을 연결하면 감상 기록을 스크로블하고, 좋아요한 트랙을 동기화하고, 감상 기록을 가져올 수 있습니다. 나머지 기능은 연결하지 않아도 모두 작동합니다."
+            "value": "선택 사항입니다. Last.fm 계정을 연결하면 재생한 곡을 스크로블하고, 좋아요 표시한 곡을 동기화하고, 전체 감상 기록을 통계와 재생 횟수에 가져올 수 있습니다. 나머지 기능은 연결하지 않아도 작동합니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opcjonalnie. Połącz konto Last.fm, aby scrobblować odsłuchy, synchronizować ulubione utwory i importować historię odsłuchów. Wszystko inne działa bez tego."
+            "value": "Opcjonalne. Połącz konto Last.fm, aby scrobblować odtworzenia, synchronizować polubione utwory i wczytać całą historię odsłuchań do statystyk i liczników odtworzeń. Wszystko inne działa bez niego."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opcional. Conecte uma conta do Last.fm para scrobblar suas audições, sincronizar as faixas curtidas e importar seu histórico. Todo o resto funciona sem isso."
+            "value": "Opcional. Conecte uma conta do Last.fm para fazer scrobble do que você ouve, sincronizar faixas favoritas e trazer todo o seu histórico de reprodução para as estatísticas e as contagens de reproduções. Todo o resto funciona sem ela."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "可选。连接 Last.fm 账户即可 Scrobble 你的收听记录、同步喜欢的曲目并导入收听历史。其余功能不连接也能使用。"
+            "value": "可选。连接 Last.fm 账户后，可以对你的播放进行 Scrobble、同步喜爱的曲目，并把完整的收听记录带入统计和播放次数。没有它，其他功能照常使用。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選用。連接 Last.fm 帳號即可 Scrobble 你的聆聽記錄、同步喜愛的曲目並匯入聆聽歷史。其餘功能不連接也能使用。"
+            "value": "選用。連接 Last.fm 帳號後，可以對你的播放進行 Scrobble、同步喜愛的曲目，並把完整的收聽記錄帶入統計和播放次數。沒有它，其他功能照常使用。"
           }
         }
       }
@@ -76741,130 +75545,66 @@
         }
       }
     },
-    "Play some music or import your Last.fm history in Settings.": {
+    "Play some music, or connect Last.fm in Settings to bring in your history.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Spiel etwas Musik oder importiere deinen Last.fm-Verlauf in den Einstellungen."
+            "value": "Spiel etwas Musik ab oder verbinde Last.fm in den Einstellungen, um deinen Verlauf zu übernehmen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reproduce algo de música o importa tu historial de Last.fm en Ajustes."
+            "value": "Reproduce música o conecta Last.fm en Ajustes para traer tu historial."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Écoutez de la musique ou importez votre historique Last.fm dans Réglages."
+            "value": "Écoutez de la musique ou connectez Last.fm dans les Réglages pour récupérer votre historique."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ascolta un po' di musica oppure importa la cronologia Last.fm in Impostazioni."
+            "value": "Riproduci della musica o collega Last.fm nelle Impostazioni per portare la tua cronologia."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "何か音楽を再生するか、設定でLast.fmの履歴をインポートしてください。"
+            "value": "音楽を再生するか、設定でLast.fmを接続して履歴を取り込みましょう。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "음악을 재생하거나 설정에서 Last.fm 기록을 가져오세요."
+            "value": "음악을 재생하거나 설정에서 Last.fm을 연결해 기록을 가져오세요."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odtwórz trochę muzyki albo zaimportuj historię z Last.fm w Ustawieniach."
+            "value": "Odtwórz muzykę lub połącz Last.fm w Ustawieniach, aby wczytać swoją historię."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toque alguma música ou importe seu histórico do Last.fm nos Ajustes."
+            "value": "Toque algumas músicas ou conecte o Last.fm nos Ajustes para trazer seu histórico."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "播放一些音乐，或在“设置”中导入 Last.fm 记录。"
+            "value": "播放一些音乐，或在“设置”中连接 Last.fm 以导入你的历史记录。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "播放一些音樂，或在「設定」中匯入 Last.fm 記錄。"
-          }
-        }
-      }
-    },
-    "Play some music, or connect Last.fm in Settings and import your history.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spiel etwas Musik – oder verbinde Last.fm in den Einstellungen und importiere deinen Verlauf."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reproduce algo de música, o conecta Last.fm en Ajustes e importa tu historial."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Écoutez de la musique, ou connectez Last.fm dans Réglages et importez votre historique."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ascolta un po' di musica, oppure collega Last.fm in Impostazioni e importa la cronologia."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "何か音楽を再生するか、設定でLast.fmを接続して履歴をインポートしてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "음악을 재생하거나, 설정에서 Last.fm을 연결하고 기록을 가져오세요."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odtwórz trochę muzyki albo połącz Last.fm w Ustawieniach i zaimportuj historię."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toque alguma música, ou conecte o Last.fm nos Ajustes e importe seu histórico."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "播放一些音乐，或在“设置”中连接 Last.fm 并导入记录。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "播放一些音樂，或在「設定」中連接 Last.fm 並匯入記錄。"
+            "value": "播放一些音樂，或在「設定」中連接 Last.fm 以匯入你的歷史記錄。"
           }
         }
       }
@@ -96253,70 +94993,6 @@
         }
       }
     },
-    "Sign in from Settings to backfill your history.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Melde dich in den Einstellungen an, um deinen Verlauf zu ergänzen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inicia sesión desde Ajustes para completar tu historial."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connectez-vous depuis Réglages pour compléter votre historique."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accedi da Impostazioni per completare la cronologia."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "履歴を補完するには設定からサインインしてください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기록을 채우려면 설정에서 로그인하세요."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaloguj się w Ustawieniach, aby uzupełnić historię."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Faça login pelos Ajustes para completar seu histórico."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在“设置”中登录即可补全你的收听记录。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在「設定」中登入即可補齊你的聆聽記錄。"
-          }
-        }
-      }
-    },
     "Sign in with": {
       "localizations": {
         "de": {
@@ -101003,6 +99679,134 @@
         }
       }
     },
+    "Sync Now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt synchronisieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizar ahora"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchroniser maintenant"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizza ora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ同期"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 동기화"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronizuj teraz"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizar agora"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即同步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即同步"
+          }
+        }
+      }
+    },
+    "Sync paused: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisierung pausiert: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronización en pausa: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisation en pause : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizzazione in pausa: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期を一時停止中: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 일시 중지됨: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronizacja wstrzymana: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronização pausada: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步已暂停：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步已暫停：%@"
+          }
+        }
+      }
+    },
     "Sync tracks and play from your wrist, no phone needed.": {
       "localizations": {
         "de": {
@@ -101191,6 +99995,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "已同步 %@"
+          }
+        }
+      }
+    },
+    "Synced %@ · %@ plays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisiert %@ · %@ Wiedergaben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizado %@ · %@ reproducciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisé %@ · %@ lectures"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizzato %@ · %@ riproduzioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に同期 · %@回再生"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 동기화됨 · 재생 %@회"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zsynchronizowano %@ · %@ odtworzeń"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizado %@ · %@ reproduções"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@同步 · %@ 次播放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@同步 · %@ 次播放"
           }
         }
       }
@@ -101698,7 +100566,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wird synchronisiert…"
+            "value": "Synchronisiere…"
           }
         },
         "es": {
@@ -101753,6 +100621,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在同步…"
+          }
+        }
+      }
+    },
+    "Syncs your Last.fm listening history now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisiert deinen Last.fm-Hörverlauf jetzt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincroniza ahora tu historial de escucha de Last.fm"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronise maintenant votre historique d'écoute Last.fm"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizza ora la cronologia di ascolto di Last.fm"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last.fmの再生履歴を今すぐ同期します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last.fm 감상 기록을 지금 동기화합니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronizuje teraz historię odsłuchań z Last.fm"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincroniza agora seu histórico de reprodução do Last.fm"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即同步你的 Last.fm 收听记录"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即同步你的 Last.fm 收聽記錄"
           }
         }
       }
@@ -118149,70 +117081,6 @@
         }
       }
     },
-    "Your listens are scrobbled to Last.fm and your loved tracks stay in sync.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine Hördurchgänge werden zu Last.fm gescrobbelt und deine Favoriten bleiben synchron."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tus escuchas se scrobblean a Last.fm y tus pistas favoritas se mantienen sincronizadas."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vos écoutes sont scrobblées sur Last.fm et vos morceaux aimés restent synchronisés."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I tuoi ascolti vengono scrobblati su Last.fm e i tuoi preferiti restano sincronizzati."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "再生はLast.fmにスクロブルされ、お気に入りは同期され続けます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "감상 기록은 Last.fm에 스크로블되고 좋아요한 트랙은 계속 동기화됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Twoje odsłuchy są scrobblowane na Last.fm, a twoje ulubione utwory pozostają zsynchronizowane."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suas audições são scrobbladas no Last.fm e suas faixas curtidas ficam em sincronia."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的收听记录会 Scrobble 到 Last.fm，喜欢的曲目也会保持同步。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的聆聽記錄會 Scrobble 到 Last.fm，喜愛的曲目也會保持同步。"
-          }
-        }
-      }
-    },
     "Your listens will no longer be scrobbled. Your library, play history, and loved tracks stay on this device.": {
       "localizations": {
         "de": {
@@ -118663,70 +117531,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的購買正在等待核准。完成後播放會自動解鎖。"
-          }
-        }
-      }
-    },
-    "Your stats now include your full listening history.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine Statistiken enthalten jetzt deinen kompletten Hörverlauf."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tus estadísticas ya incluyen todo tu historial de escucha."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vos statistiques incluent désormais tout votre historique d'écoute."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le tue statistiche ora includono tutta la cronologia di ascolto."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "統計にこれまでの再生履歴がすべて反映されました。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이제 통계에 전체 감상 기록이 포함됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Twoje statystyki obejmują teraz pełną historię odsłuchów."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suas estatísticas agora incluem todo o seu histórico de audição."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的统计现在包含完整的收听记录了。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的統計現在包含完整的聆聽記錄了。"
           }
         }
       }

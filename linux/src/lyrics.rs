@@ -5,6 +5,7 @@ use flaccy_shared::lyrics::{
     LyricsFailure, Wanted,
 };
 use std::path::Path;
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
 /// The generation of the lyrics pipeline that stores rows. Rows saved before
@@ -139,12 +140,28 @@ fn found_or_missing(lyrics: Lyrics) -> LyricsResult {
     }
 }
 
+/// The lookup without a settle gate, for tests that read it straight.
+#[cfg(test)]
+pub fn fetch_blocking(db_path: &Path, music_root: &Path, track: &Track) -> LyricsResult {
+    resolve(db_path, music_root, track, None).unwrap_or(LyricsResult::Missing)
+}
+
 /// Resolution order: the local database cache, then lyrics the user keeps
 /// alongside the audio (`.lrc` sidecar or an embedded tag), then lrclib. A
 /// cached answer from an older pipeline revision is shown if the server cannot
 /// improve on it, and a cached miss never hides a file the listener has added
 /// since. An unreadable cache costs only the memory, never the lookup.
-pub fn fetch_blocking(db_path: &Path, music_root: &Path, track: &Track) -> LyricsResult {
+///
+/// `settled` is asked once the cache and the local files have had their say and
+/// before lrclib is called: answering false abandons the lookup (`None`)
+/// instead of spending a request on a track the listener has already skipped
+/// away from.
+fn resolve(
+    db_path: &Path,
+    music_root: &Path,
+    track: &Track,
+    settled: Option<&dyn Fn() -> bool>,
+) -> Option<LyricsResult> {
     let db = Db::open(db_path).ok();
     let cached = db
         .as_ref()
@@ -153,7 +170,7 @@ pub fn fetch_blocking(db_path: &Path, music_root: &Path, track: &Track) -> Lyric
         .as_ref()
         .filter(|row| is_current(row) && has_content(row))
     {
-        return found_or_missing(lyrics_from_row(row));
+        return Some(found_or_missing(lyrics_from_row(row)));
     }
     let offset_ms = cached.as_ref().map_or(0, |row| row.offset_ms);
 
@@ -168,17 +185,20 @@ pub fn fetch_blocking(db_path: &Path, music_root: &Path, track: &Track) -> Lyric
         if let Some(db) = &db {
             let _ = db.save_lyrics(&track.title, &track.artist, &content);
         }
-        return found_or_missing(Lyrics {
+        return Some(found_or_missing(Lyrics {
             document: document_from(local.synced_raw.as_deref(), local.plain.as_deref(), None, false),
             offset_ms,
-        });
+        }));
     }
     if cached.as_ref().is_some_and(is_current) {
-        return LyricsResult::Missing;
+        return Some(LyricsResult::Missing);
     }
 
     let stale = cached.as_ref().filter(|row| has_content(row));
-    match lookup_remote(track) {
+    if settled.is_some_and(|settled| !settled()) {
+        return None;
+    }
+    Some(match lookup_remote(track) {
         Remote::Found(fetched) => {
             let content = LyricsContent {
                 synced: fetched.synced.clone(),
@@ -235,6 +255,136 @@ pub fn fetch_blocking(db_path: &Path, music_root: &Path, track: &Track) -> Lyric
             Some(row) => found_or_missing(lyrics_from_row(row)),
             None => LyricsResult::Failed(failure),
         },
+    })
+}
+
+/// How long a track has to stay the wanted one before lrclib is asked about it,
+/// so skipping through a queue costs the cache reads and nothing on the
+/// network.
+const SETTLE_DELAY: Duration = Duration::from_millis(300);
+
+/// Whether a lookup may go to the network right away or only once the track
+/// has stayed wanted for `SETTLE_DELAY`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Pace {
+    Settled,
+    Immediate,
+}
+
+/// The track the player is on, as far as lookups are concerned.
+static WANTED: Mutex<Option<String>> = Mutex::new(None);
+
+/// One lookup running on behalf of every caller that asks for the same track.
+struct Flight {
+    key: String,
+    outcome: Mutex<Option<Option<LyricsResult>>>,
+    done: Condvar,
+}
+
+static FLIGHTS: Mutex<Vec<Arc<Flight>>> = Mutex::new(Vec::new());
+
+fn flight_key(track: &Track) -> String {
+    format!("{}\u{1f}{}\u{1f}{}", track.rel_path, track.title, track.artist)
+}
+
+/// Records which track is current, so a lookup that waits out `SETTLE_DELAY`
+/// can tell whether it is still wanted.
+pub fn want(track: &Track) {
+    if let Ok(mut wanted) = WANTED.lock() {
+        *wanted = Some(flight_key(track));
+    }
+}
+
+fn is_wanted(key: &str) -> bool {
+    WANTED
+        .lock()
+        .map(|wanted| wanted.as_deref() == Some(key))
+        .unwrap_or(true)
+}
+
+/// Publishes a flight's outcome and retires it, also when the leader panics.
+struct Leader {
+    flight: Arc<Flight>,
+}
+
+impl Leader {
+    fn finish(&self, outcome: Option<LyricsResult>) {
+        if let Ok(mut flights) = FLIGHTS.lock() {
+            flights.retain(|flight| !Arc::ptr_eq(flight, &self.flight));
+        }
+        if let Ok(mut slot) = self.flight.outcome.lock() {
+            if slot.is_none() {
+                *slot = Some(outcome);
+            }
+        }
+        self.flight.done.notify_all();
+    }
+}
+
+impl Drop for Leader {
+    fn drop(&mut self) {
+        self.finish(None);
+    }
+}
+
+/// Joins the lookup already running for `key`, or starts one: `Ok` is the
+/// flight to wait on, `Err` the leader that has to run it.
+fn join_or_lead(key: &str) -> Result<Arc<Flight>, Leader> {
+    let Ok(mut flights) = FLIGHTS.lock() else {
+        return Err(Leader {
+            flight: Arc::new(Flight {
+                key: key.to_string(),
+                outcome: Mutex::new(None),
+                done: Condvar::new(),
+            }),
+        });
+    };
+    if let Some(flight) = flights.iter().find(|flight| flight.key == key) {
+        return Ok(Arc::clone(flight));
+    }
+    let flight = Arc::new(Flight {
+        key: key.to_string(),
+        outcome: Mutex::new(None),
+        done: Condvar::new(),
+    });
+    flights.push(Arc::clone(&flight));
+    Err(Leader { flight })
+}
+
+/// `fetch_blocking` for callers that may overlap: while one thread is looking
+/// a track up, another asking for the same track waits for that answer instead
+/// of repeating the request and the database write. Cache and local-file reads
+/// are immediate; with `Pace::Settled` the network is only used once the track
+/// has stayed wanted for `SETTLE_DELAY`, and `None` means it was skipped away
+/// from first.
+pub fn fetch_shared(
+    db_path: &Path,
+    music_root: &Path,
+    track: &Track,
+    pace: Pace,
+) -> Option<LyricsResult> {
+    let key = flight_key(track);
+    match join_or_lead(&key) {
+        Ok(flight) => {
+            let mut outcome = flight.outcome.lock().ok()?;
+            while outcome.is_none() {
+                outcome = flight.done.wait(outcome).ok()?;
+            }
+            (*outcome).clone().flatten()
+        }
+        Err(leader) => {
+            let settle = || {
+                std::thread::sleep(SETTLE_DELAY);
+                is_wanted(&key)
+            };
+            let gate: Option<&dyn Fn() -> bool> = match pace {
+                Pace::Settled => Some(&settle),
+                Pace::Immediate => None,
+            };
+            let result = resolve(db_path, music_root, track, gate);
+            leader.finish(result.clone());
+            result
+        }
     }
 }
 
@@ -683,6 +833,66 @@ mod tests {
             }
             _ => panic!("the sidecar should have been read past the cached miss"),
         }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn cache_found(db_path: &Path) {
+        let db = Db::open(db_path).unwrap();
+        db.save_lyrics(
+            "Song",
+            "Artist",
+            &LyricsContent {
+                synced: Some("[00:05.00]Cached".to_string()),
+                plain: None,
+                lyricsfile: None,
+                instrumental: false,
+                revision: REVISION,
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn a_lookup_skipped_away_from_never_reaches_the_network() {
+        let dir = scratch_dir("skipped");
+        let db_path = dir.join("library.sqlite");
+        drop(Db::open(&db_path).unwrap());
+        let result = resolve(&db_path, &dir, &track("gone.flac"), Some(&|| false));
+        assert!(result.is_none());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_cached_answer_is_read_without_waiting_to_settle() {
+        let dir = scratch_dir("cache-hit");
+        let db_path = dir.join("library.sqlite");
+        cache_found(&db_path);
+        let result = resolve(&db_path, &dir, &track("song.flac"), Some(&|| false));
+        assert!(matches!(result, Some(LyricsResult::Found(_))));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn overlapping_lookups_for_one_track_all_get_the_answer() {
+        let dir = scratch_dir("overlap");
+        let db_path = dir.join("library.sqlite");
+        cache_found(&db_path);
+        want(&track("song.flac"));
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let (db_path, dir) = (db_path.clone(), dir.clone());
+                std::thread::spawn(move || {
+                    fetch_shared(&db_path, &dir, &track("song.flac"), Pace::Settled)
+                })
+            })
+            .collect();
+        for handle in handles {
+            assert!(matches!(
+                handle.join().unwrap(),
+                Some(LyricsResult::Found(_))
+            ));
+        }
+        assert!(FLIGHTS.lock().unwrap().is_empty());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

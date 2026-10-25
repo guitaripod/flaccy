@@ -1,6 +1,6 @@
 use crate::events::AppEvent;
 use crate::filters::{self, LibraryFilter};
-use crate::library::Album;
+use crate::library::{Album, Library};
 use crate::ui::album_layouts::AlbumBody;
 use crate::ui::filter_chips::ChipBar;
 use crate::ui::track_page::PageMode;
@@ -18,7 +18,7 @@ const COVER_REQUEST_PX: u32 = 320;
 
 /// Mirrors LibraryViewModel.AlbumSort on the Apple clients — same options,
 /// same semantics, same order.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum AlbumSort {
     Title,
     Artist,
@@ -64,28 +64,121 @@ impl AlbumSort {
     }
 }
 
+/// What the grid keeps of an album: the few fields a tile shows, the key it is
+/// found by, and where it sat in the library when the grid was built. The
+/// tracks stay in the library, so building the grid copies no track and a
+/// tile always opens the album as the library holds it now.
+struct AlbumCard {
+    key: String,
+    title: String,
+    artist: String,
+    year: Option<String>,
+    index: usize,
+}
+
+impl AlbumCard {
+    fn of(album: &Album, index: usize) -> Self {
+        Self {
+            key: album.key(),
+            title: album.title.clone(),
+            artist: album.artist.clone(),
+            year: album.year.clone(),
+            index,
+        }
+    }
+
+    fn subtitle(&self) -> String {
+        match &self.year {
+            Some(year) if !year.is_empty() => format!("{} · {}", self.artist, year),
+            _ => self.artist.clone(),
+        }
+    }
+
+    /// The album this tile stands for in `library`: the one at the remembered
+    /// position when it is still the same album, otherwise found by its key.
+    fn album_in<'a>(&self, library: &'a Library) -> Option<&'a Album> {
+        library
+            .albums
+            .get(self.index)
+            .filter(|album| album.title == self.title && album.artist == self.artist)
+            .or_else(|| library.album_by_key(&self.key))
+    }
+}
+
+type SortKey = (u8, i64, String, String);
+
 /// Same comparisons as iOS sortedAlbums: title/artist alphabetical, year
 /// ascending with unknown years last, recently added/played newest first with
-/// never-played albums trailing alphabetically.
-fn sort_albums(albums: &mut [Album], sort: AlbumSort) {
-    let title_key = |album: &Album| album.title.to_lowercase();
+/// never-played albums trailing alphabetically. Computed once per album.
+fn sort_key(album: &Album, sort: AlbumSort) -> SortKey {
+    let title = album.title.to_lowercase();
     match sort {
-        AlbumSort::Title => albums.sort_by_key(|a| (title_key(a), a.artist.to_lowercase())),
-        AlbumSort::Artist => albums.sort_by_key(|a| (a.artist.to_lowercase(), title_key(a))),
-        AlbumSort::Year => albums.sort_by_key(|a| {
-            (
-                a.year
-                    .clone()
-                    .filter(|y| !y.is_empty())
-                    .unwrap_or_else(|| "9999".to_string()),
-                title_key(a),
-            )
-        }),
-        AlbumSort::RecentlyAdded => albums.sort_by_key(|a| (-a.added_unix(), title_key(a))),
-        AlbumSort::RecentlyPlayed => albums.sort_by_key(|a| match a.last_played_unix() {
-            Some(played) => (0, -played, title_key(a)),
-            None => (1, 0, title_key(a)),
-        }),
+        AlbumSort::Title => (0, 0, title, album.artist.to_lowercase()),
+        AlbumSort::Artist => (0, 0, album.artist.to_lowercase(), title),
+        AlbumSort::Year => (
+            0,
+            0,
+            album
+                .year
+                .clone()
+                .filter(|year| !year.is_empty())
+                .unwrap_or_else(|| "9999".to_string()),
+            title,
+        ),
+        AlbumSort::RecentlyAdded => (0, -album.added_unix(), title, String::new()),
+        AlbumSort::RecentlyPlayed => match album.last_played_unix() {
+            Some(played) => (0, -played, title, String::new()),
+            None => (1, 0, title, String::new()),
+        },
+    }
+}
+
+/// The positions of `albums` in display order for `sort`.
+fn sorted_order(albums: &[Album], sort: AlbumSort) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..albums.len()).collect();
+    order.sort_by_cached_key(|&index| sort_key(&albums[index], sort));
+    order
+}
+
+/// Everything the grid's rows depend on. Two builds with the same state would
+/// produce the same rows, so the second is skipped.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct GridState {
+    content: u64,
+    recency: u64,
+    sort: AlbumSort,
+}
+
+impl GridState {
+    fn of(signature: &filters::LibrarySignature, sort: AlbumSort) -> Self {
+        let by_recency = matches!(sort, AlbumSort::RecentlyAdded | AlbumSort::RecentlyPlayed);
+        Self {
+            content: signature.albums,
+            recency: if by_recency { signature.album_recency } else { 0 },
+            sort,
+        }
+    }
+}
+
+/// The chip membership last computed, and what it was computed from. The
+/// ranges behind Recently Added and Rediscover move with the clock, so an hour
+/// is as long as a membership is trusted for.
+#[derive(Default)]
+struct AdmissionStamp {
+    library: filters::BuiltFrom,
+    chip: Cell<Option<LibraryFilter>>,
+    hour: Cell<i64>,
+}
+
+impl AdmissionStamp {
+    fn is_current(&self, library: &Rc<Library>, chip: LibraryFilter, now: i64) -> bool {
+        self.library.is(library) && self.chip.get() == Some(chip) && self.hour.get() == now / 3600
+    }
+
+    fn record(&self, library: &Rc<Library>, chip: LibraryFilter, now: i64) {
+        self.library.set(library);
+        self.chip.set(Some(chip));
+        self.hour.set(now / 3600);
     }
 }
 
@@ -109,25 +202,21 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let filter = {
         let query = Rc::clone(&ui.query);
         let allowed = Rc::clone(&allowed);
+        let needle = filters::SearchNeedle::default();
         gtk::CustomFilter::new(move |obj| {
             let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
                 return true;
             };
-            let album = boxed.borrow::<Album>();
+            let card = boxed.borrow::<AlbumCard>();
             if allowed
                 .borrow()
                 .as_ref()
-                .is_some_and(|keys| !keys.contains(&album.key()))
+                .is_some_and(|keys| !keys.contains(&card.key))
             {
                 return false;
             }
             let query = query.borrow();
-            if query.is_empty() {
-                return true;
-            }
-            let needle = query.to_lowercase();
-            album.title.to_lowercase().contains(&needle)
-                || album.artist.to_lowercase().contains(&needle)
+            needle.matches(&query, &[&card.title, &card.artist])
         })
     };
     let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
@@ -145,10 +234,12 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let cell = build_album_cell();
         {
             let item_weak = item.downgrade();
+            let drop_ui = Rc::clone(&setup_ui);
             crate::ui::artwork_editor::attach_image_drop(&cell, &setup_ui, move || {
                 let boxed = item_weak.upgrade()?.item().and_downcast::<BoxedAnyObject>()?;
-                let album = boxed.borrow::<Album>().clone();
-                Some(album)
+                let library = drop_ui.core.library.borrow().clone();
+                let album = boxed.borrow::<AlbumCard>().album_in(&library).cloned();
+                album
             });
         }
         let gesture = gtk::GestureClick::builder()
@@ -164,7 +255,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
                 return;
             };
-            let key = boxed.borrow::<Album>().key();
+            let key = boxed.borrow::<AlbumCard>().key.clone();
             context::popup_menu_at(
                 &anchor,
                 &context::album_menu(&key, context::album_downloads(&menu_ui.core, &key)),
@@ -186,7 +277,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
                 return;
             };
-            let album = boxed.borrow::<Album>();
+            let card = boxed.borrow::<AlbumCard>();
             let Some(picture) = cell.first_child().and_downcast::<gtk::Picture>() else {
                 return;
             };
@@ -196,23 +287,32 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let Some(subtitle) = title.next_sibling().and_downcast::<gtk::Label>() else {
                 return;
             };
-            title.set_label(&album.title);
-            title.set_tooltip_text(Some(&album.title));
-            subtitle.set_label(&subtitle_text(&album));
-            picture.set_paintable(Some(&ui.core.artwork.placeholder(&album.key())));
-            let expected = album.key();
+            title.set_label(&card.title);
+            title.set_tooltip_text(Some(&card.title));
+            subtitle.set_label(&card.subtitle());
+            picture.set_paintable(Some(&ui.core.artwork.placeholder(&card.key)));
+            let expected = card.key.clone();
             let item_weak = item.downgrade();
             let weak = picture.downgrade();
-            ui.core
-                .artwork
-                .request(&album.title, &album.artist, 168, move |texture, _| {
+            let wanted = {
+                let item_weak = item_weak.clone();
+                let expected = expected.clone();
+                move || still_bound_album(&item_weak, &expected)
+            };
+            ui.core.artwork.request_while(
+                wanted,
+                &card.title,
+                &card.artist,
+                168,
+                move |texture, _| {
                     if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
                         if still_bound_album(&item_weak, &expected) {
                             picture.set_paintable(Some(texture));
                         }
                     }
-                });
-            bound.borrow_mut().insert(album.key(), picture.downgrade());
+                },
+            );
+            bound.borrow_mut().insert(card.key.clone(), picture.downgrade());
         });
     }
     {
@@ -222,7 +322,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 return;
             };
             if let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() {
-                bound.borrow_mut().remove(&boxed.borrow::<Album>().key());
+                bound.borrow_mut().remove(&boxed.borrow::<AlbumCard>().key);
             }
         });
     }
@@ -251,8 +351,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             else {
                 return;
             };
-            let album = boxed.borrow::<Album>().clone();
-            push_album_detail(&ui, &album);
+            let library = ui.core.library.borrow().clone();
+            let card = boxed.borrow::<AlbumCard>();
+            if let Some(album) = card.album_in(&library) {
+                push_album_detail(&ui, album);
+            }
         });
     }
 
@@ -312,23 +415,27 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         let chip_filter = Rc::clone(&chip_filter);
         let allowed = Rc::clone(&allowed);
         let filter = filter.clone();
-        let applied = Cell::new(0u64);
+        let applied = Cell::new(None::<GridState>);
+        let admission = AdmissionStamp::default();
         Rc::new(move || {
             let library = ui.core.library.borrow().clone();
             let now = chrono::Utc::now().timestamp();
-            let admitted = filters::albums_allowed(chip_filter.get(), &library.albums, now);
-            if *allowed.borrow() != admitted {
-                *allowed.borrow_mut() = admitted;
-                filter.changed(gtk::FilterChange::Different);
+            let chip = chip_filter.get();
+            if !admission.is_current(&library, chip, now) {
+                let admitted = filters::albums_allowed(chip, &library.albums, now);
+                if *allowed.borrow() != admitted {
+                    *allowed.borrow_mut() = admitted;
+                    filter.changed(gtk::FilterChange::Different);
+                }
+                admission.record(&library, chip, now);
             }
-            let mut albums = library.albums.clone();
-            sort_albums(&mut albums, sort_mode.get());
-            let fingerprint = albums_fingerprint(&albums);
-            if applied.replace(fingerprint) != fingerprint {
+            let sort = sort_mode.get();
+            let state = GridState::of(&filters::library_signature(&library), sort);
+            if applied.replace(Some(state)) != Some(state) {
                 let saved = scroll.vadjustment().value();
-                let items: Vec<BoxedAnyObject> = albums
-                    .iter()
-                    .map(|album| BoxedAnyObject::new(album.clone()))
+                let items: Vec<BoxedAnyObject> = sorted_order(&library.albums, sort)
+                    .into_iter()
+                    .map(|index| BoxedAnyObject::new(AlbumCard::of(&library.albums[index], index)))
                     .collect();
                 store.splice(0, store.n_items(), &items);
                 if saved > 0.0 {
@@ -410,15 +517,35 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     }
 
     {
+        let library_dirty = Rc::new(Cell::new(false));
+        let search_dirty = Rc::new(Cell::new(false));
+        {
+            let rebuild = Rc::clone(&rebuild);
+            let filter = filter.clone();
+            let library_dirty = Rc::clone(&library_dirty);
+            let search_dirty = Rc::clone(&search_dirty);
+            ui.core
+                .hub
+                .subscribe_widget(&stack, move |stack, event| match event {
+                    AppEvent::LibraryReloaded if stack.is_mapped() => rebuild(),
+                    AppEvent::LibraryReloaded => library_dirty.set(true),
+                    AppEvent::SearchChanged(_) if stack.is_mapped() => {
+                        filter.changed(gtk::FilterChange::Different)
+                    }
+                    AppEvent::SearchChanged(_) => search_dirty.set(true),
+                    _ => {}
+                });
+        }
         let rebuild = Rc::clone(&rebuild);
         let filter = filter.clone();
-        ui.core
-            .hub
-            .subscribe_widget(&stack, move |_, event| match event {
-                AppEvent::LibraryReloaded => rebuild(),
-                AppEvent::SearchChanged(_) => filter.changed(gtk::FilterChange::Different),
-                _ => {}
-            });
+        stack.connect_map(move |_| {
+            if library_dirty.replace(false) {
+                rebuild();
+            }
+            if search_dirty.replace(false) {
+                filter.changed(gtk::FilterChange::Different);
+            }
+        });
     }
 
     {
@@ -499,28 +626,6 @@ fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) 
         });
 }
 
-/// Digest of the album set plus the metadata the grid renders; any add,
-/// removal, reorder, or enriched year/genre changes it, triggering a model
-/// splice (the virtualized GridView only rebinds the handful of visible cells).
-fn albums_fingerprint(albums: &[Album]) -> u64 {
-    let mut hash = 0xcbf2_9ce4_8422_2325u64;
-    for album in albums {
-        let row = format!(
-            "{}|{}|{:?}|{:?}",
-            album.title, album.artist, album.year, album.genre
-        );
-        hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
-    }
-    hash
-}
-
-fn subtitle_text(album: &Album) -> String {
-    match &album.year {
-        Some(year) if !year.is_empty() => format!("{} · {}", album.artist, year),
-        _ => album.artist.clone(),
-    }
-}
-
 /// The "No Music Found" page with its way forward: pick the music folder,
 /// download the sample album, and watch a scan that is already under way.
 /// Home shows the same page while the library is empty.
@@ -580,7 +685,7 @@ fn still_bound_album(item: &glib::WeakRef<gtk::ListItem>, expected: &str) -> boo
     item.upgrade()
         .and_then(|item| item.item())
         .and_downcast::<BoxedAnyObject>()
-        .is_some_and(|boxed| boxed.borrow::<Album>().key() == expected)
+        .is_some_and(|boxed| boxed.borrow::<AlbumCard>().key == expected)
 }
 
 /// Empty tile shell reused by the GridView factory: cover picture, title, and
@@ -890,41 +995,49 @@ fn cover_host_with_pencil(ui: &Rc<Ui>, album: &Album, picture: &gtk::Picture) ->
     host
 }
 
-/// Personal Last.fm play count for this album ("You've played this N times"),
-/// fetched via album.getInfo with the username param when authenticated.
+/// How many times this album was played ("You've played this N times"),
+/// counted from the local listening history, which the Last.fm history sync
+/// keeps complete; refreshed when the sync brings in new plays.
 fn load_user_playcount(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
-    let Some(session) = ui.core.session.borrow().clone() else {
-        return;
-    };
-    let Some(client) = crate::lastfm::LastFmClient::new(Some(session.key.clone())) else {
-        return;
-    };
-    let artist = album.artist.clone();
+    show_album_plays(ui, album, label);
+    let ui_ref = Rc::clone(ui);
+    let album = album.clone();
+    ui.core.hub.subscribe_widget(label, move |label, event| {
+        if matches!(event, AppEvent::HistorySynced { .. } | AppEvent::ScrobbleRecorded) {
+            show_album_plays(&ui_ref, &album, label);
+        }
+    });
+}
+
+fn show_album_plays(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
+    let db_path = ui.core.db_path.clone();
     let title = album.title.clone();
-    let (tx, rx) = async_channel::bounded::<Option<i64>>(1);
+    let songs: Vec<(String, String)> = album
+        .tracks
+        .iter()
+        .map(|track| (track.title.clone(), track.artist.clone()))
+        .collect();
+    let (tx, rx) = async_channel::bounded::<i64>(1);
     std::thread::Builder::new()
         .name("flaccy-album-plays".into())
         .spawn(move || {
-            let count = client
-                .fetch_album_user_playcount(&artist, &title, &session.username)
-                .unwrap_or(None);
+            let count = crate::db::Db::open(&db_path)
+                .map(|db| db.album_listen_count(&title, &songs))
+                .unwrap_or(0);
             let _ = tx.send_blocking(count);
         })
         .ok();
     let weak = label.downgrade();
     gtk::glib::spawn_future_local(async move {
-        let Ok(Some(count)) = rx.recv().await else {
+        let Ok(count) = rx.recv().await else {
             return;
         };
-        if count <= 0 {
-            return;
-        }
         if let Some(label) = weak.upgrade() {
             label.set_label(&format!(
-                "You've played this {count} time{} on Last.fm",
+                "You've played this {count} time{}",
                 if count == 1 { "" } else { "s" }
             ));
-            label.set_visible(true);
+            label.set_visible(count > 0);
         }
     });
 }
@@ -982,43 +1095,49 @@ mod sort_tests {
         }
     }
 
-    fn titles(albums: &[Album]) -> Vec<&str> {
-        albums.iter().map(|a| a.title.as_str()).collect()
+    fn sorted_titles(albums: &[Album], sort: AlbumSort) -> Vec<&str> {
+        sorted_order(albums, sort)
+            .into_iter()
+            .map(|index| albums[index].title.as_str())
+            .collect()
     }
 
     #[test]
     fn recently_added_orders_newest_first() {
-        let mut albums = vec![
+        let albums = vec![
             album("Old", None, 100, None),
             album("New", None, 300, None),
             album("Mid", None, 200, None),
         ];
-        sort_albums(&mut albums, AlbumSort::RecentlyAdded);
-        assert_eq!(titles(&albums), vec!["New", "Mid", "Old"]);
+        assert_eq!(
+            sorted_titles(&albums, AlbumSort::RecentlyAdded),
+            vec!["New", "Mid", "Old"]
+        );
     }
 
     #[test]
     fn year_sorts_ascending_with_unknown_last() {
-        let mut albums = vec![
+        let albums = vec![
             album("NoYear", None, 0, None),
             album("Nineties", Some("1994"), 0, None),
             album("Modern", Some("2020"), 0, None),
         ];
-        sort_albums(&mut albums, AlbumSort::Year);
-        assert_eq!(titles(&albums), vec!["Nineties", "Modern", "NoYear"]);
+        assert_eq!(
+            sorted_titles(&albums, AlbumSort::Year),
+            vec!["Nineties", "Modern", "NoYear"]
+        );
     }
 
     #[test]
     fn recently_played_puts_never_played_last_alphabetically() {
-        let mut albums = vec![
+        let albums = vec![
             album("Zebra Unplayed", None, 0, None),
             album("Alpha Unplayed", None, 0, None),
             album("Played Older", None, 0, Some(50)),
             album("Played Newer", None, 0, Some(90)),
         ];
-        sort_albums(&mut albums, AlbumSort::RecentlyPlayed);
         assert_eq!(
-            titles(&albums),
+            sorted_titles(&albums, AlbumSort::RecentlyPlayed),
             vec![
                 "Played Newer",
                 "Played Older",
@@ -1026,6 +1145,85 @@ mod sort_tests {
                 "Zebra Unplayed"
             ]
         );
+    }
+
+    #[test]
+    fn title_and_artist_sorts_ignore_case_and_break_ties_on_the_other_field() {
+        let mut lower = album("alpha", None, 0, None);
+        lower.artist = "zed".to_string();
+        let mut upper = album("Alpha", None, 0, None);
+        upper.artist = "Abe".to_string();
+        let other = album("Beta", None, 0, None);
+        let albums = vec![lower, other, upper];
+        assert_eq!(
+            sorted_titles(&albums, AlbumSort::Title),
+            vec!["Alpha", "alpha", "Beta"]
+        );
+        let by_artist: Vec<&str> = sorted_order(&albums, AlbumSort::Artist)
+            .into_iter()
+            .map(|index| albums[index].artist.as_str())
+            .collect();
+        assert_eq!(by_artist, vec!["Abe", "Artist", "zed"]);
+    }
+
+    #[test]
+    fn equal_keys_keep_library_order() {
+        let albums = vec![
+            album("Same", None, 5, None),
+            album("same", None, 5, None),
+            album("SAME", None, 5, None),
+        ];
+        assert_eq!(sorted_order(&albums, AlbumSort::RecentlyAdded), vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn a_card_finds_its_album_by_position_then_by_key() {
+        let albums = vec![
+            album("One", None, 0, None),
+            album("Two", None, 0, None),
+            album("Three", None, 0, None),
+        ];
+        let card = AlbumCard::of(&albums[1], 1);
+        let library = Library {
+            tracks: Vec::new(),
+            albums: albums.clone(),
+            artists: Vec::new(),
+            index: Default::default(),
+        };
+        assert_eq!(card.album_in(&library).map(|a| a.title.as_str()), Some("Two"));
+        let reordered = Library {
+            tracks: Vec::new(),
+            albums: vec![albums[2].clone(), albums[0].clone(), albums[1].clone()],
+            artists: Vec::new(),
+            index: Default::default(),
+        };
+        assert_eq!(
+            card.album_in(&reordered).map(|a| a.title.as_str()),
+            Some("Two")
+        );
+        let gone = Library {
+            tracks: Vec::new(),
+            albums: vec![albums[0].clone()],
+            artists: Vec::new(),
+            index: Default::default(),
+        };
+        assert!(card.album_in(&gone).is_none());
+    }
+
+    #[test]
+    fn grid_state_ignores_recency_unless_the_sort_reads_it() {
+        let signature = |recency: u64| filters::LibrarySignature {
+            track_rows: Vec::new(),
+            albums: 7,
+            album_recency: recency,
+            artists: 0,
+        };
+        assert!(GridState::of(&signature(1), AlbumSort::Title) == GridState::of(&signature(2), AlbumSort::Title));
+        assert!(
+            GridState::of(&signature(1), AlbumSort::RecentlyPlayed)
+                != GridState::of(&signature(2), AlbumSort::RecentlyPlayed)
+        );
+        assert!(GridState::of(&signature(1), AlbumSort::Title) != GridState::of(&signature(1), AlbumSort::Artist));
     }
 
     #[test]

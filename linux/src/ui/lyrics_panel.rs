@@ -1,6 +1,6 @@
 use crate::events::AppEvent;
 use crate::library::Track;
-use crate::lyrics::{Lyrics, LyricsResult};
+use crate::lyrics::{Lyrics, LyricsResult, Pace};
 use crate::ui::lyric_line::LyricLine;
 use crate::ui::screen::is_watched;
 use crate::ui::Ui;
@@ -502,7 +502,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let status = status.clone();
         let stack = stack.clone();
         let retry = retry.clone();
-        Rc::new(move |track: &Track| {
+        Rc::new(move |track: &Track, pace: Pace| {
             let generation = {
                 let mut state = state.borrow_mut();
                 state.generation += 1;
@@ -514,26 +514,32 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
             retry.set_visible(false);
             stack.set_visible_child_name("status");
 
-            let (tx, rx) = async_channel::bounded::<LyricsResult>(1);
-            let db_path = ui.core.db_path.clone();
-            let music_root = ui.core.music_root();
-            let track_for_thread = track.clone();
-            std::thread::spawn(move || {
-                let result =
-                    crate::lyrics::fetch_blocking(&db_path, &music_root, &track_for_thread);
-                let _ = tx.send_blocking(result);
-            });
+            crate::lyrics::want(track);
+            let ui = Rc::clone(&ui);
             let state = Rc::clone(&state);
             let apply_lyrics = Rc::clone(&apply_lyrics);
+            let track = track.clone();
             glib::spawn_future_local(async move {
-                let Ok(result) = rx.recv().await else { return };
-                if state.borrow().generation != generation {
+                let mut pace = pace;
+                loop {
+                    let rx = lookup_channel(&ui, &track, pace);
+                    let Ok(outcome) = rx.recv().await else { return };
+                    if state.borrow().generation != generation {
+                        return;
+                    }
+                    let Some(result) = outcome else {
+                        if !ui.core.player.is_current_path(&track.rel_path) {
+                            return;
+                        }
+                        pace = Pace::Immediate;
+                        continue;
+                    };
+                    if let LyricsResult::Found(lyrics) = &result {
+                        state.borrow_mut().lyrics = lyrics.clone();
+                    }
+                    apply_lyrics(&result);
                     return;
                 }
-                if let LyricsResult::Found(lyrics) = &result {
-                    state.borrow_mut().lyrics = lyrics.clone();
-                }
-                apply_lyrics(&result);
             });
         })
     };
@@ -548,7 +554,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                 .clone()
                 .or_else(|| ui.core.player.current_track());
             if let Some(track) = track {
-                fetch_for(&track);
+                fetch_for(&track, Pace::Immediate);
             }
         });
     }
@@ -569,7 +575,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                     .or_else(|| ui.core.player.current_track());
                 if let Some(track) = track {
                     state.borrow_mut().track = Some(track.clone());
-                    fetch_for(&track);
+                    fetch_for(&track, Pace::Settled);
                 }
             }
             sync_driver();
@@ -601,7 +607,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                     state.borrow_mut().track = track.clone();
                     if visible.get() && panel_map.is_mapped() {
                         if let Some(track) = track {
-                            fetch_for(track);
+                            fetch_for(track, Pace::Settled);
                         }
                     }
                 }
@@ -623,6 +629,25 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         widget: panel.upcast(),
         set_active,
     }
+}
+
+/// Starts a lookup for the track on its own thread, joining one that is
+/// already running for it, and returns the channel its answer arrives on
+/// (`None` when the track was skipped away from before the network was used).
+fn lookup_channel(
+    ui: &Rc<Ui>,
+    track: &Track,
+    pace: Pace,
+) -> async_channel::Receiver<Option<LyricsResult>> {
+    let (tx, rx) = async_channel::bounded::<Option<LyricsResult>>(1);
+    let db_path = ui.core.db_path.clone();
+    let music_root = ui.core.music_root();
+    let track = track.clone();
+    std::thread::spawn(move || {
+        let outcome = crate::lyrics::fetch_shared(&db_path, &music_root, &track, pace);
+        let _ = tx.send_blocking(outcome);
+    });
+    rx
 }
 
 /// The timing control: a small button over the lines that opens a popover with

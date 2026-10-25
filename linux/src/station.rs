@@ -144,10 +144,9 @@ pub fn library_radio(
     for (title, artist, count) in play_counts {
         count_by_key.insert(track_key(title, artist), *count);
     }
-    let candidates: Vec<Track> = pool
+    let candidates: Vec<&Track> = pool
         .iter()
         .filter(|track| !excluding.contains(&track.rel_path))
-        .cloned()
         .collect();
     if candidates.is_empty() {
         return Vec::new();
@@ -157,7 +156,8 @@ pub fn library_radio(
             .get(&track_key(&track.title, &track.artist))
             .unwrap_or(&0) as f64
     });
-    let mut station = spaced_by_artist(weighted.into_iter().take(limit * 2).collect());
+    let mut station =
+        spaced_by_artist(weighted.into_iter().take(limit * 2).cloned().collect());
     station.truncate(limit);
     station
 }
@@ -174,7 +174,7 @@ pub fn crate_dig(
         count_by_key.insert(track_key(title, artist), *count);
     }
 
-    let mut albums: HashMap<String, Vec<Track>> = HashMap::new();
+    let mut albums: HashMap<String, Vec<&Track>> = HashMap::new();
     for track in pool {
         if excluding.contains(&track.rel_path) {
             continue;
@@ -184,10 +184,10 @@ pub fn crate_dig(
             track.album.to_lowercase(),
             track.artist.to_lowercase()
         );
-        albums.entry(key).or_default().push(track.clone());
+        albums.entry(key).or_default().push(track);
     }
 
-    let mut scored: Vec<(Track, f64)> = Vec::new();
+    let mut scored: Vec<(&Track, f64)> = Vec::new();
     for tracks in albums.values() {
         if tracks.len() < 4 {
             continue;
@@ -212,22 +212,23 @@ pub fn crate_dig(
             }
             let weight =
                 (album_plays as f64) / ((*count + 1) as f64) * (1.0 + (peak - *count) as f64);
-            scored.push((track.clone(), weight.max(0.1)));
+            scored.push((track, weight.max(0.1)));
         }
     }
     if scored.is_empty() {
         return Vec::new();
     }
 
-    let weight_map: HashMap<String, f64> = scored
+    let weight_map: HashMap<&str, f64> = scored
         .iter()
-        .map(|(t, w)| (t.rel_path.clone(), *w))
+        .map(|(t, w)| (t.rel_path.as_str(), *w))
         .collect();
-    let candidates: Vec<Track> = scored.into_iter().map(|(t, _)| t).collect();
+    let candidates: Vec<&Track> = scored.into_iter().map(|(t, _)| t).collect();
     let weighted = weighted_shuffle(candidates, |track| {
-        *weight_map.get(&track.rel_path).unwrap_or(&0.1)
+        *weight_map.get(track.rel_path.as_str()).unwrap_or(&0.1)
     });
-    let mut station = spaced_by_artist(weighted.into_iter().take(limit * 2).collect());
+    let mut station =
+        spaced_by_artist(weighted.into_iter().take(limit * 2).cloned().collect());
     station.truncate(limit);
     station
 }
@@ -245,8 +246,9 @@ pub fn history_weight(last_played_unix: Option<i64>, now_unix: i64) -> f64 {
     }
 }
 
+/// The key a song's plays are counted under: `recap::track_key`.
 pub fn track_key(title: &str, artist: &str) -> String {
-    format!("{}\u{0}{}", title.to_lowercase(), artist.to_lowercase())
+    crate::recap::track_key(title, artist)
 }
 
 #[cfg(test)]

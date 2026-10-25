@@ -20,7 +20,15 @@ let engineTargets: [Target] = [
             .product(name: "MidgarCore", package: "MidgarKit"),
             .product(name: "GRDB", package: "GRDB.swift"),
         ]
-    )
+    ),
+    .testTarget(
+        name: "FlaccyEngineTests",
+        dependencies: [
+            "FlaccyEngine",
+            "FlaccyCore",
+            .product(name: "GRDB", package: "GRDB.swift"),
+        ]
+    ),
 ]
 #endif
 

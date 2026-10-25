@@ -28,6 +28,7 @@ final class AlbumDetailViewController: NSViewController {
     private var pageFrame: TrackPageFrameView?
     private var songs: TrackPageSongs?
     private var isAwaitingMetadata = false
+    private var listenCount: Int?
 
     init(album: Album) {
         self.album = album
@@ -129,6 +130,9 @@ final class AlbumDetailViewController: NSViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(libraryUpdated), name: Library.didUpdateNotification, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(historyDidChange), name: ListenHistorySync.didChange, object: nil
+        )
         configureCoverOverlay()
         artworkObserver = ArtworkChangeObserver { [weak self] in self?.refreshArtwork() }
         populate()
@@ -177,9 +181,7 @@ final class AlbumDetailViewController: NSViewController {
         metaLabel.stringValue = metaParts.joined(separator: " · ")
         metaLabel.isHidden = metaParts.isEmpty || isAwaitingMetadata
 
-        rebuildChips(playCount: DetailEnrichmentCache.shared.cachedAlbumPlayCount(
-            artist: album.artist, album: album.title
-        ))
+        rebuildChips(playCount: listenCount)
         rebuildTracks()
 
         let totalSeconds = album.tracks.reduce(0.0) { $0 + $1.duration }
@@ -306,6 +308,22 @@ final class AlbumDetailViewController: NSViewController {
         }
     }
 
+    /// Counts the album's plays in the local listening history and redraws the
+    /// chips with the result.
+    private func refreshListenCount() {
+        let album = self.album
+        Task { [weak self] in
+            let plays = await AlbumListenCount.count(for: album)
+            guard let self, self.album.title == album.title else { return }
+            self.listenCount = plays
+            self.rebuildChips(playCount: plays)
+        }
+    }
+
+    @objc private func historyDidChange() {
+        refreshListenCount()
+    }
+
     /// Repairs this album's metadata when the queue says it is due, jumping it
     /// ahead of the background pass so the page the reader is looking at is
     /// fixed first and the result is persisted with everything else the job
@@ -315,11 +333,7 @@ final class AlbumDetailViewController: NSViewController {
     private func enrichOnAppear() {
         let title = album.title
         let artist = album.artist
-        Task { [weak self] in
-            let playCount = await DetailEnrichmentCache.shared.albumPlayCount(artist: artist, album: title)
-            guard let self, self.album.title == title else { return }
-            self.rebuildChips(playCount: playCount)
-        }
+        refreshListenCount()
         guard album.year == nil || album.genre == nil else { return }
         guard isEnrichmentDue(title: title, artist: artist) else {
             renderUnresolvedMetadata(title: title, artist: artist)

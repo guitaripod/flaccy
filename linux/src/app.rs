@@ -41,7 +41,9 @@ pub struct AppCore {
     pub drain_in_flight: Rc<Cell<bool>>,
     pub mpris: RefCell<Option<Rc<mpris_server::Player>>>,
     pub enrich_tx: RefCell<Option<async_channel::Sender<crate::enrichment::EnrichRequest>>>,
-    pub import_in_flight: Cell<bool>,
+    pub history_sync_in_flight: Cell<bool>,
+    pub history_state: RefCell<Option<flaccy_library::listen_history::HistorySyncState>>,
+    pub history_status: RefCell<crate::history_sync::HistoryStatus>,
     /// Paths that have a version kept in Previous Versions, so a track's context
     /// menu can offer to restore it without asking the database per row.
     previous_versions: RefCell<HashSet<String>>,
@@ -161,7 +163,9 @@ impl AppCore {
             drain_in_flight: Rc::new(Cell::new(false)),
             mpris: RefCell::new(None),
             enrich_tx: RefCell::new(None),
-            import_in_flight: Cell::new(false),
+            history_sync_in_flight: Cell::new(false),
+            history_state: RefCell::new(None),
+            history_status: RefCell::new(crate::history_sync::HistoryStatus::Waiting),
             previous_versions: RefCell::new(HashSet::new()),
             sample_in_flight: Cell::new(false),
             sleep_remaining: Cell::new(None),
@@ -570,7 +574,7 @@ impl AppCore {
         self.start_remote();
         self.schedule_periodic_drain();
         self.schedule_wantlist_refresh();
-        self.schedule_history_import();
+        crate::history_sync::schedule(self);
         self.wire_lastfm_sync();
         if config::demo_mode() && demo_autoplays() {
             self.schedule_demo_autoplay();
@@ -1013,9 +1017,12 @@ impl AppCore {
 
     /// Resolves the new track's lyrics off the main thread — database cache,
     /// then the file's own lyrics, then lrclib — which also warms the cache the
-    /// lyrics panel reads, so opening it on this song is instant.
+    /// lyrics panel reads, so opening it on this song is instant. The panel asks
+    /// for the same track at the same moment; the two share one lookup, and
+    /// nothing goes to the network for a song skipped within a third of a second.
     pub fn prefetch_lyrics(self: &Rc<Self>, track: &Track) {
         *self.lyrics.borrow_mut() = crate::lyrics::Lyrics::default();
+        crate::lyrics::want(track);
         let (tx, rx) = async_channel::bounded::<crate::lyrics::Lyrics>(1);
         let db_path = self.db_path.clone();
         let music_root = self.music_root();
@@ -1023,9 +1030,14 @@ impl AppCore {
         let spawned = std::thread::Builder::new()
             .name("flaccy-lyrics-prefetch".into())
             .spawn(move || {
-                let lyrics = match crate::lyrics::fetch_blocking(&db_path, &music_root, &for_thread)
-                {
-                    crate::lyrics::LyricsResult::Found(lyrics) => lyrics,
+                let outcome = crate::lyrics::fetch_shared(
+                    &db_path,
+                    &music_root,
+                    &for_thread,
+                    crate::lyrics::Pace::Settled,
+                );
+                let lyrics = match outcome {
+                    Some(crate::lyrics::LyricsResult::Found(lyrics)) => lyrics,
                     _ => crate::lyrics::Lyrics::default(),
                 };
                 let _ = tx.send_blocking(lyrics);
@@ -1215,8 +1227,7 @@ impl AppCore {
     }
 
     pub fn toggle_love(self: &Rc<Self>, rel_path: &str) {
-        let library = self.library.borrow().clone();
-        let Some(track) = library.track_by_rel_path(rel_path) else {
+        let Some(track) = self.library.borrow().track_by_rel_path(rel_path).cloned() else {
             return;
         };
         let loved = !track.loved;
@@ -1225,8 +1236,7 @@ impl AppCore {
             crate::logger::error("database", &format!("setLoved failed: {err}"));
             return;
         }
-        let updated = self.library.borrow().clone_with_loved(rel_path, loved);
-        *self.library.borrow_mut() = Rc::new(updated);
+        self.apply_loved(rel_path, loved);
         self.hub.emit(&AppEvent::LovedChanged {
             rel_path: rel_path.to_string(),
             loved,
@@ -1239,6 +1249,14 @@ impl AppCore {
         if let Some(remote) = crate::remote::handle().filter(|_| crate::remote::is_remote(rel_path)) {
             remote.set_starred(rel_path, loved);
         }
+    }
+
+    /// Swaps in a copy of the library with the loved flag flipped. Pages note
+    /// which library they last built from by pointer, so a love must arrive as
+    /// a new library rather than an edit of the one they already saw.
+    fn apply_loved(&self, rel_path: &str, loved: bool) {
+        let updated = self.library.borrow().clone_with_loved(rel_path, loved);
+        *self.library.borrow_mut() = Rc::new(updated);
     }
 
     pub fn save_config(&self) {
@@ -1281,59 +1299,6 @@ impl AppCore {
         });
     }
 
-    /// One-shot Last.fm history pull a bit after launch: when authenticated and
-    /// the local scrobbles table is still essentially empty, imports the full
-    /// listening history so Stats (tiles, heatmap, clock, top lists) fills in
-    /// without the user hunting for the Import button.
-    fn schedule_history_import(self: &Rc<Self>) {
-        let weak = Rc::downgrade(self);
-        glib::timeout_add_local_once(Duration::from_secs(12), move || {
-            if let Some(core) = weak.upgrade() {
-                core.maybe_import_history();
-            }
-        });
-    }
-
-    /// Kicks off a full history import only when the local scrobbles table is
-    /// still below the seeded threshold. Count-gated rather than flag-gated so
-    /// it is a no-op once history is present and self-heals from an interrupted
-    /// pull (which resumes from the persisted page cursor) on the next attempt.
-    fn maybe_import_history(self: &Rc<Self>) {
-        const AUTO_IMPORT_THRESHOLD: i64 = 50;
-        if config::demo_mode()
-            || !crate::lastfm::keys_available()
-            || self.session.borrow().is_none()
-            || self.import_in_flight.get()
-        {
-            return;
-        }
-        let core = Rc::clone(self);
-        let db_path = self.db_path.clone();
-        let resume_cursor = self.config.borrow().import_page_cursor;
-        let (tx, rx) = async_channel::bounded::<i64>(1);
-        std::thread::Builder::new()
-            .name("flaccy-import-check".into())
-            .spawn(move || {
-                let count = Db::open(&db_path)
-                    .map(|db| db.scrobble_count())
-                    .unwrap_or(0);
-                let _ = tx.send_blocking(count);
-            })
-            .ok();
-        glib::spawn_future_local(async move {
-            let count = rx.recv().await.unwrap_or(i64::MAX);
-            if crate::importer::should_auto_import(resume_cursor, count, AUTO_IMPORT_THRESHOLD) {
-                crate::logger::info(
-                    "import",
-                    &format!(
-                        "auto-import: {count} local scrobbles, cursor at page {resume_cursor}; pulling Last.fm history"
-                    ),
-                );
-                crate::importer::start(&core);
-            }
-        });
-    }
-
     /// Re-runs loved down-sync and the wantlist refresh whenever the Last.fm
     /// session connects or disconnects.
     fn wire_lastfm_sync(self: &Rc<Self>) {
@@ -1345,7 +1310,10 @@ impl AppCore {
             if let crate::events::AppEvent::LastFmChanged = event {
                 if core.session.borrow().is_some() {
                     crate::scrobbler::sync_loved_from_lastfm(&core);
-                    core.maybe_import_history();
+                    crate::history_sync::load_state(&core);
+                    crate::history_sync::start(&core, crate::history_sync::Trigger::Requested);
+                } else {
+                    crate::history_sync::load_state(&core);
                 }
                 crate::wantlist::refresh(&core);
             }

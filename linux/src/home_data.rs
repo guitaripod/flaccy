@@ -957,6 +957,7 @@ mod tests {
             tracks: albums.iter().flat_map(|a| a.tracks.clone()).collect(),
             albums,
             artists: Vec::new(),
+            index: Default::default(),
         }
     }
 

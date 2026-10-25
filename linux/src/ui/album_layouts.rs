@@ -1,8 +1,9 @@
 use crate::events::AppEvent;
 use crate::library::{disc_sections, format_time, Album, Track};
 use crate::ui::track_page::{
-    balance_columns, column_count, even_runs, matches, reveal, reveal_row, ControlBar, Frame,
-    PageKind, TableOptions, TrackLayout, TrackTable, FILTER_THRESHOLD, SONGS_PER_COLUMN,
+    balance_columns, column_count, even_runs, matches_text, reveal, reveal_row, search_text,
+    ControlBar, Frame, PageKind, TableOptions, TrackLayout, TrackTable, FILTER_THRESHOLD,
+    SONGS_PER_COLUMN,
 };
 use crate::ui::{context, Ui};
 use adw::prelude::*;
@@ -24,6 +25,7 @@ impl Block {
     fn new(
         ui: &Rc<Ui>,
         all: &Rc<Vec<Track>>,
+        search: &Rc<Vec<String>>,
         base: usize,
         len: usize,
         label: Option<(&str, f64)>,
@@ -31,11 +33,12 @@ impl Block {
     ) -> Block {
         let list = build_track_list(ui, all, base, &all[base..base + len]);
         {
-            let all = Rc::clone(all);
+            let search = Rc::clone(search);
             let query = Rc::clone(query);
             list.set_filter_func(move |row| {
-                all.get(base + row.index().max(0) as usize)
-                    .is_none_or(|track| matches(track, &query.borrow()))
+                search
+                    .get(base + row.index().max(0) as usize)
+                    .is_none_or(|text| matches_text(text, &query.borrow()))
             });
         }
         let header = label.map(|(label, duration)| disc_header(label, len, duration));
@@ -54,20 +57,15 @@ impl Block {
         parent.append(&self.list);
     }
 
-    fn refresh(&self, tracks: &[Track], needle: &str) {
+    fn refresh(&self, search: &[String], needle: &str) {
         self.list.invalidate_filter();
+        let any = search[self.base..self.base + self.len]
+            .iter()
+            .any(|text| matches_text(text, needle));
         if let Some(header) = &self.header {
-            let any = tracks[self.base..self.base + self.len]
-                .iter()
-                .any(|track| matches(track, needle));
             header.set_visible(any);
         }
-        self.list.set_visible(
-            needle.is_empty()
-                || tracks[self.base..self.base + self.len]
-                    .iter()
-                    .any(|track| matches(track, needle)),
-        );
+        self.list.set_visible(needle.is_empty() || any);
     }
 
     fn row_of(&self, index: usize) -> Option<gtk::ListBoxRow> {
@@ -92,6 +90,7 @@ pub struct AlbumBody {
     ui: Rc<Ui>,
     album: Album,
     tracks: Rc<Vec<Track>>,
+    search: Rc<Vec<String>>,
     sections: Option<Vec<Section>>,
     frame: Rc<Frame>,
     bar: ControlBar,
@@ -109,6 +108,7 @@ pub struct AlbumBody {
 impl AlbumBody {
     pub fn new(ui: &Rc<Ui>, album: &Album, frame: &Rc<Frame>) -> Rc<AlbumBody> {
         let tracks = Rc::new(album.tracks.clone());
+        let search = Rc::new(tracks.iter().map(search_text).collect::<Vec<_>>());
         let sections = disc_sections(&album.tracks).map(|sections| {
             let mut base = 0;
             sections
@@ -180,6 +180,7 @@ impl AlbumBody {
                 ui: Rc::clone(ui),
                 album: album.clone(),
                 tracks: Rc::clone(&tracks),
+                search,
                 sections,
                 frame: Rc::clone(frame),
                 bar,
@@ -249,6 +250,7 @@ impl AlbumBody {
                     Block::new(
                         &self.ui,
                         &self.tracks,
+                        &self.search,
                         section.base,
                         section.len,
                         Some((&section.label, section.duration)),
@@ -259,6 +261,7 @@ impl AlbumBody {
             None => vec![Block::new(
                 &self.ui,
                 &self.tracks,
+                &self.search,
                 0,
                 self.tracks.len(),
                 None,
@@ -353,6 +356,7 @@ impl AlbumBody {
                                 Block::new(
                                     &self.ui,
                                     &self.tracks,
+                                    &self.search,
                                     section.base,
                                     section.len,
                                     Some((&section.label, section.duration)),
@@ -369,6 +373,7 @@ impl AlbumBody {
                     vec![Block::new(
                         &self.ui,
                         &self.tracks,
+                        &self.search,
                         range.start,
                         range.len(),
                         None,
@@ -401,7 +406,7 @@ impl AlbumBody {
             .iter()
             .chain(self.column_blocks.borrow().iter())
         {
-            block.refresh(&self.tracks, &needle);
+            block.refresh(&self.search, &needle);
         }
         if let Some(table) = self.table.borrow().as_ref() {
             table.set_query(&needle);
@@ -411,9 +416,9 @@ impl AlbumBody {
             return;
         }
         let shown = self
-            .tracks
+            .search
             .iter()
-            .filter(|track| matches(track, &needle))
+            .filter(|text| matches_text(text, &needle))
             .count();
         self.bar.set_status(Some(&if shown == 0 {
             "No songs match".to_string()

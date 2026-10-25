@@ -70,6 +70,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         AudioPlayer.shared.restoreQueueState()
         Task {
             await AudioPlayer.shared.retryPendingScrobbles()
+            ListenHistorySync.shared.start()
         }
 
         startLibraryPipeline()

@@ -166,16 +166,14 @@ final class ProfileCell: UICollectionViewCell {
     }
 }
 
-final class ImportBannerCell: UICollectionViewCell {
-    static let reuseID = "ImportBannerCell"
+final class SyncBannerCell: UICollectionViewCell {
+    static let reuseID = "SyncBannerCell"
 
     let card = recapCard(cornerRadius: 18)
     let iconView = UIImageView()
     let titleLabel = UILabel()
     let subtitleLabel = UILabel()
     let spinner = UIActivityIndicatorView(style: .medium)
-    let chevron = UIImageView(image: UIImage(systemName: "arrow.down.circle.fill"))
-    var onTap: (() -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -194,8 +192,6 @@ final class ImportBannerCell: UICollectionViewCell {
         subtitleLabel.textColor = UIColor.white.withAlphaComponent(0.6)
         subtitleLabel.numberOfLines = 2
 
-        chevron.tintColor = UIColor.white.withAlphaComponent(0.8)
-        chevron.contentMode = .scaleAspectFit
         spinner.color = .white
         spinner.hidesWhenStopped = true
 
@@ -203,10 +199,7 @@ final class ImportBannerCell: UICollectionViewCell {
         textStack.axis = .vertical
         textStack.spacing = 1
 
-        let trailing = UIStackView(arrangedSubviews: [spinner, chevron])
-        trailing.axis = .horizontal
-
-        let row = UIStackView(arrangedSubviews: [iconView, textStack, trailing])
+        let row = UIStackView(arrangedSubviews: [iconView, textStack, spinner])
         row.axis = .horizontal
         row.spacing = 12
         row.alignment = .center
@@ -226,56 +219,19 @@ final class ImportBannerCell: UICollectionViewCell {
             row.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
             row.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
         ])
-
-        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
-        card.addGestureRecognizer(tap)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    @objc func handleTap() { onTap?() }
-
-    func configure(state: RecapImportState) {
-        switch state {
-        case .available:
-            titleLabel.text = String(localized: "Import Last.fm history")
-            subtitleLabel.text = String(localized: "Backfill your stats with everything you scrobbled before installing.")
-            spinner.stopAnimating()
-            chevron.isHidden = false
-            card.isUserInteractionEnabled = true
-            accessibilityHint = String(localized: "Double tap to import")
-        case .importing(let imported):
-            titleLabel.text = String(localized: "Importing history\u{2026}")
-            subtitleLabel.text = imported > 0
-                ? String(localized: "\(RecapFormat.count(imported)) scrobbles imported so far\u{2026}")
-                : String(localized: "This can take a moment. You can keep browsing.")
-            spinner.startAnimating()
-            chevron.isHidden = true
-            card.isUserInteractionEnabled = false
-            accessibilityHint = nil
-        case .done(let imported):
-            titleLabel.text = String(localized: "History imported")
-            subtitleLabel.text = imported > 0
-                ? String(localized: "Imported \(RecapFormat.count(imported)) scrobbles.")
-                : String(localized: "Your stats now include your full listening history.")
-            spinner.stopAnimating()
-            chevron.isHidden = true
-            card.isUserInteractionEnabled = false
-            accessibilityHint = nil
-        case .unavailable:
-            titleLabel.text = String(localized: "Connect Last.fm to import")
-            subtitleLabel.text = String(localized: "Sign in from Settings to backfill your history.")
-            spinner.stopAnimating()
-            chevron.isHidden = true
-            card.isUserInteractionEnabled = false
-            accessibilityHint = nil
+    func configure(status: ListenHistoryStatus) {
+        titleLabel.text = String(localized: "Bringing in your Last.fm history")
+        if case .backfilling(let plays, _, _) = status, plays > 0 {
+            subtitleLabel.text = String(localized: "\(RecapFormat.count(plays)) plays so far\u{2026}")
+        } else {
+            subtitleLabel.text = String(localized: "This can take a moment. You can keep browsing.")
         }
+        spinner.startAnimating()
         isAccessibilityElement = true
         accessibilityLabel = [titleLabel.text, subtitleLabel.text].compactMap { $0 }.joined(separator: ". ")
-    }
-
-    override func prepareForReuse() {
-        super.prepareForReuse()
-        onTap = nil
     }
 }

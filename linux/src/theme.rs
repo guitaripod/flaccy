@@ -1,5 +1,6 @@
 use gtk::gdk;
 use gtk::glib;
+use gtk::prelude::*;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
@@ -280,6 +281,17 @@ fn generate_css(p: &Palette) -> String {
     )
 }
 
+/// Whether there are visible windows and the compositor has suspended all of
+/// them.
+fn all_windows_suspended() -> bool {
+    let mut shown = gtk::Window::list_toplevels()
+        .into_iter()
+        .filter_map(|window| window.downcast::<gtk::Window>().ok())
+        .filter(|window| window.is_visible())
+        .peekable();
+    shown.peek().is_some() && shown.all(|window| window.is_suspended())
+}
+
 /// Owns the swappable CSS provider that carries the live palette. A single
 /// provider is reloaded on every change so providers never stack.
 pub struct ThemeController {
@@ -290,6 +302,7 @@ pub struct ThemeController {
     listeners: RefCell<Vec<Box<dyn Fn() -> bool>>>,
     last_css: RefCell<String>,
     refresh_pending: Cell<bool>,
+    deferred_while_suspended: Cell<bool>,
 }
 
 /// The current accent as normalized 0..1 RGB, for Cairo-drawn surfaces (stats
@@ -327,6 +340,7 @@ impl ThemeController {
             listeners: RefCell::new(Vec::new()),
             last_css: RefCell::new(String::new()),
             refresh_pending: Cell::new(false),
+            deferred_while_suspended: Cell::new(false),
         });
         controller.refresh();
 
@@ -373,9 +387,27 @@ impl ThemeController {
         glib::timeout_add_local_once(Duration::from_millis(180), || {
             if let Some(controller) = Self::current() {
                 controller.refresh_pending.set(false);
-                controller.refresh();
+                controller.refresh_if_visible();
             }
         });
+    }
+
+    /// Reloads the palette unless every window on screen is suspended: the
+    /// compositor shows none of them, so the app-wide restyle would be paid for
+    /// nothing. The latest palette is applied by `resume` when one comes back.
+    fn refresh_if_visible(&self) {
+        if all_windows_suspended() {
+            self.deferred_while_suspended.set(true);
+            return;
+        }
+        self.refresh();
+    }
+
+    /// Applies the palette that was held back while the windows were suspended.
+    pub fn resume(&self) {
+        if self.deferred_while_suspended.get() {
+            self.refresh();
+        }
     }
 
     /// Registers a widget to be notified (self-pruning on drop) whenever the
@@ -408,6 +440,7 @@ impl ThemeController {
     }
 
     fn refresh(&self) {
+        self.deferred_while_suspended.set(false);
         let theme = self.theme.get();
         let dark = adw::StyleManager::default().is_dark();
         let palette = resolve(self.seed(), theme == Theme::Mono, dark);

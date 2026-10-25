@@ -227,7 +227,10 @@ pub fn start(core: &Rc<AppCore>) {
 
     wire_transport(core);
     start_sync_loop(core);
-    sweep_download_buffers();
+    std::thread::Builder::new()
+        .name("flaccy-buffer-sweep".into())
+        .spawn(sweep_download_buffers)
+        .ok();
 }
 
 /// The download buffer that makes the video seekable is a temporary file

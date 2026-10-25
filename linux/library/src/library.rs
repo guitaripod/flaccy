@@ -1,6 +1,7 @@
 use crate::db::Db;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
@@ -135,6 +136,16 @@ impl Album {
         format!("{}|{}", self.title, self.artist)
     }
 
+    /// Whether `key` is this album's `key()`, compared in place so a lookup
+    /// across the whole library allocates nothing.
+    pub fn key_matches(&self, key: &str) -> bool {
+        let title_end = self.title.len();
+        key.len() == title_end + 1 + self.artist.len()
+            && key.starts_with(self.title.as_str())
+            && key.as_bytes()[title_end] == b'|'
+            && key.ends_with(self.artist.as_str())
+    }
+
     pub fn total_duration(&self) -> f64 {
         self.tracks.iter().map(|t| t.duration).sum()
     }
@@ -187,6 +198,140 @@ pub struct Library {
     pub tracks: Vec<Track>,
     pub albums: Vec<Album>,
     pub artists: Vec<ArtistEntry>,
+    pub index: LibraryIndex,
+}
+
+/// The normalised `title ␀ artist` keys of every song and release in a
+/// library, as positions into it. Built once per loaded library and shared by
+/// every `ChartIndex` over it.
+pub struct ChartKeys {
+    pub tracks: HashMap<String, usize>,
+    pub albums: HashMap<String, usize>,
+}
+
+impl ChartKeys {
+    pub fn build(library: &Library) -> Self {
+        let mut albums = HashMap::with_capacity(library.albums.len());
+        for (at, album) in library.albums.iter().enumerate() {
+            albums.insert(chart_key(&album.title, &album.artist), at);
+        }
+        let mut tracks = HashMap::with_capacity(library.tracks.len());
+        for (at, track) in library.tracks.iter().enumerate() {
+            tracks.insert(chart_key(&track.title, &track.artist), at);
+        }
+        Self { tracks, albums }
+    }
+}
+
+/// The case-, diacritic- and punctuation-insensitive `title ␀ artist` key the
+/// Stats charts match on.
+pub fn chart_key(title: &str, artist: &str) -> String {
+    format!("{}\u{0}{}", crate::keys::normalize(title), crate::keys::normalize(artist))
+}
+
+/// Lookup tables over a `Library`'s albums and tracks, built once per loaded
+/// library (on the loading thread) instead of once per question. Every table
+/// holds positions, never copies, so a clone of the library that only changes
+/// a track's flags can share them.
+#[derive(Clone, Default)]
+pub struct LibraryIndex {
+    artists: Arc<OnceLock<ArtistTrackIndex>>,
+    charts: Arc<OnceLock<ChartKeys>>,
+    durations: Arc<OnceLock<Arc<HashMap<String, i64>>>>,
+}
+
+impl LibraryIndex {
+    /// The positions of each artist's tracks, built on first use when the
+    /// library was assembled without one.
+    fn artist_tracks<'a>(&'a self, albums: &[Album]) -> &'a ArtistTrackIndex {
+        self.artists
+            .get_or_init(|| ArtistTrackIndex::build(albums, &mut KeyMemo::default()))
+    }
+
+    /// The `"Title — Artist"` / `"Album — Artist"` tables behind the Stats
+    /// charts, built on first use when the library was assembled without one.
+    pub fn chart_keys<'a>(&'a self, library: &Library) -> &'a ChartKeys {
+        self.charts
+            .get_or_init(|| ChartKeys::build(library))
+    }
+}
+
+impl LibraryIndex {
+    /// The whole seconds of every playable song by `recap::track_key`, shared
+    /// with whichever thread asks, built on first use.
+    fn track_durations(&self, tracks: &[Track]) -> Arc<HashMap<String, i64>> {
+        Arc::clone(self.durations.get_or_init(|| {
+            Arc::new(
+                tracks
+                    .iter()
+                    .filter(|track| track.duration > 0.0)
+                    .map(|track| {
+                        (
+                            crate::recap::track_key(&track.title, &track.artist),
+                            track.duration.round() as i64,
+                        )
+                    })
+                    .collect(),
+            )
+        }))
+    }
+}
+
+/// Where each artist's tracks sit: `(album, track)` positions in album order,
+/// keyed by `hygiene::artist_key`.
+struct ArtistTrackIndex {
+    positions: HashMap<String, Vec<(u32, u32)>>,
+}
+
+impl ArtistTrackIndex {
+    /// An album credited to an artist contributes all of its tracks, any other
+    /// album only the tracks that artist performs, matching what walking every
+    /// album and testing every track would find.
+    fn build(albums: &[Album], memo: &mut KeyMemo) -> Self {
+        let mut positions: HashMap<String, Vec<(u32, u32)>> = HashMap::new();
+        for (album_at, album) in albums.iter().enumerate() {
+            let credit_key = memo.artist_key(&album.artist).to_string();
+            let credited = positions.entry(credit_key.clone()).or_default();
+            credited.extend((0..album.tracks.len()).map(|at| (album_at as u32, at as u32)));
+            for (track_at, track) in album.tracks.iter().enumerate() {
+                let performer_key = memo.artist_key(&track.artist);
+                if performer_key != credit_key {
+                    positions
+                        .entry(performer_key.to_string())
+                        .or_default()
+                        .push((album_at as u32, track_at as u32));
+                }
+            }
+        }
+        Self { positions }
+    }
+}
+
+/// Remembers the key of every distinct string met while a library is
+/// assembled: a library has tens of thousands of tracks but only hundreds of
+/// distinct artists and albums, so each key is derived once.
+#[derive(Default)]
+struct KeyMemo {
+    artist_keys: HashMap<String, String>,
+    normalized: HashMap<String, String>,
+}
+
+impl KeyMemo {
+    fn artist_key(&mut self, credit: &str) -> &str {
+        if !self.artist_keys.contains_key(credit) {
+            self.artist_keys
+                .insert(credit.to_string(), crate::hygiene::artist_key(credit));
+        }
+        &self.artist_keys[credit]
+    }
+
+    fn normalize(&mut self, text: &str) -> &str {
+        if !self.normalized.contains_key(text) {
+            self.normalized
+                .insert(text.to_string(), crate::keys::normalize(text));
+        }
+        &self.normalized[text]
+    }
 }
 
 impl Library {
@@ -210,6 +355,7 @@ impl Library {
             tracks,
             albums,
             artists: self.artists.clone(),
+            index: self.index.clone(),
         }
     }
 
@@ -218,6 +364,7 @@ impl Library {
             tracks: Vec::new(),
             albums: Vec::new(),
             artists: Vec::new(),
+            index: LibraryIndex::default(),
         }
     }
 
@@ -226,7 +373,7 @@ impl Library {
     }
 
     pub fn album_by_key(&self, key: &str) -> Option<&Album> {
-        self.albums.iter().find(|a| a.key() == key)
+        self.albums.iter().find(|a| a.key_matches(key))
     }
 
     /// Every library track `artist` is on (feat. credits collapse to the lead
@@ -238,17 +385,29 @@ impl Library {
     /// tracks.
     pub fn artist_tracks(&self, artist: &str) -> Vec<Track> {
         let key = crate::hygiene::artist_key(artist);
-        self.albums
+        let Some(positions) = self.index.artist_tracks(&self.albums).positions.get(&key) else {
+            return Vec::new();
+        };
+        positions
             .iter()
-            .flat_map(|album| {
-                let credited = crate::hygiene::artist_key(&album.artist) == key;
-                let key = key.clone();
-                album.tracks.iter().filter(move |track| {
-                    credited || crate::hygiene::artist_key(&track.artist) == key
-                })
-            })
-            .cloned()
+            .map(|&(album, track)| self.albums[album as usize].tracks[track as usize].clone())
             .collect()
+    }
+
+    /// Song lengths by `recap::track_key`, for the plays that were imported
+    /// without one. Built once per library and shared.
+    pub fn track_durations(&self) -> Arc<HashMap<String, i64>> {
+        self.index.track_durations(&self.tracks)
+    }
+
+    /// Whether the library holds any track by `artist`.
+    pub fn owns_artist(&self, artist: &str) -> bool {
+        let key = crate::hygiene::artist_key(artist);
+        self.index
+            .artist_tracks(&self.albums)
+            .positions
+            .get(&key)
+            .is_some_and(|positions| !positions.is_empty())
     }
 }
 
@@ -263,11 +422,7 @@ pub fn sort_album_tracks(tracks: &mut [Track]) {
     if is_multi_disc(tracks) {
         tracks.sort_by(multi_disc_order);
     } else {
-        tracks.sort_by(|a, b| {
-            a.track_number
-                .cmp(&b.track_number)
-                .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
-        });
+        tracks.sort_by_cached_key(|track| (track.track_number, track.title.to_lowercase()));
     }
 }
 
@@ -454,13 +609,12 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     // `albumArtist` is settled for the whole library by
     // `Db::resolve_album_credits`; the fall back to the performing artist is
     // what a database that has not been through that pass yet gets.
+    let mut memo = KeyMemo::default();
     let mut grouped: HashMap<String, Vec<Track>> = HashMap::new();
     for track in &tracks {
-        let key = format!(
-            "{}\u{0}{}",
-            crate::keys::normalize(&track.album),
-            crate::hygiene::artist_key(track.credit())
-        );
+        let mut key = String::from(memo.normalize(&track.album));
+        key.push('\u{0}');
+        key.push_str(memo.artist_key(track.credit()));
         grouped.entry(key).or_default().push(track.clone());
     }
 
@@ -468,8 +622,11 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
         .into_values()
         .filter_map(|mut group| {
             let title = majority_value(group.iter().map(|t| t.album.as_str()));
-            let artist =
-                majority_value(group.iter().map(|t| crate::hygiene::primary_artist(t.credit())));
+            let artist = majority_value(
+                group
+                    .iter()
+                    .map(|t| crate::hygiene::primary_artist_slice(t.credit())),
+            );
             sort_album_tracks(&mut group);
             let (year, genre) = album_meta_for(&meta, &title, &artist, &group);
             Some(Album {
@@ -484,12 +641,7 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     if group_album_editions {
         albums = crate::hygiene::consolidate_albums(albums);
     }
-    albums.sort_by(|a, b| {
-        a.artist
-            .to_lowercase()
-            .cmp(&b.artist.to_lowercase())
-            .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
-    });
+    albums.sort_by_cached_key(|album| (album.artist.to_lowercase(), album.title.to_lowercase()));
 
     // Songs list must match the album surface: when editions are folded, every
     // shared track collapses to one best-quality keeper. When grouping is off,
@@ -504,13 +656,18 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     };
 
     let last_played = db.track_sort_keys();
-    let artists = build_artists(&albums, &last_played);
+    let artists = build_artists(&albums, &last_played, &mut memo);
+    let artist_tracks = ArtistTrackIndex::build(&albums, &mut memo);
 
-    Library {
+    let library = Library {
         tracks,
         albums,
         artists,
-    }
+        index: LibraryIndex::default(),
+    };
+    let _ = library.index.artists.set(artist_tracks);
+    library.index.chart_keys(&library);
+    library
 }
 
 /// An album's year and genre, resolved field by field rather than row by row.
@@ -560,12 +717,13 @@ fn album_meta_for(
 fn build_artists(
     albums: &[Album],
     last_played: &HashMap<String, Option<i64>>,
+    memo: &mut KeyMemo,
 ) -> Vec<ArtistEntry> {
     let mut map: HashMap<String, ArtistEntry> = HashMap::new();
 
-    let touch = |map: &mut HashMap<String, ArtistEntry>, credit: &str, track: &Track| {
+    let touch = |map: &mut HashMap<String, ArtistEntry>, key: &str, credit: &str, track: &Track| {
         let entry = map
-            .entry(crate::hygiene::artist_key(credit))
+            .entry(key.to_string())
             .or_insert_with(|| ArtistEntry {
                 name: crate::hygiene::primary_artist(credit),
                 album_count: 0,
@@ -582,14 +740,14 @@ fn build_artists(
     };
 
     for album in albums {
-        let credit_key = crate::hygiene::artist_key(&album.artist);
+        let credit_key = memo.artist_key(&album.artist).to_string();
         let mut appeared: HashSet<String> = HashSet::new();
         for track in &album.tracks {
-            touch(&mut map, &album.artist, track);
-            let performer_key = crate::hygiene::artist_key(&track.artist);
+            touch(&mut map, &credit_key, &album.artist, track);
+            let performer_key = memo.artist_key(&track.artist);
             if performer_key != credit_key {
-                touch(&mut map, &track.artist, track);
-                appeared.insert(performer_key);
+                touch(&mut map, performer_key, &track.artist, track);
+                appeared.insert(performer_key.to_string());
             }
         }
         if let Some(entry) = map.get_mut(&credit_key) {
@@ -603,23 +761,16 @@ fn build_artists(
     }
 
     let mut artists: Vec<ArtistEntry> = map.into_values().collect();
-    artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    artists.sort_by_cached_key(|artist| artist.name.to_lowercase());
     artists
 }
 
-fn majority_value<I, S>(values: I) -> String
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<str>,
-{
-    let mut counts: HashMap<String, usize> = HashMap::new();
-    let mut first: Option<String> = None;
+fn majority_value<'a>(values: impl IntoIterator<Item = &'a str>) -> String {
+    let mut counts: HashMap<&str, usize> = HashMap::new();
+    let mut first: Option<&str> = None;
     for value in values {
-        let s = value.as_ref().to_string();
-        if first.is_none() {
-            first = Some(s.clone());
-        }
-        *counts.entry(s).or_default() += 1;
+        first.get_or_insert(value);
+        *counts.entry(value).or_default() += 1;
     }
     counts
         .into_iter()
@@ -627,6 +778,7 @@ where
         .map(|(k, _)| k)
         .or(first)
         .unwrap_or_default()
+        .to_string()
 }
 
 #[cfg(test)]
@@ -876,7 +1028,7 @@ mod sort_tests {
         let artist = majority_value(
             group
                 .iter()
-                .map(|t| crate::hygiene::primary_artist(&t.artist)),
+                .map(|t| crate::hygiene::primary_artist_slice(&t.artist)),
         );
         assert_eq!(artist, "50 Cent");
     }
@@ -1079,5 +1231,288 @@ mod duration_tests {
         assert_eq!(said(local_noon(2026, 10, 12)), "4 days ago");
         assert_eq!(said(local_noon(2026, 10, 9)), "Oct 9, 2026");
         assert_eq!(said(local_noon(2025, 1, 2)), "Jan 2, 2025");
+    }
+}
+
+#[cfg(test)]
+mod artist_index_tests {
+    use super::*;
+
+    fn track(rel_path: &str, artist: &str) -> Track {
+        TrackRow {
+            id: 0,
+            rel_path: rel_path.into(),
+            title: rel_path.into(),
+            artist: artist.into(),
+            album: "Alb".into(),
+            album_artist: None,
+            track_number: 1,
+            duration: 1.0,
+            codec: None,
+            bit_depth: None,
+            sample_rate: None,
+            channels: None,
+            loved: false,
+            play_count: 0,
+            date_added: 0,
+            last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
+            disc_number: None,
+        }
+    }
+
+    fn album(title: &str, artist: &str, tracks: Vec<Track>) -> Album {
+        Album {
+            title: title.into(),
+            artist: artist.into(),
+            year: None,
+            genre: None,
+            tracks,
+        }
+    }
+
+    fn walking_artist_tracks(library: &Library, artist: &str) -> Vec<Track> {
+        let key = crate::hygiene::artist_key(artist);
+        library
+            .albums
+            .iter()
+            .flat_map(|album| {
+                let credited = crate::hygiene::artist_key(&album.artist) == key;
+                let key = key.clone();
+                album.tracks.iter().filter(move |track| {
+                    credited || crate::hygiene::artist_key(&track.artist) == key
+                })
+            })
+            .cloned()
+            .collect()
+    }
+
+    fn mixed_library() -> Library {
+        let mut library = Library::empty();
+        library.albums = vec![
+            album(
+                "Soundtrack",
+                "Various Artists",
+                vec![
+                    track("s/1", "Composer A"),
+                    track("s/2", "composer a feat. Guest"),
+                    track("s/3", "Composer B"),
+                ],
+            ),
+            album(
+                "Own",
+                "Composer A",
+                vec![track("o/1", "Composer A"), track("o/2", "Composer B")],
+            ),
+            album("Empty", "Nobody", Vec::new()),
+            album("Punctuation", "?!", vec![track("p/1", "...")]),
+            album("Sigur", "Sigur Rós", vec![track("g/1", "Sigur Ros")]),
+            album("Again", "Composer A", vec![track("o/3", "Someone Else")]),
+        ];
+        library
+    }
+
+    fn paths(tracks: &[Track]) -> Vec<&str> {
+        tracks.iter().map(|t| t.rel_path.as_str()).collect()
+    }
+
+    #[test]
+    fn artist_tracks_match_walking_every_album_and_track() {
+        let library = mixed_library();
+        for artist in [
+            "Composer A",
+            "COMPOSER B",
+            "Various Artists",
+            "Nobody",
+            "?!",
+            "",
+            "Sigur Rós",
+            "sigur ros",
+            "Absent",
+            "Composer A feat. Guest",
+        ] {
+            assert_eq!(
+                paths(&library.artist_tracks(artist)),
+                paths(&walking_artist_tracks(&library, artist)),
+                "{artist:?}"
+            );
+            assert_eq!(
+                library.owns_artist(artist),
+                !walking_artist_tracks(&library, artist).is_empty(),
+                "{artist:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn artist_tracks_keep_album_order_with_credited_albums_whole() {
+        let library = mixed_library();
+        assert_eq!(
+            paths(&library.artist_tracks("Composer A")),
+            ["s/1", "s/2", "o/1", "o/2", "o/3"]
+        );
+    }
+
+    #[test]
+    fn a_copy_sharing_the_index_answers_the_same() {
+        let library = mixed_library();
+        let first = paths(&library.artist_tracks("Composer B")).len();
+        let copy = Library {
+            tracks: library.tracks.clone(),
+            albums: library.albums.clone(),
+            artists: library.artists.clone(),
+            index: library.index.clone(),
+        };
+        assert_eq!(copy.artist_tracks("Composer B").len(), first);
+    }
+
+    #[test]
+    fn sorting_album_tracks_stays_stable_among_equal_keys() {
+        let mut tracks: Vec<Track> = ["b", "A", "a", "B", "a", "C"]
+            .iter()
+            .enumerate()
+            .map(|(at, title)| {
+                let mut t = track(&format!("p/{at}"), "X");
+                t.title = title.to_string();
+                t.track_number = 0;
+                t
+            })
+            .collect();
+        let mut expected = tracks.clone();
+        expected.sort_by(|a, b| {
+            a.track_number
+                .cmp(&b.track_number)
+                .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase()))
+        });
+        sort_album_tracks(&mut tracks);
+        assert_eq!(paths(&tracks), paths(&expected));
+    }
+
+    #[test]
+    fn track_durations_keep_only_playable_songs_by_case_folded_key() {
+        let mut long = track("a", "Artist");
+        long.title = "Song".into();
+        long.duration = 200.4;
+        let mut silent = track("b", "Artist");
+        silent.title = "Silent".into();
+        silent.duration = 0.0;
+        let mut library = Library::empty();
+        library.tracks = vec![long, silent];
+        let durations = library.track_durations();
+        assert_eq!(durations.len(), 1);
+        assert_eq!(durations.get(&crate::recap::track_key("SONG", "ARTIST")), Some(&200));
+        assert!(Arc::ptr_eq(&durations, &library.track_durations()));
+    }
+
+    #[test]
+    fn album_key_matches_agrees_with_key() {
+        let albums = [
+            album("A|B", "C", Vec::new()),
+            album("A", "B|C", Vec::new()),
+            album("", "", Vec::new()),
+            album("Ágætis", "Sigur Rós", Vec::new()),
+            album("x", "", Vec::new()),
+        ];
+        let keys: Vec<String> = albums
+            .iter()
+            .map(|a| a.key())
+            .chain(["A|B|C".to_string(), "|".to_string(), "x|".to_string(), "x".to_string()])
+            .collect();
+        for album in &albums {
+            for key in &keys {
+                assert_eq!(album.key_matches(key), album.key() == *key, "{key:?}");
+            }
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn artist_tracks_match_walking_on_the_real_library() {
+        let library = load(&perf_fixture::open(), true);
+        for entry in &library.artists {
+            assert_eq!(
+                paths(&library.artist_tracks(&entry.name)),
+                paths(&walking_artist_tracks(&library, &entry.name)),
+                "{}",
+                entry.name
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod perf_fixture {
+    use super::*;
+    use std::time::Instant;
+
+    pub fn open() -> Db {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/perfdb/library.sqlite");
+        Db::open(&path).expect("perf database copy")
+    }
+
+    pub fn distinct_strings() -> Vec<String> {
+        let db = open();
+        let mut seen = std::collections::BTreeSet::new();
+        for track in db.fetch_all_tracks() {
+            seen.insert(track.title);
+            seen.insert(track.artist);
+            seen.insert(track.album);
+            seen.extend(track.album_artist);
+        }
+        for (title, artist) in db.album_meta().into_keys() {
+            seen.insert(title);
+            seen.insert(artist);
+        }
+        seen.into_iter().collect()
+    }
+
+    #[test]
+    #[ignore]
+    fn time_library_pipeline() {
+        let db = open();
+        let started = Instant::now();
+        let tracks = db.fetch_all_tracks();
+        println!("fetch_all_tracks {} rows: {:?}", tracks.len(), started.elapsed());
+        let started = Instant::now();
+        let library = load(&db, true);
+        println!("load total: {:?}", started.elapsed());
+        let started = Instant::now();
+        let keys = library.index.chart_keys(&library);
+        println!("chart_keys {} tracks: {:?}", keys.tracks.len(), started.elapsed());
+        let started = Instant::now();
+        let owned = library.artists.iter().take(50).filter(|artist| library.owns_artist(&artist.name)).count();
+        println!("owns_artist x50 -> {owned}: {:?}", started.elapsed());
+        let started = Instant::now();
+        let mut total = 0;
+        for artist in &library.artists {
+            total += library.artist_tracks(&artist.name).len();
+        }
+        println!("artist_tracks x{} -> {total}: {:?}", library.artists.len(), started.elapsed());
+        let strings = distinct_strings();
+        let started = Instant::now();
+        let mut length = 0;
+        for text in &strings {
+            length += crate::hygiene::artist_key(text).len();
+        }
+        println!("artist_key x{} -> {length}: {:?}", strings.len(), started.elapsed());
+        let started = Instant::now();
+        let mut length = 0;
+        for text in &strings {
+            length += crate::keys::normalize(text).len();
+        }
+        println!("normalize x{} -> {length}: {:?}", strings.len(), started.elapsed());
+        let keys: Vec<String> = library
+            .albums
+            .iter()
+            .map(|album| album.key())
+            .collect();
+        let started = Instant::now();
+        let mut found = 0;
+        for key in &keys {
+            found += library.album_by_key(key).is_some() as usize;
+        }
+        println!("album_by_key x{} -> {found}: {:?}", keys.len(), started.elapsed());
     }
 }

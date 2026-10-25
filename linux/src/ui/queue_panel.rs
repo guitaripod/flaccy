@@ -19,15 +19,14 @@ const UP_NEXT_LIMIT: usize = 120;
 /// Next, and a time-remaining summary. Live-updates from player events.
 /// Placement options so the sidebar and the in-view (Now Playing lens) share
 /// one implementation. The in-view instance drops its own "Queue" title (the
-/// ViewStack switcher labels it) and lets Now Playing drive the rebuild after
-/// the crossfade instead of rebuilding on its own map.
+/// ViewStack switcher labels it). Both start inactive and are activated by
+/// whoever reveals them, so a hidden panel never rebuilds its rows.
 pub struct QueueOptions {
     pub show_title: bool,
     pub bottom_margin: i32,
-    pub self_map_rebuild: bool,
-    /// Whether the panel starts live. The sidebar is always live; the in-view
-    /// instance starts inactive so it doesn't rebuild ~140 rows on every track
-    /// change while its column is collapsed — Now Playing activates it on reveal.
+    /// Whether the panel starts live. Each instance starts inactive so it
+    /// doesn't rebuild ~140 rows on every track change while it is hidden — its
+    /// host activates it on reveal.
     pub initial_active: bool,
 }
 
@@ -36,15 +35,13 @@ impl QueueOptions {
         Self {
             show_title: true,
             bottom_margin: 12,
-            self_map_rebuild: true,
-            initial_active: true,
+            initial_active: false,
         }
     }
     pub fn in_view() -> Self {
         Self {
             show_title: false,
             bottom_margin: 8,
-            self_map_rebuild: false,
             initial_active: false,
         }
     }
@@ -163,8 +160,9 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
             while let Some(child) = list.first_child() {
                 list.remove(&child);
             }
-            let snapshot = ui.core.player.queue_snapshot();
-            if snapshot.queue.is_empty() {
+            let window = ui.core.player.queue_window(HISTORY_LIMIT, UP_NEXT_LIMIT);
+            let totals = window.summary;
+            if totals.len == 0 {
                 stack.set_visible_child_name("empty");
                 summary.set_label("");
                 clear.set_sensitive(false);
@@ -173,22 +171,19 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
                 return;
             }
             stack.set_visible_child_name("list");
-            let current = snapshot.current;
-            let up_next_count = snapshot.queue.len().saturating_sub(current + 1);
+            let current = totals.current;
+            let up_next_count = totals.up_next();
             clear.set_sensitive(up_next_count > 0);
-            let remaining: f64 = snapshot.queue[(current + 1).min(snapshot.queue.len())..]
-                .iter()
-                .map(|t| t.duration)
-                .sum();
             summary.set_label(&format!(
                 "{} in history · {} up next · {} min remaining",
                 current,
                 up_next_count,
-                (remaining / 60.0).round() as i64
+                (totals.remaining_seconds / 60.0).round() as i64
             ));
 
-            let history_start = current.saturating_sub(HISTORY_LIMIT);
-            let up_next_end = (current + 1 + UP_NEXT_LIMIT).min(snapshot.queue.len());
+            let history_start = window.start;
+            let up_next_end = window.start + window.tracks.len();
+            let queue_len = totals.len;
 
             let mut collected = Vec::new();
             let mut now_playing_anchor: Option<gtk::ListBoxRow> = None;
@@ -200,8 +195,8 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
                 list.append(&section_row("HISTORY"));
                 collected.push(usize::MAX);
             }
-            for index in history_start..up_next_end {
-                let track = &snapshot.queue[index];
+            for (offset, track) in window.tracks.iter().enumerate() {
+                let index = history_start + offset;
                 if index == current {
                     let heading = section_row("NOW PLAYING");
                     now_playing_anchor = Some(heading.clone());
@@ -218,10 +213,10 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
                 list.append(&row);
                 collected.push(index);
             }
-            if up_next_end < snapshot.queue.len() {
+            if up_next_end < queue_len {
                 list.append(&info_row(&format!(
                     "{} more up next",
-                    snapshot.queue.len() - up_next_end
+                    queue_len - up_next_end
                 )));
                 collected.push(usize::MAX);
             }
@@ -232,7 +227,9 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
             pinner.drive();
         })
     };
-    rebuild(false);
+    if opts.initial_active {
+        rebuild(false);
+    }
 
     {
         let ui_ref = Rc::clone(ui);
@@ -246,8 +243,8 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
             if index == usize::MAX {
                 return;
             }
-            let snapshot = ui_ref.core.player.queue_snapshot();
-            if index != snapshot.current {
+            let (current, _) = ui_ref.core.player.current_index_and_len();
+            if index != current {
                 crate::scrobbler::checkpoint_skip(&ui_ref.core);
                 ui_ref.core.player.jump_to(index);
             }
@@ -255,31 +252,51 @@ pub fn build(ui: &Rc<Ui>, opts: QueueOptions) -> QueuePanel {
     }
 
     let active = Rc::new(Cell::new(opts.initial_active));
-    {
+    let pending: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+    let request_rebuild = {
         let rebuild = Rc::clone(&rebuild);
+        let active = Rc::clone(&active);
+        let pending = Rc::clone(&pending);
+        Rc::new(move |pin_now_playing: bool| {
+            if let Some(already_pinning) = pending.get() {
+                pending.set(Some(already_pinning || pin_now_playing));
+                return;
+            }
+            pending.set(Some(pin_now_playing));
+            let rebuild = Rc::clone(&rebuild);
+            let active = Rc::clone(&active);
+            let pending = Rc::clone(&pending);
+            glib::idle_add_local_once(move || {
+                if let Some(pin) = pending.take() {
+                    if active.get() {
+                        rebuild(pin);
+                    }
+                }
+            });
+        })
+    };
+    {
+        let request_rebuild = Rc::clone(&request_rebuild);
         let active = Rc::clone(&active);
         ui.core.hub.subscribe_widget(&root, move |_, event| {
             if !active.get() {
                 return;
             }
             match event {
-                AppEvent::TrackChanged(_) => rebuild(true),
-                AppEvent::QueueChanged | AppEvent::LovedChanged { .. } => rebuild(false),
+                AppEvent::TrackChanged(_) => request_rebuild(true),
+                AppEvent::QueueChanged | AppEvent::LovedChanged { .. } => request_rebuild(false),
                 _ => {}
             }
         });
     }
 
-    if opts.self_map_rebuild {
-        let rebuild = Rc::clone(&rebuild);
-        root.connect_map(move |_| rebuild(true));
-    }
-
     let set_active: Rc<dyn Fn(bool)> = {
         let rebuild = Rc::clone(&rebuild);
         let active = Rc::clone(&active);
+        let pending = Rc::clone(&pending);
         Rc::new(move |now_active: bool| {
             active.set(now_active);
+            pending.set(None);
             if now_active {
                 rebuild(true);
             }

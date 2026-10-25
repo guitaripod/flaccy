@@ -5,6 +5,31 @@ use std::rc::Rc;
 use std::time::Duration;
 
 const ENV: &str = "FLACCY_FRAME_STATS";
+const STALL_PROBE: Duration = Duration::from_millis(10);
+const STALL_REPORTED_MS: i64 = 50;
+const SLOW_HANDLER: Duration = Duration::from_millis(8);
+
+/// Whether `FLACCY_FRAME_STATS` is set, read once.
+pub fn enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os(ENV).is_some())
+}
+
+/// Logs an event-hub subscriber that held the main thread for at least
+/// `SLOW_HANDLER`, named by the line that subscribed it.
+pub fn note_handler(origin: &std::panic::Location<'static>, took: Duration) {
+    if took >= SLOW_HANDLER {
+        crate::logger::info(
+            "frames",
+            &format!(
+                "handler {}:{} took {:.1}ms",
+                origin.file(),
+                origin.line(),
+                took.as_secs_f64() * 1000.0
+            ),
+        );
+    }
+}
 
 /// What the window's frame clock did over the last second, in microseconds of
 /// main-thread time: the update phase (tick callbacks, CSS animations), the
@@ -50,7 +75,7 @@ impl Tally {
 /// and `paint` is what each of those cycles costs. Handlers are connected
 /// after the toolkit's own, so each phase's time is read when its work is done.
 pub fn install(window: &impl IsA<gtk::Widget>) {
-    if std::env::var_os(ENV).is_none() {
+    if !enabled() {
         return;
     }
     window.connect_realize(|window| {
@@ -81,5 +106,24 @@ pub fn install(window: &impl IsA<gtk::Widget>) {
             crate::logger::info("frames", &tally.report());
             glib::ControlFlow::Continue
         });
+        watch_for_stalls();
+    });
+}
+
+/// Logs every stretch of at least `STALL_REPORTED_MS` in which the main loop
+/// could not get back to a high-priority probe that wants to run every
+/// `STALL_PROBE`: a click handler, a query or a decode that froze the window
+/// for that long, whether or not a frame was due.
+fn watch_for_stalls() {
+    let expected = Cell::new(glib::monotonic_time());
+    let period_us = STALL_PROBE.as_micros() as i64;
+    glib::timeout_add_local_full(STALL_PROBE, glib::Priority::HIGH, move || {
+        let now = glib::monotonic_time();
+        let late_ms = (now - expected.get() - period_us) / 1000;
+        if late_ms >= STALL_REPORTED_MS {
+            crate::logger::info("frames", &format!("stall={late_ms}ms"));
+        }
+        expected.set(now);
+        glib::ControlFlow::Continue
     });
 }

@@ -15,7 +15,7 @@ mod frame_stats;
 mod home_data;
 mod home_state;
 pub(crate) use flaccy_library::hygiene;
-mod importer;
+mod history_sync;
 mod lastfm;
 pub(crate) use flaccy_library::library;
 /// The load bar mirrors `FlaccyCore.LibraryLoadProgress` and lives in the
@@ -102,12 +102,13 @@ fn main() -> glib::ExitCode {
     application.run_with_args(&args)
 }
 
-/// Pulls the authenticated user's full Last.fm history into the local database
+/// Brings the authenticated user's Last.fm history into the local database
 /// without opening the GUI (so it never contends for the single-instance lock),
-/// then exits. Resumes from the persisted page cursor.
+/// then exits: the first run pulls everything and resumes where it stopped,
+/// later runs pull what arrived since.
 fn run_headless_import() -> glib::ExitCode {
     let Some(session) = config::load_session() else {
-        eprintln!("not signed in to Last.fm — nothing to import");
+        eprintln!("not signed in to Last.fm — nothing to sync");
         return glib::ExitCode::FAILURE;
     };
     if !lastfm::keys_available() {
@@ -115,16 +116,19 @@ fn run_headless_import() -> glib::ExitCode {
         return glib::ExitCode::FAILURE;
     }
     let db_path = db::default_db_path();
-    let start_page = config::load().import_page_cursor.max(1);
+    let legacy_page = config::load().import_page_cursor.max(1);
     logger::info(
-        "import",
-        &format!("headless history import for {} starting", session.username),
+        "history",
+        &format!("headless history sync for {} starting", session.username),
     );
-    let imported = importer::import_blocking(&db_path, &session, start_page);
-    println!("imported {imported} scrobbles for {}", session.username);
-    logger::info(
-        "import",
-        &format!("headless history import done: {imported} scrobbles"),
-    );
-    glib::ExitCode::SUCCESS
+    match history_sync::sync_blocking(&db_path, &session, legacy_page) {
+        Ok(stored) => {
+            println!("synced {stored} new plays for {}", session.username);
+            glib::ExitCode::SUCCESS
+        }
+        Err(reason) => {
+            eprintln!("history sync stopped: {reason}");
+            glib::ExitCode::FAILURE
+        }
+    }
 }

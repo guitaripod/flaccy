@@ -71,37 +71,93 @@ pub fn consolidation_base_title(title: &str) -> String {
 /// "&" or "," ("Corvid & Crane") are preserved. Mirrors the macOS
 /// `LibraryHygiene.primaryArtist`.
 pub fn primary_artist(raw: &str) -> String {
-    let lower = raw.to_lowercase();
+    primary_artist_slice(raw).to_string()
+}
+
+const ASCII_ARTIST_SEPARATORS: [&str; 16] = [
+    ";",
+    " / ",
+    " x ",
+    " & ",
+    " + ",
+    " vs. ",
+    " vs ",
+    " feat. ",
+    " feat ",
+    " ft. ",
+    " ft ",
+    " featuring ",
+    " (feat.",
+    " (ft.",
+    " (featuring",
+    " with ",
+];
+
+const CROSS_ARTIST_SEPARATOR: &str = " \u{00D7} ";
+
+/// `primary_artist` without the allocation: the trimmed lead of `raw`, or all
+/// of it trimmed when the lead is empty.
+pub fn primary_artist_slice(raw: &str) -> &str {
+    let cut = if raw.is_ascii() {
+        ascii_separator_start(raw.as_bytes())
+    } else {
+        lowered_separator_start(raw)
+    };
+    let lead = raw[..cut].trim();
+    if lead.is_empty() {
+        raw.trim()
+    } else {
+        lead
+    }
+}
+
+/// Where the first separator begins in an all-ASCII credit, matched without
+/// regard to case and without lowercasing a copy. The "×" separator cannot
+/// occur in ASCII text.
+fn ascii_separator_start(raw: &[u8]) -> usize {
+    (0..raw.len())
+        .find(|&at| {
+            matches!(raw[at], b';' | b' ' | b'(')
+                && ASCII_ARTIST_SEPARATORS.iter().any(|separator| {
+                    raw[at..]
+                        .get(..separator.len())
+                        .is_some_and(|window| window.eq_ignore_ascii_case(separator.as_bytes()))
+                })
+        })
+        .unwrap_or(raw.len())
+}
+
+/// The separator search for credits with non-ASCII text, run on a lowercased
+/// copy and mapped back to `raw`'s own offsets: a character whose lowercase
+/// has a different UTF-8 length (`İ`, `ẞ`, the Kelvin sign) must not shift
+/// the cut, or the slice lands mid-character.
+fn lowered_separator_start(raw: &str) -> usize {
+    let (lower, origins) = lowercase_with_origins(raw);
     let mut cut = raw.len();
-    for sep in [
-        ";",
-        " / ",
-        " \u{00D7} ",
-        " x ",
-        " & ",
-        " + ",
-        " vs. ",
-        " vs ",
-        " feat. ",
-        " feat ",
-        " ft. ",
-        " ft ",
-        " featuring ",
-        " (feat.",
-        " (ft.",
-        " (featuring",
-        " with ",
-    ] {
-        if let Some(idx) = lower.find(sep) {
-            cut = cut.min(idx);
+    for separator in ASCII_ARTIST_SEPARATORS
+        .iter()
+        .copied()
+        .chain(std::iter::once(CROSS_ARTIST_SEPARATOR))
+    {
+        if let Some(index) = lower.find(separator) {
+            cut = cut.min(origins[index]);
         }
     }
-    let result = raw[..cut].trim();
-    if result.is_empty() {
-        raw.trim().to_string()
-    } else {
-        result.to_string()
+    cut
+}
+
+/// `raw` lowercased, with the byte offset in `raw` of the character each byte
+/// of the lowercase came from.
+fn lowercase_with_origins(raw: &str) -> (String, Vec<usize>) {
+    let mut lower = String::with_capacity(raw.len());
+    let mut origins = Vec::with_capacity(raw.len());
+    for (at, ch) in raw.char_indices() {
+        for lowered in ch.to_lowercase() {
+            lower.push(lowered);
+            origins.resize(lower.len(), at);
+        }
     }
+    (lower, origins)
 }
 
 /// Aggressive artist grouping key: the lead artist, diacritic-folded and
@@ -109,7 +165,7 @@ pub fn primary_artist(raw: &str) -> String {
 /// "Beyoncé"/"Beyonce", "Jay-Z"/"Jay Z" and "deadmau5 & Kaskade" all collapse
 /// to one artist.
 pub fn artist_key(credit: &str) -> String {
-    normalize(&primary_artist(credit))
+    normalize(primary_artist_slice(credit))
 }
 
 /// The grouping key that fuses editions of the same release for display and
@@ -403,6 +459,61 @@ fn track_quality_scalar(track: &Track) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::keys::legacy_keys;
+
+    /// Whether lowercasing `text` changes some character's UTF-8 length, the
+    /// one case where the old offsets were wrong (or panicked) and the new
+    /// ones are meant to differ.
+    fn lowercase_shifts_offsets(text: &str) -> bool {
+        text.chars()
+            .any(|ch| ch.to_lowercase().map(char::len_utf8).sum::<usize>() != ch.len_utf8())
+    }
+
+    fn assert_same_keys(text: &str) {
+        let owned = text.to_string();
+        if lowercase_shifts_offsets(text) {
+            assert!(legacy_keys::outcome(|| artist_key(&owned)).is_some(), "artist_key {text:?}");
+            return;
+        }
+        let old_lead = legacy_keys::outcome(|| legacy_keys::primary_artist(&owned));
+        let new_lead = legacy_keys::outcome(|| primary_artist(&owned));
+        assert_eq!(new_lead, old_lead, "primary_artist {text:?}");
+        let old_key = legacy_keys::outcome(|| legacy_keys::artist_key(&owned));
+        let new_key = legacy_keys::outcome(|| artist_key(&owned));
+        assert_eq!(new_key, old_key, "artist_key {text:?}");
+    }
+
+    #[test]
+    fn a_lowercase_that_changes_length_cuts_at_the_separator() {
+        assert_eq!(primary_artist("İstanbul feat. Someone"), "İstanbul");
+        assert_eq!(primary_artist("GROẞ & Klein"), "GROẞ");
+        assert_eq!(primary_artist("\u{212A}ent ft. Guest"), "\u{212A}ent");
+        assert_eq!(primary_artist("İİİ × B"), "İİİ");
+    }
+
+    #[test]
+    fn artist_keys_match_the_original_over_the_corpus() {
+        for text in legacy_keys::corpus() {
+            assert_same_keys(&text);
+        }
+    }
+
+    #[test]
+    fn artist_keys_match_the_original_when_case_changes_byte_length() {
+        for text in ["İ feat. X", "Kaskade İ & Y", "ΣΑΣ vs Z", "ǅ + Q", "ẞ / ſ"] {
+            assert_same_keys(text);
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn artist_keys_match_the_original_over_the_real_library() {
+        for text in crate::library::perf_fixture::distinct_strings() {
+            assert_same_keys(&text);
+        }
+    }
+
 
     #[test]
     fn artist_key_folds_collaborators_and_casing() {

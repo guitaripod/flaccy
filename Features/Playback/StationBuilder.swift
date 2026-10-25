@@ -1,3 +1,4 @@
+import FlaccyCore
 import Foundation
 
 /// Builds radio-style track queues from the local library: seeded by an artist
@@ -98,12 +99,12 @@ nonisolated enum StationBuilder {
     /// favourites dominate while unplayed tracks still surface for variety.
     static func libraryRadio(
         pool: [Track],
-        playCounts: [(trackTitle: String, artist: String, count: Int)],
+        playCounts: [(key: String, count: Int)],
         excluding: Set<URL>,
         limit: Int
     ) -> [Track] {
         var countByKey: [String: Int] = [:]
-        for entry in playCounts { countByKey[trackKey(entry.trackTitle, entry.artist)] = entry.count }
+        for entry in playCounts { countByKey[entry.key] = entry.count }
 
         let candidates = pool.filter { !excluding.contains($0.fileURL) }
         guard !candidates.isEmpty else { return [] }
@@ -120,12 +121,12 @@ nonisolated enum StationBuilder {
     /// that album's peak play count — the sides you own but never queue.
     static func crateDig(
         pool: [Track],
-        playCounts: [(trackTitle: String, artist: String, count: Int)],
+        playCounts: [(key: String, count: Int)],
         excluding: Set<URL>,
         limit: Int
     ) -> [Track] {
         var countByKey: [String: Int] = [:]
-        for entry in playCounts { countByKey[trackKey(entry.trackTitle, entry.artist)] = entry.count }
+        for entry in playCounts { countByKey[entry.key] = entry.count }
 
         var albums: [String: [Track]] = [:]
         for track in pool where !excluding.contains(track.fileURL) {
@@ -155,7 +156,7 @@ nonisolated enum StationBuilder {
     }
 
     private static func trackKey(_ title: String, _ artist: String) -> String {
-        "\(title.lowercased())\u{0}\(artist.lowercased())"
+        ListenHistory.trackKey(title: title, artist: artist)
     }
 
     private static func albumKey(_ album: String, _ artist: String) -> String {
