@@ -140,17 +140,18 @@ pub fn present_for_current(ui: &Rc<Ui>, line: Option<usize>) {
         ui.core.toast("Play a song with lyrics to share them.");
         return;
     };
-    let (tx, rx) = async_channel::bounded::<LyricsResult>(1);
+    let (tx, rx) = async_channel::bounded::<Option<LyricsResult>>(1);
     let db_path = ui.core.db_path.clone();
     let music_root = ui.core.music_root();
     let for_thread = track.clone();
     std::thread::spawn(move || {
-        let _ = tx.send_blocking(crate::lyrics::fetch_blocking(&db_path, &music_root, &for_thread));
+        let outcome = crate::lyrics::fetch_shared(&db_path, &music_root, &for_thread, crate::lyrics::Pace::Immediate);
+        let _ = tx.send_blocking(outcome);
     });
     let ui = Rc::clone(ui);
     glib::spawn_future_local(async move {
         match rx.recv().await {
-            Ok(LyricsResult::Found(lyrics)) => present(&ui, track, lyrics, line),
+            Ok(Some(LyricsResult::Found(lyrics))) => present(&ui, track, lyrics, line),
             _ => ui.core.toast(&format!(
                 "No lyrics to share for “{}” — none were found in its tags, beside the file or on lrclib.net.",
                 track.title
