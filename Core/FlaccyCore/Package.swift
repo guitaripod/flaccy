@@ -44,7 +44,8 @@ let package = Package(
         ),
         .testTarget(
             name: "FlaccyCoreTests",
-            dependencies: ["FlaccyCore"]
+            dependencies: ["FlaccyCore"],
+            exclude: ["Fixtures"]
         ),
     ] + engineTargets,
     swiftLanguageModes: [.v6]

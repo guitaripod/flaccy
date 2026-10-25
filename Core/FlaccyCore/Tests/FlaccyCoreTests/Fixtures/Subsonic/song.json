@@ -1,0 +1,61 @@
+{
+    "subsonic-response": {
+        "status": "ok",
+        "version": "1.16.1",
+        "type": "navidrome",
+        "serverVersion": "0.64.2 (10114574)",
+        "openSubsonic": true,
+        "song": {
+            "id": "4vVKvXswBtHVzMYeWVqhKo",
+            "parent": "3VJh1vLoeqzHRu7d7CGEO3",
+            "isDir": false,
+            "title": "Opening",
+            "album": "First Light",
+            "artist": "Test Artist",
+            "track": 1,
+            "year": 2026,
+            "size": 313276,
+            "contentType": "audio/flac",
+            "suffix": "flac",
+            "duration": 20,
+            "bitRate": 122,
+            "path": "Test Artist/First Light/01 - Opening.flac",
+            "created": "2026-10-25T14:48:23.521499828+02:00",
+            "albumId": "3VJh1vLoeqzHRu7d7CGEO3",
+            "artistId": "4kqFOAfzcbEE22Bin8jHjV",
+            "type": "music",
+            "bpm": 0,
+            "comment": "",
+            "sortName": "opening",
+            "mediaType": "song",
+            "musicBrainzId": "",
+            "isrc": [],
+            "genres": [],
+            "replayGain": {},
+            "channelCount": 2,
+            "samplingRate": 44100,
+            "bitDepth": 16,
+            "moods": [],
+            "artists": [
+                {
+                    "id": "4kqFOAfzcbEE22Bin8jHjV",
+                    "name": "Test Artist"
+                }
+            ],
+            "displayArtist": "Test Artist",
+            "albumArtists": [
+                {
+                    "id": "4kqFOAfzcbEE22Bin8jHjV",
+                    "name": "Test Artist"
+                }
+            ],
+            "displayAlbumArtist": "Test Artist",
+            "contributors": [],
+            "displayComposer": "",
+            "explicitStatus": "",
+            "groupings": [],
+            "works": [],
+            "movements": []
+        }
+    }
+}

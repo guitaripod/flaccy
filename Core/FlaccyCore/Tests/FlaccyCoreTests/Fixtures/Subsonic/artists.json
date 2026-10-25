@@ -1,0 +1,53 @@
+{
+    "subsonic-response": {
+        "status": "ok",
+        "version": "1.16.1",
+        "type": "navidrome",
+        "serverVersion": "0.64.2 (10114574)",
+        "openSubsonic": true,
+        "artists": {
+            "index": [
+                {
+                    "name": "S",
+                    "artist": [
+                        {
+                            "id": "3sg1Ec7n48VD3IbpPp6c7T",
+                            "name": "Second Band",
+                            "coverArt": "ar-3sg1Ec7n48VD3IbpPp6c7T_8eb8b76b8211654d",
+                            "albumCount": 2,
+                            "artistImageUrl": "http://127.0.0.1:4533/share/img/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFyLTNzZzFFYzduNDhWRDNJYnBQcDZjN1RfOGViOGI3NmI4MjExNjU0ZCIsImlzcyI6Ik5EIn0.2BWTNz0esV55L43eDPlDH9QH-VsOK1gl8UMHBn5ohkg?size=600",
+                            "musicBrainzId": "",
+                            "sortName": "second band",
+                            "roles": [
+                                "albumartist",
+                                "artist",
+                                "maincredit"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "T",
+                    "artist": [
+                        {
+                            "id": "4kqFOAfzcbEE22Bin8jHjV",
+                            "name": "Test Artist",
+                            "coverArt": "ar-4kqFOAfzcbEE22Bin8jHjV_e76ac0034a3e6ee9",
+                            "albumCount": 1,
+                            "artistImageUrl": "http://127.0.0.1:4533/share/img/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFyLTRrcUZPQWZ6Y2JFRTIyQmluOGpIalZfZTc2YWMwMDM0YTNlNmVlOSIsImlzcyI6Ik5EIn0.WcZT6ZRZRdoS9tlyW-xryC6wysBBLfpoGs42D8CI7Eg?size=600",
+                            "musicBrainzId": "",
+                            "sortName": "test artist",
+                            "roles": [
+                                "albumartist",
+                                "artist",
+                                "maincredit"
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "lastModified": 1792932503000,
+            "ignoredArticles": "The El La Los Las Le Les Os As O A"
+        }
+    }
+}
