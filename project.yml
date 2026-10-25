@@ -280,6 +280,7 @@ targets:
           - WatchSync/WatchSyncBackgroundTask.swift
           - WatchSync/WatchSyncCells.swift
           - WatchSync/WatchSyncCopy.swift
+          - WatchSync/WatchRemoteExercise.swift
           - WatchSync/WatchSyncExercise.swift
           - WatchSync/WatchSyncHelpViewController.swift
           - WatchSync/WatchSyncMetrics.swift

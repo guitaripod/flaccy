@@ -45,6 +45,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         ReexportExercise.runIfRequested()
         NewMixShot.runIfRequested(tabs: tabs, player: playerContainer)
         WatchSyncExercise.runIfRequested()
+        WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         EqualizerShots.runIfRequested(in: window)
         #endif

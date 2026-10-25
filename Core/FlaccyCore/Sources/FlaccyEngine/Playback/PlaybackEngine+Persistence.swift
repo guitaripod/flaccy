@@ -28,6 +28,7 @@ extension PlaybackEngine {
     }
 
     func relativePath(for track: Track, docsDir: URL) -> String {
+        if let remote = RemoteTrackPath(assetURL: track.fileURL) { return remote.path }
         let trackPath = track.fileURL.standardizedFileURL.path
         let docsPath = docsDir.path
         if trackPath.hasPrefix(docsPath) {
