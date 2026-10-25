@@ -19,6 +19,9 @@ enum ScreenshotSeeder {
 
     static let launchArgument = "--seed-screenshots"
 
+    /// Seeds the library but not the listening history, for a Home with nothing played yet.
+    static let noHistoryArgument = "--no-history"
+
     /// Captures the once-per-library Debut. It re-runs the fictional seed and
     /// then clears `libraryDebut`, so the showpiece is presentable again on a
     /// simulator that has already been through it. Nothing here ever reads a
@@ -115,7 +118,9 @@ enum ScreenshotSeeder {
         writeAudioFiles(for: catalog, in: documents)
         insertTracks(for: catalog, db: db)
         insertAlbumInfo(for: catalog, db: db)
-        insertScrobbles(for: catalog, db: db)
+        if !CommandLine.arguments.contains(noHistoryArgument) {
+            insertScrobbles(for: catalog, db: db)
+        }
         insertLyrics(db: db)
         #if os(iOS)
         DemoMode.seedSupplements(db: db)
