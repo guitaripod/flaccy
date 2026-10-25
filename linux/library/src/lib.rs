@@ -8,6 +8,7 @@ pub mod fingerprint;
 pub mod hygiene;
 pub mod keys;
 pub mod library;
+pub mod listen_history;
 pub mod logger;
 pub mod music_video;
 pub mod recap;
