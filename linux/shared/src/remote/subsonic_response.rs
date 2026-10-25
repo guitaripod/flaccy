@@ -4,33 +4,48 @@
 //! required; every other field is optional and unknown fields are ignored, so
 //! a newer server keeps decoding. The `flaccy*` fields on a song are present
 //! only when the server runs Flaccy's extension. Decode a body with
-//! `serde_json::from_str::<Root>` and read `response`.
+//! `serde_json::from_str::<Root>` and read `response`. Every model also
+//! serializes, with absent fields left out, so a server can answer with the
+//! same types a client reads.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Root {
     #[serde(rename = "subsonic-response")]
     pub response: Envelope,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Envelope {
     pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub server_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub server_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub open_subsonic: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ErrorBody>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub open_subsonic_extensions: Option<Vec<Extension>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub music_folders: Option<MusicFolders>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub artists: Option<Artists>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub album_list2: Option<AlbumList2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub album: Option<Album>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub song: Option<Child>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub search_result3: Option<SearchResult3>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub playlists: Option<Playlists>,
 }
 
@@ -92,137 +107,202 @@ impl SubsonicFailure {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct ErrorBody {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub code: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Extension {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub versions: Option<Vec<i64>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MusicFolders {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub music_folder: Option<Vec<MusicFolder>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct MusicFolder {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Artists {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub index: Option<Vec<ArtistIndex>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct ArtistIndex {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub artist: Option<Vec<Artist>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Artist {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub album_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cover_art: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumId3 {
     pub id: String,
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cover_art: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub song_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub year: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub genre: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub display_artist: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct AlbumList2 {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub album: Option<Vec<AlbumId3>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Album {
     #[serde(flatten)]
     pub info: AlbumId3,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub song: Option<Vec<Child>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Child {
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent: Option<String>,
     pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub album: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub track: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub disc_number: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub year: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub genre: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cover_art: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub size: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub content_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub suffix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bit_rate: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bit_depth: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sampling_rate: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub channel_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub album_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub artist_id: Option<String>,
     #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub music_brainz_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub display_artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub display_album_artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub flaccy_fingerprint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub flaccy_revision: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub flaccy_revised_at: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResult3 {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub artist: Option<Vec<Artist>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub album: Option<Vec<AlbumId3>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub song: Option<Vec<Child>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Playlists {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub playlist: Option<Vec<Playlist>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Playlist {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub song_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub changed: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cover_art: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub public: Option<bool>,
 }
 
