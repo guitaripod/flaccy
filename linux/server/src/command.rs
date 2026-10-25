@@ -1,6 +1,7 @@
 //! The command line: serve, scan, password, keys and status.
 
 use std::io::BufRead;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -128,7 +129,10 @@ async fn serve(config: Config) -> Result<(), String> {
     })?;
     logger::info("server", &format!("listening on http://{address}"));
     tokio::spawn(refresh::keep_current(state.clone()));
-    axum::serve(listener, api::router(state))
+    axum::serve(
+        listener,
+        api::router(state).into_make_service_with_connect_info::<SocketAddr>(),
+    )
         .with_graceful_shutdown(shutdown_signal())
         .await
         .map_err(|err| format!("The server stopped: {err}. Start it again with `flaccy-server serve`; if this repeats, check the log in the data folder."))

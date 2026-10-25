@@ -15,6 +15,7 @@ use crate::catalog::Catalog;
 use crate::config::Config;
 use crate::credentials::{CredentialStore, Credentials};
 use crate::store::Store;
+use crate::throttle::LoginThrottle;
 
 /// The shared pieces behind `AppState`.
 pub struct Shared {
@@ -22,6 +23,7 @@ pub struct Shared {
     credentials: CredentialStore,
     db: Mutex<Db>,
     pub store: Store,
+    pub login_throttle: LoginThrottle,
     /// The program that converts audio, `ffmpeg` unless `FLACCY_SERVER_FFMPEG` names another.
     pub ffmpeg: String,
     catalog: RwLock<Catalog>,
@@ -71,6 +73,7 @@ impl AppState {
             credentials,
             db: Mutex::new(db),
             store,
+            login_throttle: LoginThrottle::default(),
             ffmpeg,
             catalog: RwLock::new(catalog),
             refresh_gate: Mutex::new(()),

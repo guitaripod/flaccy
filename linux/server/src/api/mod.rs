@@ -8,6 +8,8 @@ mod model;
 mod playlists;
 mod system;
 
+use std::time::Instant;
+
 use axum::extract::{Path, Request, State};
 use axum::http::request::Parts;
 use axum::response::Response;
@@ -20,6 +22,7 @@ use crate::error::ApiError;
 use crate::reply::{self, Format};
 use crate::request::Params;
 use crate::state::AppState;
+use crate::throttle;
 
 const MAX_FORM_BYTES: usize = 1 << 20;
 
@@ -65,11 +68,16 @@ async fn entry(State(state): State<AppState>, Path(raw_method): Path<String>, re
     let format = reply::format_of(&params);
     let method = raw_method.strip_suffix(".view").unwrap_or(&raw_method).to_string();
 
-    let credentials = state.credentials();
-    if let Err(error) = auth::authenticate(&params, credentials.as_ref()) {
-        return reply::render(format, reply::failure(&error));
-    }
-    let username = credentials.map(|credentials| credentials.username).unwrap_or_default();
+    let address = throttle::client_address(&parts, state.0.config.behind_proxy);
+    let verified = state.0.login_throttle.attempt(address, Instant::now(), || {
+        let credentials = state.credentials();
+        auth::authenticate(&params, credentials.as_ref())?;
+        Ok(credentials.map(|credentials| credentials.username).unwrap_or_default())
+    });
+    let username = match verified {
+        Ok(username) => username,
+        Err(error) => return reply::render(format, reply::failure(&error)),
+    };
     let call = Call {
         state: &state,
         params: &params,

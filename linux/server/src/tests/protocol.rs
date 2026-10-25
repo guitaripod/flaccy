@@ -1,6 +1,10 @@
 //! Envelope formats and the authentication paths.
 
-use axum::http::StatusCode;
+use std::net::SocketAddr;
+
+use axum::body::Body;
+use axum::extract::ConnectInfo;
+use axum::http::{Request, StatusCode};
 use md5::{Digest, Md5};
 
 use super::{TestServer, PASSWORD, USER};
@@ -96,6 +100,37 @@ async fn every_auth_path_logs_in_and_each_failure_has_its_code() {
         assert_eq!(answer["subsonic-response"]["status"], "failed", "{query}");
         assert_eq!(answer["subsonic-response"]["error"]["code"], code, "{query}");
     }
+}
+
+fn from_peer(uri: &str, peer: &str) -> Request<Body> {
+    Request::builder()
+        .uri(uri)
+        .extension(ConnectInfo(peer.parse::<SocketAddr>().unwrap()))
+        .body(Body::empty())
+        .unwrap()
+}
+
+#[tokio::test]
+async fn ten_failed_logins_lock_one_address_out_and_leave_the_others_working() {
+    let server = TestServer::new();
+    let wrong = format!("/rest/ping?f=json&u={USER}&p=wrong");
+    let right = format!("/rest/ping?f=json&u={USER}&p={PASSWORD}");
+    let attacker = "203.0.113.9:5000";
+    for _ in 0..10 {
+        let reply = server.send(from_peer(&wrong, attacker)).await;
+        assert!(reply.text().contains("\"code\":40"), "{}", reply.text());
+        assert!(!reply.text().contains("Too many"), "{}", reply.text());
+    }
+    let refused = server.send(from_peer(&right, attacker)).await;
+    assert_eq!(refused.status, StatusCode::OK);
+    assert!(refused.text().contains("\"code\":40"), "{}", refused.text());
+    assert!(
+        refused.text().contains("Too many failed logins from 203.0.113.9. Wait 10 minutes, then check the username and password or API key saved in your app."),
+        "{}",
+        refused.text()
+    );
+    let other = server.send(from_peer(&right, "198.51.100.4:5000")).await;
+    assert!(other.text().contains("\"status\":\"ok\""), "{}", other.text());
 }
 
 #[tokio::test]

@@ -20,6 +20,7 @@ pub mod reply;
 pub mod request;
 pub mod state;
 pub mod store;
+pub mod throttle;
 pub mod transcode;
 pub mod xml;
 

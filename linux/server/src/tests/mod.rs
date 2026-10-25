@@ -107,6 +107,7 @@ impl TestServer {
             address: "127.0.0.1".to_string(),
             port: 0,
             data_dir: Some(dir.path().join("data")),
+            behind_proxy: false,
         };
         let mut account = Credentials {
             username: USER.to_string(),

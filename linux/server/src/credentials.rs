@@ -63,10 +63,13 @@ impl Credentials {
     /// The name of the key whose SHA-256 `key` has, `None` for an unknown or revoked key.
     pub fn key_name(&self, key: &str) -> Option<&str> {
         let digest = ids::sha256_hex(key.as_bytes());
-        self.keys
-            .iter()
-            .find(|record| constant_time_eq(record.sha256.as_bytes(), digest.as_bytes()))
-            .map(|record| record.name.as_str())
+        let mut matched = None;
+        for record in &self.keys {
+            if constant_time_eq(record.sha256.as_bytes(), digest.as_bytes()) {
+                matched = Some(record.name.as_str());
+            }
+        }
+        matched
     }
 
     /// Makes a key called `name` and returns it. The key is not recoverable
@@ -99,15 +102,19 @@ impl Credentials {
     }
 }
 
-/// Compares two byte strings in time that depends only on their lengths.
+/// Compares two byte strings without stopping at the first difference. Every
+/// byte up to the longer length is read, a missing byte counts as zero, and a
+/// length difference always counts as a mismatch, so an unequal length cannot
+/// return early.
 pub fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
-    if left.len() != right.len() {
-        return false;
+    let width = left.len().max(right.len());
+    let mut difference = left.len() ^ right.len();
+    for index in 0..width {
+        let a = left.get(index).copied().unwrap_or(0);
+        let b = right.get(index).copied().unwrap_or(0);
+        difference |= usize::from(a ^ b);
     }
-    left.iter()
-        .zip(right)
-        .fold(0u8, |difference, (a, b)| difference | (a ^ b))
-        == 0
+    difference == 0
 }
 
 /// Rejects a password the server should not accept, naming why.
@@ -277,6 +284,30 @@ mod tests {
         save(&path, &changed).unwrap();
         assert_eq!(store.current().unwrap().username, "someone");
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn constant_time_eq_refuses_every_length_mismatch() {
+        assert!(constant_time_eq(b"abc", b"abc"));
+        assert!(constant_time_eq(b"", b""));
+        assert!(!constant_time_eq(b"abc", b"abd"));
+        assert!(!constant_time_eq(b"abc", b"abcd"));
+        assert!(!constant_time_eq(b"abcd", b"abc"));
+        assert!(!constant_time_eq(b"", b"a"));
+        assert!(!constant_time_eq(b"a", b""));
+        assert!(!constant_time_eq(b"\0", b""));
+    }
+
+    #[test]
+    fn a_wrong_length_token_or_key_hash_is_refused() {
+        let mut credentials = account();
+        let key = credentials.add_key("iphone", "now").unwrap();
+        assert!(!credentials.token_matches("", "salt"));
+        assert!(!credentials.token_matches("00", "salt"));
+        assert!(!credentials.password_matches("sesame-seed-and-more"));
+        assert!(!credentials.password_matches("sesame"));
+        assert_eq!(credentials.key_name(&key[..10]), None);
+        assert_eq!(credentials.key_name(&format!("{key}0")), None);
     }
 
     #[test]

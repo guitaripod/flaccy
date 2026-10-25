@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 const DEFAULT_ADDRESS: &str = "127.0.0.1";
-const DEFAULT_PORT: u16 = 4533;
+const DEFAULT_PORT: u16 = 4545;
 
 /// What `config.toml` holds. Only `music_folder` is required.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
@@ -17,6 +17,12 @@ pub struct Config {
     pub port: u16,
     #[serde(default)]
     pub data_dir: Option<PathBuf>,
+    /// Set when a reverse proxy on this machine, such as `tailscale serve`, is the
+    /// only thing connecting to the server. Failed logins are then counted against
+    /// the first address in `X-Forwarded-For`. Leave it false when clients connect
+    /// directly, because any client can then send any address and dodge the lockout.
+    #[serde(default)]
+    pub behind_proxy: bool,
 }
 
 fn default_address() -> String {
@@ -150,8 +156,9 @@ mod tests {
         let (dir, path) = write("music_folder = \"/music\"\n");
         let config = Config::load(&path).unwrap();
         assert_eq!(config.address, "127.0.0.1");
-        assert_eq!(config.port, 4533);
-        assert_eq!(config.listen_address(), "127.0.0.1:4533");
+        assert_eq!(config.port, 4545);
+        assert!(!config.behind_proxy);
+        assert_eq!(config.listen_address(), "127.0.0.1:4545");
         assert!(config.data_dir().ends_with("flaccy-server"));
         std::fs::remove_dir_all(dir).unwrap();
     }
@@ -169,6 +176,13 @@ mod tests {
         let (dir, path) = write("port = 4540\n");
         let error = Config::load(&path).unwrap_err();
         assert!(error.to_string().contains("music_folder"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn behind_proxy_is_read_from_the_file() {
+        let (dir, path) = write("music_folder = \"/m\"\nbehind_proxy = true\n");
+        assert!(Config::load(&path).unwrap().behind_proxy);
         std::fs::remove_dir_all(dir).unwrap();
     }
 
