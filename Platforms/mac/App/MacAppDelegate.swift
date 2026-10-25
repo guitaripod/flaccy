@@ -33,6 +33,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         ScreenshotSeeder.seedIfRequested()
         DebugLayoutFixtures.seedIfRequested()
+        DebugHomeDrive.seedIfRequested()
         #endif
 
         NSApp.mainMenu = MainMenu.build()

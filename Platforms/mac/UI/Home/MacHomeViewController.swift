@@ -129,6 +129,15 @@ final class MacHomeViewController: NSViewController {
         presentAsSheet(MacHomeCustomizeViewController())
     }
 
+    #if DEBUG
+    func scrollForCapture(to offset: CGFloat) {
+        view.layoutSubtreeIfNeeded()
+        let clip = scrollView.contentView
+        clip.scroll(to: NSPoint(x: 0, y: offset - clip.contentInsets.top))
+        scrollView.reflectScrolledClipView(clip)
+    }
+    #endif
+
     private var contentWidth: CGFloat {
         min(max(document.bounds.width - Self.sidePadding * 2, 0), Self.maximumContentWidth)
     }

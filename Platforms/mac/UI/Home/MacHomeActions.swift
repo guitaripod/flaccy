@@ -115,6 +115,15 @@ enum MacHomeActions {
     }
 }
 
+extension PlaylistRecord {
+
+    /// What a queue started from this playlist is called, for Jump Back In.
+    var playbackContext: PlaybackContext? {
+        guard let id else { return nil }
+        return PlaybackContext(kind: .playlist, id: String(id), title: name, subtitle: "")
+    }
+}
+
 extension Notification.Name {
     static let flaccyOpenRecapWeek = Notification.Name("flaccy.mac.openRecapWeek")
     static let flaccyRevealPlaylist = Notification.Name("flaccy.mac.revealPlaylist")

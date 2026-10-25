@@ -253,11 +253,11 @@ final class PlaylistsViewController: NSViewController {
         menu.addItem(.separator())
         menu.addItem(ClosureMenuItem(title: String(localized: "Play"), systemImage: "play.fill") {
             guard !entry.tracks.isEmpty else { return }
-            AudioPlayer.shared.play(entry.tracks, startingAt: 0)
+            AudioPlayer.shared.play(entry.tracks, startingAt: 0, context: entry.record.playbackContext)
         })
         menu.addItem(ClosureMenuItem(title: String(localized: "Shuffle"), systemImage: "shuffle") {
             guard !entry.tracks.isEmpty else { return }
-            AudioPlayer.shared.play(entry.tracks.shuffled(), startingAt: 0)
+            AudioPlayer.shared.play(entry.tracks.shuffled(), startingAt: 0, context: entry.record.playbackContext)
         })
         menu.addItem(.separator())
         MacArtworkEditor.coverMenuItems(for: entry.record, tracks: entry.tracks, window: view.window)

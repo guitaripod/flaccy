@@ -39,6 +39,7 @@ final class MainWindowController: NSWindowController {
         window.toolbar = toolbar
 
         contentViewController = RootContainerViewController()
+        sectionDidChange()
         if let size = Self.debugWindowSize() {
             window.setContentSize(size)
             window.center()

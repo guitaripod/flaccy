@@ -463,7 +463,7 @@ final class MacHomeSectionHeader: NSView {
             addSubview(link)
             NSLayoutConstraint.activate([
                 link.trailingAnchor.constraint(equalTo: trailingAnchor),
-                link.firstBaselineAnchor.constraint(equalTo: label.firstBaselineAnchor),
+                link.centerYAnchor.constraint(equalTo: label.centerYAnchor, constant: 1),
                 link.leadingAnchor.constraint(greaterThanOrEqualTo: label.trailingAnchor, constant: 12),
             ])
         } else {
