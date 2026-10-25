@@ -616,9 +616,12 @@ impl AppCore {
 
     /// Resolves the new track's lyrics off the main thread — database cache,
     /// then the file's own lyrics, then lrclib — which also warms the cache the
-    /// lyrics panel reads, so opening it on this song is instant.
+    /// lyrics panel reads, so opening it on this song is instant. The panel asks
+    /// for the same track at the same moment; the two share one lookup, and
+    /// nothing goes to the network for a song skipped within a third of a second.
     pub fn prefetch_lyrics(self: &Rc<Self>, track: &Track) {
         *self.lyrics.borrow_mut() = crate::lyrics::Lyrics::default();
+        crate::lyrics::want(track);
         let (tx, rx) = async_channel::bounded::<crate::lyrics::Lyrics>(1);
         let db_path = self.db_path.clone();
         let music_root = self.music_root();
@@ -626,9 +629,14 @@ impl AppCore {
         let spawned = std::thread::Builder::new()
             .name("flaccy-lyrics-prefetch".into())
             .spawn(move || {
-                let lyrics = match crate::lyrics::fetch_blocking(&db_path, &music_root, &for_thread)
-                {
-                    crate::lyrics::LyricsResult::Found(lyrics) => lyrics,
+                let outcome = crate::lyrics::fetch_shared(
+                    &db_path,
+                    &music_root,
+                    &for_thread,
+                    crate::lyrics::Pace::Settled,
+                );
+                let lyrics = match outcome {
+                    Some(crate::lyrics::LyricsResult::Found(lyrics)) => lyrics,
                     _ => crate::lyrics::Lyrics::default(),
                 };
                 let _ = tx.send_blocking(lyrics);
