@@ -103,6 +103,71 @@ enum MacHomeActions {
         }
     }
 
+    private static var isDownloadingSample = false
+    private static var isRestoring = false
+
+    /// Starts the sample album, which plays as it arrives, and says what went
+    /// wrong in the onboarding panel's own words when it does not finish.
+    static func downloadSample(in window: NSWindow?) {
+        guard !isDownloadingSample, !SampleMusicService.shared.isDownloading else { return }
+        isDownloadingSample = true
+        MidgarLog.info("Home: sample album download started", category: .content)
+        Task {
+            let success = await SampleMusicService.shared.downloadSamples()
+            isDownloadingSample = false
+            guard !success else { return }
+            let message = SampleMusicService.shared.interruption == .resumable
+                ? String(localized: "The sample album download was interrupted. Try again to pick up where it stopped.")
+                : String(localized: "Couldn't reach the sample music server. Check your connection and try again.")
+            MacToast.show(message, style: .error, in: window)
+        }
+    }
+
+    /// Asks the App Store for what this Apple Account already owns and says
+    /// how it went in the paywall's own words.
+    static func restorePurchases(in window: NSWindow?) {
+        guard !isRestoring else { return }
+        isRestoring = true
+        Task {
+            let outcome = await PurchaseManager.shared.restore()
+            isRestoring = false
+            switch outcome {
+            case .restored:
+                let owned = PurchaseManager.shared.state == .purchased(.lifetime)
+                MacToast.show(
+                    owned ? String(localized: "You own Flaccy. Thank you.") : String(localized: "Purchase restored"),
+                    style: .success, in: window
+                )
+            case .nothingToRestore:
+                presentInfo(
+                    title: String(localized: "Nothing to Restore"),
+                    message: String(localized: "No previous purchase was found for this Apple Account."),
+                    in: window
+                )
+            case .cancelled:
+                break
+            case .failed:
+                presentInfo(
+                    title: String(localized: "Restore Failed"),
+                    message: String(localized: "Couldn't reach the App Store. Check your connection and try again."),
+                    in: window
+                )
+            }
+        }
+    }
+
+    private static func presentInfo(title: String, message: String, in window: NSWindow?) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: String(localized: "OK"))
+        if let window {
+            alert.beginSheetModal(for: window)
+        } else {
+            alert.runModal()
+        }
+    }
+
     static func showSection(_ section: SidebarSection) {
         NotificationCenter.default.post(
             name: .flaccyShowSection, object: nil,

@@ -27,6 +27,8 @@ extension HomeViewController {
         switch id {
         case .banners: return bannerSection()
         case .hero: return heroSection(pageInset: pageInset)
+        case .promoNote: return promoNoteSection(pageInset: pageInset)
+        case .promoCard: return promoCardSection(pageInset: pageInset)
         case .heroWithJump:
             let count = dataSource.snapshot().numberOfItems(inSection: id)
             return heroWithJumpSection(itemCount: count, pageInset: pageInset)
@@ -52,7 +54,28 @@ extension HomeViewController {
         let size = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(300))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [NSCollectionLayoutItem(layoutSize: size)])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: pageInset, bottom: 22, trailing: pageInset)
+        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: pageInset, bottom: heroBottomInset, trailing: pageInset)
+        return section
+    }
+
+    /// A line under the hero sits close to it; anything else leaves the usual gap.
+    private var heroBottomInset: CGFloat {
+        dataSource.snapshot().sectionIdentifiers.contains(.promoNote) ? 8 : 22
+    }
+
+    private func promoNoteSection(pageInset: CGFloat) -> NSCollectionLayoutSection {
+        let size = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(34))
+        let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [NSCollectionLayoutItem(layoutSize: size)])
+        let section = NSCollectionLayoutSection(group: group)
+        section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: pageInset, bottom: 22, trailing: pageInset)
+        return section
+    }
+
+    private func promoCardSection(pageInset: CGFloat) -> NSCollectionLayoutSection {
+        let size = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(280))
+        let group = NSCollectionLayoutGroup.vertical(layoutSize: size, subitems: [NSCollectionLayoutItem(layoutSize: size)])
+        let section = NSCollectionLayoutSection(group: group)
+        section.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: pageInset, bottom: 22, trailing: pageInset)
         return section
     }
 
@@ -92,7 +115,7 @@ extension HomeViewController {
         let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(300))
         let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [heroItem, column])
         let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: pageInset, bottom: 22, trailing: pageInset)
+        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: pageInset, bottom: heroBottomInset, trailing: pageInset)
         return section
     }
 

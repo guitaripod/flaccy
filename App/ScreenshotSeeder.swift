@@ -113,6 +113,9 @@ enum ScreenshotSeeder {
         }
         #endif
         guard (try? db.fetchAllTrackRelativePaths())?.isEmpty ?? true else { return }
+        #if os(iOS)
+        if DemoMode.isEmptyLibrary { return }
+        #endif
 
         let documents = LibraryPaths.root
         writeAudioFiles(for: catalog, in: documents)

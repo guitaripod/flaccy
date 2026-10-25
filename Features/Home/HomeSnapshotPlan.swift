@@ -5,6 +5,8 @@ nonisolated enum HomeSectionID: Hashable, Sendable {
     case banners
     case hero
     case heroWithJump
+    case promoNote
+    case promoCard
     case jumpBackIn
     case madeForYou
     case recentlyAdded
@@ -18,7 +20,9 @@ nonisolated enum HomeItem: Hashable, Sendable {
     case runwayBanner
     case statusBanner
     case hero
-    case empty
+    case getStarted
+    case promoCard
+    case promoNote
     case jumpHeader
     case jump(PlaybackContext)
     case mix(String)
@@ -47,16 +51,23 @@ nonisolated enum HomeSnapshotPlan {
         if showsStatusBanner { banners.append(.statusBanner) }
         if !banners.isEmpty { plan.append((.banners, banners)) }
 
+        let promo = feed.promo
+        let heroItem = heroItem(for: promo)
         if feed.hero == .empty {
-            plan.append((.hero, [.empty]))
+            plan.append((.hero, [promo == nil ? .getStarted : heroItem]))
             return plan
         }
         var blocks = feed.blocks.filter { $0 != .single(.resume) }[...]
         if isWide, blocks.first == .single(.jumpBackIn), !feed.jumpBackIn.isEmpty {
             blocks = blocks.dropFirst()
-            plan.append((.heroWithJump, [.hero, .jumpHeader] + feed.jumpBackIn.map { .jump($0.context) }))
+            plan.append((.heroWithJump, [heroItem, .jumpHeader] + feed.jumpBackIn.map { .jump($0.context) }))
         } else {
-            plan.append((.hero, [.hero]))
+            plan.append((.hero, [heroItem]))
+        }
+        switch promo?.placement {
+        case .heroFootnote: plan.append((.promoNote, [.promoNote]))
+        case .belowHero: plan.append((.promoCard, [.promoCard]))
+        case .replacesHero, .pageEnd, nil: break
         }
 
         for block in blocks {
@@ -71,8 +82,16 @@ nonisolated enum HomeSnapshotPlan {
                 }
             }
         }
+        if promo?.placement == .pageEnd { plan.append((.promoCard, [.promoCard])) }
         plan.append((.footer, [.edit]))
         return plan
+    }
+
+    /// What stands where the hero stands: the hero itself, or the card that
+    /// replaces it.
+    private static func heroItem(for promo: HomePromo?) -> HomeItem {
+        guard let promo, promo.placement == .replacesHero else { return .hero }
+        return promo == .getStarted ? .getStarted : .promoCard
     }
 
     private static func entry(for section: HomeSection, model: HomeScreenModel) -> (HomeSectionID, [HomeItem])? {

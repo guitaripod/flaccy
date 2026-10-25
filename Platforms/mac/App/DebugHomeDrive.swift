@@ -4,8 +4,9 @@ import AppKit
 import FlaccyCore
 import FlaccyEngine
 
-/// Fixtures and the capture script for `--shot-home wide|narrow|playing|dayone|customize`,
-/// run next to `--seed-screenshots`: a paused album queue at track 5 saved
+/// Fixtures and the capture script for `--shot-home wide|narrow|playing|dayone|customize|empty`,
+/// run next to `--seed-screenshots` (`empty` runs without it, on a library with
+/// nothing in it, to capture the first-run card): a paused album queue at track 5 saved
 /// last night, a few things to jump back into, plays on today's date in an
 /// earlier year and across the last two weeks. `dayone` runs with no history
 /// at all (`--no-history` stops the seeder from writing any).
@@ -20,12 +21,13 @@ enum DebugHomeDrive {
     }
 
     static var wantsHistory: Bool {
-        variant != nil && variant != "dayone"
+        variant != nil && variant != "dayone" && variant != "empty"
     }
 
     /// Runs before the queue is restored at launch, so the restored queue is
     /// the one written here.
     static func seedIfRequested() {
+        if variant == "empty" { OnboardingPanelView.isSuppressedForCapture = true }
         guard wantsHistory else { return }
         let database = DatabaseManager.shared
         guard let records = try? database.fetchAllTracks(), !records.isEmpty else { return }
@@ -121,7 +123,7 @@ enum DebugHomeDrive {
     /// radio to show beside the albums the history already names.
     static func prepare() async {
         var attempts = 0
-        while Library.shared.albums.isEmpty, attempts < 60 {
+        while variant != "empty", Library.shared.albums.isEmpty, attempts < 60 {
             try? await Task.sleep(for: .milliseconds(500))
             attempts += 1
         }

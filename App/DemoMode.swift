@@ -16,17 +16,20 @@ enum DemoMode {
 
     static var environment: [String: String] { ProcessInfo.processInfo.environment }
 
-    private static let dayOneKey = "flaccy.demo.dayOne"
+    private static let historyModeKey = "flaccy.demo.historyMode"
 
     static var isDayOne: Bool { environment["FLACCY_ROUTE"] == "home-dayone" }
+    static var isEmptyLibrary: Bool { environment["FLACCY_ROUTE"] == "home-empty" }
     static var isHomeRoute: Bool { environment["FLACCY_ROUTE"]?.hasPrefix("home") == true }
 
-    /// The empty-history Home needs a library nobody has played, and every
-    /// other route needs the played one, so switching between them reseeds.
+    /// The empty-history Home needs a library nobody has played, the first-run
+    /// Home needs no library at all, and every other route needs the played
+    /// one, so switching between them reseeds.
     private static func switchedHistoryMode() -> Bool {
-        let previous = UserDefaults.standard.bool(forKey: dayOneKey)
-        UserDefaults.standard.set(isDayOne, forKey: dayOneKey)
-        return previous != isDayOne
+        let mode = isEmptyLibrary ? "empty" : (isDayOne ? "dayOne" : "played")
+        let previous = UserDefaults.standard.string(forKey: historyModeKey)
+        UserDefaults.standard.set(mode, forKey: historyModeKey)
+        return previous != mode
     }
 
     static func eraseIfStale(_ db: DatabaseManager) {
@@ -272,7 +275,7 @@ enum DemoMode {
     /// Playing, Queue and Lyrics always open on the same paused moment unless
     /// `FLACCY_QUEUE_INDEX` / `FLACCY_ELAPSED` move it.
     static func applyPlaybackState() {
-        if isDayOne {
+        if isDayOne || isEmptyLibrary {
             clearHomeQueue()
             return
         }
@@ -554,6 +557,7 @@ enum DemoRouter {
     private static func waitForLibrary() async {
         for _ in 0..<200 {
             let queueReady = DemoMode.environment["FLACCY_NO_QUEUE"] == "1" || AudioPlayer.shared.currentTrack != nil
+            if DemoMode.isEmptyLibrary { return }
             if Library.shared.albums.count >= ScreenshotSeeder.catalog.count, queueReady { return }
             try? await Task.sleep(for: .milliseconds(100))
         }
@@ -561,7 +565,7 @@ enum DemoRouter {
 
     private static func destination(for route: String) -> AppTabBarController.Destination {
         switch route {
-        case "home", "home-playing", "home-edit", "home-dayone": .home
+        case "home", "home-playing", "home-edit", "home-dayone", "home-empty": .home
         case "charts": .recap
         case "search": .search
         default: .library
@@ -575,7 +579,7 @@ enum DemoRouter {
         let nav = tabs.libraryNavigation
         tabs.show(destination(for: route))
         switch route {
-        case "home", "home-playing", "home-dayone", "charts": break
+        case "home", "home-playing", "home-dayone", "home-empty", "charts": break
         case "home-edit": tabs.home.presentEditHome()
         case "library":
             tabs.library.select(segment: .albums)

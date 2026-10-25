@@ -14,11 +14,12 @@ nonisolated struct HomeScreenModel: Sendable {
 
     /// The album whose cover tints the backdrop behind the hero.
     var backdropAlbum: Album? {
+        if feed.promo?.placement == .replacesHero { return nil }
         switch feed.hero {
-        case .resume: feed.resume?.album
-        case .upNext: feed.upNext?.albums.first
-        case .dayOne: feed.dayOne?.coverAlbums.first
-        case .empty: nil
+        case .resume: return feed.resume?.album
+        case .upNext: return feed.upNext?.albums.first
+        case .dayOne: return feed.dayOne?.coverAlbums.first
+        case .empty: return nil
         }
     }
 }
@@ -54,6 +55,8 @@ final class HomeViewModel {
             RecentContextStore.didChange,
             HomeLayoutStore.didChange,
             Library.didUpdateNotification,
+            PurchaseManager.stateDidChange,
+            PurchaseManager.entitlementsDidLoad,
             UIApplication.willEnterForegroundNotification,
         ]
         for name in names {
@@ -79,6 +82,7 @@ final class HomeViewModel {
                 guard let self, mine == self.generation else { return }
                 self.model = built
                 self.hasLoaded = true
+                HomePromoOffers.loadIfNeeded(for: built.feed.promo)
                 self.onUpdate?(built)
             }
         }

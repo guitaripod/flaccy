@@ -230,7 +230,7 @@ final class MacHomeFilledButton: MacHomeInteractiveView {
     private let icon = NSImageView()
     private let fill = NSView()
 
-    init(title: String, symbol: String, height: CGFloat = 32) {
+    init(title: String, symbol: String?, height: CGFloat = 32) {
         label = NSTextField(labelWithString: title)
         super.init(frame: .zero)
         wantsLayer = true
@@ -241,8 +241,11 @@ final class MacHomeFilledButton: MacHomeInteractiveView {
         fill.translatesAutoresizingMaskIntoConstraints = false
         addSubview(fill)
 
-        icon.image = MacSymbolImage.configured(symbol, pointSize: 12, weight: .bold, accessibilityDescription: nil)
-        icon.imageScaling = .scaleNone
+        if let symbol {
+            icon.image = MacSymbolImage.configured(symbol, pointSize: 12, weight: .bold, accessibilityDescription: nil)
+            icon.imageScaling = .scaleNone
+        }
+        icon.isHidden = symbol == nil
         label.font = .systemFont(ofSize: 13, weight: .semibold)
 
         let row = NSStackView(views: [icon, label])

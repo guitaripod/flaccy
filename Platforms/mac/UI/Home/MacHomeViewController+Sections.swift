@@ -106,6 +106,7 @@ final class MacHomeTopRow: NSView {
 extension MacHomeViewController {
 
     func heroView(_ feed: HomeFeed) -> NSView {
+        if feed.promo?.placement == .replacesHero, let card = promoView(feed) { return card }
         let hero = MacHomeHeroView()
         if let model = heroModel(feed) { hero.configure(model) }
         return hero
@@ -369,5 +370,44 @@ extension MacHomeViewController {
         header.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         shelf.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         return stack
+    }
+}
+
+extension MacHomeViewController {
+
+    /// The card, or the line, the feed's promo asks for, worded by the shared
+    /// `HomePromoContent` and wired to this page.
+    func promoView(_ feed: HomeFeed) -> NSView? {
+        guard let promo = feed.promo else { return nil }
+        let content = HomePromoContent.make(for: promo, proof: feed.proofLines, gettingStartedBody: HomeCopy.getStartedBodyMac)
+        switch content {
+        case .getStarted(let started):
+            let card = MacHomePromoCard()
+            card.configure(getStarted: started)
+            card.onAction = { [weak self] action in self?.perform(action) }
+            return card
+        case .plan(let plan):
+            let card = MacHomePromoCard()
+            card.configure(plan: plan)
+            card.onAction = { [weak self] action in self?.perform(action) }
+            return card
+        case .note(let text):
+            return MacHomePromoNote(text: text)
+        }
+    }
+
+    private func perform(_ action: MacHomePromoAction) {
+        switch action {
+        case .chooseFolder:
+            NSApp.sendAction(#selector(MacAppDelegate.chooseMusicFolder(_:)), to: nil, from: self)
+        case .importFiles:
+            NSApp.sendAction(#selector(MacAppDelegate.importFiles(_:)), to: nil, from: self)
+        case .playSample:
+            MacHomeActions.downloadSample(in: view.window)
+        case .seePlans, .getLifetime:
+            PurchaseManager.shared.requestPaywall()
+        case .restorePurchases:
+            MacHomeActions.restorePurchases(in: view.window)
+        }
     }
 }

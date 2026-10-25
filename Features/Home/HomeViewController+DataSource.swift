@@ -9,11 +9,19 @@ extension HomeViewController {
             cell.onAction = { [weak self] action in self?.handle(hero: action) }
             cell.configure(with: self.model)
         }
-        let empty = UICollectionView.CellRegistration<HomeEmptyCell, HomeItem> { [weak self] cell, _, _ in
-            guard let self else { return }
-            cell.onAction = { [weak self] action in self?.handle(empty: action) }
-            self.library.applySampleButtonState()
-            cell.configure(sample: self.library.sampleMusicButton.configuration)
+        let getStarted = UICollectionView.CellRegistration<HomeGetStartedCell, HomeItem> { [weak self] cell, _, _ in
+            guard let self, case .getStarted(let content) = self.promoContent else { return }
+            cell.onAction = { [weak self] action in self?.handle(promo: action) }
+            cell.configure(with: content, sample: HomeSampleButton.current())
+        }
+        let planCard = UICollectionView.CellRegistration<HomePlanCardCell, HomeItem> { [weak self] cell, _, _ in
+            guard let self, case .plan(let content) = self.promoContent else { return }
+            cell.onAction = { [weak self] action in self?.handle(promo: action) }
+            cell.configure(with: content)
+        }
+        let promoNote = UICollectionView.CellRegistration<HomePromoNoteCell, HomeItem> { [weak self] cell, _, _ in
+            guard let self, case .note(let text) = self.promoContent else { return }
+            cell.configure(text: text)
         }
         let banner = UICollectionView.CellRegistration<HomeBannerCell, HomeItem> { [weak self] cell, _, item in
             guard let self else { return }
@@ -60,8 +68,12 @@ extension HomeViewController {
             switch item {
             case .hero:
                 return collectionView.dequeueConfiguredReusableCell(using: hero, for: indexPath, item: item)
-            case .empty:
-                return collectionView.dequeueConfiguredReusableCell(using: empty, for: indexPath, item: item)
+            case .getStarted:
+                return collectionView.dequeueConfiguredReusableCell(using: getStarted, for: indexPath, item: item)
+            case .promoCard:
+                return collectionView.dequeueConfiguredReusableCell(using: planCard, for: indexPath, item: item)
+            case .promoNote:
+                return collectionView.dequeueConfiguredReusableCell(using: promoNote, for: indexPath, item: item)
             case .runwayBanner, .statusBanner:
                 return collectionView.dequeueConfiguredReusableCell(using: banner, for: indexPath, item: item)
             case .jumpHeader:

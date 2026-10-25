@@ -24,6 +24,7 @@ final class HomeViewController: UIViewController {
     private var runwayRequested = false
     private var showsStatusBanner = false
     private var hasRendered = false
+    var isRestoring = false
     private(set) var isWide = false
     private var cancellables = Set<AnyCancellable>()
 
@@ -138,7 +139,7 @@ final class HomeViewController: UIViewController {
         render(loadState: libraryViewModel.currentLoadState)
         NotificationCenter.default.publisher(for: SampleMusicService.progressDidChange)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.refreshEmptyCell() }
+            .sink { [weak self] _ in self?.refreshGetStartedCell() }
             .store(in: &cancellables)
         NotificationCenter.default.publisher(for: AlbumArtworkCache.didChangeNotification)
             .receive(on: DispatchQueue.main)
@@ -156,8 +157,9 @@ final class HomeViewController: UIViewController {
         reapply()
     }
 
+    /// The last-day card says the same thing the runway banner does, so only one of them is up.
     private var showsRunwayBanner: Bool {
-        runwayRequested && !library.debutOwnsScreen
+        runwayRequested && !library.debutOwnsScreen && model.feed.promo != .lastDay
     }
 
     private func render(loadState state: LibraryViewModel.LibraryLoadState) {
@@ -209,12 +211,19 @@ final class HomeViewController: UIViewController {
         view.setNeedsLayout()
     }
 
-    func refreshEmptyCell() {
+    /// The sample album's button is the one place its download shows, so it
+    /// follows the service while the card is on screen.
+    func refreshGetStartedCell() {
         library.applySampleButtonState()
         var snapshot = dataSource.snapshot()
-        guard snapshot.itemIdentifiers.contains(.empty) else { return }
-        snapshot.reconfigureItems([.empty])
+        guard snapshot.itemIdentifiers.contains(.getStarted) else { return }
+        snapshot.reconfigureItems([.getStarted])
         dataSource.apply(snapshot, animatingDifferences: false)
+    }
+
+    /// The words of the promo card the feed asks for, or nil when it asks for none.
+    var promoContent: HomePromoContent? {
+        model.feed.promo.map { HomePromoContent.make(for: $0, proof: model.feed.proofLines) }
     }
 
     func positionBackdrop() {

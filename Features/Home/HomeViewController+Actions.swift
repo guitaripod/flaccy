@@ -21,13 +21,58 @@ extension HomeViewController {
         }
     }
 
-    func handle(empty action: HomeEmptyAction) {
+    func handle(promo action: HomePromoAction) {
         let library = self.library
         switch action {
         case .addMusic: library.performWhenVisible { library.importTapped() }
-        case .addSample: library.performWhenVisible { library.sampleMusicTapped() }
+        case .playSample: library.performWhenVisible { library.sampleMusicTapped() }
         case .computerGuide: library.performWhenVisible { library.presentComputerTransferGuide() }
+        case .seePlans, .getLifetime: PurchaseManager.shared.requestPaywall()
+        case .restorePurchases: restorePurchases()
         }
+    }
+
+    /// Asks the App Store for what this Apple Account already owns, and says
+    /// how it went in the paywall's own words.
+    private func restorePurchases() {
+        guard !isRestoring else { return }
+        isRestoring = true
+        Task { [weak self] in
+            let outcome = await PurchaseManager.shared.restore()
+            guard let self else { return }
+            self.isRestoring = false
+            self.report(restore: outcome)
+        }
+    }
+
+    private func report(restore outcome: PurchaseManager.RestoreOutcome) {
+        switch outcome {
+        case .restored:
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            let thanks = PurchaseManager.shared.state == .purchased(.lifetime)
+                ? String(localized: "You own Flaccy. Thank you.")
+                : String(localized: "Purchase restored")
+            ToastView.show(thanks, in: view, style: .success)
+        case .nothingToRestore:
+            presentInfoAlert(
+                title: String(localized: "Nothing to Restore"),
+                message: String(localized: "No previous purchase was found for this Apple Account.")
+            )
+        case .cancelled:
+            break
+        case .failed:
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            presentInfoAlert(
+                title: String(localized: "Restore Failed"),
+                message: String(localized: "Couldn't reach the App Store. Check your connection and try again.")
+            )
+        }
+    }
+
+    private func presentInfoAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
+        present(alert, animated: true)
     }
 
     private func resume() {

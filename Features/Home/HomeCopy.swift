@@ -127,6 +127,20 @@ enum HomeCopy {
         String(localized: "\(count) of them hi-res")
     }
 
+    static var getStartedTitle: String { String(localized: "Bring in your music") }
+    static var getStartedBody: String {
+        String(localized: "Add songs from the Files app, a NAS or your computer, or start with a free sample album.")
+    }
+    static var getStartedBodyMac: String {
+        String(localized: "Choose a folder of music on this Mac, import files, or start with a free sample album.")
+    }
+    static var addMusic: String { String(localized: "Add Music") }
+    static var playSampleAlbum: String { String(localized: "Play the Sample Album") }
+    static var otherWaysToAdd: String { String(localized: "Other ways to add music") }
+    static var keepListeningTitle: String { String(localized: "Keep listening with Flaccy Pro") }
+    static var seePlans: String { String(localized: "See Plans") }
+    static var restorePurchases: String { String(localized: "Restore Purchases") }
+
     static var libraryRadio: String { String(localized: "Library Radio") }
     static var libraryRadioSubtitle: String { String(localized: "Endless, from everything") }
     static var moreMixes: String { String(localized: "More mixes appear as you listen") }

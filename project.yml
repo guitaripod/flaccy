@@ -183,7 +183,7 @@ targets:
           - Home/HomeArtView.swift
           - Home/HomeBackdropView.swift
           - Home/HomeChromeViews.swift
-          - Home/HomeEmptyCell.swift
+          - Home/HomePromoCells.swift
           - Home/HomeGlanceCards.swift
           - Home/HomeHeroCell.swift
           - Home/HomeJumpTileCell.swift

@@ -34,10 +34,11 @@ final class MacHomeViewController: NSViewController {
     private let scrollView = NSScrollView()
     private let document = MacHomeDocumentView()
     private let column = NSStackView()
-    private let emptyState = LibraryEmptyStateView()
+    private var emptyHost: NSView?
     private var backdropTop: NSLayoutConstraint?
     private var columnFill: NSLayoutConstraint?
     private var topRow: MacHomeTopRow?
+    private var heroRow: MacHomeTopRow?
     private var strips: [NSStackView] = []
     private var observers: [NSObjectProtocol] = []
     private var feed: HomeFeed?
@@ -67,10 +68,6 @@ final class MacHomeViewController: NSViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(scrollView)
 
-        emptyState.translatesAutoresizingMaskIntoConstraints = false
-        emptyState.isHidden = true
-        root.addSubview(emptyState)
-
         let backdropTop = backdrop.topAnchor.constraint(equalTo: root.topAnchor)
         self.backdropTop = backdropTop
         let fill = column.widthAnchor.constraint(equalTo: document.widthAnchor, constant: -Self.sidePadding * 2)
@@ -98,9 +95,6 @@ final class MacHomeViewController: NSViewController {
             column.leadingAnchor.constraint(greaterThanOrEqualTo: document.leadingAnchor, constant: Self.sidePadding),
             column.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -24),
             fill,
-
-            emptyState.centerXAnchor.constraint(equalTo: root.centerXAnchor),
-            emptyState.centerYAnchor.constraint(equalTo: root.centerYAnchor),
         ])
 
         document.onWidthChange = { [weak self] width in self?.widthDidChange(width) }
@@ -164,6 +158,8 @@ final class MacHomeViewController: NSViewController {
             AudioPlayer.queueDidChange,
             RecentContextStore.didChange,
             HomeLayoutStore.didChange,
+            PurchaseManager.stateDidChange,
+            PurchaseManager.entitlementsDidLoad,
             AlbumArtworkCache.didChangeNotification,
             NSApplication.didBecomeActiveNotification,
         ]
@@ -221,10 +217,15 @@ final class MacHomeViewController: NSViewController {
         let clip = scrollView.contentView
         let restore = clip.bounds.origin.y
         clearColumn()
-        emptyState.isHidden = feed.hero != .empty
+        emptyHost?.removeFromSuperview()
+        emptyHost = nil
+        HomePromoOffers.loadIfNeeded(for: feed.promo)
         scrollView.isHidden = feed.hero == .empty
         backdrop.show(heroCover(of: feed))
-        guard feed.hero != .empty else { return }
+        guard feed.hero != .empty else {
+            showFirstRun(feed)
+            return
+        }
 
         let index = MacHomeCoverIndex(albums: Library.shared.albums)
         var position = 0
@@ -240,6 +241,7 @@ final class MacHomeViewController: NSViewController {
             add(block, feed: feed, index: index)
             position += 1
         }
+        addPromoBesideThePage(feed)
         document.layoutSubtreeIfNeeded()
         widthDidChange(document.bounds.width)
         clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: restore))
@@ -252,7 +254,47 @@ final class MacHomeViewController: NSViewController {
             view.removeFromSuperview()
         }
         topRow = nil
+        heroRow = nil
         strips = []
+    }
+
+    /// With nothing of the person's own in the library the page is the card
+    /// that brings music in, alone and centred.
+    private func showFirstRun(_ feed: HomeFeed) {
+        guard let card = promoView(feed) else { return }
+        card.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(card)
+        NSLayoutConstraint.activate([
+            card.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            card.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            card.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -Self.sidePadding * 2),
+        ])
+        emptyHost = card
+    }
+
+    /// The footnote and the last-day card go straight under the hero, the
+    /// value card ends the page, and a card that replaces the hero was already
+    /// placed where the hero stands, unless Continue is turned off and there
+    /// is no hero row to stand in for: then it leads the page.
+    private func addPromoBesideThePage(_ feed: HomeFeed) {
+        guard let promo = feed.promo else { return }
+        if promo.placement == .replacesHero, heroRow != nil { return }
+        guard let extra = promoView(feed) else { return }
+        extra.translatesAutoresizingMaskIntoConstraints = false
+        switch promo.placement {
+        case .replacesHero:
+            column.insertArrangedSubview(extra, at: 0)
+        case .heroFootnote, .belowHero:
+            let index = heroRow.flatMap { column.arrangedSubviews.firstIndex(of: $0) }.map { $0 + 1 } ?? 0
+            column.insertArrangedSubview(extra, at: index)
+            if let heroRow, promo.placement == .heroFootnote { column.setCustomSpacing(12, after: heroRow) }
+        case .pageEnd:
+            column.addArrangedSubview(extra)
+        }
+        let limit = extra is MacHomePromoNote
+            ? extra.widthAnchor.constraint(equalTo: column.widthAnchor)
+            : extra.widthAnchor.constraint(lessThanOrEqualTo: column.widthAnchor)
+        limit.isActive = true
     }
 
     private func add(_ block: HomeBlock, feed: HomeFeed, index: MacHomeCoverIndex) {
@@ -300,15 +342,17 @@ final class MacHomeViewController: NSViewController {
         if panel { row.setPanel(jumpBackInPanel(feed)) }
         row.setWide(isWide)
         topRow = row
+        if hero { heroRow = row }
         addFull(row)
     }
 
     private func heroCover(of feed: HomeFeed) -> Album? {
+        if feed.promo?.placement == .replacesHero { return nil }
         switch feed.hero {
-        case .resume: feed.resume?.album
-        case .upNext: feed.upNext?.albums.first
-        case .dayOne: feed.dayOne?.coverAlbums.first
-        case .empty: nil
+        case .resume: return feed.resume?.album
+        case .upNext: return feed.upNext?.albums.first
+        case .dayOne: return feed.dayOne?.coverAlbums.first
+        case .empty: return nil
         }
     }
 }

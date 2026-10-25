@@ -53,6 +53,8 @@ nonisolated struct HomeFeed: Sendable {
     let recentlyAdded: [Album]
     let onThisDay: Memory?
     let week: WeekGlance?
+    var promo: HomePromo? = nil
+    var proofLines: [PaywallProof.Line] = []
 
     static let empty = HomeFeed(
         facts: HomeAvailability(
@@ -62,6 +64,39 @@ nonisolated struct HomeFeed: Sendable {
         hero: .empty, blocks: [], resume: nil, upNext: nil, dayOne: nil, jumpBackIn: [], mixes: [],
         recentlyAdded: [], onThisDay: nil, week: nil
     )
+
+    /// This feed with the promo card and the proof lines behind it.
+    func with(promo: HomePromo?, proofLines: [PaywallProof.Line]) -> HomeFeed {
+        var copy = self
+        copy.promo = promo
+        copy.proofLines = proofLines
+        return copy
+    }
+}
+
+/// What Home needs from the entitlement and the library to decide its one
+/// promo card, frozen on the main actor beside the rest of the inputs.
+nonisolated struct HomePromoInputs: Sendable {
+    let phase: HomePromo.Phase
+    let entitlementsLoaded: Bool
+    let welcomeBackOpen: Bool
+    let playsAreScrobbled: Bool
+    let ownTrackCount: Int
+
+    @MainActor
+    static func current(tracks: [Track], manager: PurchaseManager = .shared) -> HomePromoInputs {
+        let sampleNames = SampleMusicService.sampleFileNames
+        let own = tracks.lazy.filter { !SampleMusicService.isSample($0.fileURL, among: sampleNames) }.count
+        var welcomeBackOpen = false
+        if case .available = manager.lapsedOfferState, manager.lapsedLifetimeOffer != nil { welcomeBackOpen = true }
+        return HomePromoInputs(
+            phase: HomePromo.Phase(manager.state),
+            entitlementsLoaded: manager.hasLoadedEntitlements,
+            welcomeBackOpen: welcomeBackOpen,
+            playsAreScrobbled: LastFMService.shared.isAuthenticated,
+            ownTrackCount: own
+        )
+    }
 }
 
 /// What the main actor hands the builder: the library, the player and the
@@ -77,6 +112,7 @@ nonisolated struct HomeFeedInputs: Sendable {
     let recents: [RecentContexts.Entry]
     let dismissed: [String: Date]
     let layout: HomeLayout
+    let promo: HomePromoInputs
     let now: Date
     let calendar: Calendar
 
@@ -93,6 +129,7 @@ nonisolated struct HomeFeedInputs: Sendable {
             recents: RecentContextStore.shared.recents.entries,
             dismissed: RecentContextStore.shared.recents.dismissed,
             layout: HomeLayoutStore.shared.layout,
+            promo: HomePromoInputs.current(tracks: library.allTracks),
             now: Date(),
             calendar: .current
         )
@@ -105,7 +142,8 @@ nonisolated struct HomeFeedInputs: Sendable {
 nonisolated enum HomeFeedBuilder {
 
     nonisolated static func build(_ inputs: HomeFeedInputs, database: DatabaseManager = .shared) -> HomeFeed {
-        guard !inputs.tracks.isEmpty else { return .empty }
+        let promo = promoCard(inputs.promo, database: database)
+        guard !inputs.tracks.isEmpty else { return HomeFeed.empty.with(promo: promo.card, proofLines: promo.proof) }
         let index = AlbumIndex(albums: inputs.albums)
         let hasHistory = ((try? database.scrobbleCount(submittedOnly: false)) ?? 0) > 0
 
@@ -146,8 +184,31 @@ nonisolated enum HomeFeedBuilder {
             mixes: mixes,
             recentlyAdded: recentlyAdded,
             onThisDay: memory,
-            week: week.hasPlays ? week : nil
+            week: week.hasPlays ? week : nil,
+            promo: promo.card,
+            proofLines: promo.proof
         )
+    }
+
+    /// The one card Home spends on getting music in or on Flaccy Pro, through
+    /// the shared `HomePromo` rule. The paywall's proof is only read for the
+    /// phases that can show it, so a paid or brand-new library costs nothing.
+    nonisolated private static func promoCard(
+        _ inputs: HomePromoInputs, database: DatabaseManager
+    ) -> (card: HomePromo?, proof: [PaywallProof.Line]) {
+        var proof: [PaywallProof.Line] = []
+        if inputs.ownTrackCount > 0, inputs.phase.hasProof {
+            let snapshot = PurchaseManager.proofSnapshot(playsAreScrobbled: inputs.playsAreScrobbled, database: database)
+            if snapshot.hasLibrary { proof = snapshot.lines() }
+        }
+        let card = HomePromo.card(for: HomePromo.Facts(
+            phase: inputs.phase,
+            entitlementsLoaded: inputs.entitlementsLoaded,
+            ownTrackCount: inputs.ownTrackCount,
+            welcomeBackOpen: inputs.welcomeBackOpen,
+            proofLineCount: proof.count
+        ))
+        return (card, proof)
     }
 
     /// Library albums looked up by Home's album key, with a fallback on the
