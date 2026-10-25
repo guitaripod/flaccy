@@ -185,19 +185,19 @@ final class EqualizerPresetsViewController: UIViewController {
             backdrop.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             backdrop.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             header.topAnchor.constraint(equalTo: view.topAnchor, constant: 30),
-            header.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
-            header.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            header.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 14),
+            header.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             tabs.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 14),
-            tabs.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            tabs.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            tabs.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+            tabs.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             tabs.heightAnchor.constraint(equalToConstant: 36),
             tableView.topAnchor.constraint(equalTo: tabs.bottomAnchor, constant: 8),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             outputsScroll.topAnchor.constraint(equalTo: tabs.bottomAnchor, constant: 12),
-            outputsScroll.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            outputsScroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            outputsScroll.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            outputsScroll.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             outputsScroll.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             outputsStack.topAnchor.constraint(equalTo: outputsScroll.contentLayoutGuide.topAnchor, constant: 4),
             outputsStack.bottomAnchor.constraint(equalTo: outputsScroll.contentLayoutGuide.bottomAnchor, constant: -40),
@@ -527,11 +527,7 @@ final class EqualizerPresetsViewController: UIViewController {
     }
 
     private func hairline() -> UIView {
-        let line = UIView()
-        line.backgroundColor = UIColor.white.withAlphaComponent(0.1)
-        line.translatesAutoresizingMaskIntoConstraints = false
-        line.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale).isActive = true
-        return line
+        HairlineView(color: UIColor.white.withAlphaComponent(0.1))
     }
 
     private func sectionTag(_ text: String) -> UILabel {

@@ -69,8 +69,7 @@ final class HomeViewController: UIViewController {
     /// re-arranges when that changes, as when the Duo opens its inner display
     /// or the window is resized.
     private func updateWidth() {
-        let insets = collectionView.adjustedContentInset
-        let width = collectionView.bounds.width - insets.left - insets.right
+        let width = contentWidth
         let wide = AdaptiveLayout.homeIsWide(contentWidth: width)
         guard wide != isWide, hasRendered else {
             if !hasRendered { isWide = wide }
@@ -101,7 +100,7 @@ final class HomeViewController: UIViewController {
         collectionView.backgroundColor = .clear
         collectionView.delegate = self
         collectionView.alwaysBounceVertical = true
-        collectionView.contentInsetAdjustmentBehavior = .always
+        collectionView.contentInsetAdjustmentBehavior = .scrollableAxes
         collectionView.contentInset.bottom = 16
         collectionView.accessibilityIdentifier = "home.collection"
         view.addSubview(collectionView)

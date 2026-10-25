@@ -59,7 +59,7 @@ extension LibraryViewController {
                         section.orthogonalScrollingBehavior = .continuous
                         section.interGroupSpacing = 10
                         section.contentInsetsReference = .safeArea
-                        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
+                        section.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 12)
                         let headerSize = NSCollectionLayoutSize(
                             widthDimension: .fractionalWidth(1.0), heightDimension: .estimated(32)
                         )

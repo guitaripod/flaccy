@@ -72,13 +72,17 @@ final class SearchViewController: UIViewController {
         var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
         configuration.showsSeparators = false
         configuration.headerMode = .supplementary
-        let layout = UICollectionViewCompositionalLayout.list(using: configuration)
+        let layout = UICollectionViewCompositionalLayout { _, environment in
+            let section = NSCollectionLayoutSection.list(using: configuration, layoutEnvironment: environment)
+            section.contentInsetsReference = .safeArea
+            return section
+        }
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
         collectionView.delegate = self
         collectionView.keyboardDismissMode = .onDrag
-        collectionView.contentInsetAdjustmentBehavior = .always
+        collectionView.contentInsetAdjustmentBehavior = .scrollableAxes
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),

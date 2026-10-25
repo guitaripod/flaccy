@@ -138,6 +138,7 @@ targets:
           - UI/AsyncImageView.swift
           - UI/DownloadedMarkView.swift
           - UI/FilterChipsView.swift
+          - UI/HairlineView.swift
           - UI/IdentifiedSegmentedControl.swift
           - UI/LiquidGlass.swift
           - UI/LoveButton.swift
