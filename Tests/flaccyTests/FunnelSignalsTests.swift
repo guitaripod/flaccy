@@ -28,7 +28,7 @@ struct FunnelSignalsTests {
             lock.withLock { stored }
         }
 
-        func record(_ signal: MidgarSignal) {
+        func send(_ signal: MidgarSignal) {
             lock.withLock { stored.append(Event(signal)) }
         }
     }
