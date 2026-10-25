@@ -76,7 +76,7 @@ extension HomeViewController {
         let tileCount = max(itemCount - 2, 0)
         let rows = (tileCount + 1) / 2
         let titleHeight: CGFloat = 40
-        let columnHeight = titleHeight + CGFloat(rows) * HomeJumpTileCell.height + CGFloat(max(rows - 1, 0)) * Self.gridSpacing
+        let columnHeight = titleHeight + CGFloat(rows) * (HomeJumpTileCell.height + Self.gridSpacing)
 
         let titleItem = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1), heightDimension: .absolute(titleHeight)
