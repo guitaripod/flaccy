@@ -42,7 +42,7 @@ final class ArtworkCropView: UIView, UIScrollViewDelegate {
         scrollView.delegate = self
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
-        scrollView.contentInsetAdjustmentBehavior = .never
+        scrollView.contentInsetAdjustmentBehavior = .never // duo-audit:ignore crop viewport positions the image itself and sits inside a card, not against a bar
         scrollView.bouncesZoom = true
         scrollView.decelerationRate = .fast
         scrollView.translatesAutoresizingMaskIntoConstraints = false
