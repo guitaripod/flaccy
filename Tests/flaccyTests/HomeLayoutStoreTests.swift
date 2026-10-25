@@ -21,7 +21,7 @@ nonisolated final class HomeLayoutStoreTests: XCTestCase {
         let defaults = makeDefaults()
         let store = HomeLayoutStore(defaults: defaults)
         store.layout = HomeLayout.standard
-            .moving(from: 3, to: 0)
+            .moving(from: 5, to: 0)
             .setting(.thisWeek, visible: false)
         let reopened = HomeLayoutStore(defaults: defaults)
         XCTAssertEqual(reopened.layout.order.first, .recentlyAdded)
