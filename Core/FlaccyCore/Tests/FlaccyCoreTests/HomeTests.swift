@@ -4,7 +4,7 @@ import XCTest
 final class HomeLayoutTests: XCTestCase {
 
     func testL1StandardEncodesEverySectionAndNothingHidden() {
-        XCTAssertEqual(HomeLayout.standard.encoded, "continue,jumpBackIn,madeForYou,recentlyAdded,onThisDay,thisWeek|")
+        XCTAssertEqual(HomeLayout.standard.encoded, "continue,jumpBackIn,onThisDay,thisWeek,madeForYou,recentlyAdded|")
         XCTAssertTrue(HomeLayout.standard.isStandard)
     }
 
@@ -16,26 +16,26 @@ final class HomeLayoutTests: XCTestCase {
 
     func testL3DecodeKeepsTheOrderAndAppendsUnmentionedSections() {
         let layout = HomeLayout.decode("thisWeek,continue|thisWeek")
-        XCTAssertEqual(layout.order, [.thisWeek, .resume, .jumpBackIn, .madeForYou, .recentlyAdded, .onThisDay])
+        XCTAssertEqual(layout.order, [.thisWeek, .resume, .jumpBackIn, .onThisDay, .madeForYou, .recentlyAdded])
         XCTAssertEqual(layout.hidden, [.thisWeek])
-        XCTAssertEqual(layout.visible, [.resume, .jumpBackIn, .madeForYou, .recentlyAdded, .onThisDay])
+        XCTAssertEqual(layout.visible, [.resume, .jumpBackIn, .onThisDay, .madeForYou, .recentlyAdded])
     }
 
     func testL4UnknownIdentifiersAndDuplicatesAreDropped() {
         let layout = HomeLayout.decode("bogus,madeForYou,madeForYou|bogus,continue")
-        XCTAssertEqual(layout.order, [.madeForYou, .resume, .jumpBackIn, .recentlyAdded, .onThisDay, .thisWeek])
+        XCTAssertEqual(layout.order, [.madeForYou, .resume, .jumpBackIn, .onThisDay, .thisWeek, .recentlyAdded])
         XCTAssertEqual(layout.hidden, [.resume])
     }
 
     func testL5MovesClampToEitherEnd() {
         XCTAssertEqual(HomeLayout.standard.moving(from: 0, to: 99).order.last, .resume)
-        XCTAssertEqual(HomeLayout.standard.moving(from: 5, to: -3).order.first, .thisWeek)
+        XCTAssertEqual(HomeLayout.standard.moving(from: 5, to: -3).order.first, .recentlyAdded)
         XCTAssertEqual(HomeLayout.standard.moving(from: 9, to: 0), .standard)
     }
 
     func testL6HidingRoundTripsAndShowingAgainRestoresTheStandard() {
         let hidden = HomeLayout.standard.setting(.onThisDay, visible: false)
-        XCTAssertEqual(hidden.encoded, "continue,jumpBackIn,madeForYou,recentlyAdded,onThisDay,thisWeek|onThisDay")
+        XCTAssertEqual(hidden.encoded, "continue,jumpBackIn,onThisDay,thisWeek,madeForYou,recentlyAdded|onThisDay")
         XCTAssertEqual(HomeLayout.decode(hidden.encoded), hidden)
         XCTAssertEqual(hidden.setting(.onThisDay, visible: true), .standard)
     }
@@ -87,14 +87,14 @@ final class HomeComposerTests: XCTestCase {
 
     func testC5TheStandardLayoutPairsOnThisDayWithThisWeek() {
         XCTAssertEqual(HomeComposer.blocks(layout: .standard, facts: facts()), [
-            .single(.resume), .single(.jumpBackIn), .single(.madeForYou), .single(.recentlyAdded),
-            .pair(.onThisDay, .thisWeek),
+            .single(.resume), .single(.jumpBackIn), .pair(.onThisDay, .thisWeek),
+            .single(.madeForYou), .single(.recentlyAdded),
         ])
     }
 
     func testC6SectionsWithNothingToShowStayOut() {
         XCTAssertEqual(HomeComposer.blocks(layout: .standard, facts: facts(jump: 1, added: 0, onThisDay: false)), [
-            .single(.resume), .single(.madeForYou), .single(.thisWeek),
+            .single(.resume), .single(.thisWeek), .single(.madeForYou),
         ])
     }
 

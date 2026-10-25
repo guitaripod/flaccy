@@ -31,10 +31,10 @@ impl Section {
     pub const ALL: [Section; 6] = [
         Section::Resume,
         Section::JumpBackIn,
-        Section::MadeForYou,
-        Section::RecentlyAdded,
         Section::OnThisDay,
         Section::ThisWeek,
+        Section::MadeForYou,
+        Section::RecentlyAdded,
     ];
 
     pub fn id(self) -> &'static str {
@@ -762,7 +762,7 @@ mod tests {
     fn l1_standard_encodes_every_section_and_nothing_hidden() {
         assert_eq!(
             Layout::standard().encoded(),
-            "continue,jumpBackIn,madeForYou,recentlyAdded,onThisDay,thisWeek|"
+            "continue,jumpBackIn,onThisDay,thisWeek,madeForYou,recentlyAdded|"
         );
         assert!(Layout::standard().is_standard());
     }
@@ -783,9 +783,9 @@ mod tests {
                 Section::ThisWeek,
                 Section::Resume,
                 Section::JumpBackIn,
+                Section::OnThisDay,
                 Section::MadeForYou,
-                Section::RecentlyAdded,
-                Section::OnThisDay
+                Section::RecentlyAdded
             ]
         );
         assert_eq!(l.hidden(), &HashSet::from([Section::ThisWeek]));
@@ -794,9 +794,9 @@ mod tests {
             vec![
                 Section::Resume,
                 Section::JumpBackIn,
+                Section::OnThisDay,
                 Section::MadeForYou,
-                Section::RecentlyAdded,
-                Section::OnThisDay
+                Section::RecentlyAdded
             ]
         );
     }
@@ -810,9 +810,9 @@ mod tests {
                 Section::MadeForYou,
                 Section::Resume,
                 Section::JumpBackIn,
-                Section::RecentlyAdded,
                 Section::OnThisDay,
-                Section::ThisWeek
+                Section::ThisWeek,
+                Section::RecentlyAdded
             ]
         );
         assert_eq!(l.hidden(), &HashSet::from([Section::Resume]));
@@ -821,7 +821,7 @@ mod tests {
     #[test]
     fn l5_moves_clamp_to_either_end() {
         assert_eq!(Layout::standard().moving(0, 99).order().last(), Some(&Section::Resume));
-        assert_eq!(Layout::standard().moving(5, -3).order().first(), Some(&Section::ThisWeek));
+        assert_eq!(Layout::standard().moving(5, -3).order().first(), Some(&Section::RecentlyAdded));
         assert_eq!(Layout::standard().moving(9, 0), Layout::standard());
     }
 
@@ -830,7 +830,7 @@ mod tests {
         let hidden = Layout::standard().setting(Section::OnThisDay, false);
         assert_eq!(
             hidden.encoded(),
-            "continue,jumpBackIn,madeForYou,recentlyAdded,onThisDay,thisWeek|onThisDay"
+            "continue,jumpBackIn,onThisDay,thisWeek,madeForYou,recentlyAdded|onThisDay"
         );
         assert_eq!(Layout::decode(Some(&hidden.encoded())), hidden);
         assert_eq!(hidden.setting(Section::OnThisDay, true), Layout::standard());
@@ -898,9 +898,9 @@ mod tests {
             vec![
                 Block::Single(Section::Resume),
                 Block::Single(Section::JumpBackIn),
+                Block::Pair(Section::OnThisDay, Section::ThisWeek),
                 Block::Single(Section::MadeForYou),
                 Block::Single(Section::RecentlyAdded),
-                Block::Pair(Section::OnThisDay, Section::ThisWeek),
             ]
         );
     }
@@ -917,8 +917,8 @@ mod tests {
             blocks(&Layout::standard(), &f),
             vec![
                 Block::Single(Section::Resume),
-                Block::Single(Section::MadeForYou),
                 Block::Single(Section::ThisWeek),
+                Block::Single(Section::MadeForYou),
             ]
         );
     }

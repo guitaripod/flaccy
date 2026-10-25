@@ -6,10 +6,10 @@ import Foundation
 public enum HomeSection: String, CaseIterable, Sendable, Codable {
     case resume = "continue"
     case jumpBackIn
-    case madeForYou
-    case recentlyAdded
     case onThisDay
     case thisWeek
+    case madeForYou
+    case recentlyAdded
 
     /// Sections small enough to sit side by side when they are neighbours.
     public var isCompact: Bool {
