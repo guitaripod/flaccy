@@ -259,6 +259,10 @@ final class PlaylistsViewController: NSViewController {
             guard !entry.tracks.isEmpty else { return }
             AudioPlayer.shared.play(entry.tracks.shuffled(), startingAt: 0)
         })
+        if let download = MacRemoteDownloadActions.menuItem(for: entry.tracks, window: view.window) {
+            menu.addItem(.separator())
+            menu.addItem(download)
+        }
         menu.addItem(.separator())
         MacArtworkEditor.coverMenuItems(for: entry.record, tracks: entry.tracks, window: view.window)
             .forEach(menu.addItem)

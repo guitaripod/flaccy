@@ -123,6 +123,21 @@ actor SubsonicClient {
         return try await call("getAlbumList2", parameters).albumList2?.album ?? []
     }
 
+    /// The number of songs the server holds, summed from its albums' song counts; nil when it cannot say.
+    func songTotal() async -> Int? {
+        var total = 0
+        var offset = 0
+        var previousFirst: String?
+        while true {
+            guard let page = try? await albumsPage(offset: offset, size: 500) else { return nil }
+            guard let first = page.first, first.id != previousFirst else { break }
+            previousFirst = first.id
+            total += page.reduce(0) { $0 + ($1.songCount ?? 0) }
+            offset += page.count
+        }
+        return total > 0 ? total : nil
+    }
+
     func album(id: String) async throws -> SubsonicResponse.AlbumWithSongs {
         guard let album = try await call("getAlbum", [("id", id)]).album else { throw RemoteFailure.notSubsonic(host: host) }
         return album

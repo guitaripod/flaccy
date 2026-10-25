@@ -26,6 +26,7 @@ final class SettingsViewController: UITableViewController {
     var libraryDebut: LibraryDebutSummary?
     var isTrialSectionVisible = false
     var isRestoring = false
+    let serversModel = RemoteServersViewModel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -50,6 +51,7 @@ final class SettingsViewController: UITableViewController {
         refreshTrialSectionVisibility()
         loadPriceIfNeeded()
         observeMetadata()
+        observeServers()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(purchaseStateChanged),
@@ -237,6 +239,11 @@ final class SettingsViewController: UITableViewController {
         snapshot.appendItems([.equalizer(summary: EqualizerCopy.settingsSummary), .gaplessPlayback, .autoplaySimilar, .libraryRadio, .crateDig], toSection: .playback)
         snapshot.appendItems([.listeningGuide], toSection: .guide)
         snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedCount, profile: WatchSyncService.shared.profile)], toSection: .watch)
+        snapshot.appendItems(serverRows(), toSection: .servers)
+        snapshot.appendItems(
+            [.cacheLimit, .cacheUsage(serversModel.cacheCaption), .clearCache],
+            toSection: .serverCache
+        )
         snapshot.appendItems(libraryRows(), toSection: .library)
         if libraryDebut != nil {
             snapshot.appendItems([.libraryDebutSummary], toSection: .setup)
@@ -278,7 +285,8 @@ final class SettingsViewController: UITableViewController {
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
         switch row {
         case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
-             .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry:
+             .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
+             .serversExplainer, .server, .cacheLimit, .cacheUsage:
             return false
         case .importLastFM: return lastFMImportProgress == nil
         case .rescanLibrary: return !isRescanning
@@ -306,8 +314,11 @@ final class SettingsViewController: UITableViewController {
         case .rescanLibrary: handleRescanTap()
         case .metadataReport: handleMetadataTap()
         case .findMissingArtwork: handleFindMissingArtworkTap()
+        case .addServer: handleAddServerTap()
+        case .clearCache: handleClearCacheTap()
         case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
-             .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry:
+             .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
+             .serversExplainer, .server, .cacheLimit, .cacheUsage:
             break
         }
     }

@@ -101,8 +101,11 @@ final class AlbumTrackCell: UITableViewCell {
         numberLabel.text = track.trackNumber > 0 ? "\(track.trackNumber)" : "\(index + 1)"
         trackTitleLabel.text = track.title
         let newMix = track.showsNewMix
+        let downloaded = track.isDownloadedRemote
         titleRow.setNewMix(newMix)
-        accessibilityLabel = newMix ? TrackVersionCopy.accessibilityLabel(track.title, newMix: true) : nil
+        titleRow.setDownloaded(downloaded)
+        accessibilityLabel = TrackVersionCopy.accessibilityLabel(track.title, newMix: newMix, downloaded: downloaded)
+        contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
         let minutes = Int(track.duration) / 60
         let seconds = Int(track.duration) % 60
         durationLabel.text = String(format: "%d:%02d", minutes, seconds)

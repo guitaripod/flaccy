@@ -57,6 +57,9 @@ enum MacTrackMenuFactory {
         playlistItem.image = NSImage(systemSymbolName: "music.note.list", accessibilityDescription: nil)
         playlistItem.submenu = PlaylistActions.addToPlaylistSubmenu(for: [track], in: window)
         menu.addItem(playlistItem)
+        if let download = MacRemoteDownloadActions.menuItem(for: [track], window: window) {
+            menu.addItem(download)
+        }
         menu.addItem(.separator())
 
         if options.includeGoToAlbum {
@@ -77,7 +80,7 @@ enum MacTrackMenuFactory {
         menu.addItem(shareSubmenuItem(
             subject: .track(title: track.title, artist: track.artist), anchor: anchor
         ))
-        if let file = RemoteStreamCache.shared.readableFile(for: track.fileURL) {
+        if track.remoteSong == nil, let file = RemoteStreamCache.shared.readableFile(for: track.fileURL) {
             menu.addItem(ClosureMenuItem(title: String(localized: "Show in Finder"), systemImage: "folder") {
                 NSWorkspace.shared.activateFileViewerSelecting([file])
             })
@@ -165,6 +168,9 @@ enum MacTrackMenuFactory {
         playlistItem.image = NSImage(systemSymbolName: "music.note.list", accessibilityDescription: nil)
         playlistItem.submenu = PlaylistActions.addToPlaylistSubmenu(for: album.tracks, in: window)
         menu.addItem(playlistItem)
+        if let download = MacRemoteDownloadActions.menuItem(for: album.tracks, window: window) {
+            menu.addItem(download)
+        }
         menu.addItem(.separator())
 
         menu.addItem(shareSubmenuItem(
@@ -176,13 +182,15 @@ enum MacTrackMenuFactory {
         menu.addItem(ClosureMenuItem(title: String(localized: "Edit Artwork…"), systemImage: "photo") {
             MacArtworkEditor.present(for: album, from: window)
         })
-        menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(
-            title: LibraryRoot.shared.isUsingDefaultRoot ? "Move to Trash…" : "Remove from Library…",
-            systemImage: "trash"
-        ) {
-            TrackDeletion.confirmAndDelete(album.tracks, in: window)
-        })
+        if album.tracks.contains(where: { $0.fileURL.isFileURL }) {
+            menu.addItem(.separator())
+            menu.addItem(ClosureMenuItem(
+                title: LibraryRoot.shared.isUsingDefaultRoot ? "Move to Trash…" : "Remove from Library…",
+                systemImage: "trash"
+            ) {
+                TrackDeletion.confirmAndDelete(album.tracks, in: window)
+            })
+        }
         return menu
     }
 

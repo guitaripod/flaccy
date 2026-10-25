@@ -36,6 +36,27 @@ nonisolated enum RemoteAuthentication: Sendable, Equatable {
     }
 }
 
+/// What a server says it is, worded for the Add Server sheet: "Navidrome 0.64.2 · OpenSubsonic".
+nonisolated struct RemoteServerSummary: Sendable, Equatable {
+    let type: String?
+    let version: String?
+    let isOpenSubsonic: Bool
+
+    var text: String {
+        let family = isOpenSubsonic ? "OpenSubsonic" : "Subsonic"
+        let name = [type.map(Self.displayName), version.map(Self.cleanVersion)].compactMap { $0 }.joined(separator: " ")
+        return name.isEmpty ? family : name + " \u{00B7} " + family
+    }
+
+    private static func displayName(_ type: String) -> String {
+        type.prefix(1).uppercased() + type.dropFirst()
+    }
+
+    private static func cleanVersion(_ version: String) -> String {
+        version.split(separator: " ").first.map(String.init) ?? version
+    }
+}
+
 /// The music servers the person added: what is known of each in the database, its secret in the
 /// Keychain, and the client that talks to it.
 actor RemoteServers {
@@ -84,6 +105,36 @@ actor RemoteServers {
         let client = SubsonicClient(serverID: id, base: base, credentials: credentials)
         clients[id] = client
         return client
+    }
+
+    /// Asks a server who it is without saving anything: the address is normalized, the server is
+    /// pinged and its OpenSubsonic extensions read. Throws the `RemoteFailure` the Add Server sheet shows.
+    func test(address: String, authentication: RemoteAuthentication) async throws -> RemoteServerSummary {
+        guard let base = ServerAddress.normalize(address) else { throw RemoteFailure.invalidAddress }
+        let probe = SubsonicClient(serverID: "test", base: base, credentials: authentication.credentials)
+        let hello = try await probe.ping()
+        let extensions = try await probe.extensions()
+        return RemoteServerSummary(
+            type: hello.type, version: hello.serverVersion, isOpenSubsonic: hello.openSubsonic == true || !extensions.isEmpty
+        )
+    }
+
+    /// Pings every server so the library knows which of them can be reached right now.
+    func refreshReachability() async {
+        for record in (try? list()) ?? [] {
+            guard let client = try? client(for: record.id) else { continue }
+            do {
+                _ = try await client.ping()
+                RemoteAvailability.shared.setReachable(serverID: record.id, true)
+            } catch let failure as RemoteFailure {
+                switch failure {
+                case .unreachable, .tlsFailure: RemoteAvailability.shared.setReachable(serverID: record.id, false)
+                default: RemoteAvailability.shared.setReachable(serverID: record.id, true)
+                }
+            } catch {
+                RemoteAvailability.shared.setReachable(serverID: record.id, false)
+            }
+        }
     }
 
     /// Adds a server after proving it answers: normalizes the address, pings it, reads its
@@ -167,6 +218,7 @@ actor RemoteServers {
         await RemoteStreamCache.shared.removeAll(serverID: id)
         credentialStore.removeSecret(for: id)
         clients[id] = nil
+        RemoteSyncStatus.shared.forget(serverID: id)
         RemoteSongDirectory.shared.invalidate(paths: paths)
         RemoteLog.info("Removed server \(id) with \(paths.count) songs")
         await RemoteCatalogSync.shared.publishRemoval(paths: paths)

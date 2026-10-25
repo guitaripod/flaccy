@@ -2771,6 +2771,70 @@
         }
       }
     },
+    "%@ of %@ songs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ von %@ Songs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ de %@ canciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ sur %@ morceaux"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ di %@ brani"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ / %@ 曲"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ / %@곡"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ z %@ utworów"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ de %@ músicas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ / %@ 首歌曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ / %@ 首歌曲"
+          }
+        }
+      }
+    },
     "%@ of %@ tracks": {
       "localizations": {
         "de": {
@@ -3417,6 +3481,70 @@
         }
       }
     },
+    "%@ songs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Songs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ canciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ morceaux"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ brani"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 曲"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@곡"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ utworów"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ músicas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 首歌曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 首歌曲"
+          }
+        }
+      }
+    },
     "%@ songs with synced lyrics": {
       "localizations": {
         "de": {
@@ -3541,6 +3669,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 首歌曲 · %2$@"
+          }
+        }
+      }
+    },
+    "%@ source": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuente: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fonte: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソース: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 출처"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Źródło: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fonte: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 来源"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 來源"
           }
         }
       }
@@ -4735,6 +4927,70 @@
         }
       }
     },
+    "%@, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、%@"
+          }
+        }
+      }
+    },
     "%@, %@ albums left": {
       "localizations": {
         "de": {
@@ -5125,6 +5381,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@，AI 暫時無法使用"
+          }
+        }
+      }
+    },
+    "%@, Downloaded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, heruntergeladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, descargada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, téléchargé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, scaricato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、ダウンロード済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, 다운로드됨"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, pobrany"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, baixada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、已下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、已下載"
           }
         }
       }
@@ -5661,6 +5981,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$d 小時 %2$02d 分"
+          }
+        }
+      }
+    },
+    "%lld GB": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Go"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld GB"
           }
         }
       }
@@ -14945,6 +15329,70 @@
         }
       }
     },
+    "1 song": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Song"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 canción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 morceau"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 brano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 曲"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1곡"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 utwór"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 música"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 首歌曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 首歌曲"
+          }
+        }
+      }
+    },
     "1 song is on your Watch": {
       "localizations": {
         "de": {
@@ -16225,6 +16673,70 @@
         }
       }
     },
+    "A server needs a name. Type one and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Server braucht einen Namen. Gib einen ein und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El servidor necesita un nombre. Escribe uno y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un serveur a besoin d’un nom. Saisis-en un, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il server deve avere un nome. Inseriscine uno e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーには名前が必要です。名前を入力して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버에는 이름이 필요합니다. 이름을 입력한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serwer potrzebuje nazwy. Wpisz ją i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O servidor precisa de um nome. Digite um e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器需要一个名称。请输入名称，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器需要一個名稱。請輸入名稱，然後再試一次。"
+          }
+        }
+      }
+    },
     "A shareable recap built from your local play history.": {
       "localizations": {
         "de": {
@@ -16993,6 +17505,70 @@
         }
       }
     },
+    "API Key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Schlüssel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clave de API"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé d’API"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiave API"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API キー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 키"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klucz API"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chave de API"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 金鑰"
+          }
+        }
+      }
+    },
     "ARTISTS": {
       "localizations": {
         "de": {
@@ -17373,6 +17949,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "原聲"
+          }
+        }
+      }
+    },
+    "Actions for %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktionen für %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acciones para %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actions pour %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Azioni per %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の操作"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 작업"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czynności dla: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ações para %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的操作"
           }
         }
       }
@@ -17919,6 +18559,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "加入範例音樂"
+          }
+        }
+      }
+    },
+    "Add Server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un serveur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーを追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 추가"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj serwer"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar servidor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增伺服器"
+          }
+        }
+      }
+    },
+    "Add Server…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server hinzufügen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir servidor…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un serveur…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi server…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーを追加…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 추가…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj serwer…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar servidor…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加服务器…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增伺服器…"
           }
         }
       }
@@ -19085,6 +19853,70 @@
         }
       }
     },
+    "Adding %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ wird hinzugefügt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadiendo %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajout de %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiunta di %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ を追加中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 추가 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodawanie: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionando %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在添加 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在新增 %@"
+          }
+        }
+      }
+    },
     "Adding to library…": {
       "localizations": {
         "de": {
@@ -19145,6 +19977,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在加入資料庫…"
+          }
+        }
+      }
+    },
+    "Address": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dirección"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indirizzo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アドレス"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주소"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adres"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endereço"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地址"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位址"
           }
         }
       }
@@ -24467,6 +25363,70 @@
         }
       }
     },
+    "Cache Limit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache-Limit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Límite de caché"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite du cache"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite cache"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャッシュの上限"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캐시 한도"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limit pamięci podręcznej"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite do cache"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缓存上限"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快取上限"
+          }
+        }
+      }
+    },
     "Calculating…": {
       "localizations": {
         "de": {
@@ -26681,6 +27641,198 @@
         }
       }
     },
+    "Clear Cache": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache leeren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vaciar caché"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vider le cache"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svuota cache"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャッシュを消去"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캐시 지우기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyść pamięć podręczną"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar cache"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除缓存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除快取"
+          }
+        }
+      }
+    },
+    "Clear Cache?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache leeren?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Vaciar caché?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vider le cache ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svuotare la cache?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャッシュを消去しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캐시를 지울까요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyścić pamięć podręczną?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar o cache?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除缓存？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除快取？"
+          }
+        }
+      }
+    },
+    "Clear Cache…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache leeren…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vaciar caché…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vider le cache…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svuota cache…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャッシュを消去…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캐시 지우기…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyść pamięć podręczną…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar cache…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除缓存…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除快取…"
+          }
+        }
+      }
+    },
     "Clear up next": {
       "localizations": {
         "de": {
@@ -26741,6 +27893,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "清除「接著播放」"
+          }
+        }
+      }
+    },
+    "Cleared %@ of cached songs. Downloads were not touched.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ der zwischengespeicherten Songs wurden gelöscht. Downloads blieben unberührt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se han vaciado %@ de canciones en caché. Las descargas no se han tocado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ de morceaux en cache ont été vidés. Les téléchargements n’ont pas été touchés."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svuotati %@ di brani in cache. I download non sono stati toccati."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャッシュ済みの曲 %@ を消去しました。ダウンロードは変更されていません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캐시된 곡 %@ 분량을 지웠습니다. 다운로드한 곡은 건드리지 않았습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyszczono %@ utworów z pamięci podręcznej. Pobrane utwory nie zostały naruszone."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foram liberados %@ de músicas em cache. Os downloads não foram alterados."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已清除 %@ 的缓存歌曲。下载内容未受影响。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已清除 %@ 的快取歌曲。下載內容未受影響。"
           }
         }
       }
@@ -36917,6 +38133,326 @@
         }
       }
     },
+    "Downloaded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heruntergeladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaricato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드됨"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobrane"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已下載"
+          }
+        }
+      }
+    },
+    "Downloaded %@ of %@. %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ von %@ heruntergeladen. %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargadas %@ de %@. %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ sur %@ téléchargés. %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaricati %@ di %@. %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ / %@ 曲をダウンロードしました。%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/%@ 다운로드했습니다. %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobrano %@ z %@. %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ de %@ baixadas. %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已下载 %@ / %@。%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已下載 %@ / %@。%@"
+          }
+        }
+      }
+    },
+    "Downloaded %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ heruntergeladen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se descargó %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a été téléchargé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ scaricato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ をダウンロードしました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 다운로드를 마쳤습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobrano %@."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ foi baixada."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已下载 %@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已下載 %@。"
+          }
+        }
+      }
+    },
+    "Downloading %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ wird heruntergeladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargando %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement de %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download di %@ in corso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ をダウンロード中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 다운로드 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobieranie: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixando %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載 %@"
+          }
+        }
+      }
+    },
+    "Downloading %@ of %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ von %@ wird heruntergeladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargando %@ de %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement de %@ sur %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download di %@ di %@ in corso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ / %@ をダウンロード中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/%@ 다운로드 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobieranie %@ z %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixando %@ de %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载 %@ / %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載 %@ / %@"
+          }
+        }
+      }
+    },
     "Downloading %lld of %lld…": {
       "localizations": {
         "de": {
@@ -42615,6 +44151,70 @@
         }
       }
     },
+    "Flaccy can’t use the camera. Allow it in Settings, or type the server’s address and key instead.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy kann die Kamera nicht verwenden. Erlaube den Zugriff in den Einstellungen oder gib stattdessen die Adresse und den Schlüssel des Servers ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy no puede usar la cámara. Permítelo en Ajustes o escribe en su lugar la dirección y la clave del servidor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy ne peut pas utiliser l’appareil photo. Autorise-le dans Réglages, ou saisis plutôt l’adresse et la clé du serveur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy non può usare la fotocamera. Consentine l’uso nelle Impostazioni oppure inserisci l’indirizzo e la chiave del server."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy はカメラを使用できません。「設定」で許可するか、代わりにサーバーのアドレスとキーを入力してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy가 카메라를 사용할 수 없습니다. 설정에서 허용하거나 서버의 주소와 키를 직접 입력하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy nie może używać aparatu. Zezwól na to w Ustawieniach albo wpisz adres i klucz serwera."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy não pode usar a câmera. Permita o acesso nos Ajustes ou digite o endereço e a chave do servidor."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 无法使用相机。请在“设置”中允许，或改为输入服务器的地址和密钥。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 無法使用相機。請在“設定”中允許，或改為輸入伺服器的位址和金鑰。"
+          }
+        }
+      }
+    },
     "Flaccy checked the file's own tags, looked for a .lrc or .elrc file next to the song, and asked lrclib.net. None of them have words for it. lrclib is written by its community, so Flaccy asks again in 30 days. A .lrc file saved next to the song shows up straight away.": {
       "localizations": {
         "de": {
@@ -47893,6 +49493,70 @@
         }
       }
     },
+    "Home Server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heimserver"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servidor doméstico"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serveur maison"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server di casa"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホームサーバー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "홈 서버"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serwer domowy"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servidor doméstico"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "家庭服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "家用伺服器"
+          }
+        }
+      }
+    },
     "Hover a preset to hear it": {
       "localizations": {
         "de": {
@@ -50377,6 +52041,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "已同步"
+          }
+        }
+      }
+    },
+    "In use: %@ cached, %@ downloaded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belegt: %@ zwischengespeichert, %@ heruntergeladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En uso: %@ en caché, %@ descargadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilisé : %@ en cache, %@ téléchargés"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In uso: %@ in cache, %@ scaricati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用中: キャッシュ %@、ダウンロード %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용 중: 캐시 %@, 다운로드 %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zajęte: %@ w pamięci podręcznej, %@ pobrane"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em uso: %@ em cache, %@ baixados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已使用：缓存 %@，下载 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已使用：快取 %@，下載 %@"
           }
         }
       }
@@ -62077,6 +63805,70 @@
         }
       }
     },
+    "No servers yet. Add one to play its library here.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Server. Füge einen hinzu, um seine Mediathek hier abzuspielen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay servidores. Añade uno para reproducir su biblioteca aquí."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun serveur pour l’instant. Ajoute-en un pour lire sa bibliothèque ici."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun server per ora. Aggiungine uno per riprodurre qui la sua libreria."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーはまだありません。追加すると、そのライブラリをここで再生できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 서버가 없습니다. 서버를 추가하면 그 보관함을 여기서 재생할 수 있습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak serwerów. Dodaj serwer, aby odtwarzać tutaj jego bibliotekę."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum servidor ainda. Adicione um para tocar a biblioteca dele aqui."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有服务器。添加一个，即可在这里播放它的资料库。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無伺服器。新增一個，即可在這裡播放它的資料庫。"
+          }
+        }
+      }
+    },
     "No similar artists in your library yet.": {
       "localizations": {
         "de": {
@@ -63161,6 +64953,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "未同步"
+          }
+        }
+      }
+    },
+    "Not synced yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht synchronisiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no sincronizado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore synchronisé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non ancora sincronizzato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未同期"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 동기화되지 않음"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeszcze nie zsynchronizowano"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não sincronizado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未同步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未同步"
           }
         }
       }
@@ -65167,6 +67023,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "單曲循環"
+          }
+        }
+      }
+    },
+    "On This Mac": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Mac"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur ce Mac"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo Mac"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Mac"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Mac"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na tym Macu"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neste Mac"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 Mac"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 Mac"
+          }
+        }
+      }
+    },
+    "On This iPhone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem iPhone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este iPhone"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur cet iPhone"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo iPhone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この iPhone"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPhone"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na tym iPhonie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neste iPhone"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPhone"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPhone"
           }
         }
       }
@@ -67993,6 +69977,70 @@
         }
       }
     },
+    "Password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contraseña"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot de passe"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hasło"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密碼"
+          }
+        }
+      }
+    },
     "Paste": {
       "localizations": {
         "de": {
@@ -68053,6 +70101,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "貼上"
+          }
+        }
+      }
+    },
+    "Paste Link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link einfügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pegar enlace"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coller le lien"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incolla link"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクをペースト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크 붙여넣기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wklej link"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colar link"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴链接"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼上連結"
           }
         }
       }
@@ -69633,6 +71745,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放預覽"
+          }
+        }
+      }
+    },
+    "Play a library from your own music server, such as Navidrome or Flaccy Server. Its songs join your library next to the ones on this device.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiele eine Mediathek von deinem eigenen Musikserver ab, etwa von Navidrome oder Flaccy Server. Ihre Songs erscheinen in deiner Mediathek neben denen auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproduce una biblioteca de tu propio servidor de música, como Navidrome o Flaccy Server. Sus canciones se suman a tu biblioteca junto a las de este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lis une bibliothèque depuis ton propre serveur musical, comme Navidrome ou Flaccy Server. Ses morceaux rejoignent ta bibliothèque à côté de ceux de cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci una libreria dal tuo server musicale, come Navidrome o Flaccy Server. I suoi brani si aggiungono alla tua libreria, accanto a quelli di questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分の音楽サーバー（Navidrome や Flaccy Server など）のライブラリを再生できます。サーバーの曲は、このデバイスの曲と一緒にライブラリに追加されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome이나 Flaccy Server 같은 내 음악 서버의 보관함을 재생할 수 있습니다. 서버의 곡은 이 기기의 곡과 함께 내 보관함에 추가됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzaj bibliotekę z własnego serwera muzyki, na przykład Navidrome lub Flaccy Server. Jego utwory dołączą do Twojej biblioteki obok tych z tego urządzenia."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toque uma biblioteca do seu próprio servidor de música, como o Navidrome ou o Flaccy Server. As músicas dele entram na sua biblioteca junto com as deste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放你自己的音乐服务器（如 Navidrome 或 Flaccy Server）上的资料库。其中的歌曲会与此设备上的歌曲一起加入你的资料库。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放你自己的音樂伺服器（如 Navidrome 或 Flaccy Server）上的資料庫。其中的歌曲會與此裝置上的歌曲一起加入你的資料庫。"
           }
         }
       }
@@ -72287,6 +74463,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "把 Flaccy 指向你的音樂資料夾，它就會就地索引一切——FLAC、ALAC、MP3 等等，不拷貝也不移動。"
+          }
+        }
+      }
+    },
+    "Point the camera at the QR code your Flaccy Server printed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Richte die Kamera auf den QR-Code, den dein Flaccy Server ausgegeben hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apunta la cámara al código QR que imprimió tu Flaccy Server."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dirige l’appareil photo vers le code QR affiché par ton Flaccy Server."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inquadra con la fotocamera il codice QR stampato dal tuo Flaccy Server."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server が表示した QR コードにカメラを向けてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server가 출력한 QR 코드에 카메라를 맞추세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skieruj aparat na kod QR wydrukowany przez Twój serwer Flaccy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aponte a câmera para o código QR que o seu Flaccy Server imprimiu."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将相机对准 Flaccy Server 打印的 QR 码。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將相機對準 Flaccy Server 印出的 QR 碼。"
           }
         }
       }
@@ -78393,6 +80633,134 @@
         }
       }
     },
+    "Remove Download": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar descarga"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer le téléchargement"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi download"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードを削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드 삭제"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń pobranie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover download"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除下載"
+          }
+        }
+      }
+    },
+    "Remove Server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer le serveur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーを削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 삭제"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń serwer"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover servidor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除伺服器"
+          }
+        }
+      }
+    },
     "Remove band": {
       "localizations": {
         "de": {
@@ -78713,6 +81081,134 @@
         }
       }
     },
+    "Remove “%@”?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ entfernen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Quitar “%@”?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer « %@ » ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovere “%@”?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” を削除しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 삭제할까요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usunąć „%@”?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover “%@”?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除“%@”？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除“%@”？"
+          }
+        }
+      }
+    },
+    "Removed %@ from your downloads.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ wurde aus deinen Downloads entfernt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se quitó %@ de tus descargas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a été retiré de tes téléchargements."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ è stato rimosso dai tuoi download."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ をダウンロードから削除しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드에서 %@ 항목을 삭제했습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usunięto %@ z pobranych."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ foi removida dos seus downloads."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已将 %@ 从下载中移除。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已將 %@ 從下載中移除。"
+          }
+        }
+      }
+    },
     "Removed %lld duplicates": {
       "localizations": {
         "de": {
@@ -78849,6 +81345,198 @@
           "stringUnit": {
             "state": "translated",
             "value": "已移除 %1$lld／%2$lld — 請查看記錄"
+          }
+        }
+      }
+    },
+    "Removed “%@” and %@ from your library.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ und %@ wurden aus deiner Mediathek entfernt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se quitaron “%@” y %@ de tu biblioteca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” et %@ ont été retirés de ta bibliothèque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” e %@ sono stati rimossi dalla tua libreria."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” と %@ をライブラリから削除しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함에서 “%@” 및 %@ 항목을 삭제했습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usunięto „%@” i %@ z Twojej biblioteki."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” e %@ foram removidas da sua biblioteca."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已从你的资料库中移除“%@”和 %@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已從你的資料庫中移除“%@”和 %@。"
+          }
+        }
+      }
+    },
+    "Removes cached songs and keeps your downloads": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernt zwischengespeicherte Songs und behält deine Downloads"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quita las canciones en caché y conserva tus descargas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprime les morceaux en cache et conserve tes téléchargements"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuove i brani in cache e mantiene i download"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャッシュ済みの曲を消去し、ダウンロードは残します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캐시된 곡을 지우고 다운로드한 곡은 남겨 둡니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuwa utwory z pamięci podręcznej i zachowuje pobrane"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove as músicas em cache e mantém seus downloads"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除缓存歌曲，保留下载内容"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除快取歌曲，保留下載內容"
+          }
+        }
+      }
+    },
+    "Remove…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除…"
           }
         }
       }
@@ -79169,6 +81857,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新命名預設"
+          }
+        }
+      }
+    },
+    "Rename Server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server umbenennen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar nombre del servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renommer le serveur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rinomina server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバー名を変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 이름 변경"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zmień nazwę serwera"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renomear servidor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重命名服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名伺服器"
           }
         }
       }
@@ -79725,6 +82477,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "要用較新版本取代「%@」嗎？"
+          }
+        }
+      }
+    },
+    "Required": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erforderlich"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obligatorio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obligatoire"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obbligatorio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "必須"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필수"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagane"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obrigatório"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "必填"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "必填"
           }
         }
       }
@@ -82317,6 +85133,70 @@
         }
       }
     },
+    "Scan QR Code": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR-Code scannen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escanear código QR"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanner le code QR"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scansiona codice QR"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR コードをスキャン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR 코드 스캔"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skanuj kod QR"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escanear código QR"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扫描 QR 码"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "掃描 QR 碼"
+          }
+        }
+      }
+    },
     "Scanning your files for audio": {
       "localizations": {
         "de": {
@@ -84531,6 +87411,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新傳送再次停止的歌曲"
+          }
+        }
+      }
+    },
+    "Server Cache": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server-Cache"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caché del servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache du serveur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache del server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーのキャッシュ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 캐시"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pamięć podręczna serwera"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache do servidor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器缓存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器快取"
+          }
+        }
+      }
+    },
+    "Servers": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servidores"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serveurs"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serwery"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servidores"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器"
           }
         }
       }
@@ -87229,6 +90237,70 @@
         }
       }
     },
+    "Sign in with": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anmelden mit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar sesión con"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se connecter avec"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accedi con"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サインイン方式"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인 방식"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zaloguj się za pomocą"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrar com"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登录方式"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登入方式"
+          }
+        }
+      }
+    },
     "Signs in to Last.fm to scrobble your listens": {
       "localizations": {
         "de": {
@@ -88843,6 +91915,134 @@
         }
       }
     },
+    "Songs you stream are kept here so they replay without the server. The least recently played go first once the limit is reached. Songs you download stay outside the limit.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Songs, die du streamst, werden hier gespeichert, damit sie ohne den Server wieder abgespielt werden können. Wenn das Limit erreicht ist, werden zuerst die zuletzt gespielten entfernt. Heruntergeladene Songs zählen nicht zum Limit."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las canciones que reproduces en streaming se guardan aquí para volver a sonar sin el servidor. Al llegar al límite, primero se quitan las que se reprodujeron menos recientemente. Las canciones descargadas no cuentan para el límite."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les morceaux que tu écoutes en streaming sont conservés ici pour être rejoués sans le serveur. Une fois la limite atteinte, les moins récemment joués partent en premier. Les morceaux téléchargés ne comptent pas dans la limite."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I brani che ascolti in streaming vengono conservati qui, così possono essere riprodotti senza il server. Raggiunto il limite, si eliminano prima quelli ascoltati meno di recente. I brani scaricati non rientrano nel limite."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーミングで再生した曲はここに保存され、サーバーなしでも再生できます。上限に達すると、最後に再生してからの時間が最も長い曲から削除されます。ダウンロードした曲は上限の対象外です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스트리밍으로 재생한 곡은 서버 없이도 다시 재생할 수 있도록 여기에 보관됩니다. 한도에 도달하면 가장 오래전에 재생한 곡부터 삭제됩니다. 다운로드한 곡은 한도에 포함되지 않습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory odtwarzane ze strumienia są tu przechowywane, aby dało się je odtworzyć bez serwera. Po osiągnięciu limitu najpierw usuwane są te, które grano najdawniej. Pobrane utwory nie są objęte limitem."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As músicas que você transmite ficam guardadas aqui para tocar sem o servidor. Ao atingir o limite, as menos tocadas recentemente saem primeiro. As músicas baixadas não entram no limite."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你流式播放的歌曲会保存在这里，即使没有服务器也能再次播放。达到上限后，最久未播放的歌曲会先被移除。你下载的歌曲不计入上限。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你串流播放的歌曲會保存在這裡，即使沒有伺服器也能再次播放。達到上限後，最久未播放的歌曲會先被移除。你下載的歌曲不計入上限。"
+          }
+        }
+      }
+    },
+    "Songs you streamed are fetched from the server again the next time you play them. Songs you downloaded are not touched.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestreamte Songs werden beim nächsten Abspielen erneut vom Server geladen. Heruntergeladene Songs bleiben unverändert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las canciones que has reproducido en streaming se volverán a descargar del servidor la próxima vez que las reproduzcas. Las canciones descargadas no se tocan."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les morceaux écoutés en streaming seront à nouveau récupérés sur le serveur la prochaine fois que tu les écouteras. Les morceaux téléchargés ne sont pas touchés."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I brani ascoltati in streaming verranno scaricati di nuovo dal server la prossima volta che li riprodurrai. I brani scaricati non vengono modificati."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーミングで再生した曲は、次に再生するときサーバーから再取得されます。ダウンロードした曲は変更されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스트리밍으로 재생한 곡은 다음에 재생할 때 서버에서 다시 가져옵니다. 다운로드한 곡은 그대로 유지됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory odtwarzane ze strumienia zostaną ponownie pobrane z serwera przy następnym odtworzeniu. Pobrane utwory nie są naruszane."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As músicas que você transmitiu serão buscadas no servidor de novo na próxima vez que tocar. As músicas baixadas não são alteradas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你流式播放过的歌曲会在下次播放时从服务器重新获取。你下载的歌曲不会受影响。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你串流播放過的歌曲會在下次播放時從伺服器重新取得。你下載的歌曲不會受影響。"
+          }
+        }
+      }
+    },
     "Sort": {
       "localizations": {
         "de": {
@@ -89095,6 +92295,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "演出者排序"
+          }
+        }
+      }
+    },
+    "Source": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origine"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソース"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출처"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Źródło"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fonte"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来源"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "來源"
           }
         }
       }
@@ -91147,6 +94411,70 @@
         }
       }
     },
+    "Synced %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisiert %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizado %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisé %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizzato %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に同期済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 동기화됨"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zsynchronizowano %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizado %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已同步 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已同步 %@"
+          }
+        }
+      }
+    },
     "Synced lyrics": {
       "localizations": {
         "de": {
@@ -91207,6 +94535,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "同步歌詞"
+          }
+        }
+      }
+    },
+    "Syncing %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisiere %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizando %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisation de %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizzazione di %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ を同期中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 동기화 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronizowanie: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizando %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在同步 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在同步 %@"
           }
         }
       }
@@ -92861,6 +96253,70 @@
         }
       }
     },
+    "Test": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tester"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テスト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "테스트"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testuj"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "測試"
+          }
+        }
+      }
+    },
     "Test notification on its way": {
       "localizations": {
         "de": {
@@ -92925,6 +96381,70 @@
         }
       }
     },
+    "Testing the connection…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindung wird getestet…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probando la conexión…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test de la connexion…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica della connessione…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続をテスト中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 테스트 중…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testowanie połączenia…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testando a conexão…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在测试连接…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在測試連線…"
+          }
+        }
+      }
+    },
     "Thanks for supporting flaccy": {
       "localizations": {
         "de": {
@@ -92985,6 +96505,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "感謝你支持 flaccy"
+          }
+        }
+      }
+    },
+    "That code isn’t a Flaccy Server link. Scan the QR code printed by flaccy-server key add --url.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Code ist kein Flaccy Server-Link. Scanne den QR-Code, den flaccy-server key add --url ausgibt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ese código no es un enlace de Flaccy Server. Escanea el código QR que imprime flaccy-server key add --url."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce code n’est pas un lien Flaccy Server. Scanne le code QR affiché par flaccy-server key add --url."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo codice non è un link di Flaccy Server. Scansiona il codice QR stampato da flaccy-server key add --url."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このコードは Flaccy Server のリンクではありません。flaccy-server key add --url で表示される QR コードをスキャンしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 코드는 Flaccy Server 링크가 아닙니다. flaccy-server key add --url 명령이 출력한 QR 코드를 스캔하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten kod nie jest linkiem serwera Flaccy Server. Zeskanuj kod QR wydrukowany przez flaccy-server key add --url."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esse código não é um link do Flaccy Server. Escaneie o código QR impresso por flaccy-server key add --url."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此码不是 Flaccy Server 链接。请扫描 flaccy-server key add --url 打印的 QR 码。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此碼不是 Flaccy Server 連結。請掃描 flaccy-server key add --url 印出的 QR 碼。"
           }
         }
       }
@@ -93775,6 +97359,70 @@
         }
       }
     },
+    "The clipboard doesn’t hold a Flaccy Server link. Copy the flaccy://server link the server printed, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zwischenablage enthält keinen Flaccy Server-Link. Kopiere den flaccy://server-Link, den der Server ausgegeben hat, und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El portapapeles no contiene un enlace de Flaccy Server. Copia el enlace flaccy://server que imprimió el servidor y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le presse-papiers ne contient pas de lien Flaccy Server. Copie le lien flaccy://server affiché par le serveur, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli appunti non contengono un link di Flaccy Server. Copia il link flaccy://server stampato dal server e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリップボードに Flaccy Server のリンクがありません。サーバーが表示した flaccy://server のリンクをコピーして、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드에 Flaccy Server 링크가 없습니다. 서버가 출력한 flaccy://server 링크를 복사한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schowek nie zawiera linku serwera Flaccy Server. Skopiuj link flaccy://server wydrukowany przez serwer i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A área de transferência não tem um link do Flaccy Server. Copie o link flaccy://server impresso pelo servidor e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剪贴板中没有 Flaccy Server 链接。请复制服务器打印的 flaccy://server 链接，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剪貼簿中沒有 Flaccy Server 連結。請複製伺服器印出的 flaccy://server 連結，然後再試一次。"
+          }
+        }
+      }
+    },
     "The clipboard has no text": {
       "localizations": {
         "de": {
@@ -93969,6 +97617,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "您裁切的封面尚未儲存。"
+          }
+        }
+      }
+    },
+    "The download was interrupted. Try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Download wurde unterbrochen. Versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La descarga se interrumpió. Vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le téléchargement a été interrompu. Réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il download è stato interrotto. Riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードが中断されました。もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드가 중단되었습니다. 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobieranie zostało przerwane. Spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O download foi interrompido. Tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载已中断。请重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載已中斷。請再試一次。"
           }
         }
       }
@@ -94417,6 +98129,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "中繼資料來源中沒有「%@」的新資訊。"
+          }
+        }
+      }
+    },
+    "The name shows in the library’s source filter and in messages. Its songs stay where they are.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Name erscheint im Quellfilter der Mediathek und in Meldungen. Seine Songs bleiben, wo sie sind."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El nombre aparece en el filtro de fuente de la biblioteca y en los mensajes. Sus canciones se quedan donde están."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le nom apparaît dans le filtre de source de la bibliothèque et dans les messages. Ses morceaux restent à leur place."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il nome compare nel filtro di origine della libreria e nei messaggi. I suoi brani restano dove sono."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この名前はライブラリのソースフィルタとメッセージに表示されます。曲の保存先は変わりません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 이름은 보관함의 출처 필터와 메시지에 표시됩니다. 곡은 그대로 유지됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nazwa pojawia się w filtrze źródeł biblioteki i w komunikatach. Jej utwory pozostają tam, gdzie są."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O nome aparece no filtro de fonte da biblioteca e nas mensagens. As músicas dele continuam onde estão."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此名称会显示在资料库的来源筛选器和消息中。其中的歌曲保持不变。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此名稱會顯示在資料庫的來源篩選器和訊息中。其中的歌曲保持不變。"
           }
         }
       }
@@ -95637,6 +99413,70 @@
         }
       }
     },
+    "This device has no camera to scan with. Type the server’s address and key instead.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Gerät hat keine Kamera zum Scannen. Gib stattdessen die Adresse und den Schlüssel des Servers ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este dispositivo no tiene cámara para escanear. Escribe en su lugar la dirección y la clave del servidor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet appareil n’a pas de caméra pour scanner. Saisis plutôt l’adresse et la clé du serveur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo dispositivo non ha una fotocamera per la scansione. Inserisci invece l’indirizzo e la chiave del server."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスにはスキャン用のカメラがありません。代わりにサーバーのアドレスとキーを入力してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기에는 스캔할 카메라가 없습니다. 대신 서버의 주소와 키를 입력하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To urządzenie nie ma aparatu do skanowania. Wpisz zamiast tego adres i klucz serwera."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este dispositivo não tem câmera para escanear. Digite o endereço e a chave do servidor."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此设备没有可用于扫描的相机。请改为输入服务器的地址和密钥。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此裝置沒有可用於掃描的相機。請改為輸入伺服器的位址和金鑰。"
+          }
+        }
+      }
+    },
     "This output remembers its own profile": {
       "localizations": {
         "de": {
@@ -95825,6 +99665,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "這會用 AI 重新分析每首曲目的中繼資料，並在資料庫中改寫標題、演出者與專輯歸類。資料庫較大時可能需要幾分鐘。"
+          }
+        }
+      }
+    },
+    "This removes %@ from your library and any playlists, and deletes the copies cached or downloaded on this device. The server itself is not changed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dadurch wird %@ aus deiner Mediathek und allen Playlists entfernt, und die auf diesem Gerät zwischengespeicherten oder heruntergeladenen Kopien werden gelöscht. Der Server selbst wird nicht verändert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esto quita %@ de tu biblioteca y de todas las listas de reproducción, y borra las copias en caché o descargadas en este dispositivo. El servidor en sí no cambia."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cela retire %@ de ta bibliothèque et de toutes les playlists, et supprime les copies en cache ou téléchargées sur cet appareil. Le serveur lui-même n’est pas modifié."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo rimuove %@ dalla tua libreria e da tutte le playlist, ed elimina le copie in cache o scaricate su questo dispositivo. Il server non viene modificato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ をライブラリとすべてのプレイリストから削除し、このデバイスにキャッシュまたはダウンロードされたコピーを消去します。サーバー自体は変更されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이렇게 하면 보관함과 모든 재생목록에서 %@ 항목을 삭제하고, 이 기기에 캐시되거나 다운로드된 사본도 지웁니다. 서버 자체는 변경되지 않습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To usunie %@ z Twojej biblioteki i wszystkich playlist oraz skasuje kopie zapisane w pamięci podręcznej lub pobrane na tym urządzeniu. Sam serwer nie zostanie zmieniony."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso remove %@ da sua biblioteca e de todas as playlists, e apaga as cópias em cache ou baixadas neste dispositivo. O próprio servidor não é alterado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此操作会将 %@ 从你的资料库和所有播放列表中移除，并删除此设备上缓存或下载的副本。服务器本身不会改变。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此操作會將 %@ 從你的資料庫和所有播放清單中移除，並刪除此裝置上快取或下載的副本。伺服器本身不會變更。"
           }
         }
       }
@@ -98937,6 +102841,198 @@
         }
       }
     },
+    "Type the API key, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib den API-Schlüssel ein und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribe la clave de API y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisis la clé d’API, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci la chiave API e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API キーを入力して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 키를 입력한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wpisz klucz API i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite a chave de API e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入 API 密钥，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請輸入 API 金鑰，然後再試一次。"
+          }
+        }
+      }
+    },
+    "Type the server’s address, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die Adresse des Servers ein und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribe la dirección del servidor y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisis l’adresse du serveur, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci l’indirizzo del server e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーのアドレスを入力して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 주소를 입력한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wpisz adres serwera i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite o endereço do servidor e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入服务器地址，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請輸入伺服器位址，然後再試一次。"
+          }
+        }
+      }
+    },
+    "Type the username and the password, then try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib den Benutzernamen und das Passwort ein und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribe el nombre de usuario y la contraseña, y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisis le nom d’utilisateur et le mot de passe, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci nome utente e password e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザー名とパスワードを入力して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용자 이름과 비밀번호를 입력한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wpisz nazwę użytkownika i hasło, a potem spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite o nome de usuário e a senha e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入用户名和密码，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請輸入使用者名稱和密碼，然後再試一次。"
+          }
+        }
+      }
+    },
     "Under a day left · Get Lifetime": {
       "localizations": {
         "de": {
@@ -100825,6 +104921,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用原始封面？"
+          }
+        }
+      }
+    },
+    "Username": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzername"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre de usuario"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nom d’utilisateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome utente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザー名"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용자 이름"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nazwa użytkownika"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome de usuário"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用户名"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用者名稱"
           }
         }
       }
@@ -108625,6 +112785,70 @@
         }
       }
     },
+    "music.example.com or http://192.168.1.20:4533": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com oder http://192.168.1.20:4533"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com o http://192.168.1.20:4533"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com ou http://192.168.1.20:4533"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com o http://192.168.1.20:4533"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com または http://192.168.1.20:4533"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com 또는 http://192.168.1.20:4533"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com lub http://192.168.1.20:4533"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com ou http://192.168.1.20:4533"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com 或 http://192.168.1.20:4533"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "music.example.com 或 http://192.168.1.20:4533"
+          }
+        }
+      }
+    },
     "or drop an image here": {
       "localizations": {
         "de": {
@@ -109203,6 +113427,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」不在%@上"
+          }
+        }
+      }
+    },
+    "“%@” isn’t downloaded and %@ can’t be reached. Connect to the internet or Tailscale and try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ist nicht heruntergeladen und %@ ist nicht erreichbar. Verbinde dich mit dem Internet oder Tailscale und versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” no está descargada y %@ no se puede alcanzar. Conéctate a internet o a Tailscale y vuelve a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” n’est pas téléchargé et %@ est injoignable. Connecte-toi à Internet ou à Tailscale, puis réessaie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” non è scaricato e %@ non è raggiungibile. Connettiti a internet o a Tailscale e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” はダウンロードされておらず、%@ に接続できません。インターネットまたは Tailscale に接続して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”은(는) 다운로드되지 않았고 %@에 연결할 수 없습니다. 인터넷 또는 Tailscale에 연결한 뒤 다시 시도하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@” nie jest pobrany, a %@ jest nieosiągalny. Połącz się z internetem lub Tailscale i spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” não está baixada e %@ não pode ser acessado. Conecte-se à internet ou ao Tailscale e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 未下载，且无法连接 %@。请连接互联网或 Tailscale，然后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 尚未下載，且無法連線到 %@。請連線到網際網路或 Tailscale，然後再試一次。"
           }
         }
       }

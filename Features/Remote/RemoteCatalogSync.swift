@@ -72,9 +72,36 @@ actor RemoteCatalogSync {
     }
 
     private func performSync(serverID: String) async throws -> RemoteSyncReport {
+        let record = try? DatabaseManager.shared.fetchRemoteServer(id: serverID)
+        RemoteSyncStatus.shared.begin(
+            serverID: serverID, name: record?.name ?? serverID, isFirstSync: record?.lastSyncedAt == nil
+        )
+        do {
+            let report = try await runSync(serverID: serverID)
+            RemoteAvailability.shared.setReachable(serverID: serverID, true)
+            RemoteSyncStatus.shared.finish(serverID: serverID, failure: nil)
+            return report
+        } catch is CancellationError {
+            RemoteSyncStatus.shared.finish(serverID: serverID, failure: nil)
+            throw CancellationError()
+        } catch {
+            let host = await RemoteServers.shared.displayHost(for: serverID)
+            let failure = RemoteFailure.from(error, host: host)
+            switch failure {
+            case .unreachable, .tlsFailure: RemoteAvailability.shared.setReachable(serverID: serverID, false)
+            default: break
+            }
+            RemoteSyncStatus.shared.finish(serverID: serverID, failure: failure.errorDescription)
+            RemoteLog.error("Sync of \(host) failed: \(failure.errorDescription ?? "unknown")")
+            throw failure
+        }
+    }
+
+    private func runSync(serverID: String) async throws -> RemoteSyncReport {
         let client = try await RemoteServers.shared.client(for: serverID)
         let database = DatabaseManager.shared
         let started = Date()
+        Task { if let total = await client.songTotal() { RemoteSyncStatus.shared.update(serverID: serverID, songTotal: total) } }
         let songs = try await fetchAllSongs(client)
         try Task.checkCancellation()
         let server = songs.map(Self.item(from:))
@@ -96,8 +123,11 @@ actor RemoteCatalogSync {
         try database.applyRemoteCatalog(change)
         let touched = (diff.updated + diff.newVersions + diff.removed).map { RemoteTrackPath(serverID: serverID, songID: $0).path }
         RemoteSongDirectory.shared.invalidate(paths: touched)
-        let dropped = (diff.newVersions + diff.removed).map { RemoteTrackPath(serverID: serverID, songID: $0) }
-        await RemoteStreamCache.shared.discardFiles(of: dropped)
+        let dropped = diff.newVersions.map { RemoteTrackPath(serverID: serverID, songID: $0) }
+        let removedSongs = diff.removed.map { RemoteTrackPath(serverID: serverID, songID: $0) }
+        await RemoteStreamCache.shared.discardFiles(of: removedSongs)
+        RemoteAvailability.shared.forget(paths: removedSongs.map(\.path))
+        await RemoteStreamCache.shared.replaceFilesOfNewVersions(dropped)
         try database.markRemoteServerSynced(id: serverID, at: Date())
         let coversAdded = await fetchMissingCovers(client: client, songs: songs.map(Self.facts(from:)))
         await publishLibraryChange(covers: coversAdded)
@@ -128,6 +158,7 @@ actor RemoteCatalogSync {
             previousFirst = first.id
             for song in page where seen.insert(song.id).inserted { songs.append(song) }
             offset += page.count
+            RemoteSyncStatus.shared.update(serverID: client.serverID, songsRead: songs.count)
         }
         if songs.isEmpty { return try await fetchSongsAlbumByAlbum(client) }
         return songs
@@ -157,6 +188,7 @@ actor RemoteCatalogSync {
             for _ in 0..<Self.albumParallelism { _ = addNext(&group) }
             for try await batch in group {
                 for song in batch where seen.insert(song.id).inserted { songs.append(song) }
+                RemoteSyncStatus.shared.update(serverID: client.serverID, songsRead: songs.count)
                 _ = addNext(&group)
             }
         }

@@ -84,6 +84,9 @@ enum RemoteExercise {
             step("no WAV song on the server; skipped the seek and new-version steps")
         }
         try await pinAlbumAndCheck(containing: song, serverID: serverID)
+        try await checkDownloadedNewVersionsComeBack(containing: song, client: client)
+        try await checkDownloadEngine(containing: song, serverID: serverID)
+        try checkOfflineState(downloaded: song, others: remoteTracks, serverID: serverID)
         try await removeServerAndCheck(serverID: serverID, playlistID: playlistID)
         try? database.deletePlaylist(id: playlistID)
     }
@@ -178,6 +181,95 @@ enum RemoteExercise {
             guard let member = RemoteTrackPath(path: path) else { continue }
             try expect(RemoteStreamCache.shared.completeFileURL(for: member)?.path.hasPrefix(RemoteCacheLayout.pinnedRoot().path) == true, "\(path) is whole and pinned")
         }
+    }
+
+    /// A downloaded song whose cached file was dropped because the server now serves different bytes
+    /// must be downloaded again by itself, with its download mark kept: once when the stream finds the
+    /// new version (the validator hook makes the server answer an `If-Range` request with a 200), and
+    /// once when a catalog sync reports it (the call the sync makes for every new version).
+    private static func checkDownloadedNewVersionsComeBack(containing song: RemoteTrackPath, client: SubsonicClient) async throws {
+        let database = DatabaseManager.shared
+        let cache = RemoteStreamCache.shared
+        let paths = try database.fetchRemoteAlbumPaths(containing: song.path)
+        let songs = paths.compactMap { RemoteTrackPath(path: $0) }
+        let first = try require(songs.first, "the pinned album has a song")
+        let second = songs.count > 1 ? songs[1] : first
+        let pinnedRoot = RemoteCacheLayout.pinnedRoot().path
+
+        let revisionBefore = try require(try database.fetchTrack(byRelativePath: first.path), "the song has a row").revision
+        await cache.discardFiles(of: [first])
+        try await cache.ensure(first, range: 0..<1_000)
+        try await cache.replaceValidatorForExercise(of: first, with: "Mon, 01 Jan 2001 00:00:00 GMT")
+        try await cache.ensure(first, range: 1_000..<2_000)
+        try expect(try await waitForRevision(first, above: revisionBefore), "a new version found while streaming is recorded for a downloaded song")
+        try await expectDownloadedAgain(first, client: client, label: "after the stream found a new version", pinnedRoot: pinnedRoot)
+
+        await cache.replaceFilesOfNewVersions([second])
+        try expect(RemoteStreamCache.shared.completeFileURL(for: second) == nil, "the sync's new-version call dropped the downloaded file")
+        try expect(RemoteAvailability.shared.isPinned(path: second.path), "the song is still flagged as downloaded while its file is gone")
+        try await expectDownloadedAgain(second, client: client, label: "after a sync reported a new version", pinnedRoot: pinnedRoot)
+    }
+
+    private static func expectDownloadedAgain(
+        _ song: RemoteTrackPath, client: SubsonicClient, label: String, pinnedRoot: String
+    ) async throws {
+        let file = try await waitForCompleteFile(song)
+        try expect(file.path.hasPrefix(pinnedRoot), "the downloaded song is whole again under Application Support \(label)")
+        let original = try await client.download(id: song.songID)
+        defer { try? FileManager.default.removeItem(at: original) }
+        try expect(FileManager.default.contentsEqual(atPath: file.path, andPath: original.path), "the new download is byte-identical to the server's file \(label)")
+        try expect(try DatabaseManager.shared.fetchPinnedRemotePaths(serverID: song.serverID).contains(song.path), "the song is still flagged as downloaded \(label)")
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline, !RemoteAvailability.shared.isDownloaded(path: song.path) {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        try expect(RemoteAvailability.shared.isDownloaded(path: song.path), "the download mark stays \(label)")
+    }
+
+    /// The Download and Remove Download entries go through `RemoteDownloads`: removing lets go of the
+    /// pin and keeps the file as cache, downloading pins it again and moves the file out of the cache.
+    private static func checkDownloadEngine(containing song: RemoteTrackPath, serverID: String) async throws {
+        let paths = try DatabaseManager.shared.fetchRemoteAlbumPaths(containing: song.path)
+        try expect(RemoteDownloads.menuState(for: paths) == .removeDownload, "a whole downloaded album offers Remove Download")
+        let removed = await RemoteDownloads.remove(paths: paths)
+        try expect(removed == paths.count, "Remove Download lets go of every song of the album (\(removed))")
+        try expect(RemoteDownloads.menuState(for: paths) == .download, "after removal the album offers Download")
+        try expect(paths.allSatisfy { !RemoteAvailability.shared.isDownloaded(path: $0) }, "no song of the album is marked downloaded after removal")
+        let cachedRoot = RemoteCacheLayout.cachesRoot().path
+        for path in paths {
+            guard let member = RemoteTrackPath(path: path) else { continue }
+            try expect(RemoteStreamCache.shared.completeFileURL(for: member)?.path.hasPrefix(cachedRoot) == true, "\(path) stays on the device as cache")
+        }
+        var steps: [Int] = []
+        let outcome = await RemoteDownloads.download(paths: paths) { done, _ in steps.append(done) }
+        try expect(outcome.downloaded == paths.count && outcome.failureReason == nil, "Download fetches every song of the album (\(outcome.downloaded))")
+        try expect(steps.first == 0 && steps.last == paths.count, "download progress runs from 0 to \(paths.count)")
+        try expect(RemoteDownloads.menuState(for: paths) == .removeDownload, "after the download the album offers Remove Download")
+        let pinnedRoot = RemoteCacheLayout.pinnedRoot().path
+        for path in paths {
+            guard let member = RemoteTrackPath(path: path) else { continue }
+            try expect(RemoteStreamCache.shared.completeFileURL(for: member)?.path.hasPrefix(pinnedRoot) == true, "\(path) is whole and downloaded again")
+        }
+    }
+
+    /// A song of a server that does not answer is dimmed unless it is whole on the device, playing it
+    /// tells the person why, and the source filter admits exactly the songs of its source.
+    private static func checkOfflineState(downloaded song: RemoteTrackPath, others: [Track], serverID: String) throws {
+        let availability = RemoteAvailability.shared
+        let album = Set(try DatabaseManager.shared.fetchRemoteAlbumPaths(containing: song.path))
+        let stranger = try require(others.first { track in track.remoteSong.map { !album.contains($0.path) } ?? false }, "a song outside the downloaded album")
+        let strangerSong = try require(stranger.remoteSong, "the other song is a server song")
+        let strangerWasComplete = availability.isComplete(path: strangerSong.path)
+        availability.setReachable(serverID: serverID, false)
+        defer { availability.setReachable(serverID: serverID, true) }
+        try expect(!availability.isUnavailable(song), "a downloaded song stays playable while its server is out of reach")
+        try expect(strangerWasComplete || availability.isUnavailable(strangerSong), "a song with no whole copy is unavailable while its server is out of reach")
+        try expect(stranger.isUnavailableOffline == availability.isUnavailable(strangerSong), "the track reports what the availability says")
+        let message = RemoteCopy.unavailable(title: stranger.title, server: "Exercise")
+        try expect(message.contains(stranger.title) && message.contains("Exercise") && message.hasSuffix("Connect to the internet or Tailscale and try again."), "the offline toast names the song and the server and the next step")
+        try expect(LibrarySource.server(serverID).admits(stranger) && !LibrarySource.local.admits(stranger), "the server source admits its songs and the local source does not")
+        availability.setReachable(serverID: serverID, true)
+        try expect(!availability.isUnavailable(strangerSong), "a reachable server's songs are not dimmed")
     }
 
     private static func removeServerAndCheck(serverID: String, playlistID: Int64) async throws {

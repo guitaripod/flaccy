@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 extension LibraryViewController {
 
     func badgeAccessories(
-        qualityTrack: Track?, loved: Bool, scrobbleCount: Int? = nil, newMix: Bool = false
+        qualityTrack: Track?, loved: Bool, scrobbleCount: Int? = nil, newMix: Bool = false, downloaded: Bool = false
     ) -> [UICellAccessory] {
         let container = UIStackView()
         container.axis = .horizontal
@@ -16,6 +16,9 @@ extension LibraryViewController {
 
         if newMix {
             container.addArrangedSubview(NewMixChipView())
+        }
+        if downloaded {
+            container.addArrangedSubview(DownloadedMarkView())
         }
         if let scrobbleCount {
             container.addArrangedSubview(scrobbleCountView(scrobbleCount))
@@ -142,6 +145,7 @@ extension LibraryViewController {
 
         let songCompactRegistration = UICollectionView.CellRegistration<ListArtworkCell, Track> { [weak self] cell, _, track in
             let newMix = track.showsNewMix
+            let downloaded = track.isDownloadedRemote
             var content = UIListContentConfiguration.valueCell()
             content.text = track.title
             content.secondaryText = track.artist
@@ -152,11 +156,13 @@ extension LibraryViewController {
             cell.accessories = self?.badgeAccessories(
                 qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track),
                 scrobbleCount: self?.viewModel.scrobbleCount(for: track),
-                newMix: newMix
+                newMix: newMix,
+                downloaded: downloaded
             ) ?? []
-            cell.accessibilityLabel = newMix
-                ? TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: true)
-                : nil
+            cell.contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
+            cell.accessibilityLabel = TrackVersionCopy.accessibilityLabel(
+                "\(track.title), \(track.artist)", newMix: newMix, downloaded: downloaded
+            )
         }
 
         let artistRegistration = UICollectionView.CellRegistration<ListArtworkCell, ArtistItem> { [weak self] cell, _, artist in
@@ -278,10 +284,16 @@ extension LibraryViewController {
                 cell: cell, title: track.title, subtitle: "\(track.artist) · \(track.albumTitle)",
                 albumTitle: track.albumTitle, artist: track.artist, cornerRadius: 4
             )
+            let downloaded = track.isDownloadedRemote
             cell.accessories = self?.badgeAccessories(
                 qualityTrack: track, loved: LovedTracksService.shared.isLoved(track: track),
-                scrobbleCount: self?.viewModel.scrobbleCount(for: track)
+                scrobbleCount: self?.viewModel.scrobbleCount(for: track),
+                downloaded: downloaded
             ) ?? []
+            cell.contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
+            cell.accessibilityLabel = TrackVersionCopy.accessibilityLabel(
+                "\(track.title), \(track.artist)", newMix: false, downloaded: downloaded
+            )
         }
 
         dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView) {

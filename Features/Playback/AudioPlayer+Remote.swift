@@ -7,7 +7,10 @@ extension AudioPlayer {
     /// the rest of this song and the first 2 MB of the one behind it are fetched, and neither
     /// file may be evicted while it is wanted.
     func reportRemoteStart(of track: Track) {
-        if let song = track.remoteSong { RemoteServerReports.started(song) }
+        if let song = track.remoteSong {
+            RemoteServerReports.started(song)
+            if RemoteAvailability.shared.isUnavailable(song) { RemoteAvailability.shared.announceUnavailable(song) }
+        }
         let upcoming = queue.indices.contains(currentIndex + 1) ? queue[currentIndex + 1].remoteSong : nil
         let current = track.remoteSong
         Task {

@@ -58,6 +58,9 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(
             self, selector: #selector(tracksRevised), name: Library.tracksRevised, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(tracksRevised), name: RemoteAvailability.didChange, object: nil
+        )
     }
 
     deinit {
@@ -419,8 +422,13 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
             })
         }
         let coverMenu = UIMenu(options: .displayInline, children: coverActions)
+        var menuChildren: [UIMenuElement] = [coverMenu]
+        if let download = RemoteDownloadActions.action(for: tracks, in: self) {
+            menuChildren.append(UIMenu(options: .displayInline, children: [download]))
+        }
+        menuChildren.append(remove)
         let menuButton = UIBarButtonItem(
-            image: UIImage(systemName: "ellipsis.circle"), menu: UIMenu(children: [coverMenu, remove])
+            image: UIImage(systemName: "ellipsis.circle"), menu: UIMenu(children: menuChildren)
         )
         menuButton.accessibilityLabel = String(localized: "More")
         navigationItem.rightBarButtonItems = [editButtonItem, menuButton]
@@ -657,8 +665,11 @@ private final class PlaylistTrackCell: UITableViewCell {
         titleLabel.text = track.title
         artistLabel.text = track.artist
         let newMix = track.showsNewMix
+        let downloaded = track.isDownloadedRemote
         titleRow.setNewMix(newMix)
-        accessibilityLabel = newMix ? TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: true) : nil
+        titleRow.setDownloaded(downloaded)
+        accessibilityLabel = TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: newMix, downloaded: downloaded)
+        contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
         let total = Int(track.duration)
         durationLabel.text = String(format: "%d:%02d", total / 60, total % 60)
         titleLabel.textColor = isPlaying ? .tintColor : .label

@@ -1,3 +1,4 @@
+import FlaccyCore
 import UIKit
 import MidgarCore
 
@@ -40,6 +41,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         RemoteLaunch.start()
         #if DEBUG
         RemoteExercise.runIfRequested()
+        RemoteShot.runIfRequested(nav: nav)
         PaywallShot.runIfRequested(in: window)
         SampleExercise.runIfRequested()
         ReexportExercise.runIfRequested()
@@ -68,6 +70,31 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             self, selector: #selector(entitlementsDidLoad), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
         TrialReminderPrompt.observeOpportunities()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handlePlaybackUnavailable(_:)), name: RemoteAvailability.playbackUnavailable, object: nil
+        )
+        let launchLinks = connectionOptions.urlContexts.map(\.url)
+        if !launchLinks.isEmpty {
+            DispatchQueue.main.async { [weak self] in launchLinks.forEach { self?.openServerLink($0) } }
+        }
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        URLContexts.forEach { openServerLink($0.url) }
+    }
+
+    @objc private func handlePlaybackUnavailable(_ notification: Notification) {
+        guard let message = notification.userInfo?[RemoteAvailability.messageKey] as? String,
+              let top = TrialRunwayPresenter.topmostViewController(in: window) else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+        ToastView.show(message, in: top.view, style: .error)
+    }
+
+    /// Opens the Add Server sheet filled in from a `flaccy://server` link; any other link is left alone.
+    private func openServerLink(_ url: URL) {
+        guard let link = ServerLink(url: url), let top = TrialRunwayPresenter.topmostViewController(in: window) else { return }
+        MidgarLog.info("Opened a server link for \(link.name ?? "a server")", category: .ui)
+        AddServerViewController.present(from: top, servers: RemoteServersViewModel(), link: link)
     }
 
     /// The single place the paywall is presented from. A Debut on screen wins:
@@ -105,6 +132,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         TrialRunwayPresenter.refresh(in: window)
+        RemoteLaunch.becameActive()
         WatchSyncService.shared.resumeIfNeeded()
         Task {
             await RecapNotificationScheduler.shared.refreshSchedule()

@@ -53,6 +53,19 @@ extension LibraryViewController {
             .sink { [weak self] notification in self?.absorbHoistedCovers(notification) }
             .store(in: &cancellables)
 
+        NotificationCenter.default.publisher(for: RemoteAvailability.didChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.reconfigureVisibleArtwork() }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: RemoteSyncStatus.didChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.render(loadState: self.viewModel.currentLoadState)
+            }
+            .store(in: &cancellables)
+
         render(loadState: viewModel.currentLoadState, animated: false)
     }
 

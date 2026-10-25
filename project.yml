@@ -135,6 +135,7 @@ targets:
           - UI/AdaptiveLayout.swift
           - UI/AppAppearance.swift
           - UI/AsyncImageView.swift
+          - UI/DownloadedMarkView.swift
           - UI/FilterChipsView.swift
           - UI/IdentifiedSegmentedControl.swift
           - UI/LiquidGlass.swift
@@ -144,6 +145,7 @@ targets:
           - UI/NowPlayingBarsView.swift
           - UI/QualityBadgeView.swift
           - UI/SectionIndexView.swift
+          - UI/SourceChipsView.swift
           - UI/SystemVolumeSlider.swift
           - UI/ToastView.swift
           - UI/TrackContextMenu.swift
@@ -237,12 +239,17 @@ targets:
           - Recap/RecapSkeletonView.swift
           - Recap/YearInMusicStoryView.swift
           - Recap/YearInMusicViewController.swift
+          - Remote/RemoteDownloadActions.swift
+          - Remote/RemoteShot.swift
+          - Settings/AddServerViewController.swift
+          - Settings/QRScannerViewController.swift
           - Settings/SettingsCells.swift
           - Settings/SettingsHeaderView.swift
           - Settings/SettingsViewController+Actions.swift
           - Settings/SettingsViewController+Cells.swift
           - Settings/SettingsViewController+Controls.swift
           - Settings/SettingsViewController+Model.swift
+          - Settings/SettingsViewController+Servers.swift
           - Settings/SettingsViewController.swift
           - Sharing/SonglinkShareable.swift
           - Sharing/StreamingLinksViewController.swift

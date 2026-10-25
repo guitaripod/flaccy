@@ -241,6 +241,7 @@ actor RemoteStreamCache {
             try? FileManager.default.removeItem(at: root.appendingPathComponent(folder, isDirectory: true))
         }
         RemoteSongDirectory.shared.invalidateAll()
+        RemoteAvailability.shared.forget(serverID: serverID)
     }
 
     /// Deletes the least recently used cached songs until the cache fits its cap again.
@@ -256,6 +257,7 @@ actor RemoteStreamCache {
             guard let song = RemoteTrackPath(path: RemoteTrackPath.scheme + key) else { continue }
             if let entry = entries.removeValue(forKey: song.path) { drop(entry, failingWaitersWith: CancellationError()) }
             Self.removeFiles(of: song, in: cachesRoot)
+            RemoteAvailability.shared.setComplete(song.path, false)
             RemoteLog.info("Cache evicted \(key)")
         }
     }
@@ -266,7 +268,49 @@ actor RemoteStreamCache {
             if let entry = entries.removeValue(forKey: song.path) { drop(entry, failingWaitersWith: CancellationError()) }
             Self.removeFiles(of: song, in: cachesRoot)
             Self.removeFiles(of: song, in: pinnedRoot)
+            RemoteAvailability.shared.setComplete(song.path, false)
         }
+    }
+
+    /// Drops the files of songs the server now serves differently, and downloads the ones the
+    /// person had downloaded again, so a download never stays flagged with no file behind it.
+    func replaceFilesOfNewVersions(_ songs: [RemoteTrackPath]) {
+        discardFiles(of: songs)
+        redownloadPinned(songs)
+    }
+
+    /// Starts a whole download, one at a time per song, for every song in `songs` that the person keeps.
+    func redownloadPinned(_ songs: [RemoteTrackPath]) {
+        for song in songs where RemoteSongDirectory.shared.source(for: song)?.pinned == true {
+            Task {
+                do {
+                    try await self.downloadComplete(song, pinnedFor: .user)
+                    RemoteLog.info("Downloaded the new version of \(song.path) again")
+                } catch is CancellationError {
+                } catch {
+                    RemoteLog.error("Could not download the new version of \(song.path): \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// Deletes every cached song that nothing is reading or fetching. Downloads stay.
+    @discardableResult
+    func clearCache() -> Int64 {
+        var busy = protectedKeys
+        for entry in entries.values where !entry.demands.isEmpty || entry.fetchTask != nil {
+            busy.insert(RemoteCacheLayout.key(for: entry.song))
+        }
+        var freed: Int64 = 0
+        for item in cachedEntries() where !busy.contains(item.key) {
+            guard let song = RemoteTrackPath(path: RemoteTrackPath.scheme + item.key) else { continue }
+            if let entry = entries.removeValue(forKey: song.path) { drop(entry, failingWaitersWith: CancellationError()) }
+            Self.removeFiles(of: song, in: cachesRoot)
+            RemoteAvailability.shared.setComplete(song.path, false)
+            freed += item.bytes
+        }
+        RemoteLog.info("Cache cleared: \(freed) bytes")
+        return freed
     }
 
     nonisolated private static func removeFiles(of song: RemoteTrackPath, in root: URL) {
@@ -289,6 +333,21 @@ actor RemoteStreamCache {
     /// The bytes the cache holds for unpinned songs, for a screen that shows the cache's size.
     nonisolated func cachedBytes() -> Int64 {
         cachedEntries().reduce(0) { $0 + $1.bytes }
+    }
+
+    /// The bytes of the songs kept outside the cache limit: downloaded by the person or held for the watch.
+    nonisolated func downloadedBytes() -> Int64 {
+        let manager = FileManager.default
+        guard let servers = try? manager.contentsOfDirectory(at: pinnedRoot, includingPropertiesForKeys: nil) else { return 0 }
+        var total: Int64 = 0
+        for server in servers {
+            let files = (try? manager.contentsOfDirectory(at: server, includingPropertiesForKeys: nil)) ?? []
+            for file in files where file.lastPathComponent.hasSuffix(RemoteCacheLayout.sidecarSuffix) {
+                guard let data = try? Data(contentsOf: file), let sidecar = try? RemoteCacheSidecar.decode(data) else { continue }
+                total += sidecar.ranges.coveredBytes
+            }
+        }
+        return total
     }
 
     private func beginDemand(_ song: RemoteTrackPath, range: Range<Int64>, priority: Priority) throws -> UUID {
@@ -346,6 +405,7 @@ extension RemoteStreamCache {
     private func markPinned(_ song: RemoteTrackPath, _ pinned: Bool) {
         try? DatabaseManager.shared.setRemotePinned(paths: [song.path], pinned: pinned)
         RemoteSongDirectory.shared.invalidate(paths: [song.path])
+        RemoteAvailability.shared.setPinned([song.path], pinned)
     }
 
     private func openHandle(_ entry: Entry) throws -> FileHandle {
@@ -571,6 +631,7 @@ extension RemoteStreamCache {
                 break
             } catch {
                 entry.lastError = error
+                noteReachability(after: error, entry: entry)
                 failWaiters(entry, with: error)
                 RemoteLog.error("Fetching \(entry.song.path) failed: \(error.localizedDescription)")
                 break
@@ -581,6 +642,7 @@ extension RemoteStreamCache {
         entry.fetchTask = nil
         if entry.sidecar.isComplete {
             closeHandle(entry)
+            RemoteAvailability.shared.setComplete(entry.song.path, true)
             evictIfNeeded()
         }
     }
@@ -594,6 +656,7 @@ extension RemoteStreamCache {
             range: RemoteStreamRange(start: target.start, end: target.end),
             validator: sentValidator
         )
+        RemoteAvailability.shared.setReachable(serverID: entry.song.serverID, true)
         entry.activeStream = stream
         entry.streamStopRequested = false
         defer {
@@ -621,6 +684,17 @@ extension RemoteStreamCache {
             throw RemoteFailure.from(error, host: host)
         }
         if !wroteAny, !entry.streamStopRequested { throw RemoteFailure.unreachable(host: host) }
+    }
+
+    private func noteReachability(after error: Error, entry: Entry) {
+        switch error as? RemoteFailure {
+        case .unreachable, .tlsFailure:
+            RemoteAvailability.shared.setReachable(serverID: entry.song.serverID, false)
+            if entry.demands.values.contains(where: { $0.priority == .playback }), !entry.sidecar.isComplete {
+                RemoteAvailability.shared.announceUnavailable(entry.song)
+            }
+        default: break
+        }
     }
 
     private func shouldStop(_ entry: Entry, cursor: Int64) -> Bool {
@@ -675,7 +749,13 @@ extension RemoteStreamCache {
         entry.sidecar.validator = validator
         persist(entry)
         let path = entry.song.path
+        RemoteAvailability.shared.setComplete(path, false)
         RemoteLog.info("The server now serves different bytes for \(path); the cached copy was dropped")
-        Task { await RemoteCatalogSync.shared.noteNewVersion(path: path, size: total) }
+        let song = entry.song
+        let keptByPerson = entry.isPinned && (RemoteSongDirectory.shared.source(for: song)?.pinned ?? false)
+        Task {
+            await RemoteCatalogSync.shared.noteNewVersion(path: path, size: total)
+            if keptByPerson { self.redownloadPinned([song]) }
+        }
     }
 }

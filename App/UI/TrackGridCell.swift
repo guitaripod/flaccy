@@ -110,8 +110,11 @@ final class TrackGridCell: UICollectionViewCell {
         titleLabel.text = track.title
         artistLabel.text = track.artist
         let newMix = track.showsNewMix
+        let downloaded = track.isDownloadedRemote
         titleRow.setNewMix(newMix)
-        accessibilityLabel = newMix ? TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: true) : nil
+        titleRow.setDownloaded(downloaded)
+        accessibilityLabel = TrackVersionCopy.accessibilityLabel("\(track.title), \(track.artist)", newMix: newMix, downloaded: downloaded)
+        contentView.alpha = track.isUnavailableOffline ? 0.45 : 1
         qualityBadge.configure(with: track)
         lovedBadge.isHidden = !loved
 
@@ -139,6 +142,8 @@ final class TrackGridCell: UICollectionViewCell {
         titleLabel.text = nil
         artistLabel.text = nil
         titleRow.setNewMix(false)
+        titleRow.setDownloaded(false)
+        contentView.alpha = 1
         accessibilityLabel = nil
         qualityBadge.isHidden = true
         lovedBadge.isHidden = true

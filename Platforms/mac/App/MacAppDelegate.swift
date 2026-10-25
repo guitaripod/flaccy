@@ -1,4 +1,5 @@
 import AppKit
+import FlaccyCore
 import MidgarCore
 import Combine
 import UniformTypeIdentifiers
@@ -76,6 +77,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         runStageBDriveIfRequested()
         ReexportExercise.runIfRequested()
         DebugDrive.runNewMixShotIfRequested(window: windowController.window)
+        DebugDrive.runRemoteShotIfRequested(window: windowController.window)
         #endif
     }
 
@@ -149,9 +151,37 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(entitlementsDidLoad), name: PurchaseManager.entitlementsDidLoad, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playbackUnavailable(_:)), name: RemoteAvailability.playbackUnavailable, object: nil
+        )
+    }
+
+    @objc private func playbackUnavailable(_ notification: Notification) {
+        guard let message = notification.userInfo?[RemoteAvailability.messageKey] as? String else { return }
+        MacToast.show(message, style: .error, in: mainWindowController?.window)
+    }
+
+    /// Opens the Add Server sheet filled in from a `flaccy://server` link; any other link is left alone.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            guard let link = ServerLink(url: url) else { continue }
+            MidgarLog.info("Opened a server link for \(link.name ?? "a server")", category: .ui)
+            showServersSettings(link: link)
+        }
+    }
+
+    func showServersSettings(link: ServerLink? = nil) {
+        showSettings(nil)
+        guard let tabs = settingsWindowController?.contentViewController as? SettingsTabViewController,
+              let index = tabs.tabViewItems.firstIndex(where: { $0.viewController is ServersSettingsPane })
+        else { return }
+        tabs.selectedTabViewItemIndex = index
+        guard let link, let pane = tabs.tabViewItems[index].viewController as? ServersSettingsPane else { return }
+        DispatchQueue.main.async { pane.presentAddServer(link: link) }
     }
 
     @objc private func appDidBecomeActive() {
+        RemoteLaunch.becameActive()
         LibraryRoot.shared.retryFallbackResolutionIfNeeded()
         Task {
             await MacRecapNotificationScheduler.shared.refreshSchedule()

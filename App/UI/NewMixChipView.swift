@@ -50,28 +50,37 @@ final class NewMixChipView: UIView {
     }
 }
 
-/// A song title followed by the New mix chip. The title is the part that
-/// gives way when the row is narrow; the chip always keeps its width.
+/// A song title with the New mix chip and the downloaded mark. In a regular-width row they
+/// follow the title on its line and the title is the part that gives way; in a compact row they
+/// sit on a line of their own under the title, so a short title keeps its width.
 final class TitleWithChipView: UIStackView {
 
     let titleLabel: UILabel
     private let chip = NewMixChipView()
+    private let mark = DownloadedMarkView()
+    private let underline = UIStackView()
     private let filler = UIView()
+    private let underlineFiller = UIView()
+    private var isCompactLayout: Bool?
 
     init(titleLabel: UILabel) {
         self.titleLabel = titleLabel
         super.init(frame: .zero)
-        axis = .horizontal
-        alignment = .center
-        spacing = 6
         titleLabel.setContentHuggingPriority(.required, for: .horizontal)
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        filler.setContentHuggingPriority(.fittingSizeLevel, for: .horizontal)
-        filler.setContentCompressionResistancePriority(.fittingSizeLevel, for: .horizontal)
+        for spacer in [filler, underlineFiller] {
+            spacer.setContentHuggingPriority(.fittingSizeLevel, for: .horizontal)
+            spacer.setContentCompressionResistancePriority(.fittingSizeLevel, for: .horizontal)
+        }
+        underline.axis = .horizontal
+        underline.alignment = .center
+        underline.spacing = 6
         chip.isHidden = true
-        addArrangedSubview(titleLabel)
-        addArrangedSubview(chip)
-        addArrangedSubview(filler)
+        mark.isHidden = true
+        arrange()
+        registerForTraitChanges([UITraitHorizontalSizeClass.self]) { (self: TitleWithChipView, _) in
+            self.arrange()
+        }
     }
 
     @available(*, unavailable)
@@ -80,5 +89,43 @@ final class TitleWithChipView: UIStackView {
     func setNewMix(_ shows: Bool) {
         guard chip.isHidden == shows else { return }
         chip.isHidden = !shows
+        updateUnderlineVisibility()
+    }
+
+    func setDownloaded(_ shows: Bool) {
+        guard mark.isHidden == shows else { return }
+        mark.isHidden = !shows
+        updateUnderlineVisibility()
+    }
+
+    private func arrange() {
+        let compact = traitCollection.horizontalSizeClass == .compact
+        guard compact != isCompactLayout else { return }
+        isCompactLayout = compact
+        for view in arrangedSubviews { removeArrangedSubview(view); view.removeFromSuperview() }
+        for view in underline.arrangedSubviews { underline.removeArrangedSubview(view); view.removeFromSuperview() }
+        if compact {
+            axis = .vertical
+            alignment = .leading
+            spacing = 2
+            underline.addArrangedSubview(chip)
+            underline.addArrangedSubview(mark)
+            underline.addArrangedSubview(underlineFiller)
+            addArrangedSubview(titleLabel)
+            addArrangedSubview(underline)
+            updateUnderlineVisibility()
+        } else {
+            axis = .horizontal
+            alignment = .center
+            spacing = 6
+            addArrangedSubview(titleLabel)
+            addArrangedSubview(chip)
+            addArrangedSubview(mark)
+            addArrangedSubview(filler)
+        }
+    }
+
+    private func updateUnderlineVisibility() {
+        underline.isHidden = chip.isHidden && mark.isHidden
     }
 }

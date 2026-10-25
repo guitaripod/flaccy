@@ -125,6 +125,7 @@ final class SongsTableViewModel {
     #endif
 
     private(set) var filter: Filter
+    private(set) var source: LibrarySource? = LibrarySource.persisted(key: LibrarySource.macStorageKey)
     private(set) var mostPlayedRange: ChartPeriod
     private(set) var displayedPlaysRange: ChartPeriod?
 
@@ -192,6 +193,21 @@ final class SongsTableViewModel {
         }
         MidgarLog.info("Songs filter: \(newFilter.rawValue)", category: .ui)
         publish()
+    }
+
+    /// Narrows the songs to one source, or to all of them for nil.
+    func selectSource(_ newSource: LibrarySource?) {
+        guard source != newSource else { return }
+        source = newSource
+        LibrarySource.persist(newSource, key: LibrarySource.macStorageKey)
+        MidgarLog.info("Songs source: \(newSource?.id ?? "all")", category: .ui)
+        publish()
+    }
+
+    /// The source chips for the servers the person added, none while there are no servers.
+    func sourceChoices() -> [LibrarySourceChoice] {
+        let servers = ((try? DatabaseManager.shared.fetchRemoteServers()) ?? []).map { (id: $0.id, name: $0.name) }
+        return LibrarySourceChoice.choices(servers: servers)
     }
 
     func selectMostPlayed(range: ChartPeriod) {
@@ -333,7 +349,8 @@ final class SongsTableViewModel {
     private func publish() {
         publishGeneration += 1
         let generation = publishGeneration
-        let rows = allRows
+        let source = self.source
+        let rows = source.map { source in allRows.filter { source.admits($0.track) } } ?? allRows
         let query = searchQuery
         let tiers = sortTiers
         let filter = self.filter

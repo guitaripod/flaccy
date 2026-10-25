@@ -108,6 +108,7 @@ final class LibraryViewModel {
     private(set) var artistSort: ArtistSort = ArtistSort(rawValue: UserDefaults.standard.string(forKey: "artistSort") ?? "") ?? .name
     private(set) var layoutMode: LibraryLayoutMode = .persisted
     private(set) var filter: LibraryFilter = .persisted
+    private(set) var source: LibrarySource? = LibrarySource.persisted(key: LibrarySource.iosStorageKey)
 
     struct TrackMeta {
         let track: Track
@@ -417,6 +418,20 @@ final class LibraryViewModel {
         self.filter = filter
         filter.persist()
         publishSnapshot()
+    }
+
+    /// Narrows the songs and albums to one source, or to all of them for nil.
+    func setSource(_ source: LibrarySource?) {
+        guard self.source != source else { return }
+        self.source = source
+        LibrarySource.persist(source, key: LibrarySource.iosStorageKey)
+        publishSnapshot()
+    }
+
+    /// The source chips for the servers the person added, none while there are no servers.
+    func sourceChoices() -> [LibrarySourceChoice] {
+        let servers = ((try? DatabaseManager.shared.fetchRemoteServers()) ?? []).map { (id: $0.id, name: $0.name) }
+        return LibrarySourceChoice.choices(servers: servers)
     }
 
     /// Rebuilds and republishes the current snapshot without changing state,

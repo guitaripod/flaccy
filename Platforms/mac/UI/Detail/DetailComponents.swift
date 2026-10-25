@@ -49,8 +49,8 @@ final class DetailTrackRowView: NSView {
     private let numberLabel = NSTextField(labelWithString: "")
     private let playingIcon = NSImageView()
     private let titleLabel = NSTextField(labelWithString: "")
-    private let newMixChip = MacNewMixChip()
-    private lazy var titleStack = NSStackView(views: [titleLabel, newMixChip])
+    private let badges = MacTitleBadges()
+    private lazy var titleStack = NSStackView(views: [titleLabel, badges])
     private let subtitleLabel = NSTextField(labelWithString: "")
     private let heartButton = NSButton()
     private let durationLabel = NSTextField(labelWithString: "")
@@ -78,7 +78,6 @@ final class DetailTrackRowView: NSView {
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        newMixChip.isHidden = true
         titleStack.orientation = .horizontal
         titleStack.spacing = 6
         titleStack.alignment = .centerY
@@ -130,7 +129,9 @@ final class DetailTrackRowView: NSView {
         loved: Bool,
         isPlaying: Bool,
         subtitle: String? = nil,
-        newMix: Bool = false
+        newMix: Bool = false,
+        downloaded: Bool = false,
+        unavailable: Bool = false
     ) {
         numberLabel.stringValue = "\(number)"
         subtitleLabel.stringValue = subtitle ?? ""
@@ -139,8 +140,9 @@ final class DetailTrackRowView: NSView {
         playingIcon.isHidden = !isPlaying
         titleLabel.stringValue = title
         titleLabel.toolTip = title
-        newMixChip.isHidden = !newMix
-        titleLabel.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(title, newMix: newMix))
+        badges.apply(newMix: newMix, downloaded: downloaded)
+        alphaValue = unavailable ? 0.45 : 1
+        titleLabel.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(title, newMix: newMix, downloaded: downloaded) ?? title)
         titleLabel.font = .systemFont(ofSize: 13, weight: isPlaying ? .semibold : .regular)
         durationLabel.stringValue = PlaybackFormat.duration(duration)
         self.isPlaying = isPlaying

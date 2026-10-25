@@ -179,6 +179,7 @@ final class RootContainerViewController: NSViewController {
     var overlayHost: NSView { zoomHost.content }
     private let statusStrip = MacStatusStripView()
     private var surfaceCancellable: AnyCancellable?
+    private var syncCancellable: AnyCancellable?
 
     private static let transportHeight: CGFloat = 84
     private static let transportMargin: CGFloat = 12
@@ -250,12 +251,21 @@ final class RootContainerViewController: NSViewController {
                 self?.render(state)
             }
         render(MacLibrarySurfaceModel.shared.state.value)
+        syncCancellable = NotificationCenter.default.publisher(for: RemoteSyncStatus.didChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.render(MacLibrarySurfaceModel.shared.state.value) }
     }
 
     /// The strip carries the ambient surface and nothing else. A Debut has its
     /// own stage in the onboarding panel, and `.none` genuinely means silence —
     /// a relaunch that finds no work due shows no chrome at all.
     private func render(_ state: MacLibrarySurfaceModel.State) {
+        if state.surface != .debut, let sync = RemoteSyncStatus.shared.current {
+            statusStrip.update(.server(sync))
+            statusStrip.setVisible(true)
+            raiseStatusStrip()
+            return
+        }
         guard state.surface == .ambient else {
             statusStrip.setVisible(false)
             return

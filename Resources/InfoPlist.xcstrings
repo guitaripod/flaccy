@@ -1,6 +1,76 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "NSCameraUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy scannt den QR-Code, den dein Flaccy Server ausgibt, damit du dessen Adresse und Schlüssel nicht eintippen musst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy scans the QR code your Flaccy Server prints, so you don't have to type its address and key."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy escanea el código QR que imprime tu Flaccy Server, para que no tengas que escribir su dirección ni su clave."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy scanne le code QR affiché par ton Flaccy Server, pour que tu n’aies pas à saisir son adresse ni sa clé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy inquadra il codice QR stampato dal tuo Flaccy Server, così non devi digitarne l’indirizzo e la chiave."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy は Flaccy Server が表示する QR コードをスキャンするので、アドレスとキーを入力する必要はありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy가 Flaccy Server가 출력한 QR 코드를 스캔하므로 서버 주소와 키를 직접 입력할 필요가 없습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy skanuje kod QR wydrukowany przez Twój serwer Flaccy, dzięki czemu nie musisz wpisywać jego adresu i klucza."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy escaneia o código QR que o seu Flaccy Server imprime, para você não precisar digitar o endereço e a chave dele."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 会扫描 Flaccy Server 打印的 QR 码，因此你无需输入它的地址和密钥。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 會掃描 Flaccy Server 印出的 QR 碼，因此你不必輸入它的位址和金鑰。"
+          }
+        }
+      }
+    },
     "NSLocalNetworkUsageDescription": {
       "localizations": {
         "de": {

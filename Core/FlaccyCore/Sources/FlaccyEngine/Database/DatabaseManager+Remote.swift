@@ -50,6 +50,19 @@ extension DatabaseManager {
         }
     }
 
+    /// How many songs each server holds in the library, by server id.
+    public func fetchRemoteSongCounts() throws -> [String: Int] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT remoteServer, COUNT(*) AS songs FROM tracks WHERE remoteServer IS NOT NULL GROUP BY remoteServer
+                """)
+            return Dictionary(uniqueKeysWithValues: rows.compactMap { row -> (String, Int)? in
+                guard let server: String = row["remoteServer"] else { return nil }
+                return (server, row["songs"])
+            })
+        }
+    }
+
     /// The songs of a server as the sync compares them with the server's catalog.
     public func fetchRemoteCatalogItems(serverID: String) throws -> [RemoteCatalogDiff.Item] {
         try dbQueue.read { db in

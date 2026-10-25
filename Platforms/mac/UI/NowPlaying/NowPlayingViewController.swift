@@ -32,7 +32,7 @@ final class NowPlayingViewController: NSViewController {
     let artistButton = HoverUnderlineButton()
     let albumLabel = NSTextField(labelWithString: "")
     let badgeLabel = NSTextField(labelWithString: "")
-    let badgeContainer = NSView()
+    lazy var badgeContainer = MacQualityBadgeView(label: badgeLabel)
     let versionRow = MacNowPlayingVersionRow()
     var loveButton: TransportButton!
 

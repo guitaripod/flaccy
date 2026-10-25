@@ -221,6 +221,12 @@ extension LibraryViewController {
     /// behind a library the person can already use. A live disk scan wins the
     /// line, because it is the thing that changes what is on screen; the job
     /// gets it the rest of the time.
+    func showRemoteSync(_ progress: RemoteSyncProgress, animated: Bool) {
+        if statusBannerHeight.constant == 0 { statusBanner.prepareForShow() }
+        statusBanner.update(.server(progress))
+        setStatusBanner(visible: true, animated: animated)
+    }
+
     func showAmbient(_ state: LibraryViewModel.LibraryLoadState, animated: Bool) {
         if statusBannerHeight.constant == 0 { statusBanner.prepareForShow() }
         statusBanner.update(

@@ -18,7 +18,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     let impactLight = UIImpactFeedbackGenerator(style: .light)
     let sectionIndexView = SectionIndexView()
     let filterChipsView = FilterChipsView()
+    let sourceChipsView = SourceChipsView()
     var chipsHeightConstraint: NSLayoutConstraint!
+    var sourceChipsHeightConstraint: NSLayoutConstraint!
     var lastRenderedFilter: LibraryFilter?
     var lastRenderedLayout: LibraryLayoutMode?
     let selectionFeedback = UISelectionFeedbackGenerator()
@@ -182,6 +184,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         setupSearchController()
         setupSegmentedControl()
         setupFilterChips()
+        setupSourceChips()
         setupRunwayBanner()
         setupStatusBanner()
         setupCollectionView()
@@ -386,8 +389,48 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         let showsChips = segment == .albums || segment == .songs
         filterChipsView.isHidden = !showsChips
         chipsHeightConstraint.constant = showsChips ? 46 : 0
+        updateSourceChips(for: segment)
         guard showsChips else { return }
         filterChipsView.configure(filters: viewModel.availableFilters(), selected: viewModel.filter)
+    }
+
+    func setupSourceChips() {
+        sourceChipsView.translatesAutoresizingMaskIntoConstraints = false
+        sourceChipsView.isHidden = true
+        sourceChipsView.accessibilityIdentifier = "library.sourceChips"
+        sourceChipsView.onSelect = { [weak self] source in
+            self?.viewModel.setSource(source)
+            self?.updateSectionIndex()
+        }
+        view.addSubview(sourceChipsView)
+        sourceChipsHeightConstraint = sourceChipsView.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            sourceChipsView.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
+            sourceChipsView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            sourceChipsView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            sourceChipsHeightConstraint,
+        ])
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(remoteServersDidChange), name: RemoteServers.didChange, object: nil
+        )
+    }
+
+    @objc func remoteServersDidChange() {
+        updateSourceChips(for: viewModel.currentSegment)
+    }
+
+    /// Shows the source row on Albums and Songs while a server is added, and widens the list to
+    /// every source when the one it was narrowed to is gone.
+    func updateSourceChips(for segment: LibraryViewModel.Segment) {
+        let choices = viewModel.sourceChoices()
+        if let source = viewModel.source, !choices.contains(where: { $0.source == source }) {
+            viewModel.setSource(nil)
+        }
+        let shows = (segment == .albums || segment == .songs) && !choices.isEmpty
+        sourceChipsView.isHidden = !shows
+        sourceChipsHeightConstraint.constant = shows ? 42 : 0
+        guard shows else { return }
+        sourceChipsView.configure(choices: choices, selected: viewModel.source)
     }
 
     func setupCollectionView() {
@@ -486,10 +529,18 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             setStatusBanner(visible: false, animated: false)
         case .ambient:
             demoteDebutToSheet()
-            showAmbient(state, animated: animated)
+            if let sync = RemoteSyncStatus.shared.current {
+                showRemoteSync(sync, animated: animated)
+            } else {
+                showAmbient(state, animated: animated)
+            }
         case .none:
             demoteDebutToSheet()
-            setStatusBanner(visible: false, animated: animated)
+            if let sync = RemoteSyncStatus.shared.current {
+                showRemoteSync(sync, animated: animated)
+            } else {
+                setStatusBanner(visible: false, animated: animated)
+            }
         }
         applyRunwayBannerVisibility(animated: animated)
     }

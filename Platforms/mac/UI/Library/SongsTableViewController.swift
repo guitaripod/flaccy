@@ -17,6 +17,8 @@ final class SongsTableViewController: NSViewController {
     private let tableView = SongsTableView()
     private let emptyStateView = LibraryEmptyStateView()
     private let chipsBar = FilterChipsBar()
+    private let sourceBar = FilterChipsBar()
+    private var sourceHeight: NSLayoutConstraint!
     private let playButton = GlassCapsuleButton(title: String(localized: "Play"), symbolName: "play.fill", prominent: true)
     private let shuffleButton = GlassCapsuleButton(title: String(localized: "Shuffle"), symbolName: "shuffle")
     private let saveButton = GlassCapsuleButton(title: String(localized: "Save as Playlist…"), symbolName: "text.badge.plus", iconOnly: true)
@@ -74,6 +76,12 @@ final class SongsTableViewController: NSViewController {
         controls.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(controls)
 
+        sourceBar.translatesAutoresizingMaskIntoConstraints = false
+        sourceBar.setAccessibilityLabel(String(localized: "Source"))
+        sourceHeight = sourceBar.heightAnchor.constraint(equalToConstant: 0)
+        sourceBar.onSelectChip = { [weak self] id in self?.chooseSource(LibrarySource(id: id)) }
+        view.addSubview(sourceBar)
+
         statusLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         statusLabel.textColor = .secondaryLabelColor
         statusLabel.lineBreakMode = .byTruncatingTail
@@ -90,7 +98,12 @@ final class SongsTableViewController: NSViewController {
             controls.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
             controls.heightAnchor.constraint(equalToConstant: 32),
 
-            scrollView.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 8),
+            sourceBar.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 6),
+            sourceBar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
+            sourceBar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
+            sourceHeight,
+
+            scrollView.topAnchor.constraint(equalTo: sourceBar.bottomAnchor, constant: 8),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -6),
@@ -144,7 +157,58 @@ final class SongsTableViewController: NSViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(jumpToCurrentSong), name: .flaccyJumpToCurrentSong, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(remoteServersChanged), name: RemoteServers.didChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(remoteAvailabilityChanged), name: RemoteAvailability.didChange, object: nil
+        )
+        refreshSourceBar()
     }
+
+    @objc private func remoteServersChanged() {
+        refreshSourceBar()
+    }
+
+    @objc private func remoteAvailabilityChanged() {
+        let visible = tableView.rows(in: tableView.visibleRect)
+        guard visible.length > 0 else { return }
+        tableView.reloadData(
+            forRowIndexes: IndexSet(integersIn: visible.location..<(visible.location + visible.length)),
+            columnIndexes: IndexSet(0..<tableView.numberOfColumns)
+        )
+    }
+
+    /// Shows the source row while a server is added, and widens the list to every
+    /// source when the one it was narrowed to is gone.
+    private func refreshSourceBar() {
+        let choices = viewModel.sourceChoices()
+        if let source = viewModel.source, !choices.contains(where: { $0.source == source }) {
+            viewModel.selectSource(nil)
+        }
+        sourceBar.isHidden = choices.isEmpty
+        sourceHeight.constant = choices.isEmpty ? 0 : 28
+        sourceBar.configure(
+            chips: choices.map { FilterChip(id: $0.source.id, title: $0.title, icon: $0.icon) },
+            selected: viewModel.source?.id ?? ""
+        )
+    }
+
+    /// A chip turns its source on; the chip that is already lit turns it off.
+    private func chooseSource(_ tapped: LibrarySource) {
+        viewModel.selectSource(viewModel.source == tapped ? nil : tapped)
+        sourceBar.setSelected(id: viewModel.source?.id ?? "")
+        if tableView.numberOfRows > 0 {
+            tableView.scrollRowToVisible(0)
+        }
+    }
+
+    #if DEBUG
+    func selectSourceForCapture(_ source: LibrarySource?) {
+        viewModel.selectSource(source)
+        sourceBar.setSelected(id: source?.id ?? "")
+    }
+    #endif
 
     deinit {
         NotificationCenter.default.removeObserver(self)
@@ -418,7 +482,9 @@ extension SongsTableViewController: NSTableViewDelegate {
             cell.configure(
                 title: track.title,
                 isPlaying: AudioPlayer.shared.currentTrack?.fileURL == track.fileURL,
-                newMix: track.showsNewMix
+                newMix: track.showsNewMix,
+                downloaded: track.isDownloadedRemote,
+                unavailable: track.isUnavailableOffline
             )
             return cell
         }
@@ -537,7 +603,7 @@ final class PlayingTitleCellView: NSTableCellView {
 
     private let label = NSTextField(labelWithString: "")
     private let speaker = NSImageView()
-    private let newMixChip = MacNewMixChip()
+    private let badges = MacTitleBadges()
     private var speakerWidth: NSLayoutConstraint?
     private var chipConstraints: [NSLayoutConstraint] = []
     private var plainTitleConstraints: [NSLayoutConstraint] = []
@@ -556,21 +622,20 @@ final class PlayingTitleCellView: NSTableCellView {
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         label.translatesAutoresizingMaskIntoConstraints = false
 
-        newMixChip.isHidden = true
-        newMixChip.translatesAutoresizingMaskIntoConstraints = false
+        badges.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(speaker)
         addSubview(label)
-        addSubview(newMixChip)
+        addSubview(badges)
         textField = label
 
         let width = speaker.widthAnchor.constraint(equalToConstant: 0)
         speakerWidth = width
         plainTitleConstraints = [label.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -2)]
         chipConstraints = [
-            newMixChip.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 6),
-            newMixChip.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -2),
-            newMixChip.centerYAnchor.constraint(equalTo: centerYAnchor),
+            badges.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 6),
+            badges.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -2),
+            badges.centerYAnchor.constraint(equalTo: centerYAnchor),
         ]
         NSLayoutConstraint.activate(plainTitleConstraints + [
             speaker.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
@@ -587,22 +652,24 @@ final class PlayingTitleCellView: NSTableCellView {
         didSet { applyTint() }
     }
 
-    func configure(title: String, isPlaying: Bool, newMix: Bool = false) {
+    func configure(title: String, isPlaying: Bool, newMix: Bool = false, downloaded: Bool = false, unavailable: Bool = false) {
         label.stringValue = title
         label.toolTip = title
-        label.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(title, newMix: newMix))
-        showNewMixChip(newMix)
+        label.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(title, newMix: newMix, downloaded: downloaded) ?? title)
+        showBadges(newMix: newMix, downloaded: downloaded)
+        alphaValue = unavailable ? 0.45 : 1
         label.font = .systemFont(ofSize: 12, weight: isPlaying ? .semibold : .regular)
         speaker.isHidden = !isPlaying
         speakerWidth?.constant = isPlaying ? 14 : 0
         applyTint()
     }
 
-    /// Puts the chip right after the title, or hands the title the whole room
-    /// again when the song has no new mix.
-    private func showNewMixChip(_ shows: Bool) {
-        guard newMixChip.isHidden == shows else { return }
-        newMixChip.isHidden = !shows
+    /// Puts the marks right after the title, or hands the title the whole room
+    /// again when the song has none.
+    private func showBadges(newMix: Bool, downloaded: Bool) {
+        let wasShowing = !badges.isHidden
+        let shows = badges.apply(newMix: newMix, downloaded: downloaded)
+        guard wasShowing != shows else { return }
         if shows {
             NSLayoutConstraint.deactivate(plainTitleConstraints)
             NSLayoutConstraint.activate(chipConstraints)

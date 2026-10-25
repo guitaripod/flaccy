@@ -27,7 +27,9 @@ enum TrackContextMenu {
         var playback: [UIMenuElement] = context.includeQueueActions ? queueActions(for: track, in: host) : []
         playback.append(stationAction(for: track, in: host))
         sections.append(UIMenu(options: .displayInline, children: playback))
-        sections.append(UIMenu(options: .displayInline, children: collectionActions(for: track, in: host)))
+        var collection = collectionActions(for: track, in: host)
+        if let download = RemoteDownloadActions.action(for: [track], in: host) { collection.append(download) }
+        sections.append(UIMenu(options: .displayInline, children: collection))
 
         let navigation = navigationActions(for: track, in: host, push: push, context: context)
         if !navigation.isEmpty {
@@ -41,7 +43,9 @@ enum TrackContextMenu {
             sections.append(UIMenu(options: .displayInline, children: [restorePreviousMixAction(for: track, in: host)]))
         }
         sections.append(contentsOf: context.extraSections)
-        sections.append(UIMenu(options: .displayInline, children: [deleteAction(for: track, in: host)]))
+        if track.remoteSong == nil {
+            sections.append(UIMenu(options: .displayInline, children: [deleteAction(for: track, in: host)]))
+        }
 
         return UIMenu(title: track.qualityBadge ?? "", children: sections)
     }

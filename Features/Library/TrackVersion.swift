@@ -54,6 +54,13 @@ enum TrackVersionCopy {
     static func accessibilityLabel(_ label: String, newMix shows: Bool) -> String {
         shows ? "\(label), \(newMix)" : label
     }
+
+    /// A row's spoken label with `, New mix` and `, Downloaded` after it while their marks show; nil when neither does.
+    static func accessibilityLabel(_ label: String, newMix: Bool, downloaded: Bool) -> String? {
+        guard newMix || downloaded else { return nil }
+        let versioned = accessibilityLabel(label, newMix: newMix)
+        return downloaded ? RemoteCopy.downloadedAccessibility(versioned) : versioned
+    }
 }
 
 extension Track {

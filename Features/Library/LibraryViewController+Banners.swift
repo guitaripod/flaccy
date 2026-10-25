@@ -20,7 +20,7 @@ extension LibraryViewController {
         view.addSubview(runwayBanner)
         runwayBannerHeight = runwayBanner.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
-            runwayBanner.topAnchor.constraint(equalTo: filterChipsView.bottomAnchor),
+            runwayBanner.topAnchor.constraint(equalTo: sourceChipsView.bottomAnchor),
             runwayBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             runwayBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             runwayBannerHeight,

@@ -290,7 +290,9 @@ extension TrackTableSurface: NSTableViewDelegate {
             isPlaying: isPlaying,
             animatesBars: AudioPlayer.shared.isPlaying,
             loved: column == .title && LovedTracksService.shared.isLoved(track: track),
-            newMix: column == .title && track.showsNewMix
+            newMix: column == .title && track.showsNewMix,
+            downloaded: column == .title && track.isDownloadedRemote,
+            unavailable: track.isUnavailableOffline
         )
         return cell
     }
@@ -309,7 +311,7 @@ final class TrackTableCell: NSTableCellView {
     private let label = NSTextField(labelWithString: "")
     private let bars = PlayingBarsView()
     private let heart = NSImageView()
-    private let newMixChip = MacNewMixChip()
+    private let badges = MacTitleBadges()
     private let column: TrackTableSurface.Column
     private var isPlaying = false
     private var chipConstraints: [NSLayoutConstraint] = []
@@ -353,15 +355,14 @@ final class TrackTableCell: NSTableCellView {
             ]
         case .title:
             addSubview(heart)
-            newMixChip.isHidden = true
-            newMixChip.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(newMixChip)
+            badges.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(badges)
             label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             plainTitleConstraints = [label.trailingAnchor.constraint(lessThanOrEqualTo: heart.leadingAnchor, constant: -4)]
             chipConstraints = [
-                newMixChip.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 6),
-                newMixChip.trailingAnchor.constraint(lessThanOrEqualTo: heart.leadingAnchor, constant: -4),
-                newMixChip.centerYAnchor.constraint(equalTo: centerYAnchor),
+                badges.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 6),
+                badges.trailingAnchor.constraint(lessThanOrEqualTo: heart.leadingAnchor, constant: -4),
+                badges.centerYAnchor.constraint(equalTo: centerYAnchor),
             ]
             constraints += [
                 label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
@@ -383,11 +384,15 @@ final class TrackTableCell: NSTableCellView {
         didSet { applyColors() }
     }
 
-    func configure(text: String, isPlaying: Bool, animatesBars: Bool, loved: Bool, newMix: Bool = false) {
+    func configure(
+        text: String, isPlaying: Bool, animatesBars: Bool, loved: Bool,
+        newMix: Bool = false, downloaded: Bool = false, unavailable: Bool = false
+    ) {
         label.stringValue = text
-        showNewMixChip(newMix)
+        showBadges(newMix: newMix, downloaded: downloaded)
+        alphaValue = unavailable ? 0.45 : 1
         if column == .title {
-            label.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(text, newMix: newMix))
+            label.setAccessibilityLabel(TrackVersionCopy.accessibilityLabel(text, newMix: newMix, downloaded: downloaded) ?? text)
         }
         label.toolTip = column == .number ? nil : text
         self.isPlaying = isPlaying
@@ -404,11 +409,13 @@ final class TrackTableCell: NSTableCellView {
         heart.isHidden = !loved
     }
 
-    /// Puts the chip right after the title, or hands the title the whole room
-    /// again when the song has no new mix.
-    private func showNewMixChip(_ shows: Bool) {
-        guard column == .title, newMixChip.isHidden == shows else { return }
-        newMixChip.isHidden = !shows
+    /// Puts the marks right after the title, or hands the title the whole room
+    /// again when the song has none.
+    private func showBadges(newMix: Bool, downloaded: Bool) {
+        guard column == .title else { return }
+        let wasShowing = !badges.isHidden
+        let shows = badges.apply(newMix: newMix, downloaded: downloaded)
+        guard wasShowing != shows else { return }
         if shows {
             NSLayoutConstraint.deactivate(plainTitleConstraints)
             NSLayoutConstraint.activate(chipConstraints)
