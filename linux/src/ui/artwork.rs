@@ -522,9 +522,23 @@ impl ArtworkCache {
         callback: impl Fn(Option<&gdk::MemoryTexture>, Option<(u8, u8, u8)>) + 'static,
     ) {
         let weak = widget.upcast_ref::<gtk::Widget>().downgrade();
+        self.request_while(move || weak.upgrade().is_some(), title, artist, size, callback);
+    }
+
+    /// Like `request`, for art that is only wanted while `wanted` holds, such
+    /// as a recycled grid tile that is still bound to this album: once it
+    /// answers false, a decode no worker has reached yet is dropped.
+    pub fn request_while(
+        &self,
+        wanted: impl Fn() -> bool + 'static,
+        title: &str,
+        artist: &str,
+        size: u32,
+        callback: impl Fn(Option<&gdk::MemoryTexture>, Option<(u8, u8, u8)>) + 'static,
+    ) {
         self.request_cover(title, artist, size, Waiter {
             callback: Box::new(callback),
-            alive: Some(Box::new(move || weak.upgrade().is_some())),
+            alive: Some(Box::new(wanted)),
         });
     }
 

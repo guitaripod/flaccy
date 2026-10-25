@@ -288,15 +288,24 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let expected = card.key.clone();
             let item_weak = item.downgrade();
             let weak = picture.downgrade();
-            ui.core
-                .artwork
-                .request(&card.title, &card.artist, 168, move |texture, _| {
+            let wanted = {
+                let item_weak = item_weak.clone();
+                let expected = expected.clone();
+                move || still_bound_album(&item_weak, &expected)
+            };
+            ui.core.artwork.request_while(
+                wanted,
+                &card.title,
+                &card.artist,
+                168,
+                move |texture, _| {
                     if let (Some(picture), Some(texture)) = (weak.upgrade(), texture) {
                         if still_bound_album(&item_weak, &expected) {
                             picture.set_paintable(Some(texture));
                         }
                     }
-                });
+                },
+            );
             bound.borrow_mut().insert(card.key.clone(), picture.downgrade());
         });
     }

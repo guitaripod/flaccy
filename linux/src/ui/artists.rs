@@ -96,15 +96,24 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 let expected = key.clone();
                 let item_weak = item.downgrade();
                 let weak = avatar.downgrade();
-                ui.core
-                    .artwork
-                    .request(&title, &album_artist, 120, move |texture, _| {
+                let wanted = {
+                    let item_weak = item_weak.clone();
+                    let expected = expected.clone();
+                    move || still_bound_artist(&item_weak, &expected)
+                };
+                ui.core.artwork.request_while(
+                    wanted,
+                    &title,
+                    &album_artist,
+                    120,
+                    move |texture, _| {
                         if let (Some(avatar), Some(texture)) = (weak.upgrade(), texture) {
                             if still_bound_artist(&item_weak, &expected) {
                                 avatar.set_custom_image(Some(texture));
                             }
                         }
-                    });
+                    },
+                );
             }
             bound.borrow_mut().insert(key, avatar.downgrade());
         });
