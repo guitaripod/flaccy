@@ -5,6 +5,7 @@ use crate::load_progress::LoadPhase;
 use crate::ui::{self, Ui};
 use adw::prelude::*;
 use flaccy_shared::enrichment_job::{copy as job_copy, Activity};
+use flaccy_shared::track_revision::copy;
 use gtk::glib;
 use gtk::{gdk, gio};
 use std::cell::{Cell, RefCell};
@@ -408,10 +409,14 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     let toast_overlay = adw::ToastOverlay::new();
     toast_overlay.set_child(Some(&inner));
     let live_toast: Rc<RefCell<Option<adw::Toast>>> = Rc::new(RefCell::new(None));
+    let toast_core = Rc::clone(core);
     core.hub
         .subscribe_widget(&toast_overlay, move |overlay, event| {
             if let AppEvent::Toast(message) = event {
                 show_toast(overlay, &live_toast, message);
+            }
+            if let AppEvent::NewMixPlaying { rel_path, title } = event {
+                overlay.add_toast(new_mix_toast(&toast_core, rel_path, title));
             }
             if let AppEvent::ScanFinished { added, removed } = event {
                 let toast = if *added > 0 || *removed > 0 {
@@ -1022,6 +1027,9 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
             ui::goto_artist(ui, &artist);
         }
     });
+    add_string_action(ui, "track-restore", |ui, rel| {
+        ui.core.restore_previous_version(rel);
+    });
     add_string_action(ui, "track-reveal", |ui, rel| {
         let path = ui
             .core
@@ -1253,7 +1261,8 @@ fn attach_file_drop(ui: &Rc<Ui>, host: &impl IsA<gtk::Widget>) {
             "library",
             &format!("drag-drop received {} item(s)", paths.len()),
         );
-        ui.core.import_dropped_paths(paths);
+        ui.core
+            .import_dropped_paths(paths, crate::ui::versions_dialog::confirm_replace(&ui));
         true
     });
     host.add_controller(drop);
@@ -1295,6 +1304,18 @@ fn present_about(window: &adw::ApplicationWindow) {
         )
         .build();
     dialog.present(Some(window));
+}
+
+/// Tells the person the song they are hearing has a new mix on disk, and
+/// offers to start it over so the player reads the new file.
+fn new_mix_toast(core: &Rc<AppCore>, rel_path: &str, title: &str) -> adw::Toast {
+    let toast = adw::Toast::new(&copy::fill(copy::NEW_MIX_OF, &[title]));
+    toast.set_button_label(Some(copy::PLAY_FROM_START));
+    toast.set_timeout(10);
+    let core = Rc::clone(core);
+    let rel_path = rel_path.to_string();
+    toast.connect_button_clicked(move |_| core.reopen_if_playing(&rel_path, true));
+    toast
 }
 
 /// One toast at a time: a new message retitles the one on screen instead of
@@ -1821,6 +1842,12 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
                 crate::scrub_drill::run(&core);
             });
             glib::ControlFlow::Break
+        });
+    }
+    if std::env::var_os("FLACCY_DEMO_REEXPORT").is_some() {
+        let core = Rc::clone(&ui.core);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
+            crate::reexport_drill::run(&core);
         });
     }
     if let Ok(spec) = std::env::var("FLACCY_DEMO_ARTWORK") {

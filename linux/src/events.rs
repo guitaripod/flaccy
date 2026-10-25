@@ -30,6 +30,13 @@ pub enum AppEvent {
         loved: bool,
     },
     LastFmChanged,
+    /// The scan recognised a new version of the song that is playing: the file
+    /// the player has open is the old one, so the person is offered the new mix
+    /// from the start.
+    NewMixPlaying {
+        rel_path: String,
+        title: String,
+    },
     SearchChanged(String),
     /// Ctrl+J: bring the playing song into view in the Songs table.
     LocateCurrent,

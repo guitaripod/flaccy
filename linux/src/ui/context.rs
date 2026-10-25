@@ -1,4 +1,5 @@
 use crate::app::AppCore;
+use flaccy_shared::track_revision::copy;
 use gtk::gdk;
 use gtk::gio;
 use gtk::glib;
@@ -8,7 +9,7 @@ use std::rc::Rc;
 /// Menus render through `popup_menu_at`'s plain-widget popover (GtkPopoverMenu
 /// on GTK 4.22 under-allocates multi-section models and clips trailing rows),
 /// so section count is not constrained.
-pub fn track_menu(rel_path: &str, loved: bool) -> gio::Menu {
+pub fn track_menu(rel_path: &str, loved: bool, has_previous: bool) -> gio::Menu {
     let menu = gio::Menu::new();
     let queue_section = gio::Menu::new();
     queue_section.append_item(&item("Play Next", "win.track-play-next", rel_path));
@@ -31,6 +32,13 @@ pub fn track_menu(rel_path: &str, loved: bool) -> gio::Menu {
     actions_section.append_item(&item("Share Songlink…", "win.track-share", rel_path));
     actions_section.append_item(&item("Copy Songlink", "win.track-songlink", rel_path));
     actions_section.append_item(&item("Show in Files", "win.track-reveal", rel_path));
+    if has_previous {
+        actions_section.append_item(&item(
+            copy::RESTORE_PREVIOUS,
+            "win.track-restore",
+            rel_path,
+        ));
+    }
     menu.append_section(None, &actions_section);
 
     let delete_section = gio::Menu::new();
@@ -184,7 +192,7 @@ pub fn attach_track_context_menu(
             .track_by_rel_path(&rel_path)
             .map(|t| t.loved)
             .unwrap_or(false);
-        let menu = track_menu(&rel_path, loved);
+        let menu = track_menu(&rel_path, loved, core.has_previous_version(&rel_path));
         popup_menu_at(&target, &menu, x, y);
     });
     widget.add_controller(gesture);

@@ -35,6 +35,7 @@ pub mod suggested_shelf;
 pub mod track_page;
 pub mod transport;
 pub mod ui_scale;
+pub mod versions_dialog;
 pub mod video_view;
 pub mod wantlist;
 pub mod window;

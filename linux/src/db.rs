@@ -3,6 +3,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use flaccy_shared::album_credit;
 use flaccy_shared::enrichment_job::{self as job, EnrichmentRecord, Fields, Scope, Status};
 use flaccy_shared::library_debut::DebutSummary;
+use flaccy_shared::track_revision::{FileSignature, StoredVersion};
 use rusqlite::functions::FunctionFlags;
 use rusqlite::{named_params, params, Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
@@ -52,6 +53,20 @@ pub struct NewTrack {
     pub sample_rate: Option<i32>,
     pub channels: Option<i32>,
     pub artwork: Option<Vec<u8>>,
+    /// The file's size and modification time as the scan saw them, stored with
+    /// the row so a later scan can tell an untouched file from a changed one.
+    pub signature: Option<FileSignature>,
+    /// What identifies the audio itself, stored as the baseline a re-export is
+    /// told apart from by `track_revision::classify`.
+    pub fingerprint: Option<String>,
+}
+
+/// The file `previousVersions` keeps for a track whose audio was replaced.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreviousVersion {
+    pub rel_path: String,
+    pub stored_path: String,
+    pub moved_at_ms: i64,
 }
 
 pub struct PendingScrobble {
@@ -206,6 +221,24 @@ pub fn string_from_unix(ts: i64) -> String {
         .unwrap_or_default()
         .format("%Y-%m-%d %H:%M:%S%.3f")
         .to_string()
+}
+
+pub fn string_from_unix_ms(ms: i64) -> String {
+    DateTime::<Utc>::from_timestamp_millis(ms)
+        .unwrap_or_default()
+        .format("%Y-%m-%d %H:%M:%S%.3f")
+        .to_string()
+}
+
+pub fn unix_ms_from_string(text: &str) -> i64 {
+    NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.3f")
+        .or_else(|_| NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S"))
+        .map(|naive| naive.and_utc().timestamp_millis())
+        .unwrap_or(0)
+}
+
+pub fn now_ms() -> i64 {
+    Utc::now().timestamp_millis()
 }
 
 pub fn unix_from_string(text: &str) -> i64 {
@@ -471,6 +504,11 @@ impl Db {
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 completedAt DATETIME NOT NULL,
                 summaryJSON TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS previousVersions (
+                trackFileURL TEXT PRIMARY KEY,
+                storedPath TEXT NOT NULL,
+                movedAt DATETIME NOT NULL
             );",
         )?;
         // Added after 1.8.0 so a remembered "no lyrics" answer can expire;
@@ -503,6 +541,17 @@ impl Db {
         let _ = self
             .conn
             .execute("ALTER TABLE playlists ADD COLUMN customCoverData BLOB", []);
+        for column in [
+            "fileSize INTEGER",
+            "fileModifiedMs INTEGER",
+            "audioFingerprint TEXT",
+            "revision INTEGER NOT NULL DEFAULT 1",
+            "revisedAt DATETIME",
+        ] {
+            let _ = self
+                .conn
+                .execute(&format!("ALTER TABLE tracks ADD COLUMN {column}"), []);
+        }
         Ok(())
     }
 
@@ -524,8 +573,9 @@ impl Db {
         self.conn.execute(
             "INSERT OR REPLACE INTO tracks
              (fileURL, title, artist, albumTitle, albumArtist, trackNumber, duration,
-              dateAdded, codec, bitDepth, sampleRate, channels)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+              dateAdded, codec, bitDepth, sampleRate, channels,
+              fileSize, fileModifiedMs, audioFingerprint, revision)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 1)",
             params![
                 track.rel_path,
                 track.title,
@@ -539,11 +589,181 @@ impl Db {
                 track.bit_depth,
                 track.sample_rate,
                 track.channels,
+                track.signature.map(|signature| signature.size),
+                track.signature.map(|signature| signature.modified_ms),
+                track.fingerprint,
             ],
         )?;
         if let Some(artwork) = &track.artwork {
             self.save_album_cover_if_missing(&track.album, &track.artist, artwork)?;
         }
+        Ok(())
+    }
+
+    /// Every indexed path with what the last scan stored about its file.
+    pub fn fetch_stored_versions(&self) -> HashMap<String, StoredVersion> {
+        let mut result = HashMap::new();
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT fileURL, fileSize, fileModifiedMs, audioFingerprint, revision, revisedAt
+             FROM tracks",
+        ) else {
+            return result;
+        };
+        let rows = stmt.query_map([], |row| {
+            let size = row.get::<_, Option<i64>>(1)?;
+            let modified_ms = row.get::<_, Option<i64>>(2)?;
+            Ok((
+                row.get::<_, String>(0)?,
+                StoredVersion {
+                    signature: size
+                        .zip(modified_ms)
+                        .map(|(size, modified_ms)| FileSignature { size, modified_ms }),
+                    fingerprint: row.get(3)?,
+                    revision: row.get(4)?,
+                    revised_at: row
+                        .get::<_, Option<String>>(5)?
+                        .map(|text| unix_ms_from_string(&text)),
+                },
+            ))
+        });
+        if let Ok(rows) = rows {
+            result.extend(rows.flatten());
+        }
+        result
+    }
+
+    /// Writes one path's version fields. Everything else on the row, its id
+    /// included, stays as it was.
+    pub fn update_version(
+        &self,
+        rel_path: &str,
+        version: &StoredVersion,
+    ) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "UPDATE tracks SET fileSize = ?1, fileModifiedMs = ?2, audioFingerprint = ?3,
+                    revision = ?4, revisedAt = ?5
+             WHERE fileURL = ?6",
+            params![
+                version.signature.map(|signature| signature.size),
+                version.signature.map(|signature| signature.modified_ms),
+                version.fingerprint,
+                version.revision,
+                version.revised_at.map(string_from_unix_ms),
+                rel_path,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Re-reads a known file into its existing row with an `UPDATE`, because
+    /// `INSERT OR REPLACE` would hand the row a new id and take it out of every
+    /// playlist and play history that points at it. Technical fields always
+    /// follow the file; the tags do only while no analysis has rewritten them.
+    /// Returns whether the track moved to another album, which leaves the old
+    /// album's enrichment state orphaned until `sweep_orphaned_enrichment`.
+    pub fn refresh_track_in_place(&self, track: &NewTrack) -> Result<bool, rusqlite::Error> {
+        let before: Option<(String, String)> = self
+            .conn
+            .query_row(
+                "SELECT albumTitle, artist FROM tracks WHERE fileURL = ?1",
+                params![track.rel_path],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+        self.conn.execute(
+            "UPDATE tracks SET
+                duration = ?1, codec = ?2, bitDepth = ?3, sampleRate = ?4, channels = ?5,
+                title = CASE WHEN aiAnalyzed = 0 THEN ?6 ELSE title END,
+                artist = CASE WHEN aiAnalyzed = 0 THEN ?7 ELSE artist END,
+                albumTitle = CASE WHEN aiAnalyzed = 0 THEN ?8 ELSE albumTitle END,
+                albumArtist = CASE WHEN aiAnalyzed = 0 THEN COALESCE(?9, albumArtist) ELSE albumArtist END,
+                trackNumber = CASE WHEN aiAnalyzed = 0 THEN ?10 ELSE trackNumber END
+             WHERE fileURL = ?11",
+            params![
+                track.duration,
+                track.codec,
+                track.bit_depth,
+                track.sample_rate,
+                track.channels,
+                track.title,
+                track.artist,
+                track.album,
+                track.album_artist,
+                track.track_number,
+                track.rel_path,
+            ],
+        )?;
+        let after: Option<(String, String)> = self
+            .conn
+            .query_row(
+                "SELECT albumTitle, artist FROM tracks WHERE fileURL = ?1",
+                params![track.rel_path],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+        if let Some(artwork) = &track.artwork {
+            if let Some((album, artist)) = &after {
+                self.save_album_cover_if_missing(album, artist, artwork)?;
+            }
+        }
+        Ok(before != after)
+    }
+
+    /// Drops the enrichment state of albums no track belongs to any more, the
+    /// same sweep every retitle and removal ends with.
+    pub fn sweep_orphaned_enrichment(&self) -> Result<(), rusqlite::Error> {
+        self.conn.execute(job::ORPHAN_SWEEP_SQL, [])?;
+        Ok(())
+    }
+
+    pub fn upsert_previous_version(
+        &self,
+        rel_path: &str,
+        stored_path: &str,
+        moved_at_ms: i64,
+    ) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "INSERT INTO previousVersions (trackFileURL, storedPath, movedAt)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(trackFileURL) DO UPDATE SET
+                storedPath = excluded.storedPath, movedAt = excluded.movedAt",
+            params![rel_path, stored_path, string_from_unix_ms(moved_at_ms)],
+        )?;
+        Ok(())
+    }
+
+    pub fn previous_version(&self, rel_path: &str) -> Option<PreviousVersion> {
+        self.conn
+            .query_row(
+                "SELECT trackFileURL, storedPath, movedAt FROM previousVersions
+                 WHERE trackFileURL = ?1",
+                params![rel_path],
+                previous_version_from_row,
+            )
+            .optional()
+            .ok()
+            .flatten()
+    }
+
+    pub fn fetch_previous_versions(&self) -> Vec<PreviousVersion> {
+        let Ok(mut stmt) = self
+            .conn
+            .prepare("SELECT trackFileURL, storedPath, movedAt FROM previousVersions")
+        else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map([], previous_version_from_row);
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    pub fn delete_previous_version(&self, rel_path: &str) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "DELETE FROM previousVersions WHERE trackFileURL = ?1",
+            params![rel_path],
+        )?;
         Ok(())
     }
 
@@ -800,7 +1020,7 @@ impl Db {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT id, fileURL, title, artist, albumTitle, trackNumber, duration,
                     codec, bitDepth, sampleRate, channels, loved, playCount,
-                    dateAdded, lastPlayed, albumArtist
+                    dateAdded, lastPlayed, albumArtist, revision, revisedAt, fileModifiedMs
              FROM tracks ORDER BY albumTitle, trackNumber, title",
         ) else {
             return Vec::new();
@@ -825,6 +1045,11 @@ impl Db {
                     .get::<_, Option<String>>(14)?
                     .map(|text| unix_from_string(&text)),
                 album_artist: row.get::<_, Option<String>>(15)?.filter(|s| !s.is_empty()),
+                revision: row.get(16)?,
+                revised_at: row
+                    .get::<_, Option<String>>(17)?
+                    .map(|text| unix_ms_from_string(&text)),
+                file_modified_ms: row.get(18)?,
             })
         });
         match rows {
@@ -2191,6 +2416,14 @@ impl Db {
 /// Decodes one `enrichmentState` row through the shared record's persistence
 /// contract, so timestamp encoding lives in exactly one place across both
 /// languages.
+fn previous_version_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<PreviousVersion> {
+    Ok(PreviousVersion {
+        rel_path: row.get(0)?,
+        stored_path: row.get(1)?,
+        moved_at_ms: unix_ms_from_string(&row.get::<_, String>(2)?),
+    })
+}
+
 fn record_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Option<EnrichmentRecord>> {
     let scope: String = row.get(0)?;
     let key: String = row.get(1)?;
@@ -2509,6 +2742,8 @@ mod cleanup_tests {
             sample_rate,
             channels: Some(2),
             artwork: None,
+            signature: None,
+            fingerprint: None,
         })
         .expect("insert track");
     }
@@ -2527,6 +2762,8 @@ mod cleanup_tests {
             sample_rate: Some(44100),
             channels: Some(2),
             artwork: None,
+            signature: None,
+            fingerprint: None,
         })
         .expect("insert track");
     }
@@ -3728,6 +3965,8 @@ mod cleanup_tests {
                 sample_rate: Some(44100),
                 channels: Some(2),
                 artwork: Some(vec![3, 3, 3, 3]),
+                signature: None,
+                fingerprint: None,
             })
             .expect("a rescan re-inserts the track and hoists its art");
 
@@ -3945,6 +4184,191 @@ mod cleanup_tests {
         let reopened = Db::open(&path).expect("a second open is a no-op");
         assert_eq!(reopened.playlist_cover(id), Some(vec![5]));
         drop(reopened);
+        remove_all(&path);
+    }
+
+    fn new_track(rel_path: &str, title: &str, album: &str) -> NewTrack {
+        NewTrack {
+            rel_path: rel_path.to_string(),
+            title: title.to_string(),
+            artist: "Artist".to_string(),
+            album: album.to_string(),
+            album_artist: None,
+            track_number: 1,
+            duration: 100.0,
+            codec: Some("WAV".to_string()),
+            bit_depth: Some(16),
+            sample_rate: Some(8000),
+            channels: Some(1),
+            artwork: None,
+            signature: Some(FileSignature {
+                size: 10,
+                modified_ms: 20,
+            }),
+            fingerprint: Some("sha256:one".to_string()),
+        }
+    }
+
+    fn id_of(db: &Db, rel_path: &str) -> i64 {
+        db.fetch_all_tracks()
+            .into_iter()
+            .find(|track| track.rel_path == rel_path)
+            .map(|track| track.id)
+            .expect("track")
+    }
+
+    #[test]
+    fn a_first_index_baselines_the_file_at_revision_one() {
+        let temp = TempDb::open();
+        temp.db.insert_track(&new_track("a.wav", "Song", "Album")).unwrap();
+        let stored = temp.db.fetch_stored_versions().remove("a.wav").expect("version");
+        assert_eq!(
+            stored,
+            StoredVersion {
+                signature: Some(FileSignature {
+                    size: 10,
+                    modified_ms: 20
+                }),
+                fingerprint: Some("sha256:one".to_string()),
+                revision: 1,
+                revised_at: None,
+            }
+        );
+    }
+
+    #[test]
+    fn refreshing_in_place_keeps_the_id_and_the_playlist_row() {
+        let temp = TempDb::open();
+        temp.db.insert_track(&new_track("a.wav", "Song", "Album")).unwrap();
+        let id = id_of(&temp.db, "a.wav");
+        let playlist = temp.db.create_playlist("Mixes").unwrap();
+        temp.db.add_track_to_playlist(playlist, "a.wav").unwrap();
+        let row_before = temp.db.playlist_tracks(playlist);
+
+        let mut changed = new_track("a.wav", "Song (Remaster)", "Album");
+        changed.duration = 240.0;
+        changed.sample_rate = Some(96_000);
+        assert!(!temp.db.refresh_track_in_place(&changed).unwrap());
+        temp.db
+            .update_version(
+                "a.wav",
+                &StoredVersion {
+                    signature: Some(FileSignature {
+                        size: 11,
+                        modified_ms: 21,
+                    }),
+                    fingerprint: Some("sha256:two".to_string()),
+                    revision: 2,
+                    revised_at: Some(1_800_000_000_123),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(id_of(&temp.db, "a.wav"), id);
+        let after = temp.db.playlist_tracks(playlist);
+        assert_eq!(after.len(), 1);
+        assert_eq!((after[0].row_id, &after[0].rel_path), (row_before[0].row_id, &row_before[0].rel_path));
+        let row = temp.db.fetch_all_tracks().remove(0);
+        assert_eq!((row.title.as_str(), row.duration, row.sample_rate), ("Song (Remaster)", 240.0, Some(96_000)));
+        assert_eq!((row.revision, row.revised_at), (2, Some(1_800_000_000_123)));
+        let stored = temp.db.fetch_stored_versions().remove("a.wav").unwrap();
+        assert_eq!(stored.fingerprint.as_deref(), Some("sha256:two"));
+    }
+
+    #[test]
+    fn analysis_keeps_the_tags_it_rewrote_while_the_stream_follows_the_file() {
+        let temp = TempDb::open();
+        temp.db.insert_track(&new_track("a.wav", "Song", "Album")).unwrap();
+        temp.db
+            .conn
+            .execute("UPDATE tracks SET aiAnalyzed = 1, title = 'Cleaned Song'", [])
+            .unwrap();
+        let mut changed = new_track("a.wav", "Raw Tag Title", "Other Album");
+        changed.duration = 300.0;
+        temp.db.refresh_track_in_place(&changed).unwrap();
+        let row = temp.db.fetch_all_tracks().remove(0);
+        assert_eq!((row.title.as_str(), row.album.as_str(), row.duration), ("Cleaned Song", "Album", 300.0));
+    }
+
+    #[test]
+    fn a_track_that_moves_album_reports_it_and_sweeps_the_old_state() {
+        let temp = TempDb::open();
+        temp.db.insert_track(&new_track("a.wav", "Song", "Old Album")).unwrap();
+        let old_key = job::key_album("Old Album", "Artist");
+        seed_state(&temp.db, &old_key, Status::Satisfied, Fields::COVER, 1);
+        assert!(temp
+            .db
+            .refresh_track_in_place(&new_track("a.wav", "Song", "New Album"))
+            .unwrap());
+        temp.db.sweep_orphaned_enrichment().unwrap();
+        assert!(state_row(&temp.db, &old_key).is_none());
+    }
+
+    #[test]
+    fn previous_versions_round_trip_and_upsert_by_path() {
+        let temp = TempDb::open();
+        temp.db.upsert_previous_version("a.wav", "/kept/a.wav", 1_700_000_000_000).unwrap();
+        temp.db.upsert_previous_version("a.wav", "/kept/a2.wav", 1_700_000_005_000).unwrap();
+        assert_eq!(
+            temp.db.previous_version("a.wav"),
+            Some(PreviousVersion {
+                rel_path: "a.wav".into(),
+                stored_path: "/kept/a2.wav".into(),
+                moved_at_ms: 1_700_000_005_000,
+            })
+        );
+        assert_eq!(temp.db.fetch_previous_versions().len(), 1);
+        temp.db.delete_previous_version("a.wav").unwrap();
+        assert!(temp.db.previous_version("a.wav").is_none());
+    }
+
+    #[test]
+    fn a_library_from_before_track_versions_gains_the_columns_at_revision_one() {
+        static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let unique = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let path = std::env::temp_dir().join(format!(
+            "flaccy-legacy-version-test-{}-{unique}.sqlite",
+            std::process::id()
+        ));
+        remove_all(&path);
+        {
+            let legacy = Connection::open(&path).expect("legacy db");
+            legacy
+                .execute_batch(
+                    "CREATE TABLE tracks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        fileURL TEXT NOT NULL UNIQUE,
+                        title TEXT NOT NULL,
+                        artist TEXT NOT NULL,
+                        albumTitle TEXT NOT NULL,
+                        albumArtist TEXT,
+                        trackNumber INTEGER NOT NULL,
+                        duration DOUBLE NOT NULL,
+                        artworkData BLOB,
+                        lastFMArtworkURL TEXT,
+                        musicBrainzID TEXT,
+                        albumMusicBrainzID TEXT,
+                        dateAdded DATETIME NOT NULL,
+                        lastPlayed DATETIME,
+                        playCount INTEGER NOT NULL DEFAULT 0,
+                        aiAnalyzed BOOLEAN NOT NULL DEFAULT 0,
+                        analysisAttemptedAt DATETIME,
+                        codec TEXT,
+                        bitDepth INTEGER,
+                        sampleRate INTEGER,
+                        channels INTEGER,
+                        loved BOOLEAN NOT NULL DEFAULT 0,
+                        lovedPendingOp TEXT
+                    );
+                    INSERT INTO tracks (fileURL, title, artist, albumTitle, trackNumber, duration, dateAdded)
+                    VALUES ('old.flac', 'Old', 'Artist', 'Album', 1, 60.0, '2024-01-01 00:00:00.000');",
+                )
+                .expect("legacy schema");
+        }
+        let db = Db::open(&path).expect("migrates");
+        let stored = db.fetch_stored_versions().remove("old.flac").expect("row");
+        assert_eq!((stored.signature, stored.fingerprint, stored.revision), (None, None, 1));
+        drop(db);
         remove_all(&path);
     }
 }

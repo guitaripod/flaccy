@@ -1,10 +1,18 @@
-use crate::db::{Db, NewTrack};
+use crate::db::{now_ms, Db, NewTrack};
+use crate::fingerprint;
 use crate::load_progress::{LoadPhase, LoadProgress};
 use lofty::file::{AudioFile, FileType, TaggedFile, TaggedFileExt};
 use lofty::prelude::*;
 use lofty::tag::ItemKey;
+use flaccy_shared::track_revision::{self, Outcome};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+
+/// Held for the whole revision pass, so a scan started while the previous one
+/// is still fingerprinting waits for it and then finds the rows already settled
+/// instead of recognising the same re-export twice.
+static REVISION_PASS: Mutex<()> = Mutex::new(());
 
 pub(crate) const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
 
@@ -18,28 +26,144 @@ pub enum ScanEvent {
         added: usize,
         removed: usize,
     },
+    /// Sent after `Done`, once the revision pass has recognised re-exports of
+    /// songs already in the library: the paths whose audio is a new version.
+    Revised(Vec<String>),
+    /// Sent after `Done` when the revision pass re-read tags that changed on
+    /// files whose audio did not, so the views reload.
+    Retagged,
     Failed(String),
+}
+
+/// What the revision pass decided about the files it had to look at.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub(crate) struct RevisionReport {
+    pub baseline: usize,
+    pub retagged: usize,
+    pub new_versions: Vec<String>,
 }
 
 pub fn spawn_scan(root: PathBuf, db_path: PathBuf, tx: async_channel::Sender<ScanEvent>) {
     std::thread::Builder::new()
         .name("flaccy-scan".into())
         .spawn(move || {
-            let result = run_scan(&root, &db_path, &tx);
-            let event = match result {
-                Ok((added, removed)) => ScanEvent::Done { added, removed },
-                Err(message) => ScanEvent::Failed(message),
-            };
-            let _ = tx.send_blocking(event);
+            match run_scan(&root, &db_path, &tx) {
+                Ok(outcome) => {
+                    let _ = tx.send_blocking(ScanEvent::Done {
+                        added: outcome.added,
+                        removed: outcome.removed,
+                    });
+                    announce_revisions(&root, &db_path, &outcome.files, &tx);
+                }
+                Err(message) => {
+                    let _ = tx.send_blocking(ScanEvent::Failed(message));
+                }
+            }
         })
         .ok();
+}
+
+struct ScanOutcome {
+    added: usize,
+    removed: usize,
+    files: Vec<PathBuf>,
+}
+
+/// Runs the revision pass behind a finished scan and tells the main loop what
+/// it found. A database that cannot be opened here already failed the scan.
+fn announce_revisions(
+    root: &Path,
+    db_path: &Path,
+    files: &[PathBuf],
+    tx: &async_channel::Sender<ScanEvent>,
+) {
+    let Ok(db) = Db::open(db_path) else { return };
+    let report = run_revision_pass(root, &db, files);
+    if report.baseline + report.retagged + report.new_versions.len() > 0 {
+        crate::logger::info(
+            "library",
+            &format!(
+                "revision pass: {} baseline, {} retagged, {} new versions",
+                report.baseline,
+                report.retagged,
+                report.new_versions.len()
+            ),
+        );
+    }
+    if report.retagged > 0 {
+        let _ = tx.send_blocking(ScanEvent::Retagged);
+    }
+    if !report.new_versions.is_empty() {
+        let _ = tx.send_blocking(ScanEvent::Revised(report.new_versions));
+    }
+}
+
+/// Looks at every file that is both on disk and already indexed. A file whose
+/// size and modification time match what is stored is not read; one that moved
+/// is fingerprinted, and `track_revision` decides whether only its tags
+/// changed (the row is refreshed in place and keeps its revision) or its audio
+/// did (the row is refreshed and its revision goes up). A file that changed
+/// again while it was being read, or cannot be read as audio yet, is left for
+/// the next scan.
+pub(crate) fn run_revision_pass(root: &Path, db: &Db, files: &[PathBuf]) -> RevisionReport {
+    let _held = REVISION_PASS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let stored = db.fetch_stored_versions();
+    let mut report = RevisionReport::default();
+    let mut album_moved = false;
+    for path in files {
+        let rel = relative_path(root, path);
+        let Some(known) = stored.get(&rel) else {
+            continue;
+        };
+        let Some(signature) = fingerprint::signature(path) else {
+            continue;
+        };
+        if !track_revision::needs_inspection(known, &signature) {
+            continue;
+        }
+        let digest = fingerprint::fingerprint(path);
+        if fingerprint::signature(path) != Some(signature) {
+            continue;
+        }
+        let outcome = track_revision::classify(known, digest.as_deref());
+        let next = track_revision::applying(outcome, known, signature, digest.as_deref(), now_ms());
+        if matches!(outcome, Outcome::Retagged | Outcome::NewVersion) {
+            let Some(track) = read_metadata(path, &rel) else {
+                crate::logger::warn("library", &format!("revision pass could not read {rel}"));
+                continue;
+            };
+            match db.refresh_track_in_place(&track) {
+                Ok(moved) => album_moved |= moved,
+                Err(err) => {
+                    crate::logger::error("library", &format!("refresh failed for {rel}: {err}"));
+                    continue;
+                }
+            }
+        }
+        if let Err(err) = db.update_version(&rel, &next) {
+            crate::logger::error("library", &format!("version write failed for {rel}: {err}"));
+            continue;
+        }
+        match outcome {
+            Outcome::Baseline => report.baseline += 1,
+            Outcome::Retagged => report.retagged += 1,
+            Outcome::NewVersion => report.new_versions.push(rel),
+            Outcome::Unchanged => {}
+        }
+    }
+    if album_moved {
+        if let Err(err) = db.sweep_orphaned_enrichment() {
+            crate::logger::error("library", &format!("orphan sweep failed: {err}"));
+        }
+    }
+    report
 }
 
 fn run_scan(
     root: &Path,
     db_path: &Path,
     tx: &async_channel::Sender<ScanEvent>,
-) -> Result<(usize, usize), String> {
+) -> Result<ScanOutcome, String> {
     let db = Db::open(db_path).map_err(|e| format!("db open failed: {e}"))?;
     let mut progress = LoadProgress::new(LoadPhase::FindingFiles);
     let _ = tx.send_blocking(ScanEvent::Progress(progress));
@@ -55,7 +179,11 @@ fn run_scan(
             "library",
             "scan found zero files but database is non-empty; keeping database (transient-empty root guard)",
         );
-        return Ok((0, 0));
+        return Ok(ScanOutcome {
+            added: 0,
+            removed: 0,
+            files: Vec::new(),
+        });
     }
 
     let to_add: Vec<&PathBuf> = files
@@ -119,7 +247,11 @@ fn run_scan(
             disk_paths.len()
         ),
     );
-    Ok((added, removed))
+    Ok(ScanOutcome {
+        added,
+        removed,
+        files,
+    })
 }
 
 fn collect_audio_files(root: &Path) -> Vec<PathBuf> {
@@ -159,7 +291,7 @@ fn collect_audio_files(root: &Path) -> Vec<PathBuf> {
 /// normalization-sensitive, so an NFC-normalized key (the Apple
 /// canonicalSyncPath behavior) would point at a nonexistent file for
 /// NFD-named libraries copied from a Mac.
-fn relative_path(root: &Path, path: &Path) -> String {
+pub(crate) fn relative_path(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| {
@@ -170,7 +302,18 @@ fn relative_path(root: &Path, path: &Path) -> String {
         })
 }
 
+/// A new file's tags together with the signature and fingerprint that baseline
+/// it, so the first re-export is told apart from the original.
 fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
+    let mut track = read_metadata(path, rel_path)?;
+    track.signature = fingerprint::signature(path);
+    track.fingerprint = fingerprint::fingerprint(path);
+    Some(track)
+}
+
+/// What a file's tags and stream properties say, without reading the audio
+/// bytes a second time. Also what restoring a previous mix re-reads in place.
+pub(crate) fn read_metadata(path: &Path, rel_path: &str) -> Option<NewTrack> {
     let tagged = lofty::probe::Probe::open(path).ok()?.read().ok()?;
     let properties = tagged.properties();
     let duration = properties.duration().as_secs_f64();
@@ -228,6 +371,8 @@ fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
         sample_rate: properties.sample_rate().map(|r| r as i32),
         channels: properties.channels().map(|c| c as i32),
         artwork,
+        signature: None,
+        fingerprint: None,
     })
 }
 
@@ -397,5 +542,135 @@ mod tests {
         let parsed = parse_filename("12. Twelfth");
         assert_eq!(parsed.track_number, 12);
         assert_eq!(parsed.title, "Twelfth");
+    }
+
+    mod revision_pass {
+        use super::super::*;
+        use crate::fingerprint::fixtures::{info_tags, tone, wav_bytes, TempDir};
+        use flaccy_shared::track_revision::StoredVersion;
+
+        const REL: &str = "Imported/Rough Mix.wav";
+
+        struct Fixture {
+            _dir: TempDir,
+            root: PathBuf,
+            db: Db,
+        }
+
+        fn fixture() -> Fixture {
+            let dir = TempDir::new("revision-pass");
+            let root = dir.path().join("music");
+            std::fs::create_dir_all(root.join("Imported")).unwrap();
+            let db = Db::open(&dir.path().join("data/library.sqlite")).unwrap();
+            Fixture { root, db, _dir: dir }
+        }
+
+        fn write(fixture: &Fixture, title: &str, album: &str, samples: usize, step: i16) {
+            let tags = info_tags(title, "Drill Band", album);
+            std::fs::write(
+                fixture.root.join(REL),
+                wav_bytes(&tone(samples, step), Some(&tags)),
+            )
+            .unwrap();
+        }
+
+        fn pass(fixture: &Fixture) -> RevisionReport {
+            let files = collect_audio_files(&fixture.root);
+            run_revision_pass(&fixture.root, &fixture.db, &files)
+        }
+
+        fn version(fixture: &Fixture) -> StoredVersion {
+            fixture.db.fetch_stored_versions().remove(REL).expect("version")
+        }
+
+        fn track(fixture: &Fixture) -> crate::library::Track {
+            fixture
+                .db
+                .fetch_all_tracks()
+                .into_iter()
+                .find(|track| track.rel_path == REL)
+                .expect("track")
+        }
+
+        fn index(fixture: &Fixture) {
+            let track = read_track(&fixture.root.join(REL), REL).expect("track");
+            fixture.db.insert_track(&track).unwrap();
+        }
+
+        #[test]
+        fn a_file_scanned_before_versions_existed_is_baselined_once_and_left_alone() {
+            let fixture = fixture();
+            write(&fixture, "Rough Mix", "Rough Cuts", 4000, 7);
+            let mut legacy = read_metadata(&fixture.root.join(REL), REL).unwrap();
+            legacy.signature = None;
+            legacy.fingerprint = None;
+            fixture.db.insert_track(&legacy).unwrap();
+
+            let first = pass(&fixture);
+            assert_eq!((first.baseline, first.retagged, first.new_versions.len()), (1, 0, 0));
+            let stored = version(&fixture);
+            assert_eq!((stored.revision, stored.revised_at), (1, None));
+            assert!(stored.fingerprint.is_some() && stored.signature.is_some());
+
+            assert_eq!(pass(&fixture), RevisionReport::default());
+        }
+
+        #[test]
+        fn a_retag_refreshes_the_row_in_place_without_a_new_revision() {
+            let fixture = fixture();
+            write(&fixture, "Rough Mix", "Rough Cuts", 4000, 7);
+            index(&fixture);
+            let id = track(&fixture).id;
+
+            write(&fixture, "Rough Mix (Final)", "Rough Cuts", 4000, 7);
+            let report = pass(&fixture);
+
+            assert_eq!((report.baseline, report.retagged, report.new_versions.len()), (0, 1, 0));
+            let row = track(&fixture);
+            assert_eq!((row.id, row.title.as_str(), row.revision), (id, "Rough Mix (Final)", 1));
+            assert_eq!(row.revised_at, None);
+        }
+
+        #[test]
+        fn a_re_export_keeps_the_row_and_the_playlist_and_raises_the_revision() {
+            let fixture = fixture();
+            write(&fixture, "Rough Mix", "Rough Cuts", 4000, 7);
+            index(&fixture);
+            let id = track(&fixture).id;
+            let playlist = fixture.db.create_playlist("Mixes").unwrap();
+            fixture.db.add_track_to_playlist(playlist, REL).unwrap();
+            let before = fixture.db.playlist_tracks(playlist);
+            let fingerprint_before = version(&fixture).fingerprint;
+
+            write(&fixture, "Rough Mix", "Rough Cuts", 5000, 11);
+            let report = pass(&fixture);
+
+            assert_eq!(report.new_versions, vec![REL.to_string()]);
+            let row = track(&fixture);
+            assert_eq!((row.id, row.revision, row.duration > 0.6), (id, 2, true));
+            assert!(row.revised_at.is_some());
+            let stored = version(&fixture);
+            assert_ne!(stored.fingerprint, fingerprint_before);
+            let after = fixture.db.playlist_tracks(playlist);
+            assert_eq!(
+                after.iter().map(|r| (r.row_id, r.rel_path.clone())).collect::<Vec<_>>(),
+                before.iter().map(|r| (r.row_id, r.rel_path.clone())).collect::<Vec<_>>()
+            );
+            assert_eq!(pass(&fixture), RevisionReport::default());
+        }
+
+        #[test]
+        fn a_file_that_cannot_be_read_as_audio_yet_is_tried_again_next_scan() {
+            let fixture = fixture();
+            write(&fixture, "Rough Mix", "Rough Cuts", 4000, 7);
+            index(&fixture);
+            let before = version(&fixture);
+
+            std::fs::write(fixture.root.join(REL), b"RIFF not a wave yet").unwrap();
+            let report = pass(&fixture);
+
+            assert_eq!(report.new_versions.len() + report.retagged, 0);
+            assert_eq!(version(&fixture), before);
+        }
     }
 }

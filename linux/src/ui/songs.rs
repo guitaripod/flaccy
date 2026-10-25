@@ -212,7 +212,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                         .is_empty();
                 context::popup_menu_at(anchor, &bulk_menu(selected.len(), has_duplicates), x, y);
             } else {
-                let menu = context::track_menu(&track.rel_path, track.loved);
+                let menu = context::track_menu(
+                    &track.rel_path,
+                    track.loved,
+                    ui.core.has_previous_version(&track.rel_path),
+                );
                 context::popup_menu_at(anchor, &menu, x, y);
             }
         })
@@ -221,9 +225,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
 
     let track_column = track_number_column(ui);
     column_view.append_column(&track_column);
-    let title_column = string_column(
+    let title_column = title_column(
         ui,
-        "Title",
         true,
         |track| track.title.clone(),
         |a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()),
@@ -1012,7 +1015,7 @@ fn tracks_fingerprint(tracks: &[Track]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for track in tracks {
         let row = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{:?}|{:?}|{:?}|{:?}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{:?}|{:?}|{:?}|{:?}|{:?}",
             track.rel_path,
             track.title,
             track.artist,
@@ -1025,7 +1028,8 @@ fn tracks_fingerprint(tracks: &[Track]) -> u64 {
             track.codec,
             track.bit_depth,
             track.sample_rate,
-            track.last_played
+            track.last_played,
+            track.revised_at
         );
         hash = hash.rotate_left(5) ^ crate::palette::fnv1a_64(&row);
     }
@@ -1115,6 +1119,35 @@ pub(crate) fn apply_now_playing_cell(ui: &Rc<Ui>, widget: &gtk::Widget, item: &g
     }
 }
 
+/// Keeps a recycled cell's chip in step with the library: a reload that
+/// recognised a re-export lights it even when the row object it is bound to
+/// is a snapshot from before.
+fn watch_cell_chip(ui: &Rc<Ui>, chip: &gtk::Label, item: &gtk::ListItem) {
+    let item_weak = item.downgrade();
+    let ui = Rc::clone(ui);
+    let hub = Rc::clone(&ui.core.hub);
+    hub.subscribe_widget(chip, move |chip, event| {
+        if !matches!(event, AppEvent::LibraryReloaded) {
+            return;
+        }
+        let Some(boxed) = item_weak
+            .upgrade()
+            .and_then(|item| item.item())
+            .and_downcast::<BoxedAnyObject>()
+        else {
+            return;
+        };
+        let rel_path = boxed.borrow::<Track>().rel_path.clone();
+        let visible = ui
+            .core
+            .library
+            .borrow()
+            .track_by_rel_path(&rel_path)
+            .is_some_and(controls::shows_new_mix);
+        chip.set_visible(visible);
+    });
+}
+
 /// Keeps a recycled cell following the player for as long as the widget lives.
 pub(crate) fn watch_now_playing_cell(ui: &Rc<Ui>, widget: &gtk::Widget, item: &gtk::ListItem) {
     let ui_ref = Rc::clone(ui);
@@ -1181,6 +1214,45 @@ pub(crate) fn string_column(
     compare: impl Fn(&Track, &Track) -> Ordering + 'static,
     menu: Option<Rc<MenuHandler>>,
 ) -> gtk::ColumnViewColumn {
+    cell_column(ui, title, expand, false, text_for, compare, menu)
+}
+
+/// A title column: the text, and beside it the New mix chip while the song's
+/// latest re-export is recent.
+pub(crate) fn title_column(
+    ui: &Rc<Ui>,
+    expand: bool,
+    text_for: impl Fn(&Track) -> String + 'static,
+    compare: impl Fn(&Track, &Track) -> Ordering + 'static,
+    menu: Option<Rc<MenuHandler>>,
+) -> gtk::ColumnViewColumn {
+    cell_column(ui, "Title", expand, true, text_for, compare, menu)
+}
+
+/// The text label of a cell, whether the cell is the label itself or a box
+/// holding it beside a chip.
+fn cell_label(cell: &gtk::Widget) -> Option<gtk::Label> {
+    cell.clone()
+        .downcast::<gtk::Label>()
+        .ok()
+        .or_else(|| cell.first_child().and_downcast::<gtk::Label>())
+}
+
+fn cell_chip(cell: &gtk::Widget) -> Option<gtk::Label> {
+    cell.last_child()
+        .and_downcast::<gtk::Label>()
+        .filter(|chip| chip.has_css_class("new-mix-chip"))
+}
+
+fn cell_column(
+    ui: &Rc<Ui>,
+    title: &str,
+    expand: bool,
+    with_chip: bool,
+    text_for: impl Fn(&Track) -> String + 'static,
+    compare: impl Fn(&Track, &Track) -> Ordering + 'static,
+    menu: Option<Rc<MenuHandler>>,
+) -> gtk::ColumnViewColumn {
     let factory = gtk::SignalListItemFactory::new();
     let setup_ui = Rc::clone(ui);
     let text_for = Rc::new(text_for);
@@ -1193,15 +1265,26 @@ pub(crate) fn string_column(
             .xalign(0.0)
             .ellipsize(pango::EllipsizeMode::End)
             .build();
-        item.set_child(Some(&label));
-        watch_now_playing_cell(&setup_ui, label.upcast_ref::<gtk::Widget>(), item);
+        let cell: gtk::Widget = if with_chip {
+            label.set_hexpand(true);
+            let chip = controls::new_mix_chip();
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            row.append(&label);
+            row.append(&chip);
+            watch_cell_chip(&setup_ui, &chip, item);
+            row.upcast()
+        } else {
+            label.clone().upcast()
+        };
+        item.set_child(Some(&cell));
+        watch_now_playing_cell(&setup_ui, &cell, item);
         watch_cell_text(&setup_ui, &label, item, Rc::clone(&setup_text));
         if let Some(menu) = menu.clone() {
             let gesture = gtk::GestureClick::builder()
                 .button(gdk::BUTTON_SECONDARY)
                 .build();
             let item_weak = item.downgrade();
-            let label_ref = label.clone();
+            let anchor = cell.clone();
             gesture.connect_pressed(move |_, _, x, y| {
                 let Some(item) = item_weak.upgrade() else {
                     return;
@@ -1210,9 +1293,9 @@ pub(crate) fn string_column(
                     return;
                 };
                 let track = boxed.borrow::<Track>().clone();
-                menu(&track, label_ref.upcast_ref::<gtk::Widget>(), x, y);
+                menu(&track, &anchor, x, y);
             });
-            label.add_controller(gesture);
+            cell.add_controller(gesture);
         }
     });
     {
@@ -1222,7 +1305,10 @@ pub(crate) fn string_column(
             let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
                 return;
             };
-            let Some(label) = item.child().and_downcast::<gtk::Label>() else {
+            let Some(cell) = item.child() else {
+                return;
+            };
+            let Some(label) = cell_label(&cell) else {
                 return;
             };
             let Some(boxed) = item.item().and_downcast::<BoxedAnyObject>() else {
@@ -1230,8 +1316,11 @@ pub(crate) fn string_column(
             };
             let track = boxed.borrow::<Track>();
             label.set_label(&text_for(&track));
+            if let Some(chip) = cell_chip(&cell) {
+                chip.set_visible(controls::shows_new_mix(&track));
+            }
             drop(track);
-            apply_now_playing_cell(&bind_ui, label.upcast_ref::<gtk::Widget>(), item);
+            apply_now_playing_cell(&bind_ui, &cell, item);
         });
     }
 

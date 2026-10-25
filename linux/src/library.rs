@@ -24,6 +24,14 @@ pub struct TrackRow {
     pub play_count: i64,
     pub date_added: i64,
     pub last_played: Option<i64>,
+    /// 1 for a song as first indexed, one more for every re-export of its
+    /// audio the scan has recognised.
+    pub revision: i64,
+    /// Milliseconds since the epoch at which the scan recognised the latest
+    /// re-export, `None` for a song never re-exported.
+    pub revised_at: Option<i64>,
+    /// When the file was last written, in milliseconds since the epoch.
+    pub file_modified_ms: Option<i64>,
 }
 
 pub type Track = TrackRow;
@@ -590,6 +598,9 @@ mod meta_tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
         }
     }
 
@@ -652,6 +663,9 @@ mod artwork_key_tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
         }
     }
 
@@ -738,6 +752,9 @@ mod sort_tests {
                 play_count: 0,
                 date_added: 0,
                 last_played: None,
+                revision: 1,
+                revised_at: None,
+                file_modified_ms: None,
             },
             TrackRow {
                 id: 2,
@@ -756,6 +773,9 @@ mod sort_tests {
                 play_count: 0,
                 date_added: 0,
                 last_played: None,
+                revision: 1,
+                revised_at: None,
+                file_modified_ms: None,
             },
             TrackRow {
                 id: 3,
@@ -774,6 +794,9 @@ mod sort_tests {
                 play_count: 0,
                 date_added: 0,
                 last_played: None,
+                revision: 1,
+                revised_at: None,
+                file_modified_ms: None,
             },
         ];
         let mut grouped: HashMap<String, Vec<Track>> = HashMap::new();
@@ -818,6 +841,9 @@ mod sort_tests {
             play_count: 0,
             date_added: 0,
             last_played: None,
+            revision: 1,
+            revised_at: None,
+            file_modified_ms: None,
         }
     }
 

@@ -1016,7 +1016,11 @@ impl DetailView {
                     .borrow()
                     .get((track.track_number.max(1) - 1) as usize)
                     .map(|(row_id, _)| *row_id);
-                let menu = context::track_menu(&track.rel_path, track.loved);
+                let menu = context::track_menu(
+                    &track.rel_path,
+                    track.loved,
+                    view.ui.core.has_previous_version(&track.rel_path),
+                );
                 if let Some(row_id) = row_id {
                     let remove_section = gio::Menu::new();
                     let remove_item = gio::MenuItem::new(Some("Remove from Playlist"), None);
@@ -1290,7 +1294,10 @@ impl DetailView {
             .ellipsize(pango::EllipsizeMode::End)
             .tooltip_text(&track.title)
             .build();
-        text_box.append(&title);
+        let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        title_row.append(&title);
+        title_row.append(&crate::ui::controls::live_new_mix_chip(ui, track));
+        text_box.append(&title_row);
         let artist = gtk::Label::builder()
             .label(&track.artist)
             .xalign(0.0)
@@ -1951,7 +1958,7 @@ fn attach_playlist_row_menu(
             .track_by_rel_path(&rel_path)
             .map(|t| t.loved)
             .unwrap_or(false);
-        let menu = context::track_menu(&rel_path, loved);
+        let menu = context::track_menu(&rel_path, loved, ui.core.has_previous_version(&rel_path));
         let remove_section = gio::Menu::new();
         let remove_item = gio::MenuItem::new(Some("Remove from Playlist"), None);
         remove_item.set_action_and_target_value(

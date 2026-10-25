@@ -961,6 +961,9 @@ mod sort_tests {
                 play_count: 0,
                 date_added: added,
                 last_played: played,
+                revision: 1,
+                revised_at: None,
+                file_modified_ms: None,
             }],
         }
     }

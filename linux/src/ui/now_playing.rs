@@ -9,6 +9,8 @@ use crate::ui::slider::SliderMetrics;
 use crate::ui::video_view;
 use crate::ui::Ui;
 use adw::prelude::*;
+use crate::library::Track;
+use flaccy_shared::track_revision::copy;
 use gtk::pango;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -53,7 +55,7 @@ pub fn present(ui: &Rc<Ui>) {
     scrim.set_hexpand(true);
     scrim.set_vexpand(true);
 
-    let (art_page, art, title, artist, meta, quality) = build_art_lens();
+    let (art_page, art, title, artist, meta, quality, mix) = build_art_lens();
     artist.set_halign(gtk::Align::Center);
     meta.set_halign(gtk::Align::Center);
     attach_label_nav(ui, &artist, "Go to Artist", |ui| {
@@ -307,6 +309,7 @@ pub fn present(ui: &Rc<Ui>) {
         &artist,
         &meta,
         &quality,
+        &mix,
         &transport.love,
         &current_rel,
     );
@@ -315,7 +318,7 @@ pub fn present(ui: &Rc<Ui>) {
     transport.sync_initial(ui);
     update_up_next_label(ui, &queue_label);
 
-    wire_events(ui, &overlay, &transport, &current_rel, &queue_label, update);
+    wire_events(ui, &overlay, &transport, &current_rel, &queue_label, &mix, update);
 
     if crate::config::demo_mode() {
         if let Ok(which) = std::env::var("FLACCY_DEMO_NP_PANELS") {
@@ -351,6 +354,7 @@ fn build_art_lens() -> (
     gtk::Label,
     gtk::Label,
     gtk::Label,
+    VersionBadge,
 ) {
     let art = gtk::Picture::builder()
         .content_fit(gtk::ContentFit::Cover)
@@ -397,10 +401,17 @@ fn build_art_lens() -> (
     quality.set_halign(gtk::Align::Center);
     quality.set_visible(false);
 
+    let mix = VersionBadge::new();
+    let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    title_row.set_halign(gtk::Align::Center);
+    title_row.append(&title);
+    title_row.append(&mix.chip);
+
     let text_box = gtk::Box::new(gtk::Orientation::Vertical, 6);
     text_box.set_halign(gtk::Align::Center);
     text_box.set_hexpand(true);
-    text_box.append(&title);
+    text_box.append(&title_row);
+    text_box.append(&mix.exported);
     text_box.append(&artist);
     text_box.append(&meta);
     text_box.append(&quality);
@@ -430,7 +441,7 @@ fn build_art_lens() -> (
         .vexpand(true)
         .child(&clamp)
         .build();
-    (scroll.upcast(), art, title, artist, meta, quality)
+    (scroll.upcast(), art, title, artist, meta, quality, mix)
 }
 
 /// Decides which optional dock controls fit a width, from what they actually
@@ -680,6 +691,65 @@ fn update_up_next_label(ui: &Rc<Ui>, label: &gtk::Label) {
     }
 }
 
+/// What Now Playing says about the playing file's versions: the New mix chip
+/// beside the title, and under it when the audio was last exported.
+#[derive(Clone)]
+struct VersionBadge {
+    chip: gtk::Label,
+    exported: gtk::Label,
+}
+
+impl VersionBadge {
+    fn new() -> Self {
+        let exported = gtk::Label::builder()
+            .xalign(0.5)
+            .visible(false)
+            .build();
+        exported.add_css_class("np-meta");
+        exported.add_css_class("dim");
+        exported.add_css_class("caption");
+        Self {
+            chip: crate::ui::controls::new_mix_chip(),
+            exported,
+        }
+    }
+
+    /// Shows the chip while the re-export is recent, and the export time once
+    /// the song has been re-exported at all.
+    fn show(&self, track: &Track) {
+        self.chip.set_visible(crate::ui::controls::shows_new_mix(track));
+        match exported_text(track) {
+            Some(text) => {
+                self.exported.set_label(&text);
+                self.exported.set_visible(true);
+            }
+            None => self.exported.set_visible(false),
+        }
+    }
+
+    fn hide(&self) {
+        self.chip.set_visible(false);
+        self.exported.set_visible(false);
+    }
+}
+
+/// `Exported 25 Oct 2026 at 14:02` in local time, for a song whose audio has
+/// been replaced at least once.
+fn exported_text(track: &Track) -> Option<String> {
+    if track.revision <= 1 {
+        return None;
+    }
+    let modified = chrono::DateTime::<chrono::Utc>::from_timestamp_millis(track.file_modified_ms?)?
+        .with_timezone(&chrono::Local);
+    Some(copy::fill(
+        copy::EXPORTED_AT,
+        &[
+            &modified.format("%-d %b %Y").to_string(),
+            &modified.format("%H:%M").to_string(),
+        ],
+    ))
+}
+
 type Updater = Rc<dyn Fn()>;
 
 /// Repaints the artwork (sharp, plus the pre-blurred backdrop), text, and
@@ -694,6 +764,7 @@ fn build_updater(
     artist: &gtk::Label,
     meta: &gtk::Label,
     quality: &gtk::Label,
+    mix: &VersionBadge,
     love: &gtk::Button,
     current_rel: &Rc<RefCell<Option<String>>>,
 ) -> Updater {
@@ -704,6 +775,7 @@ fn build_updater(
     let artist = artist.clone();
     let meta = meta.clone();
     let quality = quality.clone();
+    let mix = mix.clone();
     let love = love.clone();
     let current_rel = Rc::clone(current_rel);
     Rc::new(move || {
@@ -712,6 +784,7 @@ fn build_updater(
             artist.set_label("");
             meta.set_label("");
             quality.set_visible(false);
+            mix.hide();
             love.set_sensitive(false);
             *current_rel.borrow_mut() = None;
             return;
@@ -719,6 +792,13 @@ fn build_updater(
         title.set_label(&track.title);
         artist.set_label(&track.artist);
         meta.set_label(&track.album);
+        let fresh = ui
+            .core
+            .library
+            .borrow()
+            .track_by_rel_path(&track.rel_path)
+            .cloned();
+        mix.show(fresh.as_ref().unwrap_or(&track));
         match track.quality_badge() {
             Some(badge) => {
                 quality.set_label(&badge);
@@ -759,6 +839,7 @@ fn wire_events(
     transport: &TransportControls,
     current_rel: &Rc<RefCell<Option<String>>>,
     queue_label: &gtk::Label,
+    mix: &VersionBadge,
     update: Updater,
 ) {
     let hub = Rc::clone(&ui.core.hub);
@@ -769,10 +850,19 @@ fn wire_events(
     let love = transport.love.clone();
     let current_rel = Rc::clone(current_rel);
     let queue_label = queue_label.clone();
+    let mix = mix.clone();
     hub.subscribe_widget(host, move |_, event| match event {
         AppEvent::TrackChanged(_) => {
             update();
             update_up_next_label(&ui, &queue_label);
+        }
+        AppEvent::LibraryReloaded => {
+            let playing = ui.core.player.current_track().and_then(|track| {
+                ui.core.library.borrow().track_by_rel_path(&track.rel_path).cloned()
+            });
+            if let Some(track) = playing {
+                mix.show(&track);
+            }
         }
         AppEvent::QueueChanged => update_up_next_label(&ui, &queue_label),
         AppEvent::AlbumArtworkChanged { title, artist } => {

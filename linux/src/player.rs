@@ -1034,6 +1034,17 @@ impl Player {
         );
     }
 
+    /// Reads the playing song's file again, from the start or where playback
+    /// is, for when the file at its path was replaced while it was open.
+    pub fn reopen_current(&self, from_start: bool) {
+        let target = if from_start {
+            0.0
+        } else {
+            self.position().unwrap_or(0.0)
+        };
+        self.reopen_at(target);
+    }
+
     /// The stall watchdog, run on every playback tick. A pipeline that says it
     /// is playing but has not moved for `STALL_THRESHOLD` is reopened where it
     /// stopped — the only thing that revives a wedged audio stream.

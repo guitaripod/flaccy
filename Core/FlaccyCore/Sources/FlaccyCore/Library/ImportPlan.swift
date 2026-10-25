@@ -53,6 +53,8 @@ public enum ImportPlan {
     public enum Placement: Equatable, Sendable {
         case copy(to: String)
         case alreadyPresent
+        /// A newer version of the song already at this path: the picked file overwrites it.
+        case replace(at: String)
     }
 
     public struct Placed: Equatable, Sendable {
@@ -108,16 +110,33 @@ public enum ImportPlan {
     /// twice never breeds a second copy. Destinations claimed earlier in the
     /// same import are taken too, so two picked files that share a name cannot
     /// land on each other.
+    ///
+    /// With an `inspector`, an audio file that meets a file already on disk at
+    /// its own path is judged by what the audio is rather than how big it is.
+    /// The same audio fingerprint at another size, or a different fingerprint
+    /// with the same song key, is a newer version of that song and becomes
+    /// `.replace(at:)`. Audio that is different and of another song takes the
+    /// `name_n` candidates as before. A claimed destination is never replaced.
     public static func placements(
         for plan: Plan,
         in importRoot: URL,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        inspector: ImportInspector? = nil
     ) -> [Placed] {
         var claimed: [String: Int64?] = [:]
         return plan.items.map { item in
-            let placement = place(item, in: importRoot, claimed: claimed, fileManager: fileManager)
-            if case .copy(let destination) = placement {
+            let placement = place(
+                item,
+                in: importRoot,
+                claimed: claimed,
+                fileManager: fileManager,
+                inspector: inspector
+            )
+            switch placement {
+            case .copy(let destination), .replace(at: let destination):
                 claimed.updateValue(item.size, forKey: destination)
+            case .alreadyPresent:
+                break
             }
             return Placed(item: item, placement: placement)
         }
@@ -133,33 +152,103 @@ public enum ImportPlan {
 
     private enum Slot {
         case free
-        case taken(size: Int64?)
+        case claimed(size: Int64?)
+        case onDisk(URL)
+    }
+
+    private struct Incoming {
+        let source: URL
+        let inspector: ImportInspector?
+        private var resolved: String??
+
+        init(source: URL, inspector: ImportInspector?) {
+            self.source = source
+            self.inspector = inspector
+        }
+
+        mutating func fingerprint() -> String? {
+            if let resolved {
+                return resolved
+            }
+            let fingerprint = inspector?.audioFingerprint(of: source)
+            resolved = .some(fingerprint)
+            return fingerprint
+        }
     }
 
     private static func place(
         _ item: Item,
         in importRoot: URL,
         claimed: [String: Int64?],
-        fileManager: FileManager
+        fileManager: FileManager,
+        inspector: ImportInspector?
     ) -> Placement {
         let parent = (item.destination as NSString).deletingLastPathComponent
         let name = (item.destination as NSString).lastPathComponent
         let stem = (name as NSString).deletingPathExtension
         let pathExtension = (name as NSString).pathExtension
+        var incoming = Incoming(source: item.source, inspector: item.kind == .audio ? inspector : nil)
         var candidate = item.destination
         var counter = 0
         while true {
-            switch slot(candidate, in: importRoot, claimed: claimed, fileManager: fileManager) {
-            case .free:
+            let taken = slot(candidate, in: importRoot, claimed: claimed, fileManager: fileManager)
+            if case .free = taken {
                 return .copy(to: candidate)
-            case .taken(let occupant):
-                guard let size = item.size, let occupant else { return .alreadyPresent }
-                if occupant == size { return .alreadyPresent }
+            }
+            if let placement = occupiedPlacement(
+                taken,
+                for: item,
+                at: candidate,
+                counter: counter,
+                incoming: &incoming
+            ) {
+                return placement
             }
             counter += 1
             let renamed = pathExtension.isEmpty ? "\(stem)_\(counter)" : "\(stem)_\(counter).\(pathExtension)"
             candidate = parent.isEmpty ? renamed : "\(parent)/\(renamed)"
         }
+    }
+
+    /// The verdict for a candidate that is not free: a placement when it settles
+    /// the item, nil when the item must go on to the next `name_n` candidate.
+    private static func occupiedPlacement(
+        _ slot: Slot,
+        for item: Item,
+        at candidate: String,
+        counter: Int,
+        incoming: inout Incoming
+    ) -> Placement? {
+        switch slot {
+        case .free:
+            return nil
+        case .claimed(let occupant):
+            return sizesMatch(item.size, occupant) ? .alreadyPresent : nil
+        case .onDisk(let target):
+            let occupantSize = size(of: target)
+            guard let fingerprint = incoming.fingerprint(),
+                  let inspector = incoming.inspector,
+                  let occupantFingerprint = inspector.audioFingerprint(of: target) else {
+                return sizesMatch(item.size, occupantSize) ? .alreadyPresent : nil
+            }
+            if fingerprint == occupantFingerprint {
+                guard sizesMatch(item.size, occupantSize) else {
+                    return counter == 0 ? .replace(at: candidate) : nil
+                }
+                return .alreadyPresent
+            }
+            guard counter == 0,
+                  let sourceKey = inspector.songKey(of: item.source),
+                  sourceKey == inspector.songKey(of: target) else {
+                return nil
+            }
+            return .replace(at: candidate)
+        }
+    }
+
+    private static func sizesMatch(_ incoming: Int64?, _ occupant: Int64?) -> Bool {
+        guard let incoming, let occupant else { return true }
+        return incoming == occupant
     }
 
     private static func slot(
@@ -168,10 +257,10 @@ public enum ImportPlan {
         claimed: [String: Int64?],
         fileManager: FileManager
     ) -> Slot {
-        if let size = claimed[destination] { return .taken(size: size) }
+        if let size = claimed[destination] { return .claimed(size: size) }
         let target = importRoot.appendingPathComponent(destination)
         guard fileManager.fileExists(atPath: target.path) else { return .free }
-        return .taken(size: size(of: target))
+        return .onDisk(target)
     }
 
     private struct Walk {
@@ -284,4 +373,14 @@ public enum ImportPlan {
     private static func isInside(_ path: String, _ root: String) -> Bool {
         path == root || path.hasPrefix(root.hasSuffix("/") ? root : root + "/")
     }
+}
+
+/// Answers the two audio questions a replacement needs, so the plan itself
+/// carries no file-format knowledge. The platform reads a fingerprint and a
+/// song key from a file; `ImportPlan` decides what the pair means.
+public protocol ImportInspector: Sendable {
+    /// The audio's identity from `AudioPayload` and `TrackRevision.fingerprint`, nil when unreadable.
+    func audioFingerprint(of url: URL) -> String?
+    /// The song's identity across tag edits, nil when the file does not say.
+    func songKey(of url: URL) -> String?
 }

@@ -43,7 +43,18 @@ pub struct Plan {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Placement {
     Copy(String),
+    /// A newer version of a song already in the library, written over the file at this path.
+    Replace(String),
     AlreadyPresent,
+}
+
+/// Reads what an audio file and its tags say about it, so a newer version of a
+/// song already in the library is told apart from a copy of the same file.
+pub trait Inspector {
+    /// Identifies the audio bytes, `None` when they cannot be read.
+    fn audio_fingerprint(&self, path: &Path) -> Option<String>;
+    /// Identifies the song across re-tags, `None` when the file carries no tags to read.
+    fn song_key(&self, path: &Path) -> Option<String>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -77,7 +88,11 @@ pub fn plan(picked: &[PathBuf], library_root: &Path, audio_extensions: &[&str]) 
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let top: Vec<String> = if name.is_empty() { Vec::new() } else { vec![name.clone()] };
+        let top: Vec<String> = if name.is_empty() {
+            Vec::new()
+        } else {
+            vec![name.clone()]
+        };
         if source.is_dir() {
             walk.walk(source, &top);
         } else {
@@ -99,13 +114,25 @@ pub fn plan(picked: &[PathBuf], library_root: &Path, audio_extensions: &[&str]) 
 /// `name_n` that already holds this very file counts as present, so importing
 /// one folder twice never breeds a second copy. Destinations claimed earlier in
 /// the same import are taken too.
-pub fn placements(plan: &Plan, import_root: &Path) -> Vec<Placed> {
+///
+/// With an inspector, an audio file whose own destination is taken on disk asks
+/// what the two recordings are. The same audio at another size is a retag, not
+/// a copy, and replaces the file. A different recording of the same song (equal
+/// song keys) is a newer version and replaces it too. Anything else takes the
+/// next free `name_n.ext`, and a `name_n` counts as present only when it holds
+/// the same audio. A destination already claimed by a replacement is judged by
+/// size like any other claim.
+pub fn placements(
+    plan: &Plan,
+    import_root: &Path,
+    inspector: Option<&dyn Inspector>,
+) -> Vec<Placed> {
     let mut claimed: HashMap<String, Option<u64>> = HashMap::new();
     plan.items
         .iter()
         .map(|item| {
-            let placement = place(item, import_root, &claimed);
-            if let Placement::Copy(destination) = &placement {
+            let placement = place(item, import_root, &claimed, inspector);
+            if let Placement::Copy(destination) | Placement::Replace(destination) = &placement {
                 claimed.insert(destination.clone(), item.size);
             }
             Placed {
@@ -122,21 +149,45 @@ pub fn report(outcome: &Outcome) -> (String, bool) {
     match (outcome.imported, outcome.skipped, outcome.failed) {
         (0, 0, 0) => ("Nothing to import.".to_string(), false),
         (0, 1, 0) => ("Already in your library.".to_string(), false),
-        (0, skipped, 0) => (format!("All {skipped} items are already in your library."), false),
-        (0, _, _) => ("Import failed — the files couldn't be copied.".to_string(), true),
+        (0, skipped, 0) => (
+            format!("All {skipped} items are already in your library."),
+            false,
+        ),
+        (0, _, _) => (
+            "Import failed — the files couldn't be copied.".to_string(),
+            true,
+        ),
         (1, 0, 0) => ("Imported 1 item".to_string(), false),
         (imported, 0, 0) => (format!("Imported {imported} items"), false),
-        (imported, skipped, 0) => (format!("Imported {imported}, {skipped} already in your library"), false),
-        (imported, _, failed) => (format!("Imported {imported}, {failed} failed to copy"), true),
+        (imported, skipped, 0) => (
+            format!("Imported {imported}, {skipped} already in your library"),
+            false,
+        ),
+        (imported, _, failed) => (
+            format!("Imported {imported}, {failed} failed to copy"),
+            true,
+        ),
     }
 }
 
 enum Slot {
     Free,
-    Taken(Option<u64>),
+    Claimed(Option<u64>),
+    OnDisk { path: PathBuf, size: Option<u64> },
 }
 
-fn place(item: &Item, import_root: &Path, claimed: &HashMap<String, Option<u64>>) -> Placement {
+enum Judgement {
+    Present,
+    Replace,
+    Pass,
+}
+
+fn place(
+    item: &Item,
+    import_root: &Path,
+    claimed: &HashMap<String, Option<u64>>,
+    inspector: Option<&dyn Inspector>,
+) -> Placement {
     let (parent, name) = match item.destination.rsplit_once('/') {
         Some((parent, name)) => (parent.to_string(), name.to_string()),
         None => (String::new(), item.destination.clone()),
@@ -147,10 +198,18 @@ fn place(item: &Item, import_root: &Path, claimed: &HashMap<String, Option<u64>>
     loop {
         match slot(&candidate, import_root, claimed) {
             Slot::Free => return Placement::Copy(candidate),
-            Slot::Taken(occupant) => match (item.size, occupant) {
-                (Some(size), Some(occupant)) if size != occupant => {}
-                _ => return Placement::AlreadyPresent,
-            },
+            Slot::Claimed(occupant) => {
+                if sizes_match(item.size, occupant) {
+                    return Placement::AlreadyPresent;
+                }
+            }
+            Slot::OnDisk { path, size } => {
+                match judge_on_disk(item, &path, size, counter == 0, inspector) {
+                    Judgement::Present => return Placement::AlreadyPresent,
+                    Judgement::Replace => return Placement::Replace(candidate),
+                    Judgement::Pass => {}
+                }
+            }
         }
         counter += 1;
         let renamed = if extension.is_empty() {
@@ -168,13 +227,68 @@ fn place(item: &Item, import_root: &Path, claimed: &HashMap<String, Option<u64>>
 
 fn slot(destination: &str, import_root: &Path, claimed: &HashMap<String, Option<u64>>) -> Slot {
     if let Some(size) = claimed.get(destination) {
-        return Slot::Taken(*size);
+        return Slot::Claimed(*size);
     }
     let target = import_root.join(destination);
     if target.exists() {
-        Slot::Taken(file_size(&target))
+        let size = file_size(&target);
+        Slot::OnDisk { path: target, size }
     } else {
         Slot::Free
+    }
+}
+
+/// The size rule every taken destination obeys: a different size is a different
+/// file, while an unknown size on either side counts as the same.
+fn sizes_match(incoming: Option<u64>, occupant: Option<u64>) -> bool {
+    match (incoming, occupant) {
+        (Some(incoming), Some(occupant)) => incoming == occupant,
+        _ => true,
+    }
+}
+
+/// Decides a destination taken by a file on disk. Only audio asks the inspector;
+/// without fingerprints on both sides the size rule decides. The first candidate
+/// may replace the occupant, a later `name_n` may only be the same audio.
+fn judge_on_disk(
+    item: &Item,
+    target: &Path,
+    occupant_size: Option<u64>,
+    first: bool,
+    inspector: Option<&dyn Inspector>,
+) -> Judgement {
+    let Some(inspector) = inspector.filter(|_| item.kind == Kind::Audio) else {
+        return size_judgement(item.size, occupant_size);
+    };
+    let (Some(incoming), Some(occupant)) = (
+        inspector.audio_fingerprint(&item.source),
+        inspector.audio_fingerprint(target),
+    ) else {
+        return size_judgement(item.size, occupant_size);
+    };
+    if incoming == occupant {
+        return match (sizes_match(item.size, occupant_size), first) {
+            (true, _) => Judgement::Present,
+            (false, true) => Judgement::Replace,
+            (false, false) => Judgement::Pass,
+        };
+    }
+    let same_song = matches!(
+        (inspector.song_key(&item.source), inspector.song_key(target)),
+        (Some(incoming), Some(occupant)) if incoming == occupant
+    );
+    if first && same_song {
+        Judgement::Replace
+    } else {
+        Judgement::Pass
+    }
+}
+
+fn size_judgement(incoming: Option<u64>, occupant: Option<u64>) -> Judgement {
+    if sizes_match(incoming, occupant) {
+        Judgement::Present
+    } else {
+        Judgement::Pass
     }
 }
 
@@ -247,7 +361,12 @@ impl Walk {
         };
         let mut children: Vec<(String, PathBuf)> = entries
             .flatten()
-            .map(|entry| (entry.file_name().to_string_lossy().into_owned(), entry.path()))
+            .map(|entry| {
+                (
+                    entry.file_name().to_string_lossy().into_owned(),
+                    entry.path(),
+                )
+            })
             .collect();
         children.sort();
         for (name, child) in children {
@@ -259,7 +378,14 @@ impl Walk {
             if child.is_dir() {
                 self.walk(&child, &nested);
             } else {
-                self.add(&child, &name, &nested, file_size(&child), true, inside_library);
+                self.add(
+                    &child,
+                    &name,
+                    &nested,
+                    file_size(&child),
+                    true,
+                    inside_library,
+                );
             }
         }
     }
@@ -355,19 +481,33 @@ mod tests {
 
         let plan = s.plan(&[s.outside.join("Score")]);
 
-        assert_eq!(destinations(&plan), vec!["Score/CD1/01.flac", "Score/CD2/01.flac"]);
+        assert_eq!(
+            destinations(&plan),
+            vec!["Score/CD1/01.flac", "Score/CD2/01.flac"]
+        );
     }
 
     #[test]
     fn only_music_and_its_lyrics_travel() {
         let s = Sandbox::new();
-        for name in ["song.flac", "song.LRC", "song.elrc", "cover.jpg", "notes.txt", ".hidden.flac", ".DS_Store"] {
+        for name in [
+            "song.flac",
+            "song.LRC",
+            "song.elrc",
+            "cover.jpg",
+            "notes.txt",
+            ".hidden.flac",
+            ".DS_Store",
+        ] {
             s.write(&s.outside, &format!("Album/{name}"), 4);
         }
 
         let plan = s.plan(&[s.outside.join("Album")]);
 
-        assert_eq!(destinations(&plan), vec!["Album/song.LRC", "Album/song.elrc", "Album/song.flac"]);
+        assert_eq!(
+            destinations(&plan),
+            vec!["Album/song.LRC", "Album/song.elrc", "Album/song.flac"]
+        );
         let kinds: Vec<Kind> = plan.items.iter().map(|i| i.kind).collect();
         assert_eq!(kinds, vec![Kind::Lyrics, Kind::Lyrics, Kind::Audio]);
     }
@@ -378,7 +518,10 @@ mod tests {
         s.write(&s.outside, "Album/.git/objects/a.flac", 4);
         s.write(&s.outside, "Album/b.flac", 4);
 
-        assert_eq!(destinations(&s.plan(&[s.outside.join("Album")])), vec!["Album/b.flac"]);
+        assert_eq!(
+            destinations(&s.plan(&[s.outside.join("Album")])),
+            vec!["Album/b.flac"]
+        );
     }
 
     #[test]
@@ -408,7 +551,7 @@ mod tests {
         s.write(&s.outside, "Album/01.flac", 4);
         s.write(&s.library, "Album/01.flac", 4);
 
-        let placed = placements(&s.plan(&[s.outside.join("Album")]), &s.library);
+        let placed = placements(&s.plan(&[s.outside.join("Album")]), &s.library, None);
 
         assert_eq!(verdicts(&placed), vec![Placement::AlreadyPresent]);
     }
@@ -419,9 +562,12 @@ mod tests {
         s.write(&s.outside, "Album/01.flac", 9);
         s.write(&s.library, "Album/01.flac", 4);
 
-        let placed = placements(&s.plan(&[s.outside.join("Album")]), &s.library);
+        let placed = placements(&s.plan(&[s.outside.join("Album")]), &s.library, None);
 
-        assert_eq!(verdicts(&placed), vec![Placement::Copy("Album/01_1.flac".into())]);
+        assert_eq!(
+            verdicts(&placed),
+            vec![Placement::Copy("Album/01_1.flac".into())]
+        );
     }
 
     #[test]
@@ -431,7 +577,7 @@ mod tests {
         s.write(&s.library, "Album/01.flac", 4);
         s.write(&s.library, "Album/01_1.flac", 9);
 
-        let placed = placements(&s.plan(&[s.outside.join("Album")]), &s.library);
+        let placed = placements(&s.plan(&[s.outside.join("Album")]), &s.library, None);
 
         assert_eq!(verdicts(&placed), vec![Placement::AlreadyPresent]);
     }
@@ -443,7 +589,7 @@ mod tests {
         let second = s.write(&s.outside, "b/x.flac", 9);
         let twin = s.write(&s.outside, "c/x.flac", 4);
 
-        let placed = placements(&s.plan(&[first, second, twin]), &s.library);
+        let placed = placements(&s.plan(&[first, second, twin]), &s.library, None);
 
         assert_eq!(
             verdicts(&placed),
@@ -461,7 +607,10 @@ mod tests {
         s.write(&s.outside, "Album/01.flac", 4);
         std::os::unix::fs::symlink(s.outside.join("Album"), s.outside.join("Album/loop")).unwrap();
 
-        assert_eq!(destinations(&s.plan(&[s.outside.join("Album")])), vec!["Album/01.flac"]);
+        assert_eq!(
+            destinations(&s.plan(&[s.outside.join("Album")])),
+            vec!["Album/01.flac"]
+        );
     }
 
     #[test]
@@ -475,8 +624,14 @@ mod tests {
     #[test]
     fn extensions_split_like_nsstring() {
         assert_eq!(split_extension("song.flac"), ("song".into(), "flac".into()));
-        assert_eq!(split_extension("archive.tar.gz"), ("archive.tar".into(), "gz".into()));
-        assert_eq!(split_extension(".hidden"), (".hidden".into(), String::new()));
+        assert_eq!(
+            split_extension("archive.tar.gz"),
+            ("archive.tar".into(), "gz".into())
+        );
+        assert_eq!(
+            split_extension(".hidden"),
+            (".hidden".into(), String::new())
+        );
         assert_eq!(split_extension("noext"), ("noext".into(), String::new()));
     }
 
@@ -486,7 +641,11 @@ mod tests {
             ((0, 0, 0), "Nothing to import.", false),
             ((0, 1, 0), "Already in your library.", false),
             ((0, 5, 0), "All 5 items are already in your library.", false),
-            ((0, 2, 3), "Import failed — the files couldn't be copied.", true),
+            (
+                (0, 2, 3),
+                "Import failed — the files couldn't be copied.",
+                true,
+            ),
             ((1, 0, 0), "Imported 1 item", false),
             ((12, 0, 0), "Imported 12 items", false),
             ((12, 3, 0), "Imported 12, 3 already in your library", false),
@@ -500,5 +659,139 @@ mod tests {
             };
             assert_eq!(report(&outcome), (sentence.to_string(), failure));
         }
+    }
+
+    #[derive(Default)]
+    struct FakeInspector {
+        fingerprints: HashMap<PathBuf, String>,
+        song_keys: HashMap<PathBuf, String>,
+    }
+
+    impl FakeInspector {
+        fn with_fingerprint(mut self, path: &Path, fingerprint: &str) -> Self {
+            self.fingerprints
+                .insert(path.to_path_buf(), fingerprint.into());
+            self
+        }
+
+        fn with_song(mut self, path: &Path, key: &str) -> Self {
+            self.song_keys.insert(path.to_path_buf(), key.into());
+            self
+        }
+    }
+
+    impl Inspector for FakeInspector {
+        fn audio_fingerprint(&self, path: &Path) -> Option<String> {
+            self.fingerprints.get(path).cloned()
+        }
+
+        fn song_key(&self, path: &Path) -> Option<String> {
+            self.song_keys.get(path).cloned()
+        }
+    }
+
+    #[test]
+    fn the_same_audio_under_the_same_name_is_already_present() {
+        let s = Sandbox::new();
+        let picked = s.write(&s.outside, "song.flac", 4);
+        let on_disk = s.write(&s.library, "song.flac", 4);
+        let inspector = FakeInspector::default()
+            .with_fingerprint(&picked, "flac:a")
+            .with_fingerprint(&on_disk, "flac:a");
+
+        let placed = placements(&s.plan(&[picked]), &s.library, Some(&inspector));
+
+        assert_eq!(verdicts(&placed), vec![Placement::AlreadyPresent]);
+    }
+
+    #[test]
+    fn the_same_song_retagged_at_the_same_name_replaces_the_file() {
+        let s = Sandbox::new();
+        let picked = s.write(&s.outside, "song.flac", 4);
+        let on_disk = s.write(&s.library, "song.flac", 4);
+        let inspector = FakeInspector::default()
+            .with_fingerprint(&picked, "flac:b")
+            .with_fingerprint(&on_disk, "flac:a")
+            .with_song(&picked, "song-key")
+            .with_song(&on_disk, "song-key");
+
+        let placed = placements(&s.plan(&[picked]), &s.library, Some(&inspector));
+
+        assert_eq!(
+            verdicts(&placed),
+            vec![Placement::Replace("song.flac".into())]
+        );
+    }
+
+    #[test]
+    fn the_same_audio_at_another_size_under_the_same_name_replaces_the_file() {
+        let s = Sandbox::new();
+        let picked = s.write(&s.outside, "song.flac", 9);
+        let on_disk = s.write(&s.library, "song.flac", 4);
+        let inspector = FakeInspector::default()
+            .with_fingerprint(&picked, "flac:a")
+            .with_fingerprint(&on_disk, "flac:a");
+
+        let placed = placements(&s.plan(&[picked]), &s.library, Some(&inspector));
+
+        assert_eq!(
+            verdicts(&placed),
+            vec![Placement::Replace("song.flac".into())]
+        );
+    }
+
+    #[test]
+    fn a_different_recording_of_another_song_under_the_same_name_takes_the_next_name() {
+        let s = Sandbox::new();
+        let picked = s.write(&s.outside, "song.flac", 4);
+        let on_disk = s.write(&s.library, "song.flac", 4);
+        let inspector = FakeInspector::default()
+            .with_fingerprint(&picked, "flac:b")
+            .with_fingerprint(&on_disk, "flac:a")
+            .with_song(&picked, "first-key")
+            .with_song(&on_disk, "second-key");
+
+        let placed = placements(&s.plan(&[picked]), &s.library, Some(&inspector));
+
+        assert_eq!(
+            verdicts(&placed),
+            vec![Placement::Copy("song_1.flac".into())]
+        );
+    }
+
+    #[test]
+    fn without_an_inspector_the_size_rule_still_decides() {
+        let s = Sandbox::new();
+        let picked = s.write(&s.outside, "song.flac", 4);
+        s.write(&s.library, "song.flac", 4);
+
+        let placed = placements(&s.plan(&[picked]), &s.library, None);
+
+        assert_eq!(verdicts(&placed), vec![Placement::AlreadyPresent]);
+    }
+
+    #[test]
+    fn a_second_newer_version_with_the_same_destination_cannot_replace_the_first() {
+        let s = Sandbox::new();
+        s.write(&s.library, "song.flac", 4);
+        let first = s.write(&s.outside, "a/song.flac", 9);
+        let second = s.write(&s.outside, "b/song.flac", 7);
+        let inspector = FakeInspector::default()
+            .with_fingerprint(&s.library.join("song.flac"), "flac:old")
+            .with_fingerprint(&first, "flac:new-one")
+            .with_fingerprint(&second, "flac:new-two")
+            .with_song(&s.library.join("song.flac"), "song-key")
+            .with_song(&first, "song-key")
+            .with_song(&second, "song-key");
+
+        let placed = placements(&s.plan(&[first, second]), &s.library, Some(&inspector));
+
+        assert_eq!(
+            verdicts(&placed),
+            vec![
+                Placement::Replace("song.flac".into()),
+                Placement::Copy("song_1.flac".into()),
+            ]
+        );
     }
 }
