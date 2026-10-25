@@ -187,6 +187,29 @@ pub struct Library {
 }
 
 impl Library {
+    /// A copy of the library with one track's loved flag changed everywhere it appears.
+    pub fn clone_with_loved(&self, rel_path: &str, loved: bool) -> Library {
+        let mut tracks = self.tracks.clone();
+        for track in &mut tracks {
+            if track.rel_path == rel_path {
+                track.loved = loved;
+            }
+        }
+        let mut albums = self.albums.clone();
+        for album in &mut albums {
+            for track in &mut album.tracks {
+                if track.rel_path == rel_path {
+                    track.loved = loved;
+                }
+            }
+        }
+        Library {
+            tracks,
+            albums,
+            artists: self.artists.clone(),
+        }
+    }
+
     pub fn empty() -> Self {
         Self {
             tracks: Vec::new(),
@@ -405,7 +428,7 @@ pub fn load(db: &Db, group_album_editions: bool) -> Library {
     for track in &tracks {
         let key = format!(
             "{}\u{0}{}",
-            crate::wantlist::normalize(&track.album),
+            crate::keys::normalize(&track.album),
             crate::hygiene::artist_key(track.credit())
         );
         grouped.entry(key).or_default().push(track.clone());
@@ -803,7 +826,7 @@ mod sort_tests {
         for track in &tracks {
             let key = format!(
                 "{}\u{0}{}",
-                crate::wantlist::normalize(&track.album),
+                crate::keys::normalize(&track.album),
                 crate::hygiene::artist_key(&track.artist)
             );
             grouped.entry(key).or_default().push(track.clone());

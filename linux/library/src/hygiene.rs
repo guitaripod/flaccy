@@ -1,5 +1,5 @@
 use crate::library::{Album, Track};
-use crate::wantlist::{base_title_with, normalize};
+use crate::keys::{base_title_with, normalize};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;

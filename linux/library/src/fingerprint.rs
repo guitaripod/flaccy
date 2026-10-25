@@ -63,7 +63,7 @@ fn hash_ranges(file: &mut File, ranges: &[std::ops::Range<u64>], size: u64) -> O
 
 /// WAV files written by hand for the tests and the re-export drill, so
 /// neither needs an encoder.
-pub(crate) mod fixtures {
+pub mod fixtures {
 
     /// A 16-bit mono 8 kHz WAV whose samples are `samples`, with an optional
     /// `LIST` chunk between the format and data chunks.
@@ -118,10 +118,9 @@ pub(crate) mod fixtures {
         payload
     }
 
-    #[cfg(test)]
+    /// A uniquely named directory under the system temp dir, removed on drop.
     pub struct TempDir(pub std::path::PathBuf);
 
-    #[cfg(test)]
     impl TempDir {
         pub fn new(label: &str) -> Self {
             use std::path::PathBuf;
@@ -142,7 +141,6 @@ pub(crate) mod fixtures {
         }
     }
 
-    #[cfg(test)]
     impl Drop for TempDir {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);

@@ -3,7 +3,7 @@
 Music player for FLAC and other local libraries, one product on four clients: iOS (iPhone only), macOS, watchOS and Linux (Rust + GTK). Server: flaccy-api (`services/flaccy`, Worker `flaccy-api.midgarcorp.cc`).
 
 ## Layout
-- `App/`, `Features/<Feature>/` and `Resources/` iOS (shared with the Mac where the Mac target does not exclude a file), `Platforms/mac/` macOS, `Platforms/watch/` watchOS, `linux/` Rust client with `linux/shared/` (Rust mirror of FlaccyCore, builds without GStreamer).
+- `App/`, `Features/<Feature>/` and `Resources/` iOS (shared with the Mac where the Mac target does not exclude a file), `Platforms/mac/` macOS, `Platforms/watch/` watchOS, `linux/` Rust client with `linux/shared/` (Rust mirror of FlaccyCore, builds without GStreamer) and `linux/library/` (`flaccy-library`: database, scanner, versions, no GTK or GStreamer, shared with `flaccy-server`).
 - `Core/FlaccyCore/` shared Swift (nonisolated, Swift 6). Its second product `FlaccyEngine` (depends on GRDB, so the watch never links it) holds `DatabaseManager` with its records, `Track` and `PlaybackEngine`; `AudioPlayer` in `Features/Playback/` is the system glue (Now Playing, remote commands, scrobbling, stations) that the engine reaches through `PlaybackEngineHost`. `Tests/flaccyTests/`, `Tests/flaccyUITests/`, `Tests/flaccyMacUITests/`, `scripts/`, `project.yml`, `store/`, `metadata/`.
 - `Platforms/mac/App/DebugDrive.swift` is the DEBUG-only window self-capture.
 

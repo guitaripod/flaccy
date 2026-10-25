@@ -4,34 +4,34 @@ mod artwork_search;
 mod local_artwork;
 mod chart_queue;
 mod config;
-mod db;
+pub(crate) use flaccy_library::db;
 mod downloads;
 mod enrichment;
 mod eq;
 mod events;
 mod filters;
-mod fingerprint;
+pub(crate) use flaccy_library::fingerprint;
 mod frame_stats;
-mod hygiene;
+pub(crate) use flaccy_library::hygiene;
 mod importer;
 mod lastfm;
-mod library;
+pub(crate) use flaccy_library::library;
 /// The load bar mirrors `FlaccyCore.LibraryLoadProgress` and lives in the
 /// `flaccy-shared` workspace member, whose tests build on any machine — the
 /// Mac that owns the Apple clients has no GStreamer for this crate. Re-exported
 /// at the crate root so every `crate::load_progress::…` path still resolves.
 pub(crate) use flaccy_shared::load_progress;
-mod logger;
+pub(crate) use flaccy_library::logger;
 mod lyrics;
 mod mpris;
 mod musicvideo;
 mod palette;
 mod player;
-mod recap;
+pub(crate) use flaccy_library::recap;
 mod reexport_drill;
 mod render;
 mod samples;
-mod scanner;
+pub(crate) use flaccy_library::scanner;
 mod scrobbler;
 mod scrub_drill;
 mod songlink;
@@ -39,7 +39,7 @@ mod station;
 mod suggested;
 mod theme;
 mod ui;
-mod versions;
+pub(crate) use flaccy_library::versions;
 mod wantlist;
 
 use adw::prelude::*;
@@ -53,7 +53,9 @@ fn main() -> glib::ExitCode {
     if std::env::args().any(|arg| arg == "--demo") {
         std::env::set_var("FLACCY_DEMO", "1");
     }
-    logger::init();
+    if let Some(data_dir) = dirs::data_dir() {
+        logger::init(&data_dir.join("flaccy"));
+    }
     logger::info(
         "lifecycle",
         &format!(

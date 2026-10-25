@@ -517,6 +517,7 @@ dependencies = [
  "cairo-rs",
  "chrono",
  "dirs",
+ "flaccy-library",
  "flaccy-shared",
  "gst-plugin-gtk4",
  "gstreamer",
@@ -534,6 +535,20 @@ dependencies = [
  "sha2",
  "toml 0.8.23",
  "ureq",
+]
+
+[[package]]
+name = "flaccy-library"
+version = "1.0.0"
+dependencies = [
+ "async-channel",
+ "chrono",
+ "dirs",
+ "flaccy-shared",
+ "lofty",
+ "rusqlite",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

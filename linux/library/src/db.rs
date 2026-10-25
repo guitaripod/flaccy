@@ -823,7 +823,7 @@ impl Db {
                 Some(folder) => folder.to_string(),
                 None => format!("\x01{}", crate::hygiene::artist_key(&artist)),
             };
-            let key = format!("{}\x00{}", crate::wantlist::normalize(&album), scope);
+            let key = format!("{}\x00{}", crate::keys::normalize(&album), scope);
             clusters
                 .entry(key)
                 .or_default()
@@ -1655,7 +1655,7 @@ impl Db {
         &self,
         title: &str,
         artist: &str,
-        found: Option<&crate::musicvideo::VideoMatch>,
+        found: Option<&crate::music_video::VideoMatch>,
         score: f64,
     ) {
         let _ = self.conn.execute(

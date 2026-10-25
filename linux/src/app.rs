@@ -1327,30 +1327,6 @@ fn run_smoke(core: &Rc<AppCore>) {
     });
 }
 
-impl Library {
-    fn clone_with_loved(&self, rel_path: &str, loved: bool) -> Library {
-        let mut tracks = self.tracks.clone();
-        for track in &mut tracks {
-            if track.rel_path == rel_path {
-                track.loved = loved;
-            }
-        }
-        let mut albums = self.albums.clone();
-        for album in &mut albums {
-            for track in &mut album.tracks {
-                if track.rel_path == rel_path {
-                    track.loved = loved;
-                }
-            }
-        }
-        Library {
-            tracks,
-            albums,
-            artists: self.artists.clone(),
-        }
-    }
-}
-
 /// What the person decides when an import holds newer versions of songs that
 /// are already in the library.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

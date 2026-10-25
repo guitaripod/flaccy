@@ -14,7 +14,7 @@ use std::sync::Mutex;
 /// instead of recognising the same re-export twice.
 static REVISION_PASS: Mutex<()> = Mutex::new(());
 
-pub(crate) const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
+pub const SUPPORTED_EXTENSIONS: [&str; 8] = ["flac", "mp3", "m4a", "ogg", "opus", "wav", "aiff", "aif"];
 
 pub enum ScanEvent {
     Progress(LoadProgress),
@@ -313,7 +313,7 @@ fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
 
 /// What a file's tags and stream properties say, without reading the audio
 /// bytes a second time. Also what restoring a previous mix re-reads in place.
-pub(crate) fn read_metadata(path: &Path, rel_path: &str) -> Option<NewTrack> {
+pub fn read_metadata(path: &Path, rel_path: &str) -> Option<NewTrack> {
     let tagged = lofty::probe::Probe::open(path).ok()?.read().ok()?;
     let properties = tagged.properties();
     let duration = properties.duration().as_secs_f64();
