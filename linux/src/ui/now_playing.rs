@@ -671,8 +671,7 @@ fn skip_button(ui: &Rc<Ui>, icon: &str, seconds: f64, name: &str, shortcut: &str
 
 /// Refreshes the "Up Next" toggle label with the live up-next count.
 fn update_up_next_label(ui: &Rc<Ui>, label: &gtk::Label) {
-    let snapshot = ui.core.player.queue_snapshot();
-    let count = snapshot.queue.len().saturating_sub(snapshot.current + 1);
+    let count = ui.core.player.queue_summary().up_next();
     if count > 0 {
         label.set_label(&format!("Up Next · {count}"));
     } else {

@@ -321,10 +321,8 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         &ui::lyrics_panel::build(&ui, ui::lyrics_panel::LyricsOptions::sidebar()).widget,
         Some("lyrics"),
     );
-    side_stack.add_named(
-        &ui::queue_panel::build(&ui, ui::queue_panel::QueueOptions::sidebar()).widget,
-        Some("queue"),
-    );
+    let queue_panel = ui::queue_panel::build(&ui, ui::queue_panel::QueueOptions::sidebar());
+    side_stack.add_named(&queue_panel.widget, Some("queue"));
 
     let panel_split = adw::OverlaySplitView::builder()
         .content(&library_split)
@@ -373,6 +371,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                 remember_side_panel(&core, split, &side_stack);
             });
     }
+    follow_queue_visibility(&panel_split, &side_stack, queue_panel.set_active);
     restore_side_panel(core);
     {
         let core = Rc::clone(core);
@@ -626,6 +625,9 @@ fn announce_suspension(window: &adw::ApplicationWindow, hub: &Rc<crate::events::
         announcer.emit(&AppEvent::WindowSuspended(suspended));
         if !suspended {
             crate::ui::controls::resume_bars();
+            if let Some(theme) = crate::theme::ThemeController::current() {
+                theme.resume();
+            }
         }
     });
 }
@@ -1704,6 +1706,33 @@ fn remember_side_panel(core: &Rc<AppCore>, split: &adw::OverlaySplitView, side_s
     }
     core.config.borrow_mut().side_panel = panel;
     core.save_config();
+}
+
+/// Keeps the sidebar queue live only while it is the visible side panel, so a
+/// closed queue (the default) never rebuilds its rows on track changes; opening
+/// it rebuilds once.
+fn follow_queue_visibility(
+    split: &adw::OverlaySplitView,
+    side_stack: &gtk::Stack,
+    set_active: Rc<dyn Fn(bool)>,
+) {
+    let shown = Rc::new(Cell::new(false));
+    let sync = {
+        let split = split.clone();
+        let side_stack = side_stack.clone();
+        Rc::new(move || {
+            let visible = split.shows_sidebar()
+                && side_stack.visible_child_name().as_deref() == Some("queue");
+            if shown.replace(visible) != visible {
+                set_active(visible);
+            }
+        })
+    };
+    {
+        let sync = Rc::clone(&sync);
+        split.connect_show_sidebar_notify(move |_| sync());
+    }
+    side_stack.connect_visible_child_name_notify(move |_| sync());
 }
 
 /// Reopens the side panel the shell was left on. Deferred so the panels are
