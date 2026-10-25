@@ -133,12 +133,13 @@ extension NowPlayingViewController {
     }
 
     /// Lays the capsules out as a single equal-width row, splitting into two
-    /// rows at accessibility text sizes so they never overflow the width.
+    /// rows at accessibility text sizes or in a column too narrow for seven
+    /// round capsules, so they never overflow or squeeze into ovals.
     func relayoutActionRow() {
         for view in actionRowContainer.arrangedSubviews {
             view.removeFromSuperview()
         }
-        let wraps = traitCollection.preferredContentSizeCategory.isAccessibilityCategory
+        let wraps = traitCollection.preferredContentSizeCategory.isAccessibilityCategory || actionRowIsNarrow
         let groups: [[UIView]] = wraps
             ? [Array(actionCapsules.prefix(4)), Array(actionCapsules.suffix(3))]
             : [actionCapsules]
@@ -148,6 +149,17 @@ extension NowPlayingViewController {
             row.spacing = 8
             actionRowContainer.addArrangedSubview(row)
         }
+    }
+
+    /// Re-splits the capsule row when the column it lives in crosses the width
+    /// that fits them on one line.
+    func refreshActionRowWrapping() {
+        let width = bottomControls.bounds.width
+        guard width > 1 else { return }
+        let narrow = width < AdaptiveLayout.actionRowSingleLineMinimumWidth
+        guard narrow != actionRowIsNarrow else { return }
+        actionRowIsNarrow = narrow
+        relayoutActionRow()
     }
 
     func configureActionButtons() {

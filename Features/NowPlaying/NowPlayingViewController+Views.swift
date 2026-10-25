@@ -29,13 +29,14 @@ extension NowPlayingViewController {
         centerContainer.addSubview(stateContentContainer)
 
         NSLayoutConstraint.activate([
-            artworkGroup.topAnchor.constraint(equalTo: centerContainer.topAnchor),
             artworkGroup.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
             artworkGroup.bottomAnchor.constraint(lessThanOrEqualTo: centerContainer.bottomAnchor),
             compactHeader.topAnchor.constraint(equalTo: centerContainer.topAnchor),
             compactHeader.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
             compactHeader.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
         ])
+        artworkGroupTop = artworkGroup.topAnchor.constraint(equalTo: centerContainer.topAnchor)
+        artworkGroupTop.isActive = true
         artworkGroupTrailing = artworkGroup.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor)
         artworkGroupTrailing.isActive = true
     }

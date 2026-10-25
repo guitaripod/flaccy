@@ -39,6 +39,7 @@ extension NowPlayingViewController {
         laptopFoldTopConstraint = nil
         laptopFoldBottomConstraint = nil
         artworkGroupTrailing.isActive = true
+        artworkGroupTop.isActive = mode != .landscape
         placeInfoBlock(inControls: mode == .landscape)
         infoBlock.isHidden = mode == .landscape && centerState != .artwork
         switch mode {
@@ -68,6 +69,8 @@ extension NowPlayingViewController {
                 bottomControls.centerYAnchor.constraint(equalTo: safe.centerYAnchor),
                 bottomControls.topAnchor.constraint(greaterThanOrEqualTo: safe.topAnchor, constant: 12),
                 artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.72),
+                artworkGroup.centerYAnchor.constraint(equalTo: centerContainer.centerYAnchor),
+                artworkGroup.topAnchor.constraint(greaterThanOrEqualTo: centerContainer.topAnchor),
                 stateContentContainer.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
                 stateContentContainer.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
                 stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),

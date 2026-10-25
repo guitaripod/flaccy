@@ -73,12 +73,14 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     let titleRow = UIStackView()
     let badgeStrip = UIStackView()
     let wrappedBadgeLine = UIStackView()
+    var actionRowIsNarrow = false
     var volumeRowView = UIView()
     var layoutMode: AdaptiveLayout.PlayerLayout = .portrait
     var modeConstraints: [NSLayoutConstraint] = []
     var laptopFoldTopConstraint: NSLayoutConstraint?
     var laptopFoldBottomConstraint: NSLayoutConstraint?
     var artworkGroupTrailing: NSLayoutConstraint!
+    var artworkGroupTop: NSLayoutConstraint!
     let focusLeftColumn = UILayoutGuide()
     let focusRightColumn = UILayoutGuide()
     let laptopLyricsHost = UIView()
@@ -200,6 +202,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         super.viewDidLayoutSubviews()
         updateLayoutModeIfNeeded()
         placeBadgeStrip()
+        refreshActionRowWrapping()
         backdropView.frame = view.bounds
         scrimLayer.frame = view.bounds
         artworkContainer.layer.shadowPath = UIBezierPath(
