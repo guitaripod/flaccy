@@ -3,6 +3,7 @@ use crate::load_progress::LoadProgress;
 use crate::player::RepeatMode;
 use flaccy_shared::enrichment_job::JobProgress;
 use std::cell::RefCell;
+use std::panic::Location;
 use std::rc::Rc;
 
 #[allow(dead_code)]
@@ -100,9 +101,15 @@ pub enum AppEvent {
 
 type Subscriber = Rc<dyn Fn(&AppEvent) -> bool>;
 
+#[derive(Clone)]
+struct Subscription {
+    callback: Subscriber,
+    origin: &'static Location<'static>,
+}
+
 #[derive(Default)]
 pub struct EventHub {
-    subscribers: RefCell<Vec<Subscriber>>,
+    subscribers: RefCell<Vec<Subscription>>,
 }
 
 impl EventHub {
@@ -110,12 +117,17 @@ impl EventHub {
         Self::default()
     }
 
+    #[track_caller]
     pub fn subscribe(&self, callback: impl Fn(&AppEvent) -> bool + 'static) {
-        self.subscribers.borrow_mut().push(Rc::new(callback));
+        self.subscribers.borrow_mut().push(Subscription {
+            callback: Rc::new(callback),
+            origin: Location::caller(),
+        });
     }
 
     /// Subscribes a widget-bound handler; the subscription self-prunes once the
     /// widget is dropped, so pushed pages never leak through the hub.
+    #[track_caller]
     pub fn subscribe_widget<W: gtk::glib::object::ObjectType>(
         &self,
         widget: &W,
@@ -132,17 +144,22 @@ impl EventHub {
     }
 
     pub fn emit(&self, event: &AppEvent) {
-        let snapshot: Vec<Subscriber> = self.subscribers.borrow().clone();
+        let snapshot: Vec<Subscription> = self.subscribers.borrow().clone();
+        let timed = crate::frame_stats::enabled();
         let mut dead: Vec<*const ()> = Vec::new();
-        for subscriber in &snapshot {
-            if !subscriber(event) {
-                dead.push(Rc::as_ptr(subscriber) as *const ());
+        for subscription in &snapshot {
+            let started = timed.then(std::time::Instant::now);
+            if !(subscription.callback)(event) {
+                dead.push(Rc::as_ptr(&subscription.callback) as *const ());
+            }
+            if let Some(started) = started {
+                crate::frame_stats::note_handler(subscription.origin, started.elapsed());
             }
         }
         if !dead.is_empty() {
             self.subscribers
                 .borrow_mut()
-                .retain(|s| !dead.contains(&(Rc::as_ptr(s) as *const ())));
+                .retain(|s| !dead.contains(&(Rc::as_ptr(&s.callback) as *const ())));
         }
     }
 }
