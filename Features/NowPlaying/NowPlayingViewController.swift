@@ -70,6 +70,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     var centerState: CenterState = .artwork
     var bottomControls = UIStackView()
     let infoBlock = UIStackView()
+    let titleRow = UIStackView()
+    let badgeStrip = UIStackView()
+    let wrappedBadgeLine = UIStackView()
     var volumeRowView = UIView()
     var layoutMode: AdaptiveLayout.PlayerLayout = .portrait
     var modeConstraints: [NSLayoutConstraint] = []
@@ -196,6 +199,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateLayoutModeIfNeeded()
+        placeBadgeStrip()
         backdropView.frame = view.bounds
         scrimLayer.frame = view.bounds
         artworkContainer.layer.shadowPath = UIBezierPath(

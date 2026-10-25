@@ -21,6 +21,7 @@ enum AdaptiveLayout {
     static let detailStackedMinimumHeight: CGFloat = 760
 
     static let playerLandscapeMaximumHeight: CGFloat = 560
+    static let badgesBesideTitleMinimumWidth: CGFloat = 300
 
     static let homeWideMinimumWidth: CGFloat = 600
     static let homeWideJumpColumns = 3
