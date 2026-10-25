@@ -10,6 +10,55 @@ use gtk::{gdk, gio};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+/// One entry of the library sidebar. The saved page is its `name`, never its
+/// position, so adding a page cannot send a returning person somewhere else.
+pub struct SidebarPage {
+    pub name: &'static str,
+    pub icon: &'static str,
+    pub label: &'static str,
+}
+
+pub const SIDEBAR_PAGES: [SidebarPage; 9] = [
+    SidebarPage { name: "home", icon: "go-home-symbolic", label: "Home" },
+    SidebarPage { name: "albums", icon: "media-optical-symbolic", label: "Albums" },
+    SidebarPage { name: "songs", icon: "audio-x-generic-symbolic", label: "Songs" },
+    SidebarPage { name: "artists", icon: "system-users-symbolic", label: "Artists" },
+    SidebarPage { name: "playlists", icon: "view-list-symbolic", label: "Playlists" },
+    SidebarPage { name: "stats", icon: "flaccy-stats-symbolic", label: "Stats" },
+    SidebarPage { name: "wantlist", icon: "starred-symbolic", label: "Wantlist" },
+    SidebarPage { name: "downloads", icon: "folder-download-symbolic", label: "Downloads" },
+    SidebarPage { name: "guide", icon: "dialog-information-symbolic", label: "Guide" },
+];
+
+/// The sidebar position of the page called `name`.
+pub fn page_index(name: &str) -> Option<i32> {
+    SIDEBAR_PAGES
+        .iter()
+        .position(|page| page.name == name)
+        .map(|index| index as i32)
+}
+
+/// Selects the sidebar row of page `name`, which shows the page.
+pub fn show_page(sidebar: &gtk::ListBox, name: &str) {
+    if let Some(row) = page_index(name).and_then(|index| sidebar.row_at_index(index)) {
+        sidebar.select_row(Some(&row));
+    }
+}
+
+/// The page a launch opens on: Home unless the person asked to be put back
+/// where they left off. A demo run names its own page.
+fn launch_page(core: &AppCore) -> String {
+    if config::demo_mode() {
+        return demo_start_page().to_string();
+    }
+    let config = core.config.borrow();
+    if config.opens_on_home() {
+        "home".to_string()
+    } else {
+        config.sidebar_page.clone()
+    }
+}
+
 pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWindow {
     ui::ui_scale::apply(core.config.borrow().ui_scale());
     register_icon_paths();
@@ -20,10 +69,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     ui::lyrics_style::apply(core.config.borrow().lyrics_font_size);
     gtk::Window::set_default_icon_name("cc.midgarcorp.Flaccy");
 
-    let (width, height) = {
+    let (width, height) = demo_window_size().unwrap_or_else(|| {
         let config = core.config.borrow();
         (config.window_width.max(900), config.window_height.max(600))
-    };
+    });
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .title("Flaccy")
@@ -171,6 +220,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .hhomogeneous(false)
         .vhomogeneous(false)
         .build();
+    stack.add_named(&ui::home::build(&ui), Some("home"));
     stack.add_named(&ui::albums::build(&ui), Some("albums"));
     stack.add_named(&ui::songs::build(&ui), Some("songs"));
     stack.add_named(&ui::artists::build(&ui), Some("artists"));
@@ -185,33 +235,25 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         .build();
     sidebar.add_css_class("navigation-sidebar");
     sidebar.add_css_class("flaccy-sidebar");
-    for (icon, label) in [
-        ("media-optical-symbolic", "Albums"),
-        ("audio-x-generic-symbolic", "Songs"),
-        ("system-users-symbolic", "Artists"),
-        ("view-list-symbolic", "Playlists"),
-        ("flaccy-stats-symbolic", "Stats"),
-        ("starred-symbolic", "Wantlist"),
-        ("folder-download-symbolic", "Downloads"),
-        ("dialog-information-symbolic", "Guide"),
-    ] {
-        sidebar.append(&sidebar_row(icon, label));
+    for page in &SIDEBAR_PAGES {
+        sidebar.append(&sidebar_row(page.icon, page.label));
     }
     attach_wantlist_badge(core, &sidebar);
     attach_downloads_badge(core, &sidebar);
+    let restoring_launch_page = Rc::new(Cell::new(true));
     {
         let sidebar = sidebar.clone();
-        let saved_index = core.config.borrow().sidebar_index.clamp(0, 7);
+        let wanted = launch_page(core);
+        let restoring_launch_page = Rc::clone(&restoring_launch_page);
         glib::idle_add_local_once(move || {
-            let index = if config::demo_mode() {
-                demo_start_view_index()
-            } else {
-                saved_index
-            };
+            let index = page_index(&wanted)
+                .or_else(|| page_index(config::DEFAULT_SIDEBAR_PAGE))
+                .unwrap_or(0);
             if let Some(row) = sidebar.row_at_index(index) {
                 sidebar.select_row(Some(&row));
                 row.grab_focus();
             }
+            restoring_launch_page.set(false);
         });
     }
 
@@ -255,26 +297,21 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         let library_split = library_split.clone();
         let sidebar_sync = Rc::clone(&sidebar_sync);
         let sidebar_toggle = sidebar_toggle.clone();
+        let restoring_launch_page = Rc::clone(&restoring_launch_page);
         sidebar.connect_row_selected(move |_, row| {
             let Some(row) = row else { return };
-            let names = [
-                "albums",
-                "songs",
-                "artists",
-                "playlists",
-                "stats",
-                "wantlist",
-                "downloads",
-                "guide",
-            ];
-            let index = row.index().clamp(0, 7) as usize;
-            core_for_rows.config.borrow_mut().sidebar_index = index as i32;
-            core_for_rows.save_config();
-            crate::logger::info("ui", &format!("sidebar selected: {}", names[index]));
+            let Some(page) = SIDEBAR_PAGES.get(row.index().max(0) as usize) else {
+                return;
+            };
+            if !restoring_launch_page.get() {
+                core_for_rows.config.borrow_mut().sidebar_page = page.name.to_string();
+                core_for_rows.save_config();
+            }
+            crate::logger::info("ui", &format!("sidebar selected: {}", page.name));
             if nav.visible_page().and_then(|p| p.tag()).as_deref() != Some("root") {
                 nav.pop_to_tag("root");
             }
-            stack.set_visible_child_name(names[index]);
+            stack.set_visible_child_name(page.name);
             // Drawer mode: pick a destination then get out of the way.
             if library_split.is_collapsed() && library_split.shows_sidebar() {
                 sidebar_sync.set(true);
@@ -453,21 +490,27 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
         let downloads_action = gio::SimpleAction::new("downloads", None);
         let sidebar_for_action = sidebar.clone();
         downloads_action.connect_activate(move |_, _| {
-            if let Some(row) = sidebar_for_action.row_at_index(6) {
-                sidebar_for_action.select_row(Some(&row));
-            }
+            show_page(&sidebar_for_action, "downloads");
         });
         app.add_action(&downloads_action);
         app.set_accels_for_action("app.downloads", &["<Control>d"]);
+    }
+    {
+        let show_page_action = gio::SimpleAction::new("show-page", Some(glib::VariantTy::STRING));
+        let sidebar_for_action = sidebar.clone();
+        show_page_action.connect_activate(move |_, name| {
+            if let Some(name) = name.and_then(|name| name.str()) {
+                show_page(&sidebar_for_action, name);
+            }
+        });
+        window.add_action(&show_page_action);
     }
     {
         let locate_action = gio::SimpleAction::new("locate-current", None);
         let sidebar_for_action = sidebar.clone();
         let hub_core = Rc::clone(core);
         locate_action.connect_activate(move |_, _| {
-            if let Some(row) = sidebar_for_action.row_at_index(1) {
-                sidebar_for_action.select_row(Some(&row));
-            }
+            show_page(&sidebar_for_action, "songs");
             hub_core.hub.emit(&AppEvent::LocateCurrent);
         });
         app.add_action(&locate_action);
@@ -753,7 +796,7 @@ fn install_shell_breakpoints(
 /// Keeps an unseen-count badge on the Wantlist sidebar row, cleared when the
 /// page is opened (WantlistSeen) and refreshed after every wantlist change.
 fn attach_wantlist_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
-    let Some(row) = sidebar.row_at_index(5) else {
+    let Some(row) = page_index("wantlist").and_then(|index| sidebar.row_at_index(index)) else {
         return;
     };
     let Some(row_box) = row.child().and_downcast::<gtk::Box>() else {
@@ -788,7 +831,7 @@ fn attach_wantlist_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
 /// Keeps an active-count badge on the Downloads sidebar row so queued work is
 /// visible from anywhere in the app.
 fn attach_downloads_badge(core: &Rc<AppCore>, sidebar: &gtk::ListBox) {
-    let Some(row) = sidebar.row_at_index(6) else {
+    let Some(row) = page_index("downloads").and_then(|index| sidebar.row_at_index(index)) else {
         return;
     };
     let Some(row_box) = row.child().and_downcast::<gtk::Box>() else {
@@ -847,9 +890,7 @@ fn attach_paste_to_download(ui: &Rc<Ui>, sidebar: &gtk::ListBox) {
                 if !crate::downloads::looks_like_url(text.trim()) {
                     return;
                 }
-                if let Some(row) = sidebar.row_at_index(6) {
-                    sidebar.select_row(Some(&row));
-                }
+                show_page(&sidebar, "downloads");
                 crate::downloads::enqueue(&ui.core, text.trim());
             });
         glib::Propagation::Stop
@@ -1861,18 +1902,30 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
     }
 }
 
-/// Demo mode helper: FLACCY_DEMO_VIEW picks the initially selected sidebar view
-/// (albums, songs, artists, playlists, stats) so marketing screenshots can be
-/// captured without input automation. Defaults to albums.
-fn demo_start_view_index() -> i32 {
-    match std::env::var("FLACCY_DEMO_VIEW").ok().as_deref() {
-        Some("songs") => 1,
-        Some("artists") => 2,
-        Some("playlists") => 3,
-        Some("stats") => 4,
-        Some("wantlist") => 5,
-        Some("downloads") => 6,
-        Some("guide") => 7,
-        _ => 0,
+/// Demo mode helper: FLACCY_DEMO_VIEW picks the initially selected sidebar page
+/// (home, albums, songs, artists, playlists, stats, wantlist, downloads, guide)
+/// so marketing screenshots can be captured without input automation.
+/// FLACCY_DEMO_HOME opens Home. Defaults to albums.
+fn demo_start_page() -> &'static str {
+    if std::env::var_os("FLACCY_DEMO_HOME").is_some() {
+        return "home";
+    }
+    let wanted = std::env::var("FLACCY_DEMO_VIEW").unwrap_or_default();
+    SIDEBAR_PAGES
+        .iter()
+        .find(|page| page.name == wanted)
+        .map(|page| page.name)
+        .unwrap_or(config::DEFAULT_SIDEBAR_PAGE)
+}
+
+/// A narrow Home demo opens at phone width so the compact arrangement shows.
+fn demo_window_size() -> Option<(i32, i32)> {
+    if !config::demo_mode() {
+        return None;
+    }
+    match std::env::var("FLACCY_DEMO_HOME").ok().as_deref() {
+        Some("narrow") => Some((420, 900)),
+        Some("wide") => Some((1440, 900)),
+        _ => None,
     }
 }
