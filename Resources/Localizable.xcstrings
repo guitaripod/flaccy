@@ -10112,13 +10112,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@で%lld回再生"
+            "value": "%2$@で%1$lld回再生"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@에서 %lld회 재생"
+            "value": "%2$@에서 %1$lld회 재생"
           }
         },
         "pl": {
@@ -10136,13 +10136,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 中播放 %lld 次"
+            "value": "%2$@ 中播放 %1$lld 次"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 中播放 %lld 次"
+            "value": "%2$@ 中播放 %1$lld 次"
           }
         }
       }
