@@ -356,3 +356,51 @@ enum HomeFixtures {
         calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
     }
 }
+
+final class HomePromoTests: XCTestCase {
+
+    private func facts(
+        _ phase: HomePromo.Phase,
+        loaded: Bool = true,
+        own: Int = 500,
+        welcomeBack: Bool = false,
+        proof: Int = 3
+    ) -> HomePromo.Facts {
+        HomePromo.Facts(phase: phase, entitlementsLoaded: loaded, ownTrackCount: own, welcomeBackOpen: welcomeBack, proofLineCount: proof)
+    }
+
+    func testPR1WithoutMusicOfTheirOwnHomeLeadsWithGettingItIn() {
+        XCTAssertEqual(HomePromo.card(for: facts(.notStarted, own: 0)), .getStarted)
+        XCTAssertEqual(HomePromo.card(for: facts(.purchased, own: 0)), .getStarted)
+        XCTAssertEqual(HomePromo.getStarted.placement, .replacesHero)
+    }
+
+    func testPR2ATrialWaitingForItsFirstPlaySaysSoUnderTheHero() {
+        XCTAssertEqual(HomePromo.card(for: facts(.notStarted)), .trialStartsOnFirstPlay)
+        XCTAssertEqual(HomePromo.trialStartsOnFirstPlay.placement, .heroFootnote)
+    }
+
+    func testPR3TheValueCardWaitsForTwoDaysAndTwoProofLines() {
+        XCTAssertNil(HomePromo.card(for: facts(.trial(daysRemaining: 7))))
+        XCTAssertNil(HomePromo.card(for: facts(.trial(daysRemaining: 6))))
+        XCTAssertEqual(HomePromo.card(for: facts(.trial(daysRemaining: 5))), .trialValue(daysRemaining: 5))
+        XCTAssertNil(HomePromo.card(for: facts(.trial(daysRemaining: 4), proof: 1)))
+        XCTAssertEqual(HomePromo.trialValue(daysRemaining: 4).placement, .pageEnd)
+    }
+
+    func testPR4TheLastDaySitsUnderTheHero() {
+        XCTAssertEqual(HomePromo.card(for: facts(.trial(daysRemaining: 1), proof: 0)), .lastDay)
+        XCTAssertEqual(HomePromo.lastDay.placement, .belowHero)
+    }
+
+    func testPR5AnEndedTrialSellsOnlyOnceTheEntitlementsConfirmIt() {
+        XCTAssertNil(HomePromo.card(for: facts(.expired, loaded: false)))
+        XCTAssertEqual(HomePromo.card(for: facts(.expired)), .keepListening(welcomeBack: false))
+        XCTAssertEqual(HomePromo.card(for: facts(.expired, welcomeBack: true)), .keepListening(welcomeBack: true))
+        XCTAssertEqual(HomePromo.keepListening(welcomeBack: true).placement, .replacesHero)
+    }
+
+    func testPR6PaidLibrariesSeeNothing() {
+        XCTAssertNil(HomePromo.card(for: facts(.purchased)))
+    }
+}
