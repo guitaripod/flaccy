@@ -56,8 +56,8 @@ final class TimingNoteViewController: UIViewController, UIPopoverPresentationCon
         view.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: view.topAnchor, constant: Self.padding),
-            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: Self.padding),
-            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -Self.padding),
+            stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: Self.padding),
+            stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -Self.padding),
             stack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -Self.padding),
             stack.widthAnchor.constraint(equalToConstant: Self.contentWidth - 2 * Self.padding),
         ])

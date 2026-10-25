@@ -77,7 +77,7 @@ enum DetailChip {
     static func chipsRow(_ chips: [String]) -> UIScrollView {
         let scroll = UIScrollView()
         scroll.showsHorizontalScrollIndicator = false
-        scroll.clipsToBounds = false
+        scroll.clipsToBounds = true
         let stack = UIStackView(arrangedSubviews: chips.map { genre($0) })
         stack.axis = .horizontal
         stack.spacing = 8

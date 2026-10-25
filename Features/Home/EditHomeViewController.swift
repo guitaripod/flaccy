@@ -86,7 +86,7 @@ final class EditHomeViewController: UIViewController {
         tableView.isEditing = true
         tableView.allowsSelection = false
         tableView.backgroundColor = .clear
-        tableView.contentInsetAdjustmentBehavior = .always
+        tableView.contentInsetAdjustmentBehavior = .scrollableAxes
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellID)
         tableView.tableHeaderView = makeIntro()
         tableView.tableFooterView = makeFooter()
