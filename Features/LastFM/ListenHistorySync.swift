@@ -306,8 +306,10 @@ final class ListenHistorySync {
         }
     }
 
+    /// A page's progress, dropped when it arrives after its sync finished so
+    /// a late "bringing in" can never cover the final status.
     private func receiveProgress(_ status: ListenHistoryStatus, generation: Int) {
-        guard generation == self.generation else { return }
+        guard generation == self.generation, syncTask != nil else { return }
         if case .backfilling(_, _, let totalPages) = status { knownTotalPages = totalPages }
         statusPublisher.send(status)
     }
