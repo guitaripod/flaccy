@@ -420,7 +420,8 @@ pub fn compose(inputs: &Inputs) -> HomeModel {
     let hero_lead = match &hero_model {
         HeroModel::Resume(hero) => hero.cover.lead().cloned(),
         HeroModel::UpNext(hero) => hero.cover.lead().cloned(),
-        _ => None,
+        HeroModel::DayOne(hero) => hero.cover.lead().cloned(),
+        HeroModel::Empty => None,
     };
     HomeModel {
         blocks: home::blocks(inputs.layout, &facts),
