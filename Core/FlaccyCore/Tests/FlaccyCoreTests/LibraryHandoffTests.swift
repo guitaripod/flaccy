@@ -198,6 +198,105 @@ final class LibraryHandoffTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: universalData.appendingPathComponent("Equalizer/state.json")), Data([5]))
     }
 
+    private func isFreshDatabase(_ url: URL) -> Bool {
+        (try? Data(contentsOf: url)) == Data([0])
+    }
+
+    private var stagingFolders: [String] {
+        let parent = universalData.deletingLastPathComponent()
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: parent.path)) ?? []
+        return names.filter { $0.contains(".handoff-import-") }
+    }
+
+    func testAFailedImportLeavesNothingBehindAndTheNextLaunchImportsAgain() throws {
+        let database: [UInt8] = (0..<512).map { UInt8($0 % 200) + 1 }
+        try write("library.sqlite", in: legacyData, bytes: database)
+        try write("Covers/a/cover.jpg", in: legacyData, bytes: [5, 6, 7])
+        let unreadable = try write("Covers/b/cover.jpg", in: legacyData, bytes: [8])
+        _ = try export(defaults: ["flaccy.mac.volume": 0.5])
+        let exportedUnreadable = LibraryHandoff.exportFolder(in: group)
+            .appendingPathComponent("Application Support/flaccy/Covers/b/cover.jpg")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: unreadable.path))
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: exportedUnreadable.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: exportedUnreadable.path) }
+
+        XCTAssertThrowsError(try LibraryHandoff.importExport(from: group, into: universalData, libraryIsEmpty: isFreshDatabase))
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: universalData.appendingPathComponent("library.sqlite").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: universalData.appendingPathComponent("Covers").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: LibraryHandoff.completionMarker(in: universalData).path))
+        XCTAssertEqual(stagingFolders, [])
+
+        try write("library.sqlite", in: universalData, bytes: [0])
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: exportedUnreadable.path)
+
+        let retried = try LibraryHandoff.importExport(from: group, into: universalData, libraryIsEmpty: isFreshDatabase)
+
+        guard case .imported(_, let defaults) = retried else { return XCTFail("the retry did not import, got \(retried)") }
+        XCTAssertEqual(defaults["flaccy.mac.volume"] as? Double, 0.5)
+        XCTAssertEqual(try Data(contentsOf: universalData.appendingPathComponent("library.sqlite")), Data(database))
+        XCTAssertEqual(try Data(contentsOf: universalData.appendingPathComponent("Covers/b/cover.jpg")), Data([8]))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: LibraryHandoff.completionMarker(in: universalData).path))
+        XCTAssertEqual(stagingFolders, [])
+
+        guard case .databaseExists = try LibraryHandoff.importExport(from: group, into: universalData, libraryIsEmpty: isFreshDatabase) else {
+            return XCTFail("a completed import ran again")
+        }
+    }
+
+    func testAnEmptyLibraryAfterACompletedImportIsNotImportedAgain() throws {
+        try write("library.sqlite", in: legacyData, bytes: [1, 2, 3])
+        _ = try export()
+        guard case .imported = try LibraryHandoff.importExport(from: group, into: universalData, libraryIsEmpty: isFreshDatabase) else {
+            return XCTFail("nothing was imported")
+        }
+        try write("library.sqlite", in: universalData, bytes: [0])
+
+        guard case .databaseExists = try LibraryHandoff.importExport(from: group, into: universalData, libraryIsEmpty: isFreshDatabase) else {
+            return XCTFail("an emptied library was replaced by the old export")
+        }
+        XCTAssertEqual(try Data(contentsOf: universalData.appendingPathComponent("library.sqlite")), Data([0]))
+    }
+
+    func testALibraryWithTracksIsLeftAloneAndCounted() throws {
+        try write("library.sqlite", in: legacyData, bytes: [1, 2, 3])
+        _ = try export()
+        try write("library.sqlite", in: universalData, bytes: [4, 4])
+
+        guard case .databaseExists = try LibraryHandoff.importExport(from: group, into: universalData, libraryIsEmpty: isFreshDatabase) else {
+            return XCTFail("a library with tracks was replaced")
+        }
+        XCTAssertEqual(try Data(contentsOf: universalData.appendingPathComponent("library.sqlite")), Data([4, 4]))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: LibraryHandoff.completionMarker(in: universalData).path))
+    }
+
+    func testAnEmptyDatabaseAndItsWriteAheadFilesAreReplacedOnRetry() throws {
+        try write("library.sqlite", in: legacyData, bytes: [1, 2, 3])
+        _ = try export()
+        try write("library.sqlite", in: universalData, bytes: [0])
+        try write("library.sqlite-wal", in: universalData, bytes: [9, 9])
+        try write("library.sqlite-shm", in: universalData, bytes: [9])
+
+        guard case .imported = try LibraryHandoff.importExport(from: group, into: universalData, libraryIsEmpty: isFreshDatabase) else {
+            return XCTFail("the empty database blocked the import")
+        }
+        XCTAssertEqual(try Data(contentsOf: universalData.appendingPathComponent("library.sqlite")), Data([1, 2, 3]))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: universalData.appendingPathComponent("library.sqlite-wal").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: universalData.appendingPathComponent("library.sqlite-shm").path))
+    }
+
+    func testAMissingDataFolderIsCreatedInOneMove() throws {
+        try write("library.sqlite", in: legacyData, bytes: [1, 2, 3])
+        _ = try export()
+        try FileManager.default.removeItem(at: universalData)
+
+        guard case .imported = try LibraryHandoff.importExport(from: group, into: universalData) else {
+            return XCTFail("nothing was imported")
+        }
+        XCTAssertEqual(try Data(contentsOf: universalData.appendingPathComponent("library.sqlite")), Data([1, 2, 3]))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: LibraryHandoff.completionMarker(in: universalData).path))
+    }
+
     func testOnlyTheAppsOwnDefaultsAreExported() {
         let owned = LibraryHandoff.ownedDefaults([
             "flaccy.mac.volume": 0.5,

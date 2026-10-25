@@ -94,6 +94,10 @@ enum HandoffExercise {
         try check(playlistTracks.map(\.trackFileURL) == songPaths, "the playlist kept its songs in order")
         try check(try database.fetchTrack(byRelativePath: songPaths[0])?.playCount == playCount, "the play count arrived")
         try check(UserDefaults.standard.integer(forKey: marker) == markerValue, "the exported default was applied")
+        try check(
+            FileManager.default.fileExists(atPath: LibraryHandoff.completionMarker(in: UniversalMacHandoff.dataFolder).path),
+            "the import recorded its completion"
+        )
 
         try check(HandoffFolderPrompt.pendingPath == manifest.libraryFolderPath, "the exported folder is waiting to be chosen again")
         try check(UserDefaults.standard.data(forKey: LibraryRoot.bookmarkKey) == nil, "the old app's folder bookmark was not applied")

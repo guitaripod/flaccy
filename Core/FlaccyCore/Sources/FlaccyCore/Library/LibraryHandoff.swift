@@ -23,9 +23,10 @@ public enum LibraryHandoff {
     public static let defaultsName = "defaults.plist"
     public static let dataFolderPath = "Application Support/flaccy"
     public static let databaseName = "library.sqlite"
+    public static let completionMarkerName = ".handoff-complete"
 
     private static let stagingPrefix = "\(folderName).tmp-"
-    private static let incomingSuffix = ".handoff-part"
+    private static let importStagingInfix = ".handoff-import-"
     private static let databaseCompanions = ["-wal", "-shm"]
     private static let appleOwnedPrefixes = ["Apple", "NS", "AK", "com.apple.", "WebKit", "PayloadEvent"]
 
@@ -108,29 +109,111 @@ public enum LibraryHandoff {
     }
 
     /// Copies the export's data folder into `dataFolder` and returns the exported defaults, unless the app already
-    /// has a database: an existing library is never imported over. Files already in `dataFolder` are kept; the
-    /// database is copied last and renamed into place, so a launch that dies half way imports again.
-    public static func importExport(from container: URL, into dataFolder: URL) throws -> ImportOutcome {
+    /// has its library: an existing library is never imported over. The copy is built in a sibling staging folder and
+    /// moved into place only when it is complete, the database last, and the completion marker is written after
+    /// that. A launch that finds an export, no marker and a database `libraryIsEmpty` calls empty (the empty one the
+    /// app opens after a failed import) imports again; files already in `dataFolder` are kept.
+    public static func importExport(
+        from container: URL,
+        into dataFolder: URL,
+        libraryIsEmpty: (URL) -> Bool = { _ in false }
+    ) throws -> ImportOutcome {
         guard let manifest = manifest(in: container) else { return .noExport }
         let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: completionMarker(in: dataFolder).path) { return .databaseExists }
         let database = dataFolder.appendingPathComponent(databaseName)
-        guard !fileManager.fileExists(atPath: database.path) else { return .databaseExists }
-        let source = exportFolder(in: container).appendingPathComponent(dataFolderPath, isDirectory: true)
-        try fileManager.createDirectory(at: dataFolder, withIntermediateDirectories: true)
-        let databaseFiles = [databaseName] + databaseCompanions.map { databaseName + $0 }
-        try copyTree(from: source, to: dataFolder, previous: nil, skipping: Set(databaseFiles))
-        for name in databaseFiles.reversed() {
-            let exported = source.appendingPathComponent(name)
-            guard fileManager.fileExists(atPath: exported.path) else { continue }
-            let incoming = dataFolder.appendingPathComponent(name + incomingSuffix)
-            try? fileManager.removeItem(at: incoming)
-            try fileManager.copyItem(at: exported, to: incoming)
-            let destination = dataFolder.appendingPathComponent(name)
-            try? fileManager.removeItem(at: destination)
-            try fileManager.moveItem(at: incoming, to: destination)
+        if fileManager.fileExists(atPath: database.path) {
+            guard libraryIsEmpty(database) else {
+                recordCompletion(in: dataFolder, of: manifest)
+                return .databaseExists
+            }
         }
-        let defaults = readDefaults(in: container)
-        return .imported(manifest: manifest, defaults: defaults)
+        let source = exportFolder(in: container).appendingPathComponent(dataFolderPath, isDirectory: true)
+        let staging = try stageImport(of: source, beside: dataFolder)
+        do {
+            try moveIntoPlace(staging, dataFolder: dataFolder)
+            try recordCompletionOrThrow(in: dataFolder, of: manifest)
+        } catch {
+            try? fileManager.removeItem(at: staging)
+            throw error
+        }
+        try? fileManager.removeItem(at: staging)
+        return .imported(manifest: manifest, defaults: readDefaults(in: container))
+    }
+
+    /// Whether the data folder records that its library came from an export or was already in use when one was found.
+    public static func completionMarker(in dataFolder: URL) -> URL {
+        dataFolder.appendingPathComponent(completionMarkerName)
+    }
+
+    private static func stageImport(of source: URL, beside dataFolder: URL) throws -> URL {
+        let fileManager = FileManager.default
+        let parent = dataFolder.deletingLastPathComponent()
+        try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
+        let prefix = importStagingPrefix(for: dataFolder)
+        for name in (try? fileManager.contentsOfDirectory(atPath: parent.path)) ?? [] where name.hasPrefix(prefix) {
+            try? fileManager.removeItem(at: parent.appendingPathComponent(name))
+        }
+        let staging = parent.appendingPathComponent(prefix + UUID().uuidString, isDirectory: true)
+        do {
+            try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
+            try copyTree(from: source, to: staging, previous: nil, skipping: [])
+        } catch {
+            try? fileManager.removeItem(at: staging)
+            throw error
+        }
+        return staging
+    }
+
+    private static func importStagingPrefix(for dataFolder: URL) -> String {
+        dataFolder.lastPathComponent + importStagingInfix
+    }
+
+    /// A data folder that does not exist yet is replaced by the staging folder in one rename. Otherwise the staged
+    /// items that are missing move across one by one, the database files after the old ones are removed and the
+    /// database itself last, so a launch that dies half way has no database and imports again.
+    private static func moveIntoPlace(_ staging: URL, dataFolder: URL) throws {
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: dataFolder.path) else {
+            try fileManager.moveItem(at: staging, to: dataFolder)
+            return
+        }
+        let databaseFiles = [databaseName] + databaseCompanions.map { databaseName + $0 }
+        try mergeMissing(from: staging, into: dataFolder, skipping: Set(databaseFiles))
+        for name in databaseFiles {
+            try? fileManager.removeItem(at: dataFolder.appendingPathComponent(name))
+        }
+        for name in databaseFiles.reversed() {
+            let staged = staging.appendingPathComponent(name)
+            guard fileManager.fileExists(atPath: staged.path) else { continue }
+            try fileManager.moveItem(at: staged, to: dataFolder.appendingPathComponent(name))
+        }
+    }
+
+    private static func mergeMissing(from staged: URL, into destination: URL, skipping: Set<String>) throws {
+        let fileManager = FileManager.default
+        for name in try fileManager.contentsOfDirectory(atPath: staged.path) where !skipping.contains(name) {
+            let item = staged.appendingPathComponent(name)
+            let target = destination.appendingPathComponent(name)
+            var isDirectory: ObjCBool = false
+            var targetIsDirectory: ObjCBool = false
+            let targetExists = fileManager.fileExists(atPath: target.path, isDirectory: &targetIsDirectory)
+            _ = fileManager.fileExists(atPath: item.path, isDirectory: &isDirectory)
+            if !targetExists {
+                try fileManager.moveItem(at: item, to: target)
+            } else if isDirectory.boolValue && targetIsDirectory.boolValue {
+                try mergeMissing(from: item, into: target, skipping: [])
+            }
+        }
+    }
+
+    private static func recordCompletionOrThrow(in dataFolder: URL, of manifest: LibraryHandoffManifest) throws {
+        let stamp = ISO8601DateFormatter().string(from: manifest.exportedAt)
+        try Data(stamp.utf8).write(to: completionMarker(in: dataFolder), options: .atomic)
+    }
+
+    private static func recordCompletion(in dataFolder: URL, of manifest: LibraryHandoffManifest) {
+        try? recordCompletionOrThrow(in: dataFolder, of: manifest)
     }
 
     private static var encoder: JSONEncoder {

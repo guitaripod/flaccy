@@ -348,8 +348,40 @@ enum ReexportExercise {
         chunk.append(body)
         var data = try Data(contentsOf: url)
         data.append(chunk)
+        data.append(id3Chunk(title: title, artist: artist, album: album))
         data.replaceSubrange(4..<8, with: littleEndian32(data.count - 8))
         try data.write(to: url)
+    }
+
+    /// The tags iOS reads from a WAV file: its AVFoundation ignores the RIFF INFO list the Mac understands.
+    private static func id3Chunk(title: String, artist: String, album: String) -> Data {
+        var frames = Data()
+        for (identifier, text) in [("TIT2", title), ("TPE1", artist), ("TALB", album)] {
+            var payload = Data([0])
+            payload.append(Data(text.utf8))
+            frames.append(Data(identifier.utf8))
+            frames.append(bigEndian32(payload.count))
+            frames.append(Data([0, 0]))
+            frames.append(payload)
+        }
+        var tag = Data("ID3".utf8)
+        tag.append(Data([3, 0, 0]))
+        tag.append(synchsafe32(frames.count))
+        tag.append(frames)
+        var chunk = Data("id3 ".utf8)
+        chunk.append(littleEndian32(tag.count))
+        chunk.append(tag)
+        if tag.count % 2 == 1 { chunk.append(0) }
+        return chunk
+    }
+
+    private static func bigEndian32(_ value: Int) -> Data {
+        var big = UInt32(value).bigEndian
+        return Data(bytes: &big, count: 4)
+    }
+
+    private static func synchsafe32(_ value: Int) -> Data {
+        Data([UInt8((value >> 21) & 0x7F), UInt8((value >> 14) & 0x7F), UInt8((value >> 7) & 0x7F), UInt8(value & 0x7F)])
     }
 
     private static func littleEndian32(_ value: Int) -> Data {

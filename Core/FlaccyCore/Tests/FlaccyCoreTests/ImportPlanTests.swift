@@ -249,15 +249,20 @@ private struct FakeInspector: ImportInspector {
     let songKeys: [String: String]
 
     init(_ entries: [(url: URL, fingerprint: String, songKey: String)]) {
-        fingerprints = Dictionary(uniqueKeysWithValues: entries.map { ($0.url.path, $0.fingerprint) })
-        songKeys = Dictionary(uniqueKeysWithValues: entries.map { ($0.url.path, $0.songKey) })
+        fingerprints = Dictionary(uniqueKeysWithValues: entries.map { (Self.key($0.url), $0.fingerprint) })
+        songKeys = Dictionary(uniqueKeysWithValues: entries.map { (Self.key($0.url), $0.songKey) })
+    }
+
+    /// The plan walks resolved paths, and a temporary folder on the Mac sits behind the `/var` symlink.
+    private static func key(_ url: URL) -> String {
+        url.resolvingSymlinksInPath().path
     }
 
     func audioFingerprint(of url: URL) -> String? {
-        fingerprints[url.path]
+        fingerprints[Self.key(url)]
     }
 
     func songKey(of url: URL) -> String? {
-        songKeys[url.path]
+        songKeys[Self.key(url)]
     }
 }
