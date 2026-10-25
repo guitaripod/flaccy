@@ -13,6 +13,7 @@ pub mod artwork_local;
 pub mod enrichment_job;
 pub mod equalizer;
 pub mod home;
+pub mod home_copy;
 pub mod import_plan;
 pub mod library_debut;
 pub mod library_filter;
