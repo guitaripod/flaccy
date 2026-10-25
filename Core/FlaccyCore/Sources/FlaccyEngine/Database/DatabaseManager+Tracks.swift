@@ -88,6 +88,14 @@ extension DatabaseManager {
         }
     }
 
+    /// Every track's relative path with the date it entered the library.
+    public func fetchTrackDateAddedByPath() throws -> [(path: String, dateAdded: Date)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: "SELECT fileURL, dateAdded FROM tracks")
+            return rows.map { (path: $0["fileURL"], dateAdded: $0["dateAdded"]) }
+        }
+    }
+
     public func fetchTrack(byRelativePath path: String) throws -> TrackRecord? {
         try dbQueue.read { db in
             try TrackRecord.filter(Column("fileURL") == path).fetchOne(db)
