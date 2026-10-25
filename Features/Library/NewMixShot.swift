@@ -9,7 +9,7 @@ import UIKit
 @MainActor
 enum NewMixShot {
 
-    static func runIfRequested(nav: UINavigationController, player: PlayerContainerViewController) {
+    static func runIfRequested(tabs: AppTabBarController, player: PlayerContainerViewController) {
         let arguments = CommandLine.arguments
         guard let flag = arguments.firstIndex(of: ReexportExercise.shotArgument) else { return }
         let screen = flag + 1 < arguments.count ? arguments[flag + 1] : "album"
@@ -17,7 +17,8 @@ enum NewMixShot {
             guard let track = await ReexportExercise.seedRevisedSong() else { return }
             AudioPlayer.shared.play([track], startingAt: 0)
             try? await Task.sleep(for: .seconds(1))
-            open(screen, for: track, nav: nav, player: player)
+            tabs.show(.library)
+            open(screen, for: track, nav: tabs.libraryNavigation, player: player)
             MidgarLog.info("NEW MIX SHOT OPENED: \(screen)", category: .content)
         }
     }

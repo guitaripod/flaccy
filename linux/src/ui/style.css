@@ -1379,3 +1379,125 @@ row:hover .playlist-drag-handle {
   color: @accent_color;
   min-width: 48px;
 }
+
+/* ---- Home ---------------------------------------------------------------- */
+/* The wash behind the top of the page is one plain textured rectangle (the
+   baked backdrop texture); nothing here uses filter, an infinite animation or
+   an animated transform, so a resting Home never wakes the frame clock. */
+.home-backdrop {
+  opacity: 0.55;
+}
+
+.home-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: @accent_color;
+}
+
+.home-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.home-title-compact {
+  font-size: 24px;
+}
+
+.home-artist {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.home-track-line {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.home-heading {
+  font-weight: 800;
+}
+
+.home-round {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+}
+
+.home-link {
+  color: @accent_color;
+  font-weight: 600;
+}
+
+.home-jump > row {
+  min-height: 52px;
+}
+
+.home-jump-cover {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px alpha(#000, 0.3);
+}
+
+.home-row-title {
+  font-weight: 600;
+}
+
+.home-row-play,
+.home-tile-play {
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.home-row:hover .home-row-play,
+.home-row:focus-within .home-row-play,
+.home-row-play:focus,
+.home-tile-host:hover .home-tile-play,
+.home-tile-host:focus-within .home-tile-play,
+.home-tile-play:focus {
+  opacity: 1;
+}
+
+.home-show-more {
+  color: @accent_color;
+  font-weight: 600;
+}
+
+.home-tile {
+  padding: 8px;
+  border-radius: 16px;
+}
+
+.home-tile-title {
+  font-weight: 600;
+}
+
+.home-tile-badge {
+  background-color: alpha(#000, 0.55);
+  color: #fff;
+  box-shadow: none;
+}
+
+.home-placeholder {
+  border: 2px dashed alpha(@window_fg_color, 0.28);
+  border-radius: 14px;
+}
+
+.home-strip-card {
+  padding: 0 14px;
+  min-height: 60px;
+}
+
+.home-card-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-week-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.home-download-bar {
+  min-height: 4px;
+}

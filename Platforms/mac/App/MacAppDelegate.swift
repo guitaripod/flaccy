@@ -37,6 +37,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         ScreenshotSeeder.seedIfRequested()
         DebugLayoutFixtures.seedIfRequested()
+        DebugHomeDrive.seedIfRequested()
         #endif
 
         NSApp.mainMenu = MainMenu.build()
@@ -432,6 +433,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             userInfo: [SectionNotificationKey.section: sender.tag]
         )
+    }
+
+    @objc func customizeHome(_ sender: Any?) {
+        NotificationCenter.default.post(name: .flaccyCustomizeHome, object: nil)
     }
 
     @objc func toggleQueue(_ sender: Any?) {

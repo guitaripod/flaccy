@@ -17,6 +17,7 @@ from build_iphone_set import parse_markers  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 SLIDES = [
+    dict(id="home", raw="home", accent=c.VIOLET, secondary=c.CORAL),
     dict(id="library", raw="library-albums", accent=c.CORAL, secondary=c.VIOLET),
     dict(id="eq", raw="equalizer-simple", accent=c.TEAL, secondary=c.VIOLET),
     dict(id="lyrics", raw="nowplaying-lyrics", accent=c.VIOLET, secondary=c.CORAL),

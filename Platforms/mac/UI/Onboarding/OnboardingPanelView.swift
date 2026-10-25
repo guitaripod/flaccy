@@ -57,10 +57,19 @@ final class OnboardingPanelView: NSView {
         case keep
     }
 
+    #if DEBUG
+    /// Set by `--shot-home empty`, which captures Home's own first-run card
+    /// without the welcome panel standing in front of it.
+    static var isSuppressedForCapture = false
+    #endif
+
     /// Loading is intentionally a "keep" state: the library posts its update
     /// notification while a reload is still marked in-flight, so hiding on
     /// isLoading would dismiss the panel the moment the empty first scan runs.
     static var visibility: Visibility {
+        #if DEBUG
+        if isSuppressedForCapture { return .hide }
+        #endif
         if MacLibrarySurfaceModel.shared.state.value.surface == .debut { return .show }
         if HandoffFolderPrompt.isPending { return .show }
         if !LibraryRoot.shared.isUsingDefaultRoot || LibraryRoot.shared.isFallbackActive

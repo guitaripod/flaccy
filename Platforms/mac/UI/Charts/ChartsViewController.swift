@@ -706,11 +706,16 @@ final class ChartsViewController: NSViewController {
         }
     }
 
-    #if DEBUG
-    func selectPeriodForCapture(_ period: ChartPeriod) {
+    /// Shows `period`, the way Home's Open Recap link lands on the last week.
+    func show(period: ChartPeriod) {
         guard let index = ChartPeriod.allCases.firstIndex(of: period) else { return }
         periodPicker.selectedSegment = index
         viewModel.load(period: period)
+    }
+
+    #if DEBUG
+    func selectPeriodForCapture(_ period: ChartPeriod) {
+        show(period: period)
     }
 
     func scrollToBottomForCapture() {

@@ -2,6 +2,7 @@ use crate::config::{self, Config, Session};
 use crate::db::Db;
 use crate::eq::EqEngine;
 use crate::events::{AppEvent, EventHub};
+use crate::home_state::{self, SavedSession, SavedTrack};
 use crate::library::{self, Library, Track};
 use crate::load_progress::{LoadPhase, LoadProgress};
 use crate::player::Player;
@@ -10,6 +11,8 @@ use crate::ui;
 use crate::versions;
 use adw::prelude::*;
 use flaccy_shared::enrichment_job::{Activity, JobProgress, Scope};
+use flaccy_shared::home::{self, ContextKind, PlaybackContext, RecentContexts};
+use flaccy_shared::home_copy;
 use flaccy_shared::import_plan;
 use flaccy_shared::library_debut::DebutSummary;
 use flaccy_shared::track_revision::copy;
@@ -79,6 +82,16 @@ pub struct AppCore {
     config_save_queued: Cell<bool>,
     /// A refresh of the servers' catalogs is running, so another is not begun.
     pub remote_syncing: Cell<bool>,
+    /// What the queue now playing was started from, for Home's Continue and
+    /// Jump Back In.
+    context: RefCell<PlaybackContext>,
+    /// The albums, playlists, mixes and radios the person started.
+    pub recents: RefCell<RecentContexts>,
+    /// The queue as it stood when playback was last touched, kept across
+    /// launches so Home can offer to carry on.
+    pub last_session: RefCell<Option<SavedSession>>,
+    session_save_queued: Cell<bool>,
+    session_saved_position: Cell<f64>,
 }
 
 /// How long after launch the servers are refreshed first, and how often after.
@@ -88,6 +101,15 @@ const REMOTE_REFRESH_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const MUTE_FLOOR: f64 = 0.005;
 /// Where unmuting lands when there is no earlier level to return to.
 const UNMUTE_DEFAULT: f64 = 0.6;
+/// The most songs a saved session keeps, so an endless station's queue never
+/// turns every track change into a megabyte write.
+const SESSION_MAX_TRACKS: usize = 1000;
+/// How many songs behind the current one a trimmed session keeps.
+const SESSION_TRAILING_TRACKS: usize = 100;
+/// How often playback progress is written while a song plays, in seconds.
+const SESSION_PROGRESS_INTERVAL: f64 = 15.0;
+/// How long queue and track changes wait to be written as one session.
+const SESSION_SAVE_DELAY: Duration = Duration::from_millis(300);
 /// How long a settled change waits before it is written to the config file, so
 /// a drag across the volume slider saves once rather than on every frame.
 const CONFIG_SAVE_DELAY: Duration = Duration::from_millis(400);
@@ -106,6 +128,9 @@ impl AppCore {
         player.set_volume(config.volume);
         player.set_shuffle(config.shuffle);
         player.set_repeat(crate::player::RepeatMode::from_id(&config.repeat_mode));
+        if config::demo_mode() && std::env::var("FLACCY_DEMO_HOME").as_deref() == Ok("dayone") {
+            db.delete_all_scrobbles();
+        }
         let session = config::load_session();
         if let Some(session) = &session {
             crate::logger::info(
@@ -157,10 +182,23 @@ impl AppCore {
             restore_volume: Cell::new(restore_volume),
             config_save_queued: Cell::new(false),
             remote_syncing: Cell::new(false),
+            context: RefCell::new(PlaybackContext::anonymous_queue()),
+            recents: RefCell::new(
+                Some(home_state::load_recents())
+                    .filter(|_| std::env::var("FLACCY_DEMO_HOME").as_deref() != Ok("dayone"))
+                    .unwrap_or_default(),
+            ),
+            last_session: RefCell::new(
+                home_state::load_session()
+                    .filter(|_| std::env::var("FLACCY_DEMO_HOME").as_deref() != Ok("dayone")),
+            ),
+            session_save_queued: Cell::new(false),
+            session_saved_position: Cell::new(0.0),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
         core.wire_remote();
+        core.wire_session();
         core
     }
 
@@ -534,7 +572,7 @@ impl AppCore {
         self.schedule_wantlist_refresh();
         self.schedule_history_import();
         self.wire_lastfm_sync();
-        if config::demo_mode() {
+        if config::demo_mode() && demo_autoplays() {
             self.schedule_demo_autoplay();
         }
         if self.smoke {
@@ -641,9 +679,80 @@ impl AppCore {
         });
     }
 
+    /// Plays `tracks` from `start`, naming what they were started from by
+    /// looking at them (see `context_for`).
     pub fn play_tracks(self: &Rc<Self>, tracks: Vec<Track>, start: usize) {
+        self.play_tracks_in(tracks, start, None);
+    }
+
+    /// The one funnel every start of playback goes through. A caller that
+    /// knows what it is starting (a playlist, a mix, a radio) says so in
+    /// `context`; any other start is named from its songs.
+    pub fn play_tracks_in(
+        self: &Rc<Self>,
+        tracks: Vec<Track>,
+        start: usize,
+        context: Option<PlaybackContext>,
+    ) {
+        if tracks.is_empty() {
+            return;
+        }
+        let context = context.unwrap_or_else(|| self.context_for(&tracks));
         crate::scrobbler::checkpoint_skip(self);
+        *self.context.borrow_mut() = context.clone();
         self.player.play_queue(tracks, start);
+        self.note_context_started(context);
+    }
+
+    /// An album when every song belongs to one library album, else whatever the
+    /// shared rule makes of their (album, credit) pairs: usually a plain queue.
+    fn context_for(&self, tracks: &[Track]) -> PlaybackContext {
+        let library = self.library.borrow().clone();
+        let album = tracks.first().and_then(|first| {
+            library
+                .albums
+                .iter()
+                .find(|album| album.tracks.iter().any(|t| t.rel_path == first.rel_path))
+        });
+        if let Some(album) = album {
+            let members: std::collections::HashSet<&str> =
+                album.tracks.iter().map(|t| t.rel_path.as_str()).collect();
+            if tracks.iter().all(|t| members.contains(t.rel_path.as_str())) {
+                return album_context(&album.title, &album.artist);
+            }
+        }
+        let pairs: Vec<(String, String)> = tracks
+            .iter()
+            .map(|t| (t.album.clone(), t.credit().to_string()))
+            .collect();
+        PlaybackContext::derived(&pairs)
+    }
+
+    /// Remembers a started context for Jump Back In. A plain queue names
+    /// nothing to go back to, so the shared rule leaves it out.
+    fn note_context_started(&self, context: PlaybackContext) {
+        let updated = self
+            .recents
+            .borrow()
+            .recording(context, chrono::Utc::now().timestamp());
+        if *self.recents.borrow() == updated {
+            return;
+        }
+        home_state::save_recents(&updated);
+        *self.recents.borrow_mut() = updated;
+        self.hub.emit(&AppEvent::HomeChanged);
+    }
+
+    /// Takes a thing off Jump Back In, history-derived albums included, until
+    /// it is played again.
+    pub fn dismiss_jump_back_in(&self, key: &str) {
+        let updated = self
+            .recents
+            .borrow()
+            .dismissing(key, chrono::Utc::now().timestamp());
+        home_state::save_recents(&updated);
+        *self.recents.borrow_mut() = updated;
+        self.hub.emit(&AppEvent::HomeChanged);
     }
 
     pub fn play_album_key(self: &Rc<Self>, key: &str, shuffle: bool) {
@@ -651,7 +760,8 @@ impl AppCore {
         let Some(album) = library.album_by_key(key) else {
             return;
         };
-        self.play_list(album.tracks.clone(), shuffle, key);
+        let context = album_context(&album.title, &album.artist);
+        self.play_list_in(album.tracks.clone(), shuffle, key, Some(context));
     }
 
     /// Every library track `artist` is on, in album order.
@@ -666,6 +776,16 @@ impl AppCore {
     /// Plays `tracks` from the top, or shuffled from a seeded random start,
     /// leaving the player's shuffle mode matching the request.
     pub fn play_list(self: &Rc<Self>, tracks: Vec<Track>, shuffle: bool, seed: &str) {
+        self.play_list_in(tracks, shuffle, seed, None);
+    }
+
+    pub fn play_list_in(
+        self: &Rc<Self>,
+        tracks: Vec<Track>,
+        shuffle: bool,
+        seed: &str,
+        context: Option<PlaybackContext>,
+    ) {
         if tracks.is_empty() {
             return;
         }
@@ -678,7 +798,154 @@ impl AppCore {
         } else {
             0
         };
-        self.play_tracks(tracks, start);
+        self.play_tracks_in(tracks, start, context);
+    }
+
+    /// Library Radio: an endless mix of everything, weighted by how much each
+    /// song is played.
+    pub fn start_library_radio(self: &Rc<Self>) {
+        let pool = self.library.borrow().tracks.clone();
+        let db_path = self.db_path.clone();
+        let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
+        std::thread::Builder::new()
+            .name("flaccy-library-radio".into())
+            .spawn(move || {
+                let counts = crate::db::Db::open(&db_path)
+                    .map(|db| db.play_counts_by_track())
+                    .unwrap_or_default();
+                let station = crate::station::library_radio(
+                    &pool,
+                    &counts,
+                    &std::collections::HashSet::new(),
+                    crate::station::STATION_SIZE,
+                );
+                let _ = tx.send_blocking(station);
+            })
+            .ok();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok(station) = rx.recv().await else { return };
+            let Some(core) = weak.upgrade() else { return };
+            if station.is_empty() {
+                core.toast("Library Radio needs songs in the library. Add some music, then try again.");
+                return;
+            }
+            let context = PlaybackContext {
+                kind: ContextKind::Radio,
+                id: home_copy::LIBRARY_RADIO_ID.to_string(),
+                title: home_copy::LIBRARY_RADIO_TITLE.to_string(),
+                subtitle: String::new(),
+            };
+            core.play_tracks_in(station, 0, Some(context));
+        });
+    }
+
+    /// Puts the last session's queue back and plays it from where it stopped,
+    /// skipping songs whose files have left the library. `shuffle` plays the
+    /// same songs shuffled from the top instead.
+    pub fn resume_session(self: &Rc<Self>, shuffle: bool) -> bool {
+        let Some(saved) = self.last_session.borrow().clone() else {
+            return false;
+        };
+        let library = self.library.borrow().clone();
+        let by_path: std::collections::HashMap<&str, &Track> = library
+            .tracks
+            .iter()
+            .map(|track| (track.rel_path.as_str(), track))
+            .collect();
+        let Some(plan) = saved.surviving(|rel| by_path.get(rel).map(|track| track.duration)) else {
+            self.toast("None of the songs in your last session are in the library any more. Their files may have moved.");
+            return false;
+        };
+        let tracks: Vec<Track> = plan
+            .tracks
+            .iter()
+            .filter_map(|saved| by_path.get(saved.rel_path.as_str()).map(|t| (*t).clone()))
+            .collect();
+        if shuffle {
+            self.play_list_in(tracks, true, "session", Some(saved.context.clone()));
+            return true;
+        }
+        crate::scrobbler::checkpoint_skip(self);
+        *self.context.borrow_mut() = saved.context.clone();
+        self.player.restore_queue(tracks, plan.index, plan.elapsed);
+        true
+    }
+
+    /// Keeps the last session current: written a moment after the track, the
+    /// queue or play/pause changes, and every so often while a song plays.
+    fn wire_session(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.hub.subscribe(move |event| {
+            let Some(core) = weak.upgrade() else {
+                return false;
+            };
+            match event {
+                AppEvent::TrackChanged(Some(_))
+                | AppEvent::QueueChanged
+                | AppEvent::PlayingChanged(_) => core.save_session_soon(),
+                AppEvent::Tick { position, .. } => {
+                    if (position - core.session_saved_position.get()).abs()
+                        >= SESSION_PROGRESS_INTERVAL
+                    {
+                        core.save_session_now(false);
+                    }
+                }
+                _ => {}
+            }
+            true
+        });
+    }
+
+    fn save_session_soon(self: &Rc<Self>) {
+        if self.session_save_queued.replace(true) {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(SESSION_SAVE_DELAY, move || {
+            if let Some(core) = weak.upgrade() {
+                core.session_save_queued.set(false);
+                core.save_session_now(true);
+            }
+        });
+    }
+
+    /// Writes the session as it stands. A player with nothing queued leaves the
+    /// file alone: quitting after a launch that never played must not erase
+    /// what the last launch left behind.
+    pub fn save_session_now(&self, notify: bool) {
+        let snapshot = self.player.queue_snapshot();
+        if snapshot.queue.is_empty() {
+            return;
+        }
+        let position = self.player.position().unwrap_or(0.0);
+        self.session_saved_position.set(position);
+        let first = if snapshot.queue.len() > SESSION_MAX_TRACKS {
+            snapshot.current.saturating_sub(SESSION_TRAILING_TRACKS)
+        } else {
+            0
+        };
+        let session = SavedSession {
+            saved_at: chrono::Utc::now().timestamp(),
+            tracks: snapshot
+                .queue
+                .iter()
+                .skip(first)
+                .take(SESSION_MAX_TRACKS)
+                .map(|track| SavedTrack {
+                    rel_path: track.rel_path.clone(),
+                    duration: track.duration,
+                })
+                .collect(),
+            index: snapshot.current - first,
+            elapsed: position,
+            context: self.context.borrow().clone(),
+        };
+        home_state::save_session(&session);
+        *self.last_session.borrow_mut() = Some(session);
+        if notify {
+            self.hub.emit(&AppEvent::HomeChanged);
+        }
     }
 
     pub fn next(self: &Rc<Self>) {
@@ -1168,6 +1435,7 @@ impl AppCore {
         let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());
         let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
         let seed_for_thread = seed_artist.clone();
+        let seed_track_is_none = seed_track.is_none();
         std::thread::Builder::new()
             .name("flaccy-station".into())
             .spawn(move || {
@@ -1218,8 +1486,15 @@ impl AppCore {
                 ),
             );
             crate::scrobbler::checkpoint_skip(&core);
+            let context = seed_track_is_none.then(|| artist_radio_context(&seed_artist));
+            if let Some(context) = &context {
+                *core.context.borrow_mut() = context.clone();
+            }
             core.player
                 .play_queue_with_seed(station, 0, Some(seed_artist));
+            if let Some(context) = context {
+                core.note_context_started(context);
+            }
         });
     }
 
@@ -1427,6 +1702,35 @@ impl AppCore {
             }
             true
         });
+    }
+}
+
+/// A demo run starts playing on its own, except for the Home states that show
+/// a paused library (`FLACCY_DEMO_HOME` other than `playing`).
+fn demo_autoplays() -> bool {
+    matches!(
+        std::env::var("FLACCY_DEMO_HOME").ok().as_deref(),
+        None | Some("playing")
+    )
+}
+
+/// The context of an album started whole.
+pub fn album_context(title: &str, credit: &str) -> PlaybackContext {
+    PlaybackContext {
+        kind: ContextKind::Album,
+        id: home::album_key(title, credit),
+        title: title.to_string(),
+        subtitle: credit.to_string(),
+    }
+}
+
+/// The context of an artist station: "<Artist> Radio".
+pub fn artist_radio_context(artist: &str) -> PlaybackContext {
+    PlaybackContext {
+        kind: ContextKind::Radio,
+        id: format!("artist:{}", home::fold(artist)),
+        title: format!("{artist} {}", home_copy::RADIO),
+        subtitle: String::new(),
     }
 }
 

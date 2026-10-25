@@ -32,7 +32,7 @@ struct ReceivingBanner: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 glyph.font(.system(size: 13, weight: .semibold))
-                Text(headline)
+                Text(compactHeadline)
                     .font(.footnote.weight(.semibold))
                     .lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
                     .minimumScaleFactor(0.8)
@@ -89,6 +89,11 @@ struct ReceivingBanner: View {
         batch.preparing
             ? String(localized: "Your iPhone is preparing songs…")
             : String(localized: "Receiving \(batch.completed) of \(batch.total)")
+    }
+
+    /// "Receiving 3 of 12 · From iPhone": the run and where it comes from.
+    private var compactHeadline: String {
+        batch.preparing ? headline : "\(headline) · \(String(localized: "From iPhone"))"
     }
 
     private var accessibilityValue: String {

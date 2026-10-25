@@ -246,7 +246,7 @@ final class PurchaseManager {
     /// nothing it produces reaches the counts a pricing decision is made from.
     func notePaywallShown() {
         guard !trialClockIsOverridden else { return }
-        Task { await MidgarSignals.shared?.record("paywall.view", props: ["placement": "paywall"]) }
+        Task { await MidgarSignals.shared?.send(.paywallView(placement: .paywall)) }
     }
 
     /// Re-derives the trial day from the stored start, for a process that has
@@ -476,7 +476,12 @@ final class PurchaseManager {
 
     @concurrent
     nonisolated private static func readProof(playsAreScrobbled: Bool) async -> PaywallProof {
-        let db = DatabaseManager.shared
+        proofSnapshot(playsAreScrobbled: playsAreScrobbled)
+    }
+
+    /// The paywall's proof counts, read synchronously for a caller that is
+    /// already off the main actor, such as Home's feed builder.
+    nonisolated static func proofSnapshot(playsAreScrobbled: Bool, database db: DatabaseManager = .shared) -> PaywallProof {
         do {
             let totals = try db.libraryTotals()
             return PaywallProof(

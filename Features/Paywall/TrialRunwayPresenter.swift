@@ -13,6 +13,7 @@ enum TrialRunwayPresenter {
         let manager = PurchaseManager.shared
         manager.refreshTrialPhase()
         library(in: window)?.setRunwayBanner(visible: manager.runwayBannerIsDue)
+        home(in: window)?.setRunwayBanner(visible: manager.runwayBannerIsDue)
         Task { await TrialReminderScheduler.shared.refresh() }
     }
 
@@ -21,6 +22,15 @@ enum TrialRunwayPresenter {
     static func library(in window: UIWindow?) -> LibraryViewController? {
         guard let root = window?.rootViewController else { return nil }
         return firstLibrary(in: root)
+    }
+
+    static func home(in window: UIWindow?) -> HomeViewController? {
+        tabController(in: window)?.home
+    }
+
+    static func tabController(in window: UIWindow?) -> AppTabBarController? {
+        guard let root = window?.rootViewController else { return nil }
+        return firstTabController(in: root)
     }
 
     static func topmostViewController(in window: UIWindow?) -> UIViewController? {
@@ -36,7 +46,16 @@ enum TrialRunwayPresenter {
             .keyWindow
     }
 
+    private static func firstTabController(in controller: UIViewController) -> AppTabBarController? {
+        if let tabs = controller as? AppTabBarController { return tabs }
+        for child in controller.children {
+            if let tabs = firstTabController(in: child) { return tabs }
+        }
+        return nil
+    }
+
     private static func firstLibrary(in controller: UIViewController) -> LibraryViewController? {
+        if let tabs = controller as? AppTabBarController { return tabs.library }
         if let library = controller as? LibraryViewController { return library }
         if let nav = controller as? UINavigationController,
            let library = nav.viewControllers.first as? LibraryViewController {

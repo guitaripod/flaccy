@@ -11,13 +11,30 @@ import UIKit
 /// `--seed-screenshots`; `DemoRouter` turns `FLACCY_ROUTE` into one screen.
 enum DemoMode {
 
-    static let version = 10
+    static let version = 11
     private static let versionKey = "flaccy.demo.version"
 
     static var environment: [String: String] { ProcessInfo.processInfo.environment }
 
+    private static let historyModeKey = "flaccy.demo.historyMode"
+
+    static var isDayOne: Bool { environment["FLACCY_ROUTE"] == "home-dayone" }
+    static var isEmptyLibrary: Bool { environment["FLACCY_ROUTE"] == "home-empty" }
+    static var isHomeRoute: Bool { environment["FLACCY_ROUTE"]?.hasPrefix("home") == true }
+
+    /// The empty-history Home needs a library nobody has played, the first-run
+    /// Home needs no library at all, and every other route needs the played
+    /// one, so switching between them reseeds.
+    private static func switchedHistoryMode() -> Bool {
+        let mode = isEmptyLibrary ? "empty" : (isDayOne ? "dayOne" : "played")
+        let previous = UserDefaults.standard.string(forKey: historyModeKey)
+        UserDefaults.standard.set(mode, forKey: historyModeKey)
+        return previous != mode
+    }
+
     static func eraseIfStale(_ db: DatabaseManager) {
-        guard UserDefaults.standard.integer(forKey: versionKey) != version else { return }
+        let switched = switchedHistoryMode()
+        guard UserDefaults.standard.integer(forKey: versionKey) != version || switched else { return }
         do {
             try db.eraseDemoContent()
             eraseDemoFiles()
@@ -116,6 +133,7 @@ enum DemoMode {
         seedLyrics(db: db)
         seedWantlist(db: db)
         seedEnrichment(db: db)
+        seedHomeHistory(db: db)
         UserDefaults.standard.set(version, forKey: versionKey)
         MidgarLog.info("Demo: supplements seeded (version \(version))", category: .content)
     }
@@ -125,6 +143,126 @@ enum DemoMode {
               let track = album.tracks.first(where: { $0.number == number })
         else { return nil }
         return ScreenshotSeeder.relativePath(album: album, track: track)
+    }
+
+    private static let homeQueueAlbum = "Parallax Hours"
+    private static let homeQueueIndex = 4
+    private static let homeQueueElapsed = 130.0
+
+    /// Yesterday at 10:30 pm, so the Continue card reads "last night".
+    private static func lastNight(now: Date = Date()) -> Date {
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
+        return calendar.date(bySettingHour: 22, minute: 30, second: 0, of: yesterday) ?? yesterday
+    }
+
+    /// An album queue paused at track 5 of 9 with about 18 minutes left,
+    /// saved last night, which is what Home restores into its Continue card.
+    private static func applyHomeQueue() {
+        let defaults = UserDefaults.standard
+        guard let album = ScreenshotSeeder.catalog.first(where: { $0.title == homeQueueAlbum }) else { return }
+        let paths = album.tracks.map { ScreenshotSeeder.relativePath(album: album, track: $0) }
+        defaults.set(paths, forKey: "flaccy.queue.paths")
+        defaults.set(homeQueueIndex, forKey: "flaccy.queue.index")
+        defaults.set(paths[homeQueueIndex], forKey: "flaccy.queue.currentPath")
+        defaults.set(homeQueueElapsed, forKey: "flaccy.queue.elapsed")
+        defaults.set(false, forKey: "flaccy.queue.shuffle")
+        defaults.set(0, forKey: "flaccy.queue.repeat")
+        defaults.removeObject(forKey: "flaccy.queue.originalPaths")
+        let context = PlaybackContext(
+            kind: .album,
+            id: HomeKeys.album(title: album.title, credit: album.artist),
+            title: album.title,
+            subtitle: album.artist
+        )
+        if let data = try? JSONEncoder().encode(context) { defaults.set(data, forKey: "flaccy.queue.context") }
+        defaults.set(lastNight().timeIntervalSince1970, forKey: "flaccy.queue.savedAt")
+    }
+
+    private static func clearHomeQueue() {
+        for key in ["paths", "index", "currentPath", "elapsed", "shuffle", "repeat", "originalPaths", "context", "savedAt"] {
+            UserDefaults.standard.removeObject(forKey: "flaccy.queue.\(key)")
+        }
+    }
+
+    /// Albums, a playlist, a mix and a radio the person "started" recently,
+    /// written where `RecentContextStore` reads them.
+    private static func seedRecentContexts(db: DatabaseManager) {
+        let now = Date()
+        func album(_ title: String) -> PlaybackContext? {
+            guard let found = ScreenshotSeeder.catalog.first(where: { $0.title == title }) else { return nil }
+            return PlaybackContext(
+                kind: .album, id: HomeKeys.album(title: found.title, credit: found.artist),
+                title: found.title, subtitle: found.artist
+            )
+        }
+        var contexts: [PlaybackContext] = []
+        if let context = album("Cassini") { contexts.append(context) }
+        if let playlist = ((try? db.fetchAllPlaylists()) ?? []).first(where: { $0.name == "Night Drive" }), let id = playlist.id {
+            contexts.append(PlaybackContext(kind: .playlist, id: String(id), title: playlist.name, subtitle: ""))
+        }
+        contexts.append(PlaybackContext(kind: .mix, id: "heavy-rotation", title: "Heavy Rotation", subtitle: ""))
+        for title in ["Aurorae", "Midnatt", "Tidal Glass", "Velvet Arithmetic"] {
+            if let context = album(title) { contexts.append(context) }
+        }
+        contexts.append(AudioPlayer.libraryRadioContext)
+        let entries = contexts.enumerated().map { offset, context in
+            RecentContexts.Entry(context: context, playedAt: now.addingTimeInterval(-Double(offset + 1) * 5400))
+        }
+        if let data = try? JSONEncoder().encode(RecentContexts(entries: entries)) {
+            UserDefaults.standard.set(data, forKey: "flaccy.home.recentContexts")
+        }
+    }
+
+    private static let currentWeekPlays = [3, 5, 2, 6, 4, 7, 5]
+    private static let previousWeekPlays = [2, 3, 4, 1, 3, 2, 3]
+
+    /// Plays on today's month and day a year ago (the On This Day card) and a
+    /// busy-then-busier fortnight (the This Week card).
+    private static func seedHomeHistory(db: DatabaseManager) {
+        guard !isDayOne else {
+            UserDefaults.standard.removeObject(forKey: "flaccy.home.recentContexts")
+            return
+        }
+        seedRecentContexts(db: db)
+        let calendar = Calendar.current
+        let now = Date()
+        var records: [ScrobbleRecord] = []
+
+        func scrobble(_ album: ScreenshotSeeder.DemoAlbum, _ track: ScreenshotSeeder.DemoTrack, at date: Date) {
+            records.append(ScrobbleRecord(
+                trackTitle: track.title, artist: album.artist, albumTitle: album.title,
+                timestamp: date, duration: Int(track.duration), submitted: true
+            ))
+        }
+
+        if let memory = ScreenshotSeeder.catalog.first(where: { $0.title == "Aurorae" }),
+           let yearAgo = calendar.date(byAdding: .year, value: -1, to: now) {
+            for (offset, track) in (memory.tracks + memory.tracks.prefix(2)).enumerated() {
+                let evening = calendar.date(bySettingHour: 19, minute: 5 + offset * 6, second: 0, of: yearAgo) ?? yearAgo
+                scrobble(memory, track, at: evening)
+            }
+        }
+
+        let albums = ScreenshotSeeder.catalog
+        var cursor = 0
+        func spread(_ counts: [Int], startingDaysAgo: Int) {
+            for (index, count) in counts.enumerated() {
+                let daysAgo = startingDaysAgo - index
+                guard let day = calendar.date(byAdding: .day, value: -daysAgo, to: now) else { continue }
+                for play in 0..<count {
+                    let album = albums[cursor % albums.count]
+                    let track = album.tracks[(cursor / albums.count + play) % album.tracks.count]
+                    cursor += 1
+                    let hour = 8 + (play * 3 + index) % 12
+                    let stamp = calendar.date(bySettingHour: hour, minute: (play * 11) % 60, second: 0, of: day) ?? day
+                    if stamp < now { scrobble(album, track, at: stamp) }
+                }
+            }
+        }
+        spread(previousWeekPlays, startingDaysAgo: 13)
+        spread(currentWeekPlays, startingDaysAgo: 6)
+        try? db.insertScrobbles(records)
     }
 
     private static let queueSpec: [(String, Int)] = [
@@ -137,6 +275,17 @@ enum DemoMode {
     /// Playing, Queue and Lyrics always open on the same paused moment unless
     /// `FLACCY_QUEUE_INDEX` / `FLACCY_ELAPSED` move it.
     static func applyPlaybackState() {
+        if isDayOne || isEmptyLibrary {
+            clearHomeQueue()
+            return
+        }
+        if isHomeRoute {
+            applyHomeQueue()
+            return
+        }
+        for key in ["context", "savedAt"] {
+            UserDefaults.standard.removeObject(forKey: "flaccy.queue.\(key)")
+        }
         if environment["FLACCY_NO_QUEUE"] == "1" {
             for key in ["paths", "index", "currentPath", "elapsed", "shuffle", "repeat", "originalPaths"] {
                 UserDefaults.standard.removeObject(forKey: "flaccy.queue.\(key)")
@@ -368,16 +517,21 @@ enum DemoMode {
 
 /// Turns `FLACCY_ROUTE` into one screen, so every screen is one launch flag.
 /// Optional `FLACCY_ALBUM`, `FLACCY_ARTIST`, `FLACCY_PLAYLIST` and `FLACCY_YEAR`
-/// pick which record a detail screen shows.
+/// pick which record a detail screen shows. Routes that existed before the tab
+/// bar still land on the same screen, inside the tab that owns it; no route at
+/// all leaves the app on Home, where it now launches.
 @MainActor
 enum DemoRouter {
 
     static func runIfRequested(
-        window: UIWindow, nav: UINavigationController, player: PlayerContainerViewController
+        window: UIWindow, tabs: AppTabBarController, player: PlayerContainerViewController
     ) {
         guard CommandLine.arguments.contains(ScreenshotSeeder.launchArgument),
               let route = DemoMode.environment["FLACCY_ROUTE"], !route.isEmpty else { return }
         Task {
+            if DemoMode.environment["FLACCY_LANDSCAPE"] == "1" {
+                window.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+            }
             await waitForLibrary()
             try? await Task.sleep(for: .seconds(0.4))
             if DemoMode.environment["FLACCY_EQ"] == "1" {
@@ -388,8 +542,12 @@ enum DemoRouter {
                     pretendOutput: EqualizerOutput(id: "wired.headphones", name: "Headphones", kind: .headphones)
                 )
             }
-            perform(route, window: window, nav: nav, player: player)
-            if DemoMode.environment["FLACCY_PLAYING"] == "1" {
+            perform(route, window: window, tabs: tabs, player: player)
+            if let scroll = Double(DemoMode.environment["FLACCY_HOME_SCROLL"] ?? "") {
+                try? await Task.sleep(for: .seconds(1.2))
+                tabs.home.demoScroll(fraction: CGFloat(scroll))
+            }
+            if DemoMode.environment["FLACCY_PLAYING"] == "1" || route == "home-playing" {
                 try? await Task.sleep(for: .seconds(0.6))
                 if !AudioPlayer.shared.isPlaying { AudioPlayer.shared.togglePlayPause() }
             }
@@ -399,20 +557,38 @@ enum DemoRouter {
     private static func waitForLibrary() async {
         for _ in 0..<200 {
             let queueReady = DemoMode.environment["FLACCY_NO_QUEUE"] == "1" || AudioPlayer.shared.currentTrack != nil
+            if DemoMode.isEmptyLibrary { return }
             if Library.shared.albums.count >= ScreenshotSeeder.catalog.count, queueReady { return }
             try? await Task.sleep(for: .milliseconds(100))
         }
     }
 
+    private static func destination(for route: String) -> AppTabBarController.Destination {
+        switch route {
+        case "home", "home-playing", "home-edit", "home-dayone", "home-empty": .home
+        case "charts": .recap
+        case "search": .search
+        default: .library
+        }
+    }
+
     private static func perform(
-        _ route: String, window: UIWindow, nav: UINavigationController, player: PlayerContainerViewController
+        _ route: String, window: UIWindow, tabs: AppTabBarController, player: PlayerContainerViewController
     ) {
         let env = DemoMode.environment
-        let library = nav.viewControllers.first as? LibraryViewController
+        let nav = tabs.libraryNavigation
+        tabs.show(destination(for: route))
         switch route {
-        case "songs": library?.demoSelect(segment: .songs)
-        case "artists": library?.demoSelect(segment: .artists)
-        case "playlists": library?.demoSelect(segment: .playlists)
+        case "home", "home-playing", "home-dayone", "home-empty", "charts": break
+        case "home-edit": tabs.home.presentEditHome()
+        case "library":
+            tabs.library.select(segment: .albums)
+            tabs.library.viewModel.setFilter(.all)
+        case "search":
+            tabs.search.demoSearch(query: env["FLACCY_QUERY"] ?? "a")
+        case "songs": tabs.library.select(segment: .songs)
+        case "artists": tabs.library.select(segment: .artists)
+        case "playlists": tabs.library.select(segment: .playlists)
         case "album":
             let title = env["FLACCY_ALBUM"] ?? ScreenshotSeeder.heroAlbum
             guard let album = Library.shared.albums.first(where: { $0.title == title }) else { return }
@@ -426,16 +602,15 @@ enum DemoRouter {
             guard let playlist = ((try? DatabaseManager.shared.fetchAllPlaylists()) ?? []).first(where: { $0.name == name }),
                   let id = playlist.id else { return }
             nav.pushViewController(PlaylistDetailViewController(playlistId: id, playlistName: name), animated: false)
-        case "charts": nav.pushViewController(ChartsViewController(), animated: false)
         case "wantlist": nav.pushViewController(WantlistViewController(), animated: false)
         case "year":
             let year = Int(env["FLACCY_YEAR"] ?? "") ?? 2025
-            present(YearInMusicViewController(year: year), from: nav)
-        case "settings": presentSettings(pushing: nil, from: nav)
-        case "listening-guide": presentSettings(pushing: ListeningGuideViewController(), from: nav)
-        case "recap-notifications": presentSettings(pushing: RecapNotificationsViewController(), from: nav)
-        case "watch-sync": presentSettings(pushing: WatchSyncViewController(), from: nav)
-        case "enrichment": presentSettings(pushing: EnrichmentReportViewController(), from: nav)
+            present(YearInMusicViewController(year: year), from: tabs)
+        case "settings": presentSettings(pushing: nil, from: tabs)
+        case "listening-guide": presentSettings(pushing: ListeningGuideViewController(), from: tabs)
+        case "recap-notifications": presentSettings(pushing: RecapNotificationsViewController(), from: tabs)
+        case "watch-sync": presentSettings(pushing: WatchSyncViewController(), from: tabs)
+        case "enrichment": presentSettings(pushing: EnrichmentReportViewController(), from: tabs)
         case "now-playing":
             player.expand()
             if (window.rootViewController as? RootContainerViewController)?.isSplit == true,
@@ -445,21 +620,21 @@ enum DemoRouter {
             }
         case "queue": player.expandShowingQueue()
         case "lyrics": player.expandShowingLyrics()
-        case "paywall": PaywallViewController.presentSheet(from: nav)
+        case "paywall": PaywallViewController.presentSheet(from: tabs)
         case "equalizer", "equalizer-advanced", "equalizer-presets", "equalizer-outputs", "equalizer-import", "equalizer-preview", "equalizer-preview-cancel":
             player.expand()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { presentEqualizer(route, from: nav) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { presentEqualizer(route, from: tabs) }
         case "streaming":
-            presentSheet(UINavigationController(rootViewController: StreamingLinksViewController(result: DemoMode.fakeSonglink)), from: nav)
+            presentSheet(UINavigationController(rootViewController: StreamingLinksViewController(result: DemoMode.fakeSonglink)), from: tabs)
         case "computer-guide":
-            presentSheet(UINavigationController(rootViewController: ComputerTransferGuideViewController()), from: nav)
+            presentSheet(UINavigationController(rootViewController: ComputerTransferGuideViewController()), from: tabs)
         default: break
         }
     }
 
     /// Seeds a fictional listening history for the equalizer and shows one of its screens
     /// over whatever is on top, the way a person would open it from Now Playing.
-    private static func presentEqualizer(_ route: String, from nav: UINavigationController) {
+    private static func presentEqualizer(_ route: String, from presenter: UIViewController) {
         let engine = EqualizerEngine.shared
         engine.start()
         engine.isDemoSignal = true
@@ -472,7 +647,7 @@ enum DemoRouter {
                 : EqualizerOutput(id: "bluetooth.demo", name: "AirPods Pro", kind: .bluetooth)
         )
         let controller = EqualizerViewController.makePresented()
-        var top: UIViewController = nav
+        var top: UIViewController = presenter
         while let presented = top.presentedViewController { top = presented }
         top.present(controller, animated: false)
         let accent = EqualizerTheme.fallbackAccent
@@ -489,19 +664,19 @@ enum DemoRouter {
         }
     }
 
-    private static func present(_ controller: UIViewController, from nav: UINavigationController) {
-        nav.present(controller, animated: false)
+    private static func present(_ controller: UIViewController, from presenter: UIViewController) {
+        presenter.present(controller, animated: false)
     }
 
-    private static func presentSheet(_ controller: UINavigationController, from nav: UINavigationController) {
+    private static func presentSheet(_ controller: UINavigationController, from presenter: UIViewController) {
         controller.modalPresentationStyle = .pageSheet
-        nav.present(controller, animated: false)
+        presenter.present(controller, animated: false)
     }
 
-    private static func presentSettings(pushing next: UIViewController?, from nav: UINavigationController) {
+    private static func presentSettings(pushing next: UIViewController?, from presenter: UIViewController) {
         let settings = UINavigationController(rootViewController: SettingsViewController())
         if let next { settings.pushViewController(next, animated: false) }
-        presentSheet(settings, from: nav)
+        presentSheet(settings, from: presenter)
     }
 }
 #endif
