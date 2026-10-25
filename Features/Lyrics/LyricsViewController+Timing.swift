@@ -45,7 +45,7 @@ extension LyricsViewController {
     /// the timing button. Hidden members collapse, so the button keeps its
     /// corner while the chip comes and goes.
     func makeTimingControls() -> UIStackView {
-        let stack = UIStackView(arrangedSubviews: [timingNoteChip, timingButton])
+        let stack = UIStackView(arrangedSubviews: [shareButton, timingNoteChip, timingButton])
         stack.axis = .horizontal
         stack.alignment = .center
         stack.spacing = 6
@@ -56,6 +56,29 @@ extension LyricsViewController {
             stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
         ])
         return stack
+    }
+
+    /// Opens the lyric share sheet on the lines being sung.
+    func makeShareButton() -> UIButton {
+        var config = UIButton.Configuration.plain()
+        config.image = UIImage(systemName: "square.and.arrow.up")
+        config.baseForegroundColor = .white.withAlphaComponent(0.7)
+        config.background.backgroundColor = .white.withAlphaComponent(0.12)
+        config.cornerStyle = .capsule
+        config.contentInsets = NSDirectionalEdgeInsets(top: 9, leading: 9, bottom: 9, trailing: 9)
+        let button = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.presentLyricShare(line: nil)
+        })
+        button.accessibilityLabel = LyricShareCopy.sheetTitle
+        button.isHidden = true
+        return button
+    }
+
+    func presentLyricShare(line: Int?) {
+        guard let lyrics, presentedViewController == nil else { return }
+        guard let session = LyricShareSession.forCurrentTrack(lyrics: lyrics, line: line) else { return }
+        lineSelectionFeedback.impactOccurred()
+        LyricShareViewController.present(session, from: self)
     }
 
     /// A quiet pill beside the clock that names why the words are not filled

@@ -143,6 +143,16 @@ final class LyricsService {
         }
     }
 
+    /// The lyrics already stored for a track, without asking anyone: what a
+    /// menu that offers to share them can check while it opens.
+    func cachedLyrics(track: String, artist: String) -> Lyrics? {
+        guard let record = try? DatabaseManager.shared.fetchLyrics(trackTitle: track, artist: artist),
+              LyricsResolution.hasContent(record)
+        else { return nil }
+        let lyrics = LyricsResolution.lyrics(from: record)
+        return lyrics.document.isEmpty || lyrics.document.instrumental ? nil : lyrics
+    }
+
     /// Remembers the listener's timing correction for a track's lyrics. A
     /// failure is logged and otherwise ignored: the correction still applies
     /// for as long as the panel is open.

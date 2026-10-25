@@ -220,6 +220,7 @@ targets:
           - Library/PlaylistDetailViewController.swift
           - Library/PlaylistListCells.swift
           - ListeningGuide/ListeningGuideViewController.swift
+          - LyricShare/LyricShareViewController.swift
           - Lyrics/LyricCells.swift
           - Lyrics/LyricWipeView.swift
           - Lyrics/LyricsViewController+Delegates.swift

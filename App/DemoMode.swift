@@ -620,6 +620,12 @@ enum DemoRouter {
             }
         case "queue": player.expandShowingQueue()
         case "lyrics": player.expandShowingLyrics()
+        case "lyric-share":
+            player.expandShowingLyrics()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                guard let session = LyricShareSession.forCurrentTrack() else { return }
+                LyricShareViewController.present(session, from: player)
+            }
         case "paywall": PaywallViewController.presentSheet(from: tabs)
         case "equalizer", "equalizer-advanced", "equalizer-presets", "equalizer-outputs", "equalizer-import", "equalizer-preview", "equalizer-preview-cancel":
             player.expand()

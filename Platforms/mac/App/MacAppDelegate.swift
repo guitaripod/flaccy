@@ -45,6 +45,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         EqualizerEngine.shared.start()
         #if DEBUG
         EqualizerExercise.runIfRequested()
+        LyricShareExercise.runIfRequested()
         RemoteExercise.runIfRequested()
         #endif
         MacLibrarySurfaceModel.shared.start()

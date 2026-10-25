@@ -261,6 +261,12 @@ extension NowPlayingViewController {
                 self?.copySonglink(title: track.title, artist: track.artist)
             },
         ]
+        if LyricsService.shared.cachedLyrics(track: track.title, artist: track.artist) != nil {
+            actions.append(UIAction(title: LyricShareCopy.menuTitle, image: UIImage(systemName: "quote.bubble")) { [weak self] _ in
+                guard let self, let session = LyricShareSession.forCurrentTrack() else { return }
+                LyricShareViewController.present(session, from: self)
+            })
+        }
         if let artwork = artworkView.image, artworkView.contentMode == .scaleAspectFill {
             actions.append(UIAction(title: String(localized: "Share Artwork"), image: UIImage(systemName: "photo")) { [weak self] _ in
                 self?.shareArtworkImage(artwork)

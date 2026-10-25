@@ -38,6 +38,8 @@ pub struct Config {
     pub songs_sort: String,
     pub songs_sort_descending: bool,
     pub np_swap_sides: bool,
+    /// The last lyric clip's look (`lyric_share::Style::encode`).
+    pub lyric_share_style: String,
     /// How album and playlist pages draw their songs (`TrackLayout::id`).
     pub detail_layout: String,
     /// The size the equalizer window was last left at.
@@ -177,6 +179,7 @@ impl Default for Config {
             songs_sort: "title".to_string(),
             songs_sort_descending: false,
             np_swap_sides: false,
+            lyric_share_style: String::new(),
             detail_layout: "list".to_string(),
             eq_window_width: 1080,
             eq_window_height: 720,

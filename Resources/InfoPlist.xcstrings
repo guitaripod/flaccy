@@ -140,6 +140,76 @@
           }
         }
       }
+    },
+    "NSPhotoLibraryAddUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy speichert die Songtext-Videos und -Karten, die du erstellst, in deiner Fotomediathek, wenn du „Sichern“ wählst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy saves the lyric videos and cards you make to your photo library when you choose Save."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy guarda en tu fototeca los videos y tarjetas con letra que creas cuando eliges Guardar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy enregistre dans votre photothèque les vidéos et cartes de paroles que vous créez lorsque vous choisissez Enregistrer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy salva nella tua libreria foto i video e le schede con i testi che crei quando scegli Salva."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作成した歌詞の動画やカードは、「保存」を選ぶと写真ライブラリに保存されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“저장”을 선택하면 만든 가사 동영상과 카드를 사진 보관함에 저장합니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy zapisuje utworzone wideo i karty z tekstem w Twojej bibliotece zdjęć, gdy wybierzesz Zapisz."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy salva na sua biblioteca de fotos os vídeos e cartões de letra que você criar quando escolher Salvar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当你选择“存储”时，Flaccy 会把你制作的歌词视频和卡片保存到照片图库。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當你選擇「儲存」時，Flaccy 會將你製作的歌詞影片和卡片存入照片圖庫。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

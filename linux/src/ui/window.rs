@@ -1931,6 +1931,15 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
             ui::songlink_dialog::share(&ui, title.to_string(), artist.to_string(), false);
         });
     }
+    if std::env::var_os("FLACCY_DEMO_LYRIC_SHARE").is_some() {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(2500), move || {
+            let line = std::env::var("FLACCY_DEMO_LYRIC_SHARE_LINE")
+                .ok()
+                .and_then(|line| line.parse().ok());
+            ui::lyric_share_dialog::present_for_current(&ui, line);
+        });
+    }
     if std::env::var_os("FLACCY_DEMO_SAMPLE").is_some() {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {

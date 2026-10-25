@@ -48,6 +48,7 @@ final class LyricsViewController: UIViewController {
     lazy var retryButton: UIButton = makeRetryButton()
     lazy var offsetItem = UIAction(title: "", attributes: .disabled) { _ in }
     lazy var timingButton: UIButton = makeTimingButton()
+    lazy var shareButton: UIButton = makeShareButton()
     lazy var timingNoteChip: UIButton = makeTimingNoteChip()
     lazy var timingControls: UIStackView = makeTimingControls()
     var timingNoteKind: LyricsTimingNoteKind?
@@ -124,6 +125,7 @@ final class LyricsViewController: UIViewController {
         cancelScroll()
         retryButton.isHidden = true
         timingButton.isHidden = true
+        shareButton.isHidden = true
         hideTimingNote()
         document = LyricsDocument()
         lyrics = nil
@@ -237,6 +239,10 @@ final class LyricsViewController: UIViewController {
                 return
             }
 
+            if found.document.hasSynced || found.document.plain != nil {
+                lyrics = found
+                shareButton.isHidden = !isCurrentTrack
+            }
             if found.document.hasSynced {
                 showSyncedLyrics(found)
                 showTimingNote(for: found.document)
@@ -247,6 +253,13 @@ final class LyricsViewController: UIViewController {
                 showStatus(LyricsStatusCopy.missing(song: trackTitle), symbol: "quote.bubble")
             }
         }
+    }
+
+    /// Sharing reads the song's audio, so it is offered only for the track
+    /// that is playing.
+    var isCurrentTrack: Bool {
+        guard let track = AudioPlayer.shared.currentTrack else { return false }
+        return track.title == trackTitle && track.artist == artistName
     }
 
     func showStatus(_ words: LyricsStatusCopy.Words, symbol: String) {

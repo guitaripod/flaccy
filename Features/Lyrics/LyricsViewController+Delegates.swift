@@ -37,6 +37,20 @@ extension LyricsViewController: UITableViewDelegate {
         aimScroll(atRow: indexPath.row)
     }
 
+    func tableView(
+        _ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard isCurrentTrack, !document.lines[indexPath.row].isInterlude else { return nil }
+        let row = indexPath.row
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            UIMenu(children: [
+                UIAction(title: LyricShareCopy.fromLine, image: UIImage(systemName: "quote.bubble")) { _ in
+                    self?.presentLyricShare(line: row)
+                }
+            ])
+        }
+    }
+
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         scrollResumeWorkItem?.cancel()
         isUserScrolling = true

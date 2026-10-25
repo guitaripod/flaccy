@@ -9,6 +9,8 @@ use flaccy_shared::lyrics::{
     failure_status, idle_status, instrumental_status, missing_status, searching_status,
     timing_note, Document, Line, LineProgress, LyricsStatus, TimingNote, INTERLUDE_BEATS,
 };
+use crate::lyric_share::copy;
+use gtk::gdk;
 use gtk::glib;
 use gtk::pango;
 use std::cell::{Cell, RefCell};
@@ -186,16 +188,22 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
     let timing = Timing::new();
     let synced_note = NoteChip::new();
     let plain_note = NoteChip::new();
+    let synced_share = share_button();
+    let plain_share = share_button();
     let synced_overlay = gtk::Overlay::new();
     synced_overlay.set_child(Some(&synced_scroll));
     synced_overlay.add_overlay(&resume_reveal);
     synced_overlay.add_overlay(&corner_cluster(&[
+        synced_share.upcast_ref(),
         synced_note.button.upcast_ref(),
         timing.button.upcast_ref(),
     ]));
     let plain_overlay = gtk::Overlay::new();
     plain_overlay.set_child(Some(&plain_scroll));
-    plain_overlay.add_overlay(&corner_cluster(&[plain_note.button.upcast_ref()]));
+    plain_overlay.add_overlay(&corner_cluster(&[
+        plain_share.upcast_ref(),
+        plain_note.button.upcast_ref(),
+    ]));
 
     let stack = gtk::Stack::new();
     stack.add_named(&status, Some("status"));
@@ -302,6 +310,54 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         });
     }
 
+    let share_from: Rc<dyn Fn(Option<usize>)> = {
+        let ui = Rc::clone(ui);
+        let state = Rc::clone(&state);
+        Rc::new(move |line: Option<usize>| {
+            let (track, lyrics) = {
+                let state = state.borrow();
+                (state.track.clone(), state.lyrics.clone())
+            };
+            let Some(track) = track else { return };
+            if !is_playing_track(&ui, &track) {
+                return;
+            }
+            crate::ui::lyric_share_dialog::present(&ui, track, lyrics, line);
+        })
+    };
+    for button in [&synced_share, &plain_share] {
+        let share_from = Rc::clone(&share_from);
+        button.connect_clicked(move |_| share_from(None));
+    }
+    {
+        let ui = Rc::clone(ui);
+        let state = Rc::clone(&state);
+        let share_from = Rc::clone(&share_from);
+        let list_ref = list.clone();
+        let press = gtk::GestureClick::builder().button(gdk::BUTTON_SECONDARY).build();
+        press.connect_pressed(move |gesture, _, x, y| {
+            let Some(row) = list_ref.row_at_y(y as i32) else { return };
+            let index = row.index() - LINE_ROW_OFFSET;
+            let Ok(index) = usize::try_from(index) else { return };
+            let shareable = {
+                let state = state.borrow();
+                state.track.as_ref().is_some_and(|track| is_playing_track(&ui, track))
+                    && state
+                        .lyrics
+                        .document
+                        .lines
+                        .get(index)
+                        .is_some_and(|line| !line.is_interlude())
+            };
+            if !shareable {
+                return;
+            }
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            line_menu(&list_ref, x, y, index, Rc::clone(&share_from));
+        });
+        list.add_controller(press);
+    }
+
     let apply_offset: Rc<dyn Fn(i64)> = {
         let ui = Rc::clone(ui);
         let state = Rc::clone(&state);
@@ -361,6 +417,9 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let timing_button = timing.button.clone();
         let synced_note = synced_note.clone();
         let plain_note = plain_note.clone();
+        let synced_share = synced_share.clone();
+        let plain_share = plain_share.clone();
+        let ui_for_share = Rc::clone(ui);
         Rc::new(move |result: &LyricsResult| {
             refresh.set(true);
             while let Some(child) = list.first_child() {
@@ -384,6 +443,13 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                 .unwrap_or_default();
             synced_note.show(None);
             plain_note.show(None);
+            let playing = state
+                .borrow()
+                .track
+                .as_ref()
+                .is_some_and(|track| is_playing_track(&ui_for_share, track));
+            synced_share.set_visible(playing);
+            plain_share.set_visible(playing);
             let lyrics = match result {
                 LyricsResult::Found(lyrics) => lyrics,
                 LyricsResult::Missing => {
@@ -684,6 +750,62 @@ impl NoteChip {
         }
         self.button.set_visible(note.is_some());
     }
+}
+
+/// Sharing reads the song's audio, so it is offered only for the track that is
+/// playing.
+fn is_playing_track(ui: &Ui, track: &Track) -> bool {
+    ui.core
+        .player
+        .current_track()
+        .is_some_and(|current| current.rel_path == track.rel_path)
+}
+
+/// The corner button that opens the Share Lyrics dialog on the lines being
+/// sung.
+fn share_button() -> gtk::Button {
+    let button = gtk::Button::builder()
+        .icon_name("send-to-symbolic")
+        .tooltip_text(copy::SHEET_TITLE)
+        .valign(gtk::Align::Center)
+        .visible(false)
+        .build();
+    button.add_css_class("flat");
+    button.add_css_class("circular");
+    button.add_css_class("lyrics-timing");
+    button
+}
+
+/// The right-click menu of a lyric line: share a clip starting from it. A plain
+/// popover with one button, since a `GtkPopoverMenu` clips its last items on
+/// GTK 4.22.
+fn line_menu(list: &gtk::ListBox, x: f64, y: f64, index: usize, share_from: Rc<dyn Fn(Option<usize>)>) {
+    let item = gtk::Button::builder()
+        .child(
+            &adw::ButtonContent::builder()
+                .icon_name("send-to-symbolic")
+                .label(copy::FROM_LINE)
+                .build(),
+        )
+        .build();
+    item.add_css_class("flat");
+    let popover = gtk::Popover::builder().child(&item).has_arrow(true).build();
+    popover.set_parent(list);
+    popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+    {
+        let popover = popover.downgrade();
+        item.connect_clicked(move |_| {
+            if let Some(popover) = popover.upgrade() {
+                popover.popdown();
+            }
+            share_from(Some(index));
+        });
+    }
+    popover.connect_closed(|popover| {
+        let popover = popover.clone();
+        glib::idle_add_local_once(move || popover.unparent());
+    });
+    popover.popup();
 }
 
 /// The top-end corner of a lyrics page: its small controls side by side, taking
