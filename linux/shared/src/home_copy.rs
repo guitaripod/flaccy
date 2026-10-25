@@ -11,6 +11,7 @@ use crate::load_progress::group_digits;
 pub const HOME: &str = "Home";
 pub const CONTINUE: &str = "Continue";
 pub const JUMP_BACK_IN: &str = "Jump Back In";
+pub const REMOVE_FROM_JUMP_BACK_IN: &str = "Remove from Jump Back In";
 pub const MADE_FOR_YOU: &str = "Made for You";
 pub const RECENTLY_ADDED: &str = "Recently Added";
 pub const ON_THIS_DAY: &str = "On This Day";

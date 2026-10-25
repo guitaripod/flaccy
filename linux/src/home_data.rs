@@ -671,7 +671,13 @@ fn jump_items(inputs: &Inputs, mixes: &[MixCard], excluded: &HashSet<String>) ->
             })
         })
         .collect();
-    let picks = home::jump_back_in(&inputs.recents.entries, &history, excluded, JUMP_CANDIDATES);
+    let picks = home::jump_back_in(
+        &inputs.recents.entries,
+        &history,
+        excluded,
+        &inputs.recents.dismissed,
+        JUMP_CANDIDATES,
+    );
     picks
         .into_iter()
         .filter_map(|context| jump_item(inputs, mixes, context))

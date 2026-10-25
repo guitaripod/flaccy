@@ -9,7 +9,7 @@
 //! same vectors prove both languages.
 
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, TimeZone, Timelike};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::library_filter::PeriodDelta;
 
@@ -481,6 +481,10 @@ pub fn recency(saved_at: i64, now: i64, offset_seconds: i32) -> Recency {
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RecentContexts {
     pub entries: Vec<RecentEntry>,
+    /// Things the person took off Jump Back In, by key, with when (unix). A
+    /// play after that moment brings the thing back.
+    #[serde(default)]
+    pub dismissed: BTreeMap<String, i64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -492,8 +496,9 @@ pub struct RecentEntry {
 pub const RECENT_CAPACITY: usize = 24;
 
 impl RecentContexts {
-    /// Puts `context` first, dropping an older entry for the same thing. A
-    /// plain queue names nothing to go back to and is ignored.
+    /// Puts `context` first, dropping an older entry for the same thing and
+    /// any dismissal of it. A plain queue names nothing to go back to and is
+    /// ignored.
     pub fn recording(&self, context: PlaybackContext, at: i64) -> RecentContexts {
         if context.kind == ContextKind::Queue {
             return self.clone();
@@ -505,10 +510,15 @@ impl RecentContexts {
         }];
         entries.extend(self.entries.iter().filter(|e| e.context.key() != key).cloned());
         entries.truncate(RECENT_CAPACITY);
-        RecentContexts { entries }
+        let mut dismissed = self.dismissed.clone();
+        dismissed.remove(&key);
+        RecentContexts { entries, dismissed }
     }
 
-    pub fn removing(&self, key: &str) -> RecentContexts {
+    /// Takes the thing off Jump Back In until it is played again.
+    pub fn dismissing(&self, key: &str, at: i64) -> RecentContexts {
+        let mut dismissed = self.dismissed.clone();
+        dismissed.insert(key.to_string(), at);
         RecentContexts {
             entries: self
                 .entries
@@ -516,16 +526,19 @@ impl RecentContexts {
                 .filter(|e| e.context.key() != key)
                 .cloned()
                 .collect(),
+            dismissed,
         }
     }
 }
 
 /// Distinct contexts by `played_at`, newest first (a recorded entry wins a tie
-/// with a history album), without the keys in `excluding`, at most `limit`.
+/// with a history album), without the keys in `excluding` or played no later
+/// than their dismissal, at most `limit`.
 pub fn jump_back_in(
     recents: &[RecentEntry],
     history: &[RecentEntry],
     excluding: &HashSet<String>,
+    dismissed: &BTreeMap<String, i64>,
     limit: usize,
 ) -> Vec<PlaybackContext> {
     let mut merged: Vec<(usize, u8, &RecentEntry)> = recents
@@ -547,7 +560,11 @@ pub fn jump_back_in(
         if picked.len() >= limit {
             break;
         }
-        if entry.context.kind == ContextKind::Queue || !seen.insert(entry.context.key()) {
+        let key = entry.context.key();
+        if dismissed.get(&key).is_some_and(|at| entry.played_at <= *at) {
+            continue;
+        }
+        if entry.context.kind == ContextKind::Queue || !seen.insert(key) {
             continue;
         }
         picked.push(entry.context.clone());
@@ -1068,9 +1085,34 @@ mod tests {
         let ids: Vec<&str> = recents.entries.iter().map(|e| e.context.id.as_str()).collect();
         assert_eq!(ids, vec!["a", "b"]);
         assert_eq!(recents.entries[0].played_at, at(3));
-        let removed = recents.removing("album:a");
+        let removed = recents.dismissing("album:a", at(5));
         assert_eq!(removed.entries.len(), 1);
         assert_eq!(removed.entries[0].context.id, "b");
+    }
+
+    #[test]
+    fn rc3_a_dismissal_hides_older_plays_until_the_next_one() {
+        let recents = RecentContexts::default()
+            .recording(album("b"), at(2))
+            .dismissing("album:c", at(90));
+        let history = vec![recent("c", 80), recent("d", 70)];
+        let ids = |picked: Vec<PlaybackContext>| picked.into_iter().map(|c| c.id).collect::<Vec<_>>();
+        assert_eq!(
+            ids(jump_back_in(&recents.entries, &history, &HashSet::new(), &recents.dismissed, JUMP_BACK_IN_LIMIT)),
+            vec!["d", "b"]
+        );
+        let later = vec![recent("c", 95)];
+        assert_eq!(
+            ids(jump_back_in(&recents.entries, &later, &HashSet::new(), &recents.dismissed, JUMP_BACK_IN_LIMIT)),
+            vec!["c", "b"]
+        );
+        assert!(!recents.recording(album("c"), at(100)).dismissed.contains_key("album:c"));
+    }
+
+    #[test]
+    fn rc4_lists_saved_before_dismissals_existed_still_decode() {
+        let decoded: RecentContexts = serde_json::from_str(r#"{"entries":[]}"#).unwrap();
+        assert_eq!(decoded, RecentContexts::default());
     }
 
     #[test]
@@ -1097,7 +1139,7 @@ mod tests {
         let history = vec![recent("c", 80), recent("a", 10), recent("d", 50)];
         let ids = |picked: Vec<PlaybackContext>| picked.into_iter().map(|c| c.id).collect::<Vec<_>>();
         assert_eq!(
-            ids(jump_back_in(&recents, &history, &HashSet::new(), JUMP_BACK_IN_LIMIT)),
+            ids(jump_back_in(&recents, &history, &HashSet::new(), &BTreeMap::new(), JUMP_BACK_IN_LIMIT)),
             vec!["a", "c", "b", "d"]
         );
         assert_eq!(
@@ -1105,11 +1147,12 @@ mod tests {
                 &recents,
                 &history,
                 &HashSet::from(["album:c".to_string()]),
+                &BTreeMap::new(),
                 JUMP_BACK_IN_LIMIT
             )),
             vec!["a", "b", "d"]
         );
-        assert_eq!(ids(jump_back_in(&recents, &history, &HashSet::new(), 2)), vec!["a", "c"]);
+        assert_eq!(ids(jump_back_in(&recents, &history, &HashSet::new(), &BTreeMap::new(), 2)), vec!["a", "c"]);
     }
 
     fn plays(album: &str, artist: &str, at: i64, count: i64) -> Vec<HomePlay> {

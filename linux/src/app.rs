@@ -613,6 +613,18 @@ impl AppCore {
         self.hub.emit(&AppEvent::HomeChanged);
     }
 
+    /// Takes a thing off Jump Back In, history-derived albums included, until
+    /// it is played again.
+    pub fn dismiss_jump_back_in(&self, key: &str) {
+        let updated = self
+            .recents
+            .borrow()
+            .dismissing(key, chrono::Utc::now().timestamp());
+        home_state::save_recents(&updated);
+        *self.recents.borrow_mut() = updated;
+        self.hub.emit(&AppEvent::HomeChanged);
+    }
+
     pub fn play_album_key(self: &Rc<Self>, key: &str, shuffle: bool) {
         let library = self.library.borrow().clone();
         let Some(album) = library.album_by_key(key) else {

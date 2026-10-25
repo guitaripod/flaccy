@@ -983,6 +983,9 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_string_action(ui, "shuffle-album", |ui, key| {
         ui.core.play_album_key(key, true);
     });
+    add_string_action(ui, "home-jump-remove", |ui, key| {
+        ui.core.dismiss_jump_back_in(key);
+    });
     add_string_action(ui, "album-play-next", |ui, key| {
         let library = ui.core.library.borrow().clone();
         if let Some(album) = library.album_by_key(key) {

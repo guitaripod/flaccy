@@ -706,6 +706,7 @@ fn jump_row(ui: &Rc<Ui>, item: &JumpItem) -> gtk::ListBoxRow {
     row_box.append(&play);
     let row = gtk::ListBoxRow::builder().child(&row_box).build();
     row.add_css_class("home-row");
+    crate::ui::context::attach_jump_back_in_menu(&row, item.context.key());
     row
 }
 

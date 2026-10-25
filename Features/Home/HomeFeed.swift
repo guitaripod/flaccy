@@ -75,6 +75,7 @@ nonisolated struct HomeFeedInputs: Sendable {
     let context: PlaybackContext
     let resumePoint: ResumePoint?
     let recents: [RecentContexts.Entry]
+    let dismissed: [String: Date]
     let layout: HomeLayout
     let now: Date
     let calendar: Calendar
@@ -90,6 +91,7 @@ nonisolated struct HomeFeedInputs: Sendable {
             context: player.playbackContext,
             resumePoint: player.resumePoint,
             recents: RecentContextStore.shared.recents.entries,
+            dismissed: RecentContextStore.shared.recents.dismissed,
             layout: HomeLayoutStore.shared.layout,
             now: Date(),
             calendar: .current
@@ -219,7 +221,9 @@ nonisolated enum HomeFeedBuilder {
         mixes: [SuggestedPlaylist],
         database: DatabaseManager
     ) -> [HomeFeed.Item] {
-        let picked = JumpBackIn.pick(recents: inputs.recents, history: history, excluding: excluding, limit: 24)
+        let picked = JumpBackIn.pick(
+            recents: inputs.recents, history: history, excluding: excluding, dismissed: inputs.dismissed, limit: 24
+        )
         var items: [HomeFeed.Item] = []
         for context in picked where items.count < HomeComposer.jumpBackInLimit {
             if let item = item(for: context, index: index, mixes: mixes, inputs: inputs, database: database) {

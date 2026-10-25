@@ -27,8 +27,10 @@ final class RecentContextStore {
         persist()
     }
 
-    func remove(key: String) {
-        recents = recents.removing(key: key)
+    /// Takes the thing off Jump Back In, history-derived albums included,
+    /// until it is played again.
+    func remove(key: String, at date: Date = Date()) {
+        recents = recents.dismissing(key: key, at: date)
         persist()
     }
 

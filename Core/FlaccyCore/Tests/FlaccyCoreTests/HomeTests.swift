@@ -211,7 +211,31 @@ final class HomeRecentsTests: XCTestCase {
             .recording(.anonymousQueue, at: at(4))
         XCTAssertEqual(recents.entries.map(\.context.id), ["a", "b"])
         XCTAssertEqual(recents.entries.first?.playedAt, at(3))
-        XCTAssertEqual(recents.removing(key: "album:a").entries.map(\.context.id), ["b"])
+        XCTAssertEqual(recents.dismissing(key: "album:a", at: at(5)).entries.map(\.context.id), ["b"])
+    }
+
+    func testRC3ADismissalHidesOlderPlaysUntilTheNextOne() {
+        let recents = RecentContexts().recording(album("b"), at: at(2)).dismissing(key: "album:c", at: at(90))
+        let history = [
+            RecentContexts.Entry(context: album("c"), playedAt: at(80)),
+            RecentContexts.Entry(context: album("d"), playedAt: at(70)),
+        ]
+        XCTAssertEqual(
+            JumpBackIn.pick(recents: recents.entries, history: history, excluding: [], dismissed: recents.dismissed).map(\.id),
+            ["d", "b"]
+        )
+        let laterPlay = [RecentContexts.Entry(context: album("c"), playedAt: at(95))]
+        XCTAssertEqual(
+            JumpBackIn.pick(recents: recents.entries, history: laterPlay, excluding: [], dismissed: recents.dismissed).map(\.id),
+            ["c", "b"]
+        )
+        XCTAssertNil(recents.recording(album("c"), at: at(100)).dismissed["album:c"])
+    }
+
+    func testRC4ListsSavedBeforeDismissalsExistStillDecode() throws {
+        let data = Data(#"{"entries":[]}"#.utf8)
+        let decoded = try JSONDecoder().decode(RecentContexts.self, from: data)
+        XCTAssertEqual(decoded, RecentContexts())
     }
 
     func testRC2CapacityKeepsTheNewest() {
