@@ -444,6 +444,36 @@ impl Player {
         self.hub.emit(&AppEvent::QueueChanged);
     }
 
+    /// Puts a queue back exactly as it was saved, in that order whatever the
+    /// shuffle mode says, and starts it `elapsed` seconds into the song at
+    /// `start`. The song is prerolled paused and seeked before it plays, so
+    /// the listener never hears its opening on the way.
+    pub fn restore_queue(&self, tracks: Vec<Track>, start: usize, elapsed: f64) {
+        if tracks.is_empty() {
+            return;
+        }
+        let track = {
+            let Ok(mut guard) = self.shared.lock() else {
+                return;
+            };
+            guard.original = tracks.clone();
+            guard.queue = tracks;
+            guard.current = start.min(guard.queue.len() - 1);
+            guard.pending_advance = None;
+            guard.station_seed = None;
+            guard.scrubbing = false;
+            guard.queue[guard.current].clone()
+        };
+        self.playing.set(true);
+        self.eos_reset.set(false);
+        self.server_paused.set(false);
+        self.stall_recoveries.set(0);
+        self.reopen_at(clamp_seek(elapsed, track.duration));
+        self.hub.emit(&AppEvent::PlayingChanged(true));
+        self.hub.emit(&AppEvent::TrackChanged(Some(track)));
+        self.hub.emit(&AppEvent::QueueChanged);
+    }
+
     fn load_and_play(&self, track: &Track) {
         let uri = {
             let Ok(guard) = self.shared.lock() else {

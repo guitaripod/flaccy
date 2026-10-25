@@ -81,6 +81,8 @@ pub enum AppEvent {
     WantlistChanged,
     WantlistSeen,
     DownloadsChanged,
+    /// Home's inputs changed: the last session or the recent contexts.
+    HomeChanged,
     DownloadProgress {
         id: i64,
         fraction: f64,

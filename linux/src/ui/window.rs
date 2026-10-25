@@ -487,6 +487,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
 
     register_actions(app, &ui, &search);
     {
+        let core = Rc::clone(core);
+        app.connect_shutdown(move |_| core.save_session_now(false));
+    }
+    {
         let downloads_action = gio::SimpleAction::new("downloads", None);
         let sidebar_for_action = sidebar.clone();
         downloads_action.connect_activate(move |_, _| {
@@ -534,6 +538,7 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                 config.window_height = window.height();
             }
             core.save_config();
+            core.save_session_now(false);
             close_secondary_windows(window);
             crate::logger::info("lifecycle", "window closed, config saved");
             glib::Propagation::Proceed
