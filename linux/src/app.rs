@@ -713,19 +713,12 @@ impl AppCore {
         crate::scrobbler::submit_love(self, rel_path, &track.title, &track.artist, loved);
     }
 
-    /// Flips the loved flag in the loaded library. Nothing holds a snapshot of
-    /// the library beyond a handler's own turn, so the shared pointer is almost
-    /// always unique and the flag is set in place; a snapshot that is still out
-    /// there gets the copy-on-write path, which leaves it exactly as it was.
+    /// Swaps in a copy of the library with the loved flag flipped. Pages note
+    /// which library they last built from by pointer, so a love must arrive as
+    /// a new library rather than an edit of the one they already saw.
     fn apply_loved(&self, rel_path: &str, loved: bool) {
-        let mut slot = self.library.borrow_mut();
-        match Rc::get_mut(&mut slot) {
-            Some(library) => library.set_loved(rel_path, loved),
-            None => {
-                let updated = slot.clone_with_loved(rel_path, loved);
-                *slot = Rc::new(updated);
-            }
-        }
+        let updated = self.library.borrow().clone_with_loved(rel_path, loved);
+        *self.library.borrow_mut() = Rc::new(updated);
     }
 
     pub fn save_config(&self) {
