@@ -290,54 +290,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     header_row.append(&sort_controls);
     let grid_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     grid_content.append(&header_row);
-    grid_content.append(&crate::ui::suggested_shelf::build(ui));
-    grid_content.append(&scroll);
+        grid_content.append(&scroll);
 
-    let empty = adw::StatusPage::builder()
-        .icon_name("audio-x-generic-symbolic")
-        .title("No Music Found")
-        .description("Drop FLAC or MP3 files into your music folder, then rescan.\nChoose a different folder in Preferences.")
-        .build();
-    let empty_actions = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(10)
-        .halign(gtk::Align::Center)
-        .build();
-    let empty_button = gtk::Button::with_label("Choose Music Folder");
-    empty_button.add_css_class("pill");
-    empty_button.add_css_class("suggested-action");
-    empty_button.set_action_name(Some("app.preferences"));
-    empty_actions.append(&empty_button);
-    let sample_button = gtk::Button::with_label("Download Sample Album");
-    sample_button.add_css_class("pill");
-    {
-        let ui = Rc::clone(ui);
-        sample_button.connect_clicked(move |_| crate::samples::download(&ui.core));
-    }
-    empty_actions.append(&sample_button);
-    let sample_progress = gtk::Label::new(None);
-    sample_progress.add_css_class("dim");
-    sample_progress.add_css_class("caption");
-    sample_progress.set_visible(false);
-    empty_actions.append(&sample_progress);
-    {
-        let sample_button = sample_button.clone();
-        let sample_progress_ref = sample_progress.clone();
-        ui.core
-            .hub
-            .subscribe_widget(&empty_actions, move |_, event| {
-                if let AppEvent::SampleDownload { text, done, failed } = event {
-                    sample_progress_ref.set_visible(true);
-                    sample_progress_ref.set_label(text);
-                    sample_button.set_sensitive(*done);
-                    if *done && !failed {
-                        sample_button.set_label("Sample Album Added");
-                    }
-                }
-            });
-    }
-    empty.set_child(Some(&empty_actions));
-    attach_scan_status(ui, &empty, &empty_actions);
+    let empty = build_empty_state(ui);
 
     let stack = gtk::Stack::new();
     stack.set_hhomogeneous(false);
@@ -564,6 +519,58 @@ fn subtitle_text(album: &Album) -> String {
         Some(year) if !year.is_empty() => format!("{} · {}", album.artist, year),
         _ => album.artist.clone(),
     }
+}
+
+/// The "No Music Found" page with its way forward: pick the music folder,
+/// download the sample album, and watch a scan that is already under way.
+/// Home shows the same page while the library is empty.
+pub(crate) fn build_empty_state(ui: &Rc<Ui>) -> adw::StatusPage {
+    let empty = adw::StatusPage::builder()
+        .icon_name("audio-x-generic-symbolic")
+        .title("No Music Found")
+        .description("Drop FLAC or MP3 files into your music folder, then rescan.\nChoose a different folder in Preferences.")
+        .build();
+    let empty_actions = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(10)
+        .halign(gtk::Align::Center)
+        .build();
+    let empty_button = gtk::Button::with_label("Choose Music Folder");
+    empty_button.add_css_class("pill");
+    empty_button.add_css_class("suggested-action");
+    empty_button.set_action_name(Some("app.preferences"));
+    empty_actions.append(&empty_button);
+    let sample_button = gtk::Button::with_label("Download Sample Album");
+    sample_button.add_css_class("pill");
+    {
+        let ui = Rc::clone(ui);
+        sample_button.connect_clicked(move |_| crate::samples::download(&ui.core));
+    }
+    empty_actions.append(&sample_button);
+    let sample_progress = gtk::Label::new(None);
+    sample_progress.add_css_class("dim");
+    sample_progress.add_css_class("caption");
+    sample_progress.set_visible(false);
+    empty_actions.append(&sample_progress);
+    {
+        let sample_button = sample_button.clone();
+        let sample_progress_ref = sample_progress.clone();
+        ui.core
+            .hub
+            .subscribe_widget(&empty_actions, move |_, event| {
+                if let AppEvent::SampleDownload { text, done, failed } = event {
+                    sample_progress_ref.set_visible(true);
+                    sample_progress_ref.set_label(text);
+                    sample_button.set_sensitive(*done);
+                    if *done && !failed {
+                        sample_button.set_label("Sample Album Added");
+                    }
+                }
+            });
+    }
+    empty.set_child(Some(&empty_actions));
+    attach_scan_status(ui, &empty, &empty_actions);
+    empty
 }
 
 /// Guards an async artwork callback against GridView cell recycling: the shared
@@ -922,7 +929,7 @@ fn load_user_playcount(ui: &Rc<Ui>, album: &Album, label: &gtk::Label) {
     });
 }
 
-fn album_quality_summary(album: &Album) -> Option<String> {
+pub(crate) fn album_quality_summary(album: &Album) -> Option<String> {
     let badges: Vec<String> = album
         .tracks
         .iter()

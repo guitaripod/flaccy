@@ -4,7 +4,25 @@ final class MiniPlayerView: UIView {
 
     static let queueTapped = Notification.Name("MiniPlayerQueueTapped")
 
+    /// `floating` is the card with its own glass that rides above the tab bar;
+    /// `accessory` is transparent and square-cornered inside, because the
+    /// system's tab accessory already supplies the glass capsule around it.
+    enum Style {
+        case floating
+        case accessory
+    }
+
+    var style: Style = .floating {
+        didSet {
+            guard style != oldValue else { return }
+            applyStyle()
+        }
+    }
+
     private let artworkView = UIImageView()
+    private let glassView = LiquidGlass.view(cornerRadius: 16)
+    private var artworkInsets: [NSLayoutConstraint] = []
+    private var isCompact = false
     private let titleLabel = UILabel()
     private let artistLabel = UILabel()
     private let playPauseButton = UIButton(type: .system)
@@ -30,7 +48,7 @@ final class MiniPlayerView: UIView {
         layer.shadowRadius = 12
         layer.masksToBounds = false
 
-        let blur = LiquidGlass.view(cornerRadius: 16)
+        let blur = glassView
         blur.translatesAutoresizingMaskIntoConstraints = false
         addSubview(blur)
 
@@ -102,6 +120,12 @@ final class MiniPlayerView: UIView {
         blur.contentView.addSubview(hStack)
 
         progressWidthConstraint = progressFill.widthAnchor.constraint(equalToConstant: 0)
+        artworkInsets = [
+            artworkView.topAnchor.constraint(equalTo: blur.contentView.topAnchor),
+            artworkView.trailingAnchor.constraint(equalTo: blur.contentView.trailingAnchor),
+            artworkView.bottomAnchor.constraint(equalTo: blur.contentView.bottomAnchor),
+        ]
+        NSLayoutConstraint.activate(artworkInsets)
 
         NSLayoutConstraint.activate([
             blur.topAnchor.constraint(equalTo: topAnchor),
@@ -114,9 +138,6 @@ final class MiniPlayerView: UIView {
             progressFill.heightAnchor.constraint(equalToConstant: 2.5),
             progressWidthConstraint!,
 
-            artworkView.topAnchor.constraint(equalTo: blur.contentView.topAnchor),
-            artworkView.trailingAnchor.constraint(equalTo: blur.contentView.trailingAnchor),
-            artworkView.bottomAnchor.constraint(equalTo: blur.contentView.bottomAnchor),
             artworkView.widthAnchor.constraint(equalTo: artworkView.heightAnchor),
 
             playPauseButton.widthAnchor.constraint(equalToConstant: 36),
@@ -156,6 +177,7 @@ final class MiniPlayerView: UIView {
         addGestureRecognizer(tap)
 
         setupAccessibility()
+        registerForCompactEnvironment()
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(progressDidChange), name: AudioPlayer.playbackProgressDidChange, object: nil
@@ -166,6 +188,43 @@ final class MiniPlayerView: UIView {
         NotificationCenter.default.addObserver(
             self, selector: #selector(artworkDidChange), name: AlbumArtworkCache.didChangeNotification, object: nil
         )
+    }
+
+    /// Re-lays the dock for the system accessory: no glass or shadow of its own,
+    /// artwork inset into the capsule as a rounded square.
+    private func applyStyle() {
+        let accessory = style == .accessory
+        glassView.effect = accessory ? nil : LiquidGlass.effect()
+        glassView.layer.cornerRadius = accessory ? 0 : 16
+        layer.cornerRadius = accessory ? 0 : 16
+        layer.shadowOpacity = accessory ? 0 : 0.15
+        let inset: CGFloat = accessory ? 4 : 0
+        artworkInsets[0].constant = inset
+        artworkInsets[1].constant = -inset
+        artworkInsets[2].constant = -inset
+        artworkView.layer.cornerRadius = accessory ? 10 : 16
+        artworkView.layer.maskedCorners = accessory
+            ? [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            : [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+        progressFill.isHidden = accessory
+        setNeedsLayout()
+    }
+
+    /// In the collapsed tab bar the accessory sits inline and is only about
+    /// 180 pt wide: the queue, skip and artist line give way to the essentials.
+    private func registerForCompactEnvironment() {
+        guard #available(iOS 26.0, *) else { return }
+        registerForTraitChanges([UITraitTabAccessoryEnvironment.self]) { (self: MiniPlayerView, _) in
+            self.setCompact(self.traitCollection.tabAccessoryEnvironment == .inline)
+        }
+    }
+
+    private func setCompact(_ compact: Bool) {
+        guard compact != isCompact else { return }
+        isCompact = compact
+        queueButton.isHidden = compact
+        nextButton.isHidden = compact
+        artistLabel.isHidden = compact
     }
 
     @objc private func artworkDidChange() {

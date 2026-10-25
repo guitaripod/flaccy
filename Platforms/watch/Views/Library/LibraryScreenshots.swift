@@ -10,6 +10,17 @@ enum LibraryShots {
 
     static var forcesEmptyLibrary: Bool { has("--shot-empty") }
 
+    /// The page the vertical pager opens on. The library flags below all aim
+    /// at the On Watch list, so any of them, or `--shot-page library`, starts
+    /// there; otherwise the pager opens on Continue.
+    static var startsOnLibraryPage: Bool {
+        let libraryFlags = [
+            "--shot-page-library", "--shot-scroll", "--shot-receiving", "--shot-preparing", "--shot-empty",
+            "--shot-remove", "--shot-stage",
+        ]
+        return libraryFlags.contains(where: has)
+    }
+
     /// `--shot-scroll albums|end` scrolls the library to a landmark, because the
     /// simulator cannot turn the Digital Crown from the command line.
     static var scrollTarget: String? {

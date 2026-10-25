@@ -6,39 +6,25 @@ import UIKit
 
 /// Where a funnel signal is handed over. Synchronous, so a call site stays one line and a test reads the result at once.
 nonisolated protocol FunnelSignalRecording: Sendable {
-    func record(_ name: String, props: [String: MidgarSignalValue])
+    func send(_ signal: MidgarSignal)
 }
 
-/// Queues the event on the app's `MidgarSignals`, and does nothing while signals are not configured (a test host, a screenshot seed).
+/// Sends the event through the app's `MidgarSignals`, which applies the registry's uniqueness, and does nothing while signals are not configured (a test host, a screenshot seed).
 nonisolated struct MidgarFunnelRecorder: FunnelSignalRecording {
-    func record(_ name: String, props: [String: MidgarSignalValue]) {
-        Task { await MidgarSignals.shared?.record(name, props: props) }
+    func send(_ signal: MidgarSignal) {
+        Task { await MidgarSignals.shared?.send(signal) }
     }
 }
 
-/// Records each person's walk towards a purchase as anonymous daily counts: the first-run steps as `funnel.step` and the
-/// checkout of a plan as `paywall.checkout`. The trial lives in the Keychain and both paywalls are our own views, so
+/// Records each person's walk towards a purchase as anonymous counts: the first-run steps as `funnel.step`, which the
+/// registry makes once per install, and the checkout of a plan as `paywall.checkout`. The trial lives in the Keychain and both paywalls are our own views, so
 /// without this the signals only hear from the people who paid. `paywall.view` and `paywall.purchase` are recorded
 /// elsewhere (`PurchaseManager.notePaywallShown`, `MidgarStore`), which is why a finished purchase is not repeated here.
 ///
 /// The `--trial-day` clock is a fiction, so nothing it produces is recorded.
 final class FunnelSignals {
 
-    enum Step: String {
-        case samplePlayed = "sample_played"
-        case addMusicOpened = "add_music_opened"
-        case libraryFilled = "library_filled"
-        case importSucceeded = "import_succeeded"
-        case importFailed = "import_failed"
-        case trialStarted = "trial_started"
-    }
-
-    enum CheckoutOutcome: String {
-        case started
-        case pending
-        case cancelled
-        case failed
-    }
+    typealias Step = MidgarSignal.FunnelStep
 
     static let shared = FunnelSignals()
 
@@ -140,13 +126,13 @@ final class FunnelSignals {
     private func record(_ step: Step) {
         guard !isSuppressed() else { return }
         MidgarLog.debug("Funnel step \(step.rawValue)", category: .purchases)
-        recorder.record("funnel.step", props: ["step": .string(step.rawValue)])
+        recorder.send(.funnelStep(step: step))
     }
 
-    private func recordCheckout(_ outcome: CheckoutOutcome, product: String) {
+    private func recordCheckout(_ outcome: MidgarSignal.Outcome, product: String) {
         guard !isSuppressed() else { return }
         MidgarLog.debug("Funnel checkout \(outcome.rawValue) \(product)", category: .purchases)
-        recorder.record("paywall.checkout", props: ["outcome": .string(outcome.rawValue), "product": .string(product)])
+        recorder.send(.paywallCheckout(outcome: outcome, product: product))
     }
 
     /// A launch before first unlock reads an empty library, because the database and the files are still protected;

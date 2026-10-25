@@ -40,6 +40,8 @@ public final class PlaybackEngine {
     public internal(set) var isPlaying: Bool = false
     public internal(set) var shuffleEnabled: Bool = false
     public internal(set) var repeatMode: RepeatMode = .off
+    public internal(set) var playbackContext: PlaybackContext = .anonymousQueue
+    public internal(set) var queueSavedAt: Date?
 
     let autoplayDefaultsKey = "flaccy.autoplaySimilarWhenQueueEnds"
     var stationSeedArtist: String?
@@ -135,13 +137,19 @@ public final class PlaybackEngine {
         play(tracks, startingAt: index, stationSeed: nil)
     }
 
+    public func play(_ tracks: [Track], startingAt index: Int, context: PlaybackContext?) {
+        play(tracks, startingAt: index, stationSeed: nil, context: context)
+    }
+
     /// Every queue replacement flows through here so the autoplay-continuation
     /// seed is deterministically set for stations and cleared for ordinary
     /// plays, never leaking a stale station artist into unrelated listening.
-    public func play(_ tracks: [Track], startingAt index: Int, stationSeed: String?) {
+    /// A queue started without a named context is named by its contents.
+    public func play(_ tracks: [Track], startingAt index: Int, stationSeed: String?, context: PlaybackContext? = nil) {
         guard !tracks.isEmpty, index >= 0, index < tracks.count else { return }
         if playbackIsGated() { return }
         stationSeedArtist = stationSeed
+        playbackContext = context ?? Self.derivedContext(for: tracks)
         host?.trackWillBeSkipped()
         originalQueue = tracks
         if shuffleEnabled {

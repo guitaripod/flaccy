@@ -2,6 +2,12 @@
 
 Lossless music player. GTK4/libadwaita, gapless GStreamer playback, a built-in equalizer, MPRIS, Last.fm scrobbling.
 
+Home (the first page in the sidebar, and where Flaccy opens): resume the album or playlist
+you were in, jump back into what you played lately, start a mix built from your own
+listening or the endless Library Radio, see what's new in your library and what you were
+playing on this day in earlier years. Customize Home (main menu) reorders or hides any of
+it, and Preferences → Open at launch keeps opening where you left off instead.
+
 Equalizer (Ctrl+E): drag the curve or switch to Advanced for up to ten bands, 16 presets
 always in view beside the curve (hover one to hear it, click to keep it),
 Equalizer APO / AutoEq import, a profile per output (it follows your default sink) and a

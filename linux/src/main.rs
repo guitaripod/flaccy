@@ -12,6 +12,8 @@ mod events;
 mod filters;
 pub(crate) use flaccy_library::fingerprint;
 mod frame_stats;
+mod home_data;
+mod home_state;
 pub(crate) use flaccy_library::hygiene;
 mod importer;
 mod lastfm;

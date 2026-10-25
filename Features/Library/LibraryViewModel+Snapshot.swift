@@ -16,12 +16,7 @@ extension LibraryViewModel {
         switch currentSegment {
         case .albums:
             let all = filteredAlbums(sortedAlbums)
-            let filtered = query.isEmpty
-                ? all
-                : all.filter {
-                    Self.searchFold($0.title).contains(query)
-                        || Self.searchFold($0.artist).contains(query)
-                }
+            let filtered = matchingAlbums(all, folded: query)
             let showsRecentShelf = query.isEmpty && filter == .all && layoutMode == .grid && albumSort == .title
             let recent = showsRecentShelf ? recentlyPlayedAlbums : []
             if !recent.isEmpty {
@@ -36,34 +31,26 @@ extension LibraryViewModel {
         case .songs:
             snapshot.appendSections([0])
             var songs = filteredSongs(sortedSongs)
-            if !query.isEmpty {
-                let keys = songSearchKeys()
-                songs = songs.filter { track in
-                    if let key = keys[track.fileURL.absoluteString] { return key.contains(query) }
-                    return Self.searchFold("\(track.title)\n\(track.artist)\n\(track.albumTitle)").contains(query)
-                }
-            }
+            songs = matchingSongs(songs, folded: query)
             songs = collapsingDuplicates(in: songs)
             visibleSongs = songs
             snapshot.appendItems(songs.map { .song($0) })
             repaint(revisedSongItems(in: songs), in: &snapshot)
         case .artists:
             snapshot.appendSections([0])
-            let filtered = query.isEmpty
-                ? sortedArtists
-                : sortedArtists.filter { Self.searchFold($0.name).contains(query) }
+            let filtered = matchingArtists(sortedArtists, folded: query)
             snapshot.appendItems(filtered.map { .artist($0) })
         case .playlists:
             snapshot.appendSections([0])
             var playlistItems: [LibraryItem] = []
             if query.isEmpty {
+                #if !canImport(UIKit)
                 playlistItems.append(.charts)
+                #endif
                 playlistItems.append(.wantlist)
                 playlistItems.append(contentsOf: (cachedSuggestions ?? []).map { .suggestedPlaylist($0) })
             }
-            let filtered = query.isEmpty
-                ? playlists
-                : playlists.filter { Self.searchFold($0.name).contains(query) }
+            let filtered = matchingPlaylists(playlists, folded: query)
             playlistItems.append(contentsOf: filtered.map { .playlist($0) })
             snapshot.appendItems(playlistItems)
         }

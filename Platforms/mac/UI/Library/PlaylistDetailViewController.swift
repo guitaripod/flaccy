@@ -73,6 +73,9 @@ final class PlaylistDetailViewController: NSViewController {
         emptyLabel.isHidden = true
 
         model.pageName = { [weak self] in self?.playlist.name ?? "" }
+        model.play = { [weak self] tracks, index in
+            AudioPlayer.shared.play(tracks, startingAt: index, context: self?.playlist.playbackContext)
+        }
         model.menu = { [weak self] entry, anchor in
             var options = MacTrackMenuFactory.TrackOptions()
             options.removeFromPlaylist = { [weak self] in
@@ -226,7 +229,7 @@ final class PlaylistDetailViewController: NSViewController {
         let tracks = rows.map(\.track)
         guard !tracks.isEmpty else { return }
         MidgarLog.info("Playing playlist \(playlist.name) (shuffled: \(shuffled))", category: .playback)
-        AudioPlayer.shared.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0)
+        AudioPlayer.shared.play(shuffled ? tracks.shuffled() : tracks, startingAt: 0, context: playlist.playbackContext)
     }
 
     private func removeEntries(_ entries: [TrackPageEntry]) {

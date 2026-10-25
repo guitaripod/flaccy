@@ -136,8 +136,8 @@ extension NowPlayingViewController {
         dismiss(animated: true) {
             guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let rootVC = scene.windows.first?.rootViewController,
-                  let nav = rootVC.children.compactMap({ $0 as? UINavigationController }).first else { return }
-            nav.pushViewController(viewController, animated: true)
+                  let tabs = rootVC.children.compactMap({ $0 as? AppTabBarController }).first else { return }
+            tabs.pushOnSelected(viewController)
         }
     }
 }

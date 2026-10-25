@@ -51,6 +51,15 @@ final class ContentRouter: NSViewController {
             self, selector: #selector(handleRevealArtist(_:)), name: .flaccyRevealArtist, object: nil
         )
         NotificationCenter.default.addObserver(
+            self, selector: #selector(handleRevealPlaylist(_:)), name: .flaccyRevealPlaylist, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleOpenRecapWeek), name: .flaccyOpenRecapWeek, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleCustomizeHome), name: .flaccyCustomizeHome, object: nil
+        )
+        NotificationCenter.default.addObserver(
             self, selector: #selector(refreshOnboarding), name: Library.didUpdateNotification, object: nil
         )
         NotificationCenter.default.addObserver(
@@ -92,6 +101,8 @@ final class ContentRouter: NSViewController {
             next.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         currentChild = next
+        ActiveSection.current = section
+        NotificationCenter.default.post(name: .flaccySectionDidChange, object: nil)
         keepOnboardingInFront()
         MidgarLog.info("Content router showing \(section.title)", category: .ui)
     }
@@ -114,6 +125,32 @@ final class ContentRouter: NSViewController {
         guard let stack = sectionControllers[.artists] as? ContentStackController else { return }
         stack.popToRoot()
         stack.push(makeArtistDetail(name, in: stack))
+    }
+
+    func revealPlaylist(id: Int64) {
+        guard let record = (try? DatabaseManager.shared.fetchAllPlaylists())?.first(where: { $0.id == id }) else {
+            MacToast.show(String(localized: "That playlist is no longer in your library."), style: .info, in: view.window)
+            return
+        }
+        switchTo(.playlists)
+        guard let stack = sectionControllers[.playlists] as? ContentStackController else { return }
+        stack.popToRoot()
+        stack.push(PlaylistDetailViewController(playlist: record))
+    }
+
+    @objc private func handleRevealPlaylist(_ notification: Notification) {
+        guard let id = notification.userInfo?["playlistID"] as? Int64 else { return }
+        revealPlaylist(id: id)
+    }
+
+    @objc private func handleOpenRecapWeek() {
+        switchTo(.charts)
+        (sectionControllers[.charts] as? ChartsViewController)?.show(period: .week)
+    }
+
+    @objc private func handleCustomizeHome() {
+        switchTo(.home)
+        (sectionControllers[.home] as? MacHomeViewController)?.presentCustomize()
     }
 
     @objc private func handleRevealAlbum(_ notification: Notification) {
@@ -148,6 +185,8 @@ final class ContentRouter: NSViewController {
 
     private func makeController(for section: SidebarSection) -> NSViewController {
         switch section {
+        case .home:
+            return MacHomeViewController()
         case .albums:
             let grid = AlbumGridViewController()
             let stack = ContentStackController(root: grid)

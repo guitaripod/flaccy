@@ -26,7 +26,18 @@ extension AudioPlayer {
     }
     #endif
 
-    func play(_ tracks: [Track], startingAt index: Int) { engine.play(tracks, startingAt: index) }
+    var playbackContext: PlaybackContext { engine.playbackContext }
+    var resumePoint: ResumePoint? { engine.resumePoint }
+
+    func play(_ tracks: [Track], startingAt index: Int) { play(tracks, startingAt: index, context: nil) }
+
+    /// Starts `tracks`, naming the queue after `context` (or its contents) and
+    /// remembering it for Jump Back In.
+    func play(_ tracks: [Track], startingAt index: Int, context: PlaybackContext?) {
+        engine.play(tracks, startingAt: index, context: context)
+        guard engine.queue.count == tracks.count else { return }
+        RecentContextStore.shared.record(engine.playbackContext)
+    }
     func togglePlayPause() { engine.togglePlayPause() }
     func nextTrack() { engine.nextTrack() }
     func previousTrack() { engine.previousTrack() }

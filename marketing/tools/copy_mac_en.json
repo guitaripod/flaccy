@@ -1,4 +1,9 @@
 {
+  "home": {
+    "kicker": "Home",
+    "headline": "Pick up *where you left off.*",
+    "maxLines": 1
+  },
   "library": {
     "kicker": "Flaccy for Mac",
     "headline": "Your collection, in *full quality.*",

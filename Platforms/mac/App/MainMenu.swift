@@ -96,7 +96,7 @@ enum MainMenu {
     private static func viewMenuItem() -> NSMenuItem {
         let menu = NSMenu(title: String(localized: "View"))
         let sections: [(SidebarSection, String)] = [
-            (.albums, "1"), (.songs, "2"), (.artists, "3"), (.playlists, "4"),
+            (.home, "1"), (.albums, "2"), (.songs, "3"), (.artists, "4"), (.playlists, "5"),
         ]
         for (section, key) in sections {
             let item = menu.addItem(
@@ -106,6 +106,7 @@ enum MainMenu {
             )
             item.tag = section.rawValue
         }
+        menu.addItem(withTitle: HomeCopy.customizeHomeMenu, action: #selector(MacAppDelegate.customizeHome(_:)), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: String(localized: "Toggle Queue"), action: #selector(MacAppDelegate.toggleQueue(_:)), keyEquivalent: "k")
         let lyrics = menu.addItem(withTitle: String(localized: "Toggle Lyrics"), action: #selector(MacAppDelegate.toggleLyrics(_:)), keyEquivalent: "L")

@@ -8,10 +8,12 @@ import UIKit
 @MainActor
 enum RemoteShot {
 
-    static func runIfRequested(nav: UINavigationController) {
+    static func runIfRequested(tabs: AppTabBarController) {
         guard let screen = RemoteShotSeed.requestedScreen else { return }
         Task {
             guard let server = await RemoteShotSeed.prepare() else { return }
+            tabs.show(.library)
+            let nav = tabs.libraryNavigation
             switch screen {
             case "add-server": await openAddServer(from: nav)
             case "library": await openLibrary(nav: nav, server: server)

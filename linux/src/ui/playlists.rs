@@ -68,13 +68,13 @@ impl PlaylistSort {
 /// One playlist as the grid and the picker show it: its playable size and the
 /// first few distinct albums that give it a cover.
 #[derive(Clone)]
-struct PlaylistCard {
-    id: i64,
-    name: String,
+pub(crate) struct PlaylistCard {
+    pub(crate) id: i64,
+    pub(crate) name: String,
     created_at: i64,
-    tracks: usize,
+    pub(crate) tracks: usize,
     duration: f64,
-    covers: Vec<AlbumRef>,
+    pub(crate) covers: Vec<AlbumRef>,
 }
 
 impl PlaylistCard {
@@ -151,7 +151,7 @@ fn cover_albums<'a>(
 
 /// Every playlist resolved against the live library: files that have left the
 /// library neither count nor play, matching what the detail page lists.
-fn load_cards(ui: &Rc<Ui>) -> Vec<PlaylistCard> {
+pub(crate) fn load_cards(ui: &Rc<Ui>) -> Vec<PlaylistCard> {
     let library = ui.core.library.borrow().clone();
     let by_path: HashMap<&str, &Track> = library
         .tracks
@@ -1043,11 +1043,15 @@ impl DetailView {
         let table = {
             let ui = Rc::clone(&self.ui);
             let frame = Rc::clone(&self.frame);
+            let playlist_id = self.playlist_id;
             TrackTable::new(
                 &self.ui,
                 options,
                 menu,
-                move |tracks, index| ui.core.play_tracks(tracks, index),
+                move |tracks, index| {
+                    let context = playlist_context(&ui, playlist_id);
+                    ui.core.play_tracks_in(tracks, index, Some(context));
+                },
                 move || frame.scroll_to_top(),
             )
         };
@@ -1692,7 +1696,8 @@ pub(crate) fn push_playlist_detail(ui: &Rc<Ui>, playlist_id: i64) {
                 .collect();
             let index = row.index().max(0) as usize;
             if index < tracks.len() {
-                ui.core.play_tracks(tracks, index);
+                let context = playlist_context(&ui, view.playlist_id);
+                ui.core.play_tracks_in(tracks, index, Some(context));
             }
         });
     }
@@ -1773,7 +1778,11 @@ fn editable_cover(ui: &Rc<Ui>, art: &PlaylistArt, playlist_id: i64) -> gtk::Over
     host
 }
 
-fn playlist_list_menu(playlist_id: i64, has_cover: bool, downloads: Option<bool>) -> gio::Menu {
+pub(crate) fn playlist_list_menu(
+    playlist_id: i64,
+    has_cover: bool,
+    downloads: Option<bool>,
+) -> gio::Menu {
     let menu = gio::Menu::new();
     let play_section = gio::Menu::new();
     play_section.append_item(&playlist_item("Play", "win.playlist-play", playlist_id));
@@ -1884,7 +1893,18 @@ pub fn play_playlist(ui: &Rc<Ui>, playlist_id: i64, shuffle: bool) {
     if shuffle != ui.core.player.shuffle_enabled() {
         ui.core.player.toggle_shuffle();
     }
-    ui.core.play_tracks(tracks, 0);
+    let context = playlist_context(ui, playlist_id);
+    ui.core.play_tracks_in(tracks, 0, Some(context));
+}
+
+/// What a queue started from this playlist is called on Home.
+pub fn playlist_context(ui: &Rc<Ui>, playlist_id: i64) -> flaccy_shared::home::PlaybackContext {
+    flaccy_shared::home::PlaybackContext {
+        kind: flaccy_shared::home::ContextKind::Playlist,
+        id: playlist_id.to_string(),
+        title: ui.core.db.playlist_name(playlist_id).unwrap_or_default(),
+        subtitle: String::new(),
+    }
 }
 
 pub fn prompt_rename_playlist(ui: &Rc<Ui>, playlist_id: i64) {

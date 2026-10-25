@@ -17,11 +17,11 @@ import compose as c  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 SLIDES = [
+    dict(id="home", raw="home", accent=c.VIOLET, secondary=c.CORAL),
     dict(id="hero", raw="library", accent=c.CORAL, secondary=c.VIOLET),
     dict(id="eq", raw="equalizer", accent=c.TEAL, secondary=c.VIOLET),
     dict(id="nowplaying", raw="now-playing", accent=c.VIOLET, secondary=c.CORAL),
     dict(id="lyrics", raw="lyrics", accent=c.ROSE, secondary=c.BLUE),
-    dict(id="playlists", raw="playlists", accent=c.TEAL, secondary=c.BLUE),
     dict(id="scrobble", raw="charts", accent=c.AMBER, secondary=c.CORAL),
     dict(id="year", raw="year", accent=c.CORAL, secondary=c.AMBER),
     dict(id="watch", layout="watch", raw="now-playing", accent=c.BLUE, secondary=c.TEAL),

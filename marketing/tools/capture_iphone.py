@@ -14,7 +14,8 @@ import time
 APP = "com.midgarcorp.flaccy"
 
 SCREENS = {
-    "library":      dict(env={}, wait=14),
+    "home":         dict(env={"FLACCY_ROUTE": "home"}, wait=14),
+    "library":      dict(env={"FLACCY_ROUTE": "library"}, wait=14),
     "songs":        dict(env={"FLACCY_ROUTE": "songs"}, wait=10),
     "artists":      dict(env={"FLACCY_ROUTE": "artists"}, wait=10),
     "playlists":    dict(env={"FLACCY_ROUTE": "playlists"}, wait=10),

@@ -251,6 +251,24 @@ pub fn attach_artist_context_menu(widget: &impl IsA<gtk::Widget>, artist: String
     widget.add_controller(gesture);
 }
 
+/// Right-click on a Jump Back In row offers to take it off the shelf.
+pub fn attach_jump_back_in_menu(widget: &impl IsA<gtk::Widget>, key: String) {
+    let gesture = gtk::GestureClick::builder()
+        .button(gdk::BUTTON_SECONDARY)
+        .build();
+    let target = widget.clone().upcast::<gtk::Widget>();
+    gesture.connect_pressed(move |_, _, x, y| {
+        let menu = gio::Menu::new();
+        menu.append_item(&item(
+            flaccy_shared::home_copy::REMOVE_FROM_JUMP_BACK_IN,
+            "win.home-jump-remove",
+            &key,
+        ));
+        popup_menu_at(&target, &menu, x, y);
+    });
+    widget.add_controller(gesture);
+}
+
 pub fn attach_album_context_menu(widget: &impl IsA<gtk::Widget>, core: &Rc<AppCore>, key: String) {
     let core = Rc::clone(core);
     let gesture = gtk::GestureClick::builder()

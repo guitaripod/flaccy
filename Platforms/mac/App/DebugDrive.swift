@@ -61,6 +61,9 @@ enum DebugDrive {
                 await exerciseOnboarding(window: window)
             }
         }
+        if CommandLine.arguments.contains("--exercise-home") {
+            DebugHomeDrive.exercise()
+        }
         if CommandLine.arguments.contains("--exercise-stack") {
             Task {
                 await exerciseStack(window: window)
@@ -87,9 +90,11 @@ enum DebugDrive {
         case equalizer(String)
         case stats(ChartPeriod)
         case songs(SongsTableViewModel.Filter, ChartPeriod?)
+        case home(String)
     }
 
     static func plannedShot() -> Shot? {
+        if let variant = DebugHomeDrive.variant { return .home(variant) }
         if CommandLine.arguments.contains("--shot-onboarding") { return .onboarding }
         if CommandLine.arguments.contains("--shot-paywall") { return .paywall }
         if CommandLine.arguments.contains("--shot-playlists") { return .section(.playlists) }
@@ -146,6 +151,10 @@ enum DebugDrive {
     }
 
     static func drive(shot: Shot, window: NSWindow?) async {
+        if case .home(let variant) = shot {
+            await DebugHomeDrive.run(variant: variant, window: window)
+            return
+        }
         if case .onboarding = shot {
             try? await Task.sleep(for: .seconds(3))
             capture(window: window, name: "flaccy-shot-onboarding")
@@ -305,7 +314,7 @@ enum DebugDrive {
             try? await Task.sleep(for: .seconds(3))
             captureSheet(of: window, name: "flaccy-shot-paywall")
             return
-        case .onboarding:
+        case .onboarding, .home:
             return
         }
         try? await Task.sleep(for: .seconds(3))
