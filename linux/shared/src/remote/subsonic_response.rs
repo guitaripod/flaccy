@@ -264,6 +264,15 @@ pub struct Child {
     pub flaccy_revision: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flaccy_revised_at: Option<String>,
+    /// When the song was starred (loved), as ISO 8601 text.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub starred: Option<String>,
+    /// How many times the server counted the song as played.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_count: Option<i64>,
+    /// When the song was last played, as ISO 8601 text.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub played: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -474,6 +483,26 @@ mod tests {
             song.flaccy_revised_at.as_deref(),
             Some("2026-10-25T14:00:00Z")
         );
+    }
+
+    #[test]
+    fn a_song_decodes_its_love_and_play_state() {
+        let envelope = parse(
+            r#"{"subsonic-response":{"status":"ok","song":{"id":"x","title":"t","starred":"2026-10-24T09:30:00Z","playCount":7,"played":"2026-10-25T14:00:00Z"}}}"#,
+        );
+        let song = envelope.song.unwrap();
+        assert_eq!(song.starred.as_deref(), Some("2026-10-24T09:30:00Z"));
+        assert_eq!(song.play_count, Some(7));
+        assert_eq!(song.played.as_deref(), Some("2026-10-25T14:00:00Z"));
+    }
+
+    #[test]
+    fn a_song_without_love_or_play_state_leaves_those_fields_out() {
+        let envelope = parse(r#"{"subsonic-response":{"status":"ok","song":{"id":"x","title":"t"}}}"#);
+        let song = envelope.song.unwrap();
+        assert_eq!((song.starred.as_ref(), song.play_count, song.played.as_ref()), (None, None, None));
+        let text = serde_json::to_string(&song).unwrap();
+        assert!(!text.contains("starred") && !text.contains("playCount") && !text.contains("played"));
     }
 
     #[test]

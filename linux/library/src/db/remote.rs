@@ -6,7 +6,7 @@
 //! The folder scan never touches these rows: `fetch_relative_paths` leaves them
 //! out, and this module is the only writer.
 
-use super::{now_string, string_from_unix, unix_ms_from_string, Db};
+use super::{now_string, string_from_unix, unix_from_string, unix_ms_from_string, Db};
 use crate::remote::catalog::RemoteSong;
 use flaccy_shared::enrichment_job as job;
 use flaccy_shared::remote::catalog_diff::{CatalogSong, Diff};
@@ -22,6 +22,8 @@ pub struct ApplyReport {
     pub updated: usize,
     pub new_versions: Vec<String>,
     pub removed: Vec<String>,
+    /// Rows whose loved flag, play count or last-played time the server changed.
+    pub listening_updated: usize,
 }
 
 /// What the proxy and the cache need to know about a song before its first
@@ -138,6 +140,7 @@ impl Db {
             )?;
             tx.execute(job::ORPHAN_SWEEP_SQL, [])?;
         }
+        report.listening_updated = refresh_listening_state(&tx, server, songs)?;
         tx.commit()?;
         Ok(report)
     }
@@ -256,6 +259,90 @@ impl Db {
             .ok()
             .flatten()
     }
+}
+
+/// The listening state a remote row holds: its loved flag, play count and
+/// last-played time as Unix seconds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ListeningState {
+    loved: bool,
+    play_count: i64,
+    last_played: Option<i64>,
+}
+
+/// The listening state of every row of `server`, with whether a local love
+/// change is still waiting to reach the server.
+fn stored_listening_state(
+    tx: &rusqlite::Transaction<'_>,
+    server: &str,
+) -> Result<HashMap<String, (ListeningState, bool)>, rusqlite::Error> {
+    let mut statement = tx.prepare(
+        "SELECT fileURL, loved, playCount, lastPlayed, lovedPendingOp IS NOT NULL
+         FROM tracks WHERE remoteServer = ?1",
+    )?;
+    let rows = statement.query_map(params![server], |row| {
+        let state = ListeningState {
+            loved: row.get(1)?,
+            play_count: row.get(2)?,
+            last_played: row
+                .get::<_, Option<String>>(3)?
+                .map(|text| unix_from_string(&text)),
+        };
+        Ok((row.get::<_, String>(0)?, (state, row.get::<_, bool>(4)?)))
+    })?;
+    let collected = rows.collect();
+    collected
+}
+
+/// The state a row holds once the server's song is merged into it. A local love
+/// change still waiting for the server keeps the local flag; the play count
+/// keeps the higher figure and the last-played time the later one.
+fn merge_listening_state(local: ListeningState, pending: bool, song: &RemoteSong) -> ListeningState {
+    ListeningState {
+        loved: if pending { local.loved } else { song.starred },
+        play_count: local.play_count.max(song.play_count),
+        last_played: match (local.last_played, song.played_unix) {
+            (Some(local), Some(server)) => Some(local.max(server)),
+            (local, server) => local.or(server),
+        },
+    }
+}
+
+/// Writes the merged listening state of each song of `server` that changes it.
+/// Rows that would be unchanged are not written, and the count is the number
+/// written.
+fn refresh_listening_state(
+    tx: &rusqlite::Transaction<'_>,
+    server: &str,
+    songs: &[RemoteSong],
+) -> Result<usize, rusqlite::Error> {
+    let stored = stored_listening_state(tx, server)?;
+    let mut changed = 0;
+    for song in songs {
+        let path = song.rel_path();
+        let Some((local, pending)) = stored.get(&path) else {
+            continue;
+        };
+        let merged = merge_listening_state(*local, *pending, song);
+        if merged == *local {
+            continue;
+        }
+        let played_changed = merged.last_played != local.last_played;
+        tx.execute(
+            "UPDATE tracks SET loved = ?1, playCount = ?2,
+                lastPlayed = CASE WHEN ?3 THEN ?4 ELSE lastPlayed END
+             WHERE fileURL = ?5",
+            params![
+                merged.loved,
+                merged.play_count,
+                played_changed,
+                merged.last_played.map(string_from_unix),
+                path,
+            ],
+        )?;
+        changed += 1;
+    }
+    Ok(changed)
 }
 
 /// Inserts one new row, leaving an existing path alone.
@@ -394,6 +481,9 @@ mod tests {
             disc: Some(1),
             fingerprint: None,
             added_unix: Some(1_700_000_000),
+            starred: false,
+            play_count: 0,
+            played_unix: None,
         }
     }
 
@@ -521,6 +611,83 @@ mod tests {
         };
         assert_eq!(credit("One").as_deref(), Some("Alpha"));
         assert_eq!(credit("Two").as_deref(), Some("Beta"));
+    }
+
+    fn listened(id: &str, starred: bool, play_count: i64, played_unix: Option<i64>) -> RemoteSong {
+        RemoteSong {
+            starred,
+            play_count,
+            played_unix,
+            ..song(id, "One", 100, 10.0)
+        }
+    }
+
+    #[test]
+    fn a_starred_song_on_the_server_becomes_loved_here() {
+        let scratch = Scratch::open("starred");
+        let report = sync(&scratch.db, &[listened("a", true, 0, None)]);
+        assert_eq!(report.listening_updated, 1);
+        assert!(scratch.db.fetch_all_tracks()[0].loved);
+        let unstarred = sync(&scratch.db, &[listened("a", false, 0, None)]);
+        assert_eq!(unstarred.listening_updated, 1);
+        assert!(!scratch.db.fetch_all_tracks()[0].loved);
+    }
+
+    #[test]
+    fn a_pending_local_unlove_is_not_overwritten_by_a_star_the_server_still_holds() {
+        let scratch = Scratch::open("pending-unlove");
+        sync(&scratch.db, &[listened("a", true, 0, None)]);
+        scratch.db.set_loved("remote://s1/a", false, Some("unlove")).unwrap();
+        let report = sync(&scratch.db, &[listened("a", true, 0, None)]);
+        assert_eq!(report.listening_updated, 0);
+        assert!(!scratch.db.fetch_all_tracks()[0].loved);
+        assert_eq!(scratch.db.fetch_pending_love_ops().len(), 1);
+    }
+
+    #[test]
+    fn a_pending_local_love_is_not_overwritten_by_a_server_without_the_star() {
+        let scratch = Scratch::open("pending-love");
+        sync(&scratch.db, &[listened("a", false, 0, None)]);
+        scratch.db.set_loved("remote://s1/a", true, Some("love")).unwrap();
+        sync(&scratch.db, &[listened("a", false, 0, None)]);
+        assert!(scratch.db.fetch_all_tracks()[0].loved);
+    }
+
+    #[test]
+    fn the_play_count_keeps_the_higher_of_local_and_server() {
+        let scratch = Scratch::open("play-count");
+        sync(&scratch.db, &[listened("a", false, 3, None)]);
+        scratch.db.set_play_count("remote://s1/a", 5).unwrap();
+        assert_eq!(sync(&scratch.db, &[listened("a", false, 3, None)]).listening_updated, 0);
+        assert_eq!(scratch.db.fetch_all_tracks()[0].play_count, 5);
+        assert_eq!(sync(&scratch.db, &[listened("a", false, 9, None)]).listening_updated, 1);
+        assert_eq!(scratch.db.fetch_all_tracks()[0].play_count, 9);
+    }
+
+    #[test]
+    fn the_last_played_time_keeps_the_later_of_local_and_server() {
+        let scratch = Scratch::open("last-played");
+        sync(&scratch.db, &[listened("a", false, 0, None)]);
+        scratch
+            .db
+            .conn
+            .execute(
+                "UPDATE tracks SET lastPlayed = '2026-10-20 10:00:00.000' WHERE fileURL = ?1",
+                ["remote://s1/a"],
+            )
+            .unwrap();
+        sync(&scratch.db, &[listened("a", false, 0, Some(1_790_812_800))]);
+        assert_eq!(scratch.db.fetch_all_tracks()[0].last_played, Some(1_792_490_400));
+        sync(&scratch.db, &[listened("a", false, 0, Some(1_792_832_400))]);
+        assert_eq!(scratch.db.fetch_all_tracks()[0].last_played, Some(1_792_832_400));
+    }
+
+    #[test]
+    fn a_sync_with_nothing_new_writes_no_listening_state() {
+        let scratch = Scratch::open("listening-idle");
+        let songs = [listened("a", true, 4, Some(1_792_936_800))];
+        sync(&scratch.db, &songs);
+        assert_eq!(sync(&scratch.db, &songs), ApplyReport::default());
     }
 
     #[test]

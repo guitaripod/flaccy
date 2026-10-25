@@ -116,6 +116,9 @@ fn song_child(catalog: &Catalog, song: &Song) -> Child {
         flaccy_fingerprint: song.fingerprint.clone(),
         flaccy_revision: Some(row.revision),
         flaccy_revised_at: row.revised_at.map(iso_ms),
+        starred: None,
+        play_count: None,
+        played: None,
     }
 }
 

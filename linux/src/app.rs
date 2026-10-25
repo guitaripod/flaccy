@@ -848,7 +848,7 @@ impl AppCore {
                             + applied.updated
                             + applied.new_versions.len()
                             + applied.removed.len();
-                        changed |= moved > 0;
+                        changed |= moved > 0 || applied.listening_updated > 0;
                         if announce {
                             core.toast(&format!(
                                 "Refreshed {name}: {} songs, {moved} changed.",

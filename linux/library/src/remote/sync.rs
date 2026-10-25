@@ -155,6 +155,7 @@ mod tests {
     use super::*;
     use crate::remote::servers::Server;
     use crate::remote::testing::{child_json, FixtureServer};
+    use serde_json::{json, Value};
 
     fn fixture_with(count: usize) -> (FixtureServer, Client) {
         let fixture = FixtureServer::start();
@@ -238,6 +239,115 @@ mod tests {
         assert_eq!(rows.len(), 12);
         assert!(rows.iter().any(|row| row.title == "Retitled"));
         assert_eq!(db.remote_revision("s1", "song-0005").map(|(revision, _)| revision), Some(2));
+        cleanup(&path);
+    }
+
+    fn fixture_with_children(children: Vec<Value>) -> (FixtureServer, Client) {
+        let fixture = FixtureServer::start();
+        for child in children {
+            fixture.add_child(child);
+        }
+        let server = Server::new("Fixture", &fixture.address(), "ana", "pw", false);
+        let client = Client::new(&server).unwrap();
+        (fixture, client)
+    }
+
+    fn listened_child(id: &str, listening: Value) -> Value {
+        let mut child = child_json(id, "Title", "Album 0", 1, 1000);
+        for (key, value) in listening.as_object().unwrap() {
+            child[key.as_str()] = value.clone();
+        }
+        child
+    }
+
+    #[test]
+    fn a_song_starred_on_the_server_becomes_loved_locally_and_an_unstar_clears_it() {
+        let (fixture, client) = fixture_with_children(vec![listened_child(
+            "song-a",
+            json!({"starred": "2026-10-24T09:30:00Z"}),
+        )]);
+        let (db, path) = scratch_db("starred");
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        apply(&db, "s1", &children).unwrap();
+        assert!(db.fetch_all_tracks()[0].loved);
+
+        fixture.clear_catalog();
+        fixture.add_child(listened_child("song-a", json!({})));
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        let (_, report) = apply(&db, "s1", &children).unwrap();
+        assert_eq!(report.applied.listening_updated, 1);
+        assert!(!db.fetch_all_tracks()[0].loved);
+        cleanup(&path);
+    }
+
+    #[test]
+    fn a_pending_local_unlove_is_not_overwritten_while_the_server_still_has_the_star() {
+        let (_fixture, client) = fixture_with_children(vec![listened_child(
+            "song-a",
+            json!({"starred": "2026-10-24T09:30:00Z"}),
+        )]);
+        let (db, path) = scratch_db("pending-unlove");
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        apply(&db, "s1", &children).unwrap();
+        db.set_loved("remote://s1/song-a", false, Some("unlove")).unwrap();
+
+        let (_, report) = apply(&db, "s1", &children).unwrap();
+        assert_eq!(report.applied.listening_updated, 0);
+        assert!(!db.fetch_all_tracks()[0].loved);
+        assert_eq!(db.fetch_pending_love_ops().len(), 1);
+        cleanup(&path);
+    }
+
+    #[test]
+    fn the_play_count_takes_the_larger_of_local_and_server() {
+        let (fixture, client) = fixture_with_children(vec![listened_child("song-a", json!({"playCount": 3}))]);
+        let (db, path) = scratch_db("play-max");
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        apply(&db, "s1", &children).unwrap();
+        assert_eq!(db.fetch_all_tracks()[0].play_count, 3);
+
+        db.set_play_count("remote://s1/song-a", 5).unwrap();
+        apply(&db, "s1", &children).unwrap();
+        assert_eq!(db.fetch_all_tracks()[0].play_count, 5);
+
+        fixture.clear_catalog();
+        fixture.add_child(listened_child("song-a", json!({"playCount": 9})));
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        apply(&db, "s1", &children).unwrap();
+        assert_eq!(db.fetch_all_tracks()[0].play_count, 9);
+        cleanup(&path);
+    }
+
+    #[test]
+    fn the_last_played_time_takes_the_later_of_local_and_server() {
+        let (fixture, client) = fixture_with_children(vec![listened_child(
+            "song-a",
+            json!({"played": "2026-10-20T10:00:00Z"}),
+        )]);
+        let (db, path) = scratch_db("played-later");
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        apply(&db, "s1", &children).unwrap();
+        assert_eq!(db.fetch_all_tracks()[0].last_played, Some(1_792_490_400));
+
+        fixture.clear_catalog();
+        fixture.add_child(listened_child("song-a", json!({"played": "2026-10-01T00:00:00Z"})));
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        let (_, earlier) = apply(&db, "s1", &children).unwrap();
+        assert_eq!(earlier.applied.listening_updated, 0);
+        assert_eq!(db.fetch_all_tracks()[0].last_played, Some(1_792_490_400));
+
+        fixture.clear_catalog();
+        fixture.add_child(listened_child("song-a", json!({"played": "2026-10-24T09:00:00Z"})));
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        apply(&db, "s1", &children).unwrap();
+        assert_eq!(db.fetch_all_tracks()[0].last_played, Some(1_792_832_400));
+
+        fixture.clear_catalog();
+        fixture.add_child(listened_child("song-a", json!({"played": "yesterday"})));
+        let children = fetch_catalog(&client, &|_| {}).unwrap();
+        let (_, garbage) = apply(&db, "s1", &children).unwrap();
+        assert_eq!(garbage.applied.listening_updated, 0);
+        assert_eq!(db.fetch_all_tracks()[0].last_played, Some(1_792_832_400));
         cleanup(&path);
     }
 

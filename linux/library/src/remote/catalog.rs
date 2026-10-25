@@ -28,6 +28,9 @@ pub struct RemoteSong {
     pub disc: Option<i32>,
     pub fingerprint: Option<String>,
     pub added_unix: Option<i64>,
+    pub starred: bool,
+    pub play_count: i64,
+    pub played_unix: Option<i64>,
 }
 
 impl RemoteSong {
@@ -79,6 +82,9 @@ impl RemoteSong {
                 .as_deref()
                 .and_then(|created| chrono::DateTime::parse_from_rfc3339(created).ok())
                 .map(|created| created.timestamp()),
+            starred: text(&child.starred).is_some(),
+            play_count: child.play_count.unwrap_or(0).max(0),
+            played_unix: child.played.as_deref().and_then(unix_from_iso),
         }
     }
 
@@ -100,6 +106,13 @@ impl RemoteSong {
             fingerprint: self.fingerprint.clone(),
         }
     }
+}
+
+/// The Unix second an ISO 8601 timestamp names, `None` when it does not parse.
+fn unix_from_iso(text: &str) -> Option<i64> {
+    chrono::DateTime::parse_from_rfc3339(text.trim())
+        .ok()
+        .map(|time| time.timestamp())
 }
 
 /// The badge codec for a file suffix, as the folder scan names it.
@@ -165,6 +178,28 @@ mod tests {
         assert_eq!(song.bit_depth, Some(16));
         assert_eq!(song.rel_path(), "remote://s1/abc");
         assert_eq!(song.added_unix, Some(1_792_932_494));
+    }
+
+    #[test]
+    fn a_child_carries_its_love_and_play_state() {
+        let song = RemoteSong::from_child(
+            "s1",
+            &child(r#"{"id":"a","title":"T","starred":"2026-10-24T09:30:00Z","playCount":4,"played":"2026-10-25T14:00:00Z"}"#),
+        );
+        assert!(song.starred);
+        assert_eq!(song.play_count, 4);
+        assert_eq!(song.played_unix, Some(1_792_936_800));
+    }
+
+    #[test]
+    fn a_blank_star_and_an_unparseable_play_time_are_ignored() {
+        let song = RemoteSong::from_child(
+            "s1",
+            &child(r#"{"id":"a","title":"T","starred":"  ","playCount":-2,"played":"yesterday"}"#),
+        );
+        assert!(!song.starred);
+        assert_eq!(song.play_count, 0);
+        assert_eq!(song.played_unix, None);
     }
 
     #[test]
