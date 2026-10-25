@@ -12,6 +12,7 @@ final class MainWindowController: NSWindowController {
 
     private var spaceKeyMonitor: Any?
     private var searchItem: NSSearchToolbarItem?
+    private var customizeItem: NSToolbarItem?
 
     convenience init() {
         let window = NSWindow(
@@ -52,6 +53,17 @@ final class MainWindowController: NSWindowController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(interfaceScaleChanged), name: .flaccyInterfaceScaleChanged, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(sectionDidChange), name: .flaccySectionDidChange, object: nil
+        )
+    }
+
+    @objc private func sectionDidChange() {
+        customizeItem?.isHidden = ActiveSection.current != .home
+    }
+
+    @objc private func customizeHome() {
+        NotificationCenter.default.post(name: .flaccyCustomizeHome, object: nil)
     }
 
     private static let baseMinimumSize = NSSize(width: 960, height: 600)
@@ -131,9 +143,10 @@ final class MainWindowController: NSWindowController {
 extension MainWindowController: NSToolbarDelegate {
 
     private static let searchIdentifier = NSToolbarItem.Identifier("LibrarySearch")
+    private static let customizeIdentifier = NSToolbarItem.Identifier("CustomizeHome")
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, Self.searchIdentifier]
+        [.toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, Self.customizeIdentifier, Self.searchIdentifier]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -145,6 +158,17 @@ extension MainWindowController: NSToolbarDelegate {
         itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
+        if itemIdentifier == Self.customizeIdentifier {
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: HomeCopy.customizeHomeMenu)
+            item.label = HomeCopy.customizeHomeMenu
+            item.toolTip = HomeCopy.customizeHomeMenu
+            item.target = self
+            item.action = #selector(customizeHome)
+            item.isHidden = ActiveSection.current != .home
+            customizeItem = item
+            return item
+        }
         guard itemIdentifier == Self.searchIdentifier else { return nil }
         let item = NSSearchToolbarItem(itemIdentifier: itemIdentifier)
         item.searchField.placeholderString = String(localized: "Search library")

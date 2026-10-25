@@ -385,6 +385,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    @objc func customizeHome(_ sender: Any?) {
+        NotificationCenter.default.post(name: .flaccyCustomizeHome, object: nil)
+    }
+
     @objc func toggleQueue(_ sender: Any?) {
         NotificationCenter.default.post(name: .flaccyToggleQueue, object: nil)
     }

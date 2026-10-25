@@ -49,6 +49,7 @@ final class GeneralSettingsPane: SettingsPane {
     let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Flaccy in the menu bar"), target: nil, action: nil)
     let scaleStepper = NSStepper()
     let scaleLabel = NSTextField(labelWithString: "")
+    let launchPopUp = NSPopUpButton()
     var isRestoring = false
 
     override func buildForm() {
@@ -102,6 +103,13 @@ final class GeneralSettingsPane: SettingsPane {
         formStack.addArrangedSubview(separator())
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "System")))
+        launchPopUp.addItems(withTitles: [HomeCopy.home, HomeCopy.whereYouLeftOff])
+        launchPopUp.target = self
+        launchPopUp.action = #selector(launchChoiceChanged)
+        launchPopUp.setAccessibilityLabel(HomeCopy.openAtLaunch)
+        let launchTitle = NSTextField(labelWithString: HomeCopy.openAtLaunch)
+        launchTitle.font = .systemFont(ofSize: 13)
+        addRow([launchTitle, launchPopUp], spacing: 8)
         loginCheckbox.target = self
         loginCheckbox.action = #selector(loginToggled)
         formStack.addArrangedSubview(loginCheckbox)
@@ -129,6 +137,7 @@ final class GeneralSettingsPane: SettingsPane {
         )
         refreshEntitlement()
         autoplayCheckbox.state = AudioPlayer.shared.autoplaySimilarWhenQueueEnds ? .on : .off
+        launchPopUp.selectItem(at: LaunchSectionSetting.choice() == .home ? 0 : 1)
         loginCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menuBarCheckbox.state = MenuBarExtraSetting.isEnabled ? .on : .off
         NotificationCenter.default.addObserver(
@@ -284,6 +293,10 @@ final class GeneralSettingsPane: SettingsPane {
             MidgarLog.error("Login item change failed: \(error.localizedDescription)", category: .general)
             loginCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off
         }
+    }
+
+    @objc func launchChoiceChanged() {
+        LaunchSectionSetting.setChoice(launchPopUp.indexOfSelectedItem == 0 ? .home : .whereYouLeftOff)
     }
 
     @objc func menuBarToggled() {

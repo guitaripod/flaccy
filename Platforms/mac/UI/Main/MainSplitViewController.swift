@@ -50,7 +50,7 @@ final class MainSplitViewController: NSSplitViewController {
         inspectorItem = inspector
 
         if contentRouter.currentSection == nil {
-            contentRouter.show(.albums)
+            contentRouter.show(LaunchSectionSetting.section())
         }
 
         NotificationCenter.default.addObserver(
