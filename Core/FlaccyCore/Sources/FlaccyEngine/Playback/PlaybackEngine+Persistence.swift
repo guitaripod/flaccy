@@ -23,6 +23,7 @@ extension PlaybackEngine {
         }
         UserDefaults.standard.set(currentTime, forKey: "flaccy.queue.elapsed")
         UserDefaults.standard.set(shuffleEnabled, forKey: "flaccy.queue.shuffle")
+        saveContext()
         UserDefaults.standard.set(repeatMode == .all ? 1 : repeatMode == .one ? 2 : 0, forKey: "flaccy.queue.repeat")
     }
 
@@ -49,6 +50,7 @@ extension PlaybackEngine {
         let savedShuffle = UserDefaults.standard.bool(forKey: "flaccy.queue.shuffle")
         let savedRepeat = UserDefaults.standard.integer(forKey: "flaccy.queue.repeat")
         let savedCurrentPath = UserDefaults.standard.string(forKey: "flaccy.queue.currentPath")
+        let savedContext = Self.loadSavedContext()
         let savedOriginalPaths = savedShuffle
             ? UserDefaults.standard.stringArray(forKey: "flaccy.queue.originalPaths")
             : nil
@@ -68,6 +70,7 @@ extension PlaybackEngine {
                 savedRepeat: savedRepeat,
                 savedCurrentPath: savedCurrentPath
             )
+            self?.applyRestoredContext(savedContext)
         }
     }
 

@@ -17,7 +17,9 @@ extension AudioPlayer {
                 seedArtist: seedArtist, pool: pool, excluding: [], limit: StationBuilder.stationSize
             )
             guard let self else { return }
-            await MainActor.run { self.startBuiltStation(tracks, seedArtist: seedArtist) }
+            await MainActor.run {
+                self.startBuiltStation(tracks, seedArtist: seedArtist, context: Self.artistRadioContext(seedArtist))
+            }
         }
     }
 
@@ -34,7 +36,9 @@ extension AudioPlayer {
                 seedTrack: seedTrack, pool: pool, excluding: [], limit: StationBuilder.stationSize
             )
             guard let self else { return }
-            await MainActor.run { self.startBuiltStation(tracks, seedArtist: seedTrack.artist) }
+            await MainActor.run {
+                self.startBuiltStation(tracks, seedArtist: seedTrack.artist, context: Self.artistRadioContext(seedTrack.artist))
+            }
         }
     }
 
@@ -52,7 +56,7 @@ extension AudioPlayer {
                 pool: pool, playCounts: counts, excluding: [], limit: StationBuilder.stationSize
             )
             guard let self else { return }
-            await MainActor.run { self.startBuiltStation(tracks, seedArtist: nil) }
+            await MainActor.run { self.startBuiltStation(tracks, seedArtist: nil, context: Self.libraryRadioContext) }
         }
     }
 
@@ -70,18 +74,31 @@ extension AudioPlayer {
                 pool: pool, playCounts: counts, excluding: [], limit: StationBuilder.stationSize
             )
             guard let self else { return }
-            await MainActor.run { self.startBuiltStation(tracks, seedArtist: nil) }
+            await MainActor.run { self.startBuiltStation(tracks, seedArtist: nil, context: Self.crateDigContext) }
         }
     }
 
-    func startBuiltStation(_ tracks: [Track], seedArtist: String?) {
+    static var libraryRadioContext: PlaybackContext {
+        PlaybackContext(kind: .radio, id: "library", title: String(localized: "Library Radio"), subtitle: "")
+    }
+
+    static var crateDigContext: PlaybackContext {
+        PlaybackContext(kind: .mix, id: "crate-dig", title: String(localized: "Crate Dig"), subtitle: "")
+    }
+
+    static func artistRadioContext(_ artist: String) -> PlaybackContext {
+        PlaybackContext(kind: .radio, id: "artist:" + HomeKeys.fold(artist), title: String(localized: "\(artist) Radio"), subtitle: "")
+    }
+
+    func startBuiltStation(_ tracks: [Track], seedArtist: String?, context: PlaybackContext? = nil) {
         isBuildingStation = false
         guard !tracks.isEmpty else {
             MidgarLog.notice("Station build produced no tracks (seed \(seedArtist ?? "library"))", category: .playback)
             return
         }
         MidgarLog.info("Starting station with \(tracks.count) tracks (seed \(seedArtist ?? "library"))", category: .playback)
-        engine.play(tracks, startingAt: 0, stationSeed: seedArtist)
+        engine.play(tracks, startingAt: 0, stationSeed: seedArtist, context: context)
+        if let context { RecentContextStore.shared.record(context) }
     }
 
     nonisolated static func continuationBatch(_ request: ContinuationRequest) async -> [Track] {

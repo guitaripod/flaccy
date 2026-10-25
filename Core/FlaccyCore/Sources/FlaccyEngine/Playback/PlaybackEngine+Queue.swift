@@ -159,6 +159,7 @@ extension PlaybackEngine {
             originalQueue.append(track)
         }
         resyncPreloadedItems()
+        refreshDerivedContext()
         host?.playFeedback(.light)
         postOnMain(PlaybackEngine.queueDidChange)
         if wasEmpty {
@@ -171,6 +172,7 @@ extension PlaybackEngine {
         queue.append(track)
         originalQueue.append(track)
         resyncPreloadedItems()
+        refreshDerivedContext()
         host?.playFeedback(.light)
         postOnMain(PlaybackEngine.queueDidChange)
         if wasEmpty {
