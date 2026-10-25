@@ -544,6 +544,104 @@ final class WatchSyncLedgerTests: XCTestCase {
         XCTAssertEqual(restored.nextToStart(now: t0), ["a", "b", "c"])
     }
 
+    func testSupersedingAStemOnTheWatchQueuesItAgain() {
+        var ledger = ledger(["a"])
+        ingest(&ledger, ["a"])
+        ledger.supersede(["a"])
+        XCTAssertEqual(ledger.phase(of: "a"), .queued)
+        XCTAssertEqual(ledger.superseded, ["a"])
+        XCTAssertEqual(ledger.nextToStart(now: t0), ["a"])
+    }
+
+    func testSupersededStemIgnoresTheOldCopyUntilTheNewOneIsHandedOff() {
+        var ledger = ledger(["a"])
+        ingest(&ledger, ["a"])
+        ledger.supersede(["a"])
+        ingest(&ledger, ["a"])
+        XCTAssertEqual(ledger.phase(of: "a"), .queued)
+        _ = ledger.nextToStart(now: t0)
+        ingest(&ledger, ["a"])
+        XCTAssertEqual(ledger.phase(of: "a"), .preparing)
+        ledger.markSending(stem: "a", fraction: 0.4)
+        ingest(&ledger, ["a"])
+        XCTAssertEqual(ledger.phase(of: "a"), .sending(fraction: 0.4))
+        ledger.markHandedOff(stem: "a", now: t0)
+        XCTAssertEqual(ledger.phase(of: "a"), .awaitingAck(since: t0))
+        XCTAssertTrue(ledger.superseded.isEmpty)
+        ingest(&ledger, ["a"])
+        XCTAssertEqual(ledger.phase(of: "a"), .onWatch)
+    }
+
+    func testSupersedingAStemInFlightSendsItAgainOnceTheOldTransferIsConfirmed() {
+        var ledger = ledger(["a"])
+        _ = ledger.nextToStart(now: t0)
+        ledger.markSending(stem: "a", fraction: 0.5)
+        ledger.markHandedOff(stem: "a", now: t0)
+        ledger.supersede(["a"])
+        XCTAssertEqual(ledger.phase(of: "a"), .awaitingAck(since: t0))
+        XCTAssertEqual(ledger.superseded, ["a"])
+        ingest(&ledger, ["a"])
+        XCTAssertEqual(ledger.phase(of: "a"), .queued)
+        XCTAssertEqual(ledger.nextToStart(now: t0), ["a"])
+        ingest(&ledger, ["a"])
+        XCTAssertEqual(ledger.phase(of: "a"), .preparing)
+    }
+
+    func testSupersedingAPreparingStemThatFailsIgnoresTheOldCopyAfterwards() {
+        var ledger = ledger(["a"])
+        _ = ledger.nextToStart(now: t0)
+        ledger.supersede(["a"])
+        ledger.markFailed(stem: "a", failure: .transient, now: t0)
+        ingest(&ledger, ["a"])
+        XCTAssertNotEqual(ledger.phase(of: "a"), .onWatch)
+        XCTAssertEqual(ledger.superseded, ["a"])
+    }
+
+    func testSupersedingAStemThatWasNeverSentChangesNothing() {
+        var ledger = ledger(["a"])
+        let before = ledger
+        ledger.supersede(["a"])
+        XCTAssertEqual(ledger, before)
+        XCTAssertTrue(ledger.superseded.isEmpty)
+    }
+
+    func testSupersedingIgnoresStemsThePersonNeverRequested() {
+        var ledger = WatchSyncLedger()
+        ingest(&ledger, ["watch-only"])
+        ledger.supersede(["watch-only", "unknown"])
+        XCTAssertEqual(ledger.phase(of: "watch-only"), .onWatch)
+        XCTAssertNil(ledger.phase(of: "unknown"))
+        XCTAssertTrue(ledger.superseded.isEmpty)
+    }
+
+    func testSupersededStemsSurviveARelaunch() {
+        var original = ledger(["a", "b"])
+        ingest(&original, ["a", "b"])
+        original.supersede(["a"])
+        var restored = WatchSyncLedger(requested: original.requested, superseded: original.superseded)
+        XCTAssertEqual(restored.superseded, ["a"])
+        ingest(&restored, ["a", "b"])
+        XCTAssertEqual(restored.phase(of: "a"), .queued)
+        XCTAssertEqual(restored.phase(of: "b"), .onWatch)
+    }
+
+    func testAdoptingATransferForASupersededStemIsRefused() {
+        var ledger = ledger(["a"])
+        ingest(&ledger, ["a"])
+        ledger.supersede(["a"])
+        XCTAssertFalse(ledger.adopt(stem: "a", bytes: 10, fraction: 0.2))
+        XCTAssertEqual(ledger.phase(of: "a"), .queued)
+    }
+
+    func testWithdrawingASupersededStemForgetsIt() {
+        var ledger = ledger(["a"])
+        ingest(&ledger, ["a"])
+        ledger.supersede(["a"])
+        ledger.withdraw(["a"])
+        XCTAssertTrue(ledger.superseded.isEmpty)
+        XCTAssertNil(ledger.phase(of: "a"))
+    }
+
     func testEquatable() {
         XCTAssertEqual(ledger(["a", "b"]), ledger(["a", "b"]))
         XCTAssertNotEqual(ledger(["a", "b"]), ledger(["a"]))

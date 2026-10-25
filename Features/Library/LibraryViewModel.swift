@@ -357,10 +357,10 @@ final class LibraryViewModel {
     @discardableResult
     func importFiles(
         from urls: [URL],
-        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void
+        progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void,
+        decideReplacements: @escaping ImportReplacementDecider
     ) async -> LibraryImportOutcome {
-        let outcome = await library.importFiles(from: urls, progress: progress)
-        return outcome
+        await library.importFiles(from: urls, progress: progress, decideReplacements: decideReplacements)
     }
 
     func setAlbumSort(_ sort: AlbumSort) {

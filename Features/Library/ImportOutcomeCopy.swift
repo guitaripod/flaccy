@@ -24,6 +24,16 @@ enum ImportOutcomeCopy {
     }
 
     static func report(_ outcome: LibraryImportOutcome) -> Report {
+        guard outcome.replaced > 0 else { return importReport(outcome) }
+        let replaced = String(localized: "\(outcome.replaced) songs replaced with newer versions")
+        guard outcome.imported > 0 || outcome.failed > 0 else {
+            return Report(message: replaced, isFailure: false, isNoOp: false)
+        }
+        let rest = importReport(outcome)
+        return Report(message: "\(rest.message) \(replaced)", isFailure: rest.isFailure, isNoOp: false)
+    }
+
+    private static func importReport(_ outcome: LibraryImportOutcome) -> Report {
         if let shortfall = outcome.shortfall {
             let needed = ByteCountFormatter.string(fromByteCount: shortfall.needed, countStyle: .file)
             let available = ByteCountFormatter.string(fromByteCount: shortfall.available, countStyle: .file)

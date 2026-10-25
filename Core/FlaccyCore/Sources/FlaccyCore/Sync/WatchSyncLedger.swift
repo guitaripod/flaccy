@@ -53,12 +53,23 @@ public struct WatchSyncLedger: Sendable, Equatable {
         case diskFull
     }
 
+    /// Whether the copy the watch holds, or is being sent, predates a newer
+    /// version of the song. `staleCopyInFlight` waits for the old transfer to
+    /// be confirmed and then sends again; `awaitingNewHandOff` has already been
+    /// queued again and trusts no confirmation until the new copy is handed off.
+    private enum Staleness: Sendable, Equatable {
+        case none
+        case staleCopyInFlight
+        case awaitingNewHandOff
+    }
+
     private struct Entry: Sendable, Equatable {
         var phase: Phase
         var bytes: Int64
         var sequence: Int
         var attempts: Int
         var isRequested: Bool
+        var staleness: Staleness = .none
     }
 
     public let policy: Policy
@@ -67,16 +78,26 @@ public struct WatchSyncLedger: Sendable, Equatable {
     private var entries: [String: Entry] = [:]
     private var nextSequence = 0
 
-    public init(requested: Set<String> = [], policy: Policy = .standard) {
+    public init(requested: Set<String> = [], superseded: Set<String> = [], policy: Policy = .standard) {
         self.policy = policy
         for stem in requested.sorted() {
             insert(stem: stem, bytes: 0, phase: .queued, isRequested: true)
+            if superseded.contains(stem) {
+                entries[stem]?.staleness = .awaitingNewHandOff
+            }
         }
     }
 
     /// The stems the person asked for and has not withdrawn; this is what to persist.
     public var requested: Set<String> {
         Set(entries.compactMap { $0.value.isRequested ? $0.key : nil })
+    }
+
+    /// The requested stems whose song has a newer version than the watch's
+    /// copy and that have not been handed off again; persisted with `requested`
+    /// so a relaunch does not mistake the old copy for the current one.
+    public var superseded: Set<String> {
+        Set(entries.compactMap { $0.value.isRequested && $0.value.staleness != .none ? $0.key : nil })
     }
 
     public func phase(of stem: String) -> Phase? {
@@ -126,6 +147,28 @@ public struct WatchSyncLedger: Sendable, Equatable {
         }
     }
 
+    /// Marks requested stems for delivery again because their song changed.
+    /// A stem on the watch goes back in line and ignores the watch's
+    /// confirmations until the new copy has been handed off, since the watch
+    /// keeps reporting the old file; a stem still being prepared or sent is
+    /// sent again as soon as that older transfer is confirmed.
+    public mutating func supersede(_ stems: [String]) {
+        for stem in stems {
+            guard var entry = entries[stem], entry.isRequested else { continue }
+            switch entry.phase {
+            case .onWatch:
+                entry.phase = .queued
+                entry.attempts = 0
+                entry.staleness = .awaitingNewHandOff
+            case .preparing, .sending, .awaitingAck:
+                entry.staleness = .staleCopyInFlight
+            case .queued, .waiting, .diskFull, .stuck:
+                break
+            }
+            entries[stem] = entry
+        }
+    }
+
     /// Corrects the size of a stem already in the ledger without touching its
     /// phase, attempts or place in line.
     public mutating func updateBytes(stem: String, bytes: Int64) {
@@ -160,6 +203,7 @@ public struct WatchSyncLedger: Sendable, Equatable {
     public mutating func abandonPreparation(stem: String) {
         guard entries[stem]?.phase == .preparing else { return }
         entries[stem]?.phase = .queued
+        retireStaleCopy(stem)
     }
 
     public mutating func markSending(stem: String, fraction: Double) {
@@ -170,10 +214,14 @@ public struct WatchSyncLedger: Sendable, Equatable {
     public mutating func markHandedOff(stem: String, now: Date) {
         guard let phase = entries[stem]?.phase, phase.isInFlight else { return }
         entries[stem]?.phase = .awaitingAck(since: now)
+        if entries[stem]?.staleness == .awaitingNewHandOff {
+            entries[stem]?.staleness = .none
+        }
     }
 
     public mutating func markFailed(stem: String, failure: Failure, now: Date) {
         guard let entry = entries[stem], entry.phase != .onWatch else { return }
+        retireStaleCopy(stem)
         switch failure {
         case .diskFull:
             entries[stem]?.phase = .diskFull
@@ -199,6 +247,7 @@ public struct WatchSyncLedger: Sendable, Equatable {
     /// transfer otherwise, so nothing the person withdrew can arrive later.
     public mutating func adopt(stem: String, bytes: Int64, fraction: Double) -> Bool {
         guard let entry = entries[stem], entry.isRequested else { return false }
+        guard entry.staleness != .awaitingNewHandOff else { return false }
         switch entry.phase {
         case .onWatch:
             return false
@@ -287,8 +336,17 @@ public struct WatchSyncLedger: Sendable, Equatable {
             insert(stem: stem, bytes: 0, phase: .onWatch, isRequested: false)
             return
         }
-        entry.phase = .onWatch
-        entry.attempts = 0
+        switch entry.staleness {
+        case .none:
+            entry.phase = .onWatch
+            entry.attempts = 0
+        case .staleCopyInFlight:
+            entry.phase = .queued
+            entry.attempts = 0
+            entry.staleness = .awaitingNewHandOff
+        case .awaitingNewHandOff:
+            break
+        }
         entries[stem] = entry
     }
 
@@ -311,7 +369,16 @@ public struct WatchSyncLedger: Sendable, Equatable {
         }
     }
 
+    /// The older transfer is gone, so whatever is sent next is made from the
+    /// current file: only the watch's own old copy can still be reported back.
+    private mutating func retireStaleCopy(_ stem: String) {
+        if entries[stem]?.staleness == .staleCopyInFlight {
+            entries[stem]?.staleness = .awaitingNewHandOff
+        }
+    }
+
     private mutating func requeueAfterLostAck(stem: String) {
+        retireStaleCopy(stem)
         let attempts = (entries[stem]?.attempts ?? 0) + 1
         entries[stem]?.attempts = attempts
         entries[stem]?.phase = attempts >= policy.maxAttempts ? .stuck(attempts: attempts) : .queued

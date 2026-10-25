@@ -11285,6 +11285,242 @@
         }
       }
     },
+    "%lld songs replaced with newer versions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Titel durch eine neuere Version ersetzt"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Titel durch neuere Versionen ersetzt"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg song replaced with a newer version"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg songs replaced with newer versions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg canción reemplazada por una versión más reciente"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg canciones reemplazadas por versiones más recientes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg morceau remplacé par une version plus récente"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg morceaux remplacés par des versions plus récentes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg brano sostituito con una versione più recente"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg brani sostituiti con versioni più recenti"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld曲を新しいバージョンに置き換えました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld공을 최신 버전으로 교체했습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "few": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg utwory zastąpione nowszymi wersjami"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg utworów zastąpionych nowszymi wersjami"
+                    }
+                  },
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg utwór zastąpiony nowszą wersją"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg utworu zastąpionego nowszymi wersjami"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg música substituída por uma versão mais recente"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg músicas substituídas por versões mais recentes"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已用较新版本替换 %lld 首歌曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已用較新版本取代 %lld 首歌曲"
+          }
+        }
+      }
+    },
     "%lld songs stopped after repeated attempts. Retry to send them again.": {
       "localizations": {
         "de": {
@@ -31671,6 +31907,70 @@
         }
       }
     },
+    "Couldn't restore the previous mix of “%@” — %@. Nothing was changed; try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der vorherige Mix von „%@“ konnte nicht wiederhergestellt werden – %@. Es wurde nichts geändert; versuche es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo restaurar la mezcla anterior de “%@”: %@. No se cambió nada; inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de restaurer le mix précédent de « %@ » : %@. Rien n’a été modifié ; réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile ripristinare il mix precedente di “%@”: %@. Non è stato modificato nulla; riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」の以前のミックスを復元できませんでした: %@。何も変更されていません。もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”의 이전 믹스를 복원할 수 없습니다: %@. 변경된 내용은 없습니다. 다시 시도해 주세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie można przywrócić poprzedniego miksu „%@” — %@. Nic nie zostało zmienione; spróbuj ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível restaurar a mixagem anterior de “%@”: %@. Nada foi alterado; tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法恢复“%@”的上一个混音——%@。未做任何更改，请重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法還原「%@」的上一個混音——%@。未做任何變更，請再試一次。"
+          }
+        }
+      }
+    },
     "Couldn't save the artwork — the framed picture couldn't be rendered. Choose a different image.": {
       "localizations": {
         "de": {
@@ -50465,6 +50765,70 @@
         }
       }
     },
+    "Keep Both": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beide behalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conservar ambas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder les deux"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantieni entrambe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "両方を残す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 유지"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zachowaj obie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manter ambas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两者都保留"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兩者都保留"
+          }
+        }
+      }
+    },
     "Keep Editing": {
       "localizations": {
         "de": {
@@ -58677,6 +59041,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "新發行"
+          }
+        }
+      }
+    },
+    "New mix of “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Mix von „%@“"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nueva mezcla de “%@”"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau mix de « %@ »"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuovo mix di “%@”"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」の新しいミックス"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”의 새 믹스"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nowy miks „%@”"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nova mixagem de “%@”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”的新混音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」的新混音"
           }
         }
       }
@@ -68633,6 +69061,70 @@
         }
       }
     },
+    "Play from start": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von Anfang abspielen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproducir desde el principio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire depuis le début"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci dall’inizio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初から再生"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "처음부터 재생"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwórz od początku"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocar desde o início"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从头播放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從頭播放"
+          }
+        }
+      }
+    },
     "Play history range": {
       "localizations": {
         "de": {
@@ -78233,6 +78725,370 @@
         }
       }
     },
+    "Replace": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersetzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reemplazar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituisci"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "置き換える"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "교체"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zastąp"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Substituir"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替换"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取代"
+          }
+        }
+      }
+    },
+    "Replace %lld songs with newer versions?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Titel durch eine neuere Version ersetzen?"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Titel durch neuere Versionen ersetzen?"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Replace %arg song with a newer version?"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Replace %arg songs with newer versions?"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "¿Reemplazar %arg canción por una versión más reciente?"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "¿Reemplazar %arg canciones por versiones más recientes?"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Remplacer %arg morceau par une version plus récente ?"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Remplacer %arg morceaux par des versions plus récentes ?"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Sostituire %arg brano con una versione più recente?"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Sostituire %arg brani con versioni più recenti?"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld曲を新しいバージョンに置き換えますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld공을 최신 버전으로 교체할까요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "few": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Zastąpić %arg utwory nowszymi wersjami?"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Zastąpić %arg utworów nowszymi wersjami?"
+                    }
+                  },
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Zastąpić %arg utwór nowszą wersją?"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Zastąpić %arg utworu nowszymi wersjami?"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$#@arg1@"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Substituir %arg música por uma versão mais recente?"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Substituir %arg músicas por versões mais recentes?"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要用较新版本替换 %lld 首歌曲吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要用較新版本取代 %lld 首歌曲嗎？"
+          }
+        }
+      }
+    },
+    "Replace “%@” with a newer version?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ durch eine neuere Version ersetzen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Reemplazar “%@” por una versión más reciente?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacer « %@ » par une version plus récente ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituire “%@” con una versione più recente?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を新しいバージョンに置き換えますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”을(를) 최신 버전으로 교체할까요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zastąpić „%@” nowszą wersją?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Substituir “%@” por uma versão mais recente?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要用较新版本替换“%@”吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要用較新版本取代「%@」嗎？"
+          }
+        }
+      }
+    },
     "Rescan": {
       "localizations": {
         "de": {
@@ -78809,6 +79665,70 @@
         }
       }
     },
+    "Restore Previous Mix": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorherigen Mix wiederherstellen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar la mezcla anterior"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurer le mix précédent"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristina il mix precedente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以前のミックスを復元"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전 믹스 복원"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przywróć poprzedni miks"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar mixagem anterior"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复上一个混音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還原上一個混音"
+          }
+        }
+      }
+    },
     "Restore Purchases": {
       "localizations": {
         "de": {
@@ -78869,6 +79789,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "回復購買項目"
+          }
+        }
+      }
+    },
+    "Restored the previous mix of “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriger Mix von „%@“ wiederhergestellt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mezcla anterior de “%@” restaurada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mix précédent de « %@ » restauré"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mix precedente di “%@” ripristinato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」の以前のミックスを復元しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”의 이전 믹스를 복원했습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przywrócono poprzedni miks „%@”"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mixagem anterior de “%@” restaurada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已恢复“%@”的上一个混音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已還原「%@」的上一個混音"
           }
         }
       }
@@ -93437,6 +94421,70 @@
         }
       }
     },
+    "The versions you have now stay in Previous Versions for 30 days.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die aktuellen Versionen bleiben 30 Tage lang unter „Frühere Versionen“ erhalten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las versiones actuales se conservan en Versiones anteriores durante 30 días."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les versions actuelles restent dans Versions précédentes pendant 30 jours."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le versioni attuali restano in Versioni precedenti per 30 giorni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在のバージョンは「以前のバージョン」に30日間保存されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 버전은 30일 동안 이전 버전에 보관됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obecne wersje pozostaną w Poprzednich wersjach przez 30 dni."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As versões atuais ficam em Versões Anteriores por 30 dias."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前版本将在“以前的版本”中保留 30 天。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前的版本會在「先前的版本」中保留 30 天。"
+          }
+        }
+      }
+    },
     "Theme %@": {
       "localizations": {
         "de": {
@@ -106939,6 +107987,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "自 %lld 年起 Scrobble"
+          }
+        }
+      }
+    },
+    "the saved copy is no longer on this device": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "die gespeicherte Kopie ist nicht mehr auf diesem Gerät"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "la copia guardada ya no está en este dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "la copie enregistrée n’est plus sur cet appareil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "la copia salvata non è più su questo dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存されたコピーはこのデバイスにありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장된 사본이 더 이상 이 기기에 없습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zapisana kopia nie znajduje się już na tym urządzeniu"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a cópia salva não está mais neste dispositivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存的副本不再位于此设备上"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已儲存的副本已不在此裝置上"
           }
         }
       }

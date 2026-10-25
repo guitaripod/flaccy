@@ -126,6 +126,9 @@ final class AudioPlayer: AudioPlaying {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleArtworkDidChange), name: AlbumArtworkCache.didChangeNotification, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleTracksRevised(_:)), name: Library.tracksRevised, object: nil
+        )
     }
 
     /// Reloads the lock-screen and Control Center cover when the person swaps

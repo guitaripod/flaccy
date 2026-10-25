@@ -294,6 +294,21 @@ extension DatabaseManager {
             }
         }
 
+        migrator.registerMigration("v15") { db in
+            try db.alter(table: "tracks") { t in
+                t.add(column: "fileSize", .integer)
+                t.add(column: "fileModifiedMs", .integer)
+                t.add(column: "audioFingerprint", .text)
+                t.add(column: "revision", .integer).notNull().defaults(to: 1)
+                t.add(column: "revisedAt", .datetime)
+            }
+            try db.create(table: "previousVersions") { t in
+                t.column("trackFileURL", .text).primaryKey()
+                t.column("storedPath", .text).notNull()
+                t.column("movedAt", .datetime).notNull()
+            }
+        }
+
         return migrator
     }
 }

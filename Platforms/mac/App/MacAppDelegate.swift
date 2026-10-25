@@ -72,6 +72,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         DebugDrive.runIfRequested(window: windowController.window)
         runStageBDriveIfRequested()
+        ReexportExercise.runIfRequested()
         #endif
     }
 
@@ -288,7 +289,11 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
             let urls = panel.urls
             let toast = MacToast.showImport(in: window)
             Task {
-                let outcome = await Library.shared.importFiles(from: urls) { toast.update($0) }
+                let outcome = await Library.shared.importFiles(
+                    from: urls,
+                    progress: { toast.update($0) },
+                    decideReplacements: { prompt in await ImportReplacementAlert.ask(prompt, in: window) }
+                )
                 toast.finish(reporting: outcome)
             }
         }

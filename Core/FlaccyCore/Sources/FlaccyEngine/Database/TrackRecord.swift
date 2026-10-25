@@ -28,6 +28,11 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
     public var channels: Int?
     public var loved: Bool = false
     public var lovedPendingOp: String?
+    public var fileSize: Int64?
+    public var fileModifiedMs: Int64?
+    public var audioFingerprint: String?
+    public var revision: Int = 1
+    public var revisedAt: Date?
 
     public init(
         id: Int64? = nil,
@@ -52,7 +57,12 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
         sampleRate: Int? = nil,
         channels: Int? = nil,
         loved: Bool = false,
-        lovedPendingOp: String? = nil
+        lovedPendingOp: String? = nil,
+        fileSize: Int64? = nil,
+        fileModifiedMs: Int64? = nil,
+        audioFingerprint: String? = nil,
+        revision: Int = 1,
+        revisedAt: Date? = nil
     ) {
         self.id = id
         self.fileURL = fileURL
@@ -77,6 +87,11 @@ public struct TrackRecord: Codable, FetchableRecord, PersistableRecord, Identifi
         self.channels = channels
         self.loved = loved
         self.lovedPendingOp = lovedPendingOp
+        self.fileSize = fileSize
+        self.fileModifiedMs = fileModifiedMs
+        self.audioFingerprint = audioFingerprint
+        self.revision = revision
+        self.revisedAt = revisedAt
     }
 }
 
@@ -98,6 +113,9 @@ public struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable
     public var bitDepth: Int?
     public var sampleRate: Int?
     public var channels: Int?
+    public var fileModifiedMs: Int64?
+    public var revision: Int = 1
+    public var revisedAt: Date?
 
     public init(
         id: Int64? = nil,
@@ -115,7 +133,10 @@ public struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable
         codec: String? = nil,
         bitDepth: Int? = nil,
         sampleRate: Int? = nil,
-        channels: Int? = nil
+        channels: Int? = nil,
+        fileModifiedMs: Int64? = nil,
+        revision: Int = 1,
+        revisedAt: Date? = nil
     ) {
         self.id = id
         self.fileURL = fileURL
@@ -133,6 +154,9 @@ public struct LightTrackRecord: Codable, FetchableRecord, Identifiable, Sendable
         self.bitDepth = bitDepth
         self.sampleRate = sampleRate
         self.channels = channels
+        self.fileModifiedMs = fileModifiedMs
+        self.revision = revision
+        self.revisedAt = revisedAt
     }
 }
 

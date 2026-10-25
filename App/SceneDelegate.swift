@@ -40,6 +40,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         #if DEBUG
         PaywallShot.runIfRequested(in: window)
         SampleExercise.runIfRequested()
+        ReexportExercise.runIfRequested()
         WatchSyncExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
         EqualizerShots.runIfRequested(in: window)

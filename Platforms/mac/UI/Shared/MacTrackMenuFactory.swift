@@ -80,6 +80,9 @@ enum MacTrackMenuFactory {
         menu.addItem(ClosureMenuItem(title: String(localized: "Show in Finder"), systemImage: "folder") {
             NSWorkspace.shared.activateFileViewerSelecting([track.fileURL])
         })
+        if PreviousMix.isAvailable(for: track) {
+            menu.addItem(restorePreviousMixItem(for: track, in: window))
+        }
 
         if let removeFromPlaylist = options.removeFromPlaylist {
             menu.addItem(.separator())
@@ -97,6 +100,27 @@ enum MacTrackMenuFactory {
             })
         }
         return menu
+    }
+
+    /// Swaps the song back to the version it had before it was last replaced.
+    private static func restorePreviousMixItem(for track: Track, in window: NSWindow?) -> NSMenuItem {
+        ClosureMenuItem(title: String(localized: "Restore Previous Mix"), systemImage: "arrow.uturn.backward.circle") {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            Task {
+                switch await PreviousMix.restore(track) {
+                case .success:
+                    MacToast.show(
+                        String(localized: "Restored the previous mix of \u{201C}\(track.title)\u{201D}"),
+                        style: .success, in: window
+                    )
+                case .failure(let error):
+                    MacToast.show(
+                        String(localized: "Couldn't restore the previous mix of \u{201C}\(track.title)\u{201D} — \(error.localizedDescription). Nothing was changed; try again."),
+                        style: .error, in: window
+                    )
+                }
+            }
+        }
     }
 
     static func menu(for album: Album, anchor: NSView?, includeViewAlbum: Bool = true) -> NSMenu {

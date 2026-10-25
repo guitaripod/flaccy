@@ -33,6 +33,7 @@ final class WatchSyncService: NSObject {
     }
 
     private static let requestedKey = "watchSync.requestedPaths"
+    private static let supersededKey = "watchSync.supersededPaths"
     private static let profileKey = "watchSync.audioProfile"
     private static let fitMargin: Int64 = 50 * 1_024 * 1_024
     private static let ackGrace: TimeInterval = 600
@@ -62,6 +63,7 @@ final class WatchSyncService: NSObject {
     var lastSentContext: [String: Data] = [:]
     var jobObserver: NSObjectProtocol?
     var libraryObserver: NSObjectProtocol?
+    var revisionObserver: NSObjectProtocol?
 
     private var trackIndex: [String: Track]?
     private var stemCache: [URL: String] = [:]
@@ -69,8 +71,10 @@ final class WatchSyncService: NSObject {
 
     override init() {
         let stored = UserDefaults.standard.stringArray(forKey: Self.requestedKey) ?? []
+        let superseded = UserDefaults.standard.stringArray(forKey: Self.supersededKey) ?? []
         ledger = WatchSyncLedger(
             requested: Set(stored.map(SyncStem.of)),
+            superseded: Set(superseded.map(SyncStem.of)),
             policy: WatchSyncLedger.Policy(ackGrace: Self.ackGrace)
         )
         profile = UserDefaults.standard.string(forKey: Self.profileKey)
@@ -79,6 +83,7 @@ final class WatchSyncService: NSObject {
         super.init()
         observeEnrichmentJob()
         observeLibrary()
+        observeRevisions()
         WatchSyncBackgroundTask.shared.onExpiration = { [weak self] in self?.suspendPreparation() }
     }
 
@@ -313,6 +318,7 @@ final class WatchSyncService: NSObject {
 
     func persistRequested() {
         UserDefaults.standard.set(ledger.requested.sorted(), forKey: Self.requestedKey)
+        UserDefaults.standard.set(ledger.superseded.sorted(), forKey: Self.supersededKey)
     }
 
     func relativePath(for url: URL) -> String {
@@ -560,6 +566,32 @@ final class WatchSyncService: NSObject {
                 self?.pump()
             }
         }
+    }
+
+    private func observeRevisions() {
+        revisionObserver = NotificationCenter.default.addObserver(
+            forName: Library.tracksRevised,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            let paths = notification.userInfo?[Library.RevisionKey.paths] as? [String] ?? []
+            MainActor.assumeIsolated { self?.supersede(paths: paths) }
+        }
+    }
+
+    /// Sends the requested songs among `paths` to the watch again, since the
+    /// copy it holds is of a version the phone has since replaced.
+    func supersede(paths: [String]) {
+        let stems = paths.map(SyncStem.of).filter { ledger.requested.contains($0) }
+        guard !stems.isEmpty else { return }
+        ledger.supersede(stems)
+        for stem in stems where !ledger.isOnWatch(stem) { runStems.insert(stem) }
+        sizeCache.removeAll()
+        WatchSyncSizing.invalidate()
+        persistRequested()
+        MidgarLog.info("Sending \(stems.count) new versions to the watch", category: .connectivity)
+        startRun()
+        pump()
     }
 
     func publish(jobProgress: EnrichmentJobProgress) {

@@ -20,7 +20,10 @@ nonisolated extension Track {
             sampleRate: record.sampleRate,
             channels: record.channels,
             loved: record.loved,
-            playCount: record.playCount
+            playCount: record.playCount,
+            revision: record.revision,
+            revisedAt: record.revisedAt,
+            fileModifiedMs: record.fileModifiedMs
         )
     }
 
@@ -41,7 +44,10 @@ nonisolated extension Track {
             sampleRate: record.sampleRate,
             channels: record.channels,
             loved: record.loved,
-            playCount: record.playCount
+            playCount: record.playCount,
+            revision: record.revision,
+            revisedAt: record.revisedAt,
+            fileModifiedMs: record.fileModifiedMs
         )
     }
 }

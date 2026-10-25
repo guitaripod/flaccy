@@ -102,8 +102,15 @@ extension WatchSyncService {
             ledger.markFailed(stem: errorPath, failure: .diskFull, now: Date())
         }
         for stem in confirmed {
-            transfers[stem]?.cancel()
-            settle(stem)
+            switch ledger.phase(of: stem) {
+            case .preparing?, .sending?:
+                continue
+            case .queued?:
+                discardWork(for: stem)
+            default:
+                transfers[stem]?.cancel()
+                settle(stem)
+            }
         }
         MidgarLog.info("Watch heartbeat: \(confirmed.count) tracks, \(free / 1_048_576) MB free, full=\(full)", category: .connectivity)
         persistRequested()

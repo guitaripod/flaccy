@@ -37,6 +37,9 @@ enum TrackContextMenu {
         if !context.otherCopies.isEmpty {
             sections.append(UIMenu(options: .displayInline, children: [copiesAction(for: track, others: context.otherCopies, in: host)]))
         }
+        if PreviousMix.isAvailable(for: track) {
+            sections.append(UIMenu(options: .displayInline, children: [restorePreviousMixAction(for: track, in: host)]))
+        }
         sections.append(contentsOf: context.extraSections)
         sections.append(UIMenu(options: .displayInline, children: [deleteAction(for: track, in: host)]))
 
@@ -51,6 +54,34 @@ enum TrackContextMenu {
             guard let host else { return }
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             DuplicateCopiesViewController.present(shown: track, others: others, from: host)
+        }
+    }
+
+    /// Swaps the song back to the version it had before it was last replaced.
+    private static func restorePreviousMixAction(for track: Track, in host: UIViewController) -> UIMenuElement {
+        UIAction(
+            title: String(localized: "Restore Previous Mix"),
+            image: UIImage(systemName: "arrow.uturn.backward.circle")
+        ) { [weak host] _ in
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            Task { @MainActor in
+                let result = await PreviousMix.restore(track)
+                guard let host else { return }
+                switch result {
+                case .success:
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    ToastView.show(
+                        String(localized: "Restored the previous mix of \u{201C}\(track.title)\u{201D}"),
+                        in: host.view, style: .success
+                    )
+                case .failure(let error):
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                    ToastView.show(
+                        String(localized: "Couldn't restore the previous mix of \u{201C}\(track.title)\u{201D} — \(error.localizedDescription). Nothing was changed; try again."),
+                        in: host.view, style: .error
+                    )
+                }
+            }
         }
     }
 

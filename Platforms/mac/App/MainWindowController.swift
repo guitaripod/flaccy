@@ -338,7 +338,11 @@ final class AudioDropView: NSView {
         MidgarLog.info("Importing \(urls.count) dropped item(s)", category: .content)
         let toast = MacToast.showImport(in: window)
         Task { [weak self] in
-            let outcome = await Library.shared.importFiles(from: urls) { toast.update($0) }
+            let outcome = await Library.shared.importFiles(
+                from: urls,
+                progress: { toast.update($0) },
+                decideReplacements: { [weak self] prompt in await ImportReplacementAlert.ask(prompt, in: self?.window) }
+            )
             self?.isImporting = false
             toast.finish(reporting: outcome)
         }

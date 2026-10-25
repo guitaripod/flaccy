@@ -159,7 +159,11 @@ extension LibraryViewController: UIDocumentPickerDelegate {
         guard !urls.isEmpty else { return }
         let toast = ToastView.showLive(ImportOutcomeCopy.scanning, in: view)
         Task {
-            let outcome = await viewModel.importFiles(from: urls) { toast.update(ImportOutcomeCopy.progress($0)) }
+            let outcome = await viewModel.importFiles(
+                from: urls,
+                progress: { toast.update(ImportOutcomeCopy.progress($0)) },
+                decideReplacements: { prompt in await ImportReplacementAlert.ask(prompt, from: self) }
+            )
             let report = ImportOutcomeCopy.report(outcome)
             UINotificationFeedbackGenerator().notificationOccurred(report.isFailure ? .error : (report.isNoOp ? .warning : .success))
             toast.finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))

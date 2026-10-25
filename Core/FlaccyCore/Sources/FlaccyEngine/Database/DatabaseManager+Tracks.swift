@@ -22,7 +22,7 @@ extension DatabaseManager {
     /// `artworkData` column untouched.
     public func updateTrackPreservingArtwork(_ track: TrackRecord) throws {
         try dbQueue.write { db in
-            try track.update(db, columns: Self.trackColumnsWithoutArtwork)
+            try track.update(db, columns: Self.trackColumnsWithoutArtworkOrVersion)
         }
     }
 
@@ -64,7 +64,7 @@ extension DatabaseManager {
         }
     }
 
-    private static let trackColumnsWithoutArtwork: [Column] = [
+    private static let trackColumnsWithoutArtworkOrVersion: [Column] = [
         Column("id"), Column("fileURL"), Column("title"), Column("artist"),
         Column("albumTitle"), Column("albumArtist"), Column("trackNumber"), Column("duration"),
         Column("lastFMArtworkURL"), Column("musicBrainzID"), Column("albumMusicBrainzID"),
@@ -72,6 +72,14 @@ extension DatabaseManager {
         Column("aiAnalyzed"), Column("analysisAttemptedAt"),
         Column("codec"), Column("bitDepth"), Column("sampleRate"), Column("channels"),
         Column("loved"), Column("lovedPendingOp"),
+    ]
+
+    /// The lean read list: everything but the artwork BLOB. The version columns
+    /// ride along on reads only, so a row written back from an older snapshot
+    /// can never roll a newer revision back.
+    private static let trackColumnsWithoutArtwork: [Column] = trackColumnsWithoutArtworkOrVersion + [
+        Column("fileSize"), Column("fileModifiedMs"), Column("audioFingerprint"),
+        Column("revision"), Column("revisedAt"),
     ]
 
     public func fetchAllTrackRelativePaths() throws -> Set<String> {
@@ -130,7 +138,7 @@ extension DatabaseManager {
     /// same transaction as the track delete so the two can never disagree. An
     /// AI retitle changes the key, so the renamed album arrives as a new pending
     /// entity instead of inheriting the old one's exhausted verdict.
-    private static func sweepOrphanedAlbumEnrichment(in db: Database) throws {
+    static func sweepOrphanedAlbumEnrichment(in db: Database) throws {
         try db.execute(sql: """
             DELETE FROM enrichmentState
             WHERE scope = 'album'
