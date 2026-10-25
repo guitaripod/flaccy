@@ -115,7 +115,7 @@ enum ScreenshotSeeder {
         writeAudioFiles(for: catalog, in: documents)
         insertTracks(for: catalog, db: db)
         insertAlbumInfo(for: catalog, db: db)
-        if !DemoMode.isDayOne { insertScrobbles(for: catalog, db: db) }
+        if ProcessInfo.processInfo.environment["FLACCY_ROUTE"] != "home-dayone" { insertScrobbles(for: catalog, db: db) }
         insertLyrics(db: db)
         #if os(iOS)
         DemoMode.seedSupplements(db: db)

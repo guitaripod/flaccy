@@ -29,7 +29,7 @@ struct ContinuePage: View {
         _ summary: (title: String, artist: String, albumTitle: String, artworkData: Data?)
     ) -> some View {
         ScrollView {
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 if !typeSize.isAccessibilitySize {
                     ArtworkView(data: summary.artworkData, seed: summary.albumTitle, cornerRadius: 14)
                         .frame(width: 80, height: 80)
@@ -39,14 +39,14 @@ struct ContinuePage: View {
                 Text(summary.title)
                     .font(.headline)
                     .multilineTextAlignment(.center)
-                    .lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
+                    .lineLimit(typeSize.isAccessibilitySize ? 4 : 1)
+                    .minimumScaleFactor(0.8)
                 Text(summary.artist)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
                 if let point = player.resumePoint {
                     WatchSegmentedProgress(segments: point.segments(), isDimmed: isDimmed)
-                        .padding(.top, 2)
                         .accessibilityHidden(true)
                 }
                 HStack(spacing: 6) {
@@ -68,7 +68,7 @@ struct ContinuePage: View {
                     .accessibilityLabel(Text("Shuffle All"))
                     .disabled(store.allTracks.isEmpty)
                 }
-                .padding(.top, 4)
+                .padding(.top, 2)
             }
             .frame(maxWidth: .infinity)
         }
