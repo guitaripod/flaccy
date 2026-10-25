@@ -105,7 +105,7 @@ enum HomeCopy {
         }
     }
 
-    static var dayOneKicker: String { String(localized: "Your library is in") }
+    static var dayOneKicker: String { String(localized: "Your library is ready") }
     static var dayOneTitle: String { String(localized: "Start anywhere") }
     static var shuffleLibrary: String { String(localized: "Shuffle Library") }
     static var radio: String { String(localized: "Radio") }

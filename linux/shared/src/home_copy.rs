@@ -30,7 +30,7 @@ pub const YOUR_QUEUE: &str = "Your Queue";
 pub const UP_NEXT_PLAYING_KICKER: &str = "Up next · made for you";
 pub const UP_NEXT_KICKER: &str = "Made for you";
 
-pub const DAY_ONE_KICKER: &str = "Your library is in";
+pub const DAY_ONE_KICKER: &str = "Your library is ready";
 pub const DAY_ONE_TITLE: &str = "Start anywhere";
 pub const SHUFFLE_LIBRARY: &str = "Shuffle Library";
 pub const RADIO: &str = "Radio";
