@@ -927,6 +927,14 @@ fn card_text(title: &str, subtitle: &str) -> gtk::Box {
 
 pub fn on_this_day_card(ui: &Rc<Ui>, card: &OtdCard) -> gtk::Widget {
     let strip = strip_card();
+    let art = cover(
+        ui,
+        &Cover::Album((card.album.title.clone(), card.album.artist.clone())),
+        38,
+        None,
+    );
+    art.set_valign(gtk::Align::Center);
+    strip.append(&art);
     strip.append(&card_text(&card.title, &card.subtitle));
     let play = gtk::Button::from_icon_name("media-playback-start-symbolic");
     play.add_css_class("circular");

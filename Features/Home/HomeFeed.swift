@@ -296,7 +296,7 @@ nonisolated enum HomeFeedBuilder {
 
     nonisolated private static func dayOneCard(_ inputs: HomeFeedInputs, recentlyAdded: [Album]) -> HomeFeed.DayOne {
         let hiRes = inputs.albums.filter { album in
-            album.tracks.contains { ($0.bitDepth ?? 0) > 16 || ($0.sampleRate ?? 0) > 48_000 }
+            album.tracks.contains { $0.isLossless && (($0.bitDepth ?? 0) > 16 || ($0.sampleRate ?? 0) > 48_000) }
         }.count
         return HomeFeed.DayOne(
             songs: inputs.tracks.count,
