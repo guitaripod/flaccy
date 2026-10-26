@@ -235,6 +235,29 @@ async fn enroll(State(shared): State<Shared>, Json(body): Json<Value>) -> Respon
     (StatusCode::CREATED, Json(reply)).into_response()
 }
 
+async fn devices(State(shared): State<Shared>, headers: HeaderMap) -> Response {
+    let state = shared.lock().unwrap();
+    let token = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .unwrap_or_default();
+    let Some((user, current)) = state.tokens.get(token) else {
+        return error(StatusCode::UNAUTHORIZED, "unauthorized", json!({}));
+    };
+    let mut listed: Vec<Value> = state
+        .tokens
+        .values()
+        .filter(|(owner, _)| owner == user)
+        .map(|(_, device)| {
+            json!({ "id": device, "name": format!("name of {device}"), "platform": "linux",
+                    "lastSeenAt": now_ms(), "current": device == current })
+        })
+        .collect();
+    listed.sort_by_key(|device| device["id"].as_str().unwrap_or_default().to_owned());
+    Json(json!({ "devices": listed })).into_response()
+}
+
 fn rand_suffix() -> u64 {
     now_ms() as u64 ^ (std::process::id() as u64) << 20
 }
@@ -342,7 +365,7 @@ impl Double {
         }));
         let router = Router::new()
             .route("/flaccy/v1/hello", get(hello))
-            .route("/flaccy/v1/devices", post(enroll))
+            .route("/flaccy/v1/devices", post(enroll).get(devices))
             .route("/flaccy/v1/sync/push", post(push))
             .route("/flaccy/v1/sync/pull", get(pull))
             .route("/flaccy/v1/listens", get(listens))

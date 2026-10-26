@@ -38,6 +38,7 @@ mod samples;
 pub(crate) use flaccy_library::scanner;
 mod scrobbler;
 mod scrub_drill;
+mod server_sync;
 mod songlink;
 mod station;
 mod suggested;
@@ -92,8 +93,17 @@ fn main() -> glib::ExitCode {
     } else {
         APP_ID
     };
-    let application = adw::Application::builder().application_id(app_id).build();
+    let application = adw::Application::builder()
+        .application_id(app_id)
+        .flags(gtk::gio::ApplicationFlags::HANDLES_OPEN)
+        .build();
     application.connect_activate(move |app| app::activate(app, smoke));
+    application.connect_open(move |app, files, _| {
+        app::activate(app, smoke);
+        for file in files {
+            server_sync::deliver(&file.uri());
+        }
+    });
 
     let args: Vec<String> = std::env::args()
         .filter(|arg| arg != "--smoke" && arg != "--demo")

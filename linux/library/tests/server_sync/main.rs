@@ -1,3 +1,4 @@
+mod client_surface;
 mod double;
 mod flows;
 mod local;

@@ -548,6 +548,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
     attach_paste_to_download(&ui, &sidebar);
     ui::equalizer::install(&ui);
     schedule_demo_detail(&ui);
+    {
+        let ui = Rc::clone(&ui);
+        glib::idle_add_local_once(move || crate::server_sync::register_ui(&ui));
+    }
 
     {
         let core = Rc::clone(core);
@@ -2025,6 +2029,12 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
             ui::playlist_cover_demo::open(&ui, &mode);
+        });
+    }
+    if let Ok(mode) = std::env::var("FLACCY_DEMO_SERVER_UI") {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(3000), move || {
+            crate::server_sync::open_demo_ui(&ui, &mode);
         });
     }
     if let Ok(mode) = std::env::var("FLACCY_DEMO_EQ_UI") {

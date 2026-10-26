@@ -40,7 +40,7 @@ fi
 
 mkdir -p "$BIN_DIR" "$APP_DIR"
 install -m 755 "$BINARY" "$BIN_DIR/flaccy"
-sed -e "s|^Exec=flaccy$|Exec=$BIN_DIR/flaccy|" \
+sed -e "s|^Exec=flaccy %U$|Exec=$BIN_DIR/flaccy %U|" \
     -e "s|^TryExec=flaccy$|TryExec=$BIN_DIR/flaccy|" \
     "$HERE/data/$APP_ID.desktop" > "$APP_DIR/$APP_ID.desktop"
 chmod 644 "$APP_DIR/$APP_ID.desktop"

@@ -10,6 +10,7 @@ const API_PREFIX: &str = "/flaccy/v1";
 const PROTOCOL: &str = "1";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(8);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
+const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Why a call to the server did not return its answer.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -109,6 +110,30 @@ pub struct EnrolledUser {
     pub id: String,
 }
 
+/// One device the server knows, as `GET /devices` lists it.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceInfo {
+    /// The device id.
+    pub id: String,
+    /// The name the device gave itself.
+    pub name: String,
+    /// `ios`, `macos`, `linux` or another platform word.
+    #[serde(default)]
+    pub platform: String,
+    /// When the server last heard from it, in Unix milliseconds.
+    #[serde(default)]
+    pub last_seen_at: Option<i64>,
+    /// True for the device that asked.
+    #[serde(default)]
+    pub current: bool,
+}
+
+#[derive(Deserialize)]
+struct DeviceList {
+    devices: Vec<DeviceInfo>,
+}
+
 /// The blocking HTTP client for one server.
 #[derive(Clone)]
 pub struct Transport {
@@ -130,9 +155,18 @@ impl fmt::Debug for Transport {
 impl Transport {
     /// A client for the server at `base_url`, with no token.
     pub fn new(base_url: &str) -> Self {
+        Self::with_timeouts(base_url, CONNECT_TIMEOUT, REQUEST_TIMEOUT)
+    }
+
+    /// A client that gives up after five seconds, for the calls a person waits on: the first look at a server and enrollment.
+    pub fn probing(base_url: &str) -> Self {
+        Self::with_timeouts(base_url, PROBE_TIMEOUT, PROBE_TIMEOUT)
+    }
+
+    fn with_timeouts(base_url: &str, connect: Duration, total: Duration) -> Self {
         let agent = ureq::AgentBuilder::new()
-            .timeout_connect(CONNECT_TIMEOUT)
-            .timeout(REQUEST_TIMEOUT)
+            .timeout_connect(connect)
+            .timeout(total)
             .build();
         Transport {
             base: base_url.trim_end_matches('/').to_owned(),
@@ -157,6 +191,12 @@ impl Transport {
         let body =
             json!({ "enroll": code, "name": name, "platform": "linux", "instance": instance });
         decode(self.request("POST", "/devices", None).send_json(body))
+    }
+
+    /// `GET /devices`: the devices of the signed-in user.
+    pub fn devices(&self) -> Result<Vec<DeviceInfo>, ApiError> {
+        decode::<DeviceList>(self.request("GET", "/devices", None).call())
+            .map(|list| list.devices)
     }
 
     /// `POST /sync/push`.

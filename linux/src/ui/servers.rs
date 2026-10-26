@@ -16,8 +16,10 @@ pub fn page(ui: &Rc<Ui>) -> adw::PreferencesPage {
         .title("Servers")
         .icon_name("network-server-symbolic")
         .build();
+    page.add(&crate::ui::flaccy_server::group(ui));
     page.add(&servers_group(ui));
     page.add(&cache_group(ui));
+    page.add(&crate::ui::flaccy_server::nudge_group(ui));
     page
 }
 
@@ -53,7 +55,7 @@ fn servers_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     add.add_css_class("suggested-action");
     {
         let ui = Rc::clone(ui);
-        add.connect_clicked(move |_| present_add(&ui));
+        add.connect_clicked(move |_| present_add(&ui, &Prefill::default()));
     }
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     header.append(&refresh_all);
@@ -199,7 +201,16 @@ fn run_test(ui: &Rc<Ui>, row: &adw::ActionRow, button: &gtk::Button, server: &Se
     });
 }
 
-fn present_add(ui: &Rc<Ui>) {
+/// What the Add Server dialog opens with when a link or another dialog already
+/// knows the address.
+#[derive(Default)]
+pub struct Prefill {
+    pub address: String,
+    pub name: String,
+    pub api_key: String,
+}
+
+pub fn present_add(ui: &Rc<Ui>, prefill: &Prefill) {
     let dialog = adw::Dialog::builder()
         .title("Add Server")
         .content_width(460)
@@ -213,6 +224,9 @@ fn present_add(ui: &Rc<Ui>) {
     let api_key = adw::PasswordEntryRow::builder()
         .title("API key (instead of a password)")
         .build();
+    address.set_text(&prefill.address);
+    name.set_text(&prefill.name);
+    api_key.set_text(&prefill.api_key);
     for row in [&address, &name, &username] {
         group.add(row);
     }

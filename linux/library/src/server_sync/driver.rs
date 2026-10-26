@@ -1,11 +1,11 @@
 use super::credentials::TokenStore;
 use super::engine::{Dirty, Engine, Enrollment, PullOutcome, PushFailure, PushRecovery};
-use super::error::{Result, SyncError};
+use super::error::{Incompatibility, Result, SyncError};
 use super::ids::new_uuid_v7;
 use super::import::ImportReport;
 use super::link::ServerLink;
 use super::sink::ScalarSink;
-use super::transport::{ApiError, Transport};
+use super::transport::{ApiError, DeviceInfo, Transport};
 use crate::db::{now_ms, Db};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
@@ -24,6 +24,28 @@ pub enum SyncState {
     Offline,
     /// Something only the person can fix; the text says what, why and what to do.
     NeedsAttention(String),
+    /// Sync is paused for a reason the status line names.
+    Blocked(Blocker),
+}
+
+/// Why sync is paused until something outside Flaccy changes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Blocker {
+    /// The server's clock is behind, so it refuses writes (`503 clock_behind`).
+    ClockBehind,
+    /// The server no longer accepts this device's token.
+    DeviceRevoked,
+    /// The server has no disk space left (`507`).
+    DiskFull,
+}
+
+/// What a server says about itself in `GET /hello`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ServerIdentity {
+    /// The name the server gave itself.
+    pub name: String,
+    /// Its version.
+    pub version: String,
 }
 
 /// The state, the queue length and the last complete pull.
@@ -137,7 +159,10 @@ pub struct Driver {
     backoff: Backoff,
     poke: PokeHandle,
     dirty: Dirty,
+    listener: Option<DirtyListener>,
 }
+
+type DirtyListener = Box<dyn Fn(&Dirty) + Send>;
 
 impl Driver {
     /// A driver that keeps its token in `tokens` and hands GUI-owned scalars to `sink`.
@@ -152,7 +177,20 @@ impl Driver {
             backoff: Backoff::STANDARD,
             poke: PokeHandle::default(),
             dirty: Dirty::default(),
+            listener: None,
         }
+    }
+
+    /// Calls `listener` with what each pulled or pushed page recomputed, as soon as the page is applied, so the GUI repaints while a long sync is still running.
+    pub fn on_dirty(&mut self, listener: impl Fn(&Dirty) + Send + 'static) {
+        self.listener = Some(Box::new(listener));
+    }
+
+    fn publish(&mut self, dirty: Dirty) {
+        if let (Some(listener), true) = (&self.listener, dirty.changed()) {
+            listener(&dirty);
+        }
+        self.dirty.merge(dirty);
     }
 
     /// The same driver with another retry schedule.
@@ -181,6 +219,37 @@ impl Driver {
         &self.engine
     }
 
+    /// One look at a server: who it says it is, and whether this Flaccy and it can sync. Tries once, five seconds at most, and keeps no state.
+    pub fn probe(&self, url: &str) -> Result<ServerIdentity> {
+        let hello = Transport::probing(url).hello()?;
+        if !hello.features.iter().any(|feature| feature == "sync") {
+            return Err(SyncError::Incompatible(Incompatibility::ServerTooOld));
+        }
+        if hello.protocol.contains(&1) {
+            return Ok(ServerIdentity {
+                name: hello.server.name,
+                version: hello.server.version,
+            });
+        }
+        let newer_only = hello.protocol.iter().all(|version| *version > 1);
+        Err(SyncError::Incompatible(if newer_only {
+            Incompatibility::AppTooOld
+        } else {
+            Incompatibility::ServerTooOld
+        }))
+    }
+
+    /// The devices of this account on the connected server. Tries once, five seconds at most.
+    pub fn devices(&self, db: &Db) -> Result<Vec<DeviceInfo>> {
+        let url = self
+            .engine
+            .server_url(db)?
+            .ok_or(SyncError::NotConfigured)?;
+        Ok(Transport::probing(&url)
+            .with_token(self.tokens.load())
+            .devices()?)
+    }
+
     /// Redeems the code of a pairing link, stores the token, and queues the local playlists, loves and plays for the server.
     pub fn enroll(
         &mut self,
@@ -193,17 +262,10 @@ impl Driver {
                 "The link has no enrollment code. Ask the server for a new link.".into(),
             )
         })?;
-        let transport = Transport::new(&link.url);
-        let hello = self.retry(|| transport.hello()).map_err(api_to_sync)?;
-        if !hello.protocol.contains(&1) || !hello.features.iter().any(|feature| feature == "sync") {
-            return Err(SyncError::Protocol(
-                "This server does not offer sync. Update the server and try again.".into(),
-            ));
-        }
+        self.probe(&link.url)?;
+        let transport = Transport::probing(&link.url);
         let instance = new_uuid_v7();
-        let reply = self
-            .retry(|| transport.enroll(code, device_name, &instance))
-            .map_err(api_to_sync)?;
+        let reply = transport.enroll(code, device_name, &instance)?;
         self.tokens.save(&reply.token)?;
         self.engine.attach(
             db,
@@ -319,7 +381,7 @@ impl Driver {
                 .on_pull_page(db, &request, &response, now_ms())?
             {
                 PullOutcome::Applied { more, dirty } => {
-                    self.dirty.merge(dirty);
+                    self.publish(dirty);
                     if !more {
                         return Ok(Flow::Done);
                     }
@@ -340,7 +402,7 @@ impl Driver {
                 let dirty =
                     self.engine
                         .on_push_response(db, &request.instance, &response, now_ms())?;
-                self.dirty.merge(dirty);
+                self.publish(dirty);
                 Ok(Push::Sent)
             }
             Err(ApiError::IncarnationChanged(incarnation)) => {
@@ -387,7 +449,10 @@ impl Driver {
                 Err(error) => return Err(error.into()),
             };
             let written = self.engine.on_listens_page(db, &page)?;
-            self.dirty.listens += written;
+            self.publish(Dirty {
+                listens: written,
+                ..Dirty::default()
+            });
             if !page.more && self.engine.listens_backfilled(db)? {
                 return Ok(Flow::Done);
             }
@@ -423,11 +488,36 @@ enum Push {
 
 fn api_state(error: &ApiError) -> SyncState {
     match error {
+        ApiError::ClockBehind => SyncState::Blocked(Blocker::ClockBehind),
+        ApiError::Unauthorized => SyncState::Blocked(Blocker::DeviceRevoked),
+        ApiError::Server(507) => SyncState::Blocked(Blocker::DiskFull),
         ApiError::Offline(_) | ApiError::Server(_) | ApiError::RateLimited(_) => SyncState::Offline,
         other => SyncState::NeedsAttention(other.to_string()),
     }
 }
 
-fn api_to_sync(error: ApiError) -> SyncError {
-    SyncError::Protocol(error.to_string())
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn refusals_that_wait_on_the_person_or_the_server_are_blockers_not_outages() {
+        assert_eq!(
+            api_state(&ApiError::ClockBehind),
+            SyncState::Blocked(Blocker::ClockBehind)
+        );
+        assert_eq!(
+            api_state(&ApiError::Unauthorized),
+            SyncState::Blocked(Blocker::DeviceRevoked)
+        );
+        assert_eq!(
+            api_state(&ApiError::Server(507)),
+            SyncState::Blocked(Blocker::DiskFull)
+        );
+        assert_eq!(api_state(&ApiError::Server(502)), SyncState::Offline);
+        assert_eq!(
+            api_state(&ApiError::Offline("x".into())),
+            SyncState::Offline
+        );
+    }
 }

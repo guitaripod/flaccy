@@ -1,6 +1,7 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 const MAX_LOG_BYTES: u64 = 1_048_576;
@@ -11,6 +12,12 @@ struct LogFile {
 }
 
 static LOGGER: OnceLock<Mutex<Option<LogFile>>> = OnceLock::new();
+static CONSOLE_QUIET: AtomicBool = AtomicBool::new(false);
+
+/// Stops lines going to stderr; the log file, when opened, still gets them. For commands that talk to a person.
+pub fn silence_console() {
+    CONSOLE_QUIET.store(true, Ordering::Relaxed);
+}
 
 /// Opens `flaccy.log` inside `directory`, creating the directory first. The app
 /// passes its data directory so the library never reads app configuration.
@@ -43,7 +50,9 @@ pub fn error(category: &str, message: &str) {
 fn write_line(level: &str, category: &str, message: &str) {
     let stamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
     let line = format!("{stamp} [{level}] [{category}] {message}\n");
-    eprint!("{line}");
+    if !CONSOLE_QUIET.load(Ordering::Relaxed) {
+        eprint!("{line}");
+    }
     let Some(mutex) = LOGGER.get() else { return };
     let Ok(mut guard) = mutex.lock() else { return };
     let Some(log) = guard.as_mut() else { return };

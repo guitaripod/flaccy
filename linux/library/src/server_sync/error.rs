@@ -1,4 +1,14 @@
+use super::transport::ApiError;
 use std::fmt;
+
+/// Why a server cannot be used with this version of Flaccy.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Incompatibility {
+    /// The server speaks an older protocol, or lacks sync.
+    ServerTooOld,
+    /// The server speaks only a newer protocol than this Flaccy knows.
+    AppTooOld,
+}
 
 /// Everything sync can fail with.
 #[derive(Debug)]
@@ -13,6 +23,10 @@ pub enum SyncError {
     Io(std::io::Error),
     /// No server is configured on this database.
     NotConfigured,
+    /// A call to the server failed in a way the person may need to act on.
+    Api(ApiError),
+    /// The server and this Flaccy cannot speak to each other.
+    Incompatible(Incompatibility),
 }
 
 /// The result type of the sync module.
@@ -26,11 +40,20 @@ impl fmt::Display for SyncError {
             SyncError::Protocol(message) => write!(formatter, "protocol: {message}"),
             SyncError::Io(error) => write!(formatter, "file: {error}"),
             SyncError::NotConfigured => write!(formatter, "no Flaccy Server is configured"),
+            SyncError::Api(error) => write!(formatter, "{error}"),
+            SyncError::Incompatible(Incompatibility::ServerTooOld) => write!(formatter, "This server is too old for sync. Update Flaccy Server to 1.0 or newer."),
+            SyncError::Incompatible(Incompatibility::AppTooOld) => write!(formatter, "This server needs a newer Flaccy. Update Flaccy and try again."),
         }
     }
 }
 
 impl std::error::Error for SyncError {}
+
+impl From<ApiError> for SyncError {
+    fn from(error: ApiError) -> Self {
+        SyncError::Api(error)
+    }
+}
 
 impl From<rusqlite::Error> for SyncError {
     fn from(error: rusqlite::Error) -> Self {

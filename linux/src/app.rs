@@ -94,6 +94,8 @@ pub struct AppCore {
     pub last_session: RefCell<Option<SavedSession>>,
     session_save_queued: Cell<bool>,
     session_saved_position: Cell<f64>,
+    /// Flaccy Server sync, set once the window exists.
+    pub server_sync: std::cell::OnceCell<Rc<crate::server_sync::Service>>,
 }
 
 /// How long after launch the servers are refreshed first, and how often after.
@@ -198,6 +200,7 @@ impl AppCore {
             ),
             session_save_queued: Cell::new(false),
             session_saved_position: Cell::new(0.0),
+            server_sync: std::cell::OnceCell::new(),
         });
         core.artwork.start(&core);
         core.wire_scrobbler();
@@ -559,7 +562,7 @@ impl AppCore {
         (Scope::Artist, artists)
     }
 
-    pub fn start(self: &Rc<Self>, _window: &adw::ApplicationWindow) {
+    pub fn start(self: &Rc<Self>, window: &adw::ApplicationWindow) {
         self.eq.start();
         self.purge_expired_versions();
         self.reload_library();
@@ -575,6 +578,7 @@ impl AppCore {
         self.schedule_periodic_drain();
         self.schedule_wantlist_refresh();
         crate::history_sync::schedule(self);
+        crate::server_sync::start(self, window);
         self.wire_lastfm_sync();
         if config::demo_mode() && demo_autoplays() {
             self.schedule_demo_autoplay();

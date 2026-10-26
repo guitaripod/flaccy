@@ -104,6 +104,8 @@ pub enum AppEvent {
     /// songs are downloaded, whether a server can be reached or a refresh began
     /// or ended. Views that mark remote songs repaint.
     RemoteChanged,
+    /// Flaccy Server sync changed: connected or disconnected, or its status line has a new state.
+    ServerSyncChanged,
     /// The equalizer's saved state, the profile in force or whether it is
     /// running changed.
     EqualizerChanged,

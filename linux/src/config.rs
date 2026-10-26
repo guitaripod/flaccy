@@ -68,6 +68,10 @@ pub struct Config {
     /// Which source the Songs page is narrowed to: empty for all of them,
     /// `local` for the music folder, or a server id.
     pub songs_source: String,
+    /// What the connected Flaccy Server calls itself; empty when none is connected.
+    pub flaccy_server_name: String,
+    /// The person closed the Servers footer about Flaccy Server for good.
+    pub flaccy_server_nudge_dismissed: bool,
 }
 
 /// The cache cap a fresh install starts with, and the smallest one offered.
@@ -196,6 +200,8 @@ impl Default for Config {
             music_video_align: true,
             remote_cache_cap_gb: REMOTE_CACHE_CAP_DEFAULT_GB,
             songs_source: String::new(),
+            flaccy_server_name: String::new(),
+            flaccy_server_nudge_dismissed: false,
         }
     }
 }
@@ -228,6 +234,10 @@ pub fn config_dir() -> PathBuf {
 
 pub fn config_path() -> PathBuf {
     config_dir().join("config.toml")
+}
+
+pub fn server_token_path() -> PathBuf {
+    config_dir().join("flaccy-server-token")
 }
 
 pub fn session_path() -> PathBuf {

@@ -13,6 +13,8 @@ pub mod delete;
 pub mod downloads;
 pub mod equalizer;
 pub mod filter_chips;
+pub mod flaccy_server;
+pub mod flaccy_server_dialog;
 pub mod guide;
 pub mod home;
 pub mod home_backdrop;
