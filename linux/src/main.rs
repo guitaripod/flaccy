@@ -17,6 +17,7 @@ mod home_state;
 pub(crate) use flaccy_library::hygiene;
 mod history_sync;
 mod lastfm;
+mod launch_probe;
 pub(crate) use flaccy_library::library;
 /// The load bar mirrors `FlaccyCore.LibraryLoadProgress` and lives in the
 /// `flaccy-shared` workspace member, whose tests build on any machine — the
