@@ -4,7 +4,7 @@
 
 use crate::apply::{self, Caller, Outcome};
 use crate::ledger::{self, SecondEvent};
-use crate::model::{PlaylistDoc, Scalar};
+use crate::model::{Love, PlaylistDoc, Rating, Scalar, SessionDoc};
 use crate::mutation::{parse, Op};
 use crate::position;
 use crate::rebase::{self, PendingMutation};
@@ -105,6 +105,92 @@ pub fn rebase_playlist(input: &str) -> String {
             &input.pending,
         );
         Ok(json!({ "doc": doc }))
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RebaseLoveInput {
+    song_key: String,
+    base: Option<Love>,
+    caller: Caller,
+    pending: Vec<PendingMutation>,
+}
+
+/// Folds pending mutations onto a base love. Input `{songKey, base, caller, pending}`, output `{love}`.
+pub fn rebase_love(input: &str) -> String {
+    run(input, |input: RebaseLoveInput| {
+        let love = rebase::fold_love(
+            &input.song_key,
+            input.base.as_ref(),
+            &input.caller,
+            &input.pending,
+        );
+        Ok(json!({ "love": love }))
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RebaseRatingInput {
+    song_key: String,
+    base: Option<Rating>,
+    caller: Caller,
+    pending: Vec<PendingMutation>,
+}
+
+/// Folds pending mutations onto a base rating. Input `{songKey, base, caller, pending}`, output `{rating}`.
+pub fn rebase_rating(input: &str) -> String {
+    run(input, |input: RebaseRatingInput| {
+        let rating = rebase::fold_rating(
+            &input.song_key,
+            input.base.as_ref(),
+            &input.caller,
+            &input.pending,
+        );
+        Ok(json!({ "rating": rating }))
+    })
+}
+
+#[derive(Deserialize)]
+struct RebaseScalarInput {
+    key: String,
+    base: Option<Scalar>,
+    caller: Caller,
+    pending: Vec<PendingMutation>,
+}
+
+/// Folds pending mutations onto a base scalar. Input `{key, base, caller, pending}`, output `{scalar}`.
+pub fn rebase_scalar(input: &str) -> String {
+    run(input, |input: RebaseScalarInput| {
+        let scalar = rebase::fold_scalar(
+            &input.key,
+            input.base.as_ref(),
+            &input.caller,
+            &input.pending,
+        );
+        Ok(json!({ "scalar": scalar }))
+    })
+}
+
+#[derive(Deserialize)]
+struct RebaseSessionInput {
+    device: String,
+    base: Option<SessionDoc>,
+    caller: Caller,
+    pending: Vec<PendingMutation>,
+}
+
+/// Folds pending mutations onto a base session. Input `{device, base, caller, pending}`, output `{session}`.
+pub fn rebase_session(input: &str) -> String {
+    run(input, |input: RebaseSessionInput| {
+        let session = rebase::fold_session(
+            &input.device,
+            input.base.as_ref(),
+            &input.caller,
+            &input.pending,
+        );
+        Ok(json!({ "session": session }))
     })
 }
 

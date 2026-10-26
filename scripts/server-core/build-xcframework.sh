@@ -7,15 +7,14 @@ IOS_SIMULATOR_TRIPLES=(aarch64-apple-ios-sim x86_64-apple-ios)
 
 usage() {
     cat <<USAGE
-usage: $(basename "$0") CRATE_DIR MODULE_NAME OUT_DIR [--package-template DIR] [--test]
+usage: $(basename "$0") CRATE_DIR MODULE_NAME OUT_DIR
 
 Builds the UniFFI crate in CRATE_DIR for macOS (arm64+x86_64), iOS device and iOS
 simulator (arm64+x86_64), generates the Swift bindings in library mode, and writes
-OUT_DIR/MODULE_NAMEFFI.xcframework and OUT_DIR/Generated/.
-With --package-template the template is copied to OUT_DIR/Package, the XCFramework
-and the generated Swift file are placed in it, and --test runs swift test there.
+OUT_DIR/MODULE_NAMEFFI.xcframework and OUT_DIR/Generated/. Debug symbols are stripped
+from the XCFramework slices; the bindings are generated from the unstripped host library.
 
-The crate needs a uniffi-bindgen bin behind a "bindgen" feature (see toy-core).
+The crate needs a uniffi-bindgen bin behind a "bindgen" feature (see server-core-ffi).
 Cargo profile overrides pass through the environment, for example
 CARGO_PROFILE_RELEASE_OPT_LEVEL=z CARGO_PROFILE_RELEASE_LTO=true.
 USAGE
@@ -32,7 +31,7 @@ require_tool() {
 
 require_tools() {
     local tool
-    for tool in cargo rustup rustc lipo xcodebuild python3 swift; do
+    for tool in cargo rustup rustc lipo strip xcodebuild python3; do
         require_tool "$tool"
     done
 }
@@ -56,14 +55,17 @@ ensure_rust_targets() {
 static_library_name() {
     cargo metadata --no-deps --format-version 1 --manifest-path "$CRATE_DIR/Cargo.toml" |
         python3 -c '
-import json, sys
+import json, os, sys
+manifest = os.path.realpath(sys.argv[1])
 for package in json.load(sys.stdin)["packages"]:
+    if os.path.realpath(package["manifest_path"]) != manifest:
+        continue
     for target in package["targets"]:
         if "staticlib" in target["crate_types"]:
             print(target["name"])
             raise SystemExit
 raise SystemExit("crate has no staticlib target")
-'
+' "$CRATE_DIR/Cargo.toml"
 }
 
 cargo_target_dir() {
@@ -106,6 +108,13 @@ make_slice_libraries() {
     fat_library "$SLICES_DIR/ios-simulator/lib$LIB_NAME.a" "${IOS_SIMULATOR_TRIPLES[@]}"
 }
 
+strip_slice_libraries() {
+    local library
+    for library in "$SLICES_DIR"/*/lib"$LIB_NAME".a; do
+        strip -S "$library" 2> >(grep -v 'already stripped' >&2 || true)
+    done
+}
+
 generate_bindings() {
     GENERATED_DIR="$OUT_DIR/Generated"
     rm -rf "$GENERATED_DIR"
@@ -146,44 +155,12 @@ create_xcframework() {
         -output "$XCFRAMEWORK"
 }
 
-substitute_xcframework_path() {
-    local manifest="$1/Package.swift" content
-    content=$(<"$manifest")
-    printf '%s\n' "${content//__XCFRAMEWORK_PATH__/${MODULE_NAME}FFI.xcframework}" >"$manifest"
-}
-
-assemble_package() {
-    PACKAGE_DIR="$OUT_DIR/Package"
-    rm -rf "$PACKAGE_DIR"
-    cp -R "$PACKAGE_TEMPLATE" "$PACKAGE_DIR"
-    substitute_xcframework_path "$PACKAGE_DIR"
-    cp -R "$XCFRAMEWORK" "$PACKAGE_DIR/"
-    rm -f "$PACKAGE_DIR/Sources/${MODULE_NAME}Bindings"/*.swift "$PACKAGE_DIR/Sources/${MODULE_NAME}Bindings/README.txt"
-    mkdir -p "$PACKAGE_DIR/Sources/${MODULE_NAME}Bindings"
-    cp "$GENERATED_DIR"/*.swift "$PACKAGE_DIR/Sources/${MODULE_NAME}Bindings/"
-}
-
-run_package_tests() {
-    (cd "$PACKAGE_DIR" && swift test)
-}
-
 parse_arguments() {
-    [[ $# -ge 3 ]] || { usage >&2; exit 2; }
+    [[ $# -eq 3 ]] || { usage >&2; exit 2; }
     CRATE_DIR=$(absolute_path "$1")
     MODULE_NAME=$2
     mkdir -p "$3"
     OUT_DIR=$(absolute_path "$3")
-    shift 3
-    PACKAGE_TEMPLATE=""
-    RUN_TESTS=0
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --package-template) PACKAGE_TEMPLATE=$(absolute_path "$2"); shift 2 ;;
-            --test) RUN_TESTS=1; shift ;;
-            *) usage >&2; exit 2 ;;
-        esac
-    done
-    [[ $RUN_TESTS -eq 0 || -n $PACKAGE_TEMPLATE ]] || fail "--test needs --package-template"
 }
 
 main() {
@@ -194,12 +171,9 @@ main() {
     build_all_triples
     make_slice_libraries
     generate_bindings
+    strip_slice_libraries
     make_headers_dir
     create_xcframework
-    if [[ -n $PACKAGE_TEMPLATE ]]; then
-        assemble_package
-        [[ $RUN_TESTS -eq 0 ]] || run_package_tests
-    fi
     echo "xcframework: $XCFRAMEWORK"
 }
 

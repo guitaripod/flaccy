@@ -156,3 +156,140 @@ fn bad_input_answers_an_error_document() {
     );
     assert!(wrong_kind["error"].is_string());
 }
+
+fn rebase_input(identity: Value, base: Value, pending: Value) -> Value {
+    let mut input = json!({ "base": base, "caller": caller_json(), "pending": pending });
+    input
+        .as_object_mut()
+        .unwrap()
+        .extend(identity.as_object().unwrap().clone());
+    input
+}
+
+fn pending(mutation: flaccy_server_core::wire::Mutation) -> Value {
+    json!({ "mutation": mutation, "failed": false })
+}
+
+#[test]
+fn rebase_love_folds_a_pending_love_over_the_base() {
+    let key = song_key("artist", "title");
+    let reference = json!({ "songKey": key, "title": "Title", "artist": "Artist" });
+    let love = mutation(
+        1,
+        "love.set",
+        300,
+        json!({ "songKey": key, "ref": reference, "loved": true }),
+    );
+    let answer = call(
+        json_api::rebase_love,
+        rebase_input(
+            json!({ "songKey": key }),
+            Value::Null,
+            json!([pending(love)]),
+        ),
+    );
+    assert_eq!(answer["love"]["loved"], true);
+    assert_eq!(answer["love"]["stamp"], 300);
+    let unrelated = call(
+        json_api::rebase_love,
+        rebase_input(
+            json!({ "songKey": song_key("other", "song") }),
+            Value::Null,
+            json!([]),
+        ),
+    );
+    assert_eq!(unrelated, json!({ "love": null }));
+}
+
+#[test]
+fn rebase_rating_folds_a_pending_rating_and_skips_failed_ones() {
+    let key = song_key("artist", "title");
+    let reference = json!({ "songKey": key, "title": "Title", "artist": "Artist" });
+    let rate = |id: i64, stamp: i64, stars: u8, failed: bool| {
+        let mutation = mutation(
+            id,
+            "rating.set",
+            stamp,
+            json!({ "songKey": key, "ref": reference, "rating": stars }),
+        );
+        json!({ "mutation": mutation, "failed": failed })
+    };
+    let answer = call(
+        json_api::rebase_rating,
+        rebase_input(
+            json!({ "songKey": key }),
+            Value::Null,
+            json!([rate(1, 300, 4, false), rate(2, 400, 1, true)]),
+        ),
+    );
+    assert_eq!(answer["rating"]["rating"], 4);
+}
+
+#[test]
+fn rebase_scalar_folds_set_then_clear() {
+    let set = mutation(
+        1,
+        "scalar.set",
+        200,
+        json!({ "key": "pref/theme", "value": "dark" }),
+    );
+    let clear = mutation(2, "scalar.clear", 300, json!({ "key": "pref/theme" }));
+    let only_set = call(
+        json_api::rebase_scalar,
+        rebase_input(
+            json!({ "key": "pref/theme" }),
+            Value::Null,
+            json!([pending(set.clone())]),
+        ),
+    );
+    assert_eq!(only_set["scalar"]["value"], "dark");
+    let cleared = call(
+        json_api::rebase_scalar,
+        rebase_input(
+            json!({ "key": "pref/theme" }),
+            Value::Null,
+            json!([pending(set), pending(clear)]),
+        ),
+    );
+    assert_eq!(cleared["scalar"]["deleted"], true);
+}
+
+#[test]
+fn rebase_session_folds_only_the_callers_device() {
+    let save = mutation(
+        1,
+        "session.save",
+        200,
+        json!({ "session": { "queue": [1, 2] } }),
+    );
+    let own = call(
+        json_api::rebase_session,
+        rebase_input(
+            json!({ "device": "phone" }),
+            Value::Null,
+            json!([pending(save.clone())]),
+        ),
+    );
+    assert_eq!(own["session"]["session"]["queue"], json!([1, 2]));
+    let other = call(
+        json_api::rebase_session,
+        rebase_input(
+            json!({ "device": "mac" }),
+            Value::Null,
+            json!([pending(save)]),
+        ),
+    );
+    assert_eq!(other, json!({ "session": null }));
+}
+
+#[test]
+fn rebase_functions_reject_malformed_input() {
+    for function in [
+        json_api::rebase_love,
+        json_api::rebase_rating,
+        json_api::rebase_scalar,
+        json_api::rebase_session,
+    ] {
+        assert!(call(function, json!({ "pending": 3 }))["error"].is_string());
+    }
+}

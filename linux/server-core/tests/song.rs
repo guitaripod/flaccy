@@ -45,3 +45,19 @@ fn rec_ids_depend_on_the_counter() {
 fn rec_id_matches_the_documented_construction() {
     assert_eq!(event_id_rec("dev", "inst", 3), "774e544cb37f53a8a84bcc4b");
 }
+
+#[test]
+fn derived_ids_are_stable_uuid_shaped_and_name_normalised() {
+    let first = flaccy_server_core::song::playlist_id("Road Trip", 0);
+    assert_eq!(first, flaccy_server_core::song::playlist_id("  road   TRIP ", 0));
+    assert_ne!(first, flaccy_server_core::song::playlist_id("Road Trip", 1));
+    assert_eq!(first.len(), 36);
+    assert_eq!(first.as_bytes()[14], b'8');
+    assert!(matches!(first.as_bytes()[19], b'8' | b'9' | b'a' | b'b'));
+    let song = flaccy_server_core::song::song_key("artist", "title");
+    let entry = flaccy_server_core::song::entry_id(&first, &song, 0);
+    assert_ne!(entry, flaccy_server_core::song::entry_id(&first, &song, 1));
+    assert_eq!(entry, flaccy_server_core::song::entry_id(&first, &song, 0));
+    assert_eq!(first, "808b3163-8999-82df-8ec4-31b79a830737");
+    assert_eq!(entry, "05f6181a-5d5f-8c20-9055-6ccd8a63e0f4");
+}

@@ -211,3 +211,12 @@ Mutation batch ≤ 500; request body ≤ 1 MiB (blobs ≤ 2 MiB); a scalar value
 ## 12. Corpus format
 
 `linux/server-core/tests/corpus/*.json`: `{"name", "steps": [ {"actor": "server|<client name>", "op": "push|pull|offline|online|crash|restore", "mutations": […], "stampOffsetMs": 0} ], "expect": {"server": {…entities…}, "clients": {"<name>": {…visible entities…}}}}`. The Rust test runner replays every file against the in-process server and clients and compares canonical JSON. Swift binding tests replay a subset through the UniFFI functions.
+
+## 13. Deterministic ids and the import floor
+
+Playlists and entries that existed before a device first connected get ids every device derives identically, so two devices connecting at once converge with no coordination. The one implementation is `flaccy_server_core::song::{normalize_playlist_name, playlist_id, entry_id}`; Apple clients call it through the binding and must never re-implement it.
+
+- `playlist_id(name, occurrence)`: `occurrence` is 0 for the first playlist with that normalized name on the device (ordered by creation date, then local id), 1 for the next, and so on. Only occurrence 0 is ever auto-merged across devices; every later same-named playlist keeps a fresh UUIDv7.
+- `entry_id(playlistId, songKey, occurrence)`: `occurrence` is 0 for the first entry of that song in the playlist by position, 1 for the next.
+- Loves, ratings and other scalars that exist before the first connect are emitted with the import floor stamp `Stamp::from_wall_ms(1_577_836_800_000)` (2020-01-01T00:00:00Z, counter 0), so any real action wins over an imported one.
+- Listens that exist before the first connect are sent as `listen.record` batches of 500 with `source = migrated` and the ids of `event_id_mig`.

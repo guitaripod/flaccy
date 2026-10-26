@@ -40,7 +40,7 @@ Flaccy Server's sync engine as pure logic (no I/O, database, async or threads). 
 - `canonical_json(&Value)`, `arg_hash(name, args)` (the push retry check), `state_digest(&[Entity])`.
 
 ## json_api (string in, string out, for UniFFI)
-- `apply_playlist`, `apply_scalar`, `rebase_playlist`, `between`, `song_key`, `suppressed_flags`, `next_stamp`. Each takes one JSON document and answers one; a failure is `{"error": "..."}`. Shapes are in the doc comments.
+- `apply_playlist`, `apply_scalar`, `rebase_playlist`, `rebase_love`, `rebase_rating`, `rebase_scalar`, `rebase_session`, `between`, `song_key`, `suppressed_flags`, `next_stamp`. Each takes one JSON document and answers one; a failure is `{"error": "..."}`. Shapes are in the doc comments.
 
 ## sim (tests and `--features sim`)
 - `sim::server::ServerModel` (push, pull, snapshot, restore), `sim::client::ClientModel` (record, visible, push_request, on_push_response, on_pull_response), `sim::world::run_seed(seed)`. `cargo test -p flaccy-server-core` runs 300 seeds; `SIM_SEEDS=20000 cargo test --release -p flaccy-server-core -- --ignored sim_long` runs more.

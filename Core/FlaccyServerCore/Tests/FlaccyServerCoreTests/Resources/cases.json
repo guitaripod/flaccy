@@ -1,0 +1,4782 @@
+[
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        },
+        {
+          "id": "e1",
+          "kind": "playlist_entry"
+        },
+        {
+          "id": "e2",
+          "kind": "playlist_entry"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": null,
+      "mutation": {
+        "args": {
+          "entries": [
+            {
+              "id": "e1",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 1",
+                "durationMs": 200001,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/1.flac",
+                "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                "title": "Title 1"
+              }
+            },
+            {
+              "id": "e2",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 2",
+                "durationMs": 200002,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/2.flac",
+                "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+                "title": "Title 2"
+              }
+            }
+          ],
+          "id": "p1",
+          "name": "Mix"
+        },
+        "id": 1,
+        "name": "playlist.create",
+        "stamp": 100
+      }
+    },
+    "name": "create with two entries"
+  },
+  {
+    "expected": {
+      "changed": [],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "noop"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "entries": [
+            {
+              "id": "e1",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 1",
+                "durationMs": 200001,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/1.flac",
+                "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                "title": "Title 1"
+              }
+            },
+            {
+              "id": "e2",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 2",
+                "durationMs": 200002,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/2.flac",
+                "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+                "title": "Title 2"
+              }
+            }
+          ],
+          "id": "p1",
+          "name": "Mix"
+        },
+        "id": 1,
+        "name": "playlist.create",
+        "stamp": 100
+      }
+    },
+    "name": "create again is a noop for the owner"
+  },
+  {
+    "expected": {
+      "changed": [],
+      "code": "forbidden",
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "invalid"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "tablet",
+        "role": "member",
+        "user": "bob"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "entries": [
+            {
+              "id": "e1",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 1",
+                "durationMs": 200001,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/1.flac",
+                "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                "title": "Title 1"
+              }
+            },
+            {
+              "id": "e2",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 2",
+                "durationMs": 200002,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/2.flac",
+                "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+                "title": "Title 2"
+              }
+            }
+          ],
+          "id": "p1",
+          "name": "Mix"
+        },
+        "id": 1,
+        "name": "playlist.create",
+        "stamp": 100
+      }
+    },
+    "name": "create over another user's playlist is forbidden"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Renamed",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "p1",
+          "name": "Renamed"
+        },
+        "id": 2,
+        "name": "playlist.rename",
+        "stamp": 200
+      }
+    },
+    "name": "rename"
+  },
+  {
+    "expected": {
+      "changed": [],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "noop"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "p1",
+          "name": "Renamed"
+        },
+        "id": 2,
+        "name": "playlist.rename",
+        "stamp": 50
+      }
+    },
+    "name": "rename with an older stamp is a noop"
+  },
+  {
+    "expected": {
+      "changed": [],
+      "code": "unknown_playlist",
+      "doc": null,
+      "status": "invalid"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": null,
+      "mutation": {
+        "args": {
+          "id": "p1",
+          "name": "Renamed"
+        },
+        "id": 2,
+        "name": "playlist.rename",
+        "stamp": 200
+      }
+    },
+    "name": "rename of an unknown playlist is invalid"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Renamed",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 900,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "p1",
+          "name": "Renamed"
+        },
+        "id": 2,
+        "name": "playlist.rename",
+        "stamp": 60
+      },
+      "stamp": 900
+    },
+    "name": "rename takes the stored stamp when given"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 210,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "blob": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "id": "p1"
+        },
+        "id": 3,
+        "name": "playlist.setCover",
+        "stamp": 210
+      }
+    },
+    "name": "set cover"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 220,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 210,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "p1"
+        },
+        "id": 4,
+        "name": "playlist.clearCover",
+        "stamp": 220
+      }
+    },
+    "name": "clear cover"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": false,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Renamed",
+          "owner": "alice",
+          "stamps": {
+            "alive": 230,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Renamed",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "p1"
+        },
+        "id": 5,
+        "name": "playlist.delete",
+        "stamp": 230
+      }
+    },
+    "name": "delete"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Renamed",
+          "owner": "alice",
+          "stamps": {
+            "alive": 240,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": false,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Renamed",
+          "owner": "alice",
+          "stamps": {
+            "alive": 230,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "p1"
+        },
+        "id": 6,
+        "name": "playlist.restore",
+        "stamp": 240
+      }
+    },
+    "name": "restore"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 250
+          },
+          "visibility": "household"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "p1",
+          "visibility": "household"
+        },
+        "id": 7,
+        "name": "playlist.setVisibility",
+        "stamp": 250
+      }
+    },
+    "name": "household visibility by the owner"
+  },
+  {
+    "expected": {
+      "changed": [],
+      "code": "forbidden",
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "invalid"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "kiosk",
+        "role": "guest",
+        "user": "gus"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "p1",
+          "visibility": "household"
+        },
+        "id": 7,
+        "name": "playlist.setVisibility",
+        "stamp": 250
+      }
+    },
+    "name": "visibility by a guest is forbidden"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "p1",
+          "kind": "playlist"
+        },
+        {
+          "id": "e1",
+          "kind": "playlist_entry"
+        },
+        {
+          "id": "e2",
+          "kind": "playlist_entry"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": null,
+      "mutation": {
+        "args": {
+          "entries": [
+            {
+              "id": "e1",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 1",
+                "durationMs": 200001,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/1.flac",
+                "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                "title": "Title 1"
+              }
+            },
+            {
+              "id": "e2",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 2",
+                "durationMs": 200002,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/2.flac",
+                "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+                "title": "Title 2"
+              }
+            }
+          ],
+          "id": "p1",
+          "name": "Mix"
+        },
+        "id": 1,
+        "name": "playlist.create",
+        "stamp": 100
+      }
+    },
+    "name": "entry base"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "e3",
+          "kind": "playlist_entry"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e3",
+            "playlist": "p1",
+            "pos": "U",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 3",
+              "durationMs": 200003,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/3.flac",
+              "songKey": "81c007364fe383b9cdb17b2591c27a30",
+              "title": "Title 3"
+            },
+            "stamps": {
+              "alive": 300,
+              "pos": 300,
+              "ref": 300
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "e3",
+          "place": {
+            "kind": "first"
+          },
+          "playlist": "p1",
+          "ref": {
+            "album": "Album",
+            "albumKey": null,
+            "artist": "Artist 3",
+            "durationMs": 200003,
+            "fp": null,
+            "mbid": null,
+            "relPath": "a/3.flac",
+            "songKey": "81c007364fe383b9cdb17b2591c27a30",
+            "title": "Title 3"
+          }
+        },
+        "id": 8,
+        "name": "entry.insert",
+        "stamp": 300
+      }
+    },
+    "name": "insert first"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "e3",
+          "kind": "playlist_entry"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e3",
+            "playlist": "p1",
+            "pos": "VV",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 3",
+              "durationMs": 200003,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/3.flac",
+              "songKey": "81c007364fe383b9cdb17b2591c27a30",
+              "title": "Title 3"
+            },
+            "stamps": {
+              "alive": 300,
+              "pos": 300,
+              "ref": 300
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "e3",
+          "place": {
+            "id": "e1",
+            "kind": "after"
+          },
+          "playlist": "p1",
+          "ref": {
+            "album": "Album",
+            "albumKey": null,
+            "artist": "Artist 3",
+            "durationMs": 200003,
+            "fp": null,
+            "mbid": null,
+            "relPath": "a/3.flac",
+            "songKey": "81c007364fe383b9cdb17b2591c27a30",
+            "title": "Title 3"
+          }
+        },
+        "id": 8,
+        "name": "entry.insert",
+        "stamp": 300
+      }
+    },
+    "name": "insert after an anchor"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "e3",
+          "kind": "playlist_entry"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e3",
+            "playlist": "p1",
+            "pos": "VV",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 3",
+              "durationMs": 200003,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/3.flac",
+              "songKey": "81c007364fe383b9cdb17b2591c27a30",
+              "title": "Title 3"
+            },
+            "stamps": {
+              "alive": 300,
+              "pos": 300,
+              "ref": 300
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "e3",
+          "place": {
+            "id": "e2",
+            "kind": "before"
+          },
+          "playlist": "p1",
+          "ref": {
+            "album": "Album",
+            "albumKey": null,
+            "artist": "Artist 3",
+            "durationMs": 200003,
+            "fp": null,
+            "mbid": null,
+            "relPath": "a/3.flac",
+            "songKey": "81c007364fe383b9cdb17b2591c27a30",
+            "title": "Title 3"
+          }
+        },
+        "id": 8,
+        "name": "entry.insert",
+        "stamp": 300
+      }
+    },
+    "name": "insert before an anchor"
+  },
+  {
+    "expected": {
+      "changed": [],
+      "code": "unknown_anchor",
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "invalid"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "e3",
+          "place": {
+            "id": "ghost",
+            "kind": "after"
+          },
+          "playlist": "p1",
+          "ref": {
+            "album": "Album",
+            "albumKey": null,
+            "artist": "Artist 3",
+            "durationMs": 200003,
+            "fp": null,
+            "mbid": null,
+            "relPath": "a/3.flac",
+            "songKey": "81c007364fe383b9cdb17b2591c27a30",
+            "title": "Title 3"
+          }
+        },
+        "id": 8,
+        "name": "entry.insert",
+        "stamp": 300
+      }
+    },
+    "name": "insert after an unknown anchor is invalid"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "e4",
+          "kind": "playlist_entry"
+        },
+        {
+          "id": "e5",
+          "kind": "playlist_entry"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e3",
+            "playlist": "p1",
+            "pos": "VV",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 3",
+              "durationMs": 200003,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/3.flac",
+              "songKey": "81c007364fe383b9cdb17b2591c27a30",
+              "title": "Title 3"
+            },
+            "stamps": {
+              "alive": 300,
+              "pos": 300,
+              "ref": 300
+            }
+          },
+          {
+            "alive": true,
+            "id": "e4",
+            "playlist": "p1",
+            "pos": "X",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 4",
+              "durationMs": 200004,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/4.flac",
+              "songKey": "392b834829de5801e9caf29aa82ce14f",
+              "title": "Title 4"
+            },
+            "stamps": {
+              "alive": 310,
+              "pos": 310,
+              "ref": 310
+            }
+          },
+          {
+            "alive": true,
+            "id": "e5",
+            "playlist": "p1",
+            "pos": "Y",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 5",
+              "durationMs": 200005,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/5.flac",
+              "songKey": "c90f4e9ab6f67bbbf47dd178d187a0ca",
+              "title": "Title 5"
+            },
+            "stamps": {
+              "alive": 310,
+              "pos": 310,
+              "ref": 310
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e3",
+            "playlist": "p1",
+            "pos": "VV",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 3",
+              "durationMs": 200003,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/3.flac",
+              "songKey": "81c007364fe383b9cdb17b2591c27a30",
+              "title": "Title 3"
+            },
+            "stamps": {
+              "alive": 300,
+              "pos": 300,
+              "ref": 300
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "entries": [
+            {
+              "id": "e4",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 4",
+                "durationMs": 200004,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/4.flac",
+                "songKey": "392b834829de5801e9caf29aa82ce14f",
+                "title": "Title 4"
+              }
+            },
+            {
+              "id": "e5",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 5",
+                "durationMs": 200005,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/5.flac",
+                "songKey": "c90f4e9ab6f67bbbf47dd178d187a0ca",
+                "title": "Title 5"
+              }
+            }
+          ],
+          "place": {
+            "kind": "last"
+          },
+          "playlist": "p1"
+        },
+        "id": 9,
+        "name": "entry.insertMany",
+        "stamp": 310
+      }
+    },
+    "name": "insert many at the end"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "e1",
+          "kind": "playlist_entry"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "X",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 320,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "e1",
+          "place": {
+            "kind": "last"
+          }
+        },
+        "id": 10,
+        "name": "entry.move",
+        "stamp": 320
+      }
+    },
+    "name": "move to the end"
+  },
+  {
+    "expected": {
+      "changed": [],
+      "code": "unknown_anchor",
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "invalid"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "ghost",
+          "place": {
+            "kind": "first"
+          }
+        },
+        "id": 11,
+        "name": "entry.move",
+        "stamp": 321
+      }
+    },
+    "name": "move of an unknown entry is invalid"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "e2",
+          "kind": "playlist_entry"
+        }
+      ],
+      "code": null,
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": false,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 330,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "id": "e2"
+        },
+        "id": 12,
+        "name": "entry.remove",
+        "stamp": 330
+      }
+    },
+    "name": "remove an entry"
+  },
+  {
+    "expected": {
+      "error": "not a playlist mutation"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {
+          "key": "pref/theme"
+        },
+        "id": 13,
+        "name": "scalar.clear",
+        "stamp": 340
+      }
+    },
+    "name": "a scalar mutation is not a playlist mutation"
+  },
+  {
+    "expected": {
+      "error": "Unsupported"
+    },
+    "function": "applyPlaylist",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "mutation": {
+        "args": {},
+        "id": 14,
+        "name": "playlist.explode",
+        "stamp": 350
+      }
+    },
+    "name": "an unknown mutation name is an error"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "pref/theme",
+          "kind": "scalar"
+        }
+      ],
+      "code": null,
+      "scalar": {
+        "deleted": false,
+        "key": "pref/theme",
+        "stamp": 200,
+        "value": {
+          "accent": [
+            1,
+            2,
+            3
+          ],
+          "mode": "dark"
+        }
+      },
+      "status": "applied"
+    },
+    "function": "applyScalar",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "mutation": {
+        "args": {
+          "key": "pref/theme",
+          "value": {
+            "accent": [
+              1,
+              2,
+              3
+            ],
+            "mode": "dark"
+          }
+        },
+        "id": 1,
+        "name": "scalar.set",
+        "stamp": 200
+      },
+      "scalar": null
+    },
+    "name": "scalar set"
+  },
+  {
+    "expected": {
+      "changed": [],
+      "code": null,
+      "scalar": {
+        "deleted": false,
+        "key": "pref/theme",
+        "stamp": 200,
+        "value": {
+          "accent": [
+            1,
+            2,
+            3
+          ],
+          "mode": "dark"
+        }
+      },
+      "status": "noop"
+    },
+    "function": "applyScalar",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "mutation": {
+        "args": {
+          "key": "pref/theme",
+          "value": "light"
+        },
+        "id": 1,
+        "name": "scalar.set",
+        "stamp": 100
+      },
+      "scalar": {
+        "deleted": false,
+        "key": "pref/theme",
+        "stamp": 200,
+        "value": {
+          "accent": [
+            1,
+            2,
+            3
+          ],
+          "mode": "dark"
+        }
+      }
+    },
+    "name": "scalar set with an older stamp is a noop"
+  },
+  {
+    "expected": {
+      "changed": [
+        {
+          "id": "pref/theme",
+          "kind": "scalar"
+        }
+      ],
+      "code": null,
+      "scalar": {
+        "deleted": true,
+        "key": "pref/theme",
+        "stamp": 300,
+        "value": null
+      },
+      "status": "applied"
+    },
+    "function": "applyScalar",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "mutation": {
+        "args": {
+          "key": "pref/theme"
+        },
+        "id": 2,
+        "name": "scalar.clear",
+        "stamp": 300
+      },
+      "scalar": {
+        "deleted": false,
+        "key": "pref/theme",
+        "stamp": 200,
+        "value": {
+          "accent": [
+            1,
+            2,
+            3
+          ],
+          "mode": "dark"
+        }
+      }
+    },
+    "name": "scalar clear"
+  },
+  {
+    "expected": {
+      "error": "Invalid(BadKey)"
+    },
+    "function": "applyScalar",
+    "input": {
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "mutation": {
+        "args": {
+          "key": "nope/x",
+          "value": 1
+        },
+        "id": 3,
+        "name": "scalar.set",
+        "stamp": 400
+      },
+      "scalar": null
+    },
+    "name": "scalar set under an unknown prefix is an error"
+  },
+  {
+    "expected": {
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Pending",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      }
+    },
+    "function": "rebasePlaylist",
+    "input": {
+      "base": null,
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "entries": [
+                {
+                  "id": "e1",
+                  "ref": {
+                    "album": "Album",
+                    "albumKey": null,
+                    "artist": "Artist 1",
+                    "durationMs": 200001,
+                    "fp": null,
+                    "mbid": null,
+                    "relPath": "a/1.flac",
+                    "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                    "title": "Title 1"
+                  }
+                }
+              ],
+              "id": "p1",
+              "name": "Mix"
+            },
+            "id": 1,
+            "name": "playlist.create",
+            "stamp": 100
+          }
+        },
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "id": "p1",
+              "name": "Pending"
+            },
+            "id": 2,
+            "name": "playlist.rename",
+            "stamp": 200
+          }
+        }
+      ],
+      "playlistId": "p1"
+    },
+    "name": "rebase playlist from no base"
+  },
+  {
+    "expected": {
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Mix",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 100,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      }
+    },
+    "function": "rebasePlaylist",
+    "input": {
+      "base": null,
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "entries": [
+                {
+                  "id": "e1",
+                  "ref": {
+                    "album": "Album",
+                    "albumKey": null,
+                    "artist": "Artist 1",
+                    "durationMs": 200001,
+                    "fp": null,
+                    "mbid": null,
+                    "relPath": "a/1.flac",
+                    "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                    "title": "Title 1"
+                  }
+                }
+              ],
+              "id": "p1",
+              "name": "Mix"
+            },
+            "id": 1,
+            "name": "playlist.create",
+            "stamp": 100
+          }
+        },
+        {
+          "failed": true,
+          "mutation": {
+            "args": {
+              "id": "p1",
+              "name": "Pending"
+            },
+            "id": 2,
+            "name": "playlist.rename",
+            "stamp": 200
+          }
+        }
+      ],
+      "playlistId": "p1"
+    },
+    "name": "rebase playlist skips failed mutations"
+  },
+  {
+    "expected": {
+      "doc": {
+        "entries": [
+          {
+            "alive": false,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 220,
+              "pos": 100,
+              "ref": 100
+            }
+          },
+          {
+            "alive": true,
+            "id": "e2",
+            "playlist": "p1",
+            "pos": "W",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 2",
+              "durationMs": 200002,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/2.flac",
+              "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+              "title": "Title 2"
+            },
+            "stamps": {
+              "alive": 210,
+              "pos": 210,
+              "ref": 210
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Pending",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      }
+    },
+    "function": "rebasePlaylist",
+    "input": {
+      "base": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Pending",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "id": "e2",
+              "place": {
+                "kind": "last"
+              },
+              "playlist": "p1",
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 2",
+                "durationMs": 200002,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/2.flac",
+                "songKey": "8d6dedfe98eb2fa2a8c3b05a00e595ea",
+                "title": "Title 2"
+              }
+            },
+            "id": 3,
+            "name": "entry.insert",
+            "stamp": 210
+          }
+        },
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "id": "e1"
+            },
+            "id": 4,
+            "name": "entry.remove",
+            "stamp": 220
+          }
+        }
+      ],
+      "playlistId": "p1"
+    },
+    "name": "rebase playlist onto a base"
+  },
+  {
+    "expected": {
+      "doc": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Pending",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      }
+    },
+    "function": "rebasePlaylist",
+    "input": {
+      "base": {
+        "entries": [
+          {
+            "alive": true,
+            "id": "e1",
+            "playlist": "p1",
+            "pos": "V",
+            "ref": {
+              "album": "Album",
+              "albumKey": null,
+              "artist": "Artist 1",
+              "durationMs": 200001,
+              "fp": null,
+              "mbid": null,
+              "relPath": "a/1.flac",
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+              "title": "Title 1"
+            },
+            "stamps": {
+              "alive": 100,
+              "pos": 100,
+              "ref": 100
+            }
+          }
+        ],
+        "playlist": {
+          "alive": true,
+          "coverBlob": null,
+          "createdAt": 0,
+          "id": "p1",
+          "name": "Pending",
+          "owner": "alice",
+          "stamps": {
+            "alive": 100,
+            "cover": 100,
+            "name": 200,
+            "visibility": 100
+          },
+          "visibility": "private"
+        }
+      },
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "pending": [],
+      "playlistId": "p1"
+    },
+    "name": "rebase playlist with nothing pending"
+  },
+  {
+    "expected": {
+      "love": {
+        "loved": true,
+        "ref": {
+          "album": "Album",
+          "albumKey": null,
+          "artist": "Artist 1",
+          "durationMs": 200001,
+          "fp": null,
+          "mbid": null,
+          "relPath": "a/1.flac",
+          "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+          "title": "Title 1"
+        },
+        "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+        "stamp": 300
+      }
+    },
+    "function": "rebaseLove",
+    "input": {
+      "base": null,
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "loved": true,
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 1",
+                "durationMs": 200001,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/1.flac",
+                "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                "title": "Title 1"
+              },
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7"
+            },
+            "id": 5,
+            "name": "love.set",
+            "stamp": 300
+          }
+        }
+      ],
+      "songKey": "5448eb8ecb3026e5339e58403cbee5b7"
+    },
+    "name": "rebase love"
+  },
+  {
+    "expected": {
+      "love": {
+        "loved": false,
+        "ref": {
+          "album": "Album",
+          "albumKey": null,
+          "artist": "Artist 1",
+          "durationMs": 200001,
+          "fp": null,
+          "mbid": null,
+          "relPath": "a/1.flac",
+          "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+          "title": "Title 1"
+        },
+        "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+        "stamp": 310
+      }
+    },
+    "function": "rebaseLove",
+    "input": {
+      "base": null,
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "loved": true,
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 1",
+                "durationMs": 200001,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/1.flac",
+                "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                "title": "Title 1"
+              },
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7"
+            },
+            "id": 5,
+            "name": "love.set",
+            "stamp": 300
+          }
+        },
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "loved": false,
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 1",
+                "durationMs": 200001,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/1.flac",
+                "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                "title": "Title 1"
+              },
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7"
+            },
+            "id": 6,
+            "name": "love.set",
+            "stamp": 310
+          }
+        }
+      ],
+      "songKey": "5448eb8ecb3026e5339e58403cbee5b7"
+    },
+    "name": "rebase love last writer wins"
+  },
+  {
+    "expected": {
+      "rating": {
+        "rating": 4,
+        "ref": {
+          "album": "Album",
+          "albumKey": null,
+          "artist": "Artist 1",
+          "durationMs": 200001,
+          "fp": null,
+          "mbid": null,
+          "relPath": "a/1.flac",
+          "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+          "title": "Title 1"
+        },
+        "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+        "stamp": 320
+      }
+    },
+    "function": "rebaseRating",
+    "input": {
+      "base": null,
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "rating": 4,
+              "ref": {
+                "album": "Album",
+                "albumKey": null,
+                "artist": "Artist 1",
+                "durationMs": 200001,
+                "fp": null,
+                "mbid": null,
+                "relPath": "a/1.flac",
+                "songKey": "5448eb8ecb3026e5339e58403cbee5b7",
+                "title": "Title 1"
+              },
+              "songKey": "5448eb8ecb3026e5339e58403cbee5b7"
+            },
+            "id": 7,
+            "name": "rating.set",
+            "stamp": 320
+          }
+        }
+      ],
+      "songKey": "5448eb8ecb3026e5339e58403cbee5b7"
+    },
+    "name": "rebase rating"
+  },
+  {
+    "expected": {
+      "scalar": {
+        "deleted": false,
+        "key": "pref/theme",
+        "stamp": 330,
+        "value": "dark"
+      }
+    },
+    "function": "rebaseScalar",
+    "input": {
+      "base": null,
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "key": "pref/theme",
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "key": "pref/theme",
+              "value": "dark"
+            },
+            "id": 8,
+            "name": "scalar.set",
+            "stamp": 330
+          }
+        }
+      ]
+    },
+    "name": "rebase scalar"
+  },
+  {
+    "expected": {
+      "session": {
+        "device": "phone",
+        "session": {
+          "index": 1,
+          "queue": [
+            "a",
+            "b"
+          ]
+        },
+        "stamp": 340
+      }
+    },
+    "function": "rebaseSession",
+    "input": {
+      "base": null,
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "device": "phone",
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "session": {
+                "index": 1,
+                "queue": [
+                  "a",
+                  "b"
+                ]
+              }
+            },
+            "id": 9,
+            "name": "session.save",
+            "stamp": 340
+          }
+        }
+      ]
+    },
+    "name": "rebase session of the caller's device"
+  },
+  {
+    "expected": {
+      "session": null
+    },
+    "function": "rebaseSession",
+    "input": {
+      "base": null,
+      "caller": {
+        "device": "phone",
+        "role": "member",
+        "user": "alice"
+      },
+      "device": "tablet",
+      "pending": [
+        {
+          "failed": false,
+          "mutation": {
+            "args": {
+              "session": {
+                "index": 1,
+                "queue": [
+                  "a",
+                  "b"
+                ]
+              }
+            },
+            "id": 9,
+            "name": "session.save",
+            "stamp": 340
+          }
+        }
+      ]
+    },
+    "name": "rebase session of another device"
+  },
+  {
+    "expected": {
+      "pos": "V"
+    },
+    "function": "between",
+    "input": {
+      "a": null,
+      "b": null
+    },
+    "name": "between with no bounds"
+  },
+  {
+    "expected": {
+      "pos": "W"
+    },
+    "function": "between",
+    "input": {
+      "a": "V",
+      "b": null
+    },
+    "name": "between after a key"
+  },
+  {
+    "expected": {
+      "pos": "U"
+    },
+    "function": "between",
+    "input": {
+      "a": null,
+      "b": "V"
+    },
+    "name": "between before a key"
+  },
+  {
+    "expected": {
+      "pos": "b"
+    },
+    "function": "between",
+    "input": {
+      "a": "a",
+      "b": "c"
+    },
+    "name": "between two keys"
+  },
+  {
+    "expected": {
+      "pos": "d"
+    },
+    "function": "between",
+    "input": {
+      "a": "c",
+      "b": "a"
+    },
+    "name": "between a reversed range"
+  },
+  {
+    "expected": {
+      "songKey": "430bf734f6554175bc3bebf6e5adea05"
+    },
+    "function": "songKey",
+    "input": {
+      "artistKey": "radiohead",
+      "titleKey": "karma police"
+    },
+    "name": "song key of two keys"
+  },
+  {
+    "expected": {
+      "songKey": "c2060c63e18df3c83289fb0dea7c83ed"
+    },
+    "function": "songKey",
+    "input": {
+      "artistKey": "",
+      "titleKey": ""
+    },
+    "name": "song key of empty keys"
+  },
+  {
+    "expected": {
+      "flags": [
+        true,
+        false,
+        true
+      ]
+    },
+    "function": "suppressedFlags",
+    "input": {
+      "events": [
+        {
+          "artistKey": "x",
+          "eventId": "000000000000000000000001",
+          "recorded": false,
+          "suppressed": false,
+          "titleKey": "t"
+        },
+        {
+          "artistKey": "x",
+          "eventId": "000000000000000000000002",
+          "recorded": true,
+          "suppressed": true,
+          "titleKey": "t"
+        },
+        {
+          "artistKey": "x",
+          "eventId": "000000000000000000000003",
+          "recorded": false,
+          "suppressed": false,
+          "titleKey": "u"
+        }
+      ]
+    },
+    "name": "suppressed flags of one second"
+  },
+  {
+    "expected": {
+      "flags": []
+    },
+    "function": "suppressedFlags",
+    "input": {
+      "events": []
+    },
+    "name": "suppressed flags of no events"
+  },
+  {
+    "expected": {
+      "stamp": 98304000
+    },
+    "function": "nextStamp",
+    "input": {
+      "last": 0,
+      "nowMs": 1000,
+      "offsetMs": 500
+    },
+    "name": "next stamp from an empty clock"
+  },
+  {
+    "expected": {
+      "stamp": 98304001
+    },
+    "function": "nextStamp",
+    "input": {
+      "last": 98304000,
+      "nowMs": 1000,
+      "offsetMs": 500
+    },
+    "name": "next stamp keeps counting inside a millisecond"
+  }
+]

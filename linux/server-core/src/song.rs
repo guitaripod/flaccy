@@ -73,3 +73,52 @@ pub fn event_id_mig(ts: i64, title_key: &str, artist_key: &str) -> String {
         EVENT_ID_BYTES,
     )
 }
+
+/// A playlist name as the first-connect merge compares it: whitespace runs collapsed to one space, trimmed, lower-cased.
+pub fn normalize_playlist_name(name: &str) -> String {
+    name.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+}
+
+fn uuid_from_digest(parts: &[&[u8]]) -> String {
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update(part);
+    }
+    let mut bytes = [0u8; 16];
+    bytes.copy_from_slice(&hasher.finalize()[..16]);
+    bytes[6] = (bytes[6] & 0x0f) | 0x80;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    let hex = hex::encode(bytes);
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hex[0..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    )
+}
+
+/// The id every device derives for a playlist that existed before sync: a UUID shaped from `SHA-256("pl0" || 0x00 || normalizedName || 0x00 || occurrence)`, occurrence in decimal ASCII (0 for the first playlist of that name on the device, by creation date then id).
+pub fn playlist_id(name: &str, occurrence: u32) -> String {
+    uuid_from_digest(&[
+        b"pl0",
+        &[0],
+        normalize_playlist_name(name).as_bytes(),
+        &[0],
+        occurrence.to_string().as_bytes(),
+    ])
+}
+
+/// The id every device derives for an entry that existed before sync: a UUID shaped from `SHA-256("e0" || 0x00 || playlistId || 0x00 || songKey || 0x00 || occurrence)`, occurrence in decimal ASCII (0 for the first entry of that song in the playlist, by position).
+pub fn entry_id(playlist_id: &str, song_key: &str, occurrence: u32) -> String {
+    uuid_from_digest(&[
+        b"e0",
+        &[0],
+        playlist_id.as_bytes(),
+        &[0],
+        song_key.as_bytes(),
+        &[0],
+        occurrence.to_string().as_bytes(),
+    ])
+}

@@ -23,6 +23,8 @@ settings:
 packages:
   FlaccyCore:
     path: Core/FlaccyCore
+  FlaccyServerCore:
+    path: Core/FlaccyServerCore
   GRDB:
     url: https://github.com/groue/GRDB.swift.git
     from: 7.0.0
@@ -60,6 +62,7 @@ targets:
       - package: FlaccyCore
       - package: FlaccyCore
         product: FlaccyEngine
+      - package: FlaccyServerCore
       - package: GRDB
       - package: MidgarKit
         product: MidgarCore
@@ -302,6 +305,7 @@ targets:
       - package: FlaccyCore
       - package: FlaccyCore
         product: FlaccyEngine
+      - package: FlaccyServerCore
       - package: GRDB
       - package: MidgarKit
         product: MidgarCore
@@ -349,6 +353,19 @@ targets:
 
   flaccyMacLegacy:
     <<: *macApp
+    dependencies:
+      - package: FlaccyCore
+      - package: FlaccyCore
+        product: FlaccyEngine
+      - package: GRDB
+      - package: MidgarKit
+        product: MidgarCore
+      - package: MidgarKit
+        product: MidgarCommerce
+      - package: MidgarKit
+        product: MidgarUI
+      - package: MidgarKit
+        product: MidgarPortal
     settings:
       groups:
         - MidgarMacApp
