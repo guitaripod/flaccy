@@ -1,0 +1,7 @@
+# Edit music_folder, then: sudo systemctl enable --now flaccy-server
+# The flaccy user must be able to read the folder.
+music_folder = "/srv/music"
+address = "127.0.0.1"
+port = 4545
+data_dir = "/var/lib/flaccy-server"
+behind_proxy = false

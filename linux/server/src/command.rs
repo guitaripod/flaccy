@@ -1,14 +1,16 @@
-//! The command line: serve, scan, password, keys and status.
+//! The command line: serve, scan, password, keys, status and healthcheck.
 
 use std::io::BufRead;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use clap::{Parser, Subcommand};
 use flaccy_library::logger;
 use qrcode::render::unicode::Dense1x2;
 use qrcode::QrCode;
-use tokio::net::TcpListener;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 
 use crate::api;
 use crate::config::{Config, ConfigError};
@@ -50,6 +52,8 @@ pub enum Command {
     },
     /// Show library counts, the last scan and the API keys.
     Status,
+    /// Exit 0 when a server answers on the configured address, for container health checks.
+    Healthcheck,
 }
 
 /// `flaccy-server password ...`
@@ -102,6 +106,7 @@ pub async fn run(cli: Cli) -> i32 {
         Command::Password { action: PasswordAction::Set { stdin, user } } => password_set(&config, stdin, user),
         Command::Key { action } => key(&config, action),
         Command::Status => status(config),
+        Command::Healthcheck => healthcheck(&config).await,
     };
     match outcome {
         Ok(()) => 0,
@@ -318,9 +323,64 @@ fn status(config: Config) -> Result<(), String> {
     Ok(())
 }
 
+const HEALTHCHECK_TIMEOUT: Duration = Duration::from_secs(5);
+
+async fn healthcheck(config: &Config) -> Result<(), String> {
+    let address = probe_address(config);
+    tokio::time::timeout(HEALTHCHECK_TIMEOUT, ask_for_ping(&address))
+        .await
+        .map_err(|_| format!("No answer from {address} within {} seconds. Check that `flaccy-server serve` is running and look at the log in the data folder.", HEALTHCHECK_TIMEOUT.as_secs()))?
+}
+
+async fn ask_for_ping(address: &str) -> Result<(), String> {
+    let mut stream = TcpStream::connect(address)
+        .await
+        .map_err(|err| format!("Could not connect to {address}: {err}. Start the server with `flaccy-server serve`."))?;
+    let request = format!("GET /rest/ping.view HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n");
+    stream
+        .write_all(request.as_bytes())
+        .await
+        .map_err(|err| format!("Could not send a request to {address}: {err}."))?;
+    let mut head = [0u8; 8];
+    stream
+        .read_exact(&mut head)
+        .await
+        .map_err(|err| format!("{address} closed the connection without answering: {err}."))?;
+    if head.starts_with(b"HTTP/1.") {
+        Ok(())
+    } else {
+        Err(format!("{address} answered, but not with HTTP. Another program may be using that port."))
+    }
+}
+
+/// The address a probe on this machine reaches, with a wildcard bind turned into loopback.
+fn probe_address(config: &Config) -> String {
+    let host = match config.address.as_str() {
+        "0.0.0.0" => "127.0.0.1",
+        "::" | "[::]" => "::1",
+        other => other,
+    };
+    if host.contains(':') && !host.starts_with('[') {
+        format!("[{host}]:{}", config.port)
+    } else {
+        format!("{host}:{}", config.port)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn config_on(address: &str) -> Config {
+        toml::from_str(&format!("music_folder = \"/m\"\naddress = \"{address}\"\nport = 4545\n")).unwrap()
+    }
+
+    #[test]
+    fn a_wildcard_bind_is_probed_on_loopback() {
+        assert_eq!(probe_address(&config_on("0.0.0.0")), "127.0.0.1:4545");
+        assert_eq!(probe_address(&config_on("::")), "[::1]:4545");
+        assert_eq!(probe_address(&config_on("192.168.1.5")), "192.168.1.5:4545");
+    }
 
     #[test]
     fn the_pairing_link_escapes_every_value() {

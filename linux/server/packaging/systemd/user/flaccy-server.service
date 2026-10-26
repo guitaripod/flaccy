@@ -1,0 +1,11 @@
+[Unit]
+Description=Flaccy OpenSubsonic server for one music folder
+
+[Service]
+ExecStart=/usr/bin/flaccy-server serve
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target

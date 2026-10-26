@@ -16,13 +16,23 @@ On Arch, from the AUR (installs `/usr/bin/flaccy-server` and the user unit):
 
     yay -S flaccy-server-bin
 
-Elsewhere (x86_64, glibc 2.39 or newer), download `flaccy-server-linux-x86_64.tar.gz`
-from the `server-v*` release on https://github.com/guitaripod/flaccy/releases and copy
-`flaccy-server` somewhere on your `PATH`. Or build it from a checkout of the repository:
+Debian, Ubuntu, Fedora and openSUSE: install the `.deb` or `.rpm` from the `server-v*`
+release on https://github.com/guitaripod/flaccy/releases. It adds a system service that runs as the
+`flaccy` user; edit `/etc/flaccy-server/config.toml`, then `sudo systemctl enable --now flaccy-server`.
+Run the commands below as `sudo -u flaccy flaccy-server --config /etc/flaccy-server/config.toml ...`.
+
+Any other Linux (x86_64 or aarch64, any libc): download `flaccy-server-<version>-linux-<arch>.tar.gz`
+from the same release. The binary is fully static; copy it somewhere on your `PATH`.
+
+Docker, with the music folder mounted at `/music`:
+
+    docker run -d -p 4545:4545 -v /path/to/music:/music:ro -v flaccy-data:/data ghcr.io/guitaripod/flaccy-server
+
+`packaging/docker/compose.yaml` adds a Tailscale sidecar. Or build from a checkout:
 
     cargo install --path linux/server
 
-which puts `flaccy-server` in `~/.cargo/bin`, where the bundled unit expects it.
+which puts `flaccy-server` in `~/.cargo/bin`, where the bundled user unit expects it.
 
 Converting a song to another format needs `ffmpeg` on the `PATH` of the
 server. Playing the original file does not.

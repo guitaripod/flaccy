@@ -1,0 +1,35 @@
+name: flaccy-server
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: flaccy
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY:?Put your own Tailscale auth key in .env, see env.example}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - ./serve.json:/config/serve.json:ro
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+    restart: unless-stopped
+
+  flaccy-server:
+    image: ghcr.io/guitaripod/flaccy-server:latest
+    network_mode: service:tailscale
+    depends_on:
+      - tailscale
+    environment:
+      FLACCY_ADDRESS: 127.0.0.1
+      FLACCY_BEHIND_PROXY: "true"
+    volumes:
+      - ${MUSIC_DIR:?Set MUSIC_DIR in .env, see env.example}:/music:ro
+      - flaccy-data:/data
+    restart: unless-stopped
+
+volumes:
+  tailscale-state:
+  flaccy-data:

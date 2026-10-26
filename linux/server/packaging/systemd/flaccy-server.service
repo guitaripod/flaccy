@@ -1,0 +1,27 @@
+[Unit]
+Description=Flaccy OpenSubsonic server for one music folder
+Documentation=https://github.com/guitaripod/flaccy/tree/master/apps/flaccy/linux/server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=flaccy
+Group=flaccy
+Environment=FLACCY_SERVER_CONFIG=/etc/flaccy-server/config.toml
+ExecStart=/usr/bin/flaccy-server serve
+Restart=on-failure
+RestartSec=5
+StateDirectory=flaccy-server
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

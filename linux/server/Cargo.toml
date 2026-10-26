@@ -13,7 +13,7 @@ path = "src/main.rs"
 flaccy-library = { path = "../library" }
 flaccy-shared = { path = "../shared" }
 axum = "0.8"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "fs", "process", "sync", "time", "io-util"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "fs", "process", "sync", "time", "io-util", "net"] }
 tokio-util = { version = "0.7", features = ["io"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["fs"] }
@@ -31,6 +31,48 @@ notify = "6"
 qrcode = { version = "0.14", default-features = false }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 lofty = "0.22"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
+base64 = "0.22"
 rpassword = "7"
 async-channel = "2"
+if-addrs = "0.13"
+
+[package.metadata.deb]
+maintainer = "Marcus Ziade <guitaripod@gmail.com>"
+section = "sound"
+priority = "optional"
+depends = "$auto, systemd | systemd-standalone-sysusers | systemd-sysusers"
+recommends = "ffmpeg"
+extended-description = "Indexes one music folder and answers the OpenSubsonic API for Flaccy and any Subsonic app. ffmpeg is only needed to convert songs to another format."
+maintainer-scripts = "packaging/scripts"
+conf-files = ["/etc/flaccy-server/config.toml"]
+assets = [
+    ["target/release/flaccy-server", "usr/bin/", "755"],
+    ["packaging/systemd/user/flaccy-server.service", "usr/lib/systemd/user/", "644"],
+    ["packaging/tmpfiles.d/flaccy-server.conf", "usr/lib/tmpfiles.d/flaccy-server.conf", "644"],
+    ["packaging/sysusers.d/flaccy-server.conf", "usr/lib/sysusers.d/flaccy-server.conf", "644"],
+    ["packaging/config.toml", "etc/flaccy-server/", "644"],
+    ["README.md", "usr/share/doc/flaccy-server/", "644"],
+]
+
+[package.metadata.deb.systemd-units]
+unit-scripts = "packaging/systemd"
+enable = false
+start = false
+
+[package.metadata.generate-rpm]
+summary = "Headless OpenSubsonic server for one music folder"
+post_install_script = "packaging/scripts/postinst"
+pre_uninstall_script = "if [ \"$1\" = 0 ] && [ -d /run/systemd/system ]; then systemctl stop flaccy-server.service || true; fi"
+assets = [
+    { source = "target/release/flaccy-server", dest = "/usr/bin/flaccy-server", mode = "755" },
+    { source = "packaging/systemd/flaccy-server.service", dest = "/usr/lib/systemd/system/flaccy-server.service", mode = "644" },
+    { source = "packaging/systemd/user/flaccy-server.service", dest = "/usr/lib/systemd/user/flaccy-server.service", mode = "644" },
+    { source = "packaging/sysusers.d/flaccy-server.conf", dest = "/usr/lib/sysusers.d/flaccy-server.conf", mode = "644" },
+    { source = "packaging/tmpfiles.d/flaccy-server.conf", dest = "/usr/lib/tmpfiles.d/flaccy-server.conf", mode = "644" },
+    { source = "packaging/config.toml", dest = "/etc/flaccy-server/config.toml", mode = "644", config = true },
+    { source = "README.md", dest = "/usr/share/doc/flaccy-server/README.md", mode = "644", doc = true },
+]
+
+[package.metadata.generate-rpm.recommends]
+ffmpeg = "*"
