@@ -972,6 +972,7 @@ dependencies = [
  "flaccy-server-core",
  "flaccy-shared",
  "flate2",
+ "futures-util",
  "hex",
  "lofty",
  "md-5",
@@ -1041,6 +1042,15 @@ name = "flaccy-server-core-ffi"
 version = "0.1.0"
 dependencies = [
  "flaccy-server-core",
+ "serde_json",
+ "uniffi",
+]
+
+[[package]]
+name = "flaccy-server-embed-ffi"
+version = "0.1.0"
+dependencies = [
+ "flaccy-server",
  "serde_json",
  "uniffi",
 ]

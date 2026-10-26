@@ -19,7 +19,11 @@ fn binary() -> PathBuf {
     if same_profile.exists() {
         return same_profile;
     }
-    profile.parent().unwrap().join("debug").join("flaccy-server")
+    profile
+        .parent()
+        .unwrap()
+        .join("debug")
+        .join("flaccy-server")
 }
 
 struct RealServer {

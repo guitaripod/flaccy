@@ -148,9 +148,10 @@ pub struct DoubleState {
     pub blobs: HashMap<String, Vec<u8>>,
     pub reseeds: Vec<(usize, usize)>,
     pub forget_next_blob: bool,
+    pub chaos: crate::chaos::Chaos,
 }
 
-type Shared = Arc<Mutex<DoubleState>>;
+pub type Shared = Arc<Mutex<DoubleState>>;
 
 pub struct Double {
     pub url: String,
@@ -414,6 +415,7 @@ impl Double {
             blobs: HashMap::new(),
             reseeds: Vec::new(),
             forget_next_blob: false,
+            chaos: crate::chaos::Chaos::default(),
         }));
         let router = Router::new()
             .route("/flaccy/v1/hello", get(hello))
@@ -426,6 +428,10 @@ impl Double {
             .route("/flaccy/v1/blobs/{sha256}", axum::routing::put(put_blob))
             .route("/flaccy/v1/sync/pull", get(pull))
             .route("/flaccy/v1/listens", get(listens))
+            .layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                crate::chaos::disturb,
+            ))
             .with_state(state.clone());
         let (address_tx, address_rx) = std::sync::mpsc::channel();
         let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
@@ -467,6 +473,21 @@ impl Double {
 
     pub fn with<T>(&self, read: impl FnOnce(&mut DoubleState) -> T) -> T {
         read(&mut self.state.lock().unwrap())
+    }
+
+    pub fn cut_responses(&self, path_fragment: &str, count: u32) {
+        self.with(|state| {
+            state.chaos.cut_path = path_fragment.to_owned();
+            state.chaos.cut_remaining = count;
+        });
+    }
+
+    pub fn set_garbage(&self, garbage: bool) {
+        self.with(|state| state.chaos.garbage = garbage);
+    }
+
+    pub fn cuts_left(&self) -> u32 {
+        self.with(|state| state.chaos.cut_remaining)
     }
 
     pub fn set_offline(&self, offline: bool) {

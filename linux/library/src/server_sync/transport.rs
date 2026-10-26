@@ -301,9 +301,7 @@ fn decode<T: serde::de::DeserializeOwned>(
     outcome: Result<ureq::Response, ureq::Error>,
 ) -> Result<T, ApiError> {
     match outcome {
-        Ok(response) => response
-            .into_json::<T>()
-            .map_err(|error| ApiError::Malformed(error.to_string())),
+        Ok(response) => parse_body(&read_body(response)?),
         Err(ureq::Error::Status(status, response)) => Err(classify(status, response)),
         Err(ureq::Error::Transport(transport)) => {
             Err(ApiError::Offline(transport.kind().to_string()))
@@ -311,11 +309,51 @@ fn decode<T: serde::de::DeserializeOwned>(
     }
 }
 
+/// Reads a whole body. A body that ends before it should, because the connection was cut or fewer bytes came than `Content-Length` promised, is a network failure to retry, not a document to judge.
+fn read_body(response: ureq::Response) -> Result<Vec<u8>, ApiError> {
+    use std::io::Read;
+    let promised = response
+        .header("Content-Length")
+        .filter(|_| response.header("Content-Encoding").is_none())
+        .and_then(|value| value.parse::<usize>().ok());
+    let mut bytes = Vec::new();
+    response
+        .into_reader()
+        .read_to_end(&mut bytes)
+        .map_err(|error| {
+            ApiError::Offline(format!("the response was cut off ({})", error.kind()))
+        })?;
+    match promised {
+        Some(promised) if bytes.len() < promised => Err(ApiError::Offline(format!(
+            "the response was cut off after {} of {promised} bytes",
+            bytes.len()
+        ))),
+        _ => Ok(bytes),
+    }
+}
+
+fn parse_body<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, ApiError> {
+    if bytes.is_empty() {
+        return serde_json::from_slice(b"null")
+            .map_err(|_| ApiError::Offline("the response was empty".into()));
+    }
+    serde_json::from_slice(bytes).map_err(|error| {
+        if error.is_eof() {
+            ApiError::Offline("the response ended early".into())
+        } else {
+            ApiError::Malformed(error.to_string())
+        }
+    })
+}
+
 fn classify(status: u16, response: ureq::Response) -> ApiError {
     let retry_after = response
         .header("Retry-After")
         .and_then(|value| value.parse().ok());
-    let body: Value = response.into_json().unwrap_or(Value::Null);
+    let body: Value = match read_body(response) {
+        Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        Err(cut) => return cut,
+    };
     let error = &body["error"];
     let code = error["code"].as_str().unwrap_or_default().to_owned();
     let incarnation = error["incarnation"]
@@ -349,6 +387,16 @@ mod tests {
     fn answer(status: u16, body: &str) -> ApiError {
         let response = ureq::Response::new(status, "status", body).expect("a response");
         classify(status, response)
+    }
+
+    #[test]
+    fn a_body_that_ends_early_is_a_network_failure_and_a_syntax_error_is_not() {
+        let cut = parse_body::<Value>(br#"{"results":[{"id":1"#).unwrap_err();
+        assert!(cut.is_transient(), "{cut:?}");
+        let garbled = parse_body::<Value>(br#"{"results":}"#).unwrap_err();
+        assert!(matches!(garbled, ApiError::Malformed(_)));
+        assert_eq!(parse_body::<Value>(b"").unwrap(), Value::Null);
+        assert!(parse_body::<Hello>(b"").unwrap_err().is_transient());
     }
 
     #[test]

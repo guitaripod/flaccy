@@ -5,6 +5,7 @@ use super::ids::new_uuid_v7;
 use super::import::ImportReport;
 use super::link::ServerLink;
 use super::merge::MergeReport;
+use super::poke::PokeHandle;
 use super::sink::ScalarSink;
 use super::status::{api_state, sync_state};
 pub use super::status::{Blocker, ServerIdentity, SyncState, SyncStatus};
@@ -12,10 +13,11 @@ use super::transport::{ApiError, DeviceInfo, Transport};
 use crate::db::{now_ms, Db};
 use flaccy_server_core::wire::Hello;
 use std::collections::HashSet;
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const MAX_RESTARTS: usize = 4;
+const UNREADABLE_LIMIT: u32 = 3;
 const MAX_PUSH_ROUNDS: usize = 200;
 const VERSION_RECHECK: Duration = Duration::from_secs(600);
 
@@ -58,38 +60,6 @@ impl Backoff {
     }
 }
 
-/// A shared flag the GUI sets to ask for a sync soon: a local change, a focus event, a server poke.
-#[derive(Clone, Default)]
-pub struct PokeHandle {
-    inner: Arc<(Mutex<bool>, Condvar)>,
-}
-
-impl PokeHandle {
-    /// Asks the sync loop to run now.
-    pub fn poke(&self) {
-        let (flag, wake) = &*self.inner;
-        if let Ok(mut raised) = flag.lock() {
-            *raised = true;
-            wake.notify_all();
-        }
-    }
-
-    /// Waits up to `timeout` for a poke; true when one arrived. Clears the flag.
-    pub fn wait(&self, timeout: Duration) -> bool {
-        let (flag, wake) = &*self.inner;
-        let Ok(mut raised) = flag.lock() else {
-            return false;
-        };
-        if !*raised {
-            raised = match wake.wait_timeout(raised, timeout) {
-                Ok((guard, _)) => guard,
-                Err(_) => return false,
-            };
-        }
-        std::mem::replace(&mut *raised, false)
-    }
-}
-
 enum Flow {
     Done,
     Restart,
@@ -125,6 +95,7 @@ pub struct Driver {
     version_recheck: Duration,
     uploaded: HashSet<String>,
     requeued: HashSet<String>,
+    unreadable_answers: u32,
 }
 
 type DirtyListener = Box<dyn Fn(&Dirty) + Send>;
@@ -148,6 +119,7 @@ impl Driver {
             version_recheck: VERSION_RECHECK,
             uploaded: HashSet::new(),
             requeued: HashSet::new(),
+            unreadable_answers: 0,
         }
     }
 
@@ -299,17 +271,35 @@ impl Driver {
             return self.status(db);
         }
         let state = match self.sync(db) {
-            Ok(()) => SyncState::UpToDate,
+            Ok(()) => {
+                self.unreadable_answers = 0;
+                SyncState::UpToDate
+            }
             Err(Stop::Api(error)) => {
-                if matches!(api_state(&error), SyncState::Offline) {
+                let state = self.failure_state(&error);
+                if matches!(state, SyncState::Offline) {
                     self.version_checked_at = None;
                 }
-                api_state(&error)
+                state
             }
             Err(Stop::Sync(error)) => sync_state(&error),
         };
         let pending = self.engine.pending_count(db).unwrap_or(0);
         self.report(db, state, pending)
+    }
+
+    /// An unreadable answer is the server's fault once, a network hiccup twice, and a problem to report the third round running.
+    fn failure_state(&mut self, error: &ApiError) -> SyncState {
+        if !matches!(error, ApiError::Malformed(_)) {
+            return api_state(error);
+        }
+        self.unreadable_answers += 1;
+        if self.unreadable_answers >= UNREADABLE_LIMIT {
+            return SyncState::NeedsAttention(format!(
+                "The server keeps sending answers Flaccy cannot read ({error}). Update Flaccy and the server to the same release; if it persists, check the server log."
+            ));
+        }
+        SyncState::Offline
     }
 
     fn report(&self, db: &Db, state: SyncState, pending: usize) -> SyncStatus {

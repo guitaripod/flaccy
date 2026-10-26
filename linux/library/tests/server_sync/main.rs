@@ -1,3 +1,4 @@
+mod chaos;
 mod client_surface;
 mod double;
 mod flows;
@@ -8,3 +9,4 @@ mod real_server;
 mod reseed;
 mod rig;
 mod steps;
+mod truncation;
