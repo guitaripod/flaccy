@@ -125,38 +125,50 @@ nonisolated enum StationBuilder {
         excluding: Set<URL>,
         limit: Int
     ) -> [Track] {
+        crateDig(
+            pool: pool, keys: pool.map { trackKey($0.title, $0.artist) },
+            playCounts: playCounts, excluding: excluding, limit: limit
+        )
+    }
+
+    /// Crate Dig over a pool whose listen keys are already folded, `keys[i]`
+    /// being `pool[i]`'s.
+    static func crateDig(
+        pool: [Track],
+        keys: [String],
+        playCounts: [(key: String, count: Int)],
+        excluding: Set<URL>,
+        limit: Int
+    ) -> [Track] {
         var countByKey: [String: Int] = [:]
         for entry in playCounts { countByKey[entry.key] = entry.count }
 
-        var albums: [String: [Track]] = [:]
-        for track in pool where !excluding.contains(track.fileURL) {
-            let key = albumKey(track.albumTitle, track.artist)
-            albums[key, default: []].append(track)
+        var albums: [String: [Int]] = [:]
+        for (index, track) in pool.enumerated() where !excluding.contains(track.fileURL) {
+            albums[albumKey(track.albumTitle, track.artist), default: []].append(index)
         }
 
         var scored: [(track: Track, weight: Double)] = []
-        for tracks in albums.values {
-            guard tracks.count >= 4 else { continue }
-            let counts = tracks.map { countByKey[trackKey($0.title, $0.artist)] ?? max(0, $0.playCount) }
+        for members in albums.values {
+            guard members.count >= 4 else { continue }
+            let counts = members.map { countByKey[keys[$0]] ?? max(0, pool[$0].playCount) }
             let albumPlays = counts.reduce(0, +)
             let peak = counts.max() ?? 0
             guard albumPlays >= 3, peak >= 2 else { continue }
             let threshold = max(0, peak / 3)
-            for (track, count) in zip(tracks, counts) where count <= threshold {
+            for (member, count) in zip(members, counts) where count <= threshold {
                 let weight = Double(albumPlays) / Double(count + 1) * (1.0 + Double(peak - count))
-                scored.append((track, max(weight, 0.1)))
+                scored.append((pool[member], max(weight, 0.1)))
             }
         }
         guard !scored.isEmpty else { return [] }
 
-        let weighted = weightedShuffle(scored.map(\.track)) { track in
-            scored.first(where: { $0.track.fileURL == track.fileURL })?.weight ?? 0.1
-        }
+        let weighted = weightedShuffle(scored) { $0.weight }.map(\.track)
         return Array(spacedByArtist(Array(weighted.prefix(limit * 2))).prefix(limit))
     }
 
     private static func trackKey(_ title: String, _ artist: String) -> String {
-        ListenHistory.trackKey(title: title, artist: artist)
+        SpellingMemo.listenKeys.key(title: title, artist: artist)
     }
 
     private static func albumKey(_ album: String, _ artist: String) -> String {

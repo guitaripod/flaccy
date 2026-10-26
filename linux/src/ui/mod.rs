@@ -18,6 +18,7 @@ pub mod home;
 pub mod home_backdrop;
 pub mod home_customize;
 pub mod home_parts;
+pub mod home_wait;
 pub mod lyric_share_dialog;
 pub mod lyrics_panel;
 pub mod lyric_line;

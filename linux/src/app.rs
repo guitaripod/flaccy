@@ -75,6 +75,11 @@ pub struct AppCore {
     building_albums: Cell<bool>,
     reload_in_flight: Cell<bool>,
     reload_pending: Cell<bool>,
+    /// Whether an earlier launch already indexed a library, read once from the
+    /// database before any disk work starts.
+    had_indexed_library: bool,
+    /// Whether the first library load has come back, whatever it found.
+    first_load_settled: Cell<bool>,
     job: RefCell<JobProgress>,
     /// The playing track's synced lyrics, so the seek bar can name the line
     /// under the pointer. Cleared the moment the track changes.
@@ -133,6 +138,7 @@ impl AppCore {
         if config::demo_mode() && std::env::var("FLACCY_DEMO_HOME").as_deref() == Ok("dayone") {
             db.delete_all_scrobbles();
         }
+        let had_indexed_library = db.has_tracks();
         let session = config::load_session();
         if let Some(session) = &session {
             crate::logger::info(
@@ -181,6 +187,8 @@ impl AppCore {
             building_albums: Cell::new(false),
             reload_in_flight: Cell::new(false),
             reload_pending: Cell::new(false),
+            had_indexed_library,
+            first_load_settled: Cell::new(false),
             job: RefCell::new(JobProgress::idle()),
             lyrics: RefCell::new(crate::lyrics::Lyrics::default()),
             restore_volume: Cell::new(restore_volume),
@@ -361,6 +369,7 @@ impl AppCore {
             let received = rx.recv().await;
             core.reload_in_flight.set(false);
             let Ok((library, weights)) = received else {
+                core.give_up_first_load();
                 return;
             };
             core.player
@@ -375,6 +384,7 @@ impl AppCore {
                 ),
             );
             *core.library.borrow_mut() = Rc::new(library);
+            core.first_load_settled.set(true);
             core.refresh_previous_versions();
             core.record_library_debut();
             if core.building_albums.replace(false) {
@@ -387,6 +397,22 @@ impl AppCore {
                 core.reload_library();
             }
         });
+    }
+
+    /// Whether Home must hold its first frame: an earlier launch indexed a
+    /// library and the first load has not brought it back yet.
+    pub fn holds_home_first_frame(&self) -> bool {
+        crate::launch_probe::home_gate(self.had_indexed_library, self.first_load_settled.get())
+            == crate::launch_probe::HomeGate::Wait
+    }
+
+    /// A first load that died on its thread still releases Home, which is told
+    /// the library changed so it draws what there is instead of waiting on a
+    /// load that is not coming.
+    fn give_up_first_load(&self) {
+        if !self.first_load_settled.replace(true) {
+            self.hub.emit(&AppEvent::LibraryReloaded);
+        }
     }
 
     /// Writes the once-per-library setup summary the first time a build yields

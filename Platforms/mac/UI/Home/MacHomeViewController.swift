@@ -31,6 +31,7 @@ final class MacHomeViewController: NSViewController {
     static let stackedStripBreakpoint: CGFloat = 680
 
     private let backdrop = MacHomeBackdropView()
+    private let launchPlaceholder = MacHomeLaunchPlaceholderView()
     private let scrollView = NSScrollView()
     private let document = MacHomeDocumentView()
     private let column = NSStackView()
@@ -45,6 +46,7 @@ final class MacHomeViewController: NSViewController {
     private var generation = 0
     private var refreshPending = false
     private var isVisible = false
+    private var hasRevealed = false
 
     override func loadView() {
         let root = AppearanceObservingView()
@@ -99,6 +101,45 @@ final class MacHomeViewController: NSViewController {
 
         document.onWidthChange = { [weak self] width in self?.widthDidChange(width) }
         scrollView.contentView.postsBoundsChangedNotifications = true
+        setupLaunchPlaceholder(in: root)
+    }
+
+    /// Holds the page back until its first real frame, with the placeholder
+    /// standing where the hero and the first shelf will be.
+    private func setupLaunchPlaceholder(in root: NSView) {
+        scrollView.alphaValue = 0
+        launchPlaceholder.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(launchPlaceholder)
+        let fill = launchPlaceholder.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -Self.sidePadding * 2)
+        fill.priority = NSLayoutConstraint.Priority(750)
+        NSLayoutConstraint.activate([
+            launchPlaceholder.topAnchor.constraint(equalTo: root.safeAreaLayoutGuide.topAnchor, constant: 20),
+            launchPlaceholder.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            launchPlaceholder.centerXAnchor.constraint(equalTo: root.centerXAnchor),
+            launchPlaceholder.widthAnchor.constraint(lessThanOrEqualToConstant: Self.maximumContentWidth),
+            launchPlaceholder.leadingAnchor.constraint(greaterThanOrEqualTo: root.leadingAnchor, constant: Self.sidePadding),
+            fill,
+        ])
+        launchPlaceholder.appear()
+    }
+
+    /// The page fades up over the placeholder, its covers already loaded,
+    /// while the placeholder fades out.
+    private func revealFirstFrame() {
+        hasRevealed = true
+        launchPlaceholder.dismiss()
+        let page: [NSView] = [scrollView] + (emptyHost.map { [$0] } ?? [])
+        guard view.window != nil else {
+            scrollView.alphaValue = 1
+            return
+        }
+        emptyHost?.alphaValue = 0
+        scrollView.alphaValue = 0
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.4
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            page.forEach { $0.animator().alphaValue = 1 }
+        }
     }
 
     override func viewWillAppear() {
@@ -198,15 +239,23 @@ final class MacHomeViewController: NSViewController {
 
     /// Reads what Home needs on the main actor, builds the feed off it, and
     /// keeps the answer only if nothing newer has been asked for since.
+    /// Until the first frame is up it waits for the library a previous launch
+    /// indexed, and keeps the build that started first even when a newer one
+    /// overtakes it, then loads the covers that frame shows before revealing it.
     private func refresh() {
-        guard isVisible else { return }
+        guard isVisible, !Library.shared.isRestoringIndexedLibrary else { return }
         generation += 1
         let token = generation
         let inputs = HomeFeedInputs.current()
+        let isFirstFrame = !hasRevealed
         Task.detached(priority: .userInitiated) { [weak self] in
+            if isFirstFrame { SpellingMemo.warm(for: inputs.tracks) }
             let built = HomeFeedBuilder.build(inputs)
+            if isFirstFrame {
+                await HomeFirstScreen.prewarmCovers(HomeFirstScreen.albums(in: built, mixCovers: [:]))
+            }
             await MainActor.run {
-                guard let self, self.generation == token else { return }
+                guard let self, self.generation == token || !self.hasRevealed else { return }
                 self.apply(built)
             }
         }
@@ -224,6 +273,7 @@ final class MacHomeViewController: NSViewController {
         backdrop.show(heroCover(of: feed))
         guard feed.hero != .empty else {
             showFirstRun(feed)
+            if !hasRevealed { revealFirstFrame() }
             return
         }
 
@@ -246,6 +296,7 @@ final class MacHomeViewController: NSViewController {
         widthDidChange(document.bounds.width)
         clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: restore))
         scrollView.reflectScrolledClipView(clip)
+        if !hasRevealed { revealFirstFrame() }
     }
 
     private func clearColumn() {

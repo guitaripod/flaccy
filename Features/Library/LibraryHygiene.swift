@@ -101,7 +101,7 @@ nonisolated extension LibraryHygiene {
     ) -> DuplicateSongs {
         var byKey: [String: [Track]] = [:]
         for track in tracks where !track.title.isEmpty {
-            byKey[songKey(title: track.title, artist: track.artist), default: []].append(track)
+            byKey[SpellingMemo.songKeys.key(title: track.title, artist: track.artist), default: []].append(track)
         }
         var hidden = Set<URL>()
         var copies: [URL: [Track]] = [:]

@@ -191,6 +191,7 @@ targets:
           - Home/HomeGlanceCards.swift
           - Home/HomeHeroCell.swift
           - Home/HomeJumpTileCell.swift
+          - Home/HomeLaunchPlaceholderView.swift
           - Home/HomeMixCardCell.swift
           - Home/HomeSegmentedProgressView.swift
           - Home/HomeSnapshotPlan.swift

@@ -34,6 +34,7 @@ final class HomeViewModel {
     var onUpdate: ((HomeScreenModel) -> Void)?
 
     private var generation = 0
+    private var isBuildingFirstFrame = false
     private var cancellables = Set<AnyCancellable>()
     private let refreshRequests = PassthroughSubject<Void, Never>()
 
@@ -45,6 +46,12 @@ final class HomeViewModel {
             .sink { [weak self] in self?.reload() }
             .store(in: &cancellables)
         observeSources()
+    }
+
+    /// Whether the first frame is still waiting for the library a previous
+    /// launch indexed. A feed built before it is back would have no songs in it.
+    var awaitsLibrary: Bool {
+        Library.shared.isRestoringIndexedLibrary
     }
 
     private func observeSources() {
@@ -61,25 +68,46 @@ final class HomeViewModel {
         ]
         for name in names {
             NotificationCenter.default.publisher(for: name)
-                .sink { [weak self] _ in self?.refreshRequests.send() }
+                .sink { [weak self] _ in self?.refresh() }
                 .store(in: &cancellables)
         }
     }
 
-    /// Asks for a fresh feed; bursts of requests collapse into one build.
+    /// Asks for a fresh feed; bursts of requests collapse into one build. The
+    /// first frame skips the wait, since nothing on screen can flicker yet.
     func refresh() {
-        refreshRequests.send()
+        if !hasLoaded, !isBuildingFirstFrame {
+            reload()
+        } else {
+            refreshRequests.send()
+        }
     }
 
     /// Builds immediately, for the first appearance and for explicit refreshes.
+    /// Until the first frame is up, the build that started first is kept even
+    /// when a newer one overtakes it: launch fires a burst of changes, and
+    /// restarting on each would hold the page back.
     func reload() {
+        guard !awaitsLibrary else { return }
         generation += 1
         let mine = generation
         let inputs = HomeFeedInputs.current()
+        let isFirstFrame = !hasLoaded
+        if isFirstFrame { isBuildingFirstFrame = true }
+        let began = DispatchTime.now().uptimeNanoseconds
         Task.detached(priority: .userInitiated) { [weak self] in
+            if isFirstFrame { SpellingMemo.warm(for: inputs.tracks) }
             let built = Self.build(inputs)
+            if isFirstFrame {
+                await HomeFirstScreen.prewarmCovers(HomeFirstScreen.albums(in: built.feed, mixCovers: built.mixCovers))
+            }
             await MainActor.run {
-                guard let self, mine == self.generation else { return }
+                guard let self, mine == self.generation || !self.hasLoaded else { return }
+                if isFirstFrame { self.isBuildingFirstFrame = false }
+                if !self.hasLoaded {
+                    let milliseconds = (DispatchTime.now().uptimeNanoseconds - began) / 1_000_000
+                    MidgarLog.info("Home first frame built in \(milliseconds) ms", category: .performance)
+                }
                 self.model = built
                 self.hasLoaded = true
                 HomePromoOffers.loadIfNeeded(for: built.feed.promo)

@@ -1501,3 +1501,73 @@ row:hover .playlist-drag-handle {
 .home-download-bar {
   min-height: 4px;
 }
+
+.home-wait {
+  opacity: 0;
+}
+
+.home-wait.shown {
+  opacity: 1;
+  animation: home-wait-in 300ms ease-out;
+}
+
+.home-wait-block {
+  background-color: alpha(@window_fg_color, 0.07);
+  border-radius: 14px;
+}
+
+.home-wait-hero {
+  border-radius: 28px;
+  border: 1px solid alpha(@window_fg_color, 0.08);
+}
+
+.home-wait-inner {
+  background-color: alpha(@window_fg_color, 0.06);
+  border-radius: 12px;
+}
+
+.home-wait-bar {
+  border-radius: 6px;
+}
+
+.home-wait-pill {
+  border-radius: 24px;
+}
+
+.home-wait-mix {
+  border-radius: 14px;
+}
+
+.home-wait-tile {
+  border-radius: 12px;
+}
+
+.home-wait.shown .home-wait-block {
+  animation: home-wait-pulse 900ms ease-in-out infinite alternate;
+}
+
+.home-wait.shown .home-wait-lag-1 {
+  animation-delay: 120ms;
+}
+
+.home-wait.shown .home-wait-lag-2 {
+  animation-delay: 240ms;
+}
+
+@keyframes home-wait-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes home-wait-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}

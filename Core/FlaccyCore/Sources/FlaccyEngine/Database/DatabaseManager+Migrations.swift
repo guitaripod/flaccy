@@ -345,6 +345,14 @@ extension DatabaseManager {
             }
         }
 
+        migrator.registerMigration("v18") { db in
+            try db.create(
+                index: "albumInfo_on_title_artist_details",
+                on: "albumInfo",
+                columns: ["title", "artist", "coverArtURL", "musicBrainzID", "year", "genre", "lastFetched"]
+            )
+        }
+
         return migrator
     }
 }

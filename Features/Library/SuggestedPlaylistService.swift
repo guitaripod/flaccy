@@ -19,7 +19,10 @@ nonisolated struct SuggestedPlaylist: Hashable, Sendable {
 
 /// Derives a handful of ready-to-play playlists by intersecting the user's
 /// local play history with the tracks they actually own. Pure and off-main;
-/// the caller snapshots `Library.shared.allTracks` and hands it in.
+/// the caller snapshots `Library.shared.allTracks` and hands it in. Each
+/// song's listen key is folded once per build, `keys[i]` being `pool[i]`'s,
+/// and each play's is read as stored: Home rebuilds the mixes on every change
+/// it shows, so this has to stay cheap on a library of thousands.
 nonisolated enum SuggestedPlaylistService {
 
     private static let maxTracks = 50
@@ -28,13 +31,14 @@ nonisolated enum SuggestedPlaylistService {
     static func build(pool: [Track]) -> [SuggestedPlaylist] {
         guard !pool.isEmpty else { return [] }
 
+        let keys = pool.map { key($0.title, $0.artist) }
         var poolByKey: [String: Track] = [:]
         poolByKey.reserveCapacity(pool.count)
-        for track in pool where poolByKey[key(track.title, track.artist)] == nil {
-            poolByKey[key(track.title, track.artist)] = track
+        for (track, k) in zip(pool, keys) where poolByKey[k] == nil {
+            poolByKey[k] = track
         }
 
-        let rows = (try? DatabaseManager.shared.fetchAllScrobbleRows()) ?? []
+        let rows = (try? DatabaseManager.shared.fetchListens()) ?? []
         guard !rows.isEmpty else { return [] }
 
         let now = Date()
@@ -46,7 +50,7 @@ nonisolated enum SuggestedPlaylistService {
         var monthCounts: [String: Int] = [:]
         var artistCounts: [String: Int] = [:]
         for row in rows {
-            let k = key(row.trackTitle, row.artist)
+            let k = row.key
             allCounts[k, default: 0] += 1
             artistCounts[row.artist.lowercased(), default: 0] += 1
             if row.timestamp >= recentCutoff { recentCounts[k, default: 0] += 1 }
@@ -57,16 +61,16 @@ nonisolated enum SuggestedPlaylistService {
         if let heavy = heavyRotation(poolByKey: poolByKey, monthCounts: monthCounts, allCounts: allCounts) {
             suggestions.append(heavy)
         }
-        if let dig = crateDig(pool: pool, allCounts: allCounts) {
+        if let dig = crateDig(pool: pool, keys: keys, allCounts: allCounts) {
             suggestions.append(dig)
         }
-        if let repeatArtist = onRepeat(pool: pool, artistCounts: artistCounts, allCounts: allCounts) {
+        if let repeatArtist = onRepeat(pool: pool, keys: keys, artistCounts: artistCounts, allCounts: allCounts) {
             suggestions.append(repeatArtist)
         }
         if let rediscover = rediscover(poolByKey: poolByKey, allCounts: allCounts, recentCounts: recentCounts) {
             suggestions.append(rediscover)
         }
-        if let spin = tonightsSpin(pool: pool, allCounts: allCounts, recentCounts: recentCounts) {
+        if let spin = tonightsSpin(pool: pool, keys: keys, allCounts: allCounts, recentCounts: recentCounts) {
             suggestions.append(spin)
         }
         return suggestions
@@ -74,16 +78,15 @@ nonisolated enum SuggestedPlaylistService {
 
     /// Underplayed tracks from albums you already love — the crate-digging
     /// privilege of owning full albums instead of streaming singles.
-    private static func crateDig(pool: [Track], allCounts: [String: Int]) -> SuggestedPlaylist? {
+    private static func crateDig(pool: [Track], keys: [String], allCounts: [String: Int]) -> SuggestedPlaylist? {
         var pairs: [(key: String, count: Int)] = []
         var seen = Set<String>()
-        for track in pool {
-            let k = key(track.title, track.artist)
+        for (track, k) in zip(pool, keys) {
             guard seen.insert(k).inserted else { continue }
             pairs.append((k, allCounts[k] ?? track.playCount))
         }
         let tracks = StationBuilder.crateDig(
-            pool: pool, playCounts: pairs, excluding: [], limit: maxTracks
+            pool: pool, keys: keys, playCounts: pairs, excluding: [], limit: maxTracks
         )
         guard tracks.count >= minTracks else { return nil }
         return SuggestedPlaylist(
@@ -97,24 +100,24 @@ nonisolated enum SuggestedPlaylistService {
     /// Picks with a day-stable seed so the suggestion holds for the evening
     /// instead of reshuffling on every library refresh.
     private static func tonightsSpin(
-        pool: [Track], allCounts: [String: Int], recentCounts: [String: Int]
+        pool: [Track], keys: [String], allCounts: [String: Int], recentCounts: [String: Int]
     ) -> SuggestedPlaylist? {
-        var albums: [String: [Track]] = [:]
-        for track in pool {
+        var albums: [String: [Int]] = [:]
+        for (index, track) in pool.enumerated() {
             let k = "\(track.albumTitle.lowercased())\u{0}\(track.artist.lowercased())"
-            albums[k, default: []].append(track)
+            albums[k, default: []].append(index)
         }
 
         var candidates: [(tracks: [Track], weight: Double, title: String, artist: String)] = []
-        for group in albums.values {
-            guard group.count >= 5 else { continue }
-            let ordered = group.sorted {
+        for members in albums.values {
+            guard members.count >= 5 else { continue }
+            let recentPlays = members.reduce(0) { $0 + (recentCounts[keys[$1]] ?? 0) }
+            guard recentPlays == 0 else { continue }
+            let albumPlays = members.reduce(0) { $0 + (allCounts[keys[$1]] ?? 0) }
+            let ordered = members.map { pool[$0] }.sorted {
                 if $0.trackNumber != $1.trackNumber { return $0.trackNumber < $1.trackNumber }
                 return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
             }
-            let albumPlays = ordered.reduce(0) { $0 + (allCounts[key($1.title, $1.artist)] ?? 0) }
-            let recentPlays = ordered.reduce(0) { $0 + (recentCounts[key($1.title, $1.artist)] ?? 0) }
-            guard recentPlays == 0 else { continue }
             let historyBoost = albumPlays > 0 ? log2(1.0 + Double(albumPlays)) : 0.35
             let weight = historyBoost * Double(ordered.count)
             candidates.append((ordered, weight, ordered[0].albumTitle, ordered[0].artist))
@@ -160,15 +163,20 @@ nonisolated enum SuggestedPlaylistService {
     }
 
     private static func onRepeat(
-        pool: [Track], artistCounts: [String: Int], allCounts: [String: Int]
+        pool: [Track], keys: [String], artistCounts: [String: Int], allCounts: [String: Int]
     ) -> SuggestedPlaylist? {
         let ranked = artistCounts.sorted { $0.value > $1.value }
+        let leaders = Set(ranked.prefix(8).map(\.key))
+        var ownedByArtist: [String: [(track: Track, plays: Int)]] = [:]
+        for (track, k) in zip(pool, keys) {
+            let artistLower = track.artist.lowercased()
+            guard leaders.contains(artistLower) else { continue }
+            ownedByArtist[artistLower, default: []].append((track, allCounts[k] ?? 0))
+        }
         for (artistLower, _) in ranked.prefix(8) {
-            let owned = pool.filter { $0.artist.lowercased() == artistLower }
+            let owned = ownedByArtist[artistLower] ?? []
             guard owned.count >= minTracks else { continue }
-            let ordered = owned.sorted {
-                (allCounts[key($0.title, $0.artist)] ?? 0) > (allCounts[key($1.title, $1.artist)] ?? 0)
-            }
+            let ordered = owned.sorted { $0.plays > $1.plays }.map(\.track)
             let tracks = Array(ordered.prefix(maxTracks))
             let displayArtist = tracks.first?.artist ?? artistLower
             return SuggestedPlaylist(
@@ -201,7 +209,7 @@ nonisolated enum SuggestedPlaylistService {
     }
 
     private static func key(_ title: String, _ artist: String) -> String {
-        LastFMStatsService.trackKey(title, artist)
+        SpellingMemo.listenKeys.key(title: title, artist: artist)
     }
 
     /// Deterministic 0…1 mix for day-stable Tonight's Spin ranking (Swift's

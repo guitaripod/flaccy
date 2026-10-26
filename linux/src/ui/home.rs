@@ -12,6 +12,7 @@ use crate::home_data::{self, AlbumIndex, Fetched, HeroModel, HomeModel, Inputs};
 use crate::library::Library;
 use crate::ui::home_backdrop::HomeBackdrop;
 use crate::ui::home_parts as parts;
+use crate::ui::home_wait::{HomeWait, CROSSFADE_MS};
 use crate::ui::mosaic::AlbumRef;
 use crate::ui::{albums, controls, playlists, resize, Ui};
 use adw::prelude::*;
@@ -26,11 +27,15 @@ use std::rc::Rc;
 /// How tall the wash of the hero's colors behind the top of the page is.
 const BACKDROP_HEIGHT: i32 = 460;
 const CONTENT_MAX_WIDTH: i32 = 1240;
+const FEED_PAGE: &str = "feed";
+const WAIT_PAGE: &str = "wait";
 
 struct State {
     ui: Rc<Ui>,
     scroll: gtk::ScrolledWindow,
     body: gtk::Box,
+    stack: gtk::Stack,
+    wait: RefCell<Option<HomeWait>>,
     backdrop: HomeBackdrop,
     mode: Cell<Option<PageMode>>,
     fetched: RefCell<Fetched>,
@@ -52,11 +57,25 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         .spacing(28)
         .build();
     body.add_css_class("home-body");
+    let stack = gtk::Stack::builder()
+        .transition_type(gtk::StackTransitionType::Crossfade)
+        .transition_duration(CROSSFADE_MS)
+        .hhomogeneous(false)
+        .vhomogeneous(false)
+        .build();
+    stack.add_named(&body, Some(FEED_PAGE));
+    let holding_first_frame = ui.core.holds_home_first_frame();
+    let wait = holding_first_frame.then(|| {
+        let wait = HomeWait::new();
+        stack.add_named(wait.widget(), Some(WAIT_PAGE));
+        stack.set_visible_child_name(WAIT_PAGE);
+        wait
+    });
     let clamp = adw::Clamp::builder()
         .maximum_size(CONTENT_MAX_WIDTH)
         .tightening_threshold(CONTENT_MAX_WIDTH)
         .valign(gtk::Align::Start)
-        .child(&body)
+        .child(&stack)
         .build();
 
     let backdrop = HomeBackdrop::new();
@@ -87,6 +106,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         ui: Rc::clone(ui),
         scroll: scroll.clone(),
         body,
+        stack,
+        wait: RefCell::new(wait),
         backdrop,
         mode: Cell::new(None),
         fetched: RefCell::new(Fetched::default()),
@@ -107,6 +128,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         resize::watch_width(&scroll, move |width, _| {
             let mode = page_mode(width);
             if state.mode.replace(Some(mode)) != Some(mode) {
+                state.arrange_wait(mode);
                 state.render();
             }
         });
@@ -133,7 +155,9 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 _ => {}
             });
     }
-    state.refresh(true);
+    if !holding_first_frame {
+        state.refresh(true);
+    }
     schedule_demo(ui);
     scroll.upcast()
 }
@@ -230,7 +254,33 @@ impl State {
         })
     }
 
+    fn arrange_wait(&self, mode: PageMode) {
+        if let Some(wait) = self.wait.borrow().as_ref() {
+            wait.arrange(mode);
+        }
+    }
+
+    /// Fades the feed in over the blocks that stood in for it and takes them
+    /// out of the page once it has, so their animation stops with them.
+    fn reveal_feed(&self) {
+        let Some(wait) = self.wait.take() else { return };
+        let widget = wait.widget().clone();
+        self.stack.set_visible_child_name(FEED_PAGE);
+        if !self.stack.is_mapped() {
+            self.stack.remove(&widget);
+            return;
+        }
+        let stack = self.stack.clone();
+        glib::timeout_add_local_once(
+            std::time::Duration::from_millis(u64::from(CROSSFADE_MS) + 60),
+            move || stack.remove(&widget),
+        );
+    }
+
     fn render(self: &Rc<Self>) {
+        if self.ui.core.holds_home_first_frame() {
+            return;
+        }
         if !self.scroll.is_mapped() {
             self.dirty.set(true);
             return;
@@ -250,6 +300,7 @@ impl State {
         }
         *self.fingerprint.borrow_mut() = fingerprint;
         self.rebuild(&model, mode);
+        self.reveal_feed();
     }
 
     fn rebuild(self: &Rc<Self>, model: &HomeModel, mode: PageMode) {
