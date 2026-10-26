@@ -175,7 +175,7 @@ enum DebugArtworkDrive {
         let renamed = (try? database.fetchAllPlaylists())?.first { $0.name == name + " Renamed" }
         report("renaming the playlist keeps its cover",
                renamed?.id.flatMap { try? database.playlistCover(id: $0) } == saved)
-        report("the old playlist row is gone with no cover left behind", (try? database.playlistCover(id: id)) == nil)
+        report("renaming keeps the playlist row itself", renamed?.id == id)
         if let renamedId = renamed?.id {
             try? database.deletePlaylist(id: renamedId)
             report("deleting the playlist leaves no cover", (try? database.playlistCover(id: renamedId)) == nil

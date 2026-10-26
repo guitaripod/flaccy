@@ -82,6 +82,31 @@ struct ReplayTests {
             let request = try JSONDecoder().decode(SongKeyRequest.self, from: input)
             let key = try ServerCore.songKey(artistKey: request.artistKey, titleKey: request.titleKey)
             return try encoder.encode(SongKeyAnswer(songKey: key))
+        case "songKeys":
+            let request = try JSONDecoder().decode(SongKeysRequest.self, from: input)
+            let keys = try ServerCore.songKeys(request.pairs.map { ($0.artistKey, $0.titleKey) })
+            return try encoder.encode(SongKeysAnswer(songKeys: keys))
+        case "normalizePlaylistName":
+            let request = try JSONDecoder().decode(NormalizePlaylistNameRequest.self, from: input)
+            return try encoder.encode(NameAnswer(name: ServerCore.normalizePlaylistName(request.name)))
+        case "playlistId":
+            let request = try JSONDecoder().decode(PlaylistIdRequest.self, from: input)
+            let id = try ServerCore.playlistId(name: request.name, occurrence: request.occurrence)
+            return try encoder.encode(PlaylistIdAnswer(playlistId: id))
+        case "entryId":
+            let request = try JSONDecoder().decode(EntryIdRequest.self, from: input)
+            let id = try ServerCore.entryId(
+                playlistId: request.playlistId, songKey: request.songKey, occurrence: request.occurrence)
+            return try encoder.encode(EntryIdAnswer(entryId: id))
+        case "eventIdRec":
+            let request = try JSONDecoder().decode(EventIdRecRequest.self, from: input)
+            let id = try ServerCore.eventIdRec(
+                deviceId: request.deviceId, instance: request.instance, counter: request.counter)
+            return try encoder.encode(EventIdAnswer(eventId: id))
+        case "eventIdsMig":
+            let request = try JSONDecoder().decode(EventIdsMigRequest.self, from: input)
+            let ids = try ServerCore.eventIdsMig(request.plays.map { ($0.ts, $0.titleKey, $0.artistKey) })
+            return try encoder.encode(EventIdsAnswer(eventIds: ids))
         case "suppressedFlags":
             let request = try JSONDecoder().decode(SuppressedFlagsRequest.self, from: input)
             return try encoder.encode(FlagsAnswer(flags: ServerCore.suppressedFlags(request.events)))

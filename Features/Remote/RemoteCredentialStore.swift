@@ -116,3 +116,24 @@ nonisolated final class RemoteCredentialStore: @unchecked Sendable {
         lock.withLock { backend }
     }
 }
+
+/// The device token of a Flaccy Server lives beside the passwords of the other servers, in the same Keychain service,
+/// under an account of its own. It is never stored anywhere else and never logged.
+nonisolated extension RemoteCredentialStore: ServerTokenStore {
+
+    static func tokenAccount(serverID: String) -> String {
+        "flaccy-server-token:\(serverID)"
+    }
+
+    func token(serverID: String) -> String? {
+        secret(for: Self.tokenAccount(serverID: serverID))
+    }
+
+    func setToken(_ token: String, serverID: String) throws {
+        try setSecret(token, for: Self.tokenAccount(serverID: serverID))
+    }
+
+    func removeToken(serverID: String) {
+        removeSecret(for: Self.tokenAccount(serverID: serverID))
+    }
+}

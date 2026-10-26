@@ -71,6 +71,18 @@ export_json_functions!(
     between,
     /// The song key of two normalized keys: `{artistKey, titleKey}` to `{songKey}`.
     song_key,
+    /// The song keys of many pairs of normalized keys: `{pairs}` to `{songKeys}`.
+    song_keys,
+    /// A playlist name as the first-connect merge compares it: `{name}` to `{name}`.
+    normalize_playlist_name,
+    /// The deterministic id of a playlist that existed before sync: `{name, occurrence}` to `{playlistId}`.
+    playlist_id,
+    /// The deterministic id of an entry that existed before sync: `{playlistId, songKey, occurrence}` to `{entryId}`.
+    entry_id,
+    /// A client's listen id: `{deviceId, instance, counter}` to `{eventId}`.
+    event_id_rec,
+    /// The ids of migrated listens: `{plays}` to `{eventIds}`.
+    event_ids_mig,
     /// The ledger verdict for the events of one second: `{events}` to `{flags}`.
     suppressed_flags,
     /// The next client stamp: `{last, offsetMs, nowMs}` to `{stamp}`.

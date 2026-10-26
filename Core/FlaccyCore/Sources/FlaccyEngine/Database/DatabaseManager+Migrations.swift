@@ -345,6 +345,10 @@ extension DatabaseManager {
             }
         }
 
+        migrator.registerMigration("v18") { db in
+            try ServerSyncSchema.create(db)
+        }
+
         return migrator
     }
 }

@@ -4757,6 +4757,141 @@
   },
   {
     "expected": {
+      "songKeys": [
+        "430bf734f6554175bc3bebf6e5adea05",
+        "c2060c63e18df3c83289fb0dea7c83ed"
+      ]
+    },
+    "function": "songKeys",
+    "input": {
+      "pairs": [
+        {
+          "artistKey": "radiohead",
+          "titleKey": "karma police"
+        },
+        {
+          "artistKey": "",
+          "titleKey": ""
+        }
+      ]
+    },
+    "name": "song keys of two pairs"
+  },
+  {
+    "expected": {
+      "songKeys": []
+    },
+    "function": "songKeys",
+    "input": {
+      "pairs": []
+    },
+    "name": "song keys of no pairs"
+  },
+  {
+    "expected": {
+      "name": "road trip"
+    },
+    "function": "normalizePlaylistName",
+    "input": {
+      "name": "  Road   TRIP "
+    },
+    "name": "normalized playlist name"
+  },
+  {
+    "expected": {
+      "playlistId": "808b3163-8999-82df-8ec4-31b79a830737"
+    },
+    "function": "playlistId",
+    "input": {
+      "name": "Road Trip",
+      "occurrence": 0
+    },
+    "name": "playlist id of the first occurrence"
+  },
+  {
+    "expected": {
+      "playlistId": "808b3163-8999-82df-8ec4-31b79a830737"
+    },
+    "function": "playlistId",
+    "input": {
+      "name": " road  trip",
+      "occurrence": 0
+    },
+    "name": "playlist id ignores case and spacing"
+  },
+  {
+    "expected": {
+      "playlistId": "18cceabd-1c2e-8a22-8364-28216e8ca6c0"
+    },
+    "function": "playlistId",
+    "input": {
+      "name": "Road Trip",
+      "occurrence": 1
+    },
+    "name": "playlist id of the second occurrence"
+  },
+  {
+    "expected": {
+      "entryId": "16ac704d-2d3f-84f4-aa60-28db467bcbdd"
+    },
+    "function": "entryId",
+    "input": {
+      "occurrence": 0,
+      "playlistId": "2f0c1c52-0000-8000-8000-000000000000",
+      "songKey": "430bf734f6554175bc3bebf6e5adea05"
+    },
+    "name": "entry id of the first occurrence"
+  },
+  {
+    "expected": {
+      "entryId": "fc8770b1-07bb-84ba-bdb1-123363123b7c"
+    },
+    "function": "entryId",
+    "input": {
+      "occurrence": 1,
+      "playlistId": "2f0c1c52-0000-8000-8000-000000000000",
+      "songKey": "430bf734f6554175bc3bebf6e5adea05"
+    },
+    "name": "entry id of the second occurrence"
+  },
+  {
+    "expected": {
+      "eventId": "647d6dca733154c7cd34960f"
+    },
+    "function": "eventIdRec",
+    "input": {
+      "counter": 0,
+      "deviceId": "device",
+      "instance": "instance"
+    },
+    "name": "client event id"
+  },
+  {
+    "expected": {
+      "eventIds": [
+        "dda33d393414c5da76027e36",
+        "e4ee58dd41dd2728be8b4cd8"
+      ]
+    },
+    "function": "eventIdsMig",
+    "input": {
+      "plays": [
+        {
+          "artistKey": "radiohead",
+          "titleKey": "karma police",
+          "ts": 1700000000
+        },
+        {
+          "artistKey": "",
+          "titleKey": "",
+          "ts": 0
+        }
+      ]
+    },
+    "name": "migrated event ids"
+  },
+  {
+    "expected": {
       "stamp": 98304000
     },
     "function": "nextStamp",

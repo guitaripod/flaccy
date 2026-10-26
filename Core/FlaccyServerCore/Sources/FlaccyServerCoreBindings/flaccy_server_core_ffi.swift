@@ -622,12 +622,67 @@ public func between(input: String)throws  -> String  {
 })
 }
 /**
+ * The deterministic id of an entry that existed before sync: `{playlistId, songKey, occurrence}` to `{entryId}`.
+ */
+public func entryId(input: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeServerCoreFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_flaccy_server_core_ffi_fn_func_entry_id(
+        FfiConverterString.lower(input),uniffiCallStatus
+    )
+})
+}
+/**
+ * A client's listen id: `{deviceId, instance, counter}` to `{eventId}`.
+ */
+public func eventIdRec(input: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeServerCoreFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_flaccy_server_core_ffi_fn_func_event_id_rec(
+        FfiConverterString.lower(input),uniffiCallStatus
+    )
+})
+}
+/**
+ * The ids of migrated listens: `{plays}` to `{eventIds}`.
+ */
+public func eventIdsMig(input: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeServerCoreFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_flaccy_server_core_ffi_fn_func_event_ids_mig(
+        FfiConverterString.lower(input),uniffiCallStatus
+    )
+})
+}
+/**
  * The next client stamp: `{last, offsetMs, nowMs}` to `{stamp}`.
  */
 public func nextStamp(input: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeServerCoreFfiError_lift) {
         uniffiCallStatus in
     uniffi_flaccy_server_core_ffi_fn_func_next_stamp(
+        FfiConverterString.lower(input),uniffiCallStatus
+    )
+})
+}
+/**
+ * A playlist name as the first-connect merge compares it: `{name}` to `{name}`.
+ */
+public func normalizePlaylistName(input: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeServerCoreFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_flaccy_server_core_ffi_fn_func_normalize_playlist_name(
+        FfiConverterString.lower(input),uniffiCallStatus
+    )
+})
+}
+/**
+ * The deterministic id of a playlist that existed before sync: `{name, occurrence}` to `{playlistId}`.
+ */
+public func playlistId(input: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeServerCoreFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_flaccy_server_core_ffi_fn_func_playlist_id(
         FfiConverterString.lower(input),uniffiCallStatus
     )
 })
@@ -699,6 +754,17 @@ public func songKey(input: String)throws  -> String  {
 })
 }
 /**
+ * The song keys of many pairs of normalized keys: `{pairs}` to `{songKeys}`.
+ */
+public func songKeys(input: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeServerCoreFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_flaccy_server_core_ffi_fn_func_song_keys(
+        FfiConverterString.lower(input),uniffiCallStatus
+    )
+})
+}
+/**
  * The ledger verdict for the events of one second: `{events}` to `{flags}`.
  */
 public func suppressedFlags(input: String)throws  -> String  {
@@ -744,7 +810,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_flaccy_server_core_ffi_checksum_func_between() != 29610) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_flaccy_server_core_ffi_checksum_func_entry_id() != 15206) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_flaccy_server_core_ffi_checksum_func_event_id_rec() != 49207) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_flaccy_server_core_ffi_checksum_func_event_ids_mig() != 42054) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_flaccy_server_core_ffi_checksum_func_next_stamp() != 23115) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_flaccy_server_core_ffi_checksum_func_normalize_playlist_name() != 30211) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_flaccy_server_core_ffi_checksum_func_playlist_id() != 47276) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_flaccy_server_core_ffi_checksum_func_rebase_love() != 41207) {
@@ -763,6 +844,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_flaccy_server_core_ffi_checksum_func_song_key() != 20484) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_flaccy_server_core_ffi_checksum_func_song_keys() != 12767) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_flaccy_server_core_ffi_checksum_func_suppressed_flags() != 36600) {

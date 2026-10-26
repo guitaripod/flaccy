@@ -86,6 +86,38 @@ public enum ServerCore {
         return try call(FlaccyServerCoreBindings.songKey, request, as: SongKeyAnswer.self).songKey
     }
 
+    public static func songKeys(_ pairs: [(artistKey: String, titleKey: String)]) throws -> [String] {
+        let request = SongKeysRequest(pairs: pairs.map { SongKeyRequest(artistKey: $0.artistKey, titleKey: $0.titleKey) })
+        return try call(FlaccyServerCoreBindings.songKeys, request, as: SongKeysAnswer.self).songKeys
+    }
+
+    public static func normalizePlaylistName(_ name: String) throws -> String {
+        let request = NormalizePlaylistNameRequest(name: name)
+        return try call(FlaccyServerCoreBindings.normalizePlaylistName, request, as: NameAnswer.self).name
+    }
+
+    public static func playlistId(name: String, occurrence: UInt32) throws -> String {
+        let request = PlaylistIdRequest(name: name, occurrence: occurrence)
+        return try call(FlaccyServerCoreBindings.playlistId, request, as: PlaylistIdAnswer.self).playlistId
+    }
+
+    public static func entryId(playlistId: String, songKey: String, occurrence: UInt32) throws -> String {
+        let request = EntryIdRequest(playlistId: playlistId, songKey: songKey, occurrence: occurrence)
+        return try call(FlaccyServerCoreBindings.entryId, request, as: EntryIdAnswer.self).entryId
+    }
+
+    public static func eventIdRec(deviceId: String, instance: String, counter: UInt64) throws -> String {
+        let request = EventIdRecRequest(deviceId: deviceId, instance: instance, counter: counter)
+        return try call(FlaccyServerCoreBindings.eventIdRec, request, as: EventIdAnswer.self).eventId
+    }
+
+    public static func eventIdsMig(_ plays: [(ts: Int64, titleKey: String, artistKey: String)]) throws -> [String] {
+        let request = EventIdsMigRequest(
+            plays: plays.map { MigratedPlayRequest(ts: $0.ts, titleKey: $0.titleKey, artistKey: $0.artistKey) }
+        )
+        return try call(FlaccyServerCoreBindings.eventIdsMig, request, as: EventIdsAnswer.self).eventIds
+    }
+
     public static func suppressedFlags(_ events: [SecondEvent]) throws -> [Bool] {
         let request = SuppressedFlagsRequest(events: events)
         return try call(FlaccyServerCoreBindings.suppressedFlags, request, as: FlagsAnswer.self).flags

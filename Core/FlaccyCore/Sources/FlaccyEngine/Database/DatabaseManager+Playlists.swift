@@ -8,8 +8,20 @@ extension DatabaseManager {
     @discardableResult
     public func createPlaylist(name: String) throws -> PlaylistRecord {
         try dbQueue.write { db in
-            try PlaylistRecord(name: name, createdAt: Date())
+            let playlist = try PlaylistRecord(name: name, createdAt: Date())
                 .insertAndFetch(db, as: PlaylistRecord.self)
+            if let id = playlist.id {
+                try ServerSyncRecorder(db, gate: serverSyncGate)?.playlistCreated(localId: id, name: name)
+            }
+            return playlist
+        }
+    }
+
+    /// Renames a playlist in place, keeping its tracks, its cover and its identity on every device that syncs it.
+    public func renamePlaylist(id: Int64, name: String) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "UPDATE playlists SET name = ? WHERE id = ?", arguments: [name, id])
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.playlistRenamed(localId: id, name: name)
         }
     }
 
@@ -28,12 +40,14 @@ extension DatabaseManager {
     public func savePlaylistCover(_ data: Data, id: Int64) throws {
         try dbQueue.write { db in
             try db.execute(sql: "UPDATE playlists SET customCoverData = ? WHERE id = ?", arguments: [data, id])
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.coverSet(localId: id, data: data)
         }
     }
 
     public func clearPlaylistCover(id: Int64) throws {
         try dbQueue.write { db in
             try db.execute(sql: "UPDATE playlists SET customCoverData = NULL WHERE id = ?", arguments: [id])
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.coverCleared(localId: id)
         }
     }
 
@@ -49,6 +63,7 @@ extension DatabaseManager {
 
     public func deletePlaylist(id: Int64) throws {
         try dbQueue.write { db in
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.playlistDeleted(localId: id)
             _ = try PlaylistRecord.deleteOne(db, id: id)
         }
     }
@@ -72,6 +87,9 @@ extension DatabaseManager {
                 trackFileURL: trackFileURL,
                 position: maxPosition + 1
             ).insert(db)
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.tracksAdded(
+                playlistLocalId: playlistId, rows: [(db.lastInsertedRowID, trackFileURL)]
+            )
         }
     }
 
@@ -85,15 +103,19 @@ extension DatabaseManager {
                 sql: "SELECT COALESCE(MAX(position), -1) FROM playlistTracks WHERE playlistId = ?",
                 arguments: [playlistId]
             ) ?? -1) + 1
+            var added: [(rowId: Int64, fileURL: String)] = []
             for trackFileURL in trackFileURLs {
                 try PlaylistTrackRecord(playlistId: playlistId, trackFileURL: trackFileURL, position: position).insert(db)
+                added.append((db.lastInsertedRowID, trackFileURL))
                 position += 1
             }
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.tracksAdded(playlistLocalId: playlistId, rows: added)
         }
     }
 
     public func removeTrackFromPlaylist(id: Int64) throws {
         try dbQueue.write { db in
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.trackRemoved(rowId: id)
             _ = try PlaylistTrackRecord.deleteOne(db, id: id)
         }
     }
@@ -125,8 +147,11 @@ extension DatabaseManager {
     public func reorderPlaylistTrack(id: Int64, newPosition: Int) throws {
         try dbQueue.write { db in
             if var record = try PlaylistTrackRecord.fetchOne(db, id: id) {
+                let recorder = try ServerSyncRecorder(db, gate: serverSyncGate)
+                let witness = try recorder?.beginMove(rowId: id)
                 record.position = newPosition
                 try record.update(db)
+                try recorder?.endMove(witness)
             }
         }
     }

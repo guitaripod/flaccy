@@ -10,6 +10,9 @@ public final class DatabaseManager: Sendable {
     let dbQueue: DatabaseQueue
     let scrobbleRevisionCounter = RevisionCounter()
 
+    /// Whether a Flaccy Server is configured, read by every write path that records for sync.
+    public let serverSyncGate: ServerSyncGate
+
     /// Rows stamped before this instant are "undated": an old scrobbler bug left
     /// imported histories with plays at 1970-01-01. They still count toward
     /// totals and top lists, but placing them on a calendar, a clock or a
@@ -29,6 +32,7 @@ public final class DatabaseManager: Sendable {
                 Self.moveCorruptDatabaseAside(at: dbPath)
                 dbQueue = try Self.openDatabase(at: dbPath)
             }
+            serverSyncGate = ServerSyncGate(configured: Self.serverSyncIsConfigured(dbQueue))
             MidgarLog.info("Database initialized at \(dbPath)", category: .database)
         } catch {
             fatalError("Failed to initialize database after recovery attempt: \(error)")
@@ -38,8 +42,14 @@ public final class DatabaseManager: Sendable {
     /// Opens a database at an arbitrary path, for tests that need to watch the
     /// real migrator run against a fixture instead of the app's own library.
     /// Nothing in the app uses it: the app has exactly one database, `shared`.
-    public init(path: String) throws {
-        dbQueue = try Self.openDatabase(at: path)
+    public init(path: String, clock: @escaping @Sendable () -> Int64 = ServerSyncGate.systemClock) throws {
+        let queue = try Self.openDatabase(at: path)
+        dbQueue = queue
+        serverSyncGate = ServerSyncGate(configured: Self.serverSyncIsConfigured(queue), clock: clock)
+    }
+
+    private static func serverSyncIsConfigured(_ queue: DatabaseQueue) -> Bool {
+        (try? queue.read { try SyncMeta.isConfigured($0) }) ?? false
     }
 
     /// Writes a consistent copy of the whole library to `url`, taken while the app keeps using it.

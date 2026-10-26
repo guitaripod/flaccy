@@ -293,22 +293,9 @@ final class PlaylistsViewController: NSViewController {
         }
     }
 
-    /// DatabaseManager exposes no in-place rename, so renaming recreates the
-    /// playlist under the new name with the same track order and the same
-    /// chosen cover, and drops the old row — the only playlist identity
-    /// anywhere is the name shown.
     static func rename(playlistId: Int64, from oldName: String, to newName: String, in window: NSWindow?) {
         do {
-            let tracks = try DatabaseManager.shared.fetchPlaylistTracks(playlistId: playlistId)
-            let renamed = try DatabaseManager.shared.createPlaylist(name: newName)
-            guard let newId = renamed.id else { return }
-            for track in tracks {
-                try DatabaseManager.shared.addTrackToPlaylist(playlistId: newId, trackFileURL: track.trackFileURL)
-            }
-            if let cover = try DatabaseManager.shared.playlistCover(id: playlistId) {
-                try DatabaseManager.shared.savePlaylistCover(cover, id: newId)
-            }
-            try DatabaseManager.shared.deletePlaylist(id: playlistId)
+            try DatabaseManager.shared.renamePlaylist(id: playlistId, name: newName)
             MidgarLog.info("Playlist \(oldName) renamed to \(newName)", category: .database)
             NotificationCenter.default.post(name: .flaccyPlaylistsDidChange, object: nil)
         } catch {

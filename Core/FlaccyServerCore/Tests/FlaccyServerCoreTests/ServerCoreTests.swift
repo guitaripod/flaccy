@@ -77,3 +77,30 @@ struct ServerCoreTests {
         #expect(keys.count == 32)
     }
 }
+
+struct DerivedIdTests {
+    @Test func playlistIdsMergeNamesThatDifferOnlyInCaseAndSpacing() throws {
+        let first = try ServerCore.playlistId(name: "Road Trip", occurrence: 0)
+        let second = try ServerCore.playlistId(name: "  road   trip ", occurrence: 0)
+        let other = try ServerCore.playlistId(name: "Road Trip", occurrence: 1)
+        #expect(first == second)
+        #expect(first != other)
+        #expect(try ServerCore.normalizePlaylistName("  Road   TRIP ") == "road trip")
+    }
+
+    @Test func entryAndEventIdsAreStable() throws {
+        let entry = try ServerCore.entryId(playlistId: "p", songKey: "k", occurrence: 0)
+        #expect(entry == (try ServerCore.entryId(playlistId: "p", songKey: "k", occurrence: 0)))
+        #expect(entry != (try ServerCore.entryId(playlistId: "p", songKey: "k", occurrence: 1)))
+        let event = try ServerCore.eventIdRec(deviceId: "d", instance: "i", counter: 3)
+        #expect(event.count == 24)
+        let migrated = try ServerCore.eventIdsMig([(ts: 5, titleKey: "t", artistKey: "a")])
+        #expect(migrated.count == 1 && migrated[0].count == 24)
+    }
+
+    @Test func songKeysKeepInputOrder() throws {
+        let keys = try ServerCore.songKeys([("radiohead", "karma police"), ("a", "b")])
+        #expect(keys.first == "430bf734f6554175bc3bebf6e5adea05")
+        #expect(keys.count == 2)
+    }
+}

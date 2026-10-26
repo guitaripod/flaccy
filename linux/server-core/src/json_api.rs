@@ -250,3 +250,100 @@ pub fn next_stamp(input: &str) -> String {
         Ok(json!({ "stamp": stamp }))
     })
 }
+
+#[derive(Deserialize)]
+struct SongKeysInput {
+    pairs: Vec<SongKeyInput>,
+}
+
+/// The song keys of many pairs of normalized keys. Input `{pairs: [{artistKey, titleKey}]}`, output `{songKeys}` in input order.
+pub fn song_keys(input: &str) -> String {
+    run(input, |input: SongKeysInput| {
+        let keys: Vec<String> = input
+            .pairs
+            .iter()
+            .map(|pair| song::song_key(&pair.artist_key, &pair.title_key))
+            .collect();
+        Ok(json!({ "songKeys": keys }))
+    })
+}
+
+#[derive(Deserialize)]
+struct NormalizePlaylistNameInput {
+    name: String,
+}
+
+/// A playlist name as the first-connect merge compares it. Input `{name}`, output `{name}`.
+pub fn normalize_playlist_name(input: &str) -> String {
+    run(input, |input: NormalizePlaylistNameInput| {
+        Ok(json!({ "name": song::normalize_playlist_name(&input.name) }))
+    })
+}
+
+#[derive(Deserialize)]
+struct PlaylistIdInput {
+    name: String,
+    occurrence: u32,
+}
+
+/// The deterministic id of a playlist that existed before sync. Input `{name, occurrence}`, output `{playlistId}`.
+pub fn playlist_id(input: &str) -> String {
+    run(input, |input: PlaylistIdInput| {
+        Ok(json!({ "playlistId": song::playlist_id(&input.name, input.occurrence) }))
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EntryIdInput {
+    playlist_id: String,
+    song_key: String,
+    occurrence: u32,
+}
+
+/// The deterministic id of an entry that existed before sync. Input `{playlistId, songKey, occurrence}`, output `{entryId}`.
+pub fn entry_id(input: &str) -> String {
+    run(input, |input: EntryIdInput| {
+        Ok(json!({ "entryId": song::entry_id(&input.playlist_id, &input.song_key, input.occurrence) }))
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EventIdRecInput {
+    device_id: String,
+    instance: String,
+    counter: u64,
+}
+
+/// A client's listen id. Input `{deviceId, instance, counter}`, output `{eventId}`.
+pub fn event_id_rec(input: &str) -> String {
+    run(input, |input: EventIdRecInput| {
+        Ok(json!({ "eventId": song::event_id_rec(&input.device_id, &input.instance, input.counter) }))
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MigratedPlay {
+    ts: i64,
+    title_key: String,
+    artist_key: String,
+}
+
+#[derive(Deserialize)]
+struct EventIdsMigInput {
+    plays: Vec<MigratedPlay>,
+}
+
+/// The ids of migrated listens. Input `{plays: [{ts, titleKey, artistKey}]}`, output `{eventIds}` in input order.
+pub fn event_ids_mig(input: &str) -> String {
+    run(input, |input: EventIdsMigInput| {
+        let ids: Vec<String> = input
+            .plays
+            .iter()
+            .map(|play| song::event_id_mig(play.ts, &play.title_key, &play.artist_key))
+            .collect();
+        Ok(json!({ "eventIds": ids }))
+    })
+}

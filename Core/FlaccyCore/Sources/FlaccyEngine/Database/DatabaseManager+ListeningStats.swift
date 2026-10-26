@@ -7,14 +7,14 @@ extension DatabaseManager {
 
     func fetchScrobbleTimestamps(since: Date) throws -> [Date] {
         try dbQueue.read { db in
-            try Date.fetchAll(db, sql: "SELECT timestamp FROM scrobbles WHERE timestamp >= ? ORDER BY timestamp ASC", arguments: [since])
+            try Date.fetchAll(db, sql: "SELECT timestamp FROM scrobbles WHERE suppressed = 0 AND timestamp >= ? ORDER BY timestamp ASC", arguments: [since])
         }
     }
 
     public func fetchScrobbleRows(from: Date, to: Date) throws -> [ScrobbleRecord] {
         try dbQueue.read { db in
             try ScrobbleRecord
-                .filter(Column("timestamp") >= from && Column("timestamp") < to)
+                .filter(Column("suppressed") == false && Column("timestamp") >= from && Column("timestamp") < to)
                 .order(Column("timestamp").asc)
                 .fetchAll(db)
         }
@@ -24,7 +24,7 @@ extension DatabaseManager {
         try dbQueue.read { db in
             try Int.fetchAll(
                 db,
-                sql: "SELECT DISTINCT CAST(strftime('%Y', timestamp) AS INTEGER) FROM scrobbles WHERE timestamp >= ? ORDER BY 1 DESC",
+                sql: "SELECT DISTINCT CAST(strftime('%Y', timestamp) AS INTEGER) FROM scrobbles WHERE suppressed = 0 AND timestamp >= ? ORDER BY 1 DESC",
                 arguments: [Self.firstDatedScrobble]
             )
         }
@@ -32,7 +32,7 @@ extension DatabaseManager {
 
     public func fetchAllScrobbleRows() throws -> [ScrobbleRecord] {
         try dbQueue.read { db in
-            try ScrobbleRecord.order(Column("timestamp").asc).fetchAll(db)
+            try ScrobbleRecord.filter(Column("suppressed") == false).order(Column("timestamp").asc).fetchAll(db)
         }
     }
 
@@ -43,6 +43,7 @@ extension DatabaseManager {
         try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: """
                 SELECT titleKey, artistKey, COUNT(*) AS c FROM scrobbles
+                WHERE suppressed = 0
                 GROUP BY titleKey, artistKey
                 ORDER BY c DESC
             """)
@@ -58,6 +59,7 @@ extension DatabaseManager {
         try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: """
                 SELECT albumTitle, artist, MAX(timestamp) AS last, COUNT(*) AS c FROM scrobbles
+                WHERE suppressed = 0
                 GROUP BY albumTitle, artist
             """)
             return rows.map { (albumTitle: $0["albumTitle"], artist: $0["artist"], lastPlayed: $0["last"], playCount: $0["c"]) }
@@ -66,7 +68,7 @@ extension DatabaseManager {
 
     public func scrobbleCountInRange(from: Date, to: Date) throws -> Int {
         try dbQueue.read { db in
-            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM scrobbles WHERE timestamp >= ? AND timestamp < ?", arguments: [from, to]) ?? 0
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM scrobbles WHERE suppressed = 0 AND timestamp >= ? AND timestamp < ?", arguments: [from, to]) ?? 0
         }
     }
 
@@ -222,7 +224,7 @@ extension DatabaseManager {
         return try dbQueue.read { db in
             let count = try db.cachedStatement(sql: """
                 SELECT COUNT(*) FROM scrobbles
-                WHERE titleKey = ? AND artistKey = ? AND (albumKey = ? OR albumKey = '')
+                WHERE suppressed = 0 AND titleKey = ? AND artistKey = ? AND (albumKey = ? OR albumKey = '')
             """)
             var total = 0
             for song in songKeys {
@@ -283,13 +285,14 @@ extension DatabaseManager {
         }
     }
 
-    /// The `WHERE` for a half-open time window, or nothing at all when the
-    /// window is the whole table: a bounded clause sends SQLite through the
-    /// timestamp index and back to the table for every row, which is slower
-    /// than reading the table straight through when every row qualifies.
+    /// The `WHERE` for a half-open time window over the plays the server's
+    /// ledger shows. When the window is the whole table the time bounds are
+    /// left out: a bounded clause sends SQLite through the timestamp index and
+    /// back to the table for every row, which is slower than reading the table
+    /// straight through when every row qualifies.
     private static func scrobbleWindow(from: Date, to: Date) -> (clause: String, arguments: StatementArguments) {
-        if from == .distantPast, to == .distantFuture { return ("", StatementArguments()) }
-        return ("WHERE timestamp >= ? AND timestamp < ?", [from, to])
+        if from == .distantPast, to == .distantFuture { return ("WHERE suppressed = 0", StatementArguments()) }
+        return ("WHERE suppressed = 0 AND timestamp >= ? AND timestamp < ?", [from, to])
     }
 
     /// The paywall's proof of what the library holds, read in one statement
@@ -313,7 +316,8 @@ extension DatabaseManager {
 
     public func scrobbleCount(submittedOnly: Bool) throws -> Int {
         try dbQueue.read { db in
-            let scrobbles = submittedOnly ? ScrobbleRecord.filter(Column("submitted") == true) : ScrobbleRecord.all()
+            let shown = ScrobbleRecord.filter(Column("suppressed") == false)
+            let scrobbles = submittedOnly ? shown.filter(Column("submitted") == true) : shown
             return try scrobbles.fetchCount(db)
         }
     }

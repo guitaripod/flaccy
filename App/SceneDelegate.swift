@@ -39,6 +39,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         RemoteLaunch.start()
         #if DEBUG
         RemoteExercise.runIfRequested()
+        ServerSyncExercise.runIfRequested()
         RemoteShot.runIfRequested(tabs: tabs)
         PaywallShot.runIfRequested(in: window)
         SampleExercise.runIfRequested()

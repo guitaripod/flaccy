@@ -8,6 +8,10 @@ extension DatabaseManager {
     public func insertScrobble(_ scrobble: ScrobbleRecord) throws {
         try dbQueue.write { db in
             try scrobble.insert(db)
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.played(
+                rowId: db.lastInsertedRowID, title: scrobble.trackTitle, artist: scrobble.artist,
+                album: scrobble.albumTitle, timestamp: scrobble.timestamp, playedSeconds: scrobble.duration
+            )
         }
         scrobbleRevisionCounter.bump()
     }
@@ -17,8 +21,13 @@ extension DatabaseManager {
     public func insertScrobbles(_ scrobbles: [ScrobbleRecord]) throws {
         guard !scrobbles.isEmpty else { return }
         try dbQueue.write { db in
+            let recorder = try ServerSyncRecorder(db, gate: serverSyncGate)
             for scrobble in scrobbles {
                 try scrobble.insert(db)
+                try recorder?.played(
+                    rowId: db.lastInsertedRowID, title: scrobble.trackTitle, artist: scrobble.artist,
+                    album: scrobble.albumTitle, timestamp: scrobble.timestamp, playedSeconds: scrobble.duration
+                )
             }
         }
         scrobbleRevisionCounter.bump()
@@ -106,7 +115,7 @@ extension DatabaseManager {
     public func fetchPendingScrobbles() throws -> [ScrobbleRecord] {
         try dbQueue.read { db in
             try ScrobbleRecord
-                .filter(Column("submitted") == false)
+                .filter(Column("submitted") == false && Column("suppressed") == false)
                 .order(Column("timestamp").asc)
                 .fetchAll(db)
         }
@@ -190,6 +199,7 @@ extension DatabaseManager {
         var tallies: [String: ListenTally] = [:]
         let rows = try Row.fetchCursor(db, sql: """
             SELECT titleKey, artistKey, COUNT(*) AS plays, MAX(timestamp) AS latest FROM scrobbles
+            WHERE suppressed = 0
             GROUP BY titleKey, artistKey
         """)
         while let row = try rows.next() {

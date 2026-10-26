@@ -57,6 +57,41 @@ struct SongKeyRequest: Codable {
     var titleKey: String
 }
 
+struct SongKeysRequest: Codable {
+    var pairs: [SongKeyRequest]
+}
+
+struct NormalizePlaylistNameRequest: Codable {
+    var name: String
+}
+
+struct PlaylistIdRequest: Codable {
+    var name: String
+    var occurrence: UInt32
+}
+
+struct EntryIdRequest: Codable {
+    var playlistId: String
+    var songKey: String
+    var occurrence: UInt32
+}
+
+struct EventIdRecRequest: Codable {
+    var deviceId: String
+    var instance: String
+    var counter: UInt64
+}
+
+struct MigratedPlayRequest: Codable {
+    var ts: Int64
+    var titleKey: String
+    var artistKey: String
+}
+
+struct EventIdsMigRequest: Codable {
+    var plays: [MigratedPlayRequest]
+}
+
 struct SuppressedFlagsRequest: Codable {
     var events: [SecondEvent]
 }
@@ -93,6 +128,30 @@ struct PositionAnswer: Codable {
 
 struct SongKeyAnswer: Codable {
     var songKey: String
+}
+
+struct SongKeysAnswer: Codable {
+    var songKeys: [String]
+}
+
+struct NameAnswer: Codable {
+    var name: String
+}
+
+struct PlaylistIdAnswer: Codable {
+    var playlistId: String
+}
+
+struct EntryIdAnswer: Codable {
+    var entryId: String
+}
+
+struct EventIdAnswer: Codable {
+    var eventId: String
+}
+
+struct EventIdsAnswer: Codable {
+    var eventIds: [String]
 }
 
 struct FlagsAnswer: Codable {

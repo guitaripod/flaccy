@@ -69,6 +69,7 @@ enum DebugDrive {
                 await exerciseStack(window: window)
             }
         }
+        ServerSyncExercise.runIfRequested()
         guard CommandLine.arguments.contains("--exercise-transport") else { return }
         MidgarLog.info("DebugDrive: transport exercise armed", category: .general)
         Task {

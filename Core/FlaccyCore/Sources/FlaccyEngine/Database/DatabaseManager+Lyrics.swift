@@ -27,6 +27,7 @@ extension DatabaseManager {
                 sql: "UPDATE lyrics SET offsetMs = ? WHERE trackTitle = ? AND artist = ?",
                 arguments: [offsetMs, trackTitle, artist]
             )
+            try ServerSyncRecorder(db, gate: serverSyncGate)?.lyricsOffset(title: trackTitle, artist: artist, offsetMs: offsetMs)
         }
     }
 

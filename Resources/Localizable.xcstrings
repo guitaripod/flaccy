@@ -2253,6 +2253,16 @@
         }
       }
     },
+    "%@ is out of disk space. Free some up and Flaccy retries by itself.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is out of disk space. Free some up and Flaccy retries by itself."
+          }
+        }
+      }
+    },
     "%@ kHz": {
       "localizations": {
         "de": {
@@ -26275,6 +26285,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法連線到 lrclib.net"
+          }
+        }
+      }
+    },
+    "Can't reach %@. Is Tailscale on?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach %@. Is Tailscale on?"
           }
         }
       }
@@ -63743,6 +63763,16 @@
         }
       }
     },
+    "No Flaccy Server is connected.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Flaccy Server is connected."
+          }
+        }
+      }
+    },
     "No Lyrics for “%@”": {
       "localizations": {
         "de": {
@@ -68323,6 +68353,48 @@
           "stringUnit": {
             "state": "translated",
             "value": "關 · bit-perfect"
+          }
+        }
+      }
+    },
+    "Offline.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline."
+          }
+        }
+      }
+    },
+    "Offline. %lld changes will send when %@ is reachable.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline. %1$#@arg1@ will send when %2$@ is reachable."
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg change"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg changes"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -97311,6 +97383,26 @@
         }
       }
     },
+    "Sync is a Flaccy Pro feature. Songs still stream.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync is a Flaccy Pro feature. Songs still stream."
+          }
+        }
+      }
+    },
+    "Sync is off.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync is off."
+          }
+        }
+      }
+    },
     "Sync paused: %@": {
       "localizations": {
         "de": {
@@ -97631,6 +97723,16 @@
         }
       }
     },
+    "Synced just now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synced just now"
+          }
+        }
+      }
+    },
     "Synced lyrics": {
       "localizations": {
         "de": {
@@ -97755,6 +97857,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在同步 %@"
+          }
+        }
+      }
+    },
+    "Syncing %lld changes…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Syncing %1$#@arg1@…"
+          },
+          "substitutions": {
+            "arg1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg change"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg changes"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -100771,6 +100905,16 @@
         }
       }
     },
+    "The clock on %@ is wrong. Sync is paused.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The clock on %@ is wrong. Sync is paused."
+          }
+        }
+      }
+    },
     "The connection works, but the lyrics server didn't answer within 10 seconds. Try again in a moment.": {
       "localizations": {
         "de": {
@@ -102885,6 +103029,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "此裝置沒有可用於掃描的相機。請改為輸入伺服器的位址和金鑰。"
+          }
+        }
+      }
+    },
+    "This device was removed from %@. Add the server again to keep syncing.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device was removed from %@. Add the server again to keep syncing."
           }
         }
       }
@@ -107593,6 +107747,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "已是最新——每張專輯都有封面和年份。"
+          }
+        }
+      }
+    },
+    "Update Flaccy to keep syncing.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update Flaccy to keep syncing."
+          }
+        }
+      }
+    },
+    "Update your Flaccy Server to keep syncing.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update your Flaccy Server to keep syncing."
           }
         }
       }

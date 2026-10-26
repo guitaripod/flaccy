@@ -10,7 +10,8 @@ let engineProducts: [Product] = [
     .library(name: "FlaccyEngine", targets: ["FlaccyEngine"])
 ]
 let engineDependencies: [Package.Dependency] = [
-    .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0")
+    .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
+    .package(path: "../FlaccyServerCore"),
 ]
 let engineTargets: [Target] = [
     .target(
@@ -19,6 +20,7 @@ let engineTargets: [Target] = [
             "FlaccyCore",
             .product(name: "MidgarCore", package: "MidgarKit"),
             .product(name: "GRDB", package: "GRDB.swift"),
+            .product(name: "FlaccyServerCore", package: "FlaccyServerCore"),
         ]
     ),
     .testTarget(
@@ -27,6 +29,7 @@ let engineTargets: [Target] = [
             "FlaccyEngine",
             "FlaccyCore",
             .product(name: "GRDB", package: "GRDB.swift"),
+            .product(name: "FlaccyServerCore", package: "FlaccyServerCore"),
         ]
     ),
 ]
@@ -37,7 +40,7 @@ let package = Package(
     platforms: [
         .iOS(.v18),
         .watchOS(.v11),
-        .macOS(.v14),
+        .macOS(.v15),
     ],
     products: [
         .library(name: "FlaccyCore", targets: ["FlaccyCore"])

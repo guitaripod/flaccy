@@ -62,6 +62,12 @@ fn invoke(function: &str, input: &Value) -> Result<String, ServerCoreFfiError> {
         "rebaseSession" => rebase_session(input),
         "between" => between(input),
         "songKey" => song_key_export(input),
+        "songKeys" => song_keys(input),
+        "normalizePlaylistName" => normalize_playlist_name(input),
+        "playlistId" => playlist_id(input),
+        "entryId" => entry_id(input),
+        "eventIdRec" => event_id_rec(input),
+        "eventIdsMig" => event_ids_mig(input),
         "suppressedFlags" => suppressed_flags(input),
         "nextStamp" => next_stamp(input),
         other => panic!("unknown function {other}"),
@@ -469,6 +475,56 @@ fn helper_cases(cases: &mut Cases) {
         json!({ "events": [] }),
     );
     cases.add(
+        "song keys of two pairs",
+        "songKeys",
+        json!({ "pairs": [{ "artistKey": "radiohead", "titleKey": "karma police" }, { "artistKey": "", "titleKey": "" }] }),
+    );
+    cases.add(
+        "song keys of no pairs",
+        "songKeys",
+        json!({ "pairs": [] }),
+    );
+    cases.add(
+        "normalized playlist name",
+        "normalizePlaylistName",
+        json!({ "name": "  Road   TRIP " }),
+    );
+    cases.add(
+        "playlist id of the first occurrence",
+        "playlistId",
+        json!({ "name": "Road Trip", "occurrence": 0 }),
+    );
+    cases.add(
+        "playlist id ignores case and spacing",
+        "playlistId",
+        json!({ "name": " road  trip", "occurrence": 0 }),
+    );
+    cases.add(
+        "playlist id of the second occurrence",
+        "playlistId",
+        json!({ "name": "Road Trip", "occurrence": 1 }),
+    );
+    cases.add(
+        "entry id of the first occurrence",
+        "entryId",
+        json!({ "playlistId": "2f0c1c52-0000-8000-8000-000000000000", "songKey": "430bf734f6554175bc3bebf6e5adea05", "occurrence": 0 }),
+    );
+    cases.add(
+        "entry id of the second occurrence",
+        "entryId",
+        json!({ "playlistId": "2f0c1c52-0000-8000-8000-000000000000", "songKey": "430bf734f6554175bc3bebf6e5adea05", "occurrence": 1 }),
+    );
+    cases.add(
+        "client event id",
+        "eventIdRec",
+        json!({ "deviceId": "device", "instance": "instance", "counter": 0 }),
+    );
+    cases.add(
+        "migrated event ids",
+        "eventIdsMig",
+        json!({ "plays": [{ "ts": 1700000000, "titleKey": "karma police", "artistKey": "radiohead" }, { "ts": 0, "titleKey": "", "artistKey": "" }] }),
+    );
+    cases.add(
         "next stamp from an empty clock",
         "nextStamp",
         json!({ "last": 0, "offsetMs": 500, "nowMs": 1000 }),
@@ -512,6 +568,12 @@ fn there_are_enough_cases_covering_errors_and_every_function() {
         "rebaseSession",
         "between",
         "songKey",
+        "songKeys",
+        "normalizePlaylistName",
+        "playlistId",
+        "entryId",
+        "eventIdRec",
+        "eventIdsMig",
         "suppressedFlags",
         "nextStamp",
     ] {

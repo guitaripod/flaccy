@@ -293,3 +293,48 @@ fn rebase_functions_reject_malformed_input() {
         assert!(call(function, json!({ "pending": 3 }))["error"].is_string());
     }
 }
+
+#[test]
+fn id_derivations_match_the_core_functions() {
+    use flaccy_server_core::song::{
+        entry_id, event_id_mig, event_id_rec, normalize_playlist_name, playlist_id,
+    };
+    let name = call(
+        json_api::normalize_playlist_name,
+        json!({ "name": "  Road   TRIP " }),
+    );
+    assert_eq!(name, json!({ "name": normalize_playlist_name("  Road   TRIP ") }));
+    assert_eq!(name["name"], "road trip");
+    let playlist = call(
+        json_api::playlist_id,
+        json!({ "name": "Road Trip", "occurrence": 1 }),
+    );
+    assert_eq!(playlist["playlistId"], json!(playlist_id("Road Trip", 1)));
+    let entry = call(
+        json_api::entry_id,
+        json!({ "playlistId": "p", "songKey": "k", "occurrence": 2 }),
+    );
+    assert_eq!(entry["entryId"], json!(entry_id("p", "k", 2)));
+    let rec = call(
+        json_api::event_id_rec,
+        json!({ "deviceId": "d", "instance": "i", "counter": 7 }),
+    );
+    assert_eq!(rec["eventId"], json!(event_id_rec("d", "i", 7)));
+    let migrated = call(
+        json_api::event_ids_mig,
+        json!({ "plays": [{ "ts": 5, "titleKey": "t", "artistKey": "a" }, { "ts": 6, "titleKey": "t", "artistKey": "a" }] }),
+    );
+    assert_eq!(
+        migrated,
+        json!({ "eventIds": [event_id_mig(5, "t", "a"), event_id_mig(6, "t", "a")] })
+    );
+}
+
+#[test]
+fn song_keys_answers_in_input_order() {
+    let answer = call(
+        json_api::song_keys,
+        json!({ "pairs": [{ "artistKey": "a", "titleKey": "b" }, { "artistKey": "c", "titleKey": "d" }] }),
+    );
+    assert_eq!(answer, json!({ "songKeys": [song_key("a", "b"), song_key("c", "d")] }));
+}

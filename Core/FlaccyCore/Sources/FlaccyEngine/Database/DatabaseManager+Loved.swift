@@ -7,10 +7,15 @@ extension DatabaseManager {
 
     public func setLoved(fileURL: String, loved: Bool, pendingOp: String?) throws {
         try dbQueue.write { db in
+            let recorder = try ServerSyncRecorder(db, gate: serverSyncGate)
+            let wasLoved = try recorder == nil ? loved : Self.storedLoved(db, fileURL: fileURL)
             try db.execute(
                 sql: "UPDATE tracks SET loved = ?, lovedPendingOp = ? WHERE fileURL = ?",
                 arguments: [loved, pendingOp, fileURL]
             )
+            if wasLoved != loved {
+                try recorder?.loved(fileURL: fileURL, loved: loved)
+            }
         }
     }
 
@@ -41,9 +46,21 @@ extension DatabaseManager {
     public func markLoved(paths: [String], loved: Bool) throws {
         guard !paths.isEmpty else { return }
         try dbQueue.write { db in
+            let recorder = try ServerSyncRecorder(db, gate: serverSyncGate)
+            let changing = recorder == nil ? [] : try TrackRecord
+                .filter(paths.contains(Column("fileURL")) && Column("loved") != loved)
+                .select(Column("fileURL"), as: String.self)
+                .fetchAll(db)
             _ = try TrackRecord
                 .filter(paths.contains(Column("fileURL")))
                 .updateAll(db, Column("loved").set(to: loved))
+            for fileURL in changing {
+                try recorder?.loved(fileURL: fileURL, loved: loved)
+            }
         }
+    }
+
+    private static func storedLoved(_ db: Database, fileURL: String) throws -> Bool {
+        try Bool.fetchOne(db, sql: "SELECT loved FROM tracks WHERE fileURL = ?", arguments: [fileURL]) ?? false
     }
 }
