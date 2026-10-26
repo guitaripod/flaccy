@@ -23,10 +23,10 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 
 | Platform | What it is | Get it |
 |---|---|---|
-| **iPhone** | The full app: gapless playback, a real equalizer, AI organization, scrobbling, charts, Year in Music, wantlist, lyrics, stations | [App Store](https://apps.apple.com/app/id6787493695) |
+| **iPhone** | The full app: gapless playback, a real equalizer, AI organization, scrobbling, charts, Year in Music, wantlist, lyrics, Share Lyrics videos, stations | [App Store](https://apps.apple.com/app/id6787493695) |
 | **Apple Watch** | Standalone phone-free player — sync tracks, play offline through AirPods | Bundled with the iOS app |
 | **Mac** | Native AppKit app with Liquid Glass and an adaptive artwork palette that tints the whole window to what's playing: full feature parity plus the equalizer in its own window, folder watching, menu bar player, media keys, multi-column sorting, keyboard-first browsing | [Mac App Store](https://apps.apple.com/app/id6789594504) |
-| **Linux** | Native GTK4/libadwaita player with an adaptive theme engine, gapless GStreamer playback, a built-in equalizer, MPRIS media keys, scrobbling, synced lyrics, listening stats | `curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh \| sh` or `yay -S flaccy-bin` |
+| **Linux** | Native GTK4/libadwaita player with an adaptive theme engine, gapless GStreamer playback, a built-in equalizer, MPRIS media keys, scrobbling, synced lyrics and Share Lyrics, listening stats | `curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh \| sh` or `yay -S flaccy-bin` |
 
 ## Features
 
@@ -62,6 +62,7 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 
 ### Last.fm
 - **Scrobbling** with offline write-ahead queue and automatic retry — identical semantics on every platform
+- **Listening history** syncs into Stats on every client
 - **Loved tracks**, **charts by period** (Mac and Linux open on the last 7 days and show how plays and minutes moved against the period before), listening clock, streak heatmap
 - **Recap & Year in Music** — shareable story cards and posters (full-resolution export on Mac)
 - Artist bios, album metadata enrichment, similar-artist discovery
@@ -77,6 +78,7 @@ Point flaccy at your music files. It scans the directory structure, sends file p
 - **Lines know where they end** — a line stops being lit when it ends, an instrumental gap of four seconds or more shows three beats that light across it, backing vocals are smaller, and a `♪` line is a break rather than a lyric
 - **Timing control** — a clock button shifts the lyrics Earlier or Later in 0.1 s steps, remembered per song, for tracks whose timestamps run off the singing
 - **Karaoke-style scrolling** that follows the singer; click/tap any line to seek
+- **Share Lyrics** — pick lines and get a short video of them over the song itself (its real audio, up to 30 s) or a still image card. Four templates: Spotlight (one big line at a time), Verse (the lines scroll past), Poster (cover art, every line lighting up as it is sung) and Pulse (a turning disc inside a ring of audio-reactive bars). Story 9:16, Post 4:5, Square or Wide 16:9; colours drawn from the cover (Artwork, Vivid, Dark, Light); four fonts; word-by-word fill when the lyrics have word timing; the preview plays the clip's audio. iPhone: Now Playing share menu, the share button beside the lyrics, or long-press a line for the share sheet / Save to Photos. Mac: share menu, lyrics panel button, or right-click a line for the share picker / Save Video… / Save Image…. Linux: lyrics panel share button or right-click a line → Save Video… / Save Image… (video needs `ffmpeg`)
 - **Finds lyrics for messy tags** — your `.lrc`/`.elrc` sidecar or embedded tag wins, then lrclib, which is also tried without "(Remastered)", "- 2011 Remaster" and featuring credits and asked again once when it is busy; same resolution on every client
 
 ### Music videos (Linux)
@@ -132,7 +134,7 @@ cargo build --release
 ./install.sh
 ```
 
-Requires Rust 1.85+, GTK 4.18+, libadwaita ≥ 1.7, and GStreamer (base + good + `gst-libav` for AAC/M4A/ALAC). Without `gst-libav` FLAC and MP3 play but AAC/M4A won't — flaccy toasts the missing codec. Optional: `yt-dlp` + `ffmpeg` for Downloads and music videos, `ollama` to break ties when picking a video.
+Requires Rust 1.85+, GTK 4.18+, libadwaita ≥ 1.7, and GStreamer (base + good + `gst-libav` for AAC/M4A/ALAC). Without `gst-libav` FLAC and MP3 play but AAC/M4A won't — flaccy toasts the missing codec. Optional: `yt-dlp` + `ffmpeg` for Downloads and music videos, `ffmpeg` for Share Lyrics video export, `ollama` to break ties when picking a video.
 
 Building without the `FLACCY_LASTFM_KEY` env var just hides scrobbling (Last.fm requests are signed by flaccy-api, so there is no secret to supply). The key can also live in `~/.config/flaccy/build-keys.env` (`FLACCY_KEYS_FILE` overrides the path) so every local build picks it up without touching the working copy. See [linux/README.md](linux/README.md).
 

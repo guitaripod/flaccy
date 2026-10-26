@@ -29,6 +29,11 @@ shows three beats that light across it. The clock button shifts the lyrics earli
 0.1 s steps, remembered per song, for tracks whose timestamps run off the singing. Click a line
 to seek.
 
+Share Lyrics (lyrics panel share button, or right-click a line): pick lines and save a short video
+of them over the song itself, with its real audio and up to 30 s, or a still image card. Choose
+Spotlight, Verse, Poster or Pulse, a format (Story, Post, Square or Wide), colours drawn from the
+cover and a font; word timing fills in word by word. Save Video… needs `ffmpeg`; Save Image… does not.
+
 An adaptive theme engine retints the whole app with the dominant color of whatever's
 playing — ambient gradient backdrops, glass surfaces, a glowing now-playing pulse — or
 pick one of seven curated palettes in Preferences. Works in light and dark.
@@ -74,7 +79,7 @@ Installs to `~/.local` (no sudo). x86_64, glibc ≥ 2.39 (Ubuntu 24.04+, Fedora 
 - Debian/Ubuntu: `sudo apt install libgtk-4-1 libadwaita-1-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav`
 - Fedora: `sudo dnf install gtk4 libadwaita gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-libav`
 
-`gst-libav` supplies the AAC/M4A/ALAC (and other ffmpeg-backed) decoders — without it, FLAC and MP3 play but AAC/M4A files won't. Flaccy names the missing codec in a toast if you hit one.
+`gst-libav` supplies the AAC/M4A/ALAC (and other ffmpeg-backed) decoders — without it, FLAC and MP3 play but AAC/M4A files won't. Flaccy names the missing codec in a toast if you hit one. Optional: `ffmpeg` for Share Lyrics video export.
 
 ### Arch (AUR)
 
