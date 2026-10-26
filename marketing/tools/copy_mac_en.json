@@ -19,14 +19,14 @@
     "headline": "Art, lyrics and queue, *side by side.*",
     "maxLines": 1
   },
+  "share": {
+    "kicker": "Share Lyrics",
+    "headline": "Your favorite line, *as a video.*",
+    "maxLines": 1
+  },
   "queue": {
     "kicker": "Up Next",
     "headline": "Your queue, *always at hand.*",
-    "maxLines": 1
-  },
-  "songs": {
-    "kicker": "Songs",
-    "headline": "A song list that *sorts your way.*",
     "maxLines": 1
   },
   "scrobble": {

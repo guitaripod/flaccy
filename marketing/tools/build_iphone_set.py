@@ -22,10 +22,10 @@ SLIDES = [
     dict(id="eq", raw="equalizer", accent=c.TEAL, secondary=c.VIOLET),
     dict(id="nowplaying", raw="now-playing", accent=c.VIOLET, secondary=c.CORAL),
     dict(id="lyrics", raw="lyrics", accent=c.ROSE, secondary=c.BLUE),
+    dict(id="share", raw="lyric-share", accent=c.CORAL, secondary=c.VIOLET),
     dict(id="scrobble", raw="charts", accent=c.AMBER, secondary=c.CORAL),
     dict(id="year", raw="year", accent=c.CORAL, secondary=c.AMBER),
     dict(id="watch", layout="watch", raw="now-playing", accent=c.BLUE, secondary=c.TEAL),
-    dict(id="watchsync", raw="watch-sync", accent=c.TEAL, secondary=c.BLUE),
     dict(id="eqpro", raw="equalizer-advanced", accent=c.AMBER, secondary=c.TEAL),
 ]
 

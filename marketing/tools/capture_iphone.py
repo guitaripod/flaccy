@@ -28,6 +28,7 @@ SCREENS = {
     "equalizer-outputs":  dict(env={"FLACCY_ROUTE": "equalizer-outputs", "FLACCY_PLAYING": "1"}, wait=16),
     "equalizer-import":   dict(env={"FLACCY_ROUTE": "equalizer-import", "FLACCY_PLAYING": "1"}, wait=16),
     "lyrics":       dict(env={"FLACCY_ROUTE": "lyrics", "FLACCY_PLAYING": "1"}, wait=18),
+    "lyric-share":  dict(env={"FLACCY_ROUTE": "lyric-share", "FLACCY_PLAYING": "1"}, wait=24),
     "queue":        dict(env={"FLACCY_ROUTE": "queue"}, wait=12),
     "charts":       dict(env={"FLACCY_ROUTE": "charts"}, wait=12),
     "year":         dict(env={"FLACCY_ROUTE": "year", "FLACCY_YEAR": "2026"}, wait=12),
