@@ -7,6 +7,7 @@ use flaccy_server_core::wire::Change;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
+use std::collections::HashMap;
 
 pub(crate) const PLAYLIST: &str = "playlist";
 pub(crate) const ENTRY: &str = "playlist_entry";
@@ -91,8 +92,8 @@ pub(crate) fn scalar(conn: &Connection, key: &str) -> Result<Option<Scalar>> {
     get(conn, SCALAR, key)
 }
 
-/// The entities a reseed carries: the user's own playlists with their entries, and every love, rating, scalar and session.
-pub(crate) fn reseed_entities(conn: &Connection, user: &str) -> Result<Vec<Value>> {
+/// The entities a reseed carries, in the order it must be sent: the user's own playlists, then the entries of each in playlist order and `(pos, id)` order, then every love, rating, scalar and session.
+pub(crate) fn reseed_entities(conn: &Connection, user: &str) -> Result<Vec<Entity>> {
     let mut stmt =
         conn.prepare_cached("SELECT kind, id, value_json FROM sync_base ORDER BY kind, id")?;
     let rows = stmt.query_map([], |row| {
@@ -102,29 +103,47 @@ pub(crate) fn reseed_entities(conn: &Connection, user: &str) -> Result<Vec<Value
             row.get::<_, String>(2)?,
         ))
     })?;
-    let mut owned = std::collections::HashSet::new();
-    let mut all = Vec::new();
+    let mut playlists = Vec::new();
+    let mut entries: HashMap<String, Vec<Entity>> = HashMap::new();
+    let mut others = Vec::new();
     for row in rows {
         let (kind, id, text) = row?;
         let value: Value = serde_json::from_str(&text)?;
-        if kind == PLAYLIST {
-            if value["owner"].as_str() != Some(user) {
-                continue;
+        let kind: EntityKind = serde_json::from_value(Value::String(kind))?;
+        match kind {
+            EntityKind::Playlist if value["owner"].as_str() == Some(user) => {
+                playlists.push(Entity { kind, id, value })
             }
-            owned.insert(id.clone());
+            EntityKind::Playlist => {}
+            EntityKind::PlaylistEntry => {
+                let playlist = value["playlist"].as_str().unwrap_or_default().to_owned();
+                entries
+                    .entry(playlist)
+                    .or_default()
+                    .push(Entity { kind, id, value });
+            }
+            _ => others.push(Entity { kind, id, value }),
         }
-        all.push((kind, id, value));
     }
-    Ok(all
-        .into_iter()
-        .filter(|(kind, _, value)| {
-            kind != ENTRY
-                || value["playlist"]
-                    .as_str()
-                    .is_some_and(|p| owned.contains(p))
-        })
-        .map(|(kind, id, value)| serde_json::json!({ "kind": kind, "id": id, "value": value }))
-        .collect())
+    let mut ordered = Vec::new();
+    for playlist in &playlists {
+        ordered.push(playlist.clone());
+    }
+    for playlist in playlists {
+        let mut owned = entries.remove(&playlist.id).unwrap_or_default();
+        owned.sort_by(|a, b| {
+            let key = |entity: &Entity| {
+                (
+                    entity.value["pos"].as_str().unwrap_or_default().to_owned(),
+                    entity.id.clone(),
+                )
+            };
+            key(a).cmp(&key(b))
+        });
+        ordered.extend(owned);
+    }
+    ordered.extend(others);
+    Ok(ordered)
 }
 
 pub(crate) fn clear(conn: &Connection) -> Result<()> {

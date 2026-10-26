@@ -7,10 +7,11 @@ use super::link::ServerLink;
 use super::merge::MergeReport;
 use super::sink::ScalarSink;
 use super::status::{api_state, sync_state};
+pub use super::status::{Blocker, ServerIdentity, SyncState, SyncStatus};
 use super::transport::{ApiError, DeviceInfo, Transport};
 use crate::db::{now_ms, Db};
 use flaccy_server_core::wire::Hello;
-pub use super::status::{Blocker, ServerIdentity, SyncState, SyncStatus};
+use std::collections::HashSet;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
@@ -122,6 +123,8 @@ pub struct Driver {
     merge: Option<MergeReport>,
     version_checked_at: Option<Instant>,
     version_recheck: Duration,
+    uploaded: HashSet<String>,
+    requeued: HashSet<String>,
 }
 
 type DirtyListener = Box<dyn Fn(&Dirty) + Send>;
@@ -143,6 +146,8 @@ impl Driver {
             merge: None,
             version_checked_at: None,
             version_recheck: VERSION_RECHECK,
+            uploaded: HashSet::new(),
+            requeued: HashSet::new(),
         }
     }
 
@@ -321,6 +326,7 @@ impl Driver {
             if matches!(self.sync_pass(db)?, Flow::Done) {
                 return Ok(());
             }
+            self.uploaded.clear();
         }
         Err(Stop::Api(ApiError::Malformed(
             "The server kept replacing its data.".into(),
@@ -406,6 +412,7 @@ impl Driver {
     }
 
     fn push_next(&mut self, db: &Db, transport: &Transport) -> std::result::Result<Push, Stop> {
+        self.upload_covers(db, transport)?;
         let Some(request) = self.engine.next_push(db)? else {
             return Ok(Push::Nothing);
         };
@@ -420,6 +427,7 @@ impl Driver {
                     self.engine
                         .on_push_response(db, &request.instance, &response, now_ms())?;
                 self.publish(dirty);
+                self.retry_refused_covers(db, transport)?;
                 Ok(Push::Sent)
             }
             Err(ApiError::IncarnationChanged(incarnation)) => {
@@ -434,6 +442,59 @@ impl Driver {
             }
             Err(error) => Err(error.into()),
         }
+    }
+
+    fn upload_covers(&mut self, db: &Db, transport: &Transport) -> std::result::Result<(), Stop> {
+        for hash in self.engine.unsent_cover_hashes(db)? {
+            if self.uploaded.contains(&hash) {
+                continue;
+            }
+            match self.upload_cover(db, transport, &hash) {
+                Ok(true) => {
+                    self.uploaded.insert(hash);
+                }
+                Ok(false) => self.engine.drop_cover(db, &hash)?,
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(())
+    }
+
+    fn upload_cover(
+        &self,
+        db: &Db,
+        transport: &Transport,
+        hash: &str,
+    ) -> std::result::Result<bool, Stop> {
+        let Some((mime, bytes)) = self.engine.local_cover(db, hash)? else {
+            return Ok(false);
+        };
+        match self.retry(|| transport.put_blob(hash, mime, &bytes)) {
+            Ok(()) => Ok(true),
+            Err(error) if error.is_transient() => Err(error.into()),
+            Err(_) => Ok(false),
+        }
+    }
+
+    fn retry_refused_covers(
+        &mut self,
+        db: &Db,
+        transport: &Transport,
+    ) -> std::result::Result<(), Stop> {
+        for (id, args_hash, hashes) in self.engine.refused_cover_reseeds(db)? {
+            if !self.requeued.insert(args_hash) {
+                continue;
+            }
+            let mut every_blob_sent = true;
+            for hash in &hashes {
+                every_blob_sent &= self.upload_cover(db, transport, hash)?;
+            }
+            if every_blob_sent {
+                self.uploaded.extend(hashes);
+                self.engine.requeue_reseed(db, id)?;
+            }
+        }
+        Ok(())
     }
 
     fn recover(
@@ -514,7 +575,8 @@ fn identity_of(hello: Hello) -> Result<ServerIdentity> {
             version: hello.server.version,
         });
     }
-    let newer_only = !hello.protocol.is_empty() && hello.protocol.iter().all(|version| *version > 1);
+    let newer_only =
+        !hello.protocol.is_empty() && hello.protocol.iter().all(|version| *version > 1);
     Err(SyncError::Incompatible(if newer_only {
         Incompatibility::AppTooOld
     } else {

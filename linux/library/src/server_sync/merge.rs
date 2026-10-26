@@ -81,7 +81,10 @@ pub(crate) fn capture(conn: &Connection) -> Result<Option<MergeReport>> {
 fn merged_playlists(conn: &Connection) -> Result<Vec<MergedPlaylist>> {
     let rows = pending::all_rows(conn)?;
     let mut merged = Vec::new();
-    for row in rows.iter().filter(|row| row.mutation.name == PLAYLIST_CREATE) {
+    for row in rows
+        .iter()
+        .filter(|row| row.mutation.name == PLAYLIST_CREATE)
+    {
         let args = &row.mutation.args;
         let (Some(id), Some(name)) = (args["id"].as_str(), args["name"].as_str()) else {
             continue;
@@ -151,7 +154,11 @@ pub fn undo_playlist(db: &Db, merged: &MergedPlaylist) -> Result<()> {
     let conn = db.connection();
     atomically(conn, || {
         let shared: HashSet<&str> = merged.server.iter().map(String::as_str).collect();
-        for entry in merged.local.iter().filter(|entry| !shared.contains(entry.id.as_str())) {
+        for entry in merged
+            .local
+            .iter()
+            .filter(|entry| !shared.contains(entry.id.as_str()))
+        {
             for row_id in track_rows(conn, &entry.id)? {
                 db.remove_playlist_track(row_id)?;
             }

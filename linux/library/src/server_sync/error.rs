@@ -41,8 +41,14 @@ impl fmt::Display for SyncError {
             SyncError::Io(error) => write!(formatter, "file: {error}"),
             SyncError::NotConfigured => write!(formatter, "no Flaccy Server is configured"),
             SyncError::Api(error) => write!(formatter, "{error}"),
-            SyncError::Incompatible(Incompatibility::ServerTooOld) => write!(formatter, "This server is too old for sync. Update Flaccy Server to 1.0 or newer."),
-            SyncError::Incompatible(Incompatibility::AppTooOld) => write!(formatter, "This server needs a newer Flaccy. Update Flaccy and try again."),
+            SyncError::Incompatible(Incompatibility::ServerTooOld) => write!(
+                formatter,
+                "This server is too old for sync. Update Flaccy Server to 1.0 or newer."
+            ),
+            SyncError::Incompatible(Incompatibility::AppTooOld) => write!(
+                formatter,
+                "This server needs a newer Flaccy. Update Flaccy and try again."
+            ),
         }
     }
 }

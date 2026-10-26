@@ -25,6 +25,7 @@ pub mod sink;
 pub mod transport;
 
 mod base;
+mod covers;
 mod error;
 mod ids;
 mod listens;
@@ -44,10 +45,10 @@ pub use engine::{Dirty, Engine, Enrollment, PullOutcome, PullRequest, PushFailur
 pub use error::{Incompatibility, Result, SyncError};
 pub use import::ImportReport;
 pub use link::ServerLink;
-pub use merge::{LocalEntry, MergeReport, MergedPlaylist};
 pub use listens::{ListenItem, ListensPage, ListensRequest};
 pub use lookup::files_for_loves;
 pub use materialize::resolve_ghosts;
+pub use merge::{LocalEntry, MergeReport, MergedPlaylist};
 pub use recorder::{clear_scalar, record_scalar, Recorder};
 pub use sink::ScalarSink;
 pub use songref::song_key_of;

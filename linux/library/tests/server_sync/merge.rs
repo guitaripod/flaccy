@@ -113,8 +113,14 @@ fn undoing_the_playlists_keeps_the_two_apart_everywhere() {
     rig.first.sync();
     for device in [&rig.second, &rig.first] {
         let playlists = device.playlists();
-        assert_eq!(playlists["Road Trip"], titles(&["Song 1", "Song 2", "Song 3"]));
-        assert_eq!(playlists["road trip"], titles(&["Song 2", "Song 3", "Song 4"]));
+        assert_eq!(
+            playlists["Road Trip"],
+            titles(&["Song 1", "Song 2", "Song 3"])
+        );
+        assert_eq!(
+            playlists["road trip"],
+            titles(&["Song 2", "Song 3", "Song 4"])
+        );
     }
 }
 
@@ -150,7 +156,10 @@ fn a_server_that_leaves_protocol_one_pauses_sync_with_the_right_words_and_resume
         SyncState::Blocked(Blocker::ServerTooOld)
     );
     double.with(|state| state.protocol = vec![1]);
-    assert_eq!(device.driver.run_once(&device.db).state, SyncState::UpToDate);
+    assert_eq!(
+        device.driver.run_once(&device.db).state,
+        SyncState::UpToDate
+    );
 }
 
 #[test]

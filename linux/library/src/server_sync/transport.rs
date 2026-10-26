@@ -216,8 +216,11 @@ impl Transport {
     /// `PATCH /devices/{id}`: renames a device of the signed-in user.
     pub fn rename_device(&self, id: &str, name: &str) -> Result<(), ApiError> {
         let path = format!("/devices/{}", crate::remote::encode_segment(id));
-        decode::<Value>(self.request("PATCH", &path, None).send_json(json!({ "name": name })))
-            .map(|_| ())
+        decode::<Value>(
+            self.request("PATCH", &path, None)
+                .send_json(json!({ "name": name })),
+        )
+        .map(|_| ())
     }
 
     /// `DELETE /devices/{id}`: revokes a device, which stops its token at once.
@@ -238,6 +241,15 @@ impl Transport {
             self.request("POST", "/sync/push", incarnation)
                 .send_json(body),
         )
+    }
+
+    /// `PUT /blobs/{sha256}`: stores an image under the hash of its bytes.
+    pub fn put_blob(&self, hash: &str, mime: &str, bytes: &[u8]) -> Result<(), ApiError> {
+        let call = self
+            .request("PUT", &format!("/blobs/{hash}"), None)
+            .set("Content-Type", mime)
+            .send_bytes(bytes);
+        decode::<Value>(call).map(|_| ())
     }
 
     /// `GET /sync/pull`.
@@ -354,7 +366,11 @@ mod tests {
                            {"id":"b","name":"Old","platform":"linux","revokedAt":9}]}"#,
         )
         .expect("a list");
-        let names: Vec<String> = list.listed().into_iter().map(|device| device.name).collect();
+        let names: Vec<String> = list
+            .listed()
+            .into_iter()
+            .map(|device| device.name)
+            .collect();
         assert_eq!(names, vec!["Desk".to_string()]);
     }
 

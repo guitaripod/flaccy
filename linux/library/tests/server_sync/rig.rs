@@ -26,6 +26,22 @@ pub fn song(number: u32) -> Song {
     }
 }
 
+pub const PNG_HEX: &str = "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da636460f85f0f0002870180eb47ba920000000049454e44ae426082";
+
+pub fn png() -> Vec<u8> {
+    hex::decode(PNG_HEX).unwrap()
+}
+
+pub fn padded_songs(count: u32, padding: usize) -> Vec<Song> {
+    (1..=count)
+        .map(|number| {
+            let mut entry = song(number);
+            entry.album = format!("{} {}", entry.album, "x".repeat(padding));
+            entry
+        })
+        .collect()
+}
+
 pub fn songs(count: u32) -> Vec<Song> {
     (1..=count).map(song).collect()
 }
@@ -85,6 +101,44 @@ impl Device {
 
     pub fn raw(&self) -> rusqlite::Connection {
         rusqlite::Connection::open(self.dir.join("library.sqlite")).unwrap()
+    }
+
+    pub fn connect_link(&mut self, link: &str) -> ImportReport {
+        let link = ServerLink::parse(link).unwrap();
+        self.driver.enroll(&self.db, &link, "Test device").unwrap()
+    }
+
+    pub fn inject(&self, name: &str, args: serde_json::Value, touches: &[String]) {
+        let raw = self.raw();
+        let next: i64 = raw
+            .query_row(
+                "SELECT value FROM sync_meta WHERE key = 'next_mutation_id'",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .unwrap()
+            .parse()
+            .unwrap();
+        raw.execute(
+            "INSERT INTO sync_pending (mutation_id, name, stamp, args_json, touches_json) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![next, name, (flaccy_library::db::now_ms() << 16) + next, args.to_string(), serde_json::to_string(touches).unwrap()],
+        )
+        .unwrap();
+        raw.execute(
+            "UPDATE sync_meta SET value = ?1 WHERE key = 'next_mutation_id'",
+            [(next + 1).to_string()],
+        )
+        .unwrap();
+    }
+
+    pub fn sync_id(&self, playlist: &str) -> String {
+        self.raw()
+            .query_row(
+                "SELECT syncId FROM playlists WHERE name = ?1",
+                [playlist],
+                |row| row.get(0),
+            )
+            .unwrap()
     }
 
     pub fn connect(&mut self, double: &Double, user: &str) -> ImportReport {

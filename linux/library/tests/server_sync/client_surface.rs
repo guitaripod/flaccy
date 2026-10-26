@@ -109,7 +109,10 @@ fn the_files_behind_a_pulled_love_are_found() {
 
 #[test]
 fn a_driver_with_no_server_has_no_devices() {
-    let driver = Driver::new(TokenStore::new(std::env::temp_dir().join("flaccy-none")), None);
+    let driver = Driver::new(
+        TokenStore::new(std::env::temp_dir().join("flaccy-none")),
+        None,
+    );
     let device = Device::new("none", &songs(1));
     assert!(matches!(
         driver.devices(&device.db),

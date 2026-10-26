@@ -166,11 +166,11 @@ pub(crate) fn next_batch(
     Ok(batch)
 }
 
-/// Records push results: every answered mutation is acknowledged, refused ones fail. Answers the touches of the newly failed.
+/// Records push results: every answered mutation is acknowledged, refused ones fail. Answers the touches of the newly failed, except for a refused reseed: it only re-sends what the app tables already show, so they stay as they are until a pull settles it.
 pub(crate) fn mark_results(conn: &Connection, results: &[MutationResult]) -> Result<Vec<String>> {
     let mut failed_touches = Vec::new();
-    let mut touches_of = conn.prepare_cached(
-        "SELECT touches_json FROM sync_pending WHERE mutation_id = ?1 AND failed = 0",
+    let mut found = conn.prepare_cached(
+        "SELECT name, touches_json FROM sync_pending WHERE mutation_id = ?1 AND failed = 0",
     )?;
     let mut mark = conn
         .prepare_cached("UPDATE sync_pending SET acked = 1, failed = ?1 WHERE mutation_id = ?2")?;
@@ -180,11 +180,11 @@ pub(crate) fn mark_results(conn: &Connection, results: &[MutationResult]) -> Res
             MutationStatus::Invalid | MutationStatus::Unsupported
         );
         if refused {
-            let text: Option<String> = touches_of
-                .query_row(params![result.id], |row| row.get(0))
+            let row: Option<(String, String)> = found
+                .query_row(params![result.id], |row| Ok((row.get(0)?, row.get(1)?)))
                 .ok();
-            if let Some(text) = text {
-                failed_touches.extend(serde_json::from_str::<Vec<String>>(&text)?);
+            if let Some((_, touches)) = row.filter(|(name, _)| name != RESEED) {
+                failed_touches.extend(serde_json::from_str::<Vec<String>>(&touches)?);
             }
         }
         mark.execute(params![refused, result.id])?;

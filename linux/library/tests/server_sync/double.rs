@@ -9,7 +9,7 @@ use flaccy_server_core::ledger::{recompute_second, SecondEvent};
 use flaccy_server_core::model::SongRef;
 use flaccy_server_core::mutation::{parse, ListenInput, Op};
 use flaccy_server_core::sim::server::{ServerError, ServerModel, Snapshot};
-use flaccy_server_core::wire::{Hello, PushRequest, ServerInfo};
+use flaccy_server_core::wire::{ErrorCode, Hello, MutationStatus, PushRequest, ServerInfo};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
@@ -145,6 +145,9 @@ pub struct DoubleState {
     names: HashMap<String, String>,
     pub pushes: u32,
     pub pulls: u32,
+    pub blobs: HashMap<String, Vec<u8>>,
+    pub reseeds: Vec<(usize, usize)>,
+    pub forget_next_blob: bool,
 }
 
 type Shared = Arc<Mutex<DoubleState>>;
@@ -304,11 +307,20 @@ async fn push(
         Err(response) => return *response,
     };
     if state.disk_full {
-        return error(StatusCode::INSUFFICIENT_STORAGE, "insufficient_storage", json!({}));
+        return error(
+            StatusCode::INSUFFICIENT_STORAGE,
+            "insufficient_storage",
+            json!({}),
+        );
     }
     state.pushes += 1;
+    let (request, refused) = screen_reseeds(&mut state, request);
     match state.model.push(&caller, &request, now_ms()) {
-        Ok(response) => {
+        Ok(mut response) => {
+            for index in refused {
+                response.results[index].status = MutationStatus::Invalid;
+                response.results[index].code = Some(ErrorCode::BadArgs);
+            }
             for mutation in &request.mutations {
                 if let Ok(Op::Listen(inputs)) = parse(mutation) {
                     state.listens.record(&inputs);
@@ -399,6 +411,9 @@ impl Double {
             names: HashMap::new(),
             pushes: 0,
             pulls: 0,
+            blobs: HashMap::new(),
+            reseeds: Vec::new(),
+            forget_next_blob: false,
         }));
         let router = Router::new()
             .route("/flaccy/v1/hello", get(hello))
@@ -408,6 +423,7 @@ impl Double {
                 patch(rename_device).delete(revoke_device),
             )
             .route("/flaccy/v1/sync/push", post(push))
+            .route("/flaccy/v1/blobs/{sha256}", axum::routing::put(put_blob))
             .route("/flaccy/v1/sync/pull", get(pull))
             .route("/flaccy/v1/listens", get(listens))
             .with_state(state.clone());
@@ -478,4 +494,60 @@ impl Drop for Double {
             let _ = thread.join();
         }
     }
+}
+
+fn reseed_covers(args: &Value) -> Vec<String> {
+    args["entities"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|entity| entity["kind"] == "playlist")
+        .filter_map(|entity| entity["value"]["coverBlob"].as_str().map(str::to_owned))
+        .collect()
+}
+
+fn screen_reseeds(state: &mut DoubleState, mut request: PushRequest) -> (PushRequest, Vec<usize>) {
+    let mut refused = Vec::new();
+    for (index, mutation) in request.mutations.iter_mut().enumerate() {
+        if mutation.name != "state.reseed" {
+            continue;
+        }
+        let entities = mutation.args["entities"].as_array().map_or(0, Vec::len);
+        state
+            .reseeds
+            .push((entities, mutation.args.to_string().len()));
+        if reseed_covers(&mutation.args)
+            .iter()
+            .any(|hash| !state.blobs.contains_key(hash))
+        {
+            mutation.name = "reseed.refused".into();
+            refused.push(index);
+        }
+    }
+    (request, refused)
+}
+
+async fn put_blob(
+    State(shared): State<Shared>,
+    headers: HeaderMap,
+    axum::extract::Path(hash): axum::extract::Path<String>,
+    body: axum::body::Bytes,
+) -> Response {
+    use sha2::{Digest, Sha256};
+    let mut state = shared.lock().unwrap();
+    if let Err(response) = caller(&state, &headers) {
+        return *response;
+    }
+    if hex::encode(Sha256::digest(&body)) != hash {
+        return error(StatusCode::BAD_REQUEST, "bad_hash", json!({}));
+    }
+    if std::mem::take(&mut state.forget_next_blob) {
+        return (StatusCode::CREATED, Json(json!({ "hash": hash }))).into_response();
+    }
+    state.blobs.insert(hash.clone(), body.to_vec());
+    (
+        StatusCode::CREATED,
+        Json(json!({ "hash": hash, "size": body.len() })),
+    )
+        .into_response()
 }

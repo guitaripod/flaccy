@@ -194,13 +194,16 @@ fn open(url: &str, token: &str) -> Result<(Socket, TcpStream), Ending> {
         logger::warn(LOG, &format!("live channel address unusable: {error}"));
         Ending::Unsupported
     })?;
-    let header = HeaderValue::from_str(&format!("Bearer {token}")).map_err(|_| Ending::Unsupported)?;
+    let header =
+        HeaderValue::from_str(&format!("Bearer {token}")).map_err(|_| Ending::Unsupported)?;
     request.headers_mut().insert("Authorization", header);
     let stream = tcp_stream(request.uri()).map_err(|error| {
         logger::info(LOG, &format!("live channel unreachable: {error}"));
         Ending::Lost { was_up_for: None }
     })?;
-    let timeouts = stream.try_clone().map_err(|_| Ending::Lost { was_up_for: None })?;
+    let timeouts = stream
+        .try_clone()
+        .map_err(|_| Ending::Lost { was_up_for: None })?;
     timeouts
         .set_read_timeout(Some(HANDSHAKE_TIMEOUT))
         .map_err(|_| Ending::Lost { was_up_for: None })?;
@@ -217,7 +220,11 @@ fn tcp_stream(uri: &tungstenite::http::Uri) -> std::io::Result<TcpStream> {
         .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidInput, "no host"))?;
     let port = uri
         .port_u16()
-        .unwrap_or(if uri.scheme_str() == Some("wss") { 443 } else { 80 });
+        .unwrap_or(if uri.scheme_str() == Some("wss") {
+            443
+        } else {
+            80
+        });
     let address = (host, port)
         .to_socket_addrs()?
         .next()
@@ -234,7 +241,10 @@ fn handshake_ending(error: &Error) -> Ending {
             Ending::Revoked
         }
         Error::Http(response) if matches!(response.status().as_u16(), 403 | 404 | 426) => {
-            logger::info(LOG, &format!("live channel not offered ({})", response.status()));
+            logger::info(
+                LOG,
+                &format!("live channel not offered ({})", response.status()),
+            );
             Ending::Unsupported
         }
         other => {
@@ -283,7 +293,10 @@ fn is_idle(error: &std::io::Error) -> bool {
 
 fn closed_by_server(code: Option<CloseCode>) -> Ending {
     if code == Some(CloseCode::Policy) {
-        logger::warn(LOG, "live channel closed by the server: token no longer valid");
+        logger::warn(
+            LOG,
+            "live channel closed by the server: token no longer valid",
+        );
         return Ending::Revoked;
     }
     logger::info(LOG, &format!("live channel closed by the server: {code:?}"));
@@ -309,7 +322,10 @@ mod tests {
     #[test]
     fn frames_are_read_by_their_type() {
         assert_eq!(parse_frame(r#"{"t":"poke","head":42}"#), Frame::Poke(42));
-        assert_eq!(parse_frame(r#"{"t":"presence","device":"x"}"#), Frame::Presence);
+        assert_eq!(
+            parse_frame(r#"{"t":"presence","device":"x"}"#),
+            Frame::Presence
+        );
         assert_eq!(parse_frame(r#"{"t":"command","id":"1"}"#), Frame::Command);
         assert_eq!(
             parse_frame(r#"{"t":"error","code":"rate_limited"}"#),
@@ -321,7 +337,10 @@ mod tests {
 
     #[test]
     fn the_address_swaps_the_scheme_and_keeps_the_port() {
-        assert_eq!(live_url("http://arch:4545/").as_deref(), Some("ws://arch:4545/flaccy/v1/live"));
+        assert_eq!(
+            live_url("http://arch:4545/").as_deref(),
+            Some("ws://arch:4545/flaccy/v1/live")
+        );
         assert_eq!(
             live_url("https://arch.tail1.ts.net").as_deref(),
             Some("wss://arch.tail1.ts.net/flaccy/v1/live")
@@ -350,20 +369,25 @@ mod tests {
         let address = listener.local_addr().expect("address");
         let (headers, seen) = mpsc::channel();
         std::thread::spawn(move || {
-            let Ok((stream, _)) = listener.accept() else { return };
-            let callback = |request: &tungstenite::handshake::server::Request,
-                            response: tungstenite::handshake::server::Response| {
-                let auth = request
-                    .headers()
-                    .get("Authorization")
-                    .and_then(|value| value.to_str().ok())
-                    .unwrap_or_default()
-                    .to_owned();
-                let origin = request.headers().contains_key("Origin");
-                let _ = headers.send(format!("{auth}|origin={origin}"));
-                Ok(response)
+            let Ok((stream, _)) = listener.accept() else {
+                return;
             };
-            let Ok(mut socket) = tungstenite::accept_hdr(stream, callback) else { return };
+            let callback =
+                |request: &tungstenite::handshake::server::Request,
+                 response: tungstenite::handshake::server::Response| {
+                    let auth = request
+                        .headers()
+                        .get("Authorization")
+                        .and_then(|value| value.to_str().ok())
+                        .unwrap_or_default()
+                        .to_owned();
+                    let origin = request.headers().contains_key("Origin");
+                    let _ = headers.send(format!("{auth}|origin={origin}"));
+                    Ok(response)
+                };
+            let Ok(mut socket) = tungstenite::accept_hdr(stream, callback) else {
+                return;
+            };
             for frame in frames {
                 let _ = socket.send(Message::text(frame));
             }
@@ -391,13 +415,16 @@ mod tests {
 
     #[test]
     fn the_token_goes_in_the_upgrade_and_pokes_come_out() {
-        let (base, headers) = serve_one(
-            vec![r#"{"t":"presence","state":"playing"}"#, r#"{"t":"poke","head":7}"#],
-        );
+        let (base, headers) = serve_one(vec![
+            r#"{"t":"presence","state":"playing"}"#,
+            r#"{"t":"poke","head":7}"#,
+        ]);
         let seen = collect(&base, "tok-123", 2);
         assert_eq!(seen, vec![LiveEvent::Up, LiveEvent::Poke { head: 7 }]);
         assert_eq!(
-            headers.recv_timeout(Duration::from_secs(1)).expect("headers"),
+            headers
+                .recv_timeout(Duration::from_secs(1))
+                .expect("headers"),
             "Bearer tok-123|origin=false"
         );
     }
@@ -407,8 +434,12 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
         let address = listener.local_addr().expect("address");
         std::thread::spawn(move || {
-            let Ok((stream, _)) = listener.accept() else { return };
-            let Ok(mut socket) = tungstenite::accept(stream) else { return };
+            let Ok((stream, _)) = listener.accept() else {
+                return;
+            };
+            let Ok(mut socket) = tungstenite::accept(stream) else {
+                return;
+            };
             let frame = tungstenite::protocol::CloseFrame {
                 code: CloseCode::Policy,
                 reason: "revoked".into(),
@@ -426,7 +457,9 @@ mod tests {
         let address = listener.local_addr().expect("address");
         std::thread::spawn(move || {
             use std::io::{Read, Write};
-            let Ok((mut stream, _)) = listener.accept() else { return };
+            let Ok((mut stream, _)) = listener.accept() else {
+                return;
+            };
             let mut buffer = [0u8; 2048];
             let _ = stream.read(&mut buffer);
             let _ = stream.write_all(

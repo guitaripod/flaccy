@@ -12,7 +12,12 @@ pub fn find(remote: &Remote) -> Option<Server> {
 }
 
 /// Makes the Flaccy Server's music part of the library, replacing an earlier entry that pointed elsewhere or held another token. Answers true when a library entry was added and its songs still have to be fetched, false for an entry for the same address and token, which is kept and only renamed when the name changed.
-pub fn attach(remote: &Remote, name: &str, address: &str, device_token: &str) -> Result<bool, String> {
+pub fn attach(
+    remote: &Remote,
+    name: &str,
+    address: &str,
+    device_token: &str,
+) -> Result<bool, String> {
     if let Some(existing) = find(remote) {
         if existing.address == address.trim() && existing.api_key.as_deref() == Some(device_token) {
             if existing.name != name.trim() {

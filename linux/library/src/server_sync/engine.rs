@@ -1,4 +1,5 @@
 use super::base;
+use super::covers;
 use super::error::{Result, SyncError};
 use super::import::{self, ImportReport};
 use super::listens::{self, ListensPage, ListensRequest};
@@ -338,6 +339,35 @@ impl Engine {
     /// A push was answered `409 instance_conflict`: moves the queue to a new instance.
     pub fn on_instance_conflict(&self, db: &Db) -> Result<()> {
         reset::after_instance_conflict(db.connection())
+    }
+
+    /// The playlist covers named by reseeds that no push has carried yet.
+    pub fn unsent_cover_hashes(&self, db: &Db) -> Result<Vec<String>> {
+        covers::unsent_cover_hashes(db.connection())
+    }
+
+    /// The cover stored on this device whose SHA-256 is `hash`, if any, with its media type.
+    pub fn local_cover(&self, db: &Db, hash: &str) -> Result<Option<(&'static str, Vec<u8>)>> {
+        Ok(covers::local_blob(db.connection(), hash)?.map(|blob| (blob.mime, blob.bytes)))
+    }
+
+    /// Drops a cover this device cannot upload from the reseeds not yet sent.
+    pub fn drop_cover(&self, db: &Db, hash: &str) -> Result<()> {
+        covers::strip_cover(db.connection(), hash)
+    }
+
+    /// Reseeds the server refused that named covers, as `(mutation id, argument hash, blob hashes)`.
+    pub fn refused_cover_reseeds(&self, db: &Db) -> Result<Vec<(i64, String, Vec<String>)>> {
+        Ok(covers::refused_with_covers(db.connection())?
+            .into_iter()
+            .map(|refused| (refused.id, refused.args_hash, refused.hashes))
+            .collect())
+    }
+
+    /// Queues a refused reseed again under a new mutation id.
+    pub fn requeue_reseed(&self, db: &Db, id: i64) -> Result<()> {
+        let conn = db.connection();
+        atomically(conn, || covers::requeue(conn, id))
     }
 
     /// The `GET /listens` to make next: the history backfill newest first, then the tail.
