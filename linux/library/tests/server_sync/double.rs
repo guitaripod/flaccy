@@ -1,7 +1,7 @@
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use flaccy_library::listen_history::{artist_listen_key, title_key};
 use flaccy_server_core::apply::Caller;
@@ -140,6 +140,9 @@ pub struct DoubleState {
     next_device: u32,
     next_code: u32,
     pub offline: bool,
+    pub disk_full: bool,
+    pub protocol: Vec<u32>,
+    names: HashMap<String, String>,
     pub pushes: u32,
     pub pulls: u32,
 }
@@ -203,7 +206,7 @@ fn caller(state: &DoubleState, headers: &HeaderMap) -> Result<Caller, Box<Respon
 async fn hello(State(shared): State<Shared>) -> Response {
     let state = shared.lock().unwrap();
     Json(Hello {
-        protocol: vec![1],
+        protocol: state.protocol.clone(),
         server: ServerInfo {
             name: "double".into(),
             version: "0".into(),
@@ -250,12 +253,40 @@ async fn devices(State(shared): State<Shared>, headers: HeaderMap) -> Response {
         .values()
         .filter(|(owner, _)| owner == user)
         .map(|(_, device)| {
-            json!({ "id": device, "name": format!("name of {device}"), "platform": "linux",
+            json!({ "id": device, "name": state.names.get(device).cloned().unwrap_or_else(|| format!("name of {device}")), "platform": "linux",
                     "lastSeenAt": now_ms(), "current": device == current })
         })
         .collect();
     listed.sort_by_key(|device| device["id"].as_str().unwrap_or_default().to_owned());
     Json(json!({ "devices": listed })).into_response()
+}
+
+async fn rename_device(
+    State(shared): State<Shared>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
+    let mut state = shared.lock().unwrap();
+    if let Err(response) = caller(&state, &headers) {
+        return *response;
+    }
+    let name = body["name"].as_str().unwrap_or_default().to_owned();
+    state.names.insert(id, name);
+    Json(json!({ "renamed": true })).into_response()
+}
+
+async fn revoke_device(
+    State(shared): State<Shared>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    let mut state = shared.lock().unwrap();
+    if let Err(response) = caller(&state, &headers) {
+        return *response;
+    }
+    state.tokens.retain(|_, (_, device)| *device != id);
+    Json(json!({ "revoked": true })).into_response()
 }
 
 fn rand_suffix() -> u64 {
@@ -272,6 +303,9 @@ async fn push(
         Ok(caller) => caller,
         Err(response) => return *response,
     };
+    if state.disk_full {
+        return error(StatusCode::INSUFFICIENT_STORAGE, "insufficient_storage", json!({}));
+    }
     state.pushes += 1;
     match state.model.push(&caller, &request, now_ms()) {
         Ok(response) => {
@@ -360,12 +394,19 @@ impl Double {
             next_device: 0,
             next_code: 0,
             offline: false,
+            disk_full: false,
+            protocol: vec![1],
+            names: HashMap::new(),
             pushes: 0,
             pulls: 0,
         }));
         let router = Router::new()
             .route("/flaccy/v1/hello", get(hello))
             .route("/flaccy/v1/devices", post(enroll).get(devices))
+            .route(
+                "/flaccy/v1/devices/{id}",
+                patch(rename_device).delete(revoke_device),
+            )
             .route("/flaccy/v1/sync/push", post(push))
             .route("/flaccy/v1/sync/pull", get(pull))
             .route("/flaccy/v1/listens", get(listens))

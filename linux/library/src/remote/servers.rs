@@ -22,6 +22,12 @@ pub struct Server {
     pub password: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub api_key: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub flaccy_server: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl fmt::Debug for Server {
@@ -34,6 +40,7 @@ impl fmt::Debug for Server {
             .field("username", &self.username)
             .field("password", &self.password.as_ref().map(|_| "***"))
             .field("api_key", &self.api_key.as_ref().map(|_| "***"))
+            .field("flaccy_server", &self.flaccy_server)
             .finish()
     }
 }
@@ -50,6 +57,15 @@ impl Server {
             username: username.trim().to_string(),
             password: if is_api_key { None } else { secret.clone() },
             api_key: if is_api_key { secret } else { None },
+            flaccy_server: false,
+        }
+    }
+
+    /// The library of a Flaccy Server this device is enrolled with: the device token signs in as an API key, and the server is marked so Preferences shows it in the Flaccy Server row instead of the list of regular servers.
+    pub fn flaccy_library(name: &str, address: &str, device_token: &str) -> Self {
+        Self {
+            flaccy_server: true,
+            ..Self::new(name, address, "", device_token, true)
         }
     }
 

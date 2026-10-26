@@ -3,6 +3,7 @@ use super::error::{Result, SyncError};
 use super::import::{self, ImportReport};
 use super::listens::{self, ListensPage, ListensRequest};
 use super::materialize::{self, ScalarChange};
+use super::merge::{self, MergeReport};
 use super::meta;
 use super::pending;
 use super::reset;
@@ -176,8 +177,18 @@ impl Engine {
             meta::set_i64(conn, meta::NEXT_ID, 1)?;
             meta::observe_server_time(conn, enrollment.server_time_ms, crate::db::now_ms())?;
             meta::set(conn, meta::DEVICE, &enrollment.device)?;
-            import::run(conn)
+            let report = import::run(conn)?;
+            if report.playlists > 0 || report.loves > 0 {
+                merge::expect(conn)?;
+            }
+            Ok(report)
         })
+    }
+
+    /// After the first complete pull of a new connection: what the server already had of this computer's playlists and loves, taken once, before the first push. `None` when nothing merged.
+    pub fn take_merge(&self, db: &Db) -> Result<Option<MergeReport>> {
+        let conn = db.connection();
+        atomically(conn, || merge::capture(conn))
     }
 
     /// Stops syncing: forgets the server, the base and the queue. Playlists, loves and plays stay as they are.

@@ -72,6 +72,13 @@ impl RemoteError {
     }
 }
 
+impl RemoteError {
+    /// Whether the server cannot serve songs right now: it is out of reach, or it refused the credentials, so an expired or revoked key looks like an outage with a way out rather than a working server.
+    pub fn is_unusable(&self) -> bool {
+        self.is_connection_failure() || matches!(self, Self::WrongCredentials { .. })
+    }
+}
+
 impl std::fmt::Display for RemoteError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(&self.message())

@@ -16,7 +16,10 @@ pub mod credentials;
 pub mod driver;
 pub mod engine;
 pub mod import;
+pub mod library;
 pub mod link;
+pub mod live;
+pub mod merge;
 pub mod recorder;
 pub mod sink;
 pub mod transport;
@@ -32,6 +35,7 @@ mod pending;
 mod reset;
 mod schema;
 mod songref;
+mod status;
 mod store;
 
 pub use credentials::TokenStore;
@@ -40,6 +44,7 @@ pub use engine::{Dirty, Engine, Enrollment, PullOutcome, PullRequest, PushFailur
 pub use error::{Incompatibility, Result, SyncError};
 pub use import::ImportReport;
 pub use link::ServerLink;
+pub use merge::{LocalEntry, MergeReport, MergedPlaylist};
 pub use listens::{ListenItem, ListensPage, ListensRequest};
 pub use lookup::files_for_loves;
 pub use materialize::resolve_ghosts;

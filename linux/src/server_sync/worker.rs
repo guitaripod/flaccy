@@ -1,10 +1,13 @@
+use super::copy;
 use super::failure::Stage;
 use super::schedule::{Outcome, Scheduler};
 use async_channel::Sender as Reply;
 use flaccy_library::db::Db;
+use flaccy_library::server_sync::live::{Live, LiveEvent};
+use flaccy_library::server_sync::merge::{undo_loves, undo_playlist};
 use flaccy_library::server_sync::{
-    files_for_loves, resolve_ghosts, Blocker, DeviceInfo, Dirty, Driver, ServerIdentity, ServerLink,
-    SyncError, SyncState, SyncStatus, TokenStore,
+    files_for_loves, library, resolve_ghosts, Blocker, DeviceInfo, Dirty, Driver, MergeReport,
+    MergedPlaylist, ServerIdentity, ServerLink, SyncError, SyncState, SyncStatus, TokenStore,
 };
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
@@ -48,12 +51,69 @@ pub enum Command {
         /// Where the answer goes.
         reply: Reply<Result<Vec<DeviceInfo>, SyncError>>,
     },
+    /// Give a device of the account another name.
+    RenameDevice {
+        /// The device id.
+        id: String,
+        /// The new name.
+        name: String,
+        /// Where the answer goes.
+        reply: Reply<Result<(), SyncError>>,
+    },
+    /// Remove a device of the account from the server.
+    RemoveDevice {
+        /// The device id.
+        id: String,
+        /// Where the answer goes.
+        reply: Reply<Result<(), SyncError>>,
+    },
+    /// Show the server's music in the library, or take it out.
+    ShowLibrary {
+        /// What the server is called in the library.
+        name: String,
+        /// True to show the music.
+        visible: bool,
+        /// Where the answer goes.
+        reply: Reply<Result<(), String>>,
+    },
+    /// Bring the library entry in line with what the person chose, at start.
+    EnsureLibrary {
+        /// What the server is called in the library.
+        name: String,
+        /// True when the music is meant to show.
+        visible: bool,
+    },
+    /// Keep a combined playlist apart again.
+    UndoPlaylist {
+        /// The playlist as it was before the merge.
+        merged: MergedPlaylist,
+        /// Where the answer goes.
+        reply: Reply<Result<(), SyncError>>,
+    },
+    /// Unlove the songs the merge loved here.
+    UndoLoves {
+        /// The song keys.
+        keys: Vec<String>,
+        /// Where the answer goes.
+        reply: Reply<Result<usize, SyncError>>,
+    },
+    /// Another device changed something, said the live channel.
+    ServerPoke {
+        /// The server's head at the commit.
+        head: i64,
+    },
+    /// The live channel opened or closed.
+    LiveUp(bool),
+    /// The live channel was told the token is no longer valid.
+    LiveRevoked,
 }
 
 /// What a successful connect hands back to the main loop.
 pub struct Connected {
     /// What the server calls itself.
     pub server: ServerIdentity,
+    /// True when the server's music joined the library.
+    pub library: bool,
 }
 
 /// A connect that failed, and which of its two calls it was.
@@ -72,6 +132,19 @@ pub enum Report {
     Dirty(Dirty),
     /// Files whose loved flag a pull changed, when there are few enough to name.
     Loved(Vec<(String, bool)>),
+    /// The first connect combined playlists or loves.
+    Merged(MergeReport),
+    /// The server's music joined or left the library.
+    Library(LibraryChange),
+}
+
+/// How the library changed under the worker.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LibraryChange {
+    /// The music was added and its songs still have to be fetched.
+    Added,
+    /// The music left the library.
+    Removed,
 }
 
 /// More changed loves than this and the views reload instead of repainting hearts one by one.
@@ -84,9 +157,10 @@ pub fn spawn(
     reports: Reports,
 ) -> Option<mpsc::Sender<Command>> {
     let (commands, inbox) = mpsc::channel();
+    let own = commands.clone();
     std::thread::Builder::new()
         .name("flaccy-server-sync".into())
-        .spawn(move || run(&db_path, tokens, &reports, &inbox))
+        .spawn(move || run(&db_path, tokens, &reports, &inbox, own))
         .ok()?;
     Some(commands)
 }
@@ -104,6 +178,7 @@ fn run(
     tokens: TokenStore,
     reports: &Reports,
     inbox: &Receiver<Command>,
+    commands: mpsc::Sender<Command>,
 ) {
     let db = match Db::open(db_path) {
         Ok(db) => db,
@@ -121,6 +196,8 @@ fn run(
         scheduler: Scheduler::new(rand::random::<f64>),
         reports: reports.clone(),
         last_logged: None,
+        commands,
+        live: None,
     };
     worker.start();
     worker.serve(inbox);
@@ -132,12 +209,15 @@ struct Worker {
     scheduler: Scheduler,
     reports: Reports,
     last_logged: Option<SyncState>,
+    commands: mpsc::Sender<Command>,
+    live: Option<Live>,
 }
 
 impl Worker {
     fn start(&mut self) {
         if self.driver.engine().is_attached(&self.db) {
             self.scheduler.connect(Instant::now());
+            self.start_live();
         }
     }
 
@@ -189,7 +269,87 @@ impl Worker {
             Command::Devices { reply } => {
                 let _ = reply.send_blocking(self.driver.devices(&self.db));
             }
+            Command::RenameDevice { id, name, reply } => {
+                let _ = reply.send_blocking(self.driver.rename_device(&self.db, &id, &name));
+            }
+            Command::RemoveDevice { id, reply } => {
+                let _ = reply.send_blocking(self.driver.remove_device(&self.db, &id));
+            }
+            Command::ShowLibrary {
+                name,
+                visible,
+                reply,
+            } => {
+                let _ = reply.send_blocking(self.show_library(&name, visible));
+            }
+            Command::EnsureLibrary { name, visible } => {
+                if let Err(message) = self.show_library(&name, visible) {
+                    crate::logger::warn(LOG, &format!("library not in step: {message}"));
+                }
+            }
+            Command::UndoPlaylist { merged, reply } => {
+                let result = undo_playlist(&self.db, &merged);
+                self.after_undo(result.is_ok());
+                let _ = reply.send_blocking(result);
+            }
+            Command::UndoLoves { keys, reply } => {
+                let result = undo_loves(&self.db, &keys);
+                self.after_undo(result.is_ok());
+                let _ = reply.send_blocking(result);
+            }
+            Command::ServerPoke { head } => {
+                crate::logger::info(LOG, &format!("live poke head={head}: pulling"));
+                self.scheduler.server_poked(now);
+            }
+            Command::LiveUp(up) => self.scheduler.live(up, now),
+            Command::LiveRevoked => {
+                self.live = None;
+                self.scheduler.network_recovered(now);
+            }
         }
+    }
+
+    fn after_undo(&mut self, changed: bool) {
+        if changed {
+            self.scheduler.poke(Instant::now());
+        }
+    }
+
+    fn start_live(&mut self) {
+        self.live = None;
+        let Some((url, token)) = self.driver.live_target(&self.db) else {
+            return;
+        };
+        let commands = self.commands.clone();
+        self.live = Live::start(&url, &token, move |event| {
+            let command = match event {
+                LiveEvent::Up => Command::LiveUp(true),
+                LiveEvent::Down => Command::LiveUp(false),
+                LiveEvent::Poke { head } => Command::ServerPoke { head },
+                LiveEvent::Revoked => Command::LiveRevoked,
+            };
+            let _ = commands.send(command);
+        });
+    }
+
+    fn show_library(&mut self, name: &str, visible: bool) -> Result<(), String> {
+        let Some(remote) = crate::remote::handle() else {
+            return Err(copy::SERVICE_UNAVAILABLE.to_owned());
+        };
+        if !visible {
+            let removed = library::detach(remote)?;
+            if removed > 0 {
+                tell(&self.reports, Report::Library(LibraryChange::Removed));
+            }
+            return Ok(());
+        }
+        let Some((url, token)) = self.driver.live_target(&self.db) else {
+            return Err(copy::SERVICE_UNAVAILABLE.to_owned());
+        };
+        if library::attach(remote, name, &url, &token)? {
+            tell(&self.reports, Report::Library(LibraryChange::Added));
+        }
+        Ok(())
     }
 
     fn poke(&mut self, now: Instant) {
@@ -218,11 +378,23 @@ impl Worker {
             ),
         );
         self.scheduler.connect(Instant::now());
-        Ok(Connected { server })
+        self.start_live();
+        let library = self.show_library(&server.name, true).is_ok();
+        Ok(Connected { server, library })
     }
 
     fn disconnect(&mut self) -> Result<(), SyncError> {
+        self.live = None;
         self.driver.disconnect(&self.db)?;
+        if let Some(remote) = crate::remote::handle() {
+            match library::detach(remote) {
+                Ok(removed) if removed > 0 => {
+                    tell(&self.reports, Report::Library(LibraryChange::Removed))
+                }
+                Ok(_) => {}
+                Err(message) => crate::logger::warn(LOG, &format!("library not removed: {message}")),
+            }
+        }
         self.scheduler.disconnect();
         self.last_logged = None;
         crate::logger::info(LOG, "disconnected");
@@ -248,7 +420,24 @@ impl Worker {
         }
         let status = self.driver.run_once(&self.db);
         let dirty = self.driver.take_dirty();
+        if dirty.changed() {
+            crate::logger::info(
+                LOG,
+                &format!(
+                    "round applied {} loves, {} playlists, {} plays",
+                    dirty.loves.len(),
+                    dirty.playlists.len(),
+                    dirty.listens
+                ),
+            );
+        }
         self.report_loves(&dirty);
+        if let Some(merge) = self.driver.take_merge() {
+            tell(&self.reports, Report::Merged(merge));
+        }
+        if matches!(status.state, SyncState::Blocked(Blocker::DeviceRevoked)) {
+            self.live = None;
+        }
         self.scheduler.finish(outcome_of(&status.state), Instant::now());
         self.log_change(&status.state);
         tell(&self.reports, Report::Status(status));
@@ -277,7 +466,9 @@ impl Worker {
 pub fn outcome_of(state: &SyncState) -> Outcome {
     match state {
         SyncState::UpToDate | SyncState::Syncing(_) => Outcome::Fine,
-        SyncState::Blocked(Blocker::DeviceRevoked) => Outcome::Parked,
+        SyncState::Blocked(
+            Blocker::DeviceRevoked | Blocker::AppTooOld | Blocker::ServerTooOld,
+        ) => Outcome::Parked,
         SyncState::Offline | SyncState::NeedsAttention(_) | SyncState::Blocked(_) => {
             Outcome::Failed
         }

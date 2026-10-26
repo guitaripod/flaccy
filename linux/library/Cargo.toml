@@ -21,6 +21,7 @@ toml = "0.8"
 ureq = { version = "2", features = ["json"] }
 flaccy-server-core = { path = "../server-core" }
 hex = "0.4"
+tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
 
 [dev-dependencies]
 flaccy-server-core = { path = "../server-core", features = ["sim"] }

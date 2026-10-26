@@ -72,6 +72,8 @@ pub struct Config {
     pub flaccy_server_name: String,
     /// The person closed the Servers footer about Flaccy Server for good.
     pub flaccy_server_nudge_dismissed: bool,
+    /// The person turned off showing the connected Flaccy Server's music in the library.
+    pub flaccy_server_library_hidden: bool,
 }
 
 /// The cache cap a fresh install starts with, and the smallest one offered.
@@ -202,6 +204,7 @@ impl Default for Config {
             songs_source: String::new(),
             flaccy_server_name: String::new(),
             flaccy_server_nudge_dismissed: false,
+            flaccy_server_library_hidden: false,
         }
     }
 }

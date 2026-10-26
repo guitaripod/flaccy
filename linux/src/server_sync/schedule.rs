@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 const FOCUSED_POLL: Duration = Duration::from_secs(30);
 const BACKGROUND_POLL: Duration = Duration::from_secs(5 * 60);
 const DEBOUNCE: Duration = Duration::from_millis(1_500);
+const LIVE_DEBOUNCE: Duration = Duration::from_millis(250);
 const DEBOUNCE_CEILING: Duration = Duration::from_secs(6);
 const REFOCUS_GAP: Duration = Duration::from_secs(10);
 const RETRY_BASE: Duration = Duration::from_secs(5);
@@ -24,10 +25,11 @@ struct Debounce {
     due: Instant,
 }
 
-/// Decides when the worker syncs next. It holds no clock and no thread, so every rule is a plain test: the poll is 30 seconds while the window is focused and five minutes otherwise, a local write waits 1.5 seconds for company (never more than six), a failure backs off exponentially with jitter up to the poll interval, and network recovery or regaining focus tries again at once.
+/// Decides when the worker syncs next. It holds no clock and no thread, so every rule is a plain test: the poll is 30 seconds while the window is focused and five minutes otherwise, a local write waits 1.5 seconds for company (never more than six), a failure backs off exponentially with jitter up to the poll interval, and network recovery or regaining focus tries again at once. While the live channel is open the server's poke is what starts a pull, so the poll slows to the five minute safety net and a local write waits a quarter of a second; when the channel drops the poll is back to what it was.
 pub struct Scheduler {
     focused: bool,
     connected: bool,
+    live: bool,
     failures: u32,
     periodic: Option<Instant>,
     debounce: Option<Debounce>,
@@ -41,6 +43,7 @@ impl Scheduler {
         Scheduler {
             focused: false,
             connected: false,
+            live: false,
             failures: 0,
             periodic: None,
             debounce: None,
@@ -59,6 +62,27 @@ impl Scheduler {
     /// The server was forgotten: nothing is scheduled.
     pub fn disconnect(&mut self) {
         *self = Scheduler::new(self.jitter);
+    }
+
+    /// The live channel opened or closed. Opening it pulls at once, for what happened while it was down.
+    pub fn live(&mut self, up: bool, now: Instant) {
+        self.live = up;
+        if !self.connected {
+            return;
+        }
+        if up {
+            self.periodic = Some(now);
+        } else {
+            let due = self.last_run.map_or(now, |last| last + self.poll());
+            self.periodic = Some(self.periodic.map_or(due, |known| known.min(due)));
+        }
+    }
+
+    /// The server poked: another device changed something, so pull now.
+    pub fn server_poked(&mut self, now: Instant) {
+        if self.connected {
+            self.periodic = Some(now);
+        }
     }
 
     /// The window gained or lost focus.
@@ -81,7 +105,8 @@ impl Scheduler {
             return;
         }
         let first = self.debounce.map_or(now, |pending| pending.first);
-        let due = (now + DEBOUNCE).min(first + DEBOUNCE_CEILING);
+        let wait = if self.live { LIVE_DEBOUNCE } else { DEBOUNCE };
+        let due = (now + wait).min(first + DEBOUNCE_CEILING);
         self.debounce = Some(Debounce { first, due });
     }
 
@@ -137,7 +162,7 @@ impl Scheduler {
     }
 
     fn poll(&self) -> Duration {
-        if self.focused {
+        if self.focused && !self.live {
             FOCUSED_POLL
         } else {
             BACKGROUND_POLL
@@ -280,6 +305,48 @@ mod tests {
         scheduler.begin();
         scheduler.finish(Outcome::Parked, start);
         assert_eq!(scheduler.deadline(), Some(start + secs(300)));
+    }
+
+    #[test]
+    fn an_open_channel_slows_the_poll_and_quickens_local_writes() {
+        let (mut scheduler, start) = scheduler();
+        scheduler.focus(true, start);
+        scheduler.connect(start);
+        scheduler.live(true, start);
+        assert!(scheduler.is_due(start));
+        scheduler.begin();
+        scheduler.finish(Outcome::Fine, start);
+        assert_eq!(scheduler.deadline(), Some(start + secs(300)));
+        scheduler.poke(start + secs(10));
+        assert_eq!(
+            scheduler.deadline(),
+            Some(start + secs(10) + Duration::from_millis(250))
+        );
+    }
+
+    #[test]
+    fn a_poke_pulls_at_once_and_a_dropped_channel_restores_the_poll() {
+        let (mut scheduler, start) = scheduler();
+        scheduler.focus(true, start);
+        scheduler.connect(start);
+        scheduler.live(true, start);
+        scheduler.begin();
+        scheduler.finish(Outcome::Fine, start);
+        scheduler.server_poked(start + secs(7));
+        assert_eq!(scheduler.deadline(), Some(start + secs(7)));
+        scheduler.begin();
+        scheduler.finish(Outcome::Fine, start + secs(7));
+        assert_eq!(scheduler.deadline(), Some(start + secs(307)));
+        scheduler.live(false, start + secs(8));
+        assert_eq!(scheduler.deadline(), Some(start + secs(37)));
+    }
+
+    #[test]
+    fn a_poke_without_a_server_schedules_nothing() {
+        let (mut scheduler, start) = scheduler();
+        scheduler.server_poked(start);
+        scheduler.live(true, start);
+        assert_eq!(scheduler.deadline(), None);
     }
 
     #[test]

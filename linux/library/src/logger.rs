@@ -37,6 +37,13 @@ pub fn info(category: &str, message: &str) {
     write_line("INFO", category, message);
 }
 
+/// Writes one DEBUG line to the log file only, and only when `FLACCY_LOG_DEBUG` is set, for traffic that would otherwise fill the log.
+pub fn debug(category: &str, message: &str) {
+    if std::env::var_os("FLACCY_LOG_DEBUG").is_some() {
+        write_line("DEBUG", category, message);
+    }
+}
+
 /// Writes one WARN line to stderr and the log file.
 pub fn warn(category: &str, message: &str) {
     write_line("WARN", category, message);

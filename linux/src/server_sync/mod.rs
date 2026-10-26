@@ -6,6 +6,7 @@ mod demo;
 pub mod failure;
 mod incoming;
 pub mod link;
+mod manage;
 mod schedule;
 pub mod status_line;
 mod worker;
@@ -14,7 +15,7 @@ use crate::app::AppCore;
 use crate::events::AppEvent;
 use failure::{failure_for, Failure, Stage};
 use flaccy_library::server_sync::{
-    DeviceInfo, Dirty, Engine, ServerIdentity, ServerLink, SyncStatus, TokenStore,
+    DeviceInfo, Dirty, Engine, MergeReport, ServerIdentity, ServerLink, SyncStatus, TokenStore,
 };
 use gtk::glib;
 use gtk::prelude::*;
@@ -22,7 +23,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
 use std::sync::mpsc;
 use std::time::Duration;
-use worker::{Command, Report};
+use worker::{Command, LibraryChange, Report};
 
 pub use demo::open_ui as open_demo_ui;
 pub use incoming::{deliver, open_incoming, register_ui};
@@ -47,6 +48,9 @@ pub struct Service {
     connected: Cell<bool>,
     pending: RefCell<Pending>,
     refresh_queued: Cell<bool>,
+    merge: RefCell<Option<MergeReport>>,
+    library_songs: Cell<Option<usize>>,
+    counting: Cell<bool>,
 }
 
 impl Service {
@@ -217,6 +221,7 @@ impl Service {
             return;
         };
         if let Some((rel_path, loved)) = files.iter().find(|(path, _)| *path == playing.rel_path) {
+            crate::logger::info(LOG, &format!("heart repainted: loved={loved}"));
             core.hub.emit(&AppEvent::LovedChanged {
                 rel_path: rel_path.clone(),
                 loved: *loved,
@@ -230,6 +235,13 @@ impl Service {
         let Some(core) = self.core.upgrade() else {
             return;
         };
+        crate::logger::info(
+            LOG,
+            &format!(
+                "views refresh: library={} playlists={} plays={}",
+                pending.library, pending.playlists, pending.plays
+            ),
+        );
         if pending.library {
             core.reload_library();
         } else if pending.playlists {
@@ -266,8 +278,12 @@ pub fn start(core: &Rc<AppCore>, window: &adw::ApplicationWindow) {
         connected: Cell::new(Engine::new().is_attached(&core.db)),
         pending: RefCell::new(Pending::default()),
         refresh_queued: Cell::new(false),
+        merge: RefCell::new(None),
+        library_songs: Cell::new(None),
+        counting: Cell::new(false),
     });
     drain_reports(&service, inbox);
+    service.ensure_library();
     wake_on_local_writes(core, &service);
     wake_on_focus(window, &service);
     wake_on_network(&service);
@@ -284,6 +300,8 @@ fn drain_reports(service: &Rc<Service>, inbox: async_channel::Receiver<Report>) 
                 Report::Status(status) => service.set_status(status),
                 Report::Dirty(dirty) => service.note_dirty(dirty),
                 Report::Loved(files) => service.repaint_hearts(&files),
+                Report::Merged(merge) => service.set_merge(merge),
+                Report::Library(change) => service.library_changed(change),
             }
         }
     });
@@ -301,6 +319,7 @@ fn wake_on_local_writes(core: &Rc<AppCore>, service: &Rc<Service>) {
             | AppEvent::ScrobbleRecorded => {
                 service.poke();
             }
+            AppEvent::RemoteChanged => service.refresh_library_count(),
             AppEvent::ScanFinished { added, .. } if *added > 0 => {
                 service.send(Command::ResolveGhosts);
             }

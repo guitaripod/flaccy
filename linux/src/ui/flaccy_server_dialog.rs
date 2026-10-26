@@ -48,6 +48,7 @@ struct Dialog {
     connect: gtk::Button,
     checking_label: gtk::Label,
     connected_title: gtk::Label,
+    connected_body: gtk::Label,
     failed_title: gtk::Label,
     failed_body: gtk::Label,
     failed_actions: gtk::Box,
@@ -147,6 +148,7 @@ impl Dialog {
             connect: connect.clone(),
             checking_label,
             connected_title,
+            connected_body,
             failed_title,
             failed_body,
             failed_actions,
@@ -280,7 +282,7 @@ impl Dialog {
         glib::spawn_future_local(async move {
             let result = this.service.connect(link).await;
             match result {
-                Ok(connected) => this.show_connected(&connected.server.name),
+                Ok(connected) => this.show_connected(&connected.server.name, connected.library),
                 Err(failure) => this.show_failure(&failure, &this.address_row.text()),
             }
         });
@@ -310,9 +312,14 @@ impl Dialog {
         announce(&self.checking_label, &message);
     }
 
-    fn show_connected(&self, name: &str) {
+    fn show_connected(&self, name: &str, library: bool) {
         let title = copy::connected_title(name);
         self.connected_title.set_label(&title);
+        self.connected_body.set_label(&if library {
+            copy::CONNECTED_BODY.to_owned()
+        } else {
+            copy::connected_body_no_library(name)
+        });
         self.show(PAGE_CONNECTED);
         announce(&self.connected_title, &title);
     }

@@ -4,60 +4,19 @@ use super::error::{Incompatibility, Result, SyncError};
 use super::ids::new_uuid_v7;
 use super::import::ImportReport;
 use super::link::ServerLink;
+use super::merge::MergeReport;
 use super::sink::ScalarSink;
+use super::status::{api_state, sync_state};
 use super::transport::{ApiError, DeviceInfo, Transport};
 use crate::db::{now_ms, Db};
+use flaccy_server_core::wire::Hello;
+pub use super::status::{Blocker, ServerIdentity, SyncState, SyncStatus};
 use std::sync::{Arc, Condvar, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const MAX_RESTARTS: usize = 4;
 const MAX_PUSH_ROUNDS: usize = 200;
-
-/// Where a sync stands, for the status line.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SyncState {
-    /// Everything local reached the server and everything on the server is here.
-    UpToDate,
-    /// This many local changes are waiting to be sent.
-    Syncing(usize),
-    /// The server cannot be reached; local changes wait and Flaccy retries by itself.
-    Offline,
-    /// Something only the person can fix; the text says what, why and what to do.
-    NeedsAttention(String),
-    /// Sync is paused for a reason the status line names.
-    Blocked(Blocker),
-}
-
-/// Why sync is paused until something outside Flaccy changes.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Blocker {
-    /// The server's clock is behind, so it refuses writes (`503 clock_behind`).
-    ClockBehind,
-    /// The server no longer accepts this device's token.
-    DeviceRevoked,
-    /// The server has no disk space left (`507`).
-    DiskFull,
-}
-
-/// What a server says about itself in `GET /hello`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ServerIdentity {
-    /// The name the server gave itself.
-    pub name: String,
-    /// Its version.
-    pub version: String,
-}
-
-/// The state, the queue length and the last complete pull.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SyncStatus {
-    /// Where the sync stands.
-    pub state: SyncState,
-    /// Mutations still queued, refused ones included until a pull retires them.
-    pub pending: usize,
-    /// Unix milliseconds of the last complete pull.
-    pub last_synced_at: Option<i64>,
-}
+const VERSION_RECHECK: Duration = Duration::from_secs(600);
 
 /// How long to wait between retries of a call that failed in a way that may pass.
 #[derive(Clone, Copy, Debug)]
@@ -160,6 +119,9 @@ pub struct Driver {
     poke: PokeHandle,
     dirty: Dirty,
     listener: Option<DirtyListener>,
+    merge: Option<MergeReport>,
+    version_checked_at: Option<Instant>,
+    version_recheck: Duration,
 }
 
 type DirtyListener = Box<dyn Fn(&Dirty) + Send>;
@@ -178,6 +140,9 @@ impl Driver {
             poke: PokeHandle::default(),
             dirty: Dirty::default(),
             listener: None,
+            merge: None,
+            version_checked_at: None,
+            version_recheck: VERSION_RECHECK,
         }
     }
 
@@ -196,6 +161,12 @@ impl Driver {
     /// The same driver with another retry schedule.
     pub fn with_backoff(mut self, backoff: Backoff) -> Self {
         self.backoff = backoff;
+        self
+    }
+
+    /// The same driver asking the server for its protocol again after this long instead of ten minutes, which is what notices a server updated while Flaccy runs.
+    pub fn with_version_recheck(mut self, every: Duration) -> Self {
+        self.version_recheck = every;
         self
     }
 
@@ -221,22 +192,7 @@ impl Driver {
 
     /// One look at a server: who it says it is, and whether this Flaccy and it can sync. Tries once, five seconds at most, and keeps no state.
     pub fn probe(&self, url: &str) -> Result<ServerIdentity> {
-        let hello = Transport::probing(url).hello()?;
-        if !hello.features.iter().any(|feature| feature == "sync") {
-            return Err(SyncError::Incompatible(Incompatibility::ServerTooOld));
-        }
-        if hello.protocol.contains(&1) {
-            return Ok(ServerIdentity {
-                name: hello.server.name,
-                version: hello.server.version,
-            });
-        }
-        let newer_only = hello.protocol.iter().all(|version| *version > 1);
-        Err(SyncError::Incompatible(if newer_only {
-            Incompatibility::AppTooOld
-        } else {
-            Incompatibility::ServerTooOld
-        }))
+        identity_of(Transport::probing(url).hello()?)
     }
 
     /// The devices of this account on the connected server. Tries once, five seconds at most.
@@ -248,6 +204,35 @@ impl Driver {
         Ok(Transport::probing(&url)
             .with_token(self.tokens.load())
             .devices()?)
+    }
+
+    /// Renames a device of this account on the connected server. Tries once, five seconds at most.
+    pub fn rename_device(&self, db: &Db, id: &str, name: &str) -> Result<()> {
+        Ok(self.signed(db)?.rename_device(id, name)?)
+    }
+
+    /// Removes a device of this account from the connected server, which stops its token at once. Tries once, five seconds at most.
+    pub fn remove_device(&self, db: &Db, id: &str) -> Result<()> {
+        Ok(self.signed(db)?.remove_device(id)?)
+    }
+
+    fn signed(&self, db: &Db) -> Result<Transport> {
+        let url = self
+            .engine
+            .server_url(db)?
+            .ok_or(SyncError::NotConfigured)?;
+        Ok(Transport::probing(&url).with_token(self.tokens.load()))
+    }
+
+    /// Where the live channel connects and the token it presents, when a server is connected and this device holds a token.
+    pub fn live_target(&self, db: &Db) -> Option<(String, String)> {
+        let url = self.engine.server_url(db).ok().flatten()?;
+        Some((url, self.tokens.load()?))
+    }
+
+    /// What the first connect combined, once, after the pull that showed it. `None` when nothing merged or it was already taken.
+    pub fn take_merge(&mut self) -> Option<MergeReport> {
+        self.merge.take()
     }
 
     /// Redeems the code of a pairing link, stores the token, and queues the local playlists, loves and plays for the server.
@@ -284,6 +269,8 @@ impl Driver {
     pub fn disconnect(&mut self, db: &Db) -> Result<()> {
         self.engine.detach(db)?;
         self.tokens.clear()?;
+        self.merge = None;
+        self.version_checked_at = None;
         Ok(())
     }
 
@@ -308,8 +295,13 @@ impl Driver {
         }
         let state = match self.sync(db) {
             Ok(()) => SyncState::UpToDate,
-            Err(Stop::Api(error)) => api_state(&error),
-            Err(Stop::Sync(error)) => SyncState::NeedsAttention(error.to_string()),
+            Err(Stop::Api(error)) => {
+                if matches!(api_state(&error), SyncState::Offline) {
+                    self.version_checked_at = None;
+                }
+                api_state(&error)
+            }
+            Err(Stop::Sync(error)) => sync_state(&error),
         };
         let pending = self.engine.pending_count(db).unwrap_or(0);
         self.report(db, state, pending)
@@ -324,6 +316,7 @@ impl Driver {
     }
 
     fn sync(&mut self, db: &Db) -> std::result::Result<(), Stop> {
+        self.check_version(db)?;
         for _ in 0..=MAX_RESTARTS {
             if matches!(self.sync_pass(db)?, Flow::Done) {
                 return Ok(());
@@ -339,6 +332,9 @@ impl Driver {
         if matches!(self.pull_all(db, &transport)?, Flow::Restart) {
             return Ok(Flow::Restart);
         }
+        if let Some(report) = self.engine.take_merge(db)? {
+            self.merge = Some(report);
+        }
         let mut pushed = false;
         for _ in 0..MAX_PUSH_ROUNDS {
             match self.push_next(db, &transport)? {
@@ -351,6 +347,23 @@ impl Driver {
             return Ok(Flow::Restart);
         }
         self.read_listens(db, &transport)
+    }
+
+    fn check_version(&mut self, db: &Db) -> std::result::Result<(), Stop> {
+        if self
+            .version_checked_at
+            .is_some_and(|at| at.elapsed() < self.version_recheck)
+        {
+            return Ok(());
+        }
+        let url = self
+            .engine
+            .server_url(db)?
+            .ok_or(SyncError::NotConfigured)?;
+        let hello = self.retry(|| Transport::probing(&url).hello())?;
+        identity_of(hello)?;
+        self.version_checked_at = Some(Instant::now());
+        Ok(())
     }
 
     fn transport(&self, db: &Db) -> std::result::Result<Transport, Stop> {
@@ -399,6 +412,10 @@ impl Driver {
         let incarnation = self.incarnation(db)?;
         match self.retry(|| transport.push(&request, incarnation.as_deref())) {
             Ok(response) => {
+                crate::logger::info(
+                    "server-sync",
+                    &format!("pushed {} changes", request.mutations.len()),
+                );
                 let dirty =
                     self.engine
                         .on_push_response(db, &request.instance, &response, now_ms())?;
@@ -486,38 +503,21 @@ enum Push {
     Restart,
 }
 
-fn api_state(error: &ApiError) -> SyncState {
-    match error {
-        ApiError::ClockBehind => SyncState::Blocked(Blocker::ClockBehind),
-        ApiError::Unauthorized => SyncState::Blocked(Blocker::DeviceRevoked),
-        ApiError::Server(507) => SyncState::Blocked(Blocker::DiskFull),
-        ApiError::Offline(_) | ApiError::Server(_) | ApiError::RateLimited(_) => SyncState::Offline,
-        other => SyncState::NeedsAttention(other.to_string()),
+/// Who a server says it is, once this Flaccy and it can speak: it must offer sync and protocol 1.
+fn identity_of(hello: Hello) -> Result<ServerIdentity> {
+    if !hello.features.iter().any(|feature| feature == "sync") {
+        return Err(SyncError::Incompatible(Incompatibility::ServerTooOld));
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn refusals_that_wait_on_the_person_or_the_server_are_blockers_not_outages() {
-        assert_eq!(
-            api_state(&ApiError::ClockBehind),
-            SyncState::Blocked(Blocker::ClockBehind)
-        );
-        assert_eq!(
-            api_state(&ApiError::Unauthorized),
-            SyncState::Blocked(Blocker::DeviceRevoked)
-        );
-        assert_eq!(
-            api_state(&ApiError::Server(507)),
-            SyncState::Blocked(Blocker::DiskFull)
-        );
-        assert_eq!(api_state(&ApiError::Server(502)), SyncState::Offline);
-        assert_eq!(
-            api_state(&ApiError::Offline("x".into())),
-            SyncState::Offline
-        );
+    if hello.protocol.contains(&1) {
+        return Ok(ServerIdentity {
+            name: hello.server.name,
+            version: hello.server.version,
+        });
     }
+    let newer_only = !hello.protocol.is_empty() && hello.protocol.iter().all(|version| *version > 1);
+    Err(SyncError::Incompatible(if newer_only {
+        Incompatibility::AppTooOld
+    } else {
+        Incompatibility::ServerTooOld
+    }))
 }

@@ -87,7 +87,11 @@ fn fill(ui: &Rc<Ui>, group: &adw::PreferencesGroup, listed: &RefCell<Vec<adw::Ac
         return;
     };
     let counts = ui.core.db.remote_song_counts();
-    let servers = remote.servers();
+    let servers: Vec<Server> = remote
+        .servers()
+        .into_iter()
+        .filter(|server| !server.flaccy_server)
+        .collect();
     if servers.is_empty() {
         let row = adw::ActionRow::builder()
             .title("No servers yet")

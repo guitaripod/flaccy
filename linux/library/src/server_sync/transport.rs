@@ -32,6 +32,8 @@ pub enum ApiError {
     },
     /// `503 clock_behind`.
     ClockBehind,
+    /// `507 insufficient_storage`: the server's disk is full, which only the person who runs it can fix.
+    InsufficientStorage,
     /// `429`, with the seconds to wait when the server said.
     RateLimited(Option<u64>),
     /// Another `5xx`.
@@ -56,6 +58,7 @@ impl fmt::Display for ApiError {
             ApiError::InstanceConflict => write!(formatter, "The server met a different history for this device."),
             ApiError::MutationGap { have } => write!(formatter, "The server is missing changes after {have}."),
             ApiError::ClockBehind => write!(formatter, "The server's clock is behind. Fix its date and time; changes wait until then."),
+            ApiError::InsufficientStorage => write!(formatter, "The server is out of disk space. Free some up; Flaccy retries by itself."),
             ApiError::RateLimited(_) => write!(formatter, "The server asked Flaccy to slow down."),
             ApiError::Server(status) => write!(formatter, "The server failed with status {status}."),
             ApiError::Refused { status, code } => write!(formatter, "The server refused the request ({status} {code})."),
@@ -127,11 +130,23 @@ pub struct DeviceInfo {
     /// True for the device that asked.
     #[serde(default)]
     pub current: bool,
+    /// Set once the device was removed; a removed device is not listed to the person.
+    #[serde(default)]
+    pub revoked_at: Option<i64>,
 }
 
 #[derive(Deserialize)]
 struct DeviceList {
     devices: Vec<DeviceInfo>,
+}
+
+impl DeviceList {
+    fn listed(self) -> Vec<DeviceInfo> {
+        self.devices
+            .into_iter()
+            .filter(|device| device.revoked_at.is_none())
+            .collect()
+    }
 }
 
 /// The blocking HTTP client for one server.
@@ -195,8 +210,20 @@ impl Transport {
 
     /// `GET /devices`: the devices of the signed-in user.
     pub fn devices(&self) -> Result<Vec<DeviceInfo>, ApiError> {
-        decode::<DeviceList>(self.request("GET", "/devices", None).call())
-            .map(|list| list.devices)
+        decode::<DeviceList>(self.request("GET", "/devices", None).call()).map(DeviceList::listed)
+    }
+
+    /// `PATCH /devices/{id}`: renames a device of the signed-in user.
+    pub fn rename_device(&self, id: &str, name: &str) -> Result<(), ApiError> {
+        let path = format!("/devices/{}", crate::remote::encode_segment(id));
+        decode::<Value>(self.request("PATCH", &path, None).send_json(json!({ "name": name })))
+            .map(|_| ())
+    }
+
+    /// `DELETE /devices/{id}`: revokes a device, which stops its token at once.
+    pub fn remove_device(&self, id: &str) -> Result<(), ApiError> {
+        let path = format!("/devices/{}", crate::remote::encode_segment(id));
+        decode::<Value>(self.request("DELETE", &path, None).call()).map(|_| ())
     }
 
     /// `POST /sync/push`.
@@ -296,8 +323,48 @@ fn classify(status: u16, response: ureq::Response) -> ApiError {
         (409, "instance_conflict") => ApiError::InstanceConflict,
         (409, "mutation_gap") => ApiError::MutationGap { have },
         (503, "clock_behind") => ApiError::ClockBehind,
+        (507, _) => ApiError::InsufficientStorage,
         (429, _) => ApiError::RateLimited(retry_after),
         (500..=599, _) => ApiError::Server(status),
         _ => ApiError::Refused { status, code },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn answer(status: u16, body: &str) -> ApiError {
+        let response = ureq::Response::new(status, "status", body).expect("a response");
+        classify(status, response)
+    }
+
+    #[test]
+    fn a_full_server_disk_is_its_own_error_and_not_worth_retrying_at_once() {
+        let error = answer(507, r#"{"error":{"code":"insufficient_storage"}}"#);
+        assert_eq!(error, ApiError::InsufficientStorage);
+        assert!(!error.is_transient());
+        assert!(error.to_string().contains("disk space"));
+    }
+
+    #[test]
+    fn a_removed_device_is_not_in_the_list_the_person_sees() {
+        let list: DeviceList = serde_json::from_str(
+            r#"{"devices":[{"id":"a","name":"Desk","platform":"linux","lastSeenAt":5,"revokedAt":null,"current":true},
+                           {"id":"b","name":"Old","platform":"linux","revokedAt":9}]}"#,
+        )
+        .expect("a list");
+        let names: Vec<String> = list.listed().into_iter().map(|device| device.name).collect();
+        assert_eq!(names, vec!["Desk".to_string()]);
+    }
+
+    #[test]
+    fn other_server_failures_stay_transient_and_a_clock_behind_stays_a_blocker() {
+        assert_eq!(answer(502, ""), ApiError::Server(502));
+        assert!(answer(502, "").is_transient());
+        assert_eq!(
+            answer(503, r#"{"error":{"code":"clock_behind"}}"#),
+            ApiError::ClockBehind
+        );
     }
 }

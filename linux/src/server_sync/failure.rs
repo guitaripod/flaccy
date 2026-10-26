@@ -71,13 +71,21 @@ fn api_failure(error: &ApiError, stage: Stage, name: &str) -> Failure {
         ),
         (ApiError::Offline(_), _) => Failure::new(
             copy::cant_reach_title(name),
-            copy::CANT_REACH_BODY,
+            copy::cant_reach_body(name),
             Remedy::TryAgain,
         ),
         (ApiError::Unauthorized, Stage::Enroll) => Failure::new(
             copy::CODE_REFUSED_TITLE,
-            copy::CODE_REFUSED_BODY,
+            copy::code_refused_body(name),
             Remedy::TryAgain,
+        ),
+        (ApiError::Unauthorized, Stage::Connected) => {
+            Failure::new(copy::revoked_title(name), copy::REVOKED_BODY, Remedy::Ok)
+        }
+        (ApiError::InsufficientStorage, _) => Failure::new(
+            copy::disk_full_title(name),
+            copy::DISK_FULL_BODY,
+            Remedy::Ok,
         ),
         (ApiError::RateLimited(_), Stage::Enroll) => {
             Failure::new(copy::TOO_MANY_TITLE, copy::TOO_MANY_BODY, Remedy::Ok)
@@ -119,7 +127,10 @@ mod tests {
     fn an_unreachable_server_asks_about_tailscale() {
         let failure = api(ApiError::Offline("Connection Failed".into()), Stage::Probe);
         assert_eq!(failure.title, "Can't reach arch");
-        assert!(failure.body.starts_with("Is Tailscale on?"));
+        assert_eq!(
+            failure.body,
+            "Is Tailscale on? Open Tailscale and connect on this device and on arch, then try again."
+        );
         assert_eq!(failure.remedy, Remedy::TryAgain);
     }
 
@@ -135,11 +146,24 @@ mod tests {
     fn a_refused_code_is_the_code_failure_only_when_enrolling() {
         let failure = api(ApiError::Unauthorized, Stage::Enroll);
         assert_eq!(failure.title, "That code didn't work");
-        assert!(failure.body.contains("10 minutes"));
+        assert_eq!(
+            failure.body,
+            "A code works once and expires after 10 minutes. On arch, run `flaccy-server enroll` for a new one."
+        );
         assert_ne!(
             api(ApiError::Unauthorized, Stage::Connected).title,
             failure.title
         );
+    }
+
+    #[test]
+    fn a_revoked_device_and_a_full_disk_say_what_to_do() {
+        let revoked = api(ApiError::Unauthorized, Stage::Connected);
+        assert_eq!(revoked.title, "arch no longer accepts this device");
+        assert_eq!(revoked.body, "Disconnect it, then add the server again.");
+        let full = api(ApiError::InsufficientStorage, Stage::Enroll);
+        assert_eq!(full.title, "arch is out of disk space");
+        assert_eq!(full.body, "Free some up and Flaccy retries by itself.");
     }
 
     #[test]

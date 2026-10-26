@@ -49,7 +49,7 @@ pub fn open_ui(ui: &Rc<crate::ui::Ui>, mode: &str) {
             let wrong = ServerLink::new(&link.url, Some(WRONG_CODE), None);
             crate::ui::flaccy_server_dialog::present_with(ui, Some(&wrong), true);
         }
-        ("detail", _) => crate::ui::flaccy_server::present_detail(ui),
+        ("detail", _) => crate::ui::flaccy_server_detail::present(ui),
         _ => crate::logger::warn(LOG, "FLACCY_DEMO_SERVER_UI needs dialog, filled, drive, wrong or detail"),
     }
 }

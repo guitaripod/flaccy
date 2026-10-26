@@ -31,6 +31,8 @@ pub enum AppEvent {
         loved: bool,
     },
     LastFmChanged,
+    /// The first connect to a Flaccy Server combined playlists or loves, and the summary sheet has something to say.
+    ServerMergeReady,
     /// The scan recognised a new version of the song that is playing: the file
     /// the player has open is the old one, so the person is offered the new mix
     /// from the start.

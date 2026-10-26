@@ -1150,6 +1150,9 @@ impl AppCore {
             core.remote_syncing.set(false);
             if changed {
                 core.reload_library();
+                if let Some(service) = core.server_sync.get() {
+                    service.resolve_ghosts();
+                }
             }
             core.hub.emit(&AppEvent::RemoteChanged);
         });

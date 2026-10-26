@@ -22,6 +22,8 @@ pub fn status_line(name: &str, status: Option<&SyncStatus>, now_ms: i64) -> Stri
         SyncState::Blocked(Blocker::ClockBehind) => copy::clock_line(name),
         SyncState::Blocked(Blocker::DiskFull) => copy::disk_full_line(name),
         SyncState::Blocked(Blocker::DeviceRevoked) => copy::revoked_line(name),
+        SyncState::Blocked(Blocker::AppTooOld) => copy::UPDATE_FLACCY_LINE.to_owned(),
+        SyncState::Blocked(Blocker::ServerTooOld) => copy::UPDATE_SERVER_LINE.to_owned(),
     }
 }
 
@@ -133,6 +135,18 @@ mod tests {
             "arch is out of disk space. Free some up and Flaccy retries by itself."
         );
         assert!(line(SyncState::Blocked(Blocker::DeviceRevoked), 0, None).starts_with("arch no longer"));
+    }
+
+    #[test]
+    fn a_version_gap_says_which_side_to_update() {
+        assert_eq!(
+            line(SyncState::Blocked(Blocker::AppTooOld), 0, None),
+            "Update Flaccy to keep syncing."
+        );
+        assert_eq!(
+            line(SyncState::Blocked(Blocker::ServerTooOld), 0, None),
+            "Update your Flaccy Server to keep syncing."
+        );
     }
 
     #[test]

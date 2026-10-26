@@ -14,6 +14,7 @@ pub(crate) const EVENT_COUNTER: &str = "event_counter";
 pub(crate) const SERVER_URL: &str = "server_url";
 pub(crate) const SERVER_ID: &str = "server_id";
 pub(crate) const IMPORTED: &str = "imported";
+pub(crate) const MERGE_PENDING: &str = "merge_pending";
 pub(crate) const LAST_SYNCED: &str = "last_synced_at";
 pub(crate) const TRACKS_SIGNATURE: &str = "tracks_signature";
 pub(crate) const LISTENS_PHASE: &str = "listens_phase";

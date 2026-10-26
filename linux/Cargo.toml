@@ -1,5 +1,5 @@
 [workspace]
-members = ["shared", "library", "server", "server-core", "server-core-ffi"]
+members = ["shared", "library", "server", "server-core", "server-core-ffi", "soak"]
 
 [package]
 name = "flaccy"

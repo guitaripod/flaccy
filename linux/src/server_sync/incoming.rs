@@ -1,4 +1,5 @@
 use super::link::{classify, Incoming};
+use crate::events::AppEvent;
 use crate::ui::servers::Prefill;
 use crate::ui::Ui;
 use gtk::prelude::*;
@@ -13,10 +14,20 @@ thread_local! {
 /// The window exists: links that arrived before it open now.
 pub fn register_ui(ui: &Rc<Ui>) {
     WINDOW.with(|window| *window.borrow_mut() = Rc::downgrade(ui));
+    present_merge_when_ready(ui);
     let waiting = WAITING.with(|waiting| std::mem::take(&mut *waiting.borrow_mut()));
     for incoming in waiting {
         open_incoming(ui, incoming);
     }
+}
+
+fn present_merge_when_ready(ui: &Rc<Ui>) {
+    let weak = Rc::downgrade(ui);
+    ui.core.hub.clone().subscribe_widget(&ui.window, move |_, event| {
+        if let (AppEvent::ServerMergeReady, Some(ui)) = (event, weak.upgrade()) {
+            crate::ui::flaccy_server_merge::present(&ui);
+        }
+    });
 }
 
 /// A command line argument or a URL the desktop handed over. Anything that is not a server link is ignored.
