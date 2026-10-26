@@ -15,7 +15,13 @@ pub const INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 /// Runs one pass over `state.sqlite` and `security.sqlite`; failures are logged and never stop the server.
 pub async fn tidy_once(state: &AppState) {
     match state.0.sync.tidy().await {
-        Ok(tidied) => logger::info(CATEGORY, &format!("state.sqlite tidied: {} old mutation results removed", tidied.results_pruned)),
+        Ok(tidied) => logger::info(
+            CATEGORY,
+            &format!(
+                "state.sqlite tidied: {} old mutation results and {} unused cover images removed",
+                tidied.results_pruned, tidied.blobs_removed
+            ),
+        ),
         Err(error) => logger::warn(CATEGORY, &format!("could not tidy state.sqlite: {error}; the next pass runs in a day")),
     }
     if let Err(error) = state.0.security.tidy().await {

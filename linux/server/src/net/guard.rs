@@ -150,6 +150,12 @@ pub struct Tagged {
     origin: Origin,
 }
 
+impl Tagged {
+    pub(super) fn new(router: Router, origin: Origin) -> Self {
+        Self { router, origin }
+    }
+}
+
 impl<'a, L> Service<IncomingStream<'a, L>> for Connections
 where
     L: Listener,

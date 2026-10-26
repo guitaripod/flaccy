@@ -37,7 +37,7 @@ use tokio::sync::broadcast;
 use crate::dbthread::{self, DbError, DbThread, Durability, ReadPool};
 use crate::security::{self, Clock};
 
-pub use blobs::{Blob, BlobError, BlobStored, MAX_BLOB_BYTES};
+pub use blobs::{Blob, BlobError, BlobStored, MAX_BLOB_BYTES, ORPHAN_BLOB_DAYS, USER_BLOB_QUOTA_BYTES};
 pub use listens::{ListenPage, ListenRow, MAX_LISTEN_PAGE};
 pub use maintenance::{Tidied, KEEP_DAYS, KEEP_PER_DEVICE};
 pub use pull::{PullError, DEFAULT_PULL_LIMIT, MAX_PULL_LIMIT};

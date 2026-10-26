@@ -25,7 +25,7 @@ Flaccy Server's sync engine as pure logic (no I/O, database, async or threads). 
 
 ## apply
 - `apply_playlist(&mut Option<PlaylistDoc>, &PlaylistOp, &Caller, stored_stamp) -> Outcome`: all `playlist.*` and `entry.*`; the doc is the playlist (for move and remove the one holding the entry), `None` if absent. Rewrites every `pos` past 64 characters and reports each entry.
-- `apply_love`, `apply_rating`, `apply_scalar`, `apply_session(&mut Option<T>, args, &Caller, stamp)`; `upsert` and `reseed_into_doc` for `state.reseed` (one playlist at a time).
+- `apply_love`, `apply_rating`, `apply_scalar`, `apply_session(&mut Option<T>, args, &Caller, stamp)`; `upsert` and `reseed_into_doc` for `state.reseed` (one playlist at a time). A playlist holds at most `MAX_ENTRIES` (20,000) alive and `MAX_TOTAL_ENTRIES` (40,000) entries in all; `parse` refuses a reseed over `MAX_RESEED_ENTITIES` (1,000) entities or `MAX_RESEED_BYTES` (400 KB); `clamp_reseed(entities, ceiling)` lowers reseeded stamps to the server clock; `neighbours` and `insertMany` cost one pass over the playlist, not a sort per entry.
 - `Outcome {status: Status, changed: Vec<EntityRef>}`; `Status` is `Applied`, `Noop`, `Invalid(code)` or `Unsupported`; `status.wire()` gives the wire pair. `Invalid` leaves state untouched; write back only `changed`.
 - `Caller {user, role, device}`. Uniqueness of entry ids across playlists, listens, `device.rename` and transactions across the entities of one `state.reseed` are the server's.
 

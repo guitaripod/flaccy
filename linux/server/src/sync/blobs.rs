@@ -2,14 +2,19 @@
 
 use std::fmt;
 
-use rusqlite::OptionalExtension;
+use rusqlite::{Connection, OptionalExtension, TransactionBehavior};
 use sha2::{Digest, Sha256};
 
 use super::{Store, SyncError};
-use crate::ids;
+use crate::{cover, ids};
 
 /// The largest blob the server stores.
 pub const MAX_BLOB_BYTES: usize = 2 * 1024 * 1024;
+/// The most bytes of blobs one user may have uploaded at a time: 50 MB.
+pub const USER_BLOB_QUOTA_BYTES: i64 = 50_000_000;
+/// Blobs that no playlist cover names are deleted once they are this many days old.
+pub const ORPHAN_BLOB_DAYS: i64 = 7;
+const MILLIS_PER_DAY: i64 = 24 * 60 * 60 * 1000;
 const HASH_CHARS: usize = 64;
 const ALLOWED_MIMES: [&str; 3] = ["image/jpeg", "image/png", "image/webp"];
 
@@ -44,6 +49,15 @@ pub enum BlobError {
     TooLarge,
     /// The SHA-256 of the bytes is not the hash in the path.
     HashMismatch,
+    /// The picture is wider, taller or has more pixels than [`cover::MAX_SIDE`] and [`cover::MAX_PIXELS`] allow.
+    ImageTooBig {
+        /// The width the header declares.
+        width: u32,
+        /// The height the header declares.
+        height: u32,
+    },
+    /// Storing the blob would take the user past [`USER_BLOB_QUOTA_BYTES`].
+    QuotaExceeded,
     /// The database failed.
     Storage(SyncError),
 }
@@ -71,6 +85,17 @@ impl fmt::Display for BlobError {
             BlobError::HashMismatch => write!(
                 formatter,
                 "The SHA-256 of the bytes is not the hash in the path. Hash exactly the bytes you send and put them at that hash."
+            ),
+            BlobError::ImageTooBig { width, height } => write!(
+                formatter,
+                "A cover is at most {} megapixels and {} pixels on a side; this one is {width} by {height}. Scale the image down and send it again.",
+                cover::MAX_PIXELS / 1_000_000,
+                cover::MAX_SIDE
+            ),
+            BlobError::QuotaExceeded => write!(
+                formatter,
+                "Each user may keep {} MB of cover images on the server and this one would pass that. Replace or remove a playlist cover, wait for the daily tidy to free unused images, then upload again.",
+                USER_BLOB_QUOTA_BYTES / 1_000_000
             ),
             BlobError::Storage(source) => write!(formatter, "{source}"),
         }
@@ -117,26 +142,72 @@ fn validate(hash: &str, mime: &str, data: &[u8]) -> Result<(), BlobError> {
     if !looks_like(mime, data) {
         return Err(BlobError::NotAnImage);
     }
+    let (width, height) = cover::dimensions(data).ok_or(BlobError::NotAnImage)?;
+    if !cover::within_limits(width, height) {
+        return Err(BlobError::ImageTooBig { width, height });
+    }
     if ids::hex(&Sha256::digest(data)) != hash {
         return Err(BlobError::HashMismatch);
     }
     Ok(())
 }
 
+/// True when `user` uploaded the blob `hash` and the server still holds it.
+pub(super) fn user_owns_blob(connection: &Connection, user: &str, hash: &str) -> Result<bool, SyncError> {
+    Ok(connection
+        .prepare_cached("SELECT 1 FROM blob_uploads u JOIN blobs b ON b.hash = u.hash WHERE u.user_id = ?1 AND u.hash = ?2")?
+        .exists((user, hash))?)
+}
+
+fn bytes_uploaded_by(connection: &Connection, user: &str) -> rusqlite::Result<i64> {
+    connection
+        .prepare_cached("SELECT COALESCE(SUM(b.size), 0) FROM blob_uploads u JOIN blobs b ON b.hash = u.hash WHERE u.user_id = ?1")?
+        .query_row([user], |row| row.get(0))
+}
+
+fn store_blob(connection: &mut Connection, owner: &str, hash: &str, mime: &str, data: &[u8], now_ms: i64) -> Result<BlobStored, BlobError> {
+    let size = data.len();
+    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let owned = user_owns_blob(&transaction, owner, hash)?;
+    if !owned && bytes_uploaded_by(&transaction, owner)? + size as i64 > USER_BLOB_QUOTA_BYTES {
+        return Err(BlobError::QuotaExceeded);
+    }
+    let added = transaction
+        .prepare_cached("INSERT OR IGNORE INTO blobs(hash, mime, size, data) VALUES (?1, ?2, ?3, ?4)")?
+        .execute((hash, mime, size as i64, data))?;
+    transaction
+        .prepare_cached(
+            "INSERT INTO blob_uploads(user_id, hash, uploaded_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(user_id, hash) DO UPDATE SET uploaded_at = excluded.uploaded_at",
+        )?
+        .execute((owner, hash, now_ms))?;
+    transaction.commit()?;
+    Ok(BlobStored { created: added == 1, size })
+}
+
+/// Deletes the blobs no playlist names as its cover whose newest upload is older than the cutoff.
+pub(super) fn delete_orphan_blobs(connection: &Connection, now_ms: i64) -> Result<usize, SyncError> {
+    let cutoff = now_ms - ORPHAN_BLOB_DAYS * MILLIS_PER_DAY;
+    let deleted = connection.execute(
+        "DELETE FROM blobs
+         WHERE hash NOT IN (SELECT cover_blob FROM playlists WHERE cover_blob IS NOT NULL)
+           AND COALESCE((SELECT MAX(uploaded_at) FROM blob_uploads WHERE blob_uploads.hash = blobs.hash), 0) < ?1",
+        [cutoff],
+    )?;
+    connection.execute("DELETE FROM blob_uploads WHERE hash NOT IN (SELECT hash FROM blobs)", [])?;
+    Ok(deleted)
+}
+
 impl Store {
-    /// Stores an image under its SHA-256 after checking the hash, the type and the 2 MiB limit.
-    pub async fn put_blob(&self, hash: &str, mime: &str, data: Vec<u8>) -> Result<BlobStored, BlobError> {
+    /// Stores an image uploaded by `owner` under its SHA-256 after checking the hash, the type, the 2 MiB limit,
+    /// the picture's declared size and the owner's quota of [`USER_BLOB_QUOTA_BYTES`].
+    pub async fn put_blob(&self, owner: &str, hash: &str, mime: &str, data: Vec<u8>) -> Result<BlobStored, BlobError> {
         validate(hash, mime, &data)?;
+        let owner = owner.to_owned();
         let hash = hash.to_owned();
         let mime = mime.to_owned();
-        let size = data.len();
-        self.write(move |connection| {
-            let added = connection
-                .prepare_cached("INSERT OR IGNORE INTO blobs(hash, mime, size, data) VALUES (?1, ?2, ?3, ?4)")?
-                .execute((&hash, &mime, size as i64, data.as_slice()))?;
-            Ok::<_, BlobError>(BlobStored { created: added == 1, size })
-        })
-        .await
+        let now_ms = self.now_ms();
+        self.write(move |connection| store_blob(connection, &owner, &hash, &mime, &data, now_ms)).await
     }
 
     /// The blob stored under `hash`, `None` when there is none.

@@ -29,7 +29,7 @@ use crate::reply::{self, Format};
 use crate::request::Params;
 use crate::security::Principal;
 use crate::state::AppState;
-use crate::throttle;
+use crate::throttle::{self, Credential};
 
 pub use identity::RestIdentities;
 use userview::UserView;
@@ -85,7 +85,8 @@ async fn entry(State(state): State<AppState>, Path(raw_method): Path<String>, re
         Ok(holder) => holder,
         Err(error) => return render_error(format, &error),
     };
-    let verified = state.0.login_throttle.attempt(address, Instant::now(), || {
+    let credential = presented_credential(&state, &params, holder.as_ref());
+    let verified = state.0.login_throttle.attempt(address, credential, Instant::now(), || {
         auth::authenticate_with(&params, state.credentials().as_ref(), holder.as_ref().map(identity::Presented::name))
     });
     let login = match verified {
@@ -113,6 +114,19 @@ async fn entry(State(state): State<AppState>, Path(raw_method): Path<String>, re
         Ok(Outcome::Raw(response)) => response,
         Err(error) => render_error(format, &error),
     }
+}
+
+/// Which credential a request presents, for the login throttle: its own API key by name, an unknown key, or a password.
+fn presented_credential(state: &AppState, params: &Params, holder: Option<&identity::Presented>) -> Credential {
+    let Some(key) = params.get("apiKey") else {
+        return Credential::Password;
+    };
+    let known = holder.map(|presented| presented.name().to_owned()).or_else(|| {
+        state
+            .credentials()
+            .and_then(|credentials| credentials.key_name(key).map(str::to_owned))
+    });
+    known.map_or(Credential::UnknownKey, Credential::Key)
 }
 
 const MEDIA_METHODS: [&str; 3] = ["stream", "download", "getcoverart"];

@@ -44,12 +44,12 @@ fn listens_of(listens: &[ServerListen], source: Source) -> Vec<ListenInput> {
     listens.iter().filter(|listen| listen.source == source).map(|listen| listen.input.clone()).collect()
 }
 
-/// How many of `inputs` the listens table does not hold yet.
-fn unseen(connection: &Connection, inputs: &[ListenInput]) -> Result<usize, SyncError> {
-    let mut statement = connection.prepare_cached("SELECT 1 FROM listens WHERE event_id = ?1")?;
+/// How many of `inputs` the listens table does not hold yet for `user`.
+fn unseen(connection: &Connection, user: &str, inputs: &[ListenInput]) -> Result<usize, SyncError> {
+    let mut statement = connection.prepare_cached("SELECT 1 FROM listens WHERE user_id = ?1 AND event_id = ?2")?;
     let mut missing = 0;
     for input in inputs {
-        if !statement.exists([&input.event_id])? {
+        if !statement.exists((user, &input.event_id))? {
             missing += 1;
         }
     }
@@ -67,7 +67,7 @@ fn record_all(connection: &mut Connection, caller: &Caller, listens: &[ServerLis
         if inputs.is_empty() {
             continue;
         }
-        added += unseen(&transaction, &inputs)?;
+        added += unseen(&transaction, &caller.user, &inputs)?;
         record_as(&transaction, &inputs, source, &mut ctx)?;
     }
     counters.save(&transaction)?;

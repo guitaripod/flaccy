@@ -3,7 +3,7 @@
 
 use super::store::Store;
 use crate::apply::{
-    apply_love, apply_playlist, apply_rating, apply_scalar, apply_session, reseed_into_doc, upsert,
+    apply_love, apply_playlist, apply_rating, apply_scalar, apply_session, clamp_reseed, reseed_into_doc, upsert,
     Caller, EntityRef, Outcome, Status,
 };
 use crate::digest::arg_hash;
@@ -266,7 +266,7 @@ impl ServerModel {
             Op::Session(session) => via(&mut self.store.sessions, &caller.device, |slot| {
                 apply_session(slot, session, caller, stamp)
             }),
-            Op::Reseed(entities) => self.apply_reseed(entities, caller),
+            Op::Reseed(entities) => self.apply_reseed(&clamp_reseed(entities, self.clock.last()), caller),
             Op::Listen(_) | Op::DeviceRename(_) => Outcome::noop(),
         };
         if outcome.status == Status::Applied {

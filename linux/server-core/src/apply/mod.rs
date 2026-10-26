@@ -7,7 +7,7 @@ mod merge;
 mod playlist;
 mod singles;
 
-pub use merge::{reseed_into_doc, upsert, Mergeable};
+pub use merge::{clamp_reseed, reseed_into_doc, upsert, Mergeable};
 pub use playlist::apply_playlist;
 pub use singles::{apply_love, apply_rating, apply_scalar, apply_session};
 

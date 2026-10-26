@@ -1,10 +1,13 @@
 //! Last-writer merges: how a stamped write, or a whole entity carrying its own
 //! stamps (`state.reseed`), lands on what is stored.
 
+use std::collections::HashMap;
+
 use super::playlist::can_edit_content;
 use super::{Caller, EntityRef, Outcome};
 use crate::model::{
     EntityKind, EntityValue, Entry, Love, Playlist, PlaylistDoc, Rating, Scalar, SessionDoc,
+    MAX_ENTRIES, MAX_TOTAL_ENTRIES,
 };
 use crate::stamp::Stamp;
 use crate::wire::ErrorCode;
@@ -37,10 +40,12 @@ pub trait Mergeable: Clone {
 }
 
 macro_rules! whole_entity {
-    ($type:ty, $kind:expr, $id:ident) => {
+    ($type:ty, $kind:expr, $id:ident, $dead:expr) => {
         impl Mergeable for $type {
             fn merge(&mut self, incoming: &Self) -> bool {
-                if incoming.stamp < self.stamp {
+                let dead: fn(&$type) -> bool = $dead;
+                let loses_tie = incoming.stamp == self.stamp && dead(incoming) && !dead(self);
+                if incoming.stamp < self.stamp || loses_tie {
                     return false;
                 }
                 let changed = *self != *incoming;
@@ -55,10 +60,10 @@ macro_rules! whole_entity {
     };
 }
 
-whole_entity!(Love, EntityKind::Love, song_key);
-whole_entity!(Rating, EntityKind::Rating, song_key);
-whole_entity!(Scalar, EntityKind::Scalar, key);
-whole_entity!(SessionDoc, EntityKind::Session, device);
+whole_entity!(Love, EntityKind::Love, song_key, |love| !love.loved);
+whole_entity!(Rating, EntityKind::Rating, song_key, |rating| rating.rating.is_none());
+whole_entity!(Scalar, EntityKind::Scalar, key, |scalar| scalar.deleted);
+whole_entity!(SessionDoc, EntityKind::Session, device, |_| false);
 
 impl Mergeable for Playlist {
     fn merge(&mut self, incoming: &Self) -> bool {
@@ -82,12 +87,15 @@ impl Mergeable for Playlist {
             incoming.visibility,
             stamps.visibility,
         );
-        changed |= assign(
-            &mut self.alive,
-            &mut self.stamps.alive,
-            incoming.alive,
-            stamps.alive,
-        );
+        let tombstone_loses_tie = self.alive && !incoming.alive && stamps.alive == self.stamps.alive;
+        if !tombstone_loses_tie {
+            changed |= assign(
+                &mut self.alive,
+                &mut self.stamps.alive,
+                incoming.alive,
+                stamps.alive,
+            );
+        }
         changed
     }
 
@@ -199,7 +207,9 @@ pub fn reseed_into_doc(
     }
     let playlists = playlists_of(entities, playlist_id);
     let entries = entries_of(entities, playlist_id);
-    if let Err(code) = check_reseed(doc.as_ref(), &playlists, &entries, caller) {
+    let checked = check_reseed(doc.as_ref(), &playlists, &entries, caller)
+        .and_then(|()| check_reseed_capacity(doc.as_ref(), &entries));
+    if let Err(code) = checked {
         return Outcome::invalid(code);
     }
     let mut changed = Vec::new();
@@ -207,11 +217,43 @@ pub fn reseed_into_doc(
         changed.extend(reseed_playlist(doc, playlist));
     }
     if let Some(doc) = doc.as_mut() {
-        for entry in entries {
-            changed.extend(reseed_entry(doc, entry));
-        }
+        changed.extend(reseed_entries(doc, &entries));
     }
     Outcome::from_changed(changed)
+}
+
+/// Lowers the stamps of reseeded entities to `ceiling`, the server clock, as a push does to its mutation's stamp.
+pub fn clamp_reseed(entities: &[EntityValue], ceiling: Stamp) -> Vec<EntityValue> {
+    entities
+        .iter()
+        .cloned()
+        .map(|mut entity| {
+            entity.clamp_stamps(ceiling);
+            entity
+        })
+        .collect()
+}
+
+/// Refuses a reseed that would leave the playlist past [`MAX_ENTRIES`] alive or [`MAX_TOTAL_ENTRIES`] in all.
+fn check_reseed_capacity(doc: Option<&PlaylistDoc>, entries: &[&Entry]) -> Result<(), ErrorCode> {
+    if entries.is_empty() {
+        return Ok(());
+    }
+    let mut alive: HashMap<&str, bool> = doc
+        .map(|doc| doc.entries.iter().map(|entry| (entry.id.as_str(), entry.alive)).collect())
+        .unwrap_or_default();
+    for entry in entries {
+        alive
+            .entry(entry.id.as_str())
+            .and_modify(|stays| *stays &= entry.alive)
+            .or_insert(entry.alive);
+    }
+    let living = alive.values().filter(|stays| **stays).count();
+    if living > MAX_ENTRIES || alive.len() > MAX_TOTAL_ENTRIES {
+        Err(ErrorCode::TooLarge)
+    } else {
+        Ok(())
+    }
 }
 
 fn reseed_playlist(doc: &mut Option<PlaylistDoc>, incoming: &Playlist) -> Option<EntityRef> {
@@ -225,13 +267,26 @@ fn reseed_playlist(doc: &mut Option<PlaylistDoc>, incoming: &Playlist) -> Option
     changed.then(|| incoming.entity_ref())
 }
 
-fn reseed_entry(doc: &mut PlaylistDoc, incoming: &Entry) -> Option<EntityRef> {
-    let changed = match doc.entries.iter_mut().find(|entry| entry.id == incoming.id) {
-        Some(existing) => existing.merge(incoming),
-        None => {
-            doc.entries.push(incoming.clone());
-            true
+fn reseed_entries(doc: &mut PlaylistDoc, incoming: &[&Entry]) -> Vec<EntityRef> {
+    let mut index: HashMap<String, usize> = doc
+        .entries
+        .iter()
+        .enumerate()
+        .map(|(at, entry)| (entry.id.clone(), at))
+        .collect();
+    let mut changed = Vec::new();
+    for entry in incoming {
+        let touched = match index.get(&entry.id) {
+            Some(&at) => doc.entries[at].merge(entry),
+            None => {
+                index.insert(entry.id.clone(), doc.entries.len());
+                doc.entries.push((*entry).clone());
+                true
+            }
+        };
+        if touched {
+            changed.push(entry.entity_ref());
         }
-    };
-    changed.then(|| incoming.entity_ref())
+    }
+    changed
 }

@@ -2,12 +2,13 @@
 
 use std::collections::BTreeSet;
 
-use flaccy_server_core::apply::{reseed_into_doc, upsert, Caller, EntityRef, Outcome, Status};
+use flaccy_server_core::apply::{clamp_reseed, reseed_into_doc, upsert, Caller, EntityRef, Outcome, Status};
 use flaccy_server_core::model::{EntityValue, Love, Rating, Scalar, SessionDoc, Visibility};
 use flaccy_server_core::wire::ErrorCode;
 use rusqlite::Connection;
 
 use super::apply::Ctx;
+use super::blobs::user_owns_blob;
 use super::doc::{load_doc, record_changes, takes_foreign_entry, write_rows};
 use super::rows::UserRow;
 use super::singles::record_user_changes;
@@ -50,9 +51,27 @@ fn has_foreign_entry(connection: &Connection, entities: &[EntityValue]) -> Resul
     Ok(false)
 }
 
+/// True when a playlist of the reseed names a cover blob the user did not upload or the server no longer holds.
+fn has_foreign_cover(connection: &Connection, entities: &[EntityValue], user: &str) -> Result<bool, SyncError> {
+    for entity in entities {
+        if let EntityValue::Playlist(playlist) = entity {
+            if let Some(blob) = &playlist.cover_blob {
+                if !user_owns_blob(connection, user, blob)? {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
+}
+
 /// Merges the entities, rolling every row back when any of them is invalid; files the changes once all are valid.
+///
+/// Their stamps are first lowered to the server clock, as a push's stamp is.
 pub(super) fn apply(connection: &Connection, entities: &[EntityValue], ctx: &mut Ctx<'_>) -> Result<Outcome, SyncError> {
-    if has_foreign_entry(connection, entities)? {
+    let entities = clamp_reseed(entities, ctx.counters.clock.last());
+    let entities = entities.as_slice();
+    if has_foreign_entry(connection, entities)? || has_foreign_cover(connection, entities, &ctx.caller.user)? {
         return Ok(Outcome::invalid(ErrorCode::BadArgs));
     }
     connection.execute_batch(&format!("SAVEPOINT {SAVEPOINT}"))?;

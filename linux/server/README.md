@@ -77,7 +77,8 @@ image runs Easy mode and listens only on loopback and the container's Tailscale 
 which puts `flaccy-server` in `~/.cargo/bin`, where the bundled user unit expects it.
 
 Converting a song to another format needs `ffmpeg` on the `PATH` of the
-server. Playing the original file does not.
+server. Playing the original file does not. Three conversions run at once; a request that
+finds them all busy for 20 seconds is answered `503` with `Retry-After`.
 
 ## Configure
 
@@ -151,7 +152,9 @@ users, devices, change head, listen count and database sizes to its report, and
 
 A device token that matches nothing counts against the sender's address: ten in ten
 minutes lock that address for ten minutes (`429`, `Retry-After`). Five wrong
-enrollment codes in a minute, from anyone, pause enrolling for a minute.
+enrollment codes in a minute from one address pause enrolling for that address for a minute,
+and sixty from all addresses together pause it for everyone; one address's lock never blocks
+another.
 
 ## Backups and restore
 
@@ -224,7 +227,15 @@ Restart the server.
     systemctl --user enable --now flaccy-server
 
 The unit restarts the server after a failure and runs `flaccy-server serve`
-from `~/.cargo/bin`. Edit `ExecStart` if the binary lives elsewhere.
+from `~/.cargo/bin`. Edit `ExecStart` if the binary lives elsewhere. It sets `LimitNOFILE=65536`;
+without it the server logs a warning at start when the open-files limit is below what 512
+connections need.
+
+The server holds at most 512 connections, 64 per source address; the next one is closed unread
+(logged once a minute), and when the server is full a device with few connections takes the place
+of an idle connection of the address holding the most. A connection must deliver a request head
+within 10 seconds of opening or of its first byte, and may idle 75 seconds between requests, so
+stalled sockets cannot keep devices out.
 
 By default a user service stops when you log out. `setup` offers to keep it running; by hand:
 
@@ -287,8 +298,8 @@ The server answers Subsonic error codes. Find the code your client shows:
   user name, password, token or API key; check what the client has saved.
 - **40**: the user name, password or token is wrong, or the server has no
   account yet (run `flaccy-server password set`). After ten failed logins
-  within ten minutes the message reads "Too many failed logins from <address>."
-  Wait ten minutes, then check the credentials. If every client hits this
+  of the same kind (passwords, or unknown API keys) within ten minutes the message reads "Too many failed logins from <address>."
+  A good login with a different key does not clear it. Wait ten minutes, then check the credentials. If every client hits this
   at once behind a proxy, set `behind_proxy = true`.
 - **41**: flaccy-server never sends this code. If you see it, the address you
   are using is not this server.
@@ -301,6 +312,10 @@ The server answers Subsonic error codes. Find the code your client shows:
   for the `member` role.
 - **70**: the song, album or playlist no longer exists, usually because the
   folder was rescanned. Refresh the client's library and pick it again.
+
+Cover pictures are limited to 16 megapixels and 8192 pixels on a side (`413 too_large`), 50 MB per
+user in all; `getCoverArt` sizes round up to 64, 128, 256, 512 or 1024 pixels, and images no
+playlist uses as a cover are deleted a week after their upload by the daily tidy.
 
 The log is `flaccy.log` in the data folder. A lockout is written there when it
 starts, with the address it applies to.

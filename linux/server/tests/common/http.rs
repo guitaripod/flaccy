@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use flaccy_server::config::{Config, Mode};
 use flaccy_server::native;
-use flaccy_server::net::{connections, AllowedHosts, TailnetAddresses};
+use flaccy_server::net::{serve, AllowedHosts, ConnectionLimits, Limits, TailnetAddresses};
 use flaccy_server::security::{DeviceId, Role, UserId};
 use flaccy_server::state::AppState;
 use serde_json::{json, Value};
@@ -133,11 +133,11 @@ impl Harness {
         let app = native::app(state.clone(), hosts);
         let (stop, stopped) = oneshot::channel::<()>();
         let task = tokio::spawn(async move {
-            let _ = axum::serve(listener, connections(app))
-                .with_graceful_shutdown(async move {
-                    let _ = stopped.await;
-                })
-                .await;
+            let limits = ConnectionLimits::new(Limits::default());
+            let _ = serve(listener, app, limits, async move {
+                let _ = stopped.await;
+            })
+            .await;
         });
         Self { dir, state, address, stop: Some(stop), task: Some(task) }
     }

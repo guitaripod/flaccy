@@ -6,6 +6,7 @@ use axum::Json;
 use flaccy_library::logger;
 use serde_json::{json, Map, Value};
 
+use crate::dbthread::DbError;
 use crate::security::SecurityError;
 use crate::sync::{BlobError, PullError, PushError, SyncError};
 
@@ -93,6 +94,18 @@ impl ApiError {
         Self::new(StatusCode::PAYLOAD_TOO_LARGE, "too_large", message)
     }
 
+    /// 507 `insufficient_storage`: SQLite reported the disk full on a write, which only the person running the server can fix.
+    pub fn insufficient_storage() -> Self {
+        logger::error(CATEGORY, "a write failed because the disk is full");
+        Self::new(
+            StatusCode::INSUFFICIENT_STORAGE,
+            "insufficient_storage",
+            "The server's disk is full, so it could not save this change.",
+        )
+        .hint("Free some disk space on the machine that runs flaccy-server; devices keep their changes and send them again by themselves.")
+        .retry_after(300)
+    }
+
     /// 429 `rate_limited` with `Retry-After`.
     pub fn rate_limited(message: impl Into<String>, retry_after_seconds: u64) -> Self {
         Self::new(StatusCode::TOO_MANY_REQUESTS, "rate_limited", message).retry_after(retry_after_seconds.max(1))
@@ -145,9 +158,21 @@ impl IntoResponse for ApiError {
     }
 }
 
+/// True when SQLite refused a write because the disk has no room left.
+fn is_disk_full(error: &DbError) -> bool {
+    matches!(
+        error,
+        DbError::Sqlite(rusqlite::Error::SqliteFailure(failure, _))
+            if failure.code == rusqlite::ErrorCode::DiskFull
+    )
+}
+
 impl From<SyncError> for ApiError {
     fn from(error: SyncError) -> Self {
-        ApiError::internal(&error)
+        match &error {
+            SyncError::Storage(source) if is_disk_full(source) => ApiError::insufficient_storage(),
+            _ => ApiError::internal(&error),
+        }
     }
 }
 
@@ -156,6 +181,7 @@ impl From<SecurityError> for ApiError {
         match error {
             SecurityError::InvalidName(_) => ApiError::bad_request(error.to_string()),
             SecurityError::UnknownDevice(_) | SecurityError::UnknownUser(_) => ApiError::not_found(error.to_string()),
+            SecurityError::Storage(ref source) if is_disk_full(source) => ApiError::insufficient_storage(),
             other => ApiError::internal(&other),
         }
     }
@@ -199,11 +225,57 @@ impl From<BlobError> for ApiError {
     fn from(error: BlobError) -> Self {
         let message = error.to_string();
         match error {
-            BlobError::TooLarge => ApiError::too_large(message),
+            BlobError::TooLarge | BlobError::ImageTooBig { .. } | BlobError::QuotaExceeded => ApiError::too_large(message),
             BlobError::BadHash | BlobError::BadMime | BlobError::NotAnImage | BlobError::HashMismatch => {
                 ApiError::bad_request(message)
             }
             BlobError::Storage(source) => source.into(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn disk_full() -> DbError {
+        DbError::Sqlite(rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(13), None))
+    }
+
+    fn other_failure() -> DbError {
+        DbError::Sqlite(rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(5), None))
+    }
+
+    #[test]
+    fn a_full_disk_answers_507_with_its_own_code() {
+        let error: ApiError = SyncError::Storage(disk_full()).into();
+        assert_eq!(error.status(), StatusCode::INSUFFICIENT_STORAGE);
+        assert_eq!(error.code(), "insufficient_storage");
+        let body = error.body();
+        assert!(body["error"]["hint"].as_str().is_some_and(|hint| hint.contains("disk space")));
+    }
+
+    #[test]
+    fn a_full_disk_on_a_push_or_a_pull_or_a_device_write_is_the_same_answer() {
+        let push: ApiError = PushError::Storage(SyncError::Storage(disk_full())).into();
+        let pull: ApiError = PullError::Storage(SyncError::Storage(disk_full())).into();
+        let security: ApiError = SecurityError::Storage(disk_full()).into();
+        for error in [push, pull, security] {
+            assert_eq!(error.status(), StatusCode::INSUFFICIENT_STORAGE);
+        }
+    }
+
+    #[test]
+    fn other_database_failures_stay_internal_errors() {
+        let error: ApiError = SyncError::Storage(other_failure()).into();
+        assert_eq!(error.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(error.code(), "internal");
+    }
+
+    #[test]
+    fn the_answer_carries_a_retry_after() {
+        let response = ApiError::insufficient_storage().into_response();
+        assert_eq!(response.status(), StatusCode::INSUFFICIENT_STORAGE);
+        assert!(response.headers().contains_key(header::RETRY_AFTER));
     }
 }

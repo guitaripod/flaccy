@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use flaccy_library::logger;
 use qrcode::render::unicode::Dense1x2;
 use qrcode::QrCode;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use crate::admin::{self, AuditAction, DeviceAction, EnrollArgs, UserAction};
@@ -23,7 +23,7 @@ use crate::lock::DataDirLock;
 use crate::maintenance;
 use crate::native;
 use crate::net::guard::ConnectionAddr;
-use crate::net::{connections, AllowedHosts, EasyListener, TailnetAddresses};
+use crate::net::{self, descriptors, AllowedHosts, ConnectionLimits, EasyListener, Limits, TailnetAddresses};
 use crate::nightly;
 use crate::refresh;
 use crate::restore;
@@ -260,11 +260,14 @@ async fn serve_on_address(state: AppState, stop: &StopSignal) -> Result<(), Stri
 async fn serve_connections<L>(listener: L, app: Router, stop: &StopSignal) -> Result<(), String>
 where
     L: axum::serve::Listener,
+    L::Io: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     L::Addr: ConnectionAddr + std::fmt::Debug,
 {
     let draining = stop.clone();
-    let server = axum::serve(listener, connections(app)).with_graceful_shutdown(async move { draining.raised().await });
-    match shutdown::run_until_stopped(async move { server.await }, stop, shutdown::GRACE).await {
+    let limits = Limits::default();
+    descriptors::warn_if_too_low(&limits);
+    let server = net::serve(listener, app, ConnectionLimits::new(limits), async move { draining.raised().await });
+    match shutdown::run_until_stopped(server, stop, shutdown::GRACE).await {
         Some(result) => result.map_err(|err| format!("The server stopped: {err}. Start it again with `flaccy-server serve`; if this repeats, check the log in the data folder.")),
         None => {
             logger::warn(

@@ -10,6 +10,7 @@ use flaccy_server_core::stamp::Stamp;
 use flaccy_server_core::wire::ErrorCode;
 use rusqlite::Connection;
 
+use super::blobs::user_owns_blob;
 use super::doc::{load_doc_for, record_changes, takes_foreign_entry, write_rows};
 use super::meta::Counters;
 use super::singles::apply_single;
@@ -79,6 +80,14 @@ fn new_entry_ids(op: &PlaylistOp) -> Option<(&str, Vec<&str>)> {
     }
 }
 
+/// True when `op` sets a cover to a blob the caller did not upload or the server no longer holds.
+fn names_foreign_blob(connection: &Connection, op: &PlaylistOp, caller: &Caller) -> Result<bool, SyncError> {
+    match op {
+        PlaylistOp::SetCover(args) => Ok(!user_owns_blob(connection, &caller.user, &args.blob)?),
+        _ => Ok(false),
+    }
+}
+
 fn apply_playlist_op(connection: &Connection, op: &PlaylistOp, ctx: &mut Ctx<'_>) -> Result<Outcome, SyncError> {
     if let Some((playlist, ids)) = new_entry_ids(op) {
         if takes_foreign_entry(connection, playlist, ids)? {
@@ -90,6 +99,9 @@ fn apply_playlist_op(connection: &Connection, op: &PlaylistOp, ctx: &mut Ctx<'_>
     let outcome = apply_playlist(&mut doc, op, ctx.caller, ctx.stamp);
     if outcome.status != Status::Applied {
         return Ok(outcome);
+    }
+    if names_foreign_blob(connection, op, ctx.caller)? {
+        return Ok(Outcome::invalid(ErrorCode::BadArgs));
     }
     if let Some(doc) = &doc {
         write_rows(connection, doc, &outcome.changed)?;

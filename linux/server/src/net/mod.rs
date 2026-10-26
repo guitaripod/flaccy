@@ -8,17 +8,22 @@
 //! [`TrustedChannel`] marker (Unix socket), and both sit behind
 //! [`guard_router`], which refuses browsers.
 
+pub mod descriptors;
 pub mod guard;
 pub mod hosts;
+pub mod limits;
 pub mod listen;
 pub mod names;
+pub mod serve;
 pub mod tailnet;
 #[cfg(unix)]
 pub mod unix;
 
 pub use guard::{browser_guard, connections, guard_router, Connections, TrustedChannel};
 pub use hosts::AllowedHosts;
+pub use limits::{ConnectionLimits, Limits};
 pub use listen::{EasyHandle, EasyListener};
+pub use serve::serve;
 pub use tailnet::{addresses, is_loopback, is_tailnet, source_allowed, TailnetAddresses};
 #[cfg(unix)]
 pub use unix::{TrustedPeer, UnixListenerSecure};

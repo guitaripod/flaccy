@@ -1,7 +1,10 @@
-//! Failed-login backoff per client address. Ten failed logins from one address
-//! within ten minutes lock that address out for ten minutes: while locked, its
-//! attempts are refused without looking at the credentials, so a guessing
-//! client gets nothing from the account, and other addresses are unaffected.
+//! Failed-login backoff per client address and credential. Ten failed logins
+//! of one kind from one address within ten minutes lock that kind out for that
+//! address for ten minutes: while locked, its attempts are refused without
+//! looking at the credentials, so a guessing client gets nothing from the
+//! account, and other addresses are unaffected. A login with a different
+//! credential, such as the guesser's own API key, neither counts against the
+//! lockout nor clears it.
 
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -22,7 +25,18 @@ pub const FAILURE_WINDOW: Duration = Duration::from_secs(10 * 60);
 pub const LOCKOUT: Duration = Duration::from_secs(10 * 60);
 const UNKNOWN_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 
-/// The failures one address has made in the current window, and its lockout if it has one.
+/// What a login presents, which its failures and successes are counted against.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Credential {
+    /// A user name with a password or token.
+    Password,
+    /// An API key the server knows, by name.
+    Key(String),
+    /// An API key the server does not know: every guess lands here whatever its text.
+    UnknownKey,
+}
+
+/// The failures one address has made with one credential in the current window, and its lockout if it has one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Streak {
     started: Instant,
@@ -49,54 +63,60 @@ impl Streak {
     }
 }
 
-/// Failed-login counters for every client address that has recently failed.
+type Source = (IpAddr, Credential);
+
+/// Failed-login counters for every address and credential that has recently failed.
 #[derive(Default)]
 pub struct LoginThrottle {
-    streaks: Mutex<HashMap<IpAddr, Streak>>,
+    streaks: Mutex<HashMap<Source, Streak>>,
 }
 
 impl LoginThrottle {
-    /// Runs `check` for a login from `address` unless that address is locked out.
+    /// Runs `check` for a login of `credential` from `address` unless that pair is locked out.
     ///
-    /// A locked address gets the lockout error and `check` is not called. A
-    /// failed login (code 40 or 44) is counted against the address; the tenth
+    /// A locked pair gets the lockout error and `check` is not called. A
+    /// failed login (code 40 or 44) is counted against the pair; the tenth
     /// one still answers with its own error and the next attempt is refused. A
-    /// success clears only that address's count.
+    /// success clears only the count of its own address and credential.
     pub fn attempt<T>(
         &self,
         address: IpAddr,
+        credential: Credential,
         now: Instant,
         check: impl FnOnce() -> Result<T, ApiError>,
     ) -> Result<T, ApiError> {
-        if self.is_locked(address, now) {
+        let source = (address, credential);
+        if self.is_locked(&source, now) {
             return Err(lockout_error(address));
         }
         let result = check();
         match &result {
             Ok(_) => {
-                self.streaks(now).remove(&address);
+                self.streaks(now).remove(&source);
             }
-            Err(error) if is_login_failure(error) => self.record_failure(address, now),
+            Err(error) if is_login_failure(error) => self.record_failure(source, now),
             Err(_) => {}
         }
         result
     }
 
-    fn streaks(&self, now: Instant) -> MutexGuard<'_, HashMap<IpAddr, Streak>> {
+    fn streaks(&self, now: Instant) -> MutexGuard<'_, HashMap<Source, Streak>> {
         let mut streaks = self.streaks.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         streaks.retain(|_, streak| streak.is_live(now));
         streaks
     }
 
-    fn is_locked(&self, address: IpAddr, now: Instant) -> bool {
+    fn is_locked(&self, source: &Source, now: Instant) -> bool {
         self.streaks(now)
-            .get(&address)
+            .get(source)
             .is_some_and(|streak| streak.is_locked(now))
     }
 
-    fn record_failure(&self, address: IpAddr, now: Instant) {
+    fn record_failure(&self, source: Source, now: Instant) {
+        let address = source.0;
+        let credential = source.1.clone();
         let mut streaks = self.streaks(now);
-        let streak = streaks.entry(address).or_insert_with(|| Streak::fresh(now));
+        let streak = streaks.entry(source).or_insert_with(|| Streak::fresh(now));
         if now.duration_since(streak.started) >= FAILURE_WINDOW {
             *streak = Streak::fresh(now);
         }
@@ -105,7 +125,7 @@ impl LoginThrottle {
             streak.locked_until = Some(now + LOCKOUT);
             logger::warn(
                 "server",
-                &format!("refusing logins from {address} for ten minutes after {MAX_FAILURES} failed logins"),
+                &format!("refusing {credential:?} logins from {address} for ten minutes after {MAX_FAILURES} failed logins"),
             );
         }
     }
@@ -174,7 +194,7 @@ mod tests {
 
     fn fail_times(throttle: &LoginThrottle, from: IpAddr, now: Instant, times: u32) {
         for _ in 0..times {
-            assert_eq!(throttle.attempt(from, now, refuse).unwrap_err().code, 40);
+            assert_eq!(throttle.attempt(from, Credential::Password, now, refuse).unwrap_err().code, 40);
         }
     }
 
@@ -197,7 +217,7 @@ mod tests {
         fail_times(&throttle, address(1), start, MAX_FAILURES);
         let mut checked = false;
         let refused = throttle
-            .attempt(address(1), start + Duration::from_secs(9 * 60 + 59), || {
+            .attempt(address(1), Credential::Password, start + Duration::from_secs(9 * 60 + 59), || {
                 checked = true;
                 Ok(())
             })
@@ -216,7 +236,48 @@ mod tests {
         let start = Instant::now();
         fail_times(&throttle, address(1), start, MAX_FAILURES);
         let after = start + LOCKOUT + Duration::from_secs(1);
-        assert_eq!(throttle.attempt(address(1), after, || Ok("in")), Ok("in"));
+        assert_eq!(throttle.attempt(address(1), Credential::Password, after, || Ok("in")), Ok("in"));
+    }
+
+    #[test]
+    fn a_success_with_another_credential_does_not_reset_a_password_streak() {
+        let throttle = LoginThrottle::default();
+        let start = Instant::now();
+        for _ in 0..MAX_FAILURES {
+            let _ = throttle.attempt(address(1), Credential::Password, start, refuse);
+            assert_eq!(throttle.attempt(address(1), Credential::Key("phone".into()), start, || Ok(())), Ok(()));
+        }
+        assert_locked(throttle.attempt(address(1), Credential::Password, start, || Ok(())));
+    }
+
+    #[test]
+    fn a_lockout_of_one_credential_leaves_the_same_address_other_credentials() {
+        let throttle = LoginThrottle::default();
+        let start = Instant::now();
+        fail_times(&throttle, address(1), start, MAX_FAILURES);
+        assert_locked(throttle.attempt(address(1), Credential::Password, start, || Ok(())));
+        assert_eq!(throttle.attempt(address(1), Credential::Key("phone".into()), start, || Ok(())), Ok(()));
+    }
+
+    #[test]
+    fn guesses_at_unknown_keys_add_up_whatever_the_key_and_a_good_key_does_not_clear_them() {
+        let throttle = LoginThrottle::default();
+        let start = Instant::now();
+        for _ in 0..MAX_FAILURES {
+            let _ = throttle.attempt(address(1), Credential::UnknownKey, start, || Err::<(), _>(ApiError::new(44, "unknown key")));
+            assert_eq!(throttle.attempt(address(1), Credential::Key("phone".into()), start, || Ok(())), Ok(()));
+        }
+        assert_locked(throttle.attempt(address(1), Credential::UnknownKey, start, || Ok(())));
+    }
+
+    #[test]
+    fn a_success_of_the_same_credential_from_the_same_address_clears_its_streak() {
+        let throttle = LoginThrottle::default();
+        let start = Instant::now();
+        fail_times(&throttle, address(1), start, MAX_FAILURES - 1);
+        assert_eq!(throttle.attempt(address(1), Credential::Password, start, || Ok(())), Ok(()));
+        fail_times(&throttle, address(1), start, MAX_FAILURES - 1);
+        assert_eq!(throttle.attempt(address(1), Credential::Password, start, || Ok(())), Ok(()));
     }
 
     #[test]
@@ -224,7 +285,7 @@ mod tests {
         let throttle = LoginThrottle::default();
         let start = Instant::now();
         fail_times(&throttle, address(1), start, MAX_FAILURES - 1);
-        assert_eq!(throttle.attempt(address(1), start, || Ok(7)), Ok(7));
+        assert_eq!(throttle.attempt(address(1), Credential::Password, start, || Ok(7)), Ok(7));
     }
 
     #[test]
@@ -234,7 +295,7 @@ mod tests {
         fail_times(&throttle, address(1), start, MAX_FAILURES - 1);
         let later = start + FAILURE_WINDOW;
         fail_times(&throttle, address(1), later, MAX_FAILURES - 1);
-        assert_eq!(throttle.attempt(address(1), later, || Ok(())), Ok(()));
+        assert_eq!(throttle.attempt(address(1), Credential::Password, later, || Ok(())), Ok(()));
     }
 
     #[test]
@@ -242,8 +303,8 @@ mod tests {
         let throttle = LoginThrottle::default();
         let start = Instant::now();
         fail_times(&throttle, address(1), start, MAX_FAILURES);
-        assert_locked(throttle.attempt(address(1), start, || Ok(())));
-        assert_eq!(throttle.attempt(address(2), start, || Ok(())), Ok(()));
+        assert_locked(throttle.attempt(address(1), Credential::Password, start, || Ok(())));
+        assert_eq!(throttle.attempt(address(2), Credential::Password, start, || Ok(())), Ok(()));
     }
 
     #[test]
@@ -251,9 +312,9 @@ mod tests {
         let throttle = LoginThrottle::default();
         let start = Instant::now();
         fail_times(&throttle, address(1), start, MAX_FAILURES - 1);
-        assert_eq!(throttle.attempt(address(2), start, || Ok(())), Ok(()));
+        assert_eq!(throttle.attempt(address(2), Credential::Password, start, || Ok(())), Ok(()));
         fail_times(&throttle, address(1), start, 1);
-        assert_locked(throttle.attempt(address(1), start, || Ok(())));
+        assert_locked(throttle.attempt(address(1), Credential::Password, start, || Ok(())));
     }
 
     #[test]
@@ -261,9 +322,9 @@ mod tests {
         let throttle = LoginThrottle::default();
         let start = Instant::now();
         fail_times(&throttle, address(1), start, MAX_FAILURES - 1);
-        assert_eq!(throttle.attempt(address(1), start, || Ok(())), Ok(()));
+        assert_eq!(throttle.attempt(address(1), Credential::Password, start, || Ok(())), Ok(()));
         fail_times(&throttle, address(1), start, MAX_FAILURES - 1);
-        assert_eq!(throttle.attempt(address(1), start, || Ok(())), Ok(()));
+        assert_eq!(throttle.attempt(address(1), Credential::Password, start, || Ok(())), Ok(()));
     }
 
     #[test]
@@ -271,14 +332,14 @@ mod tests {
         let throttle = LoginThrottle::default();
         let start = Instant::now();
         for _ in 0..MAX_FAILURES {
-            let _ = throttle.attempt(address(1), start, || Err::<(), _>(ApiError::new(44, "unknown key")));
+            let _ = throttle.attempt(address(1), Credential::Password, start, || Err::<(), _>(ApiError::new(44, "unknown key")));
         }
-        assert_locked(throttle.attempt(address(1), start, || Ok(())));
+        assert_locked(throttle.attempt(address(1), Credential::Password, start, || Ok(())));
         let other = address(2);
         for _ in 0..MAX_FAILURES * 2 {
-            let _ = throttle.attempt(other, start, || Err::<(), _>(ApiError::new(10, "no login")));
+            let _ = throttle.attempt(other, Credential::Password, start, || Err::<(), _>(ApiError::new(10, "no login")));
         }
-        assert_eq!(throttle.attempt(other, start, || Ok(())), Ok(()));
+        assert_eq!(throttle.attempt(other, Credential::Password, start, || Ok(())), Ok(()));
     }
 
     #[test]

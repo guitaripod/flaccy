@@ -205,7 +205,7 @@ async fn cover_art_serves_the_stored_cover_and_resizes_it_into_the_cache() {
     let small = server.get(&format!("{uri}&size=60")).await;
     assert_eq!(small.header("content-type"), "image/jpeg");
     let decoded = image::load_from_memory(&small.body).unwrap();
-    assert_eq!((decoded.width(), decoded.height()), (60, 30));
+    assert_eq!((decoded.width(), decoded.height()), (64, 32));
     let cached = std::fs::read_dir(server.state.0.config.covers_dir()).unwrap().count();
     assert_eq!(cached, 1);
 
@@ -224,4 +224,25 @@ async fn cover_art_serves_the_stored_cover_and_resizes_it_into_the_cache() {
         .get(&format!("/rest/getCoverArt?{}&id={first_artist}", TestServer::login()))
         .await;
     assert_eq!(by_artist.body, cover);
+}
+
+#[tokio::test]
+async fn every_requested_size_lands_in_one_of_five_cache_files() {
+    let server = TestServer::new().await;
+    server.standard_library();
+    let album = server.album_id("Rough Cuts").await;
+    server
+        .state
+        .db()
+        .set_custom_cover(&[("Rough Cuts".to_string(), "Drill Band".to_string())], &png(1500, 800))
+        .unwrap();
+    let uri = format!("/rest/getCoverArt?{}&id={album}", TestServer::login());
+    for size in 33..=300 {
+        server.get(&format!("{uri}&size={size}")).await;
+    }
+    let widest = server.get(&format!("{uri}&size=100000")).await;
+    let decoded = image::load_from_memory(&widest.body).unwrap();
+    assert_eq!(decoded.width(), 1024);
+    let cached = std::fs::read_dir(server.state.0.config.covers_dir()).unwrap().count();
+    assert!(cached <= 5, "{cached} cached files for 268 different sizes");
 }

@@ -4,6 +4,7 @@ use super::merge::assign;
 use super::{Caller, EntityRef, Outcome};
 use crate::model::{
     EntityKind, Entry, Place, Playlist, PlaylistDoc, PlaylistStamps, Visibility, MAX_ENTRIES,
+    MAX_TOTAL_ENTRIES,
 };
 use crate::mutation::{
     CreateArgs, InsertArgs, InsertManyArgs, MoveArgs, NewEntry, PlaylistOp, Target,
@@ -215,6 +216,36 @@ fn place_entry(
     Ok(())
 }
 
+/// A stretch of new entries going between two neighbours: no other entry lies between them, so the next
+/// entry of the stretch needs no search.
+struct Run {
+    prev: Option<String>,
+    next: Option<String>,
+}
+
+impl Run {
+    fn starting_at(doc: &PlaylistDoc, place: &Place) -> Option<Run> {
+        let (prev, next) = doc.neighbours(place, None).ok()?;
+        Some(Run {
+            prev: prev.map(|entry| entry.pos.clone()),
+            next: next.map(|entry| entry.pos.clone()),
+        })
+    }
+
+    fn place(self, doc: &mut PlaylistDoc, new: &NewEntry, stamp: Stamp, changed: &mut Changes) -> Option<Run> {
+        let pos = between(self.prev.as_deref(), self.next.as_deref());
+        let stays_between = self.next.as_deref().is_none_or(|next| pos.as_str() < next);
+        doc.entries.push(Entry::new(&new.id, &doc.playlist.id, new.song.clone(), pos.clone(), stamp));
+        changed.push(EntityRef::new(EntityKind::PlaylistEntry, &new.id));
+        stays_between.then_some(Run { prev: Some(pos), next: self.next })
+    }
+}
+
+/// Places `entries` one after the other starting at `first_place`.
+///
+/// The neighbours are found once; each entry then takes the key between the last one and the same next
+/// neighbour, which is where a search after it would put it. Keys that fail to stay in order, which only
+/// equal keys left by a reseed can cause, fall back to a search per entry.
 fn append_all(
     doc: &mut PlaylistDoc,
     entries: &[NewEntry],
@@ -223,17 +254,27 @@ fn append_all(
     changed: &mut Changes,
 ) {
     let mut place = first_place.clone();
+    let mut run = Run::starting_at(doc, first_place);
     for new in entries {
-        if place_entry(doc, new, &place, stamp, changed).is_ok() {
-            place = Place::After { id: new.id.clone() };
+        match run.take() {
+            Some(current) => {
+                run = current.place(doc, new, stamp, changed);
+                place = Place::After { id: new.id.clone() };
+            }
+            None => {
+                if place_entry(doc, new, &place, stamp, changed).is_ok() {
+                    place = Place::After { id: new.id.clone() };
+                }
+            }
         }
     }
 }
 
-/// Refuses growth past the entry limit; dead entries are kept forever and do not count.
+/// Refuses growth past the entry limits: [`MAX_ENTRIES`] alive and [`MAX_TOTAL_ENTRIES`] with the dead ones,
+/// which are kept forever as tombstones.
 fn check_capacity(doc: &PlaylistDoc, extra: usize) -> Result<(), ErrorCode> {
     let alive = doc.entries.iter().filter(|entry| entry.alive).count();
-    if alive + extra > MAX_ENTRIES {
+    if alive + extra > MAX_ENTRIES || doc.entries.len() + extra > MAX_TOTAL_ENTRIES {
         Err(ErrorCode::TooLarge)
     } else {
         Ok(())
@@ -263,7 +304,8 @@ fn insert_many(
     stamp: Stamp,
     changed: &mut Changes,
 ) -> Result<(), ErrorCode> {
-    if args.entries.iter().any(|new| doc.entry(&new.id).is_some()) {
+    let present: HashSet<&str> = doc.entries.iter().map(|entry| entry.id.as_str()).collect();
+    if args.entries.iter().any(|new| present.contains(new.id.as_str())) {
         return Ok(());
     }
     check_capacity(doc, args.entries.len())?;

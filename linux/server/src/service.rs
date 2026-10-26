@@ -103,7 +103,7 @@ fn arguments(spec: &ServiceSpec) -> Vec<String> {
 pub fn unit_file(spec: &ServiceSpec) -> String {
     let command: Vec<String> = arguments(spec).iter().map(|argument| quote_exec(argument)).collect();
     format!(
-        "[Unit]\nDescription=Flaccy Server\nAfter=network-online.target tailscaled.service\nWants=network-online.target\n\n[Service]\nExecStart={}\nRestart=on-failure\nRestartSec=5\nNoNewPrivileges=yes\n\n[Install]\nWantedBy=default.target\n",
+        "[Unit]\nDescription=Flaccy Server\nAfter=network-online.target tailscaled.service\nWants=network-online.target\n\n[Service]\nExecStart={}\nRestart=on-failure\nRestartSec=5\nLimitNOFILE=65536\nNoNewPrivileges=yes\n\n[Install]\nWantedBy=default.target\n",
         command.join(" ")
     )
 }

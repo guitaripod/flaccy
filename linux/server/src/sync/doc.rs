@@ -58,16 +58,18 @@ pub(super) fn scope_of(playlist: &Playlist) -> &str {
 
 /// Writes the rows of the entities an apply reported changed.
 pub(super) fn write_rows(connection: &Connection, doc: &PlaylistDoc, changed: &[EntityRef]) -> Result<(), SyncError> {
+    let mut entry_ids = HashSet::new();
     for reference in changed {
         match reference.kind {
             EntityKind::Playlist => save_playlist(connection, &doc.playlist)?,
             EntityKind::PlaylistEntry => {
-                if let Some(entry) = doc.entry(&reference.id) {
-                    save_entry(connection, entry)?;
-                }
+                entry_ids.insert(reference.id.as_str());
             }
             _ => {}
         }
+    }
+    for entry in doc.entries.iter().filter(|entry| entry_ids.contains(entry.id.as_str())) {
+        save_entry(connection, entry)?;
     }
     Ok(())
 }

@@ -48,7 +48,7 @@ The server keeps `server_hlc: i64`, persisted in `server_meta`, never decreasing
 ### 3.2 `POST /devices` (no token; a code)
 Request: `{ "enroll": "<code>", "name": "iPhone", "platform": "ios|macos|linux|windows|other", "instance": "<uuid>" }`.
 Response `201`: `{ "device": "<id>", "token": "<256-bit base64url>", "user": {"id","name","role"}, "serverTimeMs": …, "incarnation": "…" }`.
-The code is 128 random bits, base32 (Crockford) without padding, single use, valid ten minutes, created by `flaccy-server enroll --user <name>`. Wrong, used or expired code: `401 enroll_invalid` (same body for all three). Throttle: five wrong codes in a minute for any code answers `429` for a minute.
+The code is 128 random bits, base32 (Crockford) without padding, single use, valid ten minutes, created by `flaccy-server enroll --user <name>`. Wrong, used or expired code: `401 enroll_invalid` (same body for all three). Throttle: five wrong codes in a minute from one source address answer `429` to that address for a minute, and sixty from all addresses together answer `429` to everyone for a minute; a lock on one address never blocks another. A code is spent only by an enrollment that finishes, so a failure after the code was found good (a full disk, say) leaves it usable.
 
 Household mode only: a request on the trusted socket with tailnet identity may omit `enroll`.
 
@@ -81,7 +81,7 @@ A mutation: `{"id": <int>, "name": "<name>", "stamp": <i64>, "args": {…}}`. Na
 |---|---|---|
 | `playlist.create` | `{id, name, entries?: [{id, ref}]}` | Creates the playlist alive, owner is the caller; initial entries appended in order. On an existing id: `noop` for its owner, `invalid forbidden` for anyone else |
 | `playlist.rename` | `{id, name}` | Sets `name` |
-| `playlist.setCover` | `{id, blob}` | Sets `coverBlob` (a blob hash previously uploaded) |
+| `playlist.setCover` | `{id, blob}` | Sets `coverBlob` to a blob the caller uploaded and the server still holds, otherwise `invalid bad_args` |
 | `playlist.clearCover` | `{id}` | Clears `coverBlob` |
 | `playlist.delete` | `{id}` | `alive = false` |
 | `playlist.restore` | `{id}` | `alive = true` |
@@ -92,12 +92,12 @@ A mutation: `{"id": <int>, "name": "<name>", "stamp": <i64>, "args": {…}}`. Na
 | `entry.remove` | `{id}` | `alive = false`, sticky: it applies at any stamp, nothing revives the entry, and `stamps.alive` keeps the larger stamp |
 | `love.set` | `{songKey, ref, loved}` | Last writer |
 | `rating.set` | `{songKey, ref, rating}` | Last writer |
-| `listen.record` | `{listens:[{eventId, ts, ref, playedS, recorded}]}` | Idempotent by `eventId`; runs the ledger |
+| `listen.record` | `{listens:[{eventId, ts, ref, playedS, recorded}]}` | Idempotent by `eventId` per user, so one user's event id never blocks another's; runs the ledger |
 | `session.save` | `{session}` | Writes the caller device's session |
 | `scalar.set` | `{key, value}` | Last writer per key |
 | `scalar.clear` | `{key}` | `deleted = true` |
 | `device.rename` | `{name}` | Names the caller device |
-| `state.reseed` | `{entities:[{kind, id, value}]}` | Last-writer upsert of full entities carrying their own stamps; used after a restore. Merged field by field, an entry stays dead once either side has it dead, playlists must be owned by the caller, entries need their playlist (existing or in the same call), `listen` is refused, and any `invalid` entity rolls back the whole mutation |
+| `state.reseed` | `{entities:[{kind, id, value}]}` | Last-writer upsert of full entities carrying their own stamps; used after a restore. Merged field by field, an entry stays dead once either side has it dead, playlists must be owned by the caller, entries need their playlist (existing or in the same call), `listen` is refused, and any `invalid` entity rolls back the whole mutation. At most 1,000 entities and 400 KB of arguments (`invalid too_large`), so a larger base is sent as several reseeds, playlists before their entries; no playlist may end past 20,000 alive or 40,000 entries in all. Every stamp is lowered to the server clock like a push's, a tombstone does not replace a live value of the same stamp, and a playlist's `coverBlob` must be a blob the caller uploaded (`invalid bad_args`) |
 
 `place` is `{"kind":"first"}`, `{"kind":"last"}`, `{"kind":"after","id":"<entry id>"}` or `{"kind":"before","id":"<entry id>"}`.
 
@@ -146,7 +146,7 @@ A client retires a pending mutation only from a response with `more = false`, an
 `GET /listens?before=<unix ts>&limit=<n>` newest first (n ≤ 5000), `GET /listens?after=<seq>&limit=<n>` ascending by `seq`. Each item is a `listen` value plus `seq`. NDJSON when `Accept: application/x-ndjson`, else `{"listens": […], "more": <bool>, "head": <int>}`.
 
 ### 6.4 Other
-`GET /sync/entity?kind=&id=` returns one entity. `PUT /blobs/{sha256}` stores an image up to 2 MiB (`image/jpeg`, `image/png`, `image/webp`; the hash is checked), `GET /blobs/{sha256}` returns it.
+`GET /sync/entity?kind=&id=` returns one entity. `PUT /blobs/{sha256}` stores an image up to 2 MiB (`image/jpeg`, `image/png`, `image/webp`; the hash is checked) whose header declares at most 16 megapixels and 8192 pixels on a side, and at most 50 MB per user in all (`413 too_large` otherwise); `GET /blobs/{sha256}` returns it. The daily tidy deletes blobs that no playlist names as its cover once their newest upload is a week old.
 
 ## 7. Position keys
 
@@ -209,12 +209,14 @@ loves(user_id TEXT NOT NULL, song_key TEXT NOT NULL, ref_json TEXT NOT NULL, lov
 ratings(user_id TEXT NOT NULL, song_key TEXT NOT NULL, ref_json TEXT NOT NULL, rating INTEGER, stamp INTEGER NOT NULL, PRIMARY KEY(user_id, song_key))
 scalars(user_id TEXT NOT NULL, key TEXT NOT NULL, value_json TEXT NOT NULL, deleted INTEGER NOT NULL, stamp INTEGER NOT NULL, PRIMARY KEY(user_id, key))
 sessions(user_id TEXT NOT NULL, device_id TEXT NOT NULL, session_json TEXT NOT NULL, stamp INTEGER NOT NULL, PRIMARY KEY(user_id, device_id))
-listens(event_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, ts INTEGER NOT NULL, song_key TEXT NOT NULL, title_key TEXT NOT NULL, artist_key TEXT NOT NULL,
-        ref_json TEXT NOT NULL, played_s INTEGER NOT NULL, source TEXT NOT NULL, recorded INTEGER NOT NULL, device_id TEXT, suppressed INTEGER NOT NULL, seq INTEGER NOT NULL)
+listens(event_id TEXT NOT NULL, user_id TEXT NOT NULL, ts INTEGER NOT NULL, song_key TEXT NOT NULL, title_key TEXT NOT NULL, artist_key TEXT NOT NULL,
+        ref_json TEXT NOT NULL, played_s INTEGER NOT NULL, source TEXT NOT NULL, recorded INTEGER NOT NULL, device_id TEXT, suppressed INTEGER NOT NULL, seq INTEGER NOT NULL,
+        PRIMARY KEY(user_id, event_id))
          -- indexes: (user_id, ts), (user_id, seq), (user_id, song_key, ts)
 device_progress(device_id TEXT NOT NULL, instance TEXT NOT NULL, last_mutation_id INTEGER NOT NULL, PRIMARY KEY(device_id, instance))
 mutation_results(device_id TEXT NOT NULL, instance TEXT NOT NULL, id INTEGER NOT NULL, arg_hash BLOB NOT NULL, status TEXT NOT NULL, code TEXT, at INTEGER NOT NULL, PRIMARY KEY(device_id, instance, id))
 blobs(hash TEXT PRIMARY KEY, mime TEXT NOT NULL, size INTEGER NOT NULL, data BLOB NOT NULL)
+blob_uploads(user_id TEXT NOT NULL, hash TEXT NOT NULL, uploaded_at INTEGER NOT NULL, PRIMARY KEY(user_id, hash))
 rest_progress(key_id TEXT PRIMARY KEY, last_mutation_id INTEGER NOT NULL)
 ```
 `scope` is the user id, or `household` for household playlists and their entries.
@@ -223,7 +225,9 @@ rest_progress(key_id TEXT PRIMARY KEY, last_mutation_id INTEGER NOT NULL)
 
 ## 11. Limits
 
-Mutation batch ≤ 500; request body ≤ 1 MiB (blobs ≤ 2 MiB); a scalar value ≤ 64 KiB; a playlist ≤ 20,000 entries; `limit` ≤ 5000; WebSocket frame ≤ 64 KiB. Over a limit: `413 too_large` or `429 rate_limited` with `Retry-After`.
+Mutation batch ≤ 500; request body ≤ 1 MiB (blobs ≤ 2 MiB); a scalar value ≤ 64 KiB; a playlist ≤ 20,000 alive entries and 40,000 in all, dead ones included; a `state.reseed` ≤ 1,000 entities and 400 KB; a picture ≤ 16 megapixels and 8192 pixels a side; blobs ≤ 50 MB per user; at most 512 connections, 64 per source address, a request head within 10 s and 75 s idle between requests; `limit` ≤ 5000; WebSocket frame ≤ 64 KiB. Over a limit: `413 too_large` or `429 rate_limited` with `Retry-After`.
+
+Refusals that wait on the server, not on the client, both carrying `Retry-After` and leaving all state untouched: `503 clock_behind` (section 1.1) when the wall clock is more than an hour behind `server_hlc`, and `507 insufficient_storage` when SQLite reports the disk full on a write (`SQLITE_FULL`) in any database, including enrollment and device changes. A client keeps its queue, shows the server's state to the person ("The clock on arch is wrong" or "arch is out of disk space", `docs/server/UX.md` section 4) and tries again by itself; it never treats either as a reason to drop mutations or reset.
 
 ## 12. Corpus format
 

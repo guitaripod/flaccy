@@ -134,6 +134,25 @@ async fn ten_failed_logins_lock_one_address_out_and_leave_the_others_working() {
 }
 
 #[tokio::test]
+async fn a_good_key_between_wrong_passwords_does_not_reset_the_lockout() {
+    let server = TestServer::new().await;
+    let wrong = format!("/rest/ping?f=json&u={USER}&p=wrong");
+    let good_key = format!("/rest/ping?f=json&apiKey={}", server.api_key);
+    let right = format!("/rest/ping?f=json&u={USER}&p={PASSWORD}");
+    let attacker = "203.0.113.9:5000";
+    for _ in 0..10 {
+        let guess = server.send(from_peer(&wrong, attacker)).await;
+        assert!(guess.text().contains("\"code\":40"), "{}", guess.text());
+        let own_key = server.send(from_peer(&good_key, attacker)).await;
+        assert!(own_key.text().contains("\"status\":\"ok\""), "{}", own_key.text());
+    }
+    let refused = server.send(from_peer(&right, attacker)).await;
+    assert!(refused.text().contains("Too many failed logins from 203.0.113.9"), "{}", refused.text());
+    let still_works = server.send(from_peer(&good_key, attacker)).await;
+    assert!(still_works.text().contains("\"status\":\"ok\""), "{}", still_works.text());
+}
+
+#[tokio::test]
 async fn a_revoked_key_is_refused_at_once() {
     let server = TestServer::new().await;
     let path = server.state.0.config.credentials_path();

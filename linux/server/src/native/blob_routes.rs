@@ -13,7 +13,7 @@ use crate::state::AppState;
 
 const IMMUTABLE: &str = "private, max-age=31536000, immutable";
 
-/// `PUT /blobs/{sha256}`: stores an image of at most 2 MiB under the SHA-256 of its bytes.
+/// `PUT /blobs/{sha256}`: stores an image of at most 2 MiB and 16 megapixels under the SHA-256 of its bytes, within the caller's 50 MB quota.
 pub async fn put_blob(
     State(state): State<AppState>,
     caller: Authed,
@@ -21,13 +21,13 @@ pub async fn put_blob(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<Response, ApiError> {
-    caller.writer()?;
+    let owner = caller.writer()?.user.clone();
     let mime = headers
         .get(header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .map(|value| value.split(';').next().unwrap_or("").trim().to_ascii_lowercase())
         .unwrap_or_default();
-    let stored = state.0.sync.put_blob(&hash, &mime, body.to_vec()).await?;
+    let stored = state.0.sync.put_blob(owner.as_str(), &hash, &mime, body.to_vec()).await?;
     let status = if stored.created { StatusCode::CREATED } else { StatusCode::OK };
     let body = json!({ "hash": hash, "size": stored.size, "serverTimeMs": state.0.sync.now_ms() });
     Ok((status, Json(body)).into_response())

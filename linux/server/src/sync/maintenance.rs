@@ -1,7 +1,8 @@
-//! Housekeeping of `state.sqlite`: old mutation results go, and the write-ahead log stays small.
+//! Housekeeping of `state.sqlite`: old mutation results and unused blobs go, and the write-ahead log stays small.
 
 use rusqlite::Connection;
 
+use super::blobs::delete_orphan_blobs;
 use super::{Store, SyncError};
 
 /// The most `mutation_results` rows kept per device.
@@ -25,6 +26,8 @@ DELETE FROM mutation_results WHERE rowid IN (
 pub struct Tidied {
     /// `mutation_results` rows deleted.
     pub results_pruned: usize,
+    /// Blobs no playlist names as its cover that were older than a week, deleted.
+    pub blobs_removed: usize,
 }
 
 fn prune(connection: &Connection, now_ms: i64) -> Result<usize, SyncError> {
@@ -50,13 +53,14 @@ impl Store {
         self.write(move |connection| prune(connection, now_ms)).await
     }
 
-    /// Prunes, then empties the write-ahead log and refreshes the query planner's statistics.
+    /// Prunes, deletes unused blobs, then empties the write-ahead log and refreshes the query planner's statistics.
     pub async fn tidy(&self) -> Result<Tidied, SyncError> {
         let now_ms = self.now_ms();
         self.write(move |connection| {
             let results_pruned = prune(connection, now_ms)?;
+            let blobs_removed = delete_orphan_blobs(connection, now_ms)?;
             shrink_log(connection)?;
-            Ok::<_, SyncError>(Tidied { results_pruned })
+            Ok::<_, SyncError>(Tidied { results_pruned, blobs_removed })
         })
         .await
     }

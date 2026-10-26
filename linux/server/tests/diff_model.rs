@@ -163,9 +163,13 @@ impl Scenario {
 
     fn make_mutation(&mut self, device: usize) -> Mutation {
         let local_now = self.now() + self.devices[device].skew_ms;
-        let (name, mut args) = random_mutation(&mut self.rng, &self.model.store, self.pressure);
+        let (mut name, mut args) = random_mutation(&mut self.rng, &self.model.store, self.pressure);
         if name == "playlist.setVisibility" {
             args["visibility"] = json!("private");
+        }
+        if name == "playlist.setCover" {
+            name = "playlist.clearCover";
+            args = json!({ "id": args["id"] });
         }
         let target = &mut self.devices[device];
         let mutation = Mutation {

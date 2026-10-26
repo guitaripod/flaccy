@@ -8,8 +8,10 @@ use crate::wire::ErrorCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// The most entries one playlist holds.
+/// The most alive entries one playlist holds.
 pub const MAX_ENTRIES: usize = 20_000;
+/// The most entries one playlist keeps in all, dead ones included, since removed entries stay as tombstones.
+pub const MAX_TOTAL_ENTRIES: usize = 40_000;
 
 /// A song as a client names it; `song_key` is the identity.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -298,35 +300,42 @@ impl PlaylistDoc {
     }
 
     /// The entries either side of `place` in the full order, leaving `skip` out of it.
+    ///
+    /// One pass over the entries, nothing sorted or allocated: the cost of an insert grows with the playlist, not with its logarithm times its length.
     pub fn neighbours(
         &self,
         place: &Place,
         skip: Option<&str>,
     ) -> Result<(Option<&Entry>, Option<&Entry>), ErrorCode> {
-        let mut order = self.ordered();
-        order.retain(|entry| Some(entry.id.as_str()) != skip);
+        let candidates = || self.entries.iter().filter(|entry| Some(entry.id.as_str()) != skip);
         let anchor = |id: &str| {
-            order
-                .iter()
-                .position(|entry| entry.id == id)
+            candidates()
+                .find(|entry| entry.id == id)
                 .ok_or(ErrorCode::UnknownAnchor)
         };
         match place {
-            Place::First => Ok((None, order.first().copied())),
-            Place::Last => Ok((order.last().copied(), None)),
+            Place::First => Ok((None, candidates().min_by(|a, b| order_of(a).cmp(&order_of(b))))),
+            Place::Last => Ok((candidates().max_by(|a, b| order_of(a).cmp(&order_of(b))), None)),
             Place::After { id } => {
-                let at = anchor(id)?;
-                Ok((Some(order[at]), order.get(at + 1).copied()))
+                let before = anchor(id)?;
+                let after = candidates()
+                    .filter(|entry| order_of(entry) > order_of(before))
+                    .min_by(|a, b| order_of(a).cmp(&order_of(b)));
+                Ok((Some(before), after))
             }
             Place::Before { id } => {
-                let at = anchor(id)?;
-                Ok((
-                    at.checked_sub(1).map(|before| order[before]),
-                    Some(order[at]),
-                ))
+                let after = anchor(id)?;
+                let before = candidates()
+                    .filter(|entry| order_of(entry) < order_of(after))
+                    .max_by(|a, b| order_of(a).cmp(&order_of(b)));
+                Ok((before, Some(after)))
             }
         }
     }
+}
+
+fn order_of(entry: &Entry) -> (&str, &str) {
+    (entry.pos.as_str(), entry.id.as_str())
 }
 
 /// The kinds of synced entity.
@@ -454,6 +463,28 @@ impl EntityValue {
             kind: self.kind(),
             id: self.id().to_owned(),
             value: value.unwrap_or(Value::Null),
+        }
+    }
+
+    /// Lowers every stamp the entity carries to `ceiling`, so a write cannot claim a time the server has not reached.
+    pub fn clamp_stamps(&mut self, ceiling: Stamp) {
+        match self {
+            EntityValue::Playlist(p) => {
+                let stamps = &mut p.stamps;
+                for stamp in [&mut stamps.name, &mut stamps.cover, &mut stamps.visibility, &mut stamps.alive] {
+                    *stamp = (*stamp).min(ceiling);
+                }
+            }
+            EntityValue::Entry(e) => {
+                let stamps = &mut e.stamps;
+                for stamp in [&mut stamps.song, &mut stamps.pos, &mut stamps.alive] {
+                    *stamp = (*stamp).min(ceiling);
+                }
+            }
+            EntityValue::Love(l) => l.stamp = l.stamp.min(ceiling),
+            EntityValue::Rating(r) => r.stamp = r.stamp.min(ceiling),
+            EntityValue::Scalar(s) => s.stamp = s.stamp.min(ceiling),
+            EntityValue::Session(s) => s.stamp = s.stamp.min(ceiling),
         }
     }
 

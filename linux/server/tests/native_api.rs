@@ -14,7 +14,10 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 fn png(extra: usize) -> Vec<u8> {
-    let mut bytes = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+    let mut bytes = Vec::new();
+    image::DynamicImage::ImageRgb8(image::RgbImage::new(4, 4))
+        .write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Png)
+        .unwrap();
     bytes.extend(std::iter::repeat_n(7u8, extra));
     bytes
 }

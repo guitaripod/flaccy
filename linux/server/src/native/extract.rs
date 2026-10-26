@@ -1,5 +1,6 @@
 //! Request extractors: who is calling, the JSON body and the query string, each failing in the native error shape.
 
+use std::net::IpAddr;
 use std::time::Instant;
 
 use axum::body::to_bytes;
@@ -105,6 +106,17 @@ impl Authed {
                 .hint("Ask the server's admin to make your user a member with `flaccy-server user role <name> member`."));
         }
         Ok(principal)
+    }
+}
+
+/// The address a request is counted against: the TCP peer, or behind a proxy the first `X-Forwarded-For` address.
+pub struct Source(pub IpAddr);
+
+impl FromRequestParts<AppState> for Source {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, ApiError> {
+        Ok(Source(throttle::client_address(parts, state.0.config.behind_proxy)))
     }
 }
 

@@ -2,11 +2,11 @@
 
 use std::time::Duration;
 
-use rusqlite::{OptionalExtension, Row};
+use rusqlite::{OptionalExtension, Row, Transaction};
 
 use super::keys::{hash_secret, hashes_match, new_device_token, random_uuid};
 use super::users::require_user;
-use super::{clean_name, DeviceId, Role, SecurityError, Store, UserId};
+use super::{clean_name, DeviceId, Role, SecurityError, Stamp, Store, UserId};
 
 /// Platforms a device may report; anything else is stored as `other`.
 pub const PLATFORMS: [&str; 5] = ["ios", "macos", "linux", "windows", "other"];
@@ -60,6 +60,38 @@ fn known_platform(platform: &str) -> &'static str {
     PLATFORMS.iter().copied().find(|known| *known == lowered).unwrap_or("other")
 }
 
+/// A device ready to be written: its id, its token and the hash that is kept of it.
+pub(super) struct NewDevice {
+    pub(super) id: DeviceId,
+    pub(super) token: String,
+    name: String,
+    platform: &'static str,
+    token_hash: Vec<u8>,
+}
+
+impl NewDevice {
+    pub(super) fn prepare(name: &str, platform: &str) -> Result<Self, SecurityError> {
+        let token = new_device_token()?;
+        Ok(Self {
+            id: DeviceId(random_uuid()?),
+            name: clean_name(name)?,
+            platform: known_platform(platform),
+            token_hash: hash_secret(&token).to_vec(),
+            token,
+        })
+    }
+
+    pub(super) fn insert(&self, transaction: &Transaction<'_>, stamp: &Stamp, user_id: &UserId) -> Result<(), SecurityError> {
+        require_user(transaction, user_id)?;
+        transaction.execute(
+            "INSERT INTO devices(id, user_id, name, platform, token_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            (&self.id, user_id, &self.name, self.platform, self.token_hash.as_slice(), stamp.at),
+        )?;
+        stamp.record(transaction, "device.create", &format!("device={} user={user_id} platform={}", self.id, self.platform))?;
+        Ok(())
+    }
+}
+
 impl Store {
     /// Enrolls a device for `user_id`. The token is returned once and only its hash is kept.
     pub async fn create_device(
@@ -69,22 +101,9 @@ impl Store {
         platform: &str,
     ) -> Result<(DeviceId, String), SecurityError> {
         let user_id = user_id.clone();
-        let name = clean_name(name)?;
-        let platform = known_platform(platform);
-        let token = new_device_token()?;
-        let hash = hash_secret(&token);
-        let id = DeviceId(random_uuid()?);
-        let stored = id.clone();
-        self.write(move |transaction, stamp| {
-            require_user(transaction, &user_id)?;
-            transaction.execute(
-                "INSERT INTO devices(id, user_id, name, platform, token_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                (&stored, &user_id, &name, platform, hash.as_slice(), stamp.at),
-            )?;
-            stamp.record(transaction, "device.create", &format!("device={stored} user={user_id} platform={platform}"))?;
-            Ok(())
-        })
-        .await?;
+        let new_device = NewDevice::prepare(name, platform)?;
+        let (id, token) = (new_device.id.clone(), new_device.token.clone());
+        self.write(move |transaction, stamp| new_device.insert(transaction, stamp, &user_id)).await?;
         Ok((id, token))
     }
 

@@ -176,13 +176,13 @@ fn content_disposition(name: &str) -> String {
 /// of its files, optionally resized to fit `size` pixels.
 pub(super) async fn cover_art(call: &Call<'_>) -> Result<Outcome, ApiError> {
     let id = call.require("id")?;
-    let size = call.params.int("size").filter(|size| *size > 0).map(|size| size.min(4096) as u32);
+    let size = call.params.int("size").filter(|size| *size > 0).map(|size| size.min(i64::from(u16::MAX)) as u32);
     let found = match ids::parse(id) {
         Some(Entity::Playlist(sync_id)) => playlist_cover(call, id, &sync_id).await?,
         _ => find_cover(call, id)?,
     };
     let (bytes, kind) = match size {
-        Some(size) => cover::resized(&call.state.0.config.covers_dir(), id, size, &found),
+        Some(size) => cover::resized(call.state.0.config.covers_dir(), id.to_owned(), size, found).await,
         None => {
             let kind = cover::content_type(&found);
             (found, kind)

@@ -5,6 +5,7 @@ Description=Flaccy OpenSubsonic server for one music folder
 ExecStart=%h/.cargo/bin/flaccy-server serve
 Restart=on-failure
 RestartSec=5
+LimitNOFILE=65536
 NoNewPrivileges=yes
 
 [Install]

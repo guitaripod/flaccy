@@ -11,6 +11,7 @@ Environment=FLACCY_SERVER_CONFIG=/etc/flaccy-server/config.toml
 ExecStart=/usr/bin/flaccy-server serve
 Restart=on-failure
 RestartSec=5
+LimitNOFILE=65536
 StateDirectory=flaccy-server
 NoNewPrivileges=yes
 PrivateTmp=yes

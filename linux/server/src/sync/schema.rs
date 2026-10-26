@@ -18,10 +18,18 @@ pub const MIGRATIONS: &[Migration] = &[
         version: 3,
         apply: create_rest_progress,
     },
+    Migration {
+        version: 4,
+        apply: key_listens_by_user,
+    },
+    Migration {
+        version: 5,
+        apply: create_blob_uploads,
+    },
 ];
 
 /// The schema version this build writes.
-pub const CURRENT_VERSION: u32 = 3;
+pub const CURRENT_VERSION: u32 = 5;
 
 const TABLES: &str = "
 CREATE TABLE server_meta(
@@ -140,10 +148,61 @@ CREATE TABLE rest_progress(
 );
 ";
 
+const LISTENS_PER_USER: &str = "
+CREATE TABLE listens_by_user(
+    event_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    ts INTEGER NOT NULL,
+    song_key TEXT NOT NULL,
+    title_key TEXT NOT NULL,
+    artist_key TEXT NOT NULL,
+    ref_json TEXT NOT NULL,
+    played_s INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    recorded INTEGER NOT NULL,
+    device_id TEXT,
+    suppressed INTEGER NOT NULL,
+    seq INTEGER NOT NULL,
+    PRIMARY KEY(user_id, event_id)
+);
+INSERT INTO listens_by_user SELECT * FROM listens;
+DROP TABLE listens;
+ALTER TABLE listens_by_user RENAME TO listens;
+CREATE INDEX listens_user_ts ON listens(user_id, ts);
+CREATE INDEX listens_user_seq ON listens(user_id, seq);
+CREATE INDEX listens_user_song_ts ON listens(user_id, song_key, ts);
+";
+
+const BLOB_UPLOADS: &str = "
+CREATE TABLE blob_uploads(
+    user_id TEXT NOT NULL,
+    hash TEXT NOT NULL,
+    uploaded_at INTEGER NOT NULL,
+    PRIMARY KEY(user_id, hash)
+);
+CREATE INDEX blob_uploads_hash ON blob_uploads(hash);
+INSERT OR IGNORE INTO blob_uploads(user_id, hash, uploaded_at)
+    SELECT owner, cover_blob, CAST(strftime('%s', 'now') AS INTEGER) * 1000
+    FROM playlists WHERE cover_blob IN (SELECT hash FROM blobs);
+INSERT OR IGNORE INTO blob_uploads(user_id, hash, uploaded_at)
+    SELECT '', hash, CAST(strftime('%s', 'now') AS INTEGER) * 1000
+    FROM blobs WHERE hash NOT IN (SELECT hash FROM blob_uploads);
+";
+
 fn create_tables(step: &Transaction<'_>) -> rusqlite::Result<()> {
     step.execute_batch(TABLES)
 }
 
 fn create_rest_progress(step: &Transaction<'_>) -> rusqlite::Result<()> {
     step.execute_batch(REST_PROGRESS)
+}
+
+/// Rebuilds `listens` with the primary key `(user_id, event_id)`, so one user's event id never blocks another's.
+fn key_listens_by_user(step: &Transaction<'_>) -> rusqlite::Result<()> {
+    step.execute_batch(LISTENS_PER_USER)
+}
+
+/// Records who uploaded each blob; covers that exist already belong to their playlist's owner.
+fn create_blob_uploads(step: &Transaction<'_>) -> rusqlite::Result<()> {
+    step.execute_batch(BLOB_UPLOADS)
 }

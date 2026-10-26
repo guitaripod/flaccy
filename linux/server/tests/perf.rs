@@ -202,3 +202,45 @@ async fn bench_edits_on_a_twenty_thousand_entry_playlist() {
     assert!(response.results.iter().all(|result| result.status == MutationStatus::Applied));
     report(&format!("one request of 90 entry.insert at the end: {:?}", started.elapsed()));
 }
+
+const NINE_THOUSAND: usize = 9_000;
+
+fn many_entries(count: usize, prefix: &str) -> Vec<serde_json::Value> {
+    (0..count).map(|index| json!({ "id": format!("{prefix}{index}"), "ref": song(index % 50) })).collect()
+}
+
+async fn insert_many_after_the_seed(store: &Store, id: i64) -> Duration {
+    let args = json!({ "playlist": "big", "entries": many_entries(NINE_THOUSAND, "many"), "place": { "kind": "last" } });
+    timed_push(store, id, "entry.insertMany", args).await
+}
+
+async fn playlist_of_nine_thousand(dir: &TempDir) -> Store {
+    let store = open(dir).await;
+    timed_push(&store, 1, "playlist.create", json!({ "id": "big", "name": "Big" })).await;
+    seed_entries(&dir.file("state.sqlite"), "big", NINE_THOUSAND);
+    store
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn nine_thousand_entries_insert_many_onto_nine_thousand_in_seconds() {
+    let dir = TempDir::new("perf-insert-many");
+    let store = playlist_of_nine_thousand(&dir).await;
+    let took = insert_many_after_the_seed(&store, 2).await;
+    assert!(took < Duration::from_secs(30), "insertMany of {NINE_THOUSAND} took {took:?}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "prints the timings of the playlist paths that used to be quadratic; run with --release"]
+async fn bench_insert_many_and_twenty_inserts_on_an_eighteen_thousand_entry_playlist() {
+    let dir = TempDir::new("perf-quadratic");
+    let store = playlist_of_nine_thousand(&dir).await;
+    let took = insert_many_after_the_seed(&store, 2).await;
+    report(&format!("entry.insertMany of {NINE_THOUSAND} onto a {NINE_THOUSAND}-entry playlist: {took:?}"));
+    let batch: Vec<_> = (0..20)
+        .map(|offset| mutation(3 + offset, "entry.insert", json!({ "id": format!("one{offset}"), "playlist": "big", "ref": song(offset as usize), "place": { "kind": "first" } })))
+        .collect();
+    let started = Instant::now();
+    let response = store.push(&member("alice", "phone"), request("phone", INSTANCE, batch), None).await.unwrap();
+    assert!(response.results.iter().all(|result| result.status == MutationStatus::Applied));
+    report(&format!("20 entry.insert at the front of the {}-entry playlist (one request): {:?}", 2 * NINE_THOUSAND, started.elapsed()));
+}

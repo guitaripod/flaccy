@@ -78,3 +78,4 @@ pub fn request(device: &str, instance: &str, mutations: Vec<Mutation>) -> PushRe
 
 pub mod child;
 pub mod http;
+pub mod images;

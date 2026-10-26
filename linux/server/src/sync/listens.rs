@@ -135,18 +135,18 @@ fn second_events(connection: &Connection, user: &str, ts: i64) -> Result<Vec<Sec
     Ok(events)
 }
 
-fn set_flag(connection: &Connection, event_id: &str, suppressed: bool) -> Result<(), SyncError> {
+fn set_flag(connection: &Connection, user: &str, event_id: &str, suppressed: bool) -> Result<(), SyncError> {
     connection
-        .prepare_cached("UPDATE listens SET suppressed = ?1 WHERE event_id = ?2")?
-        .execute((suppressed, event_id))?;
+        .prepare_cached("UPDATE listens SET suppressed = ?1 WHERE user_id = ?2 AND event_id = ?3")?
+        .execute((suppressed, user, event_id))?;
     Ok(())
 }
 
 fn stamp_seq(connection: &Connection, counters: &mut Counters, user: &str, event_id: &str) -> Result<(), SyncError> {
     let seq = counters.next_seq();
     connection
-        .prepare_cached("UPDATE listens SET seq = ?1 WHERE event_id = ?2")?
-        .execute((seq, event_id))?;
+        .prepare_cached("UPDATE listens SET seq = ?1 WHERE user_id = ?2 AND event_id = ?3")?
+        .execute((seq, user, event_id))?;
     counters.note_head(user, seq);
     Ok(())
 }
@@ -175,7 +175,7 @@ pub(super) fn record_as(connection: &Connection, inputs: &[ListenInput], source:
     for ts in seconds {
         let events = second_events(connection, &ctx.caller.user, ts)?;
         for flip in recompute_second(&events) {
-            set_flag(connection, &flip.event_id, flip.suppressed)?;
+            set_flag(connection, &ctx.caller.user, &flip.event_id, flip.suppressed)?;
             stamped.insert(flip.event_id);
         }
     }

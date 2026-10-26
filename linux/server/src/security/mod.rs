@@ -67,7 +67,7 @@ pub mod users;
 
 pub use audit::VerifyError;
 pub use devices::{Device, Principal};
-pub use enroll::EnrollError;
+pub use enroll::{EnrollError, Enrolled};
 pub use keys::{ApiKey, LegacyImport};
 pub use lastfm::LastfmSession;
 pub use users::{Role, User};

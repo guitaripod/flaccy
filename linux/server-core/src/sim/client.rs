@@ -6,7 +6,7 @@ use super::server::ServerError;
 use super::store::Store;
 use crate::apply::Caller;
 use crate::model::{Entity, EntityKind, EntityValue};
-use crate::mutation::{parse, Op, Target};
+use crate::mutation::{chunk_reseed, parse, Op, Target};
 use crate::rebase::{
     fold_love, fold_playlist, fold_rating, fold_scalar, fold_session, PendingMutation,
 };
@@ -307,7 +307,7 @@ impl ClientModel {
         self.durable.pending = renumbered;
     }
 
-    fn reseed_pend(&mut self, local_now_ms: i64) -> Option<Pend> {
+    fn reseed_pends(&mut self, local_now_ms: i64) -> Vec<Pend> {
         let base = &self.durable.base;
         let user = self.caller.user.clone();
         let owned: BTreeSet<&String> = base
@@ -335,31 +335,30 @@ impl ClientModel {
         values.extend(base.ratings.values().cloned().map(EntityValue::Rating));
         values.extend(base.scalars.values().cloned().map(EntityValue::Scalar));
         values.extend(base.sessions.values().cloned().map(EntityValue::Session));
-        if values.is_empty() {
-            return None;
-        }
         let entities: Vec<Entity> = values.iter().map(EntityValue::to_entity).collect();
-        let stamp = self.stamp(local_now_ms);
-        Some(Pend {
-            mutation: Mutation {
-                id: 0,
-                name: "state.reseed".to_owned(),
-                stamp,
-                args: json!({ "entities": entities }),
-            },
-            failed: false,
-            acked: false,
-        })
+        chunk_reseed(entities)
+            .into_iter()
+            .map(|entities| Pend {
+                mutation: Mutation {
+                    id: 0,
+                    name: "state.reseed".to_owned(),
+                    stamp: self.stamp(local_now_ms),
+                    args: json!({ "entities": entities }),
+                },
+                failed: false,
+                acked: false,
+            })
+            .collect()
     }
 
     fn reset(&mut self, incarnation: Option<String>, instance: String, local_now_ms: i64) {
         self.resets += 1;
-        let reseed = self.reseed_pend(local_now_ms);
+        let reseed = self.reseed_pends(local_now_ms);
         self.durable.base = Store::default();
         self.durable.instance = instance;
         self.durable.incarnation = incarnation;
         self.durable.cursor = 0;
-        self.renumber(reseed.into_iter().collect());
+        self.renumber(reseed);
     }
 
     /// A pull succeeded. Stale answers are ignored; a new incarnation resets; otherwise the changes land in the base.

@@ -80,16 +80,17 @@ Settings → Servers lists the server like any other, with a **Sync** badge. Its
 | Needs the person | Update Flaccy to keep syncing. / Update your Flaccy Server to keep syncing. |
 | Disk full on the server | arch is out of disk space. Free some up and Flaccy retries by itself. |
 | Server clock wrong | The clock on arch is wrong. Sync is paused. |
+| Device removed on the server | arch no longer accepts this device. Disconnect it, then add the server again. |
 
 Tapping the row opens **arch**:
 
 - *Status* (the line above and "Last synced…").
 - *Library*: song count, "Show arch's music in my library" (on).
 - *Sync* (Pro): a switch "Sync with arch" (on); when the person is not Pro the row reads "Sync playlists, loves and history · Pro" and opens the paywall, never anything automatic.
-- *Devices*: this iPhone (renamable), the others with "last seen"; swipe to remove another device.
+- *Devices*: this iPhone (renamable), the others with "last seen"; swipe to remove another device. Removing asks first: "Remove Pixel?" and "Pixel stops syncing with arch. Its playlists and history stay on it, and arch keeps its copy." with **Remove** and **Cancel**. A device the server no longer accepts shows "arch no longer accepts this device" in place of the list, and its song count line in *Library* says the same.
 - *Disconnect this device*: confirmation "This iPhone stops syncing with arch. Your playlists and history stay here, and arch keeps its copy." The server and the data on it are never touched by Disconnect.
 
-First connect with data on both sides shows one summary sheet, only when something merged: "We combined your playlists. Road Trip and Workout were on both devices and are now one each. N songs are now loved here." with **Undo** for each line and **OK**.
+First connect with data on both sides shows one summary sheet, only when something merged: "We combined your playlists. Road Trip and Workout were on both devices and are now one each. N songs are now loved here." with **Undo** for each line and **OK**. A playlist is combined when both devices had one with the same name before connecting (see PROTOCOL.md section 13); a love counts when another device loved a song this one has. **Undo** on the playlists line keeps them apart again: what only this device had leaves the shared playlist and becomes a playlist of its own under the name this device gave it. **Undo** on the loves line unloves those songs, on every device, because a love is shared state.
 
 ## 5. Mac and Linux
 

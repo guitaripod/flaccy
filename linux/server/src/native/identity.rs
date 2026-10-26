@@ -7,11 +7,11 @@ use flaccy_server_core::wire::{Hello, HelloCaller, Role as WireRole, ServerInfo}
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use super::extract::{Authed, JsonBody, MaybeAuthed};
+use super::extract::{Authed, JsonBody, MaybeAuthed, Source};
 use super::host::machine_name;
 use super::ApiError;
 use crate::lastfm;
-use crate::security::{self, Device, DeviceId, EnrollError, Principal, Role, User};
+use crate::security::{self, Device, DeviceId, EnrollError, Enrolled, Principal, Role, User};
 use crate::state::AppState;
 use crate::sync::CURRENT_VERSION;
 
@@ -102,12 +102,13 @@ fn check_enroll_fields(request: &EnrollRequest) -> Result<(), ApiError> {
 /// `POST /devices`: turns an enrollment code into a device and its token, shown once.
 pub async fn enroll(
     State(state): State<AppState>,
+    Source(source): Source,
     JsonBody(request): JsonBody<EnrollRequest>,
 ) -> Result<(StatusCode, Json<Value>), ApiError> {
     check_enroll_fields(&request)?;
     let security = &state.0.security;
-    let user_id = match security.redeem(&request.enroll).await {
-        Ok(user_id) => user_id,
+    let enrolled = match security.enroll_device(source, &request.enroll, &request.name, &request.platform).await {
+        Ok(enrolled) => enrolled,
         Err(EnrollError::Invalid) => return Err(ApiError::enroll_invalid()),
         Err(EnrollError::Locked { retry_after }) => {
             return Err(ApiError::rate_limited(
@@ -118,7 +119,7 @@ pub async fn enroll(
         }
         Err(EnrollError::Storage(error)) => return Err(error.into()),
     };
-    let (device, token) = security.create_device(&user_id, &request.name, &request.platform).await?;
+    let Enrolled { user: user_id, device, token } = enrolled;
     let user = security
         .get_user(&user_id)
         .await?

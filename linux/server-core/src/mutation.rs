@@ -16,6 +16,10 @@ const MAX_ID_BYTES: usize = 128;
 const MAX_SESSION_BYTES: usize = 64 * 1024;
 const MAX_LISTENS_PER_MUTATION: usize = 500;
 const BLOB_HASH_LEN: usize = 64;
+/// The most entities one `state.reseed` carries; a larger base is sent as several reseeds.
+pub const MAX_RESEED_ENTITIES: usize = 1_000;
+/// The most bytes of JSON the arguments of one `state.reseed` take.
+pub const MAX_RESEED_BYTES: usize = 400_000;
 
 /// Why a mutation did not parse.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -518,9 +522,34 @@ fn parse_reseed(args: &Value) -> Result<Op, ParseError> {
         entities: Vec<Entity>,
     }
     let parsed: ReseedArgs = decode(args)?;
+    check(parsed.entities.len() <= MAX_RESEED_ENTITIES, ErrorCode::TooLarge)?;
+    check(args.to_string().len() <= MAX_RESEED_BYTES, ErrorCode::TooLarge)?;
     let decoded: Result<Vec<EntityValue>, ErrorCode> =
         parsed.entities.iter().map(Entity::decode).collect();
     Ok(Op::Reseed(decoded?))
+}
+
+/// Splits entities into the consecutive `state.reseed` arguments that each stay within [`MAX_RESEED_ENTITIES`] and
+/// [`MAX_RESEED_BYTES`]; the order is kept, so a playlist sent before its entries stays before them.
+pub fn chunk_reseed(entities: Vec<Entity>) -> Vec<Vec<Entity>> {
+    const ENVELOPE_BYTES: usize = 64;
+    let mut chunks: Vec<Vec<Entity>> = Vec::new();
+    let mut bytes = ENVELOPE_BYTES;
+    for entity in entities {
+        let size = serde_json::to_string(&entity).map_or(0, |text| text.len() + 1);
+        let full = chunks
+            .last()
+            .is_none_or(|chunk| chunk.len() >= MAX_RESEED_ENTITIES || bytes + size > MAX_RESEED_BYTES);
+        if full {
+            chunks.push(Vec::new());
+            bytes = ENVELOPE_BYTES;
+        }
+        bytes += size;
+        if let Some(chunk) = chunks.last_mut() {
+            chunk.push(entity);
+        }
+    }
+    chunks
 }
 
 /// Parses a mutation: unknown names are [`ParseError::Unsupported`], bad arguments carry their code.
