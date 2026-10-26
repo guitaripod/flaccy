@@ -17,6 +17,7 @@ extension DebugDrive {
         }
         session.style = LyricShareStyle()
         let controller = LyricShareWindowController.present(session, from: window)
+        zoomForCapture(controller)
         try? await Task.sleep(for: .seconds(4))
         MidgarLog.info(
             "DebugDrive: lyric share audio loaded=\(session.audio != nil) failure=\(String(describing: session.audioFailure))",
@@ -35,6 +36,30 @@ extension DebugDrive {
         try? await Task.sleep(for: .seconds(1))
         captureLyricShare(controller, parent: window, name: "flaccy-shot-lyric-share-poster-square")
         controller.dismiss()
+    }
+
+    private static let zoomedContentSize = NSSize(width: 1120, height: 824)
+
+    /// Draws the share window at the interface zoom the other shot windows use,
+    /// so a 1x display captures it as sharp as the zoomed main window: the
+    /// window grows by the scale and its content lays out in `zoomedContentSize`.
+    private static func zoomForCapture(_ controller: LyricShareWindowController) {
+        let scale = MacInterfaceScale.current
+        guard scale != MacInterfaceScale.standard, let window = controller.window else { return }
+        let root = controller.content.view
+        let size = window.contentLayoutRect.size
+        window.contentViewController = nil
+        let host = InterfaceZoomHostView(frame: NSRect(origin: .zero, size: size))
+        window.contentView = host
+        host.content.addSubview(root)
+        root.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            root.leadingAnchor.constraint(equalTo: host.content.leadingAnchor),
+            root.trailingAnchor.constraint(equalTo: host.content.trailingAnchor),
+            root.topAnchor.constraint(equalTo: host.content.topAnchor),
+            root.bottomAnchor.constraint(equalTo: host.content.bottomAnchor)
+        ])
+        window.setContentSize(NSSize(width: zoomedContentSize.width * scale, height: zoomedContentSize.height * scale))
     }
 
     /// The session for the playing track, reading its audio from a generated

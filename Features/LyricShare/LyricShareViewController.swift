@@ -21,6 +21,7 @@ final class LyricShareViewController: UIViewController {
     private let scrollView = UIScrollView()
     private let stack = UIStackView()
     private var templateButtons: [LyricShareTemplate: UIButton] = [:]
+    private var templateLabels: [LyricShareTemplate: UILabel] = [:]
     private let formatControl = UISegmentedControl(items: LyricShareFormat.allCases.map(LyricShareCopy.format))
     private var themeButtons: [LyricShareTheme: UIButton] = [:]
     private let typefaceControl = UISegmentedControl(items: LyricShareTypeface.allCases.map(LyricShareCopy.typeface))
@@ -226,11 +227,37 @@ final class LyricShareViewController: UIViewController {
         for template in LyricShareTemplate.allCases {
             let button = UIButton(type: .system)
             button.accessibilityHint = LyricShareCopy.templateHint(template)
+            button.accessibilityLabel = LyricShareCopy.template(template)
+            templateLabels[template] = Self.addTileLabel(LyricShareCopy.template(template), to: button)
             button.addAction(UIAction { [weak self] _ in self?.update { $0.template = template } }, for: .touchUpInside)
             templateButtons[template] = button
             row.addArrangedSubview(button)
         }
         return row
+    }
+
+    /// A template tile's name as a label of its own under the symbol, since a
+    /// button configuration's title wraps instead of shrinking and template
+    /// names run long in some languages ("スポットライト").
+    private static func addTileLabel(_ text: String, to button: UIButton) -> UILabel {
+        let label = UILabel()
+        label.text = text
+        label.font = .scaled(.caption1, size: 12, weight: .semibold)
+        label.adjustsFontForContentSizeCategory = true
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.6
+        label.numberOfLines = 1
+        label.textAlignment = .center
+        label.isUserInteractionEnabled = false
+        label.isAccessibilityElement = false
+        label.translatesAutoresizingMaskIntoConstraints = false
+        button.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 6),
+            label.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -6),
+            label.bottomAnchor.constraint(equalTo: button.bottomAnchor, constant: -9),
+        ])
+        return label
     }
 
     private func themeRow() -> UIView {
@@ -406,17 +433,12 @@ final class LyricShareViewController: UIViewController {
         for (template, button) in templateButtons {
             var config = template == style.template ? UIButton.Configuration.tinted() : UIButton.Configuration.gray()
             config.image = UIImage(systemName: LyricShareCopy.templateSymbol(template))
-            config.title = LyricShareCopy.template(template)
             config.imagePlacement = .top
-            config.imagePadding = 6
             config.cornerStyle = .large
-            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
-                var attributes = attributes
-                attributes.font = UIFont.scaled(.caption1, size: 12, weight: .semibold)
-                return attributes
-            }
+            config.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 6, bottom: 34, trailing: 6)
             button.configuration = config
             button.isSelected = template == style.template
+            templateLabels[template]?.textColor = button.isSelected ? .white : .label
         }
         formatControl.selectedSegmentIndex = LyricShareFormat.allCases.firstIndex(of: style.format) ?? 0
         typefaceControl.selectedSegmentIndex = LyricShareTypeface.allCases.firstIndex(of: style.typeface) ?? 0

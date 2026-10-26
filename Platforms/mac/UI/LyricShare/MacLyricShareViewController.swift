@@ -231,7 +231,8 @@ final class MacLyricShareViewController: NSViewController {
 
     private func previewPixels() -> CGFloat {
         let scale = view.window?.backingScaleFactor ?? 2
-        return min(well.imageView.frame.width * scale, Self.previewPixelWidth)
+        let pointsOnScreen = well.imageView.convert(well.imageView.bounds, to: nil).width
+        return min(pointsOnScreen * scale, Self.previewPixelWidth)
     }
 
     func rebuildRenderer() {
