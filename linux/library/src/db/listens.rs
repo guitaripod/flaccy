@@ -215,10 +215,10 @@ impl Db {
         let mut tallies = HashMap::new();
         let sql = if since_unix.is_some() {
             "SELECT titleKey, artistKey, COUNT(*), MAX(timestamp) FROM scrobbles
-             WHERE timestamp >= ?1 GROUP BY titleKey, artistKey"
+             WHERE timestamp >= ?1 AND suppressed = 0 GROUP BY titleKey, artistKey"
         } else {
             "SELECT titleKey, artistKey, COUNT(*), MAX(timestamp) FROM scrobbles
-             GROUP BY titleKey, artistKey"
+             WHERE suppressed = 0 GROUP BY titleKey, artistKey"
         };
         let Ok(mut stmt) = self.conn.prepare(sql) else {
             return tallies;
@@ -258,7 +258,7 @@ impl Db {
     pub fn unmeasured_listens_between(&self, from_unix: i64, to_unix: i64) -> Vec<(String, i64)> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT titleKey || char(0) || artistKey, COUNT(*) FROM scrobbles
-             WHERE duration = 0 AND timestamp >= ?1 AND timestamp < ?2
+             WHERE duration = 0 AND timestamp >= ?1 AND timestamp < ?2 AND suppressed = 0
              GROUP BY titleKey, artistKey",
         ) else {
             return Vec::new();
@@ -338,7 +338,8 @@ impl Db {
         let album_key = crate::listen_history::album_listen_key(album_title);
         let Ok(mut stmt) = self.conn.prepare_cached(
             "SELECT COUNT(*) FROM scrobbles
-             WHERE titleKey = ?1 AND artistKey = ?2 AND (albumKey = ?3 OR albumKey = '')",
+             WHERE titleKey = ?1 AND artistKey = ?2 AND (albumKey = ?3 OR albumKey = '')
+               AND suppressed = 0",
         ) else {
             return 0;
         };
@@ -362,7 +363,7 @@ impl Db {
     pub fn top_listen_artists(&self, since_unix: Option<i64>, limit: usize) -> Vec<(String, i64, i64)> {
         let mut folded = fold_spellings(self.spellings(
             "SELECT artistKey, artist, COUNT(*), COALESCE(SUM(duration), 0), MAX(timestamp)
-             FROM scrobbles WHERE timestamp >= ?1 GROUP BY artistKey, artist",
+             FROM scrobbles WHERE timestamp >= ?1 AND suppressed = 0 GROUP BY artistKey, artist",
             since_unix,
         ));
         folded.truncate(limit);
@@ -375,7 +376,7 @@ impl Db {
         let mut folded = fold_spellings(self.spellings(
             "SELECT albumKey || char(0) || artistKey, albumTitle || ' — ' || artist, COUNT(*), 0,
                     MAX(timestamp)
-             FROM scrobbles WHERE timestamp >= ?1 AND albumKey <> ''
+             FROM scrobbles WHERE timestamp >= ?1 AND albumKey <> '' AND suppressed = 0
              GROUP BY albumKey, artistKey, albumTitle, artist",
             since_unix,
         ));
@@ -388,7 +389,7 @@ impl Db {
         let mut folded = fold_spellings(self.spellings(
             "SELECT titleKey || char(0) || artistKey, trackTitle || ' — ' || artist, COUNT(*), 0,
                     MAX(timestamp)
-             FROM scrobbles WHERE timestamp >= ?1
+             FROM scrobbles WHERE timestamp >= ?1 AND suppressed = 0
              GROUP BY titleKey, artistKey, trackTitle, artist",
             since_unix,
         ));

@@ -14,6 +14,7 @@ pub mod music_video;
 pub mod recap;
 pub mod remote;
 pub mod scanner;
+pub mod server_sync;
 pub mod versions;
 
 pub(crate) use flaccy_shared::load_progress;

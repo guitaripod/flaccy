@@ -1,4 +1,5 @@
 use crate::library::TrackRow;
+use crate::server_sync;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use flaccy_shared::album_credit;
 use flaccy_shared::enrichment_job::{self as job, EnrichmentRecord, Fields, Scope, Status};
@@ -635,7 +636,12 @@ impl Db {
         }
         self.migrate_remote_columns()?;
         self.migrate_listen_key_columns()?;
+        server_sync::migrate(&self.conn)?;
         Ok(())
+    }
+
+    pub(crate) fn connection(&self) -> &Connection {
+        &self.conn
     }
 
     /// The paths the folder scan owns: every indexed song except the ones a
@@ -1240,11 +1246,13 @@ impl Db {
         loved: bool,
         pending_op: Option<&str>,
     ) -> Result<(), rusqlite::Error> {
-        self.conn.execute(
-            "UPDATE tracks SET loved = ?1, lovedPendingOp = ?2 WHERE fileURL = ?3",
-            params![loved, pending_op, rel_path],
-        )?;
-        Ok(())
+        server_sync::record(&self.conn, |recorder| {
+            self.conn.execute(
+                "UPDATE tracks SET loved = ?1, lovedPendingOp = ?2 WHERE fileURL = ?3",
+                params![loved, pending_op, rel_path],
+            )?;
+            recorder.loved(rel_path, loved)
+        })
     }
 
     pub fn clear_pending_love_op(&self, rel_path: &str) -> Result<(), rusqlite::Error> {
@@ -1428,23 +1436,25 @@ impl Db {
         submitted: bool,
     ) -> Result<(), rusqlite::Error> {
         let keys = crate::listen_history::ListenKeys::of(title, artist, album);
-        self.conn.execute(
-            "INSERT INTO scrobbles
-             (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![
-                title,
-                artist,
-                album,
-                string_from_unix(timestamp_unix),
-                duration,
-                submitted,
-                keys.title,
-                keys.artist,
-                keys.album
-            ],
-        )?;
-        Ok(())
+        server_sync::record(&self.conn, |recorder| {
+            self.conn.execute(
+                "INSERT INTO scrobbles
+                 (trackTitle, artist, albumTitle, timestamp, duration, submitted, titleKey, artistKey, albumKey)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    title,
+                    artist,
+                    album,
+                    string_from_unix(timestamp_unix),
+                    duration,
+                    submitted,
+                    keys.title,
+                    keys.artist,
+                    keys.album
+                ],
+            )?;
+            recorder.played(title, artist, album, timestamp_unix, duration)
+        })
     }
 
     /// Inserts a page of imported scrobbles inside one transaction so a large
@@ -1489,7 +1499,7 @@ impl Db {
     pub fn fetch_pending_scrobbles(&self) -> Vec<PendingScrobble> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT id, trackTitle, artist, albumTitle, timestamp, duration
-             FROM scrobbles WHERE submitted = 0 ORDER BY timestamp",
+             FROM scrobbles WHERE submitted = 0 AND suppressed = 0 ORDER BY timestamp",
         ) else {
             return Vec::new();
         };
@@ -1539,25 +1549,35 @@ impl Db {
     }
 
     pub fn create_playlist(&self, name: &str) -> Result<i64, rusqlite::Error> {
-        self.conn.execute(
-            "INSERT INTO playlists (name, createdAt) VALUES (?1, ?2)",
-            params![name, now_string()],
-        )?;
-        Ok(self.conn.last_insert_rowid())
+        server_sync::record(&self.conn, |recorder| {
+            self.conn.execute(
+                "INSERT INTO playlists (name, createdAt) VALUES (?1, ?2)",
+                params![name, now_string()],
+            )?;
+            let id = self.conn.last_insert_rowid();
+            recorder.playlist_created(id, name)?;
+            Ok(id)
+        })
     }
 
     pub fn delete_playlist(&self, id: i64) -> Result<(), rusqlite::Error> {
-        self.conn
-            .execute("DELETE FROM playlists WHERE id = ?1", params![id])?;
-        Ok(())
+        server_sync::record(&self.conn, |recorder| {
+            recorder.playlist_deleted(id)?;
+            self.conn
+                .execute("DELETE FROM playlists WHERE id = ?1", params![id])?;
+            Ok(())
+        })
     }
 
     pub fn rename_playlist(&self, id: i64, name: &str) -> Result<(), rusqlite::Error> {
-        self.conn.execute(
-            "UPDATE playlists SET name = ?1 WHERE id = ?2",
-            params![name, id],
-        )?;
-        Ok(())
+        server_sync::record(&self.conn, |recorder| {
+            recorder.playlist_renamed(id, name)?;
+            self.conn.execute(
+                "UPDATE playlists SET name = ?1 WHERE id = ?2",
+                params![name, id],
+            )?;
+            Ok(())
+        })
     }
 
     pub fn fetch_playlists(&self) -> Vec<PlaylistRow> {
@@ -1604,19 +1624,22 @@ impl Db {
         playlist_id: i64,
         rel_path: &str,
     ) -> Result<(), rusqlite::Error> {
-        let next: i64 = self
-            .conn
-            .query_row(
-                "SELECT COALESCE(MAX(position), -1) + 1 FROM playlistTracks WHERE playlistId = ?1",
-                params![playlist_id],
-                |row| row.get(0),
-            )
-            .unwrap_or(0);
-        self.conn.execute(
-            "INSERT INTO playlistTracks (playlistId, trackFileURL, position) VALUES (?1, ?2, ?3)",
-            params![playlist_id, rel_path, next],
-        )?;
-        Ok(())
+        server_sync::record(&self.conn, |recorder| {
+            let next: i64 = self
+                .conn
+                .query_row(
+                    "SELECT COALESCE(MAX(position), -1) + 1 FROM playlistTracks WHERE playlistId = ?1",
+                    params![playlist_id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+            self.conn.execute(
+                "INSERT INTO playlistTracks (playlistId, trackFileURL, position) VALUES (?1, ?2, ?3)",
+                params![playlist_id, rel_path, next],
+            )?;
+            let row_id = self.conn.last_insert_rowid();
+            recorder.tracks_added(playlist_id, &[(row_id, rel_path.to_owned())])
+        })
     }
 
     /// Appends `rel_paths` to a playlist in the order given, in one transaction
@@ -1626,23 +1649,27 @@ impl Db {
         playlist_id: i64,
         rel_paths: &[String],
     ) -> Result<(), rusqlite::Error> {
-        let tx = self.conn.unchecked_transaction()?;
-        let next: i64 = tx
-            .query_row(
-                "SELECT COALESCE(MAX(position), -1) + 1 FROM playlistTracks WHERE playlistId = ?1",
-                params![playlist_id],
-                |row| row.get(0),
-            )
-            .unwrap_or(0);
-        {
-            let mut stmt = tx.prepare(
-                "INSERT INTO playlistTracks (playlistId, trackFileURL, position) VALUES (?1, ?2, ?3)",
-            )?;
-            for (offset, rel_path) in rel_paths.iter().enumerate() {
-                stmt.execute(params![playlist_id, rel_path, next + offset as i64])?;
+        server_sync::record(&self.conn, |recorder| {
+            let next: i64 = self
+                .conn
+                .query_row(
+                    "SELECT COALESCE(MAX(position), -1) + 1 FROM playlistTracks WHERE playlistId = ?1",
+                    params![playlist_id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+            let mut added = Vec::with_capacity(rel_paths.len());
+            {
+                let mut stmt = self.conn.prepare(
+                    "INSERT INTO playlistTracks (playlistId, trackFileURL, position) VALUES (?1, ?2, ?3)",
+                )?;
+                for (offset, rel_path) in rel_paths.iter().enumerate() {
+                    stmt.execute(params![playlist_id, rel_path, next + offset as i64])?;
+                    added.push((self.conn.last_insert_rowid(), rel_path.clone()));
+                }
             }
-        }
-        tx.commit()
+            recorder.tracks_added(playlist_id, &added)
+        })
     }
 
     pub fn playlist_tracks(&self, playlist_id: i64) -> Vec<PlaylistTrackRow> {
@@ -1665,9 +1692,12 @@ impl Db {
     }
 
     pub fn remove_playlist_track(&self, row_id: i64) -> Result<(), rusqlite::Error> {
-        self.conn
-            .execute("DELETE FROM playlistTracks WHERE id = ?1", params![row_id])?;
-        Ok(())
+        server_sync::record(&self.conn, |recorder| {
+            recorder.track_removed(row_id)?;
+            self.conn
+                .execute("DELETE FROM playlistTracks WHERE id = ?1", params![row_id])?;
+            Ok(())
+        })
     }
 
     pub fn reorder_playlist(
@@ -1675,18 +1705,16 @@ impl Db {
         playlist_id: i64,
         ordered_row_ids: &[i64],
     ) -> Result<(), rusqlite::Error> {
-        self.conn.execute_batch("BEGIN IMMEDIATE")?;
-        for (position, row_id) in ordered_row_ids.iter().enumerate() {
-            let result = self.conn.execute(
-                "UPDATE playlistTracks SET position = ?1 WHERE id = ?2 AND playlistId = ?3",
-                params![position as i64, row_id, playlist_id],
-            );
-            if let Err(err) = result {
-                let _ = self.conn.execute_batch("ROLLBACK");
-                return Err(err);
+        server_sync::record(&self.conn, |recorder| {
+            recorder.playlist_reordered(playlist_id, ordered_row_ids)?;
+            for (position, row_id) in ordered_row_ids.iter().enumerate() {
+                self.conn.execute(
+                    "UPDATE playlistTracks SET position = ?1 WHERE id = ?2 AND playlistId = ?3",
+                    params![position as i64, row_id, playlist_id],
+                )?;
             }
-        }
-        self.conn.execute_batch("COMMIT")
+            Ok(())
+        })
     }
 
     pub fn playlist_name(&self, playlist_id: i64) -> Option<String> {
@@ -1766,11 +1794,13 @@ impl Db {
         artist: &str,
         offset_ms: i64,
     ) -> Result<(), rusqlite::Error> {
-        self.conn.execute(
-            "UPDATE lyrics SET offsetMs = ?3 WHERE trackTitle = ?1 AND artist = ?2",
-            params![title, artist, offset_ms],
-        )?;
-        Ok(())
+        server_sync::record(&self.conn, |recorder| {
+            self.conn.execute(
+                "UPDATE lyrics SET offsetMs = ?3 WHERE trackTitle = ?1 AND artist = ?2",
+                params![title, artist, offset_ms],
+            )?;
+            recorder.lyrics_offset(title, artist, offset_ms)
+        })
     }
 
     /// Marks a row as current without changing what it holds, for when the
@@ -1883,14 +1913,14 @@ impl Db {
 
     pub fn scrobble_count(&self) -> i64 {
         self.conn
-            .query_row("SELECT COUNT(*) FROM scrobbles", [], |row| row.get(0))
+            .query_row("SELECT COUNT(*) FROM scrobbles WHERE suppressed = 0", [], |row| row.get(0))
             .unwrap_or(0)
     }
 
     pub fn fetch_all_scrobble_rows(&self) -> Vec<ScrobbleRow> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT trackTitle, artist, albumTitle, timestamp, duration
-             FROM scrobbles ORDER BY timestamp",
+             FROM scrobbles WHERE suppressed = 0 ORDER BY timestamp",
         ) else {
             return Vec::new();
         };
@@ -1917,7 +1947,7 @@ impl Db {
 
     pub fn has_scrobbles(&self) -> bool {
         self.conn
-            .query_row("SELECT 1 FROM scrobbles LIMIT 1", [], |_| Ok(()))
+            .query_row("SELECT 1 FROM scrobbles WHERE suppressed = 0 LIMIT 1", [], |_| Ok(()))
             .is_ok()
     }
 
@@ -1927,7 +1957,7 @@ impl Db {
     pub fn fetch_scrobble_rows_since(&self, since_unix: i64) -> Vec<ScrobbleRow> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT trackTitle, artist, albumTitle, timestamp, duration
-             FROM scrobbles WHERE timestamp >= ?1 ORDER BY timestamp",
+             FROM scrobbles WHERE timestamp >= ?1 AND suppressed = 0 ORDER BY timestamp",
         ) else {
             return Vec::new();
         };
@@ -1951,7 +1981,7 @@ impl Db {
     pub fn fetch_scrobble_rows_between(&self, from_unix: i64, to_unix: i64) -> Vec<ScrobbleRow> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT trackTitle, artist, albumTitle, timestamp, duration
-             FROM scrobbles WHERE timestamp >= ?1 AND timestamp < ?2 ORDER BY timestamp",
+             FROM scrobbles WHERE timestamp >= ?1 AND timestamp < ?2 AND suppressed = 0 ORDER BY timestamp",
         ) else {
             return Vec::new();
         };
@@ -1978,7 +2008,7 @@ impl Db {
     pub fn recent_album_plays(&self, since_unix: i64, limit: usize) -> Vec<(String, String, i64)> {
         let Ok(mut stmt) = self.conn.prepare(
             "SELECT albumTitle, artist, MAX(timestamp) AS latest FROM scrobbles
-             WHERE timestamp >= ?1 AND albumTitle <> ''
+             WHERE timestamp >= ?1 AND albumTitle <> '' AND suppressed = 0
              GROUP BY albumTitle ORDER BY latest DESC LIMIT ?2",
         ) else {
             return Vec::new();
@@ -2001,7 +2031,7 @@ impl Db {
         self.conn
             .query_row(
                 "SELECT COUNT(*), COALESCE(SUM(duration), 0) FROM scrobbles
-                 WHERE timestamp >= ?1 AND timestamp < ?2",
+                 WHERE timestamp >= ?1 AND timestamp < ?2 AND suppressed = 0",
                 params![string_from_unix(from_unix), string_from_unix(to_unix)],
                 |row| Ok((row.get(0)?, row.get(1)?)),
             )
@@ -2013,7 +2043,7 @@ impl Db {
     /// read back as far as its first gap.
     pub fn scrobble_times_before(&self, before_unix: i64, limit: usize) -> Vec<i64> {
         let Ok(mut stmt) = self.conn.prepare(
-            "SELECT timestamp FROM scrobbles WHERE timestamp < ?1
+            "SELECT timestamp FROM scrobbles WHERE timestamp < ?1 AND suppressed = 0
              ORDER BY timestamp DESC LIMIT ?2",
         ) else {
             return Vec::new();
@@ -2036,7 +2066,7 @@ impl Db {
 
     pub fn play_counts_by_track(&self) -> Vec<(String, String, i64)> {
         let Ok(mut stmt) = self.conn.prepare(
-            "SELECT MAX(trackTitle), MAX(artist), COUNT(*) FROM scrobbles GROUP BY titleKey, artistKey",
+            "SELECT MAX(trackTitle), MAX(artist), COUNT(*) FROM scrobbles WHERE suppressed = 0 GROUP BY titleKey, artistKey",
         ) else {
             return Vec::new();
         };

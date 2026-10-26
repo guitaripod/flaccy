@@ -19,3 +19,11 @@ rand = "0.9"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 ureq = { version = "2", features = ["json"] }
+flaccy-server-core = { path = "../server-core" }
+hex = "0.4"
+
+[dev-dependencies]
+flaccy-server-core = { path = "../server-core", features = ["sim"] }
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync"] }
+flate2 = "1"
