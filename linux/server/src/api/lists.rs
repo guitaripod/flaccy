@@ -6,7 +6,8 @@ use flaccy_library::keys;
 use rand::seq::{IndexedRandom, SliceRandom};
 use serde_json::{json, Value};
 
-use super::model::{album_value, song_value};
+use super::model::{album_is_starred, album_last_played, album_play_count, album_value, song_value};
+use super::userview::UserView;
 use super::{one, Call, Fields};
 use crate::catalog::{Album, Catalog, Song};
 use crate::error::ApiError;
@@ -41,18 +42,18 @@ pub(super) fn album_list(call: &Call<'_>) -> Result<Fields, ApiError> {
         "random" => albums.shuffle(&mut rand::rng()),
         "newest" => albums.sort_by_key(|album| Reverse(album.created)),
         "frequent" => {
-            albums.retain(|album| catalog.album_play_count(album) > 0);
-            albums.sort_by_key(|album| Reverse(catalog.album_play_count(album)));
+            albums.retain(|album| album_play_count(&catalog, &call.view, album) > 0);
+            albums.sort_by_key(|album| Reverse(album_play_count(&catalog, &call.view, album)));
         }
         "recent" => {
-            albums.retain(|album| catalog.album_last_played(album).is_some());
-            albums.sort_by_key(|album| Reverse(catalog.album_last_played(album)));
+            albums.retain(|album| album_last_played(&catalog, &call.view, album).is_some());
+            albums.sort_by_key(|album| Reverse(album_last_played(&catalog, &call.view, album)));
         }
         "alphabeticalByName" => albums.sort_by_key(|album| album.title.to_lowercase()),
         "alphabeticalByArtist" => {
             albums.sort_by_key(|album| (album.artist.to_lowercase(), album.title.to_lowercase()))
         }
-        "starred" => albums.retain(|album| catalog.album_is_starred(album)),
+        "starred" => albums.retain(|album| album_is_starred(&catalog, &call.view, album)),
         "byYear" => by_year(call, &mut albums)?,
         "byGenre" => {
             let genre = call.require("genre")?;
@@ -74,7 +75,7 @@ pub(super) fn album_list(call: &Call<'_>) -> Result<Fields, ApiError> {
     }
     let listed: Vec<Value> = paged(albums, offset, size)
         .into_iter()
-        .map(|album| album_value(&catalog, album))
+        .map(|album| album_value(&catalog, &call.view, album))
         .collect();
     Ok(one("albumList2", albums_object(listed)))
 }
@@ -129,7 +130,7 @@ pub(super) fn random_songs(call: &Call<'_>) -> Fields {
         .collect();
     let chosen: Vec<Value> = candidates
         .choose_multiple(&mut rand::rng(), size)
-        .map(|song| song_value(&catalog, song))
+        .map(|song| song_value(&catalog, &call.view, song))
         .collect();
     one("randomSongs", songs_object(chosen))
 }
@@ -186,7 +187,7 @@ pub(super) fn search(call: &Call<'_>) -> Fields {
         album_page.1,
     )
     .into_iter()
-    .map(|album| album_value(&catalog, album))
+    .map(|album| album_value(&catalog, &call.view, album))
     .collect();
     let songs: Vec<Value> = paged(
         catalog
@@ -197,7 +198,7 @@ pub(super) fn search(call: &Call<'_>) -> Fields {
         song_page.1,
     )
     .into_iter()
-    .map(|song| song_value(&catalog, song))
+    .map(|song| song_value(&catalog, &call.view, song))
     .collect();
 
     let mut result = serde_json::Map::new();
@@ -213,11 +214,11 @@ pub(super) fn search(call: &Call<'_>) -> Fields {
     one("searchResult3", Value::Object(result))
 }
 
-fn starred_songs(catalog: &Catalog) -> Vec<Value> {
+fn starred_songs(catalog: &Catalog, view: &UserView) -> Vec<Value> {
     catalog
         .songs_in_order()
-        .filter(|song| song.row.loved)
-        .map(|song| song_value(catalog, song))
+        .filter(|song| view.starred_at(&song.song_key).is_some())
+        .map(|song| song_value(catalog, view, song))
         .collect()
 }
 
@@ -228,13 +229,13 @@ pub(super) fn starred(call: &Call<'_>) -> Fields {
     let albums: Vec<Value> = catalog
         .albums()
         .iter()
-        .filter(|album| catalog.album_is_starred(album))
-        .map(|album| album_value(&catalog, album))
+        .filter(|album| album_is_starred(&catalog, &call.view, album))
+        .map(|album| album_value(&catalog, &call.view, album))
         .collect();
     if !albums.is_empty() {
         result.insert("album".into(), Value::Array(albums));
     }
-    let songs = starred_songs(&catalog);
+    let songs = starred_songs(&catalog, &call.view);
     if !songs.is_empty() {
         result.insert("song".into(), Value::Array(songs));
     }

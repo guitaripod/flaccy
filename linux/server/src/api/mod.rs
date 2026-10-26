@@ -2,12 +2,18 @@
 
 mod annotate;
 mod browse;
+mod identity;
 mod lists;
 mod media;
 mod model;
+mod now_playing;
 mod playlists;
+mod queue;
 mod system;
+pub mod userview;
+mod writes;
 
+use std::sync::Arc;
 use std::time::Instant;
 
 use axum::extract::{Path, Request, State};
@@ -21,8 +27,12 @@ use crate::auth;
 use crate::error::ApiError;
 use crate::reply::{self, Format};
 use crate::request::Params;
+use crate::security::Principal;
 use crate::state::AppState;
 use crate::throttle;
+
+pub use identity::RestIdentities;
+use userview::UserView;
 
 const MAX_FORM_BYTES: usize = 1 << 20;
 
@@ -42,6 +52,8 @@ pub(crate) struct Call<'a> {
     pub params: &'a Params,
     pub method: &'a str,
     pub username: String,
+    pub principal: Principal,
+    pub view: Arc<UserView>,
 }
 
 impl<'a> Call<'a> {
@@ -69,26 +81,52 @@ async fn entry(State(state): State<AppState>, Path(raw_method): Path<String>, re
     let method = raw_method.strip_suffix(".view").unwrap_or(&raw_method).to_string();
 
     let address = throttle::client_address(&parts, state.0.config.behind_proxy);
+    let holder = match identity::key_holder(&state, params.get("apiKey")).await {
+        Ok(holder) => holder,
+        Err(error) => return render_error(format, &error),
+    };
     let verified = state.0.login_throttle.attempt(address, Instant::now(), || {
-        let credentials = state.credentials();
-        auth::authenticate(&params, credentials.as_ref())?;
-        Ok(credentials.map(|credentials| credentials.username).unwrap_or_default())
+        auth::authenticate_with(&params, state.credentials().as_ref(), holder.as_ref().map(identity::Presented::name))
     });
-    let username = match verified {
-        Ok(username) => username,
+    let login = match verified {
+        Ok(login) => login,
         Err(error) => return reply::render(format, reply::failure(&error)),
+    };
+    let identity = match identity::resolve(&state, &login, holder).await {
+        Ok(identity) => identity,
+        Err(error) => return render_error(format, &error),
+    };
+    let view = match user_view(&state, &method, &identity.principal).await {
+        Ok(view) => view,
+        Err(error) => return render_error(format, &error),
     };
     let call = Call {
         state: &state,
         params: &params,
         method: &method,
-        username,
+        username: identity.username,
+        principal: identity.principal,
+        view,
     };
     match dispatch(&call, &parts).await {
         Ok(Outcome::Fields(fields)) => reply::render(format, reply::success(fields)),
         Ok(Outcome::Raw(response)) => response,
         Err(error) => render_error(format, &error),
     }
+}
+
+const MEDIA_METHODS: [&str; 3] = ["stream", "download", "getcoverart"];
+
+/// The user's stars, ratings and plays for the calls that show them; the calls that only move bytes get none.
+async fn user_view(state: &AppState, method: &str, principal: &Principal) -> Result<Arc<UserView>, ApiError> {
+    if MEDIA_METHODS.contains(&method.to_ascii_lowercase().as_str()) {
+        return Ok(Arc::default());
+    }
+    state.0.views.get(&state.0.sync, &principal.user).await.map_err(|error| {
+        ApiError::generic(format!(
+            "Could not read what this user starred, rated and played: {error} Check that the server's data folder is readable, then try again"
+        ))
+    })
 }
 
 fn render_error(format: Format, error: &ApiError) -> Response {
@@ -100,7 +138,7 @@ async fn dispatch(call: &Call<'_>, parts: &Parts) -> Result<Outcome, ApiError> {
     let fields = match name.as_str() {
         "stream" => return media::stream(call, parts).await,
         "download" => return media::download(call, parts).await,
-        "getcoverart" => return media::cover_art(call),
+        "getcoverart" => return media::cover_art(call).await,
         "ping" => Fields::new(),
         "getlicense" => system::license(),
         "getopensubsonicextensions" => system::extensions(),
@@ -116,17 +154,17 @@ async fn dispatch(call: &Call<'_>, parts: &Parts) -> Result<Outcome, ApiError> {
         "search3" => lists::search(call),
         "getstarred2" => lists::starred(call),
         "getlyricsbysongid" => browse::lyrics(call)?,
-        "scrobble" => annotate::scrobble(call)?,
-        "star" => annotate::star(call, true)?,
-        "unstar" => annotate::star(call, false)?,
-        "setrating" => annotate::set_rating(call)?,
-        "getplaylists" => playlists::list(call),
-        "getplaylist" => playlists::get(call)?,
-        "createplaylist" => playlists::create(call)?,
-        "updateplaylist" => playlists::update(call)?,
-        "deleteplaylist" => playlists::delete(call)?,
-        "getplayqueue" => playlists::play_queue(call),
-        "saveplayqueue" => playlists::save_play_queue(call)?,
+        "scrobble" => annotate::scrobble(call).await?,
+        "star" => annotate::star(call, true).await?,
+        "unstar" => annotate::star(call, false).await?,
+        "setrating" => annotate::set_rating(call).await?,
+        "getplaylists" => playlists::list(call).await?,
+        "getplaylist" => playlists::get(call).await?,
+        "createplaylist" => playlists::create(call).await?,
+        "updateplaylist" => playlists::update(call).await?,
+        "deleteplaylist" => playlists::delete(call).await?,
+        "getplayqueue" => queue::get(call).await?,
+        "saveplayqueue" => queue::save(call).await?,
         _ => {
             return Err(ApiError::generic(format!(
                 "'{}' is not implemented by flaccy-server; use a client call it supports such as getAlbumList2, getAlbum, stream or getCoverArt",

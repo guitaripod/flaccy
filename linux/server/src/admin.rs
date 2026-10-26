@@ -10,9 +10,11 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use clap::{Args, Subcommand};
 use serde_json::{json, Value};
 
+use crate::backup;
 use crate::command::{percent_encode, qr_text};
 use crate::config::Config;
 use crate::credentials;
+use crate::lastfm;
 use crate::native::machine_name;
 use crate::security::{self, Device, Role, User};
 use crate::state::AppState;
@@ -28,9 +30,9 @@ pub(crate) fn say(text: &str) {
 /// `flaccy-server enroll ...`
 #[derive(Args, Debug)]
 pub struct EnrollArgs {
-    /// The user the new device belongs to. On a server with no users yet, this creates the first admin.
+    /// The user the new device belongs to; the first admin when left out. On a server with no users yet, this creates the first admin.
     #[arg(long)]
-    pub user: String,
+    pub user: Option<String>,
     /// How clients reach this server; default http://<this machine's name>:<port>.
     #[arg(long)]
     pub url: Option<String>,
@@ -143,11 +145,22 @@ async fn enrollee(security: &security::Store, name: &str) -> Result<User, String
     Err(format!("There is no user called '{name}'. Add one with `flaccy-server user add {name}`, then enroll again."))
 }
 
+async fn first_admin(security: &security::Store) -> Result<User, String> {
+    let users = security.list_users().await.map_err(storage)?;
+    users
+        .into_iter()
+        .find(|user| user.role == Role::Admin)
+        .ok_or_else(|| "This server has no users yet. Run `flaccy-server enroll --user <name>` to make the first one, or `flaccy-server setup`.".to_owned())
+}
+
 /// `enroll`: makes a ten-minute code for a user and prints it once with its link and QR code.
 pub async fn enroll(config: &Config, args: EnrollArgs) -> Result<(), String> {
     let ttl = parse_ttl(&args.ttl)?;
     let security = open_security(config).await?;
-    let user = enrollee(&security, &args.user).await?;
+    let user = match &args.user {
+        Some(name) => enrollee(&security, name).await?,
+        None => first_admin(&security).await?,
+    };
     let code = security.create_enrollment(&user.id, ttl).await.map_err(storage)?;
     let url = args.url.unwrap_or_else(|| format!("http://{}:{}", machine_name(), config.port));
     let link = enrollment_link(&url, &code, machine_name());
@@ -293,6 +306,8 @@ async fn report(state: &AppState, account: Option<credentials::Credentials>) -> 
     let users = state.0.security.list_users().await.map_err(storage)?;
     let devices = state.0.security.list_devices(None).await.map_err(storage)?;
     let stats = state.0.sync.stats().await.map_err(storage)?;
+    let last_backup = backup::last_status(&state.0.security).await?;
+    let lastfm = lastfm::status::gather(&state.0.sync, &state.0.security).await?;
     let last_scan = state
         .0
         .store
@@ -312,6 +327,8 @@ async fn report(state: &AppState, account: Option<credentials::Credentials>) -> 
         "lastScan": last_scan,
         "account": account_block,
         "apiKeys": keys,
+        "backup": { "lastAt": last_backup.last_at, "ok": last_backup.last_ok, "error": last_backup.last_error },
+        "lastfm": lastfm::status::report(&lastfm, config.lastfm.api_key().is_some()),
         "sync": {
             "users": users.len(),
             "devices": devices.iter().filter(|device| device.revoked_at.is_none()).count(),
@@ -358,6 +375,15 @@ fn print_report(report: &Value) {
         say(&format!("  {}  created {}", text(&key["name"]), text(&key["created"])));
     }
     print_sync(&report["sync"]);
+    print_backup(&report["backup"]);
+}
+
+fn print_backup(backup: &Value) {
+    match (backup["lastAt"].as_str(), backup["ok"].as_bool()) {
+        (Some(at), Some(true)) => say(&format!("Last backup:  {at}")),
+        (Some(at), _) => say(&format!("Last backup:  FAILED at {at}: {}", text(&backup["error"]))),
+        _ => say("Last backup:  never; run `flaccy-server backup`"),
+    }
 }
 
 fn print_sync(sync: &Value) {

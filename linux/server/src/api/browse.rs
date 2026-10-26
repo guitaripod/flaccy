@@ -82,7 +82,7 @@ pub(super) fn artist(call: &Call<'_>) -> Result<Fields, ApiError> {
         .albums
         .iter()
         .filter_map(|album_id| catalog.album(album_id))
-        .map(|album| album_value(&catalog, album))
+        .map(|album| album_value(&catalog, &call.view, album))
         .collect();
     if let Value::Object(object) = &mut value {
         object.insert("album".into(), Value::Array(albums));
@@ -97,7 +97,7 @@ pub(super) fn album(call: &Call<'_>) -> Result<Fields, ApiError> {
     let album = catalog
         .album(id)
         .ok_or_else(|| ApiError::not_found("Album", id))?;
-    Ok(one("album", album_with_songs_value(&catalog, album)))
+    Ok(one("album", album_with_songs_value(&catalog, &call.view, album)))
 }
 
 /// `getSong`: one song.
@@ -109,7 +109,7 @@ pub(super) fn song(call: &Call<'_>) -> Result<Fields, ApiError> {
         _ => None,
     }
     .ok_or_else(|| ApiError::not_found("Song", id))?;
-    Ok(one("song", song_value(&catalog, song)))
+    Ok(one("song", song_value(&catalog, &call.view, song)))
 }
 
 /// `getLyricsBySongId`: the lyrics the library holds, synced lines when there are any.

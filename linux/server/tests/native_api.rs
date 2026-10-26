@@ -27,10 +27,10 @@ async fn hello_answers_without_a_token_and_lists_only_what_exists() {
     assert_eq!(reply.header("flaccy-protocol"), Some("1"));
     let body = reply.json();
     assert_eq!(body["protocol"], json!([1]));
-    assert_eq!(body["features"], json!(["sync"]));
+    assert_eq!(body["features"], json!(["sync", "live"]));
     assert_eq!(body["mode"], "easy");
     assert_eq!(body["caller"], Value::Null);
-    assert_eq!(body["server"]["schema"], 1);
+    assert_eq!(body["server"]["schema"], flaccy_server::sync::CURRENT_VERSION);
     assert!(body["serverTimeMs"].as_i64().unwrap() > 1_700_000_000_000);
     assert_eq!(body["incarnation"].as_str().unwrap(), harness.state.0.sync.incarnation());
     harness.stop().await;

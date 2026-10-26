@@ -10,12 +10,13 @@ use serde_json::{json, Value};
 use super::extract::{Authed, JsonBody, MaybeAuthed};
 use super::host::machine_name;
 use super::ApiError;
+use crate::lastfm;
 use crate::security::{self, Device, DeviceId, EnrollError, Principal, Role, User};
 use crate::state::AppState;
 use crate::sync::CURRENT_VERSION;
 
 const PROTOCOL_VERSION: u32 = 1;
-const FEATURES: [&str; 1] = ["sync"];
+const FEATURES: [&str; 2] = ["sync", "live"];
 const MODE: &str = "easy";
 const MAX_INSTANCE_CHARS: usize = 64;
 
@@ -39,6 +40,10 @@ fn caller_of(principal: &Principal) -> HelloCaller {
 
 /// `GET /hello`: what this server is and speaks; the caller only when a valid token came along.
 pub async fn hello(State(state): State<AppState>, MaybeAuthed(principal): MaybeAuthed) -> Json<Hello> {
+    let mut features: Vec<String> = FEATURES.iter().map(|feature| (*feature).to_owned()).collect();
+    if lastfm::history_feature_for(&state, principal.as_ref()).await {
+        features.push(lastfm::HISTORY_FEATURE.to_owned());
+    }
     Json(Hello {
         protocol: vec![PROTOCOL_VERSION],
         server: ServerInfo {
@@ -46,7 +51,7 @@ pub async fn hello(State(state): State<AppState>, MaybeAuthed(principal): MaybeA
             version: env!("CARGO_PKG_VERSION").to_owned(),
             schema: CURRENT_VERSION,
         },
-        features: FEATURES.iter().map(|feature| (*feature).to_owned()).collect(),
+        features,
         mode: MODE.to_owned(),
         server_time_ms: state.0.sync.now_ms(),
         incarnation: state.0.sync.incarnation(),
@@ -195,5 +200,6 @@ pub async fn revoke_device(
 ) -> Result<Json<Value>, ApiError> {
     let device = owned_device(&state, &caller.0, &id).await?;
     state.0.security.acting_as(&caller.0.user).revoke_device(&device.id).await?;
+    state.0.live.close_device(device.id.as_str());
     Ok(Json(json!({ "revoked": true, "serverTimeMs": state.0.sync.now_ms() })))
 }

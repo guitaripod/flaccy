@@ -13,12 +13,17 @@ mod changes;
 mod doc;
 mod entity;
 mod listens;
+pub mod migrate_legacy;
+mod maintenance;
 mod meta;
 mod pull;
 mod push;
 mod reseed;
+mod rest;
+mod rest_read;
 mod rows;
 mod schema;
+mod server_writes;
 mod singles;
 mod stats;
 
@@ -34,9 +39,13 @@ use crate::security::{self, Clock};
 
 pub use blobs::{Blob, BlobError, BlobStored, MAX_BLOB_BYTES};
 pub use listens::{ListenPage, ListenRow, MAX_LISTEN_PAGE};
+pub use maintenance::{Tidied, KEEP_DAYS, KEEP_PER_DEVICE};
 pub use pull::{PullError, DEFAULT_PULL_LIMIT, MAX_PULL_LIMIT};
 pub use push::{PushError, MAX_BATCH};
+pub use rest::RestWriteError;
+pub use rest_read::{PlayStat, UserState};
 pub use schema::CURRENT_VERSION;
+pub use server_writes::ServerListen;
 pub use stats::SyncStats;
 
 /// The scope of household playlists and their entries in the `changes` table.
@@ -155,9 +164,15 @@ impl Store {
         })
     }
 
-    /// Finishes queued work and closes the writer.
+    /// Finishes queued work, empties the write-ahead log, closes the readers and then the writer, which leaves no `-wal` file behind.
     pub async fn close(&self) -> Result<(), SyncError> {
-        Ok(self.inner.db.close().await?)
+        let emptied = self.inner.db.call(|connection| connection.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")).await;
+        self.inner.readers.close().await;
+        let closed = self.inner.db.close().await;
+        match emptied {
+            Ok(()) | Err(DbError::Closed) => Ok(closed?),
+            Err(error) => Err(error.into()),
+        }
     }
 
     /// The server incarnation this store answers pulls with.

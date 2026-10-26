@@ -4,6 +4,8 @@
 mod library;
 mod media;
 mod protocol;
+mod rest_migration;
+mod rest_sync;
 mod versions;
 
 use std::path::PathBuf;
@@ -99,6 +101,12 @@ impl TestServer {
     }
 
     pub async fn with_ffmpeg(ffmpeg: &str) -> Self {
+        Self::prepared(ffmpeg, |_| {}).await
+    }
+
+    /// Like [`TestServer::with_ffmpeg`], handing the configuration to `prepare` before the state opens, so a test can
+    /// leave files in the data folder the way an older server version did.
+    pub async fn prepared(ffmpeg: &str, prepare: impl FnOnce(&Config)) -> Self {
         let dir = TestDir::new();
         let music = dir.path().join("music");
         std::fs::create_dir_all(&music).unwrap();
@@ -109,7 +117,9 @@ impl TestServer {
             data_dir: Some(dir.path().join("data")),
             behind_proxy: false,
             mode: Mode::Easy,
+            lastfm: Default::default(),
             hosts: Vec::new(),
+            backup_dir: None,
         };
         let mut account = Credentials {
             username: USER.to_string(),
@@ -118,6 +128,7 @@ impl TestServer {
         };
         let api_key = account.add_key("phone", "2026-10-25T12:00:00Z").unwrap();
         credentials::save(&config.credentials_path(), &account).unwrap();
+        prepare(&config);
         let state = AppState::open_with_ffmpeg(config, ffmpeg.to_string()).await.unwrap();
         let router = crate::api::router(state.clone());
         Self { dir, state, router, api_key }

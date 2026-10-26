@@ -9,12 +9,15 @@
 //! [`guard_router`], which refuses browsers.
 
 pub mod guard;
+pub mod hosts;
 pub mod listen;
+pub mod names;
 pub mod tailnet;
 #[cfg(unix)]
 pub mod unix;
 
-pub use guard::{browser_guard, connections, guard_router, AllowedHosts, Connections, TrustedChannel};
+pub use guard::{browser_guard, connections, guard_router, Connections, TrustedChannel};
+pub use hosts::AllowedHosts;
 pub use listen::{EasyHandle, EasyListener};
 pub use tailnet::{addresses, is_loopback, is_tailnet, source_allowed, TailnetAddresses};
 #[cfg(unix)]

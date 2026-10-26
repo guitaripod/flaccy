@@ -44,7 +44,7 @@ async fn the_state_file_is_private_and_records_its_schema() {
     store.close().await.unwrap();
     let connection = rusqlite::Connection::open(&path).unwrap();
     let version: i64 = connection.query_row("SELECT MAX(version) FROM schema_migrations", [], |row| row.get(0)).unwrap();
-    assert_eq!(version, 1);
+    assert_eq!(version, i64::from(flaccy_server::sync::CURRENT_VERSION));
     let tables: i64 = connection
         .query_row(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('server_meta','changes','playlists','playlist_entries','loves','ratings','scalars','sessions','listens','device_progress','mutation_results','blobs')",

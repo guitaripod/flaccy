@@ -5,13 +5,23 @@ use rusqlite::Transaction;
 use crate::dbthread::Migration;
 
 /// Every migration of `state.sqlite`, oldest first.
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    apply: create_tables,
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        apply: create_tables,
+    },
+    Migration {
+        version: 2,
+        apply: crate::lastfm::create_tables,
+    },
+    Migration {
+        version: 3,
+        apply: create_rest_progress,
+    },
+];
 
 /// The schema version this build writes.
-pub const CURRENT_VERSION: u32 = 1;
+pub const CURRENT_VERSION: u32 = 3;
 
 const TABLES: &str = "
 CREATE TABLE server_meta(
@@ -123,6 +133,17 @@ CREATE TABLE blobs(
 );
 ";
 
+const REST_PROGRESS: &str = "
+CREATE TABLE rest_progress(
+    key_id TEXT PRIMARY KEY,
+    last_mutation_id INTEGER NOT NULL
+);
+";
+
 fn create_tables(step: &Transaction<'_>) -> rusqlite::Result<()> {
     step.execute_batch(TABLES)
+}
+
+fn create_rest_progress(step: &Transaction<'_>) -> rusqlite::Result<()> {
+    step.execute_batch(REST_PROGRESS)
 }

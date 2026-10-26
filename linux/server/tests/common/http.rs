@@ -117,9 +117,15 @@ impl Harness {
             data_dir: Some(dir.file("data")),
             behind_proxy: false,
             mode: Mode::Easy,
+            lastfm: Default::default(),
             hosts: Vec::new(),
+            backup_dir: None,
         };
         prepare(&config);
+        Self::start_in(dir, config).await
+    }
+
+    pub async fn start_in(dir: TempDir, config: Config) -> Self {
         let state = AppState::open(config).await.unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
@@ -202,6 +208,17 @@ impl Harness {
 
     pub async fn revoke(&self, device: &str) {
         self.state.0.security.revoke_device(&DeviceId(device.to_owned())).await.unwrap();
+    }
+
+    pub async fn halt(mut self) -> (TempDir, Config) {
+        if let Some(stop) = self.stop.take() {
+            let _ = stop.send(());
+        }
+        if let Some(task) = self.task.take() {
+            let _ = tokio::time::timeout(IO_TIMEOUT, task).await;
+        }
+        flaccy_server::shutdown::close_databases(&self.state).await;
+        (self.dir, self.state.0.config.clone())
     }
 
     pub async fn stop(mut self) {

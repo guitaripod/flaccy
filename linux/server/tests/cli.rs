@@ -139,3 +139,15 @@ async fn household_mode_is_refused_when_the_configuration_loads() {
     assert!(ran.err.contains("Household mode is not available in this release; remove `mode` or set it to \"easy\"."), "{}", ran.err);
     harness.stop().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn enroll_without_a_user_serves_the_first_admin_once_one_exists() {
+    let harness = Harness::start().await;
+    let cli = Cli::new(&harness);
+    let empty = cli.run(&["enroll", "--json"]).await;
+    assert!(!empty.ok && empty.err.contains("no users yet"), "{}", empty.err);
+    cli.json(&["enroll", "--user", "alice", "--json"]).await;
+    let again = cli.json(&["enroll", "--json"]).await;
+    assert_eq!(again["user"], "alice");
+    harness.stop().await;
+}

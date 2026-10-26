@@ -1,9 +1,10 @@
 //! An in-memory picture of the library, grouped the way the Flaccy clients
 //! group it, with the ids the API hands out.
 //!
-//! It is built from `flaccy_library::library::load` after every scan. Play
-//! counts, loved flags and ratings change between scans, so they are updated in
-//! place here as well as in the database.
+//! It is built from `flaccy_library::library::load` after every scan and holds
+//! only facts about the library. What a listener did with a song, the stars, the
+//! rating and the plays, lives in the sync state and is attached per user at
+//! response time (`api::userview`).
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -11,6 +12,9 @@ use std::path::Path;
 use flaccy_library::db::Db;
 use flaccy_library::hygiene;
 use flaccy_library::library::{self, disc_sections, TrackRow};
+use flaccy_library::listen_history::ListenKeyCache;
+use flaccy_server_core::model::SongRef;
+use flaccy_server_core::song::song_key;
 
 use crate::ids;
 use crate::store::{Store, TrackExtra};
@@ -22,7 +26,7 @@ pub struct Song {
     pub size: i64,
     pub fingerprint: Option<String>,
     pub musicbrainz_id: Option<String>,
-    pub rating: Option<i64>,
+    pub song_key: String,
     pub album_id: String,
     pub artist_id: String,
     pub disc: Option<i64>,
@@ -63,6 +67,7 @@ pub struct Catalog {
     songs: HashMap<i64, Song>,
     song_order: Vec<i64>,
     song_by_path: HashMap<String, i64>,
+    song_by_key: HashMap<String, i64>,
     albums: Vec<Album>,
     album_by_id: HashMap<String, usize>,
     artists: Vec<Artist>,
@@ -70,12 +75,12 @@ pub struct Catalog {
 }
 
 impl Catalog {
-    /// Groups the library in `db`, adding the extras and ratings `store` holds.
+    /// Groups the library in `db`, adding the extras `store` holds.
     /// `root` is the music folder, used to size files the scan never measured.
     pub fn build(db: &Db, store: &Store, root: &Path) -> Catalog {
         let library = library::load(db, false);
         let extras = store.track_extras();
-        let ratings = store.ratings();
+        let mut keys = ListenKeyCache::default();
         let mut catalog = Catalog::default();
         for album in &library.albums {
             let Some(first) = album.tracks.first() else {
@@ -87,11 +92,12 @@ impl Catalog {
             let mut song_ids = Vec::with_capacity(album.tracks.len());
             for track in &album.tracks {
                 let extra = extras.get(&track.id).cloned().unwrap_or_default();
+                let artist_key = keys.artist(&track.artist).to_owned();
                 let song = Song {
                     size: file_size(&extra, root, track),
                     fingerprint: extra.fingerprint,
                     musicbrainz_id: extra.musicbrainz_id,
-                    rating: ratings.get(&track.rel_path).copied(),
+                    song_key: song_key(&artist_key, keys.title(&track.title)),
                     album_id: album_id.clone(),
                     artist_id: ids::artist(&track.artist),
                     disc: discs.get(&track.rel_path).copied(),
@@ -100,6 +106,7 @@ impl Catalog {
                 song_ids.push(track.id);
                 catalog.song_order.push(track.id);
                 catalog.song_by_path.insert(track.rel_path.clone(), track.id);
+                catalog.song_by_key.entry(song.song_key.clone()).or_insert(track.id);
                 catalog.songs.insert(track.id, song);
             }
             catalog.album_by_id.insert(album_id.clone(), catalog.albums.len());
@@ -148,21 +155,6 @@ impl Catalog {
         self.artists = artists;
     }
 
-    /// Copies play counts, last played times and loved flags from `rows`, and
-    /// ratings from `ratings`, onto the songs they belong to.
-    pub fn apply_dynamic(&mut self, rows: &[TrackRow], ratings: &HashMap<String, i64>) {
-        for row in rows {
-            if let Some(song) = self.songs.get_mut(&row.id) {
-                song.row.loved = row.loved;
-                song.row.play_count = row.play_count;
-                song.row.last_played = row.last_played;
-            }
-        }
-        for song in self.songs.values_mut() {
-            song.rating = ratings.get(&song.row.rel_path).copied();
-        }
-    }
-
     /// Every song, in album order.
     pub fn songs_in_order(&self) -> impl Iterator<Item = &Song> {
         self.song_order.iter().filter_map(|id| self.songs.get(id))
@@ -176,6 +168,17 @@ impl Catalog {
     /// The song in track row `row_id`.
     pub fn song(&self, row_id: i64) -> Option<&Song> {
         self.songs.get(&row_id)
+    }
+
+    /// The song a playlist entry or a saved queue names: the file at its path when that file still has its
+    /// song key, otherwise the first song with the key.
+    pub fn resolve(&self, song: &SongRef) -> Option<&Song> {
+        let by_path = song
+            .rel_path
+            .as_deref()
+            .and_then(|path| self.song_at_path(path))
+            .filter(|found| found.song_key == song.song_key);
+        by_path.or_else(|| self.song_by_key.get(&song.song_key).and_then(|id| self.songs.get(id)))
     }
 
     /// The song stored at `rel_path`.
@@ -210,46 +213,9 @@ impl Catalog {
         album.songs.iter().filter_map(|id| self.songs.get(id))
     }
 
-    /// Total plays across `album`.
-    pub fn album_play_count(&self, album: &Album) -> i64 {
-        self.album_songs(album).map(|song| song.row.play_count).sum()
-    }
-
-    /// When any song of `album` was last played.
-    pub fn album_last_played(&self, album: &Album) -> Option<i64> {
-        self.album_songs(album).filter_map(|song| song.row.last_played).max()
-    }
-
-    /// Whether every song of `album` is loved, which is what a starred album means here.
-    pub fn album_is_starred(&self, album: &Album) -> bool {
-        !album.songs.is_empty() && self.album_songs(album).all(|song| song.row.loved)
-    }
-
     /// Total running time of `album` in seconds.
     pub fn album_duration(&self, album: &Album) -> f64 {
         self.album_songs(album).map(|song| song.row.duration).sum()
-    }
-
-    /// Marks the song loved or not.
-    pub fn set_loved(&mut self, row_id: i64, loved: bool) {
-        if let Some(song) = self.songs.get_mut(&row_id) {
-            song.row.loved = loved;
-        }
-    }
-
-    /// Counts one more play at `played_at` (Unix seconds).
-    pub fn record_play(&mut self, row_id: i64, played_at: i64) {
-        if let Some(song) = self.songs.get_mut(&row_id) {
-            song.row.play_count += 1;
-            song.row.last_played = Some(played_at);
-        }
-    }
-
-    /// Sets or clears the song's rating.
-    pub fn set_rating(&mut self, row_id: i64, rating: Option<i64>) {
-        if let Some(song) = self.songs.get_mut(&row_id) {
-            song.rating = rating;
-        }
     }
 }
 

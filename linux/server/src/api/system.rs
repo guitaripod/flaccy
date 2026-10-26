@@ -5,6 +5,7 @@ use serde_json::json;
 
 use super::{one, Call, Fields};
 use crate::error::ApiError;
+use crate::security::Role;
 
 const EXTENSIONS: [(&str, i64); 4] = [
     ("apiKeyAuthentication", 1),
@@ -36,26 +37,28 @@ pub(super) fn extensions() -> Fields {
     )
 }
 
-/// `getUser`: the one account. Roles for features the server does not offer are false.
+/// `getUser`: the calling user. Roles for features the server does not offer are false.
 pub(super) fn user(call: &Call<'_>) -> Result<Fields, ApiError> {
     if let Some(asked) = call.params.get("username") {
         if !asked.eq_ignore_ascii_case(&call.username) {
             return Err(ApiError::not_found("User", asked));
         }
     }
+    let role = call.principal.role;
+    let writes = matches!(role, Role::Admin | Role::Member);
     Ok(one(
         "user",
         json!({
             "username": call.username,
             "email": "",
-            "scrobblingEnabled": true,
+            "scrobblingEnabled": writes,
             "adminRole": false,
             "settingsRole": false,
             "downloadRole": true,
             "uploadRole": false,
-            "playlistRole": true,
+            "playlistRole": writes,
             "coverArtRole": true,
-            "commentRole": true,
+            "commentRole": writes,
             "podcastRole": false,
             "streamRole": true,
             "jukeboxRole": false,

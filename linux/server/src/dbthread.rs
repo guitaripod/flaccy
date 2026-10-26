@@ -218,7 +218,7 @@ fn describe_panic(payload: Box<dyn Any + Send>) -> String {
 /// Read-only connections to one file, used round-robin, for queries that must not queue behind the writer.
 #[derive(Clone)]
 pub struct ReadPool {
-    connections: Arc<Vec<Mutex<Connection>>>,
+    connections: Arc<Vec<Mutex<Option<Connection>>>>,
     next: Arc<AtomicUsize>,
 }
 
@@ -230,7 +230,7 @@ impl ReadPool {
     pub async fn open(path: &Path, size: usize) -> Result<Self, DbError> {
         let file = path.to_path_buf();
         let connections = tokio::task::spawn_blocking(move || {
-            (0..size.max(1)).map(|_| open_reader(&file).map(Mutex::new)).collect::<Result<Vec<_>, _>>()
+            (0..size.max(1)).map(|_| open_reader(&file).map(|connection| Mutex::new(Some(connection)))).collect::<Result<Vec<_>, _>>()
         })
         .await
         .map_err(|error| DbError::Panicked(error.to_string()))??;
@@ -250,14 +250,32 @@ impl ReadPool {
         let pool = self.clone();
         tokio::task::spawn_blocking(move || {
             let slot = pool.next.fetch_add(1, Ordering::Relaxed) % pool.connections.len();
-            let connection = pool.connections[slot].lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-            match catch_unwind(AssertUnwindSafe(|| work(&connection))) {
+            let guard = pool.connections[slot].lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let Some(connection) = guard.as_ref() else {
+                return Err(DbError::Closed);
+            };
+            match catch_unwind(AssertUnwindSafe(|| work(connection))) {
                 Ok(result) => result.map_err(Into::into),
                 Err(payload) => Err(DbError::Panicked(describe_panic(payload))),
             }
         })
         .await
         .map_err(|error| DbError::Panicked(error.to_string()))?
+    }
+}
+
+impl ReadPool {
+    /// Waits for reads in progress, then closes every connection; later calls fail with [`DbError::Closed`].
+    /// Closing the readers lets the writer's own close delete the write-ahead log.
+    pub async fn close(&self) {
+        let pool = self.clone();
+        let _ = tokio::task::spawn_blocking(move || {
+            for slot in pool.connections.iter() {
+                let connection = slot.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).take();
+                drop(connection);
+            }
+        })
+        .await;
     }
 }
 

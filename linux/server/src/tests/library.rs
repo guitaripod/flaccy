@@ -2,6 +2,7 @@
 
 use flaccy_library::db::{Db, LyricsContent};
 
+use super::rest_sync::owner;
 use super::TestServer;
 
 #[tokio::test]
@@ -191,9 +192,9 @@ async fn scrobble_counts_plays_and_now_playing_does_not() {
     let recent = server.json("getAlbumList2", "type=recent").await;
     assert_eq!(recent.envelope.album_list2.unwrap().album.unwrap().len(), 1);
 
-    let stored = server.state.db().fetch_all_tracks();
-    let row = stored.iter().find(|row| row.title == "Opening").unwrap();
-    assert_eq!(row.play_count, 2);
+    let stored = server.state.0.sync.user_state(&owner(&server).await).await.unwrap();
+    let plays: Vec<i64> = stored.plays.values().map(|stat| stat.count).collect();
+    assert_eq!(plays, vec![2]);
     assert_eq!(server.json("scrobble", "id=s999999").await.error_code(), 70);
     assert_eq!(server.json("scrobble", "").await.error_code(), 10);
 }
@@ -208,7 +209,8 @@ async fn star_and_unstar_set_and_clear_loved() {
     assert!(starred.raw["song"]["starred"].as_str().unwrap().ends_with('Z'));
     let list = server.json("getStarred2", "").await;
     assert_eq!(list.raw["starred2"]["song"].as_array().unwrap().len(), 1);
-    assert!(server.state.db().fetch_all_tracks().iter().any(|row| row.title == "Middle" && row.loved));
+    let stored = server.state.0.sync.user_state(&owner(&server).await).await.unwrap();
+    assert_eq!(stored.loved.len(), 1);
 
     let album = server.album_id("Rough Cuts").await;
     server.json("star", &format!("albumId={album}")).await.ok();
@@ -247,7 +249,8 @@ async fn ratings_are_stored_per_song_and_zero_removes_them() {
     server.json("setRating", &format!("id={id}&rating=4")).await.ok();
     let rated = server.json("getSong", &format!("id={id}")).await;
     assert_eq!(rated.raw["song"]["userRating"], 4);
-    assert_eq!(server.state.0.store.ratings().values().copied().collect::<Vec<_>>(), vec![4]);
+    let stored = server.state.0.sync.user_state(&owner(&server).await).await.unwrap();
+    assert_eq!(stored.ratings.values().copied().collect::<Vec<_>>(), vec![4]);
     server.json("setRating", &format!("id={id}&rating=0")).await.ok();
     let cleared = server.json("getSong", &format!("id={id}")).await;
     assert!(cleared.raw["song"].get("userRating").is_none());

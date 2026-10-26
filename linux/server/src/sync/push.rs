@@ -123,13 +123,13 @@ fn from_word<T: DeserializeOwned>(word: &str) -> Result<T, SyncError> {
         .map_err(|_| SyncError::Corrupt(format!("mutation_results holds the word '{word}'")))
 }
 
-struct Effects {
+pub(super) struct Effects {
     pokes: broadcast::Sender<Poke>,
     renamer: Option<DeviceRenamer>,
 }
 
 impl Effects {
-    fn deliver(&self, counters: &mut Counters) {
+    pub(super) fn deliver(&self, counters: &mut Counters) {
         let (pokes, renames) = counters.take_effects();
         for poke in pokes {
             let _ = self.pokes.send(poke);
@@ -283,7 +283,7 @@ impl Store {
         claimed.filter(|claimed| *claimed != current).map(|_| current)
     }
 
-    fn effects(&self) -> Effects {
+    pub(super) fn effects(&self) -> Effects {
         Effects {
             pokes: self.inner.pokes.clone(),
             renamer: self.inner.renamer.read().unwrap_or_else(|poisoned| poisoned.into_inner()).clone(),

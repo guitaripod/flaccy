@@ -133,3 +133,72 @@ async fn bench_numbers() {
     let tail = store.pull(&principal, INSTANCE, first.head, 1000, None).await.unwrap();
     report(&format!("pull at head ({} changes): {:?}", tail.changes.len(), started.elapsed()));
 }
+
+const BIG_PLAYLIST: usize = 19_850;
+
+fn seed_entries(path: &std::path::Path, playlist: &str, count: usize) {
+    let connection = rusqlite::Connection::open(path).unwrap();
+    connection.busy_timeout(Duration::from_secs(10)).unwrap();
+    let keys = flaccy_server_core::position::rebalance(count);
+    let stamp = common::BASE_TIME_MS << 16;
+    let transaction = connection.unchecked_transaction().unwrap();
+    {
+        let mut insert = transaction
+            .prepare("INSERT INTO playlist_entries(id, playlist_id, ref_json, pos, alive, st_ref, st_pos, st_alive) VALUES (?1, ?2, ?3, ?4, 1, ?5, ?5, ?5)")
+            .unwrap();
+        for (index, key) in keys.iter().enumerate() {
+            insert.execute((format!("e{index}"), playlist, song(index).to_string(), key, stamp)).unwrap();
+        }
+    }
+    transaction.commit().unwrap();
+}
+
+async fn timed_push(store: &Store, id: i64, name: &str, args: serde_json::Value) -> Duration {
+    let started = Instant::now();
+    let response = store.push(&member("alice", "phone"), request("phone", INSTANCE, vec![mutation(id, name, args)]), None).await.unwrap();
+    let elapsed = started.elapsed();
+    assert_eq!(response.results[0].status, MutationStatus::Applied, "{name}: {:?}", response.results[0].code);
+    elapsed
+}
+
+fn spread(label: &str, mut samples: Vec<Duration>) {
+    samples.sort();
+    report(&format!("{label}: min {:?}, median {:?}, max {:?} over {} edits", samples[0], samples[samples.len() / 2], samples[samples.len() - 1], samples.len()));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "prints the cost of one edit on a 20,000-entry playlist; run with --release"]
+async fn bench_edits_on_a_twenty_thousand_entry_playlist() {
+    let dir = TempDir::new("perf-big");
+    let store = open(&dir).await;
+    timed_push(&store, 1, "playlist.create", json!({ "id": "big", "name": "Big" })).await;
+    seed_entries(&dir.file("state.sqlite"), "big", BIG_PLAYLIST);
+    let mut next = 2;
+    let mut inserts_middle = Vec::new();
+    let mut inserts_last = Vec::new();
+    let mut moves = Vec::new();
+    let mut removes = Vec::new();
+    let mut renames = Vec::new();
+    for round in 0..15 {
+        let anchor = format!("e{}", 5_000 + round * 700);
+        let place = json!({ "kind": "after", "id": anchor });
+        inserts_middle.push(timed_push(&store, next, "entry.insert", json!({ "id": format!("m{round}"), "playlist": "big", "ref": song(round), "place": place })).await);
+        inserts_last.push(timed_push(&store, next + 1, "entry.insert", json!({ "id": format!("l{round}"), "playlist": "big", "ref": song(round), "place": { "kind": "last" } })).await);
+        moves.push(timed_push(&store, next + 2, "entry.move", json!({ "id": format!("e{}", 100 + round), "place": { "kind": "after", "id": format!("e{}", 15_000 + round) } })).await);
+        removes.push(timed_push(&store, next + 3, "entry.remove", json!({ "id": format!("e{}", 200 + round) })).await);
+        renames.push(timed_push(&store, next + 4, "playlist.rename", json!({ "id": "big", "name": format!("Big {round}") })).await);
+        next += 5;
+    }
+    spread("entry.insert after a middle entry", inserts_middle);
+    spread("entry.insert at the end", inserts_last);
+    spread("entry.move", moves);
+    spread("entry.remove", removes);
+    spread("playlist.rename", renames);
+    let batch: Vec<_> = (0..90)
+        .map(|offset| mutation(next + offset, "entry.insert", json!({ "id": format!("b{offset}"), "playlist": "big", "ref": song(offset as usize), "place": { "kind": "last" } })))
+        .collect();
+    let started = Instant::now();
+    let response = store.push(&member("alice", "phone"), request("phone", INSTANCE, batch), None).await.unwrap();
+    assert!(response.results.iter().all(|result| result.status == MutationStatus::Applied));
+    report(&format!("one request of 90 entry.insert at the end: {:?}", started.elapsed()));
+}

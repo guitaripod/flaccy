@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::lastfm::LastfmSettings;
+
 const DEFAULT_ADDRESS: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4545;
 
@@ -40,6 +42,13 @@ pub struct Config {
     /// Host names clients may use besides this machine's tailnet addresses and localhost.
     #[serde(default)]
     pub hosts: Vec<String>,
+    /// The `lastfm_*` keys: the API key and, for tests, other endpoints.
+    #[serde(flatten)]
+    pub lastfm: LastfmSettings,
+    /// Where nightly backups and `flaccy-server backup` put their files; `<data_dir>/backups`
+    /// when unset, and an empty string turns the nightly backup off.
+    #[serde(default)]
+    pub backup_dir: Option<PathBuf>,
 }
 
 fn default_address() -> String {
@@ -145,6 +154,15 @@ impl Config {
         self.data_dir().join("credentials.toml")
     }
 
+    /// Where backups go: the configured folder, `<data_dir>/backups` by default, or `None` when `backup_dir` is empty.
+    pub fn backup_dir(&self) -> Option<PathBuf> {
+        match &self.backup_dir {
+            Some(dir) if dir.as_os_str().is_empty() => None,
+            Some(dir) => Some(expand_home(dir)),
+            None => Some(self.data_dir().join("backups")),
+        }
+    }
+
     /// The resized cover cache.
     pub fn covers_dir(&self) -> PathBuf {
         self.data_dir().join("covers")
@@ -245,6 +263,17 @@ mod tests {
     fn behind_proxy_is_read_from_the_file() {
         let (dir, path) = write("music_folder = \"/m\"\nbehind_proxy = true\n");
         assert!(Config::load(&path).unwrap().behind_proxy);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn backups_default_beside_the_data_and_can_be_moved_or_turned_off() {
+        let (dir, path) = write("music_folder = \"/m\"\ndata_dir = \"/data\"\n");
+        assert_eq!(Config::load(&path).unwrap().backup_dir(), Some(PathBuf::from("/data/backups")));
+        std::fs::write(&path, "music_folder = \"/m\"\nbackup_dir = \"/mnt/share/flaccy\"\n").unwrap();
+        assert_eq!(Config::load(&path).unwrap().backup_dir(), Some(PathBuf::from("/mnt/share/flaccy")));
+        std::fs::write(&path, "music_folder = \"/m\"\nbackup_dir = \"\"\n").unwrap();
+        assert_eq!(Config::load(&path).unwrap().backup_dir(), None);
         std::fs::remove_dir_all(dir).unwrap();
     }
 

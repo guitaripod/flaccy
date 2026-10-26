@@ -13,12 +13,22 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use crate::admin::{self, AuditAction, DeviceAction, EnrollArgs, UserAction};
+use crate::backup;
 use crate::config::{Config, ConfigError};
 use crate::credentials::{self, Credentials, DEFAULT_USERNAME};
+use crate::doctor;
+use crate::export::{self, ExportArgs};
+use crate::lastfm::{self, LastfmAction};
+use crate::lock::DataDirLock;
+use crate::maintenance;
 use crate::native;
 use crate::net::guard::ConnectionAddr;
 use crate::net::{connections, AllowedHosts, EasyListener, TailnetAddresses};
+use crate::nightly;
 use crate::refresh;
+use crate::restore;
+use crate::setup::{self, SetupArgs};
+use crate::shutdown::{self, StopSignal};
 use crate::state::AppState;
 
 /// The address the configuration file defaults to; any other value is honoured as the only bind address.
@@ -81,6 +91,28 @@ pub enum Command {
     },
     /// Exit 0 when a server answers on the configured address, for container health checks.
     Healthcheck,
+    /// Connect the server's own Last.fm session, set the account whose history is brought in, and show how both stand.
+    Lastfm {
+        #[command(subcommand)]
+        action: LastfmAction,
+    },
+    /// Copy the sync state and the security database into dated files, while the server runs.
+    Backup {
+        /// Write into this folder instead of `backup_dir`.
+        #[arg(long)]
+        to: Option<PathBuf>,
+    },
+    /// Replace the sync state with a backup. The server must be stopped.
+    Restore {
+        /// A `state-YYYYMMDD-HHMMSS.sqlite` file made by `backup`.
+        file: PathBuf,
+    },
+    /// Write one user's playlists, loves, ratings and history as files other programs read.
+    Export(ExportArgs),
+    /// Set the server up: pick the music folder, start it as a service and enroll the first device.
+    Setup(SetupArgs),
+    /// Check Tailscale, the network, the clock, the disk, ffmpeg, the databases, backups and devices.
+    Doctor,
 }
 
 /// `flaccy-server password ...`
@@ -116,7 +148,12 @@ pub enum KeyAction {
 
 /// Runs the command and returns the process exit code.
 pub async fn run(cli: Cli) -> i32 {
+    let config_is_explicit = cli.config.is_some();
     let path = cli.config.unwrap_or_else(Config::default_path);
+    let command = cli.command.unwrap_or(Command::Serve);
+    if let Command::Setup(args) = command {
+        return setup::run(&path, config_is_explicit, args).await;
+    }
     let config = match Config::load(&path) {
         Ok(config) => config,
         Err(error) => {
@@ -127,7 +164,7 @@ pub async fn run(cli: Cli) -> i32 {
             };
         }
     };
-    let outcome = match cli.command.unwrap_or(Command::Serve) {
+    let outcome = match command {
         Command::Serve => serve(config).await,
         Command::Scan => scan(config).await,
         Command::Password { action: PasswordAction::Set { stdin, user } } => password_set(&config, stdin, user),
@@ -138,6 +175,12 @@ pub async fn run(cli: Cli) -> i32 {
         Command::Device { action } => admin::device(&config, action).await,
         Command::Audit { action } => admin::audit(&config, action).await,
         Command::Healthcheck => healthcheck(&config).await,
+        Command::Lastfm { action } => lastfm::cli::run(&config, action).await,
+        Command::Backup { to } => backup::command(&config, to).await,
+        Command::Restore { file } => restore::command(&config, &file).await,
+        Command::Export(args) => export::command(&config, args).await,
+        Command::Doctor => return doctor::run(&config, &path).await,
+        Command::Setup(_) => Err("`setup` runs before the configuration is read.".to_owned()),
     };
     match outcome {
         Ok(()) => 0,
@@ -149,7 +192,10 @@ pub async fn run(cli: Cli) -> i32 {
 }
 
 async fn serve(config: Config) -> Result<(), String> {
+    let _data_dir_lock = DataDirLock::acquire(&config.data_dir()).map_err(|error| error.to_string())?;
     logger::init(&config.data_dir());
+    let stop = StopSignal::new();
+    tokio::spawn(raise_on_stop_request(stop.clone()));
     let state = AppState::open(config).await?;
     if state.credentials().is_none() {
         logger::warn(
@@ -157,15 +203,26 @@ async fn serve(config: Config) -> Result<(), String> {
             "no account exists yet, so every OpenSubsonic login will be refused; run `flaccy-server password set` or `flaccy-server key add <name>` in another terminal, and `flaccy-server enroll --user <name>` to add a Flaccy device",
         );
     }
-    tokio::spawn(refresh::keep_current(state.clone()));
-    if state.0.config.address == DEFAULT_ADDRESS {
-        serve_easy(state).await
+    let background = [
+        tokio::spawn(refresh::keep_current(state.clone())),
+        tokio::spawn(nightly::keep_backed_up(state.clone())),
+        tokio::spawn(lastfm::run(state.clone())),
+        tokio::spawn(maintenance::keep_tidy(state.clone())),
+        state.0.live.shutdown_on(stop.clone()),
+    ];
+    let outcome = if state.0.config.address == DEFAULT_ADDRESS {
+        serve_easy(state.clone(), &stop).await
     } else {
-        serve_on_address(state).await
+        serve_on_address(state.clone(), &stop).await
+    };
+    for task in &background {
+        task.abort();
     }
+    shutdown::close_databases(&state).await;
+    outcome
 }
 
-async fn serve_easy(state: AppState) -> Result<(), String> {
+async fn serve_easy(state: AppState, stop: &StopSignal) -> Result<(), String> {
     let port = state.0.config.port;
     logger::info(
         "server",
@@ -178,10 +235,10 @@ async fn serve_easy(state: AppState) -> Result<(), String> {
     })?;
     let hosts = AllowedHosts::new(&state.0.config.hosts, listener.handle().tailnet());
     let app = native::app(state, hosts);
-    serve_connections(listener, app).await
+    serve_connections(listener, app, stop).await
 }
 
-async fn serve_on_address(state: AppState) -> Result<(), String> {
+async fn serve_on_address(state: AppState, stop: &StopSignal) -> Result<(), String> {
     let address = state.0.config.listen_address();
     logger::warn(
         "server",
@@ -197,23 +254,32 @@ async fn serve_on_address(state: AppState) -> Result<(), String> {
     })?;
     logger::info("server", &format!("listening on http://{address}"));
     let hosts = AllowedHosts::new(&state.0.config.hosts, TailnetAddresses::default());
-    serve_connections(listener, native::app(state, hosts)).await
+    serve_connections(listener, native::app(state, hosts), stop).await
 }
 
-async fn serve_connections<L>(listener: L, app: Router) -> Result<(), String>
+async fn serve_connections<L>(listener: L, app: Router, stop: &StopSignal) -> Result<(), String>
 where
     L: axum::serve::Listener,
     L::Addr: ConnectionAddr + std::fmt::Debug,
 {
-    axum::serve(listener, connections(app))
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .map_err(|err| format!("The server stopped: {err}. Start it again with `flaccy-server serve`; if this repeats, check the log in the data folder."))
+    let draining = stop.clone();
+    let server = axum::serve(listener, connections(app)).with_graceful_shutdown(async move { draining.raised().await });
+    match shutdown::run_until_stopped(async move { server.await }, stop, shutdown::GRACE).await {
+        Some(result) => result.map_err(|err| format!("The server stopped: {err}. Start it again with `flaccy-server serve`; if this repeats, check the log in the data folder.")),
+        None => {
+            logger::warn(
+                "server",
+                &format!("open requests were still running {} seconds after the stop request; closing them", shutdown::GRACE.as_secs()),
+            );
+            Ok(())
+        }
+    }
 }
 
-async fn shutdown_signal() {
+async fn raise_on_stop_request(stop: StopSignal) {
     wait_for_stop_request().await;
     logger::info("server", "stop requested; finishing open requests and exiting");
+    stop.raise();
 }
 
 async fn wait_for_stop_request() {

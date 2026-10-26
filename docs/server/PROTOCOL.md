@@ -8,7 +8,7 @@ The contract between `flaccy-server` and every Flaccy client. The design reasoni
 - Every call except `GET /hello` and `POST /devices` needs `Authorization: Bearer <device token>`.
 - Errors: HTTP status plus `{"error": {"code": "<snake_case>", "message": "<what failed, the cause, the next step>", "hint": "<optional>"}}`.
 - Ids that clients mint (playlist, entry, device, instance, event) are UUIDv7 in lowercase hyphenated form, except `eventId` and `songKey`, defined below.
-- A request carrying an `Origin` header, `Sec-Fetch-Site: cross-site`, or a `Host` that is not an allowed host is answered `403 browser_refused`. CORS is never enabled.
+- A request carrying an `Origin` header, `Sec-Fetch-Site: cross-site`, or a `Host` that is not an allowed host (section 2) is answered `403 browser_refused`, on `/rest` as well. CORS is never enabled.
 - Clients send `Flaccy-Incarnation: <uuid>`, the incarnation they last saw, on every authenticated call once they have one. If it differs from the server's, the server applies nothing and answers `409 incarnation_changed` with the current value in `error.incarnation`; the client then runs the reset of section 6.2. The same field is added to `409 cookie_ahead`.
 - `Flaccy-Protocol: 1` is sent by clients and answered by the server. The server speaks protocol 1 and ignores unknown JSON fields; clients ignore unknown fields too.
 
@@ -32,7 +32,7 @@ The server keeps `server_hlc: i64`, persisted in `server_meta`, never decreasing
 
 - **Easy mode** (default): the server binds the host's tailnet addresses (100.64.0.0/10, fd7a:115c:a1e0::/48) and loopback, re-evaluating when a network interface changes, and closes any accepted connection whose peer address is outside those ranges and loopback before reading a byte. Plain HTTP; no identity headers are read.
 - **Household mode**: a Unix socket (mode 0600) or loopback TCP behind `tailscale serve`. Identity headers are trusted only on the socket.
-- Allowed hosts: the configured `hosts`, the machine's tailnet addresses, `localhost` and `127.0.0.1`, each with or without the port.
+- Allowed hosts, compared without the port and ignoring case. A `Host` is allowed when it is: an IP literal (IPv4, or IPv6 in brackets); a single-label name such as `arch`; `localhost`; one of the machine's own names (its host name, the short form, and the aliases `/etc/hosts` gives it); a name ending in `.ts.net`, `.local`, `.lan`, `.home.arpa` or `.internal`; or listed in the configured `hosts`, either exactly or as `*.example.com` for everything under a domain. Any other name with a dot, such as `evil.example.com` or `100.64.0.1.evil.com`, is refused: that is what a DNS-rebinding page sends, since a browser can only reach this server through a name it resolved.
 
 ## 3. Identity and enrollment
 
@@ -53,7 +53,7 @@ The code is 128 random bits, base32 (Crockford) without padding, single use, val
 Household mode only: a request on the trusted socket with tailnet identity may omit `enroll`.
 
 ### 3.3 Other identity routes
-`GET /devices` (own devices; admin: all), `PATCH /devices/{id}` `{name}` (owner or admin), `DELETE /devices/{id}` (revoke; owner or admin; effective on the next request; open sockets close). `GET /me` `{user, role, devices}`.
+`GET /devices` (own devices; admin: all), `PATCH /devices/{id}` `{name}` (owner or admin), `DELETE /devices/{id}` (revoke; owner or admin; effective on the next request; the device's open live sockets close at once). `GET /me` `{user, role, devices}`.
 
 ## 4. Entities
 
@@ -128,6 +128,8 @@ The retry and gap checks below run over the whole request before the first mutat
 
 Response `200`: `{"results": [{"id", "status", "code"?}], "serverTimeMs": …}`.
 
+The server keeps the stored result of the newest 1,000 mutations of each device and of the last 30 days, and prunes the rest daily. A retry of a pruned id is answered `409 instance_conflict`, which sends the client to a new instance as above.
+
 ### 6.2 `GET /sync/pull?since=<seq>&limit=<n>`
 `limit` ≤ 5000, default 1000. Returns state entities (every kind except `listen`) whose change `seq` is greater than `since`, ascending, for the caller's scope plus `household`:
 ```
@@ -164,7 +166,19 @@ After each `listen.record` that touches second `t`, the server recomputes `t` an
 
 ## 9. Live channel (version 1 subset)
 
-`GET /live` upgrades to a WebSocket. JSON text frames: server to client `{"t":"poke","head":<seq>}` after any commit that changes the caller's scope; `{"t":"presence","device","state","ref","positionMs","at"}`; client to server `{"t":"presence",…}` (the server overwrites `device`) and `{"t":"command","to","name","args"}`; the server relays a command as `{"t":"command","id","from","name","args","sentAt"}` or answers `{"t":"error","code":"target_offline"}`. Ping every 25 seconds; a connection silent for 75 seconds is closed. Frames above 64 KiB close the socket.
+`GET /live` upgrades to a WebSocket. It needs `Authorization: Bearer <device token>` on the upgrade request (an API key, a pending user and any request with an `Origin` header are refused before the upgrade, with the usual error bodies). Frames are JSON text, at most 64 KiB; a larger frame closes the socket with code 1009.
+
+Server to client:
+- `{"t":"poke","head":<seq>}` after a commit that changes the caller's scope (the user's own entities or `household`). Bursts are coalesced into one poke carrying the highest `head`. A poke is a hint to pull, never data; a client that connects pulls once itself.
+- `{"t":"presence","device","state","ref","positionMs","at"}`: another device of the same user. The latest frame of each device is kept in memory and replayed to a new connection. When a device's last socket closes the server relays `state: "offline"` for it and forgets its presence.
+- `{"t":"command","id","from","name","args","sentAt"}`: a command from another device of the same user. `id` is fresh, `from` is the sender's device id and `sentAt` is the server's clock in Unix milliseconds.
+- `{"t":"error","code","message"}`: `target_offline` (the target has no open socket, or is not a device of the caller's user; commands are never queued), `rate_limited` (more than 5 commands per second from the device), `bad_frame` (not a JSON object with a known `t`, or a missing field), `internal`.
+
+Client to server:
+- `{"t":"presence","state":"playing","ref":…,"positionMs":…}`: `state` is a word of up to 32 characters. The server ignores any `device` and `at` in it, uses the device of the token and its own clock, and relays the frame to the user's other devices.
+- `{"t":"command","to":"<device id>","name":"<up to 64 characters>","args":{…}}`.
+
+Liveness: the server sends a WebSocket ping every 25 seconds, and closes (code 1000) a connection from which it has heard nothing, pongs included, for 75 seconds. It checks the token again every 30 seconds and before relaying every command; a revoked token, or a user whose role became `pending`, closes the socket with code 1008. A stopping server closes every socket with code 1001 (going away).
 
 ## 10. Storage
 
@@ -201,8 +215,11 @@ listens(event_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, ts INTEGER NOT NULL, s
 device_progress(device_id TEXT NOT NULL, instance TEXT NOT NULL, last_mutation_id INTEGER NOT NULL, PRIMARY KEY(device_id, instance))
 mutation_results(device_id TEXT NOT NULL, instance TEXT NOT NULL, id INTEGER NOT NULL, arg_hash BLOB NOT NULL, status TEXT NOT NULL, code TEXT, at INTEGER NOT NULL, PRIMARY KEY(device_id, instance, id))
 blobs(hash TEXT PRIMARY KEY, mime TEXT NOT NULL, size INTEGER NOT NULL, data BLOB NOT NULL)
+rest_progress(key_id TEXT PRIMARY KEY, last_mutation_id INTEGER NOT NULL)
 ```
 `scope` is the user id, or `household` for household playlists and their entries.
+
+`rest_progress` numbers the writes of the OpenSubsonic API. Each API key (and the legacy password login) writes as a device of its own whose id is the key's id and whose name is `opensubsonic:<key name>`, platform `other`; the key's mutations are the ones of section 5, applied server side with ids from this counter and stamps from the server clock, without an `instance` or a `mutation_results` row. A scrobble becomes `listen.record` with `source = opensubsonic` and the `eventId` of `event_id_rec(device, "rest", counter)`. A saved play queue is the key's `session`. The import of the single-user server's data (`legacy_migrated` in `server_meta`) writes as the device `legacy` with the ids and the import floor of section 13.
 
 ## 11. Limits
 

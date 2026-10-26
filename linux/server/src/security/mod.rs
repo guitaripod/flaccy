@@ -60,6 +60,8 @@ pub mod devices;
 pub mod enroll;
 pub mod keys;
 pub mod lastfm;
+mod maintenance;
+pub mod rest;
 pub mod schema;
 pub mod users;
 

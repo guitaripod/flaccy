@@ -10,6 +10,8 @@ mod extract;
 mod guesses;
 mod host;
 mod identity;
+mod live;
+mod live_hub;
 mod sync_routes;
 
 use std::time::Duration;
@@ -30,6 +32,7 @@ use crate::state::AppState;
 pub use error::ApiError;
 pub use guesses::BearerThrottle;
 pub use host::machine_name;
+pub use live_hub::{LiveHub, LiveTiming};
 
 const BASE: &str = "/flaccy/v1";
 const JSON_BODY_LIMIT: usize = 1024 * 1024;
@@ -92,6 +95,7 @@ fn json_routes() -> Router<AppState> {
         .route("/sync/pull", get(sync_routes::pull))
         .route("/sync/entity", get(sync_routes::entity))
         .route("/listens", get(sync_routes::listens))
+        .route("/live", get(live::upgrade))
         .layer(RequestBodyLimitLayer::new(JSON_BODY_LIMIT))
 }
 

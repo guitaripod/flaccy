@@ -174,10 +174,13 @@ fn content_disposition(name: &str) -> String {
 
 /// `getCoverArt`: the stored cover of an album, else a picture embedded in one
 /// of its files, optionally resized to fit `size` pixels.
-pub(super) fn cover_art(call: &Call<'_>) -> Result<Outcome, ApiError> {
+pub(super) async fn cover_art(call: &Call<'_>) -> Result<Outcome, ApiError> {
     let id = call.require("id")?;
     let size = call.params.int("size").filter(|size| *size > 0).map(|size| size.min(4096) as u32);
-    let found = find_cover(call, id)?;
+    let found = match ids::parse(id) {
+        Some(Entity::Playlist(sync_id)) => playlist_cover(call, id, &sync_id).await?,
+        _ => find_cover(call, id)?,
+    };
     let (bytes, kind) = match size {
         Some(size) => cover::resized(&call.state.0.config.covers_dir(), id, size, &found),
         None => {
@@ -197,6 +200,23 @@ pub(super) fn cover_art(call: &Call<'_>) -> Result<Outcome, ApiError> {
     Ok(Outcome::Raw(response))
 }
 
+/// The cover picture of a playlist the user may see, from the blob its cover field names.
+async fn playlist_cover(call: &Call<'_>, id: &str, sync_id: &str) -> Result<Vec<u8>, ApiError> {
+    let missing = || ApiError::new(70, format!("Playlist '{id}' has no cover picture; set one in a Flaccy app and it appears here"));
+    let storage = |error: crate::sync::SyncError| ApiError::generic(format!("Could not read the playlist cover: {error} Check the server's data folder and try again"));
+    let doc = call
+        .state
+        .0
+        .sync
+        .playlist_for(&call.principal.user, sync_id)
+        .await
+        .map_err(storage)?
+        .ok_or_else(|| ApiError::not_found("Playlist", id))?;
+    let hash = doc.playlist.cover_blob.ok_or_else(missing)?;
+    let blob = call.state.0.sync.get_blob(&hash).await.map_err(storage)?;
+    blob.map(|blob| blob.data).ok_or_else(missing)
+}
+
 fn find_cover(call: &Call<'_>, id: &str) -> Result<Vec<u8>, ApiError> {
     let missing = || {
         ApiError::new(
@@ -208,9 +228,7 @@ fn find_cover(call: &Call<'_>, id: &str) -> Result<Vec<u8>, ApiError> {
     let (art_keys, paths) = {
         let catalog = call.state.catalog();
         match ids::parse(id) {
-            Some(Entity::Playlist(row_id)) => {
-                return call.state.db().playlist_cover(row_id).ok_or_else(missing)
-            }
+            Some(Entity::Playlist(_)) => return Err(missing()),
             Some(Entity::Song(row_id)) => {
                 let song = catalog.song(row_id).ok_or_else(|| ApiError::not_found("Song", id))?;
                 match catalog.album(&song.album_id) {

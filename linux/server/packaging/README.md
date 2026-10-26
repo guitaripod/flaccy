@@ -28,8 +28,20 @@ Sources in this directory:
   `flaccy` user, state directory, default `/etc/flaccy-server/config.toml` and package scripts.
 
 Environment variables of the image: `FLACCY_MUSIC_FOLDER` (`/music`), `FLACCY_DATA_DIR` (`/data`),
-`FLACCY_PORT` (`4545`), `FLACCY_ADDRESS` (`0.0.0.0`), `FLACCY_BEHIND_PROXY` (`false`). They fill
-`/data/config.toml` on every start unless a config file of your own is mounted there.
+`FLACCY_PORT` (`4545`), `FLACCY_BEHIND_PROXY` (`false`), `FLACCY_HOSTS` (comma separated host names
+or `*.example.com` patterns, none by default) and `FLACCY_ADDRESS` (unset). They fill
+`/data/config.toml` on every start unless a config file of your own is mounted there; the file
+always has `mode = "easy"` and the port, and has `address` only when `FLACCY_ADDRESS` is set.
+
+Easy mode is the default: the server listens on loopback and every Tailscale interface of the
+container, following the interfaces as they come up, and closes connections from anywhere else.
+In `compose.yaml` the server shares the Tailscale sidecar's network namespace (`network_mode:
+service:tailscale`), so the sidecar's `tailscale0` interface is the container's own: devices
+reach `http://flaccy:4545` over the tailnet, and `tailscale serve` reaches it on loopback for
+HTTPS. The container healthcheck asks loopback, which Easy mode always binds. A plain
+`docker run -p` has no Tailscale interface: set `FLACCY_ADDRESS=0.0.0.0` to listen on every
+address (the `Host` check still refuses dotted names that are not on your `FLACCY_HOSTS` list or a
+private suffix, so LAN names such as `nas.local` and addresses such as `192.168.1.5` work).
 
 After installing a package: edit `/etc/flaccy-server/config.toml`, then
 `sudo systemctl enable --now flaccy-server` and, to make an account or key,

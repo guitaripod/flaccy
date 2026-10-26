@@ -29,6 +29,19 @@ check_behind_proxy() {
     esac
 }
 
+build_hosts() {
+    HOSTS_TOML=
+    old_ifs=$IFS
+    IFS=,
+    for entry in ${FLACCY_HOSTS:-}; do
+        name=$(printf %s "$entry" | tr -d ' ')
+        [ -n "$name" ] || continue
+        reject_unsafe FLACCY_HOSTS "$name"
+        HOSTS_TOML="${HOSTS_TOML:+$HOSTS_TOML, }\"$name\""
+    done
+    IFS=$old_ifs
+}
+
 is_own_config() {
     [ ! -e "$CONFIG" ] || [ "$(head -n 1 "$CONFIG")" = "$GENERATED_MARK" ]
 }
@@ -36,19 +49,22 @@ is_own_config() {
 write_config() {
     music=${FLACCY_MUSIC_FOLDER:-/music}
     data=${FLACCY_DATA_DIR:-/data}
-    address=${FLACCY_ADDRESS:-0.0.0.0}
+    address=${FLACCY_ADDRESS:-}
     reject_unsafe FLACCY_MUSIC_FOLDER "$music"
     reject_unsafe FLACCY_DATA_DIR "$data"
     reject_unsafe FLACCY_ADDRESS "$address"
     check_port
     check_behind_proxy
+    build_hosts
     {
         echo "$GENERATED_MARK"
         echo "music_folder = \"$music\""
-        echo "address = \"$address\""
+        echo "mode = \"easy\""
+        [ -z "$address" ] || echo "address = \"$address\""
         echo "port = ${FLACCY_PORT:-4545}"
         echo "data_dir = \"$data\""
         echo "behind_proxy = ${FLACCY_BEHIND_PROXY:-false}"
+        [ -z "$HOSTS_TOML" ] || echo "hosts = [$HOSTS_TOML]"
     } > "$CONFIG" || fail "Could not write $CONFIG. Make /data writable by uid 1000 (chown 1000:1000 on a bind mount) or mount your own config file there."
 }
 

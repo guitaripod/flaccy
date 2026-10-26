@@ -1,10 +1,9 @@
 //! Everything a request handler shares: the configuration, the account, the
 //! database and the in-memory catalog.
 //!
-//! Lock order is always catalog first, database second. A handler that changes
-//! a play count, a loved flag or a rating takes the catalog write lock before it
-//! writes the database, so a rebuild that swaps the catalog in can never count
-//! the same change twice.
+//! The catalog holds library facts only; what a listener did with a song lives
+//! in the sync state and is attached per user at response time. Lock order is
+//! catalog first, library database second.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -12,13 +11,15 @@ use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuar
 use flaccy_library::db::Db;
 use flaccy_library::logger;
 
+use crate::api::userview::UserViews;
+use crate::api::RestIdentities;
 use crate::catalog::Catalog;
 use crate::config::Config;
 use crate::credentials::{CredentialStore, Credentials};
-use crate::native::BearerThrottle;
+use crate::native::{BearerThrottle, LiveHub};
 use crate::security::{self, DeviceId};
 use crate::store::Store;
-use crate::sync::{self, DeviceRenamer};
+use crate::sync::{self, migrate_legacy, DeviceRenamer};
 use crate::throttle::LoginThrottle;
 
 /// Opens `security.sqlite` and `state.sqlite`, and adopts the legacy account's keys when `credentials.toml` exists.
@@ -37,7 +38,7 @@ async fn open_identity_and_sync(
 }
 
 /// Makes the legacy account's name the first admin and gives that admin the legacy API keys.
-async fn adopt_legacy_account(security: &security::Store, account: &Credentials) -> Result<(), String> {
+pub(crate) async fn adopt_legacy_account(security: &security::Store, account: &Credentials) -> Result<(), String> {
     if account.username.trim().is_empty() {
         return Ok(());
     }
@@ -77,6 +78,12 @@ pub struct Shared {
     pub security: security::Store,
     /// The sync state: playlists, loves, ratings, scalars, sessions and listens.
     pub sync: sync::Store,
+    /// Each user's stars, ratings and plays, as the OpenSubsonic calls show them.
+    pub views: UserViews,
+    /// What the OpenSubsonic logins remember about identities.
+    pub rest_identities: RestIdentities,
+    /// The open live-channel sockets and the presence they share.
+    pub live: LiveHub,
     /// The program that converts audio, `ffmpeg` unless `FLACCY_SERVER_FFMPEG` names another.
     pub ffmpeg: String,
     catalog: RwLock<Catalog>,
@@ -122,7 +129,7 @@ impl AppState {
         let catalog = Catalog::build(&db, &store, &config.music_folder);
         let credentials = CredentialStore::new(config.credentials_path());
         let (security, sync) = open_identity_and_sync(&config, &credentials).await?;
-        Ok(AppState(Arc::new(Shared {
+        let state = AppState(Arc::new(Shared {
             config,
             credentials,
             db: Mutex::new(db),
@@ -131,10 +138,16 @@ impl AppState {
             bearer_throttle: BearerThrottle::default(),
             security,
             sync,
+            views: UserViews::default(),
+            rest_identities: RestIdentities::default(),
+            live: LiveHub::new(),
             ffmpeg,
             catalog: RwLock::new(catalog),
             refresh_gate: Mutex::new(()),
-        })))
+        }));
+        state.0.views.follow(state.0.sync.subscribe());
+        migrate_legacy::migrate_if_needed(&state).await;
+        Ok(state)
     }
 
     /// The music folder the library is indexed from.
@@ -162,8 +175,7 @@ impl AppState {
         self.0.db.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// Groups the library afresh from the database and swaps the result in,
-    /// carrying over any play, love or rating that changed while it was built.
+    /// Groups the library afresh from the database and swaps the result in.
     pub fn rebuild_catalog(&self) {
         let path = self.0.config.database_path();
         let db = match Db::open(&path) {
@@ -179,9 +191,7 @@ impl AppState {
                 return;
             }
         };
-        let mut fresh = Catalog::build(&db, &self.0.store, self.music_root());
-        let mut guard = self.catalog_mut();
-        fresh.apply_dynamic(&self.db().fetch_all_tracks(), &self.0.store.ratings());
-        *guard = fresh;
+        let fresh = Catalog::build(&db, &self.0.store, self.music_root());
+        *self.catalog_mut() = fresh;
     }
 }

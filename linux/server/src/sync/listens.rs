@@ -93,7 +93,7 @@ fn listen_from_row(row: &Row<'_>) -> rusqlite::Result<ListenRow> {
     })
 }
 
-fn insert_listen(connection: &Connection, user: &str, device: &str, input: &ListenInput) -> Result<bool, SyncError> {
+fn insert_listen(connection: &Connection, user: &str, device: &str, source: Source, input: &ListenInput) -> Result<bool, SyncError> {
     let song_text = serde_json::to_string(&input.song)
         .map_err(|error| SyncError::Corrupt(format!("a listen would not serialize: {error}")))?;
     let added = connection
@@ -110,9 +110,9 @@ fn insert_listen(connection: &Connection, user: &str, device: &str, input: &List
             artist_listen_key(&input.song.artist),
             song_text,
             input.played_s,
-            source_text(Source::Flaccy),
+            source_text(source),
             input.recorded,
-            device,
+            (!device.is_empty()).then_some(device),
         ))?;
     Ok(added == 1)
 }
@@ -153,13 +153,18 @@ fn stamp_seq(connection: &Connection, counters: &mut Counters, user: &str, event
 
 /// `listen.record`: inserts each listen once, recomputes every second it touched and gives each new or flipped listen a sequence number.
 pub(super) fn record(connection: &Connection, inputs: &[ListenInput], ctx: &mut Ctx<'_>) -> Result<Outcome, SyncError> {
+    record_as(connection, inputs, Source::Flaccy, ctx)
+}
+
+/// Like [`record`] with the `source` the listens are stored under; a caller without a device stores none.
+pub(super) fn record_as(connection: &Connection, inputs: &[ListenInput], source: Source, ctx: &mut Ctx<'_>) -> Result<Outcome, SyncError> {
     if !ctx.caller.can_write() {
         return Ok(Outcome::invalid(ErrorCode::Forbidden));
     }
     let mut stamped: BTreeSet<String> = BTreeSet::new();
     let mut seconds: BTreeSet<i64> = BTreeSet::new();
     for input in inputs {
-        if insert_listen(connection, &ctx.caller.user, &ctx.caller.device, input)? {
+        if insert_listen(connection, &ctx.caller.user, &ctx.caller.device, source, input)? {
             stamped.insert(input.event_id.clone());
             seconds.insert(input.ts);
         }

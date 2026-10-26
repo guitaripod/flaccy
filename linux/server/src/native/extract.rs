@@ -28,7 +28,7 @@ pub enum Identity {
     Unknown,
 }
 
-fn bearer_token(headers: &HeaderMap) -> Option<&str> {
+pub(super) fn bearer_token(headers: &HeaderMap) -> Option<&str> {
     let value = headers.get(header::AUTHORIZATION)?.to_str().ok()?;
     let split = value.get(..BEARER_PREFIX.len())?;
     if split.eq_ignore_ascii_case(BEARER_PREFIX) {

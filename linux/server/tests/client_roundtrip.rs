@@ -85,7 +85,9 @@ async fn a_re_export_on_the_server_reaches_the_client_as_revision_two_of_the_sam
         data_dir: Some(root.path().join("server-data")),
         behind_proxy: false,
         mode: Mode::Easy,
+        lastfm: Default::default(),
         hosts: Vec::new(),
+        backup_dir: None,
     };
     let account = Credentials {
         username: USER.to_string(),

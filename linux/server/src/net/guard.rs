@@ -2,8 +2,7 @@
 
 use std::convert::Infallible;
 use std::future::{ready, Ready};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::sync::Arc;
+use std::net::SocketAddr;
 use std::task::{Context, Poll};
 
 use axum::body::Body;
@@ -16,93 +15,10 @@ use axum::{Json, Router};
 use serde_json::json;
 use tower::Service;
 
-use super::tailnet::TailnetAddresses;
+use super::hosts::AllowedHosts;
 
 const REFUSED_CODE: &str = "browser_refused";
-const LOCALHOST_NAME: &str = "localhost";
 const MAX_ECHOED_HOST: usize = 80;
-
-/// A host name or address as it appears in a `Host` header, port removed.
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum HostName {
-    Ip(IpAddr),
-    Name(String),
-}
-
-impl HostName {
-    /// Reads `name`, `name:port`, `1.2.3.4[:port]` or `[v6][:port]`; `None` when malformed.
-    fn parse(raw: &str) -> Option<Self> {
-        let text = raw.trim().to_ascii_lowercase();
-        let host = match text.strip_prefix('[') {
-            Some(rest) => {
-                let (inner, after) = rest.split_once(']')?;
-                valid_port_suffix(after)?;
-                return inner.parse::<Ipv6Addr>().ok().map(|ip| Self::Ip(IpAddr::V6(ip)));
-            }
-            None => strip_port(&text)?,
-        };
-        if host.is_empty() {
-            return None;
-        }
-        Some(match host.parse::<Ipv4Addr>() {
-            Ok(ip) => Self::Ip(IpAddr::V4(ip)),
-            Err(_) => Self::Name(host.trim_end_matches('.').to_string()),
-        })
-    }
-}
-
-fn valid_port_suffix(after: &str) -> Option<()> {
-    match after.strip_prefix(':') {
-        None if after.is_empty() => Some(()),
-        Some(port) if is_port(port) => Some(()),
-        _ => None,
-    }
-}
-
-fn strip_port(text: &str) -> Option<&str> {
-    match text.split_once(':') {
-        None => Some(text),
-        Some((host, port)) if is_port(port) => Some(host),
-        Some(_) => None,
-    }
-}
-
-fn is_port(text: &str) -> bool {
-    !text.is_empty() && text.len() <= 5 && text.bytes().all(|byte| byte.is_ascii_digit())
-}
-
-/// The `Host` values the server answers to: the configured names, the current
-/// tailnet addresses, `localhost`, `127.0.0.1` and `[::1]`, each with or
-/// without a port. The tailnet part is re-read on every request.
-#[derive(Clone, Debug)]
-pub struct AllowedHosts {
-    configured: Arc<[HostName]>,
-    tailnet: TailnetAddresses,
-}
-
-impl AllowedHosts {
-    /// `configured` are the `hosts` of the configuration file; entries that are
-    /// not valid host names are skipped. `tailnet` is usually
-    /// [`EasyHandle::tailnet`](super::EasyHandle::tailnet).
-    pub fn new(configured: &[String], tailnet: TailnetAddresses) -> Self {
-        let parsed: Vec<HostName> = configured.iter().filter_map(|entry| HostName::parse(entry)).collect();
-        Self { configured: parsed.into(), tailnet }
-    }
-
-    /// Whether a raw `Host` header value is allowed.
-    pub fn allows(&self, host_header: &str) -> bool {
-        let Some(host) = HostName::parse(host_header) else {
-            return false;
-        };
-        if self.configured.contains(&host) {
-            return true;
-        }
-        match host {
-            HostName::Name(name) => name == LOCALHOST_NAME,
-            HostName::Ip(ip) => ip == IpAddr::V4(Ipv4Addr::LOCALHOST) || ip == IpAddr::V6(Ipv6Addr::LOCALHOST) || self.tailnet.contains(ip),
-        }
-    }
-}
 
 enum Refusal {
     Origin,
@@ -122,7 +38,7 @@ impl Refusal {
     fn hint(&self) -> &'static str {
         match self {
             Self::Origin | Self::CrossSite => "Use a Flaccy app or another native client instead of a browser.",
-            Self::Host(_) => "Connect with this machine's Tailscale address, localhost, or a name listed under `hosts` in the configuration file, then restart the server.",
+            Self::Host(_) => "Connect with this machine's name, its Tailscale or local address, or add the name you use to `hosts` in the configuration file and restart the server.",
         }
     }
 
@@ -273,58 +189,6 @@ impl Service<Request<Body>> for Tagged {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn hosts(configured: &[&str], tailnet: &[&str]) -> AllowedHosts {
-        let shared = TailnetAddresses::default();
-        shared.replace(tailnet.iter().map(|ip| ip.parse().unwrap()).collect());
-        let configured: Vec<String> = configured.iter().map(|name| name.to_string()).collect();
-        AllowedHosts::new(&configured, shared)
-    }
-
-    #[test]
-    fn ports_are_stripped_from_names_and_addresses() {
-        let allowed = hosts(&["arch.tail1234.ts.net"], &["100.91.211.44"]);
-        for good in ["localhost", "localhost:4545", "127.0.0.1:80", "arch.tail1234.ts.net:4545", "ARCH.tail1234.ts.net", "100.91.211.44:4545"] {
-            assert!(allowed.allows(good), "{good}");
-        }
-    }
-
-    #[test]
-    fn ipv6_literals_are_read_with_their_brackets() {
-        let allowed = hosts(&[], &["fd7a:115c:a1e0::6b01:d32d"]);
-        assert!(allowed.allows("[::1]"));
-        assert!(allowed.allows("[::1]:4545"));
-        assert!(allowed.allows("[fd7a:115c:a1e0::6b01:d32d]:4545"));
-        assert!(!allowed.allows("::1"));
-        assert!(!allowed.allows("[::2]:4545"));
-        assert!(!allowed.allows("[::1]x"));
-    }
-
-    #[test]
-    fn unknown_malformed_and_empty_hosts_are_refused() {
-        let allowed = hosts(&["music.example.org"], &[]);
-        for bad in ["evil.example", "127.0.0.2", "100.91.211.44", "localhost:notaport", "localhost:", "", ":80", "a:1:2"] {
-            assert!(!allowed.allows(bad), "{bad}");
-        }
-    }
-
-    #[test]
-    fn tailnet_addresses_are_read_per_call() {
-        let shared = TailnetAddresses::default();
-        let allowed = AllowedHosts::new(&[], shared.clone());
-        assert!(!allowed.allows("100.64.0.9"));
-        shared.replace(vec!["100.64.0.9".parse().unwrap()]);
-        assert!(allowed.allows("100.64.0.9:4545"));
-        shared.replace(Vec::new());
-        assert!(!allowed.allows("100.64.0.9"));
-    }
-
-    #[test]
-    fn a_configured_address_with_a_port_matches_without_it() {
-        let allowed = hosts(&["192.168.1.5:4545", "[fd00::5]"], &[]);
-        assert!(allowed.allows("192.168.1.5"));
-        assert!(allowed.allows("[fd00::5]:80"));
-    }
 
     #[test]
     fn the_echoed_host_is_short_and_printable() {

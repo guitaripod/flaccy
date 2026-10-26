@@ -20,6 +20,16 @@ pub enum Login {
 /// in with was sent, 40 for a wrong user, password or token, 43 when an API key
 /// arrives together with a user name, and 44 for an unknown or revoked key.
 pub fn authenticate(params: &Params, credentials: Option<&Credentials>) -> Result<Login, ApiError> {
+    authenticate_with(params, credentials, None)
+}
+
+/// Like [`authenticate`], also accepting an `apiKey` the security store recognised: `store_key` is the name of the
+/// API key or device it belongs to, as for the keys of users other than the legacy account and for device tokens.
+pub fn authenticate_with(
+    params: &Params,
+    credentials: Option<&Credentials>,
+    store_key: Option<&str>,
+) -> Result<Login, ApiError> {
     let key = params.get("apiKey");
     let user = params.get("u");
     if key.is_some() && user.is_some() {
@@ -31,6 +41,7 @@ pub fn authenticate(params: &Params, credentials: Option<&Credentials>) -> Resul
     if let Some(key) = key {
         return credentials
             .and_then(|credentials| credentials.key_name(key))
+            .or(store_key)
             .map(|name| Login::Key(name.to_string()))
             .ok_or_else(|| {
                 ApiError::new(

@@ -6,6 +6,7 @@ use flaccy_shared::remote::subsonic_response::{AlbumId3, Artist as ArtistEntry, 
 use serde::Serialize;
 use serde_json::Value;
 
+use super::userview::UserView;
 use crate::catalog::{Album, Artist, Catalog, Song};
 
 /// A song with the fields beyond the shared `Child`.
@@ -122,16 +123,32 @@ fn song_child(catalog: &Catalog, song: &Song) -> Child {
     }
 }
 
-fn song_out(catalog: &Catalog, song: &Song) -> SongOut {
+fn song_out(catalog: &Catalog, view: &UserView, song: &Song) -> SongOut {
+    let key = &song.song_key;
     SongOut {
         child: song_child(catalog, song),
         is_dir: false,
         media_type: "song",
-        played: song.row.last_played.map(iso),
-        play_count: song.row.play_count,
-        starred: song.row.loved.then(|| iso(song.row.date_added)),
-        user_rating: song.rating,
+        played: view.last_played(key).map(iso),
+        play_count: view.play_count(key),
+        starred: view.starred_at(key).map(iso_ms),
+        user_rating: view.rating(key),
     }
+}
+
+/// Total plays across `album`.
+pub fn album_play_count(catalog: &Catalog, view: &UserView, album: &Album) -> i64 {
+    catalog.album_songs(album).map(|song| view.play_count(&song.song_key)).sum()
+}
+
+/// When any song of `album` was last played, in Unix seconds.
+pub fn album_last_played(catalog: &Catalog, view: &UserView, album: &Album) -> Option<i64> {
+    catalog.album_songs(album).filter_map(|song| view.last_played(&song.song_key)).max()
+}
+
+/// Whether every song of `album` is starred, which is what a starred album means here.
+pub fn album_is_starred(catalog: &Catalog, view: &UserView, album: &Album) -> bool {
+    !album.songs.is_empty() && catalog.album_songs(album).all(|song| view.starred_at(&song.song_key).is_some())
 }
 
 fn album_id3(catalog: &Catalog, album: &Album) -> AlbumId3 {
@@ -150,16 +167,16 @@ fn album_id3(catalog: &Catalog, album: &Album) -> AlbumId3 {
     }
 }
 
-fn album_out(catalog: &Catalog, album: &Album, with_songs: bool) -> AlbumOut {
+fn album_out(catalog: &Catalog, view: &UserView, album: &Album, with_songs: bool) -> AlbumOut {
     AlbumOut {
         info: album_id3(catalog, album),
-        play_count: catalog.album_play_count(album),
-        played: catalog.album_last_played(album).map(iso),
-        starred: catalog.album_is_starred(album).then(|| iso(album.created)),
+        play_count: album_play_count(catalog, view, album),
+        played: album_last_played(catalog, view, album).map(iso),
+        starred: album_is_starred(catalog, view, album).then(|| iso(album.created)),
         song: with_songs.then(|| {
             catalog
                 .album_songs(album)
-                .map(|song| song_out(catalog, song))
+                .map(|song| song_out(catalog, view, song))
                 .collect()
         }),
     }
@@ -170,18 +187,18 @@ fn value<T: Serialize>(item: &T) -> Value {
 }
 
 /// A song as JSON.
-pub fn song_value(catalog: &Catalog, song: &Song) -> Value {
-    value(&song_out(catalog, song))
+pub fn song_value(catalog: &Catalog, view: &UserView, song: &Song) -> Value {
+    value(&song_out(catalog, view, song))
 }
 
 /// An album without its songs as JSON.
-pub fn album_value(catalog: &Catalog, album: &Album) -> Value {
-    value(&album_out(catalog, album, false))
+pub fn album_value(catalog: &Catalog, view: &UserView, album: &Album) -> Value {
+    value(&album_out(catalog, view, album, false))
 }
 
 /// An album with its songs in play order as JSON.
-pub fn album_with_songs_value(catalog: &Catalog, album: &Album) -> Value {
-    value(&album_out(catalog, album, true))
+pub fn album_with_songs_value(catalog: &Catalog, view: &UserView, album: &Album) -> Value {
+    value(&album_out(catalog, view, album, true))
 }
 
 /// An artist as a list entry as JSON.

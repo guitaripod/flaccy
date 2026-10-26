@@ -23,7 +23,6 @@ services:
     depends_on:
       - tailscale
     environment:
-      FLACCY_ADDRESS: 127.0.0.1
       FLACCY_BEHIND_PROXY: "true"
     volumes:
       - ${MUSIC_DIR:?Set MUSIC_DIR in .env, see env.example}:/music:ro
