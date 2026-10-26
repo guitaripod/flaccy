@@ -18,7 +18,7 @@ fn token_for(salt: &str) -> String {
 
 #[tokio::test]
 async fn ping_without_f_answers_xml_with_the_subsonic_root() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     let reply = server.get(&format!("/rest/ping?{}", TestServer::login())).await;
     assert_eq!(reply.status, StatusCode::OK);
     assert!(reply.header("content-type").starts_with("application/xml"));
@@ -31,7 +31,7 @@ async fn ping_without_f_answers_xml_with_the_subsonic_root() {
 
 #[tokio::test]
 async fn get_album_without_f_answers_one_song_element_per_track_in_xml() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let album = server.album_id("Rough Cuts").await;
     let reply = server
@@ -48,7 +48,7 @@ async fn get_album_without_f_answers_one_song_element_per_track_in_xml() {
 
 #[tokio::test]
 async fn an_error_is_a_200_with_an_error_element_in_xml() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     let reply = server.get("/rest/ping").await;
     assert_eq!(reply.status, StatusCode::OK);
     let xml = reply.text();
@@ -57,7 +57,7 @@ async fn an_error_is_a_200_with_an_error_element_in_xml() {
 
 #[tokio::test]
 async fn the_view_suffix_and_form_posts_work() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     let reply = server.get(&format!("/rest/ping.view?{}&f=json", TestServer::login())).await;
     assert!(reply.text().contains("\"status\":\"ok\""));
     let posted = server
@@ -69,7 +69,7 @@ async fn the_view_suffix_and_form_posts_work() {
 
 #[tokio::test]
 async fn every_auth_path_logs_in_and_each_failure_has_its_code() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     let salt = "c19b2d";
     let token = token_for(salt);
     let encoded = ids::hex(PASSWORD.as_bytes());
@@ -112,7 +112,7 @@ fn from_peer(uri: &str, peer: &str) -> Request<Body> {
 
 #[tokio::test]
 async fn ten_failed_logins_lock_one_address_out_and_leave_the_others_working() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     let wrong = format!("/rest/ping?f=json&u={USER}&p=wrong");
     let right = format!("/rest/ping?f=json&u={USER}&p={PASSWORD}");
     let attacker = "203.0.113.9:5000";
@@ -135,7 +135,7 @@ async fn ten_failed_logins_lock_one_address_out_and_leave_the_others_working() {
 
 #[tokio::test]
 async fn a_revoked_key_is_refused_at_once() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     let path = server.state.0.config.credentials_path();
     let mut account = crate::credentials::load(&path).unwrap().unwrap();
     assert!(account.revoke_key("phone"));
@@ -149,7 +149,7 @@ async fn a_revoked_key_is_refused_at_once() {
 
 #[tokio::test]
 async fn unknown_methods_say_they_are_not_implemented() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     let answer = server.json("getPodcasts", "").await;
     assert_eq!(answer.error_code(), 0);
     let message = answer.envelope.error.unwrap().message.unwrap();
@@ -158,7 +158,7 @@ async fn unknown_methods_say_they_are_not_implemented() {
 
 #[tokio::test]
 async fn identity_calls_describe_the_server() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let ping = server.json("ping", "").await;
     assert_eq!(ping.envelope.server_type.as_deref(), Some("flaccy-server"));

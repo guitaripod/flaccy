@@ -1,10 +1,10 @@
-//! The command line: serve, scan, password, keys, status and healthcheck.
+//! The command line: serve, scan, password, keys, status, healthcheck, enroll, users, devices and the audit trail.
 
 use std::io::BufRead;
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use axum::Router;
 use clap::{Parser, Subcommand};
 use flaccy_library::logger;
 use qrcode::render::unicode::Dense1x2;
@@ -12,11 +12,17 @@ use qrcode::QrCode;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::api;
+use crate::admin::{self, AuditAction, DeviceAction, EnrollArgs, UserAction};
 use crate::config::{Config, ConfigError};
 use crate::credentials::{self, Credentials, DEFAULT_USERNAME};
+use crate::native;
+use crate::net::guard::ConnectionAddr;
+use crate::net::{connections, AllowedHosts, EasyListener, TailnetAddresses};
 use crate::refresh;
 use crate::state::AppState;
+
+/// The address the configuration file defaults to; any other value is honoured as the only bind address.
+const DEFAULT_ADDRESS: &str = "127.0.0.1";
 
 /// Exit code for a missing or unreadable configuration.
 const EXIT_NO_CONFIG: i32 = 2;
@@ -50,8 +56,29 @@ pub enum Command {
         #[command(subcommand)]
         action: KeyAction,
     },
-    /// Show library counts, the last scan and the API keys.
-    Status,
+    /// Show library counts, the last scan, the API keys and the sync state.
+    Status {
+        /// Print one JSON document instead of text.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Make a one-time code, link and QR code that enrolls a device for a user.
+    Enroll(EnrollArgs),
+    /// Manage users.
+    User {
+        #[command(subcommand)]
+        action: UserAction,
+    },
+    /// List and revoke enrolled devices.
+    Device {
+        #[command(subcommand)]
+        action: DeviceAction,
+    },
+    /// Check the audit trail.
+    Audit {
+        #[command(subcommand)]
+        action: AuditAction,
+    },
     /// Exit 0 when a server answers on the configured address, for container health checks.
     Healthcheck,
 }
@@ -105,7 +132,11 @@ pub async fn run(cli: Cli) -> i32 {
         Command::Scan => scan(config).await,
         Command::Password { action: PasswordAction::Set { stdin, user } } => password_set(&config, stdin, user),
         Command::Key { action } => key(&config, action),
-        Command::Status => status(config),
+        Command::Status { json } => admin::status(config, json).await,
+        Command::Enroll(args) => admin::enroll(&config, args).await,
+        Command::User { action } => admin::user(&config, action).await,
+        Command::Device { action } => admin::device(&config, action).await,
+        Command::Audit { action } => admin::audit(&config, action).await,
         Command::Healthcheck => healthcheck(&config).await,
     };
     match outcome {
@@ -119,25 +150,62 @@ pub async fn run(cli: Cli) -> i32 {
 
 async fn serve(config: Config) -> Result<(), String> {
     logger::init(&config.data_dir());
-    let address = config.listen_address();
-    let state = AppState::open(config)?;
+    let state = AppState::open(config).await?;
     if state.credentials().is_none() {
         logger::warn(
             "server",
-            "no account exists yet, so every login will be refused; run `flaccy-server password set` or `flaccy-server key add <name>` in another terminal",
+            "no account exists yet, so every OpenSubsonic login will be refused; run `flaccy-server password set` or `flaccy-server key add <name>` in another terminal, and `flaccy-server enroll --user <name>` to add a Flaccy device",
         );
     }
+    tokio::spawn(refresh::keep_current(state.clone()));
+    if state.0.config.address == DEFAULT_ADDRESS {
+        serve_easy(state).await
+    } else {
+        serve_on_address(state).await
+    }
+}
+
+async fn serve_easy(state: AppState) -> Result<(), String> {
+    let port = state.0.config.port;
+    logger::info(
+        "server",
+        "the `address` setting is superseded by tailnet binding: the server listens on loopback and this machine's tailnet addresses; set `address` to another value to bind only that address",
+    );
+    let listener = EasyListener::bind(port).await.map_err(|err| {
+        format!(
+            "Could not listen on port {port}: {err}. Another program may be using that port; set a different `port` in the configuration file."
+        )
+    })?;
+    let hosts = AllowedHosts::new(&state.0.config.hosts, listener.handle().tailnet());
+    let app = native::app(state, hosts);
+    serve_connections(listener, app).await
+}
+
+async fn serve_on_address(state: AppState) -> Result<(), String> {
+    let address = state.0.config.listen_address();
+    logger::warn(
+        "server",
+        &format!(
+            "`address` is {}, so the server listens only on {address} and not on the tailnet; list the host names clients use under `hosts`, or remove `address` to listen on loopback and the tailnet",
+            state.0.config.address
+        ),
+    );
     let listener = TcpListener::bind(&address).await.map_err(|err| {
         format!(
             "Could not listen on {address}: {err}. Another program may be using that port; set a different `port` in the configuration file, or `address` if this machine does not own that address."
         )
     })?;
     logger::info("server", &format!("listening on http://{address}"));
-    tokio::spawn(refresh::keep_current(state.clone()));
-    axum::serve(
-        listener,
-        api::router(state).into_make_service_with_connect_info::<SocketAddr>(),
-    )
+    let hosts = AllowedHosts::new(&state.0.config.hosts, TailnetAddresses::default());
+    serve_connections(listener, native::app(state, hosts)).await
+}
+
+async fn serve_connections<L>(listener: L, app: Router) -> Result<(), String>
+where
+    L: axum::serve::Listener,
+    L::Addr: ConnectionAddr + std::fmt::Debug,
+{
+    axum::serve(listener, connections(app))
         .with_graceful_shutdown(shutdown_signal())
         .await
         .map_err(|err| format!("The server stopped: {err}. Start it again with `flaccy-server serve`; if this repeats, check the log in the data folder."))
@@ -165,7 +233,7 @@ async fn wait_for_stop_request() {
 
 async fn scan(config: Config) -> Result<(), String> {
     logger::init(&config.data_dir());
-    let state = AppState::open(config)?;
+    let state = AppState::open(config).await?;
     let worker = state.clone();
     let summary = tokio::task::spawn_blocking(move || refresh::refresh_now(&worker))
         .await
@@ -270,7 +338,7 @@ pub fn pairing_link(url: &str, key: &str, name: &str) -> String {
     )
 }
 
-fn percent_encode(value: &str) -> String {
+pub(crate) fn percent_encode(value: &str) -> String {
     value
         .bytes()
         .map(|byte| {
@@ -283,44 +351,11 @@ fn percent_encode(value: &str) -> String {
         .collect()
 }
 
-fn qr_text(link: &str) -> Result<String, String> {
+pub(crate) fn qr_text(link: &str) -> Result<String, String> {
     let code = QrCode::new(link.as_bytes()).map_err(|err| {
         format!("Could not draw a QR code for the pairing link: {err}. Enter the URL and key in the app by hand instead.")
     })?;
     Ok(code.render::<Dense1x2>().quiet_zone(true).build())
-}
-
-fn status(config: Config) -> Result<(), String> {
-    let account = credentials::load(&config.credentials_path())?;
-    let state = AppState::open(config)?;
-    let catalog = state.catalog();
-    println!("Music folder: {}", state.music_root().display());
-    println!("Data folder:  {}", state.0.config.data_dir().display());
-    println!(
-        "Library:      {} songs, {} albums, {} artists, {} playlists",
-        catalog.song_count(),
-        catalog.albums().len(),
-        catalog.artists().len(),
-        state.0.store.playlist_count()
-    );
-    match state.0.store.state("lastScanAt") {
-        Some(at) => println!(
-            "Last scan:    {at} ({})",
-            state.0.store.state("lastScanSummary").unwrap_or_default()
-        ),
-        None => println!("Last scan:    never; run `flaccy-server scan` or `flaccy-server serve`"),
-    }
-    match &account {
-        Some(account) if !account.password.is_empty() => println!("Account:      {} (password set)", account.username),
-        Some(account) => println!("Account:      {} (no password; API keys only)", account.username),
-        None => println!("Account:      none; run `flaccy-server password set`"),
-    }
-    let keys = account.map(|account| account.keys).unwrap_or_default();
-    println!("API keys:     {}", if keys.is_empty() { "none".to_string() } else { keys.len().to_string() });
-    for record in keys {
-        println!("  {}  created {}", record.name, record.created);
-    }
-    Ok(())
 }
 
 const HEALTHCHECK_TIMEOUT: Duration = Duration::from_secs(5);

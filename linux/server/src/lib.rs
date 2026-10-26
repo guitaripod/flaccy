@@ -6,6 +6,7 @@
 //! no GTK or GStreamer packages and is meant to sit behind `tailscale serve`
 //! or a reverse proxy that terminates HTTPS.
 
+pub mod admin;
 pub mod api;
 pub mod auth;
 pub mod catalog;
@@ -16,6 +17,7 @@ pub mod credentials;
 pub mod dbthread;
 pub mod error;
 pub mod ids;
+pub mod native;
 pub mod net;
 pub mod refresh;
 pub mod reply;
@@ -23,6 +25,7 @@ pub mod request;
 pub mod security;
 pub mod state;
 pub mod store;
+pub mod sync;
 pub mod throttle;
 pub mod transcode;
 pub mod xml;

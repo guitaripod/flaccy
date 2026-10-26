@@ -16,7 +16,7 @@ use flaccy_shared::remote::subsonic_response::{Envelope, Root};
 use serde_json::Value;
 use tower::ServiceExt;
 
-use crate::config::Config;
+use crate::config::{Config, Mode};
 use crate::credentials::{self, Credentials};
 use crate::refresh::{refresh_now, ScanSummary};
 use crate::state::AppState;
@@ -94,11 +94,11 @@ pub struct TestServer {
 }
 
 impl TestServer {
-    pub fn new() -> Self {
-        Self::with_ffmpeg("ffmpeg")
+    pub async fn new() -> Self {
+        Self::with_ffmpeg("ffmpeg").await
     }
 
-    pub fn with_ffmpeg(ffmpeg: &str) -> Self {
+    pub async fn with_ffmpeg(ffmpeg: &str) -> Self {
         let dir = TestDir::new();
         let music = dir.path().join("music");
         std::fs::create_dir_all(&music).unwrap();
@@ -108,6 +108,8 @@ impl TestServer {
             port: 0,
             data_dir: Some(dir.path().join("data")),
             behind_proxy: false,
+            mode: Mode::Easy,
+            hosts: Vec::new(),
         };
         let mut account = Credentials {
             username: USER.to_string(),
@@ -116,7 +118,7 @@ impl TestServer {
         };
         let api_key = account.add_key("phone", "2026-10-25T12:00:00Z").unwrap();
         credentials::save(&config.credentials_path(), &account).unwrap();
-        let state = AppState::open_with_ffmpeg(config, ffmpeg.to_string()).unwrap();
+        let state = AppState::open_with_ffmpeg(config, ffmpeg.to_string()).await.unwrap();
         let router = crate::api::router(state.clone());
         Self { dir, state, router, api_key }
     }

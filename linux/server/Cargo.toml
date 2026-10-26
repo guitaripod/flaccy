@@ -12,11 +12,12 @@ path = "src/main.rs"
 [dependencies]
 flaccy-library = { path = "../library" }
 flaccy-shared = { path = "../shared" }
+flaccy-server-core = { path = "../server-core" }
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "fs", "process", "sync", "time", "io-util", "net"] }
 tokio-util = { version = "0.7", features = ["io"] }
 tower = { version = "0.5", features = ["util"] }
-tower-http = { version = "0.6", features = ["fs"] }
+tower-http = { version = "0.6", features = ["fs", "compression-gzip", "compression-br", "limit", "timeout"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_urlencoded = "0.7"
@@ -36,6 +37,9 @@ base64 = "0.22"
 rpassword = "7"
 async-channel = "2"
 if-addrs = "0.13"
+
+[dev-dependencies]
+flaccy-server-core = { path = "../server-core", features = ["sim"] }
 
 [package.metadata.deb]
 maintainer = "Marcus Ziade <guitaripod@gmail.com>"

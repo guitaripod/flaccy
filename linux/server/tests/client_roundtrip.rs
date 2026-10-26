@@ -14,7 +14,7 @@ use flaccy_library::remote::servers::Server;
 use flaccy_library::remote::service::{Paths, Remote};
 use flaccy_library::remote::sync::SyncReport;
 use flaccy_server::api;
-use flaccy_server::config::Config;
+use flaccy_server::config::{Config, Mode};
 use flaccy_server::credentials::{self, Credentials};
 use flaccy_server::refresh::{refresh_now, ScanSummary};
 use flaccy_server::state::AppState;
@@ -84,6 +84,8 @@ async fn a_re_export_on_the_server_reaches_the_client_as_revision_two_of_the_sam
         port: 0,
         data_dir: Some(root.path().join("server-data")),
         behind_proxy: false,
+        mode: Mode::Easy,
+        hosts: Vec::new(),
     };
     let account = Credentials {
         username: USER.to_string(),
@@ -91,7 +93,7 @@ async fn a_re_export_on_the_server_reaches_the_client_as_revision_two_of_the_sam
         keys: Vec::new(),
     };
     credentials::save(&config.credentials_path(), &account).unwrap();
-    let state = AppState::open(config).unwrap();
+    let state = AppState::open(config).await.unwrap();
     let summary = scan(&state).await;
     assert_eq!(summary.added, 2, "{summary:?}");
 

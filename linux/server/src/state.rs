@@ -10,12 +10,59 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use flaccy_library::db::Db;
+use flaccy_library::logger;
 
 use crate::catalog::Catalog;
 use crate::config::Config;
 use crate::credentials::{CredentialStore, Credentials};
+use crate::native::BearerThrottle;
+use crate::security::{self, DeviceId};
 use crate::store::Store;
+use crate::sync::{self, DeviceRenamer};
 use crate::throttle::LoginThrottle;
+
+/// Opens `security.sqlite` and `state.sqlite`, and adopts the legacy account's keys when `credentials.toml` exists.
+async fn open_identity_and_sync(
+    config: &Config,
+    credentials: &CredentialStore,
+) -> Result<(security::Store, sync::Store), String> {
+    let security = security::Store::open(&config.security_path()).await.map_err(|error| error.to_string())?;
+    if let Some(account) = credentials.current() {
+        adopt_legacy_account(&security, &account).await?;
+    }
+    let incarnation = security.incarnation().await.map_err(|error| error.to_string())?;
+    let sync = sync::Store::open(&config.state_path(), incarnation).await.map_err(|error| error.to_string())?;
+    sync.set_device_renamer(device_renamer(security.clone()));
+    Ok((security, sync))
+}
+
+/// Makes the legacy account's name the first admin and gives that admin the legacy API keys.
+async fn adopt_legacy_account(security: &security::Store, account: &Credentials) -> Result<(), String> {
+    if account.username.trim().is_empty() {
+        return Ok(());
+    }
+    security.ensure_owner(&account.username).await.map_err(|error| error.to_string())?;
+    let imported = security.import_legacy(account).await.map_err(|error| error.to_string())?;
+    if imported.imported > 0 {
+        logger::info("server", &format!("imported {} API key(s) from credentials.toml", imported.imported));
+    }
+    Ok(())
+}
+
+/// Renames a device in the security store when a `device.rename` mutation commits.
+fn device_renamer(security: security::Store) -> DeviceRenamer {
+    let runtime = tokio::runtime::Handle::current();
+    Arc::new(move |device: &str, name: &str| {
+        let security = security.clone();
+        let id = DeviceId(device.to_owned());
+        let name = name.to_owned();
+        runtime.spawn(async move {
+            if let Err(error) = security.rename_device(&id, &name).await {
+                logger::warn("server", &format!("could not rename device {id}: {error}"));
+            }
+        });
+    })
+}
 
 /// The shared pieces behind `AppState`.
 pub struct Shared {
@@ -24,6 +71,12 @@ pub struct Shared {
     db: Mutex<Db>,
     pub store: Store,
     pub login_throttle: LoginThrottle,
+    /// Failed bearer tokens of the native API, per peer address.
+    pub bearer_throttle: BearerThrottle,
+    /// Users, devices, enrollments, API keys and the audit trail.
+    pub security: security::Store,
+    /// The sync state: playlists, loves, ratings, scalars, sessions and listens.
+    pub sync: sync::Store,
     /// The program that converts audio, `ffmpeg` unless `FLACCY_SERVER_FFMPEG` names another.
     pub ffmpeg: String,
     catalog: RwLock<Catalog>,
@@ -35,16 +88,16 @@ pub struct Shared {
 pub struct AppState(pub Arc<Shared>);
 
 impl AppState {
-    /// Opens the database in the data folder, creates the server's tables and
+    /// Opens the databases in the data folder, creates the server's tables and
     /// builds the catalog from what the last scan stored. The music folder is
     /// not scanned here.
-    pub fn open(config: Config) -> Result<AppState, String> {
+    pub async fn open(config: Config) -> Result<AppState, String> {
         let ffmpeg = std::env::var("FLACCY_SERVER_FFMPEG").unwrap_or_else(|_| "ffmpeg".to_string());
-        Self::open_with_ffmpeg(config, ffmpeg)
+        Self::open_with_ffmpeg(config, ffmpeg).await
     }
 
     /// Like `open`, converting audio with the program `ffmpeg` names.
-    pub fn open_with_ffmpeg(config: Config, ffmpeg: String) -> Result<AppState, String> {
+    pub async fn open_with_ffmpeg(config: Config, ffmpeg: String) -> Result<AppState, String> {
         if !config.music_folder.is_dir() {
             return Err(format!(
                 "The music folder {} does not exist or is not a folder. Set `music_folder` in the configuration file to the folder your music lives in.",
@@ -68,12 +121,16 @@ impl AppState {
         let store = Store::open(&database_path)?;
         let catalog = Catalog::build(&db, &store, &config.music_folder);
         let credentials = CredentialStore::new(config.credentials_path());
+        let (security, sync) = open_identity_and_sync(&config, &credentials).await?;
         Ok(AppState(Arc::new(Shared {
             config,
             credentials,
             db: Mutex::new(db),
             store,
             login_throttle: LoginThrottle::default(),
+            bearer_throttle: BearerThrottle::default(),
+            security,
+            sync,
             ffmpeg,
             catalog: RwLock::new(catalog),
             refresh_gate: Mutex::new(()),

@@ -362,7 +362,7 @@ pub(crate) fn clean_name(name: &str) -> Result<String, SecurityError> {
 }
 
 #[cfg(unix)]
-fn prepare_private_file(path: &Path) -> std::io::Result<()> {
+pub(crate) fn prepare_private_file(path: &Path) -> std::io::Result<()> {
     use std::os::unix::fs::OpenOptionsExt;
     if let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent)?;
@@ -371,14 +371,14 @@ fn prepare_private_file(path: &Path) -> std::io::Result<()> {
 }
 
 #[cfg(not(unix))]
-fn prepare_private_file(path: &Path) -> std::io::Result<()> {
+pub(crate) fn prepare_private_file(path: &Path) -> std::io::Result<()> {
     if let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent)?;
     }
     Ok(())
 }
 
-fn restrict_database_files(path: &Path) {
+pub(crate) fn restrict_database_files(path: &Path) {
     let name = path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
     for suffix in ["", "-wal", "-shm"] {
         let file = path.with_file_name(format!("{name}{suffix}"));

@@ -16,7 +16,7 @@ async fn first_song(server: &TestServer) -> (String, Vec<u8>) {
 
 #[tokio::test]
 async fn stream_sends_the_original_file_with_range_headers() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let (id, original) = first_song(&server).await;
     let full = server.get(&stream_uri(&id)).await;
@@ -42,7 +42,7 @@ async fn stream_sends_the_original_file_with_range_headers() {
 
 #[tokio::test]
 async fn a_range_request_answers_206_with_content_range() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let (id, original) = first_song(&server).await;
     let partial = server.get_with(&stream_uri(&id), &[("range", "bytes=10-109")]).await;
@@ -62,7 +62,7 @@ async fn a_range_request_answers_206_with_content_range() {
 
 #[tokio::test]
 async fn if_range_with_a_stale_date_returns_the_whole_file() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let (id, original) = first_song(&server).await;
     let last_modified = server.get(&stream_uri(&id)).await.header("last-modified").to_string();
@@ -86,7 +86,7 @@ async fn if_range_with_a_stale_date_returns_the_whole_file() {
 
 #[tokio::test]
 async fn a_file_removed_after_the_scan_is_reported_not_crashed_on() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let (id, _) = first_song(&server).await;
     std::fs::remove_file(server.music().join("Drill Band/Rough Cuts/01 Opening.wav")).unwrap();
@@ -99,7 +99,7 @@ async fn a_file_removed_after_the_scan_is_reported_not_crashed_on() {
 
 #[tokio::test]
 async fn download_is_the_raw_file_as_an_attachment() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let (id, original) = first_song(&server).await;
     let reply = server
@@ -112,7 +112,7 @@ async fn download_is_the_raw_file_as_an_attachment() {
 
 #[tokio::test]
 async fn raw_format_and_a_zero_bit_rate_stay_untouched() {
-    let server = TestServer::with_ffmpeg("/nonexistent/ffmpeg");
+    let server = TestServer::with_ffmpeg("/nonexistent/ffmpeg").await;
     server.standard_library();
     let (id, original) = first_song(&server).await;
     for extra in ["format=raw", "maxBitRate=0", "format=raw&maxBitRate=0&estimateContentLength=true"] {
@@ -123,7 +123,7 @@ async fn raw_format_and_a_zero_bit_rate_stay_untouched() {
 
 #[tokio::test]
 async fn a_missing_ffmpeg_answers_error_0_saying_to_install_it() {
-    let server = TestServer::with_ffmpeg("/nonexistent/ffmpeg");
+    let server = TestServer::with_ffmpeg("/nonexistent/ffmpeg").await;
     server.standard_library();
     let (id, _) = first_song(&server).await;
     let reply = server.get(&format!("{}&f=json&format=mp3", stream_uri(&id))).await;
@@ -148,7 +148,7 @@ async fn ffmpeg_converts_to_the_format_asked_for() {
     if !ffmpeg_present() {
         return;
     }
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let (id, original) = first_song(&server).await;
 
@@ -183,7 +183,7 @@ fn png(width: u32, height: u32) -> Vec<u8> {
 
 #[tokio::test]
 async fn cover_art_serves_the_stored_cover_and_resizes_it_into_the_cache() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let album = server.album_id("Rough Cuts").await;
     let uri = format!("/rest/getCoverArt?{}&id={album}", TestServer::login());

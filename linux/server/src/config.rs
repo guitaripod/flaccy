@@ -7,6 +7,17 @@ use serde::Deserialize;
 const DEFAULT_ADDRESS: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 4545;
 
+/// How the server is reached.
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    /// Tailnet addresses and loopback, plain HTTP, device tokens.
+    #[default]
+    Easy,
+    /// A Unix socket behind `tailscale serve`; not available yet.
+    Household,
+}
+
 /// What `config.toml` holds. Only `music_folder` is required.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Config {
@@ -23,6 +34,12 @@ pub struct Config {
     /// directly, because any client can then send any address and dodge the lockout.
     #[serde(default)]
     pub behind_proxy: bool,
+    /// How the server is reached; only `easy` exists in this release.
+    #[serde(default)]
+    pub mode: Mode,
+    /// Host names clients may use besides this machine's tailnet addresses and localhost.
+    #[serde(default)]
+    pub hosts: Vec<String>,
 }
 
 fn default_address() -> String {
@@ -39,6 +56,7 @@ pub enum ConfigError {
     Missing(PathBuf),
     Unreadable(PathBuf, String),
     Invalid(PathBuf, String),
+    HouseholdUnavailable,
 }
 
 impl std::fmt::Display for ConfigError {
@@ -54,6 +72,10 @@ impl std::fmt::Display for ConfigError {
                 formatter,
                 "Could not read the configuration file {}: {cause}. Check that it exists and that your user may read it.",
                 path.display()
+            ),
+            Self::HouseholdUnavailable => write!(
+                formatter,
+                "Household mode is not available in this release; remove `mode` or set it to \"easy\"."
             ),
             Self::Invalid(path, cause) => write!(
                 formatter,
@@ -86,6 +108,9 @@ impl Config {
         };
         let mut config: Config = toml::from_str(&text)
             .map_err(|err| ConfigError::Invalid(path.to_path_buf(), err.to_string()))?;
+        if config.mode == Mode::Household {
+            return Err(ConfigError::HouseholdUnavailable);
+        }
         config.music_folder = expand_home(&config.music_folder);
         config.data_dir = config.data_dir.map(|dir| expand_home(&dir));
         Ok(config)
@@ -103,6 +128,16 @@ impl Config {
     /// The SQLite library database.
     pub fn database_path(&self) -> PathBuf {
         self.data_dir().join("library.sqlite")
+    }
+
+    /// The security database: users, devices, enrollments, API keys and the audit trail.
+    pub fn security_path(&self) -> PathBuf {
+        self.data_dir().join("security.sqlite")
+    }
+
+    /// The sync state database.
+    pub fn state_path(&self) -> PathBuf {
+        self.data_dir().join("state.sqlite")
     }
 
     /// The account and API keys file.
@@ -176,6 +211,33 @@ mod tests {
         let (dir, path) = write("port = 4540\n");
         let error = Config::load(&path).unwrap_err();
         assert!(error.to_string().contains("music_folder"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn mode_and_hosts_default_to_easy_and_none() {
+        let (dir, path) = write("music_folder = \"/music\"\n");
+        let config = Config::load(&path).unwrap();
+        assert_eq!(config.mode, Mode::Easy);
+        assert!(config.hosts.is_empty());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn hosts_are_read_from_the_file() {
+        let (dir, path) = write("music_folder = \"/m\"\nmode = \"easy\"\nhosts = [\"music.example.org\"]\n");
+        assert_eq!(Config::load(&path).unwrap().hosts, vec!["music.example.org".to_string()]);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn household_mode_fails_to_load_with_the_documented_sentence() {
+        let (dir, path) = write("music_folder = \"/m\"\nmode = \"household\"\n");
+        let error = Config::load(&path).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Household mode is not available in this release; remove `mode` or set it to \"easy\"."
+        );
         std::fs::remove_dir_all(dir).unwrap();
     }
 

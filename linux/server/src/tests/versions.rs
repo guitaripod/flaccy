@@ -14,7 +14,7 @@ fn overwrite(server: &TestServer, title: &str, samples: usize, step: i16) {
 
 #[tokio::test]
 async fn a_re_export_keeps_the_song_its_playlists_and_its_plays_and_raises_the_revision() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let id = server.song_id("Opening").await;
     let before = server.json("getSong", &format!("id={id}")).await;
@@ -54,7 +54,7 @@ async fn a_re_export_keeps_the_song_its_playlists_and_its_plays_and_raises_the_r
 
 #[tokio::test]
 async fn a_retag_only_change_updates_the_title_and_keeps_revision_1() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let id = server.song_id("Opening").await;
 
@@ -72,7 +72,7 @@ async fn a_retag_only_change_updates_the_title_and_keeps_revision_1() {
 
 #[tokio::test]
 async fn new_files_join_and_removed_files_leave_on_the_next_scan() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     server.write_song("Zed/Third/02 Duet.wav", "Duet", "Zed", "Third", 8000, 3);
     std::fs::remove_file(server.music().join("The Echo/Second Light/02 Dim.wav")).unwrap();

@@ -6,7 +6,7 @@ use super::TestServer;
 
 #[tokio::test]
 async fn album_lists_page_and_sort_by_every_type() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
 
     let first = server.json("getAlbumList2", "type=alphabeticalByName&size=2&offset=0").await;
@@ -51,7 +51,7 @@ async fn album_lists_page_and_sort_by_every_type() {
 
 #[tokio::test]
 async fn an_album_lists_its_songs_in_track_order_with_every_field() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let album_id = server.album_id("Rough Cuts").await;
     let answer = server.json("getAlbum", &format!("id={album_id}")).await;
@@ -93,7 +93,7 @@ async fn an_album_lists_its_songs_in_track_order_with_every_field() {
 
 #[tokio::test]
 async fn artists_are_indexed_by_letter_ignoring_the_and_each_lists_its_albums() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let artists = server.json("getArtists", "").await;
     let indexes = artists.envelope.artists.unwrap().index.unwrap();
@@ -114,7 +114,7 @@ async fn artists_are_indexed_by_letter_ignoring_the_and_each_lists_its_albums() 
 
 #[tokio::test]
 async fn search_with_an_empty_query_returns_everything_paged_by_count_and_offset() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let everything = server.json("search3", "query=&songCount=100").await;
     let result = everything.envelope.search_result3.unwrap();
@@ -138,7 +138,7 @@ async fn search_with_an_empty_query_returns_everything_paged_by_count_and_offset
 
 #[tokio::test]
 async fn search_finds_by_any_word_of_title_artist_or_album() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let by_artist = server.json("search3", "query=echo").await;
     let songs = by_artist.envelope.search_result3.unwrap().song.unwrap();
@@ -152,7 +152,7 @@ async fn search_finds_by_any_word_of_title_artist_or_album() {
 
 #[tokio::test]
 async fn single_and_random_songs() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let id = server.song_id("Solo").await;
     let song = server.json("getSong", &format!("id={id}")).await;
@@ -168,7 +168,7 @@ async fn single_and_random_songs() {
 
 #[tokio::test]
 async fn scrobble_counts_plays_and_now_playing_does_not() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let id = server.song_id("Opening").await;
     let before = server.json("getSong", &format!("id={id}")).await;
@@ -200,7 +200,7 @@ async fn scrobble_counts_plays_and_now_playing_does_not() {
 
 #[tokio::test]
 async fn star_and_unstar_set_and_clear_loved() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let id = server.song_id("Middle").await;
     server.json("star", &format!("id={id}")).await.ok();
@@ -225,7 +225,7 @@ async fn star_and_unstar_set_and_clear_loved() {
 
 #[tokio::test]
 async fn an_album_with_every_song_loved_is_starred() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     for title in ["Glow", "Dim"] {
         let id = server.song_id(title).await;
@@ -241,7 +241,7 @@ async fn an_album_with_every_song_loved_is_starred() {
 
 #[tokio::test]
 async fn ratings_are_stored_per_song_and_zero_removes_them() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let id = server.song_id("Dim").await;
     server.json("setRating", &format!("id={id}&rating=4")).await.ok();
@@ -257,7 +257,7 @@ async fn ratings_are_stored_per_song_and_zero_removes_them() {
 
 #[tokio::test]
 async fn a_playlist_round_trips_through_create_update_and_delete() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let opening = server.song_id("Opening").await;
     let middle = server.song_id("Middle").await;
@@ -312,7 +312,7 @@ async fn a_playlist_round_trips_through_create_update_and_delete() {
 
 #[tokio::test]
 async fn the_play_queue_is_saved_and_read_back() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let empty = server.json("getPlayQueue", "").await;
     assert!(empty.ok().raw.get("playQueue").is_none());
@@ -335,7 +335,7 @@ async fn the_play_queue_is_saved_and_read_back() {
 
 #[tokio::test]
 async fn lyrics_come_from_what_the_library_has() {
-    let server = TestServer::new();
+    let server = TestServer::new().await;
     server.standard_library();
     let id = server.song_id("Opening").await;
     let none = server.json("getLyricsBySongId", &format!("id={id}")).await;
