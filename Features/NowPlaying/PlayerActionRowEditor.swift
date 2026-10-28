@@ -99,7 +99,7 @@ final class PlayerActionRowEditor: NSObject, UIGestureRecognizerDelegate {
     }
 
     private static let jiggleKey = "player.actionRow.jiggle"
-    private static let maxAngle: Float = 0.019
+    private static let maxAngle: Float = 0.03
 
     private let container: PlayerActionRowView
     private let host: UIView
