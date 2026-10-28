@@ -618,6 +618,11 @@ enum DemoRouter {
                let album = Library.shared.albums.first(where: { $0.title == track.albumTitle && $0.artist == track.artist }) {
                 nav.pushViewController(AlbumDetailViewController(album: album), animated: false)
             }
+        case "now-playing-edit":
+            player.expand()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                player.beginActionRowEditing()
+            }
         case "queue": player.expandShowingQueue()
         case "lyrics": player.expandShowingLyrics()
         case "lyric-share":

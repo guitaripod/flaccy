@@ -242,6 +242,8 @@ targets:
           - NowPlaying/NowPlayingViewController+TrackPan.swift
           - NowPlaying/NowPlayingViewController+Views.swift
           - NowPlaying/NowPlayingViewController.swift
+          - NowPlaying/PlayerActionOrder.swift
+          - NowPlaying/PlayerActionRowEditor.swift
           - NowPlaying/PlayerContainerViewController.swift
           - NowPlaying/QueueViewController.swift
           - NowPlaying/ScrubberView.swift

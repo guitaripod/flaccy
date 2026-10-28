@@ -108,47 +108,54 @@ extension NowPlayingViewController {
         ToastView.show(EqualizerCopy.outputChanged(name: output.name, profile: profile), in: view)
     }
 
-    func makeActionRow() -> UIStackView {
+    func makeActionRow() -> UIView {
         configureActionButtons()
 
-        let shuffle = GlassCapsule(hosting: shuffleButton)
-        let repeats = GlassCapsule(hosting: repeatButton)
-        let sleep = GlassCapsule(hosting: sleepTimerButton)
-        let lyrics = GlassCapsule(hosting: lyricsButton)
-        let queue = GlassCapsule(hosting: queueButton)
-        shuffleCapsule = shuffle
-        repeatCapsule = repeats
-        sleepTimerCapsule = sleep
-        lyricsCapsule = lyrics
-        queueCapsule = queue
-
-        actionCapsules = [
-            shuffle, repeats, GlassCapsule(hosting: airplayButton), sleep,
-            GlassCapsule(hosting: shareButton), lyrics, queue,
+        let capsules: [PlayerAction: GlassCapsule] = [
+            .shuffle: GlassCapsule(hosting: shuffleButton),
+            .repeatMode: GlassCapsule(hosting: repeatButton),
+            .airplay: GlassCapsule(hosting: airplayButton),
+            .sleepTimer: GlassCapsule(hosting: sleepTimerButton),
+            .share: GlassCapsule(hosting: shareButton),
+            .lyrics: GlassCapsule(hosting: lyricsButton),
+            .queue: GlassCapsule(hosting: queueButton),
         ]
-        actionRowContainer.axis = .vertical
-        actionRowContainer.spacing = 8
+        shuffleCapsule = capsules[.shuffle]
+        repeatCapsule = capsules[.repeatMode]
+        sleepTimerCapsule = capsules[.sleepTimer]
+        lyricsCapsule = capsules[.lyrics]
+        queueCapsule = capsules[.queue]
+
+        let controls: [PlayerAction: UIView] = [
+            .shuffle: shuffleButton,
+            .repeatMode: repeatButton,
+            .airplay: airplayButton,
+            .sleepTimer: sleepTimerButton,
+            .share: shareButton,
+            .lyrics: lyricsButton,
+            .queue: queueButton,
+        ]
+        let editor = PlayerActionRowEditor(
+            container: actionRowContainer, host: view, capsules: capsules, controls: controls
+        )
+        editor.onOrderChanged = { [weak self] in self?.setupAccessibilityOrder() }
+        actionRowEditor = editor
+
         relayoutActionRow()
         return actionRowContainer
     }
 
-    /// Lays the capsules out as a single equal-width row, splitting into two
+    /// Lays the capsules out from the person's saved order, splitting into two
     /// rows at accessibility text sizes or in a column too narrow for seven
     /// round capsules, so they never overflow or squeeze into ovals.
     func relayoutActionRow() {
-        for view in actionRowContainer.arrangedSubviews {
-            view.removeFromSuperview()
-        }
         let wraps = traitCollection.preferredContentSizeCategory.isAccessibilityCategory || actionRowIsNarrow
-        let groups: [[UIView]] = wraps
-            ? [Array(actionCapsules.prefix(4)), Array(actionCapsules.suffix(3))]
-            : [actionCapsules]
-        for group in groups {
-            let row = UIStackView(arrangedSubviews: group)
-            row.distribution = .fillEqually
-            row.spacing = 8
-            actionRowContainer.addArrangedSubview(row)
-        }
+        actionRowEditor?.applyLayout(wraps: wraps)
+    }
+
+    /// Opens the jiggle for the screenshot and exercise routes.
+    func beginActionRowEditing() {
+        actionRowEditor?.beginEditing()
     }
 
     /// Re-splits the capsule row when the column it lives in crosses the width
@@ -167,6 +174,7 @@ extension NowPlayingViewController {
 
         shuffleButton.setImage(UIImage(systemName: "shuffle", withConfiguration: iconConfig), for: .normal)
         shuffleButton.accessibilityLabel = String(localized: "Shuffle")
+        shuffleButton.accessibilityIdentifier = "player.action.shuffle"
         shuffleButton.addAction(UIAction { [weak self] _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             AudioPlayer.shared.toggleShuffle()
@@ -175,6 +183,7 @@ extension NowPlayingViewController {
 
         repeatButton.setImage(UIImage(systemName: "repeat", withConfiguration: iconConfig), for: .normal)
         repeatButton.accessibilityLabel = String(localized: "Repeat")
+        repeatButton.accessibilityIdentifier = "player.action.repeat"
         repeatButton.addAction(UIAction { [weak self] _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             AudioPlayer.shared.cycleRepeatMode()
@@ -184,9 +193,11 @@ extension NowPlayingViewController {
         airplayButton.tintColor = .white.withAlphaComponent(0.7)
         airplayButton.activeTintColor = .white
         airplayButton.accessibilityLabel = "AirPlay"
+        airplayButton.accessibilityIdentifier = "player.action.airplay"
 
         sleepTimerButton.setImage(UIImage(systemName: "moon.zzz", withConfiguration: iconConfig), for: .normal)
         sleepTimerButton.accessibilityLabel = String(localized: "Sleep timer")
+        sleepTimerButton.accessibilityIdentifier = "player.action.sleep"
         sleepTimerButton.addAction(UIAction { [weak self] _ in self?.showSleepTimerSheet() }, for: .touchUpInside)
         sleepTimerButton.menu = UIMenu(children: [
             UIDeferredMenuElement.uncached { [weak self] completion in
@@ -196,6 +207,7 @@ extension NowPlayingViewController {
 
         shareButton.setImage(UIImage(systemName: "square.and.arrow.up", withConfiguration: iconConfig), for: .normal)
         shareButton.accessibilityLabel = String(localized: "Share")
+        shareButton.accessibilityIdentifier = "player.action.share"
         shareButton.addAction(UIAction { [weak self] _ in
             guard let self, let track = AudioPlayer.shared.currentTrack else { return }
             UIImpactFeedbackGenerator(style: .light).impactOccurred()

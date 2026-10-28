@@ -312,6 +312,10 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         expand()
     }
 
+    func beginActionRowEditing() {
+        npc.beginActionRowEditing()
+    }
+
     func collapseAndPush(_ viewController: UIViewController) {
         guard state != .dock, !isPaneMode else {
             onRequestPush?(viewController)
