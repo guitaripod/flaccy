@@ -349,6 +349,11 @@ extension DatabaseManager {
             try ServerSyncSchema.create(db)
         }
 
+        migrator.registerMigration("v19") { db in
+            try ServerSyncSchema.refreshPlayIndexes(db)
+            try ServerSyncSchema.createPendingKeys(db)
+        }
+
         return migrator
     }
 }

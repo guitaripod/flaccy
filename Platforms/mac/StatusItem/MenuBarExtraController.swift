@@ -130,6 +130,12 @@ final class MenuBarExtraController: NSObject, NSMenuDelegate {
         let sleepItem = menu.addItem(withTitle: sleepTimerTitle(), action: nil, keyEquivalent: "")
         sleepItem.submenu = SleepTimerMenuBuilder.build()
 
+        let serverLines = ServerMenuLines.current()
+        if !serverLines.isEmpty {
+            menu.addItem(.separator())
+            for line in serverLines { menu.addItem(withTitle: line, action: nil, keyEquivalent: "").isEnabled = false }
+        }
+
         menu.addItem(.separator())
         let open = menu.addItem(withTitle: String(localized: "Open Flaccy"), action: #selector(openApp), keyEquivalent: "")
         open.target = self

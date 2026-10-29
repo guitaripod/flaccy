@@ -288,8 +288,9 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
-             .serversExplainer, .server, .cacheLimit, .cacheUsage:
+             .serversExplainer, .cacheLimit, .cacheUsage:
             return false
+        case .server(let server): return server.flaccy != nil
         case .historySync: return !ListenHistorySync.shared.status.isBusy
         case .rescanLibrary: return !isRescanning
         default: return true
@@ -316,11 +317,13 @@ final class SettingsViewController: UITableViewController {
         case .rescanLibrary: handleRescanTap()
         case .metadataReport: handleMetadataTap()
         case .findMissingArtwork: handleFindMissingArtworkTap()
+        case .addFlaccyServer: handleAddFlaccyServerTap()
         case .addServer: handleAddServerTap()
+        case .server(let server): handleServerTap(server)
         case .clearCache: handleClearCacheTap()
         case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
-             .serversExplainer, .server, .cacheLimit, .cacheUsage:
+             .serversExplainer, .cacheLimit, .cacheUsage:
             break
         }
     }

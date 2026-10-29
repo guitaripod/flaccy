@@ -35,16 +35,20 @@ enum SyncMeta {
     static let listensAfter = "listens_after"
     static let listensTailFrom = "listens_tail_from"
     static let paused = "paused"
+    static let role = "role"
+    static let recording = "recording"
+    static let reseedCoverRetry = "reseed_cover_retry"
 
     static func get(_ db: Database, _ key: String) throws -> String? {
-        try String.fetchOne(db, sql: "SELECT value FROM sync_meta WHERE key = ?", arguments: [key])
+        let fetch = try db.cachedStatement(sql: "SELECT value FROM sync_meta WHERE key = ?")
+        return try String.fetchOne(fetch, arguments: [key])
     }
 
     static func set(_ db: Database, _ key: String, _ value: String) throws {
-        try db.execute(
-            sql: "INSERT INTO sync_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            arguments: [key, value]
+        let upsert = try db.cachedStatement(
+            sql: "INSERT INTO sync_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
         )
+        try upsert.execute(arguments: [key, value])
     }
 
     static func remove(_ db: Database, _ key: String) throws {
@@ -93,6 +97,22 @@ enum SyncMeta {
         return stamp
     }
 
+    /// `count` consecutive stamps from one call into the core: what `count` calls at the same instant would answer.
+    static func nextStamps(_ db: Database, count: Int, nowMs: Int64) throws -> [Int64] {
+        guard count > 0 else { return [] }
+        let last = try int(db, lastStamp) ?? 0
+        let offset = try int(db, serverOffset) ?? 0
+        let first = try ServerCoreBridge.nextStamp(last: last, offsetMs: offset, nowMs: nowMs)
+        try setInt(db, lastStamp, first + Int64(count - 1))
+        return (0..<count).map { first + Int64($0) }
+    }
+
+    static func takeMutationIds(_ db: Database, count: Int) throws -> Int64 {
+        let first = try int(db, nextMutationId) ?? 1
+        try setInt(db, nextMutationId, first + Int64(count))
+        return first
+    }
+
     static func observeServerTime(_ db: Database, serverTimeMs: Int64, localNowMs: Int64) throws {
         try setInt(db, serverOffset, serverTimeMs &- localNowMs)
     }
@@ -106,7 +126,7 @@ enum SyncMeta {
     /// Forgets the server, the base and the queue. The sync ids of playlists and entries and the event ids of plays stay, so
     /// connecting again to the same server finds what is already there instead of creating it twice.
     static func clearAll(_ db: Database) throws {
-        for table in ServerSyncSchema.tables {
+        for table in ServerSyncSchema.serverState {
             try db.execute(sql: "DELETE FROM \(table)")
         }
     }

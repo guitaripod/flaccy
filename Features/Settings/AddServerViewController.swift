@@ -34,17 +34,21 @@ final class AddServerViewController: UITableViewController {
     private let notification = UINotificationFeedbackGenerator()
     private var addButton: UIBarButtonItem!
 
-    init(servers: RemoteServersViewModel, link: ServerLink? = nil) {
+    init(servers: RemoteServersViewModel, link: ServerLink? = nil, address: String? = nil) {
         self.servers = servers
         super.init(style: .insetGrouped)
         if let link { form.apply(link: link) }
+        if let address {
+            form.address = address
+            form.suggestName()
+        }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    static func present(from host: UIViewController, servers: RemoteServersViewModel, link: ServerLink? = nil) {
-        let controller = AddServerViewController(servers: servers, link: link)
+    static func present(from host: UIViewController, servers: RemoteServersViewModel, link: ServerLink? = nil, address: String? = nil) {
+        let controller = AddServerViewController(servers: servers, link: link, address: address)
         let navigation = UINavigationController(rootViewController: controller)
         navigation.modalPresentationStyle = .pageSheet
         host.present(navigation, animated: true)
@@ -268,15 +272,29 @@ final class AddServerViewController: UITableViewController {
     private func scanTapped() {
         selection.selectionChanged()
         view.endEditing(true)
-        let scanner = QRScannerViewController { [weak self] link in
+        let scanner = QRScannerViewController { [weak self] parsed in
             self?.dismiss(animated: true) {
-                self?.form.apply(link: link)
-                self?.notification.notificationOccurred(.success)
-                self?.applySnapshot(animated: false)
-                self?.formChanged()
+                guard let self else { return }
+                switch parsed {
+                case .subsonic(let link):
+                    self.form.apply(link: link)
+                    self.notification.notificationOccurred(.success)
+                    self.applySnapshot(animated: false)
+                    self.formChanged()
+                case .flaccyServer(let link):
+                    self.openFlaccyServerSheet(for: link)
+                }
             }
         }
         present(UINavigationController(rootViewController: scanner), animated: true)
+    }
+
+    private func openFlaccyServerSheet(for link: FlaccyServerLink) {
+        notification.notificationOccurred(.success)
+        guard let presenter = presentingViewController else { return }
+        dismiss(animated: true) {
+            AddFlaccyServerViewController.present(from: presenter, link: link)
+        }
     }
 
     #if DEBUG
@@ -327,6 +345,7 @@ final class FormFieldCell: UITableViewCell, UITextFieldDelegate {
     let field = UITextField()
     var onChange: ((String) -> Void)?
     var onEnd: (() -> Void)?
+    var onReturn: (() -> Void)?
 
     private let captionLabel = UILabel()
 
@@ -372,6 +391,8 @@ final class FormFieldCell: UITableViewCell, UITextFieldDelegate {
         field.autocapitalizationType = .sentences
         field.autocorrectionType = .default
         field.textContentType = nil
+        field.returnKeyType = .next
+        onReturn = nil
     }
 
     func show(title: String, value: String, placeholder: String) {
@@ -383,6 +404,7 @@ final class FormFieldCell: UITableViewCell, UITextFieldDelegate {
 
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
+        onReturn?()
         return true
     }
 }

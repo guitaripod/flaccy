@@ -25,6 +25,8 @@ packages:
     path: Core/FlaccyCore
   FlaccyServerCore:
     path: Core/FlaccyServerCore
+  FlaccyServerEmbed:
+    path: Core/FlaccyServerEmbed
   GRDB:
     url: https://github.com/groue/GRDB.swift.git
     from: 7.0.0
@@ -267,8 +269,14 @@ targets:
           - Remote/RemoteShot.swift
           - Search/SearchResultCell.swift
           - Search/SearchViewController.swift
+          - ServerSync/FlaccyServerShot.swift
+          - ServerSync/ServerSyncBackgroundRefresh.swift
+          - Settings/AddFlaccyServerViewController.swift
           - Settings/AddServerViewController.swift
+          - Settings/FlaccyServerDetailViewController.swift
+          - Settings/FlaccyServerNudgeView.swift
           - Settings/QRScannerViewController.swift
+          - Settings/ServerMergeSummaryViewController.swift
           - Settings/SettingsCells.swift
           - Settings/SettingsHeaderView.swift
           - Settings/SettingsViewController+Actions.swift
@@ -306,6 +314,7 @@ targets:
       - package: FlaccyCore
         product: FlaccyEngine
       - package: FlaccyServerCore
+      - package: FlaccyServerEmbed
       - package: GRDB
       - package: MidgarKit
         product: MidgarCore
@@ -320,6 +329,7 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
+        com.apple.security.network.server: true
         com.apple.security.files.user-selected.read-write: true
         com.apple.security.files.bookmarks.app-scope: true
         com.apple.security.application-groups:

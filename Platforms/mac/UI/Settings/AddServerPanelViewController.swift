@@ -30,10 +30,11 @@ final class AddServerPanelViewController: NSViewController, NSTextFieldDelegate 
     private var passwordRow: NSGridRow!
     private var apiKeyRow: NSGridRow!
 
-    init(servers: RemoteServersViewModel, link: ServerLink? = nil) {
+    init(servers: RemoteServersViewModel, link: ServerLink? = nil, address: String? = nil) {
         self.servers = servers
         super.init(nibName: nil, bundle: nil)
         if let link { form.apply(link: link) }
+        if let address { form.address = address }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

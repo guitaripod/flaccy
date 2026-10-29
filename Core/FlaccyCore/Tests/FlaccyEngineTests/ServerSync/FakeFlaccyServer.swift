@@ -53,6 +53,10 @@ final class FakeFlaccyServer: @unchecked Sendable {
     var pullSinces: [Int64] = []
     var pageCap = 5_000
     var refusedNames: Set<String> = []
+    var role: ServerRole = .member
+    var writeRole: ServerRole = .member
+    var queuedHelloRoles: [ServerRole] = []
+    var refuseCoversTimes = 0
     var protocols = [1]
     var features = ["sync", "live", "lastfm.history"]
     var oversizedPageOnce = false
@@ -120,6 +124,29 @@ final class FakeFlaccyServer: @unchecked Sendable {
         }
     }
 
+    @discardableResult
+    func plantPlaylist(name: String, songs: [ServerSongRef], coverBlob: String? = nil) throws -> String {
+        try locked {
+            counter += 1
+            let id = ServerSyncIDs.uuidV7(nowMs: Int64(counter))
+            let playlist = CorePlaylist(
+                id: id, owner: "user-1", name: name, coverBlob: coverBlob, visibility: .private, alive: true, createdAt: 1_700_000_000,
+                stamps: PlaylistStamps(name: 1, cover: 1, visibility: 1, alive: 1)
+            )
+            var entries: [CoreEntry] = []
+            for (index, song) in songs.enumerated() {
+                entries.append(CoreEntry(
+                    id: ServerSyncIDs.uuidV7(nowMs: Int64(counter * 10_000 + index)), playlist: id, song: coreRef(song),
+                    pos: "a\(String(format: "%05d", index))V", alive: true, stamps: EntryStamps(song: 1, pos: 1, alive: 1)
+                ))
+            }
+            state.playlists[id] = CorePlaylistDoc(playlist: playlist, entries: entries)
+            try emit("playlist", id, deleted: false, value: playlist)
+            for entry in entries { try emit("playlist_entry", entry.id, deleted: false, value: entry) }
+            return id
+        }
+    }
+
     func plantSessions(_ count: Int) throws {
         try locked {
             for index in 0..<count {
@@ -162,12 +189,17 @@ final class FakeFlaccyServer: @unchecked Sendable {
         if let claimed, claimed != state.incarnation { throw ServerSyncError.incarnationChanged(state.incarnation) }
     }
 
-    func hello() throws -> ServerHello {
+    func hello(token: String?) throws -> ServerHello {
         try locked {
             try gate("hello")
+            var caller: ServerHelloCaller?
+            if let token, let who = tokens[token] {
+                let shown = queuedHelloRoles.isEmpty ? role : queuedHelloRoles.removeFirst()
+                caller = ServerHelloCaller(user: who.user, role: shown, device: who.device)
+            }
             return ServerHello(
                 protocols: protocols, server: ServerInfo(name: "fake", version: "1.0.0", schema: 1), features: features,
-                mode: "easy", serverTimeMs: clock(), incarnation: state.incarnation
+                mode: "easy", serverTimeMs: clock(), incarnation: state.incarnation, caller: caller
             )
         }
     }
@@ -182,7 +214,7 @@ final class FakeFlaccyServer: @unchecked Sendable {
             tokens[token] = (device, "user-1")
             deviceNames[device] = request.name
             return ServerEnrollReply(
-                device: device, token: token, user: ServerUser(id: "user-1", name: "tester", role: .member),
+                device: device, token: token, user: ServerUser(id: "user-1", name: "tester", role: role),
                 serverTimeMs: clock(), incarnation: state.incarnation
             )
         }

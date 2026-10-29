@@ -77,6 +77,18 @@ public struct EntityRef: Hashable, Sendable, Codable {
     }
 }
 
+public struct Entity: Hashable, Sendable, Codable {
+    public var kind: EntityKind
+    public var id: String
+    public var value: JSONValue
+
+    public init(kind: EntityKind, id: String, value: JSONValue) {
+        self.kind = kind
+        self.id = id
+        self.value = value
+    }
+}
+
 public struct ApplyPlaylistResult: Hashable, Sendable, Codable {
     public var status: ApplyStatus
     public var code: ErrorCode?

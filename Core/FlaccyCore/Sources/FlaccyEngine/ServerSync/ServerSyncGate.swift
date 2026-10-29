@@ -9,11 +9,13 @@ public final class ServerSyncGate: @unchecked Sendable {
 
     private let lock = NSLock()
     private var configured: Bool
+    private var recording: Bool
     private var recordedHandler: (@Sendable () -> Void)?
     private let clock: @Sendable () -> Int64
 
-    init(configured: Bool, clock: @escaping @Sendable () -> Int64 = ServerSyncGate.systemClock) {
+    init(configured: Bool, recording: Bool, clock: @escaping @Sendable () -> Int64 = ServerSyncGate.systemClock) {
         self.configured = configured
+        self.recording = recording
         self.clock = clock
     }
 
@@ -27,6 +29,15 @@ public final class ServerSyncGate: @unchecked Sendable {
 
     func setConfigured(_ value: Bool) {
         lock.withLock { configured = value }
+    }
+
+    /// True once writes are being queued for the server: a server is connected and the account may write to it.
+    var isRecording: Bool {
+        lock.withLock { recording }
+    }
+
+    func setRecording(_ value: Bool) {
+        lock.withLock { recording = value }
     }
 
     var nowMs: Int64 { clock() }

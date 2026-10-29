@@ -32,7 +32,7 @@ final class SyncDevice: @unchecked Sendable {
 
     static let link = FlaccyServerLink(baseURL: URL(string: "http://fake:4545") ?? URL(fileURLWithPath: "/"), enrollmentCode: "GOODCODE", name: "Fake")
 
-    init(server: FakeFlaccyServer, backoff: ServerSyncBackoff = .none) throws {
+    init(server: FakeFlaccyServer, transports: (any ServerSyncTransportFactory)? = nil, backoff: ServerSyncBackoff = .none) throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("sync-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         self.folder = folder
@@ -42,7 +42,7 @@ final class SyncDevice: @unchecked Sendable {
         engine = ServerSyncEngine(
             database: database,
             configuration: ServerSyncConfiguration(
-                transports: FakeTransports(server: server), tokens: tokens, scalarSink: sink, backoff: backoff,
+                transports: transports ?? FakeTransports(server: server), tokens: tokens, scalarSink: sink, backoff: backoff,
                 platform: "ios", isEntitled: { state.entitled }, sleep: { state.record($0) }, jitter: { 0.5 },
                 localChangeDelaySeconds: nil, periodSeconds: 1
             )

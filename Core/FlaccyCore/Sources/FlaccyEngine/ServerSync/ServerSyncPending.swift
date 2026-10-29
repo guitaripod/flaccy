@@ -47,6 +47,23 @@ enum SyncPending {
         return id
     }
 
+    /// Appends many mutations with one allocation of ids and stamps. Answers nothing: the ids are dense from the first one taken.
+    static func appendAll(_ db: Database, _ batch: [NewMutation], nowMs: Int64) throws {
+        guard !batch.isEmpty else { return }
+        let firstId = try SyncMeta.takeMutationIds(db, count: batch.count)
+        let stamps = try SyncMeta.nextStamps(db, count: batch.count, nowMs: nowMs)
+        let insert = try db.cachedStatement(sql: """
+            INSERT INTO sync_pending (mutation_id, name, stamp, args_json, touches_json) VALUES (?, ?, ?, ?, ?)
+            """)
+        for (offset, new) in batch.enumerated() {
+            let arguments: [any DatabaseValueConvertible] = [
+                firstId + Int64(offset), new.name, new.stamp ?? stamps[offset], try text(new.args), try ServerCoreBridge.text(new.touches),
+            ]
+            try insert.execute(arguments: StatementArguments(arguments))
+            try insertKeys(db, id: firstId + Int64(offset), touches: new.touches)
+        }
+    }
+
     private static func text(_ json: ServerJSON) throws -> String {
         guard let text = json.text else { throw ServerSyncStoreError.unencodable }
         return text
@@ -62,6 +79,15 @@ enum SyncPending {
                 """,
             arguments: [id, name, stamp, argsJSON, try ServerCoreBridge.text(touches)]
         )
+        try insertKeys(db, id: id, touches: touches)
+    }
+
+    private static func insertKeys(_ db: Database, id: Int64, touches: [String]) throws {
+        guard !touches.isEmpty else { return }
+        let insert = try db.cachedStatement(sql: "INSERT OR IGNORE INTO sync_pending_keys (key, mutation_id) VALUES (?, ?)")
+        for key in touches {
+            try insert.execute(arguments: [key, id])
+        }
     }
 
     static func appendListen(_ db: Database, _ listen: ServerJSON, nowMs: Int64) throws {
@@ -140,6 +166,13 @@ enum SyncPending {
         for text in texts {
             touches.append(contentsOf: try ServerCoreBridge.decode([String].self, from: text))
         }
+        try db.execute(
+            sql: """
+                DELETE FROM sync_pending_keys WHERE mutation_id IN (
+                    SELECT mutation_id FROM sync_pending WHERE acked = 1 AND mutation_id <= ?)
+                """,
+            arguments: [confirmed]
+        )
         try db.execute(sql: "DELETE FROM sync_pending WHERE acked = 1 AND mutation_id <= ?", arguments: [confirmed])
         return touches
     }
@@ -165,6 +198,7 @@ enum SyncPending {
     /// Gives every queued mutation a fresh id from 1 behind `leading`, forgetting what the server said about them.
     static func renumber(_ db: Database, leading: [NewMutation], nowMs: Int64) throws {
         let kept = try rows(db)
+        try db.execute(sql: "DELETE FROM sync_pending_keys")
         try db.execute(sql: "DELETE FROM sync_pending")
         var next: Int64 = 1
         for lead in leading {
@@ -179,11 +213,14 @@ enum SyncPending {
         try SyncMeta.setInt(db, SyncMeta.nextMutationId, next)
     }
 
-    static func rows(_ db: Database, excludingListens: Bool = false) throws -> [PendingRow] {
-        let condition = excludingListens ? "WHERE name <> 'listen.record'" : ""
-        return try Row.fetchAll(
+    static func rows(_ db: Database, after: Int64 = 0) throws -> [PendingRow] {
+        try Row.fetchAll(
             db,
-            sql: "SELECT mutation_id, name, stamp, args_json, acked, failed, touches_json FROM sync_pending \(condition) ORDER BY mutation_id"
+            sql: """
+                SELECT mutation_id, name, stamp, args_json, acked, failed, touches_json FROM sync_pending
+                WHERE mutation_id > ? ORDER BY mutation_id
+                """,
+            arguments: [after]
         ).map { row in
             let touches: String = row["touches_json"]
             return PendingRow(
@@ -217,44 +254,48 @@ enum ServerSyncStoreError: Error, Equatable {
     case notConfigured
 }
 
-/// The queue indexed by the entity each mutation touches, so folding one entity reads only its own mutations.
-struct SyncPendingIndex {
+/// Finds the queued mutations that touch one entity through `sync_pending_keys`, reading only those.
+final class SyncPendingLookup {
 
-    private var byKey: [String: [CorePending]] = [:]
+    private let db: Database
+    private var reseeds: [Int64: [String: [ServerJSON]]] = [:]
 
-    static func load(_ db: Database) throws -> SyncPendingIndex {
-        var index = SyncPendingIndex()
-        for row in try SyncPending.rows(db, excludingListens: true) {
-            if row.name == SyncPending.reseed {
-                try index.addReseed(row)
-                continue
+    init(_ db: Database) {
+        self.db = db
+    }
+
+    func hasPending(for key: String) throws -> Bool {
+        let check = try db.cachedStatement(sql: "SELECT EXISTS (SELECT 1 FROM sync_pending_keys WHERE key = ?)")
+        return try Bool.fetchOne(check, arguments: [key]) ?? false
+    }
+
+    func pending(for key: String) throws -> [CorePending] {
+        let fetch = try db.cachedStatement(sql: """
+            SELECT p.mutation_id, p.name, p.stamp, p.args_json, p.failed FROM sync_pending_keys k
+            JOIN sync_pending p ON p.mutation_id = k.mutation_id
+            WHERE k.key = ? AND p.name <> 'listen.record' ORDER BY p.mutation_id
+            """)
+        let rows = try Row.fetchAll(fetch, arguments: [key])
+        return try rows.map { row in
+            let id: Int64 = row["mutation_id"]
+            let name: String = row["name"]
+            let argsJSON: String = row["args_json"]
+            let failed = (row["failed"] as Int) != 0
+            guard name == SyncPending.reseed else {
+                return try ServerCoreBridge.pending(id: id, name: name, stamp: row["stamp"], argsJSON: argsJSON, failed: failed)
             }
-            let pending = try ServerCoreBridge.pending(
-                id: row.id, name: row.name, stamp: row.stamp, argsJSON: row.argsJSON, failed: row.failed
-            )
-            for key in row.touches {
-                index.byKey[key, default: []].append(pending)
-            }
+            let args: ServerJSON = ["entities": .array(group(of: id, argsJSON: argsJSON)[key] ?? [])]
+            return try ServerCoreBridge.pending(id: id, name: name, stamp: row["stamp"], argsJSON: args.text ?? "{}", failed: failed)
         }
-        return index
     }
 
-    func pending(for key: String) -> [CorePending] {
-        byKey[key] ?? []
-    }
-
-    private mutating func addReseed(_ row: PendingRow) throws {
-        guard let entities = ServerJSON(text: row.argsJSON)?["entities"]?.array else { return }
+    private func group(of id: Int64, argsJSON: String) -> [String: [ServerJSON]] {
+        if let known = reseeds[id] { return known }
         var groups: [String: [ServerJSON]] = [:]
-        for entity in entities {
+        for entity in ServerJSON(text: argsJSON)?["entities"]?.array ?? [] {
             if let key = SyncPending.reseedKey(of: entity) { groups[key, default: []].append(entity) }
         }
-        for (key, group) in groups {
-            let args: ServerJSON = ["entities": .array(group)]
-            guard let text = args.text else { continue }
-            byKey[key, default: []].append(try ServerCoreBridge.pending(
-                id: row.id, name: row.name, stamp: row.stamp, argsJSON: text, failed: row.failed
-            ))
-        }
+        reseeds[id] = groups
+        return groups
     }
 }

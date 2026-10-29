@@ -42,8 +42,8 @@ enum SyncListens {
     }
 
     /// Stores a page and moves the paging state, in the caller's transaction. Answers how many rows were written.
-    static func apply(_ db: Database, page: ServerListensPage, memo: inout ListenKeyMemo) throws -> Int {
-        let written = try upsert(db, page.listens, memo: &memo)
+    static func apply(_ db: Database, page: ServerListensPage, memo: inout ListenKeyMemo, rows: [ServerListenItem]) throws -> Int {
+        let written = try upsert(db, rows, memo: &memo)
         if try SyncMeta.get(db, SyncMeta.listensPhase) == tail {
             if let last = page.listens.last {
                 try SyncMeta.setInt(db, SyncMeta.listensAfter, last.seq)
@@ -72,6 +72,11 @@ enum SyncListens {
         }
         try SyncMeta.remove(db, SyncMeta.listensBefore)
         try SyncMeta.remove(db, SyncMeta.listensTailFrom)
+    }
+
+    /// Stores a slice of a page without moving the paging state.
+    static func store(_ db: Database, _ listens: [ServerListenItem], memo: inout ListenKeyMemo) throws -> Int {
+        try upsert(db, listens, memo: &memo)
     }
 
     private static func upsert(_ db: Database, _ listens: [ServerListenItem], memo: inout ListenKeyMemo) throws -> Int {

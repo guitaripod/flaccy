@@ -28,7 +28,7 @@ actor RemoteCatalogSync {
     /// Syncs every server whose last sync is older than six hours, or that never synced, and sends the stars that did not reach their server.
     func syncStaleServers(now: Date = Date()) async {
         let servers = (try? await RemoteServers.shared.list()) ?? []
-        for server in servers where Self.isStale(server.lastSyncedAt, now: now) {
+        for server in servers where Self.isStale(server.lastSyncedAt, now: now) && RemoteLibraryVisibility.isShown(serverID: server.id) {
             _ = try? await sync(serverID: server.id)
         }
         await RemoteServerReports.flushPendingStars()
@@ -42,6 +42,7 @@ actor RemoteCatalogSync {
     /// Syncs one server. A sync already running for it is joined rather than started twice.
     @discardableResult
     func sync(serverID: String) async throws -> RemoteSyncReport {
+        guard RemoteLibraryVisibility.isShown(serverID: serverID) else { return RemoteSyncReport() }
         if let existing = running[serverID] { return try await existing.value }
         let task = Task { try await self.performSync(serverID: serverID) }
         running[serverID] = task
@@ -78,6 +79,7 @@ actor RemoteCatalogSync {
         )
         do {
             let report = try await runSync(serverID: serverID)
+            await ServerSyncService.engine.resolveGhosts()
             RemoteAvailability.shared.setReachable(serverID: serverID, true)
             RemoteSyncStatus.shared.finish(serverID: serverID, failure: nil)
             return report

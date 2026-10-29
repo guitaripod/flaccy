@@ -104,3 +104,13 @@ struct DerivedIdTests {
         #expect(keys.count == 2)
     }
 }
+
+struct ReseedChunkTests {
+    @Test func entitiesSplitAtTheServersLimitsInOrder() throws {
+        let entities = (0..<2_300).map { Entity(kind: .love, id: String(format: "%032x", $0), value: ["n": .int(Int64($0))]) }
+        let chunks = try ServerCore.chunkReseed(entities)
+        #expect(chunks.map(\.count) == [1_000, 1_000, 300])
+        #expect(chunks.flatMap { $0 } == entities)
+        #expect(try ServerCore.chunkReseed([]).isEmpty)
+    }
+}

@@ -12,6 +12,7 @@ actor FlaccyServerClient: ServerSyncTransport {
     static let protocolVersion = "1"
     static let probeTimeout: TimeInterval = 5
     static let callTimeout: TimeInterval = 60
+    static let liveTimeout: TimeInterval = 15
 
     private let baseURL: URL
     private let token: String?
@@ -103,6 +104,19 @@ actor FlaccyServerClient: ServerSyncTransport {
         var call = try request("GET", "/blobs/\(Self.escaped(hash))")
         call.setValue("image/*", forHTTPHeaderField: "Accept")
         return try await send(call)
+    }
+
+    /// The WebSocket of `GET /live` (PROTOCOL.md section 9), signed in with the device token. The upgrade carries no `Origin`
+    /// header, which the server refuses.
+    func liveSocket(incarnation: String? = nil) throws -> URLSessionWebSocketTask {
+        var call = try request("GET", "/live", incarnation: incarnation, timeout: Self.liveTimeout)
+        guard let url = call.url, var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            throw ServerSyncError.malformed("the server address")
+        }
+        components.scheme = components.scheme == "https" ? "wss" : "ws"
+        call.url = components.url
+        call.setValue(nil, forHTTPHeaderField: "Accept")
+        return session.webSocketTask(with: call)
     }
 
     private nonisolated static func escaped(_ segment: String) -> String {

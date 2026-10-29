@@ -5,6 +5,11 @@ public enum ServerRole: String, Hashable, Sendable, Codable {
     case member
     case guest
     case pending
+
+    /// True for the roles that may write playlists, loves and plays to the server.
+    public var canWrite: Bool {
+        self == .admin || self == .member
+    }
 }
 
 public struct ServerInfo: Hashable, Sendable, Codable {

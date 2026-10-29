@@ -47,7 +47,9 @@ final class ServerSyncStore: Sendable {
     static let pushMaxMutations = 500
     static let pushMaxBytes = 900_000
     static let pullLimit = 5_000
-    static let applyChunkRows = 5_000
+    static let applyChunkRows = 400
+    static let refreshWeight = 120
+    static let listensSliceRows = 500
 
     let database: DatabaseManager
 
@@ -76,10 +78,11 @@ final class ServerSyncStore: Sendable {
         }
     }
 
-    /// Starts syncing with a server: stores its identity, then queues the local playlists, loves and covers, all in one
-    /// transaction. Replaces any earlier server.
-    func attach(_ enrollment: ServerSyncEnrollment) throws -> ServerSyncImportReport {
+    /// Starts syncing with a server: stores its identity and, when the account may write, marks what the library holds as waiting to
+    /// be imported and imports the first playlists, all in one short transaction. Replaces any earlier server.
+    func attach(_ enrollment: ServerSyncEnrollment, role: ServerRole) throws -> ServerSyncImportReport {
         let wasConfigured = gate.isConfigured
+        let wasRecording = gate.isRecording
         let report: ServerSyncImportReport
         do {
             report = try database.dbQueue.write { db in
@@ -89,20 +92,61 @@ final class ServerSyncStore: Sendable {
                 try SyncMeta.set(db, SyncMeta.user, enrollment.user)
                 try SyncMeta.set(db, SyncMeta.instance, enrollment.instance)
                 try SyncMeta.set(db, SyncMeta.incarnation, enrollment.incarnation)
+                try SyncMeta.set(db, SyncMeta.role, role.rawValue)
                 try SyncMeta.setInt(db, SyncMeta.cursor, 0)
                 try SyncMeta.setInt(db, SyncMeta.nextMutationId, 1)
                 try SyncMeta.observeServerTime(db, serverTimeMs: enrollment.serverTimeMs, localNowMs: nowMs)
                 try SyncMeta.set(db, SyncMeta.device, enrollment.device)
-                let report = try SyncImport.queueStructure(db, nowMs: nowMs)
                 gate.setConfigured(true)
-                return report
+                guard role.canWrite else { return ServerSyncImportReport() }
+                return try startRecording(db)
             }
         } catch {
             gate.setConfigured(wasConfigured)
+            gate.setRecording(wasRecording)
             throw error
         }
         gate.announceRecorded()
         return report
+    }
+
+    private func startRecording(_ db: Database) throws -> ServerSyncImportReport {
+        let report = try SyncImport.begin(db, nowMs: nowMs)
+        try SyncMeta.set(db, SyncMeta.recording, "1")
+        gate.setRecording(true)
+        return report
+    }
+
+    /// An account that could only listen was given access: the library is marked for import and writes start being queued.
+    func beginRecording() throws -> ServerSyncImportReport {
+        let wasRecording = gate.isRecording
+        do {
+            return try database.dbQueue.write { try startRecording($0) }
+        } catch {
+            gate.setRecording(wasRecording)
+            throw error
+        }
+    }
+
+    var isRecording: Bool { gate.isRecording }
+
+    func role() throws -> ServerRole? {
+        try meta(SyncMeta.role).flatMap(ServerRole.init(rawValue:))
+    }
+
+    func setRole(_ role: ServerRole) throws {
+        try setMeta(SyncMeta.role, role.rawValue)
+    }
+
+    /// One bounded step of the structure import, committed on its own. Answers what it queued and true once none is left.
+    func importStructureStep() throws -> (report: ServerSyncImportReport, done: Bool) {
+        try autoreleasepool {
+            try database.dbQueue.write { try SyncImport.step($0, nowMs: nowMs) }
+        }
+    }
+
+    func isStructureImported() throws -> Bool {
+        try database.dbQueue.read { try SyncImport.isStructureDone($0) }
     }
 
     /// Stops syncing: forgets the server, the base and the queue. Playlists, loves and plays stay as they are.
@@ -110,6 +154,7 @@ final class ServerSyncStore: Sendable {
         try database.dbQueue.write { db in
             try SyncMeta.clearAll(db)
             gate.setConfigured(false)
+            gate.setRecording(false)
         }
     }
 
@@ -123,24 +168,64 @@ final class ServerSyncStore: Sendable {
     }
 
     /// The cover images the mutations of a push refer to, for upload before the push.
-    func blobs(for mutations: [ServerMutation]) throws -> [(hash: String, data: Data)] {
-        let hashes = mutations.filter { $0.name == "playlist.setCover" }.compactMap { $0.args["blob"]?.string }
+    func blobs(for mutations: [ServerMutation]) throws -> [(hash: String, data: Data?)] {
+        var hashes = mutations.filter { $0.name == "playlist.setCover" }.compactMap { $0.args["blob"]?.string }
+        hashes.append(contentsOf: mutations.flatMap(ReseedCovers.hashes(in:)))
+        var seen = Set<String>()
         return try database.dbQueue.read { db in
-            try hashes.compactMap { hash in
-                try Data.fetchOne(db, sql: "SELECT data FROM sync_blobs WHERE hash = ?", arguments: [hash]).map { (hash, $0) }
+            try hashes.filter { seen.insert($0).inserted }.map { hash in
+                (hash, try Data.fetchOne(db, sql: "SELECT data FROM sync_blobs WHERE hash = ?", arguments: [hash]))
             }
         }
     }
 
+    /// The server refused reseed mutations because of a cover. They stay queued, unacknowledged and not failed, and the queue moves
+    /// to a new instance so they are sent again under ids the server has not spent. The first time the covers are expected to
+    /// have been uploaded again; the second time they are taken out so the rest of the base still reaches the server.
+    func keepRefusedReseeds(instance: String, response: ServerPushResponse, ids: Set<Int64>, removeCovers: Bool) throws {
+        try database.dbQueue.write { db in
+            try SyncMeta.observeServerTime(db, serverTimeMs: response.serverTimeMs, localNowMs: nowMs)
+            guard let link = try SyncMeta.link(db), link.instance == instance else { return }
+            _ = try SyncPending.markResults(db, response.results.filter { !ids.contains($0.id) })
+            if removeCovers {
+                for id in ids {
+                    guard let text = try String.fetchOne(db, sql: "SELECT args_json FROM sync_pending WHERE mutation_id = ?", arguments: [id]),
+                          let args = ServerJSON(text: text)
+                    else { continue }
+                    let mutation = ServerMutation(id: id, name: SyncPending.reseed, stamp: 0, args: args)
+                    for hash in ReseedCovers.hashes(in: mutation) {
+                        try db.execute(sql: "DELETE FROM sync_blobs WHERE hash = ?", arguments: [hash])
+                    }
+                    guard let stripped = ReseedCovers.removing(nil, from: mutation).args.text else { continue }
+                    try db.execute(sql: "UPDATE sync_pending SET args_json = ? WHERE mutation_id = ?", arguments: [stripped, id])
+                }
+                try SyncMeta.remove(db, SyncMeta.reseedCoverRetry)
+            } else {
+                try SyncMeta.set(db, SyncMeta.reseedCoverRetry, "1")
+            }
+            try SyncReset.afterInstanceConflict(db, nowMs: nowMs)
+        }
+    }
+
+    func hasRetriedReseedCovers() throws -> Bool {
+        try meta(SyncMeta.reseedCoverRetry) != nil
+    }
+
     /// A push succeeded: every answered mutation is acknowledged and refused ones drop out of the visible state.
-    /// Nothing is retired; only a pull does that.
-    func onPushResponse(instance: String, response: ServerPushResponse, localNowMs: Int64) throws -> MaterializeOutcome {
+    /// Nothing is retired; only a pull does that. With `keepForbidden`, writes the server refused because the account lost its right
+    /// to write stay queued, unacknowledged and not failed, and the queue moves to a new instance so they get ids the server has
+    /// not spent.
+    func onPushResponse(
+        instance: String, response: ServerPushResponse, localNowMs: Int64, keepForbidden: Bool = false
+    ) throws -> MaterializeOutcome {
         try database.dbQueue.write { db in
             try SyncMeta.observeServerTime(db, serverTimeMs: response.serverTimeMs, localNowMs: localNowMs)
             guard let link = try SyncMeta.link(db), link.instance == instance else { return MaterializeOutcome() }
+            let results = keepForbidden ? response.results.filter { $0.code != "forbidden" } : response.results
             var dirty = SyncDirty()
-            for key in try SyncPending.markResults(db, response.results) { dirty.add(foldKey: key) }
-            return try refresh(db, dirty)
+            for key in try SyncPending.markResults(db, results) { dirty.add(foldKey: key) }
+            if keepForbidden { try SyncReset.afterInstanceConflict(db, nowMs: nowMs) }
+            return try refreshAll(db, dirty)
         }
     }
 
@@ -190,36 +275,94 @@ final class ServerSyncStore: Sendable {
             return nil
         }
         if let verdict { return verdict }
-        var outcome = MaterializeOutcome()
-        let chunks = response.changes.chunked(into: Self.applyChunkRows)
-        let pages = chunks.isEmpty ? [[]] : chunks
-        for (index, chunk) in pages.enumerated() {
-            let last = index == pages.count - 1
-            let part = try database.dbQueue.write { db -> MaterializeOutcome in
-                var dirty = SyncDirty()
-                for change in chunk {
-                    if let stored = try SyncBase.put(db, change), let key = stored.foldKey { dirty.add(foldKey: key) }
+        var dirty = SyncDirty()
+        for chunk in response.changes.chunked(into: Self.applyChunkRows) {
+            try autoreleasepool {
+                try database.dbQueue.write { db in
+                    for change in chunk {
+                        if let stored = try SyncBase.put(db, change), let key = stored.foldKey { dirty.add(foldKey: key) }
+                    }
                 }
-                if last { try finishPage(db, response: response, dirty: &dirty) }
-                return try refresh(db, dirty)
             }
-            outcome.merge(part)
         }
+        var outcome = try materialize(dirty)
+        let retired = try database.dbQueue.write { db -> SyncDirty in
+            try finishPage(db, response: response)
+        }
+        outcome.merge(try materialize(retired))
         return .applied(more: response.more, outcome: outcome)
     }
 
-    private func finishPage(_ db: Database, response: ServerPullResponse, dirty: inout SyncDirty) throws {
+    private func finishPage(_ db: Database, response: ServerPullResponse) throws -> SyncDirty {
+        var dirty = SyncDirty()
         let cursor = response.more ? (response.changes.last?.seq ?? response.head) : response.head
         try SyncMeta.setInt(db, SyncMeta.cursor, cursor)
         try SyncMeta.set(db, SyncMeta.incarnation, response.incarnation)
-        guard !response.more else { return }
-        for key in try SyncPending.retire(db, confirmed: response.lastMutationId) { dirty.add(foldKey: key) }
+        guard !response.more else { return dirty }
+        for key in try SyncPending.retire(db, confirmed: response.lastMutationId) where key.hasPrefix("playlist:") {
+            dirty.add(foldKey: key)
+        }
         try SyncMeta.setInt(db, SyncMeta.lastSynced, nowMs)
+        return dirty
+    }
+
+    /// Recomputes dirty entities into the app tables in transactions of bounded weight, so no write waits long behind them.
+    func materialize(_ dirty: SyncDirty) throws -> MaterializeOutcome {
+        var outcome = MaterializeOutcome()
+        guard !dirty.isEmpty else { return outcome }
+        for batch in try weighed(dirty) {
+            let part = try autoreleasepool {
+                try database.dbQueue.write { try refresh($0, batch) }
+            }
+            outcome.merge(part)
+        }
+        return outcome
+    }
+
+    private func weighed(_ dirty: SyncDirty) throws -> [SyncDirty] {
+        let sizes: [String: Int] = try database.dbQueue.read { db in
+            var sizes: [String: Int] = [:]
+            for id in dirty.playlists {
+                sizes[id] = try Int.fetchOne(
+                    db, sql: "SELECT COUNT(*) FROM sync_base WHERE kind = 'playlist_entry' AND parent = ?", arguments: [id]
+                ) ?? 0
+            }
+            return sizes
+        }
+        var batches: [SyncDirty] = []
+        var current = SyncDirty()
+        var weight = 0
+        func close() {
+            if !current.isEmpty { batches.append(current) }
+            current = SyncDirty()
+            weight = 0
+        }
+        for id in dirty.playlists.sorted() {
+            current.playlists.insert(id)
+            weight += 1 + (sizes[id] ?? 0) / 2
+            if weight >= Self.refreshWeight { close() }
+        }
+        for key in dirty.loves.sorted() {
+            current.loves.insert(key)
+            weight += 1
+            if weight >= Self.refreshWeight { close() }
+        }
+        for key in dirty.scalars.sorted() {
+            current.scalars.insert(key)
+            weight += 1
+            if weight >= Self.refreshWeight { close() }
+        }
+        close()
+        return batches
     }
 
     private func refresh(_ db: Database, _ dirty: SyncDirty) throws -> MaterializeOutcome {
         guard let caller = try SyncMaterializer.caller(db) else { return MaterializeOutcome() }
         return try SyncMaterializer.refresh(db, dirty: dirty, caller: caller)
+    }
+
+    private func refreshAll(_ db: Database, _ dirty: SyncDirty) throws -> MaterializeOutcome {
+        try refresh(db, dirty)
     }
 
     /// A pull was refused because its cursor is ahead of the server's log.
@@ -255,17 +398,31 @@ final class ServerSyncStore: Sendable {
     }
 
     func onListensPage(_ page: ServerListensPage) throws -> Int {
-        try database.dbQueue.write { db in
-            var memo = ListenKeyMemo()
-            return try SyncListens.apply(db, page: page, memo: &memo)
+        var memo = ListenKeyMemo()
+        var written = 0
+        let slices = page.listens.chunked(into: Self.listensSliceRows)
+        for slice in slices.dropLast() {
+            written += try autoreleasepool {
+                try database.dbQueue.write { try SyncListens.store($0, slice, memo: &memo) }
+            }
         }
+        written += try autoreleasepool {
+            try database.dbQueue.write { try SyncListens.apply($0, page: page, memo: &memo, rows: slices.last ?? []) }
+        }
+        return written
     }
 
     /// Queues the next chunk of the person's earlier plays as migrated listens. Answers true once none are left.
-    func importListensChunk() throws -> Bool {
-        let (queued, done) = try database.dbQueue.write { try SyncImport.importListens($0, nowMs: nowMs) }
-        if queued > 0 { gate.announceRecorded() }
-        return done
+    func importListensChunk() throws -> (queued: Int, done: Bool) {
+        let result = try autoreleasepool {
+            try database.dbQueue.write { try SyncImport.importListens($0, nowMs: nowMs) }
+        }
+        if result.queued > 0 { gate.announceRecorded() }
+        return result
+    }
+
+    func refreshSongKeyIndex() throws {
+        try SyncSongRefs.refreshIndex(database)
     }
 
     func hasImportedListens() throws -> Bool {

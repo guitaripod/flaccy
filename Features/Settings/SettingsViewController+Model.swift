@@ -95,6 +95,7 @@ extension SettingsViewController {
         case watchSync(syncedCount: Int, profile: WatchAudioProfile)
         case serversExplainer
         case server(RemoteServerRow)
+        case addFlaccyServer
         case addServer
         case cacheLimit
         case cacheUsage(String)

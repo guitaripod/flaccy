@@ -60,6 +60,9 @@ extension FakeFlaccyServer {
         if refusedNames.contains(mutation.name) {
             return ServerMutationResult(id: id, status: .invalid, code: "bad_args")
         }
+        if !writeRole.canWrite {
+            return ServerMutationResult(id: id, status: .invalid, code: "forbidden")
+        }
         let stamp = nextStored(mutation.stamp)
         let core = CoreMutation(id: id, name: mutation.name, stamp: mutation.stamp, args: try ServerCoreBridge.decode(CoreJSON.self, from: mutation.args.text ?? "null"))
         switch mutation.name {
@@ -80,6 +83,7 @@ extension FakeFlaccyServer {
             try recordListens(mutation, device: caller.device)
             return ServerMutationResult(id: id, status: .applied)
         case "state.reseed":
+            if let refusal = reseedRefusal(mutation) { return ServerMutationResult(id: id, status: .invalid, code: refusal) }
             try reseed(mutation, stamp: stamp)
             return ServerMutationResult(id: id, status: .applied)
         case "session.save", "device.rename":
@@ -180,6 +184,19 @@ extension FakeFlaccyServer {
         }
     }
 
+    private func reseedRefusal(_ mutation: ServerMutation) -> String? {
+        let entities = mutation.args["entities"]?.array ?? []
+        if entities.count > 1_000 || (mutation.args.text?.utf8.count ?? 0) > 400_000 { return "too_large" }
+        let covers = entities.compactMap { $0["kind"]?.string == "playlist" ? $0["value"]?["coverBlob"]?.string : nil }
+        if covers.isEmpty { return nil }
+        if refuseCoversTimes > 0 {
+            refuseCoversTimes -= 1
+            for hash in covers { state.blobs[hash] = nil }
+            return "bad_args"
+        }
+        return covers.allSatisfy { state.blobs[$0] != nil } ? nil : "bad_args"
+    }
+
     private func reseed(_ mutation: ServerMutation, stamp: Int64) throws {
         for entity in mutation.args["entities"]?.array ?? [] {
             guard let kind = entity["kind"]?.string, let id = entity["id"]?.string, let value = entity["value"],
@@ -262,7 +279,7 @@ struct FakeTransport: ServerSyncTransport {
     let server: FakeFlaccyServer
     let token: String?
 
-    func hello() async throws -> ServerHello { try server.hello() }
+    func hello() async throws -> ServerHello { try server.hello(token: token) }
     func enroll(_ request: ServerEnrollRequest) async throws -> ServerEnrollReply { try server.enroll(request) }
     func push(_ request: ServerPushRequest, incarnation: String?) async throws -> ServerPushResponse {
         try server.push(request, incarnation: incarnation, token: token)
@@ -285,6 +302,15 @@ struct FakeTransports: ServerSyncTransportFactory {
 
     func transport(baseURL: URL, token: String?) -> any ServerSyncTransport {
         server.transport(token: token)
+    }
+}
+
+struct RoutedTransports: ServerSyncTransportFactory {
+    let servers: [String: FakeFlaccyServer]
+
+    func transport(baseURL: URL, token: String?) -> any ServerSyncTransport {
+        guard let server = baseURL.host.flatMap({ servers[$0] }) else { preconditionFailure("no fake server at \(baseURL)") }
+        return server.transport(token: token)
     }
 }
 

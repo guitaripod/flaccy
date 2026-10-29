@@ -34,6 +34,7 @@ final class ComputerTransferGuideViewController: UIViewController {
     }
 
     private let scrollView = UIScrollView()
+    private let impact = UIImpactFeedbackGenerator(style: .light)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,7 +49,9 @@ final class ComputerTransferGuideViewController: UIViewController {
     }
 
     private func buildContent() {
-        let stack = UIStackView(arrangedSubviews: Self.routes.map(makeRow) + [makeFootnote()])
+        var rows = Self.routes.map(makeRow)
+        if !FlaccyServerNudge.isDismissed, FlaccyServerLibrary.record() == nil { rows.append(makeServerCard()) }
+        let stack = UIStackView(arrangedSubviews: rows + [makeFootnote()])
         stack.axis = .vertical
         stack.spacing = 22
         stack.isLayoutMarginsRelativeArrangement = true
@@ -102,6 +105,72 @@ final class ComputerTransferGuideViewController: UIViewController {
         row.isAccessibilityElement = true
         row.accessibilityLabel = "\(route.title). \(route.detail)"
         return row
+    }
+
+    private func makeServerCard() -> UIView {
+        let title = UILabel()
+        title.text = String(localized: "Hear your whole library on every device")
+        title.font = .preferredFont(forTextStyle: .headline)
+        title.adjustsFontForContentSizeCategory = true
+        title.numberOfLines = 0
+        title.accessibilityTraits = .header
+
+        let body = UILabel()
+        body.text = FlaccyServerNudge.text
+        body.font = .preferredFont(forTextStyle: .subheadline)
+        body.textColor = .secondaryLabel
+        body.adjustsFontForContentSizeCategory = true
+        body.numberOfLines = 0
+
+        var addConfiguration = UIButton.Configuration.filled()
+        addConfiguration.title = String(localized: "Add Flaccy Server")
+        addConfiguration.cornerStyle = .capsule
+        let add = UIButton(configuration: addConfiguration)
+        add.accessibilityIdentifier = "guide.serverCard.add"
+        add.addAction(UIAction { [weak self] _ in
+            self?.impact.impactOccurred()
+            guard let self else { return }
+            AddFlaccyServerViewController.present(from: self)
+        }, for: .touchUpInside)
+
+        var closeConfiguration = UIButton.Configuration.plain()
+        closeConfiguration.image = UIImage(systemName: "xmark.circle.fill")
+        closeConfiguration.baseForegroundColor = .tertiaryLabel
+        let close = UIButton(configuration: closeConfiguration)
+        close.accessibilityLabel = String(localized: "Close")
+        close.accessibilityHint = String(localized: "Hides this suggestion for good")
+        close.accessibilityIdentifier = "guide.serverCard.close"
+        close.setContentHuggingPriority(.required, for: .horizontal)
+
+        let header = UIStackView(arrangedSubviews: [title, close])
+        header.alignment = .top
+        header.spacing = 8
+        let content = UIStackView(arrangedSubviews: [header, body, add])
+        content.axis = .vertical
+        content.alignment = .leading
+        content.spacing = 10
+        header.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
+        body.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
+
+        let card = UIView()
+        card.backgroundColor = .secondarySystemGroupedBackground
+        card.layer.cornerRadius = 16
+        card.layer.cornerCurve = .continuous
+        content.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
+            content.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -16),
+            content.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            content.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+        ])
+        close.addAction(UIAction { [weak self, weak card] _ in
+            self?.impact.impactOccurred()
+            FlaccyServerNudge.dismiss()
+            UIView.animate(withDuration: 0.25) { card?.isHidden = true }
+        }, for: .touchUpInside)
+        card.accessibilityIdentifier = "guide.serverCard"
+        return card
     }
 
     private func makeFootnote() -> UIView {

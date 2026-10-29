@@ -14,7 +14,8 @@ extension SyncMaterializer {
     static func syncPlaylist(
         _ db: Database, id: String, visible: CorePlaylistDoc?, resolver: SyncSongResolver, outcome: inout MaterializeOutcome
     ) throws {
-        let local = try Int64.fetchOne(db, sql: "SELECT id FROM playlists WHERE syncId = ?", arguments: [id])
+        let find = try db.cachedStatement(sql: "SELECT id FROM playlists WHERE syncId = ?")
+        let local = try Int64.fetchOne(find, arguments: [id])
         guard let doc = visible, doc.playlist.alive else {
             if let local {
                 try db.execute(sql: "DELETE FROM playlists WHERE id = ?", arguments: [local])
@@ -25,9 +26,8 @@ extension SyncMaterializer {
         }
         let localID: Int64
         if let local {
-            try db.execute(
-                sql: "UPDATE playlists SET name = ?1 WHERE id = ?2 AND name <> ?1", arguments: [doc.playlist.name, local]
-            )
+            let rename = try db.cachedStatement(sql: "UPDATE playlists SET name = ?1 WHERE id = ?2 AND name <> ?1")
+            try rename.execute(arguments: [doc.playlist.name, local])
             if db.changesCount > 0 { outcome.changes.playlists = true }
             localID = local
         } else {
@@ -54,34 +54,32 @@ extension SyncMaterializer {
         outcome: inout MaterializeOutcome
     ) throws {
         var existing: [String: LocalRow] = [:]
-        for row in try Row.fetchAll(
-            db,
-            sql: "SELECT id, syncId, trackFileURL, position FROM playlistTracks WHERE playlistId = ? AND syncId IS NOT NULL",
-            arguments: [localID]
-        ) {
+        let fetchRows = try db.cachedStatement(
+            sql: "SELECT id, syncId, trackFileURL, position FROM playlistTracks WHERE playlistId = ? AND +syncId IS NOT NULL"
+        )
+        for row in try Row.fetchAll(fetchRows, arguments: [localID]) {
             existing[row["syncId"]] = LocalRow(rowId: row["id"], fileURL: row["trackFileURL"], position: row["position"])
         }
+        let keptKeys = try resolver.songKeys(ofRowsIn: localID)
         var shown: [(entry: CoreEntry, fileURL: String)] = []
         var hidden: [CoreEntry] = []
         for entry in visibleEntries(doc) {
-            if let fileURL = try resolveEntry(resolver, existing: existing[entry.id], entry: entry) {
+            if let fileURL = try resolveEntry(resolver, existing: existing[entry.id], keptKeys: keptKeys, entry: entry) {
                 shown.append((entry, fileURL))
             } else {
                 hidden.append(entry)
             }
         }
+        let update = try db.cachedStatement(sql: "UPDATE playlistTracks SET trackFileURL = ?, position = ? WHERE id = ?")
+        let insert = try db.cachedStatement(
+            sql: "INSERT INTO playlistTracks (playlistId, trackFileURL, position, syncId) VALUES (?, ?, ?, ?)"
+        )
         for (position, item) in shown.enumerated() {
             if let row = existing[item.entry.id] {
                 if row.fileURL == item.fileURL && row.position == position { continue }
-                try db.execute(
-                    sql: "UPDATE playlistTracks SET trackFileURL = ?, position = ? WHERE id = ?",
-                    arguments: [item.fileURL, position, row.rowId]
-                )
+                try update.execute(arguments: [item.fileURL, position, row.rowId])
             } else {
-                try db.execute(
-                    sql: "INSERT INTO playlistTracks (playlistId, trackFileURL, position, syncId) VALUES (?, ?, ?, ?)",
-                    arguments: [localID, item.fileURL, position, item.entry.id]
-                )
+                try insert.execute(arguments: [localID, item.fileURL, position, item.entry.id])
             }
             outcome.changes.playlists = true
         }
@@ -93,12 +91,13 @@ extension SyncMaterializer {
         try replaceGhosts(db, playlist: id, hidden: hidden)
     }
 
-    private static func resolveEntry(_ resolver: SyncSongResolver, existing: LocalRow?, entry: CoreEntry) throws -> String? {
-        let ref = ServerCoreBridge.songRef(entry.song)
-        if let existing, try resolver.pathHasSongKey(existing.fileURL, entry.song.songKey) {
+    private static func resolveEntry(
+        _ resolver: SyncSongResolver, existing: LocalRow?, keptKeys: [String: String], entry: CoreEntry
+    ) throws -> String? {
+        if let existing, keptKeys[entry.id] == entry.song.songKey {
             return existing.fileURL
         }
-        return try resolver.resolve(ref)
+        return try resolver.resolve(ServerCoreBridge.songRef(entry.song))
     }
 
     private static func clearGhosts(_ db: Database, playlist: String) throws {

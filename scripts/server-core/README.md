@@ -19,3 +19,7 @@
 
 ## Swift API
 `import FlaccyServerCore`, then the `ServerCore` namespace: `applyPlaylist`, `applyScalar`, `rebasePlaylist`, `rebaseLove`, `rebaseRating`, `rebaseScalar`, `rebaseSession`, `between`, `songKey`, `suppressedFlags`, `nextStamp`, `version`. Inputs and outputs are `Codable & Sendable` structs; failures throw `ServerCoreError`.
+
+## Embedded server (macOS only)
+`linux/server-embed-ffi` wraps `flaccy_server::embed` for the sandboxed Mac app as the package `Core/FlaccyServerEmbed` (see `docs/server/EMBED.md`). `scripts/server-core/build-embed.sh` builds its macOS slice (arm64+x86_64) through `build-xcframework.sh` with `XCFRAMEWORK_PLATFORMS=macos XCFRAMEWORK_STRIP=0` and installs `Artifacts/FlaccyServerEmbedFFI.xcframework` (gitignored, about 140 MB; the linker keeps only what the app calls) and the generated bindings. It works in `Dev/builds/flaccy-server-embed/app` on the Mac. `swift test` in `Core/FlaccyServerEmbed` on the Mac starts a real server on a FLAC fixture.
+- Never strip these archives: Xcode 27's `strip -S` rewrote the relocations of the Rust objects and the first call into the server crashed.

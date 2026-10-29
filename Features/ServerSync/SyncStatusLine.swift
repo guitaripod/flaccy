@@ -36,6 +36,10 @@ extension SyncStatus {
             String(localized: "The clock on \(server) is wrong. Sync is paused.")
         case .deviceRemoved(let server):
             String(localized: "This device was removed from \(server). Add the server again to keep syncing.")
+        case .listenOnly(let server):
+            String(localized: "This account can only listen. Ask the owner of \(server) to give it access.")
+        case .awaitingApproval(let server):
+            String(localized: "Waiting for approval. Ask the owner of \(server) to approve this device.")
         }
     }
 

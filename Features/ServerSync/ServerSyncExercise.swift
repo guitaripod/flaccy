@@ -94,6 +94,8 @@ enum ServerSyncExercise {
         try expect(history.count == 4, "the remote play reached the history (\(history.count) plays of this run)")
         step("a rename, a love and a play made elsewhere arrived")
 
+        try await livePoke(url: url, tokens: tokens, songs: songs)
+
         try await engine.disconnect()
         try expect(!database.serverSyncGate.isConfigured, "disconnecting turns the recorder off")
         try expect(tokens.token(serverID: "any") == nil, "disconnecting forgets the token")
@@ -235,6 +237,36 @@ enum ServerSyncExercise {
         try expect(response.results.allSatisfy { $0.status == .applied }, "the server applied the edits made elsewhere (\(response.results))")
     }
 
+    private static func livePoke(url: URL, tokens: ExerciseTokens, songs: [TrackRecord]) async throws {
+        let pokes = PokeCounter()
+        let channel = FlaccyServerLiveChannel(baseURL: url, token: { tokens.current }, onPoke: { pokes.increment() })
+        await channel.start()
+        defer { Task { await channel.stop() } }
+        try await expectWithin(10, "the live channel opened and asked for a first pull") { pokes.count >= 1 }
+        let opened = pokes.count
+        let client = FlaccyServerClient(baseURL: url, token: tokens.current)
+        let device = try require(try await client.devices().first { $0.current }, "the server lists this device")
+        let song = songs[3]
+        let key = try ServerSongIdentity.songKey(title: song.title, artist: song.artist)
+        let ref = ServerSongRef(songKey: key, title: song.title, artist: song.artist, album: song.albumTitle)
+        let refJSON = try JSONDecoder().decode(ServerJSON.self, from: JSONEncoder().encode(ref))
+        let stamp = Int64(Date().timeIntervalSince1970 * 1000) << 16
+        let mutation = ServerMutation(id: 1, name: "love.set", stamp: stamp, args: ["songKey": .string(key), "ref": refJSON, "loved": true])
+        _ = try await client.push(
+            ServerPushRequest(device: device.id, instance: "exercise-live", mutations: [mutation]), incarnation: nil
+        )
+        try await expectWithin(10, "the server poked after a change made from another instance") { pokes.count > opened }
+        step("the live channel poked \(pokes.count) times, the last one for a change made elsewhere")
+    }
+
+    private static func expectWithin(_ seconds: Int, _ step: String, _ condition: () -> Bool) async throws {
+        for _ in 0..<(seconds * 4) {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(250))
+        }
+        throw Failure(step: step)
+    }
+
     private static func step(_ text: String) {
         MidgarLog.info("SERVER EXERCISE step: \(text)", category: .sync)
     }
@@ -247,6 +279,16 @@ enum ServerSyncExercise {
         guard let value else { throw Failure(step: step) }
         return value
     }
+}
+
+nonisolated private final class PokeCounter: @unchecked Sendable {
+
+    private let lock = NSLock()
+    private var total = 0
+
+    var count: Int { lock.withLock { total } }
+
+    func increment() { lock.withLock { total += 1 } }
 }
 
 private final class ExerciseTokens: ServerTokenStore, @unchecked Sendable {

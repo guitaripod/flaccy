@@ -9,6 +9,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private var tabController: AppTabBarController?
     private var rootController: RootContainerViewController?
     private var deferredPaywallObserver: NSObjectProtocol?
+    private var mergePresenter: ServerMergePresenter?
 
     func scene(
         _ scene: UIScene,
@@ -36,11 +37,14 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = rootVC
         window.makeKeyAndVisible()
         self.window = window
+        mergePresenter = ServerMergePresenter(window: window)
         RemoteLaunch.start()
         #if DEBUG
         RemoteExercise.runIfRequested()
         ServerSyncExercise.runIfRequested()
+        ServerSyncReseedExercise.runIfRequested()
         RemoteShot.runIfRequested(tabs: tabs)
+        FlaccyServerShot.runIfRequested(tabs: tabs)
         PaywallShot.runIfRequested(in: window)
         SampleExercise.runIfRequested()
         ReexportExercise.runIfRequested()
@@ -73,6 +77,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handlePlaybackUnavailable(_:)), name: RemoteAvailability.playbackUnavailable, object: nil
         )
+        #if DEBUG
+        if let link = FlaccyServerShot.driveLink {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.openServerLink(link) }
+        }
+        #endif
         let launchLinks = connectionOptions.urlContexts.map(\.url)
         if !launchLinks.isEmpty {
             DispatchQueue.main.async { [weak self] in launchLinks.forEach { self?.openServerLink($0) } }
@@ -90,11 +99,18 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         ToastView.show(message, in: top.view, style: .error)
     }
 
-    /// Opens the Add Server sheet filled in from a `flaccy://server` link; any other link is left alone.
+    /// Opens the Add Flaccy Server or Add Server sheet filled in from a `flaccy://server` link, without connecting; any other
+    /// link is left alone.
     private func openServerLink(_ url: URL) {
-        guard let link = ServerLink(url: url), let top = TrialRunwayPresenter.topmostViewController(in: window) else { return }
-        MidgarLog.info("Opened a server link for \(link.name ?? "a server")", category: .ui)
-        AddServerViewController.present(from: top, servers: RemoteServersViewModel(), link: link)
+        guard let parsed = ParsedServerLink(url: url), let top = TrialRunwayPresenter.topmostViewController(in: window) else { return }
+        switch parsed {
+        case .flaccyServer(let link):
+            MidgarLog.info("Opened a Flaccy Server link for \(link.name ?? link.baseURL.host() ?? "a server")", category: .ui)
+            AddFlaccyServerViewController.present(from: top, link: link)
+        case .subsonic(let link):
+            MidgarLog.info("Opened a server link for \(link.name ?? "a server")", category: .ui)
+            AddServerViewController.present(from: top, servers: RemoteServersViewModel(), link: link)
+        }
     }
 
     /// Wires the mini player to the tab controller: pushes land on the selected
@@ -154,8 +170,14 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         TrialRunwayPresenter.refresh(in: window)
     }
 
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        ServerSyncLifecycle.shared.enteredBackground()
+        ServerSyncBackgroundRefresh.schedule()
+    }
+
     func sceneDidBecomeActive(_ scene: UIScene) {
         TrialRunwayPresenter.refresh(in: window)
+        ServerSyncLifecycle.shared.becameActive()
         RemoteLaunch.becameActive()
         WatchSyncService.shared.resumeIfNeeded()
         Task {

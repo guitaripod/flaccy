@@ -253,7 +253,7 @@ extension SettingsViewController {
             cell.accessibilityLabel = String(localized: "Library")
             cell.accessibilityValue = content.secondaryText
 
-        case .serversExplainer, .server, .addServer, .cacheLimit, .cacheUsage, .clearCache:
+        case .serversExplainer, .server, .addFlaccyServer, .addServer, .cacheLimit, .cacheUsage, .clearCache:
             configureServerRow(row, cell: cell, content: &content)
 
         case .storage(let used):

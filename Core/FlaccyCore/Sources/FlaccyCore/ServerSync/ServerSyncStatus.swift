@@ -14,12 +14,23 @@ public enum SyncStatus: Hashable, Sendable {
     case serverDiskFull(server: String)
     case serverClockWrong(server: String)
     case deviceRemoved(server: String)
+    case listenOnly(server: String)
+    case awaitingApproval(server: String)
 
     /// True while the person has something to do before syncing can continue.
     public var needsPerson: Bool {
         switch self {
-        case .notPro, .appNeedsUpdate, .serverNeedsUpdate, .deviceRemoved: true
+        case .notPro, .appNeedsUpdate, .serverNeedsUpdate, .deviceRemoved, .listenOnly, .awaitingApproval: true
         default: false
+        }
+    }
+
+    /// The status of an account that may not write to the server: only guests and pending devices have one.
+    public static func readOnly(role: ServerRole, server: String) -> SyncStatus? {
+        switch role {
+        case .guest: .listenOnly(server: server)
+        case .pending: .awaitingApproval(server: server)
+        case .admin, .member: nil
         }
     }
 

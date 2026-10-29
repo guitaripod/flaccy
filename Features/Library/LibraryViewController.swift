@@ -444,6 +444,13 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         NotificationCenter.default.addObserver(
             self, selector: #selector(remoteServersDidChange), name: RemoteServers.didChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(serverSyncChangesDidArrive), name: ServerSyncLifecycle.changesDidArrive, object: nil
+        )
+    }
+
+    @objc func serverSyncChangesDidArrive() {
+        viewModel.refreshPlaylists()
     }
 
     @objc func remoteServersDidChange() {

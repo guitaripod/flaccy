@@ -50,6 +50,7 @@ public struct ServerSyncConnection: Sendable, Equatable {
     public var serverName: String
     public var deviceID: String
     public var userID: String
+    public var role: ServerRole
     public var imported: ServerSyncImportReport
 }
 
@@ -75,11 +76,14 @@ public actor ServerSyncEngine {
     var networkOnline = true
     var lastFailure: ServerSyncError?
     var clockBehind = false
+    var mergeProbe: ServerMergeProbe?
+    let connectedBox = ConnectedServerBox()
 
     public init(database: DatabaseManager, configuration: ServerSyncConfiguration) {
         self.store = ServerSyncStore(database: database)
         self.configuration = configuration
         self.currentStatus = store.isConfigured() ? .upToDate(lastSyncedAt: nil) : .notConnected
+        connectedBox.set((try? store.link()).flatMap { $0 }.flatMap(ServerSyncServer.init(link:)))
     }
 
     /// Where syncing stands now.
@@ -108,6 +112,17 @@ public actor ServerSyncEngine {
         currentLink()?.serverName
     }
 
+    /// The server this device syncs with, readable from any thread without waiting on the engine or the database.
+    public nonisolated var connectedServer: ServerSyncServer? {
+        connectedBox.value
+    }
+
+    /// The account a server's device token is filed under in the `ServerTokenStore`: the lower-cased host and the port. Anything that
+    /// reads the token for the same server, such as the music library's sign-in, must use this and no spelling of its own.
+    public nonisolated static func serverID(for baseURL: URL) -> String {
+        "\((baseURL.host(percentEncoded: false) ?? baseURL.absoluteString).lowercased()):\(baseURL.port ?? 0)"
+    }
+
     func currentLink() -> ServerSyncLink? {
         (try? store.link()) ?? nil
     }
@@ -128,8 +143,7 @@ public actor ServerSyncEngine {
     }
 
     func serverID(for urlText: String) -> String {
-        guard let url = URL(string: urlText), let host = url.host else { return urlText.lowercased() }
-        return "\(host.lowercased()):\(url.port ?? 0)"
+        URL(string: urlText).map(Self.serverID(for:)) ?? urlText.lowercased()
     }
 
     func makeTransport(link: ServerSyncLink) throws -> any ServerSyncTransport {
@@ -161,5 +175,18 @@ public actor ServerSyncEngine {
 
     func logError(_ message: String) {
         MidgarLog.error(message, category: .sync)
+    }
+}
+
+/// The connected server, mirrored where it can be read without awaiting.
+final class ConnectedServerBox: @unchecked Sendable {
+
+    private let lock = NSLock()
+    private var stored: ServerSyncServer?
+
+    var value: ServerSyncServer? { lock.withLock { stored } }
+
+    func set(_ server: ServerSyncServer?) {
+        lock.withLock { stored = server }
     }
 }

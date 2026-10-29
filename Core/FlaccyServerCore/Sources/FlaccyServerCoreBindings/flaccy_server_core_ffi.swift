@@ -622,6 +622,17 @@ public func between(input: String)throws  -> String  {
 })
 }
 /**
+ * The chunks a `state.reseed` must be sent in: `{entities}` to `{chunks}`.
+ */
+public func chunkReseedEntities(input: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeServerCoreFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_flaccy_server_core_ffi_fn_func_chunk_reseed_entities(
+        FfiConverterString.lower(input),uniffiCallStatus
+    )
+})
+}
+/**
  * The deterministic id of an entry that existed before sync: `{playlistId, songKey, occurrence}` to `{entryId}`.
  */
 public func entryId(input: String)throws  -> String  {
@@ -808,6 +819,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_flaccy_server_core_ffi_checksum_func_between() != 29610) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_flaccy_server_core_ffi_checksum_func_chunk_reseed_entities() != 34756) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_flaccy_server_core_ffi_checksum_func_entry_id() != 15206) {

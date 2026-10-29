@@ -126,8 +126,10 @@ nonisolated struct RemoteServerRow: Sendable, Equatable, Hashable {
     let lastSyncedAt: Date?
     let lastFailure: String?
     let isSyncing: Bool
+    let flaccy: FlaccyServerRowModel?
 
-    init(record: RemoteServerRecord, songCount: Int) {
+    init(record: RemoteServerRecord, songCount: Int, flaccy: FlaccyServerRowModel? = nil) {
+        self.flaccy = flaccy
         id = record.id
         name = record.name
         address = Self.displayAddress(record.baseURL)

@@ -19,7 +19,7 @@ final class ServerSyncRecorder {
     private var announced = false
 
     init?(_ db: Database, gate: ServerSyncGate) throws {
-        guard gate.isConfigured, let link = try SyncMeta.link(db) else { return nil }
+        guard gate.isRecording, let link = try SyncMeta.link(db) else { return nil }
         self.db = db
         self.gate = gate
         self.link = link
@@ -183,13 +183,16 @@ final class ServerSyncRecorder {
     }
 
     private func playlistSyncID(_ localId: Int64) throws -> String? {
-        try String.fetchOne(db, sql: "SELECT syncId FROM playlists WHERE id = ?", arguments: [localId])
+        if let known = try String.fetchOne(db, sql: "SELECT syncId FROM playlists WHERE id = ?", arguments: [localId]) {
+            return known
+        }
+        return try SyncImport.ensurePlaylist(db, localID: localId, nowMs: gate.nowMs)
     }
 
     private func previousEntry(of entry: String, inPlaylist local: Int64) throws -> String? {
         let order = try String.fetchAll(
             db,
-            sql: "SELECT syncId FROM playlistTracks WHERE playlistId = ? AND syncId IS NOT NULL ORDER BY position, id",
+            sql: "SELECT syncId FROM playlistTracks WHERE playlistId = ? AND +syncId IS NOT NULL ORDER BY position, id",
             arguments: [local]
         )
         guard let index = order.firstIndex(of: entry), index > 0 else { return nil }

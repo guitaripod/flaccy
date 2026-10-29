@@ -118,6 +118,11 @@ public enum ServerCore {
         return try call(FlaccyServerCoreBindings.eventIdsMig, request, as: EventIdsAnswer.self).eventIds
     }
 
+    public static func chunkReseed(_ entities: [Entity]) throws -> [[Entity]] {
+        let request = ChunkReseedRequest(entities: entities)
+        return try call(FlaccyServerCoreBindings.chunkReseedEntities, request, as: ChunkReseedAnswer.self).chunks
+    }
+
     public static func suppressedFlags(_ events: [SecondEvent]) throws -> [Bool] {
         let request = SuppressedFlagsRequest(events: events)
         return try call(FlaccyServerCoreBindings.suppressedFlags, request, as: FlagsAnswer.self).flags

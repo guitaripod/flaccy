@@ -84,8 +84,12 @@ class SettingsPane: NSViewController {
 
     let formStack = NSStackView()
 
+    func makeRootView() -> NSView {
+        NSView()
+    }
+
     override func loadView() {
-        view = NSView()
+        view = makeRootView()
         formStack.orientation = .vertical
         formStack.alignment = .leading
         formStack.spacing = 14

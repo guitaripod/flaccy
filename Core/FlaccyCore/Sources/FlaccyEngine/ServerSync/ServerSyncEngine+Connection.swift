@@ -27,25 +27,52 @@ extension ServerSyncEngine {
             logError("The device token could not be stored in the Keychain")
             throw ServerSyncError.malformed("the device token could not be stored")
         }
-        let report: ServerSyncImportReport
+        let role = await roleOfNewDevice(baseURL: link.baseURL, token: reply.token, fallback: reply.user.role)
+        var report: ServerSyncImportReport
         do {
+            try store.refreshSongKeyIndex()
             report = try store.attach(ServerSyncEnrollment(
                 serverURL: link.baseURL.absoluteString, serverName: link.name ?? hello.server.name,
                 device: reply.device, user: reply.user.id, incarnation: reply.incarnation, instance: instance,
                 serverTimeMs: reply.serverTimeMs
-            ))
+            ), role: role)
         } catch {
             configuration.tokens.removeToken(serverID: serverID)
             logError("Attaching to the server failed: \(error.localizedDescription)")
             throw ServerSyncError.malformed("the library could not be prepared for sync")
         }
+        mergeProbe = try? store.mergeProbe()
+        connectedBox.set(currentLink().flatMap(ServerSyncServer.init(link:)))
         log("Connected to \(hello.server.name); queued \(report.playlists) playlists, \(report.entries) songs, \(report.loves) loves")
         installLocalChangeHandler()
+        let name = link.name ?? hello.server.name
+        if let status = SyncStatus.readOnly(role: role, server: name) {
+            publish(status)
+            return ServerSyncConnection(serverName: name, deviceID: reply.device, userID: reply.user.id, role: role, imported: report)
+        }
+        report = try await importStructure(starting: report)
         publish(.syncing(changes: (try? store.unsentCount()) ?? 0))
         if startSyncing { Task { await self.syncNow() } }
-        return ServerSyncConnection(
-            serverName: link.name ?? hello.server.name, deviceID: reply.device, userID: reply.user.id, imported: report
-        )
+        return ServerSyncConnection(serverName: name, deviceID: reply.device, userID: reply.user.id, role: role, imported: report)
+    }
+
+    private func roleOfNewDevice(baseURL: URL, token: String, fallback: ServerRole) async -> ServerRole {
+        let signedIn = configuration.transports.transport(baseURL: baseURL, token: token)
+        let hello = try? await retrying { try await signedIn.hello() }
+        return hello?.caller?.role ?? fallback
+    }
+
+    /// Queues the rest of what the library already holds, a bounded step at a time, so the person's own writes never wait on it.
+    func importStructure(starting report: ServerSyncImportReport = ServerSyncImportReport()) async throws -> ServerSyncImportReport {
+        var total = report
+        while !(try store.isStructureImported()) {
+            try Task.checkCancellation()
+            let step = try store.importStructureStep()
+            total.add(step.report)
+            if step.done { break }
+            await Task.yield()
+        }
+        return total
     }
 
     static func checkCompatible(_ hello: ServerHello) throws {
@@ -64,6 +91,8 @@ extension ServerSyncEngine {
             configuration.tokens.removeToken(serverID: serverID(for: link.serverURL))
         }
         try store.detach()
+        mergeProbe = nil
+        connectedBox.set(nil)
         lastFailure = nil
         publish(.notConnected)
     }

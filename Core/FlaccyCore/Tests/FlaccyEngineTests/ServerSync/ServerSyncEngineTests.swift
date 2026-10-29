@@ -31,7 +31,7 @@ final class ServerSyncEngineTests: XCTestCase {
         XCTAssertFalse(device.tokens.isEmpty)
         let isConnected = await device.engine.isConnected
         XCTAssertTrue(isConnected)
-        XCTAssertEqual(server.callCount("hello"), 1)
+        XCTAssertEqual(server.callCount("hello"), 2)
         XCTAssertEqual(server.callCount("enroll"), 1)
     }
 
@@ -342,7 +342,7 @@ final class ServerSyncEngineTests: XCTestCase {
         _ = try await device.connect()
         assertUpToDate(await device.settle())
         XCTAssertEqual(try device.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM sync_base WHERE kind = 'session'") }, 12_000)
-        XCTAssertEqual(ServerSyncStore.applyChunkRows, 5_000)
+        XCTAssertEqual(ServerSyncStore.applyChunkRows, 400)
         XCTAssertEqual(ServerSyncStore.pullLimit, 5_000)
         XCTAssertEqual(server.pullSinces.count, 1)
         XCTAssertEqual(try ServerSyncStore(database: device.database).pullRequest().since, server.seq)

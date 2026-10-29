@@ -12,7 +12,7 @@ extension SettingsViewController {
     }
 
     func serverRows() -> [Row] {
-        [.serversExplainer] + serversModel.rows.map { Row.server($0) } + [.addServer]
+        [.serversExplainer] + serversModel.rows.map { Row.server($0) } + [.addFlaccyServer, .addServer]
     }
 
     func configureServerRow(_ row: Row, cell: UITableViewCell, content: inout UIListContentConfiguration) {
@@ -30,21 +30,32 @@ extension SettingsViewController {
         case .server(let server):
             content.image = RowIcon.image(systemName: "server.rack", tint: .systemIndigo)
             content.text = server.name
-            content.secondaryText = RemoteCopy.detail(for: server)
             content.secondaryTextProperties.numberOfLines = 0
-            content.secondaryTextProperties.color = server.lastFailure == nil ? .secondaryLabel : .systemRed
-            cell.selectionStyle = .none
-            cell.accessoryView = makeServerMenuButton(for: server)
-            cell.accessibilityTraits = []
             cell.accessibilityLabel = server.name
-            cell.accessibilityValue = RemoteCopy.detail(for: server)
-            cell.accessibilityIdentifier = "settings.row.server"
+            if let flaccy = server.flaccy {
+                configureFlaccyServerRow(flaccy, cell: cell, content: &content)
+            } else {
+                content.secondaryText = RemoteCopy.detail(for: server)
+                content.secondaryTextProperties.color = server.lastFailure == nil ? .secondaryLabel : .systemRed
+                cell.selectionStyle = .none
+                cell.accessoryView = makeServerMenuButton(for: server)
+                cell.accessibilityTraits = []
+                cell.accessibilityValue = RemoteCopy.detail(for: server)
+                cell.accessibilityIdentifier = "settings.row.server"
+            }
+
+        case .addFlaccyServer:
+            content.image = RowIcon.image(systemName: "plus", tint: .systemGreen)
+            content.text = String(localized: "Add Flaccy Server")
+            content.textProperties.color = .tintColor
+            cell.accessibilityLabel = String(localized: "Add Flaccy Server")
+            cell.accessibilityIdentifier = "settings.row.addFlaccyServer"
 
         case .addServer:
-            content.image = RowIcon.image(systemName: "plus", tint: .systemGreen)
-            content.text = String(localized: "Add Server")
+            content.image = RowIcon.image(systemName: "plus", tint: .systemGray)
+            content.text = String(localized: "Add Other Server")
             content.textProperties.color = .tintColor
-            cell.accessibilityLabel = String(localized: "Add Server")
+            cell.accessibilityLabel = String(localized: "Add Other Server")
             cell.accessibilityIdentifier = "settings.row.addServer"
 
         case .cacheLimit:
@@ -75,6 +86,38 @@ extension SettingsViewController {
         default:
             break
         }
+    }
+
+    private func configureFlaccyServerRow(
+        _ flaccy: FlaccyServerRowModel, cell: UITableViewCell, content: inout UIListContentConfiguration
+    ) {
+        content.secondaryText = flaccy.statusLine
+        content.secondaryTextProperties.color = flaccy.needsPro ? .tintColor : .secondaryLabel
+        cell.accessoryView = makeSyncBadge()
+        cell.accessibilityTraits = [.button, .updatesFrequently]
+        cell.accessibilityValue = flaccy.accessibilityValue
+        cell.accessibilityHint = String(localized: "Opens the server\u{2019}s settings")
+        cell.accessibilityIdentifier = "settings.row.flaccyServer"
+    }
+
+    private func makeSyncBadge() -> UIView {
+        let label = PaddedBadgeLabel()
+        label.text = String(localized: "Sync")
+        label.font = UIFontMetrics(forTextStyle: .caption1).scaledFont(for: .systemFont(ofSize: 12, weight: .semibold))
+        label.adjustsFontForContentSizeCategory = true
+        label.textColor = .tintColor
+        label.backgroundColor = UIColor.tintColor.withAlphaComponent(0.14)
+        label.layer.cornerRadius = 9
+        label.layer.masksToBounds = true
+        label.accessibilityIdentifier = "settings.row.flaccyServer.badge"
+        let chevron = UIImageView(image: UIImage(systemName: "chevron.right"))
+        chevron.tintColor = .tertiaryLabel
+        chevron.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
+        let stack = UIStackView(arrangedSubviews: [label, chevron])
+        stack.spacing = 10
+        stack.alignment = .center
+        stack.frame = CGRect(origin: .zero, size: stack.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize))
+        return stack
     }
 
     func makeServerMenuButton(for server: RemoteServerRow) -> UIButton {
@@ -129,7 +172,7 @@ extension SettingsViewController {
     override func tableView(
         _ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
     ) -> UISwipeActionsConfiguration? {
-        guard case .server(let server) = dataSource.itemIdentifier(for: indexPath) else { return nil }
+        guard case .server(let server) = dataSource.itemIdentifier(for: indexPath), server.flaccy == nil else { return nil }
         let remove = UIContextualAction(style: .destructive, title: String(localized: "Remove")) { [weak self] _, _, done in
             self?.confirmRemove(server)
             done(true)
@@ -147,9 +190,33 @@ extension SettingsViewController {
         return UISwipeActionsConfiguration(actions: [remove, rename, refresh])
     }
 
+    func handleAddFlaccyServerTap() {
+        impactLight.impactOccurred()
+        AddFlaccyServerViewController.present(from: self)
+    }
+
     func handleAddServerTap() {
         impactLight.impactOccurred()
         AddServerViewController.present(from: self, servers: serversModel)
+    }
+
+    func handleServerTap(_ server: RemoteServerRow) {
+        guard server.flaccy != nil, let record = try? DatabaseManager.shared.fetchRemoteServer(id: server.id) else { return }
+        impactLight.impactOccurred()
+        navigationController?.pushViewController(FlaccyServerDetailViewController(record: record), animated: true)
+    }
+
+    override func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        guard dataSource.sectionIdentifier(for: section) == .servers, FlaccyServerNudge.isVisible(serverCount: serversModel.rows.count)
+        else { return nil }
+        return FlaccyServerNudgeView { [weak self] in
+            self?.impactLight.impactOccurred()
+            FlaccyServerNudge.dismiss()
+            guard let self else { return }
+            var snapshot = self.dataSource.snapshot()
+            snapshot.reloadSections([.servers])
+            self.dataSource.apply(snapshot, animatingDifferences: true)
+        }
     }
 
     func refreshServer(_ server: RemoteServerRow) {

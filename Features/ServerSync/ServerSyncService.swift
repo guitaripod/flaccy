@@ -4,10 +4,8 @@ import Foundation
 
 /// The app's one sync engine over the library database, with the Keychain token store and the URLSession client.
 ///
-/// Nothing starts it yet: the Servers screens call `connect`, `disconnect` and `devices` on it, read `statusUpdates()` for the status
-/// line, and the app delegates call `launched()`, `foregrounded()`, `backgrounded()` and `resolveGhosts()` after a library scan.
-/// Pro gating (`ServerSyncConfiguration.isEntitled`) and the network path monitor (`reachabilityChanged`) are wired where those
-/// decisions are made.
+/// `ServerSyncLifecycle` starts it and feeds it the app's moments (launch, foreground, background, network path, purchases); the
+/// Servers screens call `connect`, `disconnect` and `devices` on it and read `statusUpdates()` through `FlaccyServerStatusStore`.
 nonisolated enum ServerSyncService {
 
     static let engine = ServerSyncEngine(
@@ -15,7 +13,8 @@ nonisolated enum ServerSyncService {
         configuration: ServerSyncConfiguration(
             transports: FlaccyServerTransports(),
             tokens: RemoteCredentialStore.shared,
-            platform: platform
+            platform: platform,
+            isEntitled: { ServerSyncEntitlement.shared.isEntitled }
         )
     )
 
@@ -25,5 +24,18 @@ nonisolated enum ServerSyncService {
         #else
         "ios"
         #endif
+    }
+
+    /// What this device is called in the server's list of devices.
+    static var deviceName: String {
+        #if os(macOS)
+        Host.current().localizedName ?? "Mac"
+        #else
+        "iPhone"
+        #endif
+    }
+
+    static func deviceToken(for baseURL: URL) -> String? {
+        RemoteCredentialStore.shared.token(serverID: ServerSyncEngine.serverID(for: baseURL))
     }
 }

@@ -29,7 +29,7 @@ It asks where your music is, scans it, starts the server in the background, keep
 
 On the iPhone: Settings → Servers → Add → **Flaccy Server**, then scan the code. On a Mac or Linux: open the link `setup` printed, or paste it. The code works once and expires in ten minutes; `flaccy-server enroll` makes another.
 
-Your server's music appears in your library under Servers. Playlists you already have, songs you loved and your listening history are combined with what the other devices have, and a card tells you what was merged (with Undo).
+Your server's music appears in your library under Servers. Playlists you already have, songs you loved and your listening history are combined with what the other devices have, and a card tells you what was merged.
 
 ## What happens when something is off
 

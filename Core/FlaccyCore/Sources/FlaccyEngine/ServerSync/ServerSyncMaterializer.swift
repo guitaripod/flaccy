@@ -14,29 +14,32 @@ enum SyncMaterializer {
     static func refresh(_ db: Database, dirty: SyncDirty, caller: CoreCaller) throws -> MaterializeOutcome {
         var outcome = MaterializeOutcome()
         guard !dirty.isEmpty else { return outcome }
-        let index = try SyncPendingIndex.load(db)
+        let index = SyncPendingLookup(db)
         let resolver = SyncSongResolver(db: db)
         for id in dirty.playlists.sorted() {
             let base = try SyncBase.doc(db, playlistID: id)
-            let visible = try ServerCoreBridge.rebasePlaylist(
-                id: id, base: base, caller: caller, pending: index.pending(for: SyncPending.playlistKey(id))
-            )
+            let key = SyncPending.playlistKey(id)
+            let visible = try index.hasPending(for: key)
+                ? try ServerCoreBridge.rebasePlaylist(id: id, base: base, caller: caller, pending: index.pending(for: key))
+                : base
             try syncPlaylist(db, id: id, visible: visible, resolver: resolver, outcome: &outcome)
         }
         for songKey in dirty.loves.sorted() {
             let base = try SyncBase.love(db, songKey: songKey)
-            let visible = try ServerCoreBridge.rebaseLove(
-                songKey: songKey, base: base, caller: caller, pending: index.pending(for: SyncPending.loveKey(songKey))
-            )
+            let key = SyncPending.loveKey(songKey)
+            let visible = try index.hasPending(for: key)
+                ? try ServerCoreBridge.rebaseLove(songKey: songKey, base: base, caller: caller, pending: index.pending(for: key))
+                : base
             if let visible, try setLoved(db, songKey: songKey, loved: visible.loved) {
                 outcome.changes.loves = true
             }
         }
         for key in dirty.scalars.sorted() {
             let base = try SyncBase.scalar(db, key: key)
-            let visible = try ServerCoreBridge.rebaseScalar(
-                key: key, base: base, caller: caller, pending: index.pending(for: SyncPending.scalarKey(key))
-            )
+            let pendingKey = SyncPending.scalarKey(key)
+            let visible = try index.hasPending(for: pendingKey)
+                ? try ServerCoreBridge.rebaseScalar(key: key, base: base, caller: caller, pending: index.pending(for: pendingKey))
+                : base
             let value: ServerJSON? = try visible.flatMap { $0.deleted ? nil : try ServerCoreBridge.json($0.value) }
             if let songKey = key.hasPrefix(lyricsPrefix) ? String(key.dropFirst(lyricsPrefix.count)) : nil {
                 if let offset = value?.int, try setLyricsOffset(db, songKey: songKey, offsetMs: offset) {
@@ -51,13 +54,11 @@ enum SyncMaterializer {
     }
 
     private static func setLoved(_ db: Database, songKey: String, loved: Bool) throws -> Bool {
-        try db.execute(
-            sql: """
-                UPDATE tracks SET loved = ?1 WHERE loved <> ?1
-                AND id IN (SELECT trackId FROM sync_song_keys WHERE songKey = ?2)
-                """,
-            arguments: [loved, songKey]
-        )
+        let update = try db.cachedStatement(sql: """
+            UPDATE tracks SET loved = ?1 WHERE loved <> ?1
+            AND id IN (SELECT trackId FROM sync_song_keys WHERE songKey = ?2)
+            """)
+        try update.execute(arguments: [loved, songKey])
         return db.changesCount > 0
     }
 

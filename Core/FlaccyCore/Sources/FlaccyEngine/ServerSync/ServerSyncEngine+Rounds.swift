@@ -14,6 +14,10 @@ extension ServerSyncEngine {
         case restart
     }
 
+    struct AccountReadOnly: Error {
+        var role: ServerRole
+    }
+
     /// Runs a sync round now, or joins the one that is running and asks for another behind it. Answers the status it ended in.
     @discardableResult
     public func syncNow() async -> SyncStatus {
@@ -50,14 +54,24 @@ extension ServerSyncEngine {
         clockBehind = false
         publishWorking()
         do {
-            try await importEarlierListens()
+            try await checkRole()
+            _ = try await importStructure()
             var restarts = 0
             while try await syncPass() == .restart {
                 restarts += 1
                 if restarts > Self.maxRestarts { throw ServerSyncError.malformed("the server kept replacing its data") }
             }
+            if try await importEarlierListens() {
+                while try await syncPass() == .restart {
+                    restarts += 1
+                    if restarts > Self.maxRestarts { throw ServerSyncError.malformed("the server kept replacing its data") }
+                }
+            }
             lastFailure = nil
             publish(clockBehind ? .serverClockWrong(server: label) : upToDate())
+        } catch let readOnly as AccountReadOnly {
+            log("The account may not write to the server any more; pending changes are kept")
+            publish(SyncStatus.readOnly(role: readOnly.role, server: label) ?? .unreachable(server: label))
         } catch is CancellationError {
             log("A sync round was cancelled")
         } catch where !store.isConfigured() {
@@ -82,11 +96,33 @@ extension ServerSyncEngine {
         if unsent > 0 { publish(.syncing(changes: unsent)) }
     }
 
-    private func importEarlierListens() async throws {
+    /// Asks the server who this device is now. A guest or a pending device stays quiet: nothing is sent or received, what it
+    /// queued stays queued, and nothing local is touched. An account given the right to write starts recording and importing.
+    private func checkRole() async throws {
+        guard let link = currentLink() else { throw ServerSyncError.notConnected }
+        let transport = try makeTransport(link: link)
+        let hello = try await retrying { try await transport.hello() }
+        guard let role = hello.caller?.role else { return }
+        try store.setRole(role)
+        guard role.canWrite else { throw AccountReadOnly(role: role) }
+        if !store.isRecording {
+            try store.refreshSongKeyIndex()
+            _ = try store.beginRecording()
+        }
+    }
+
+    /// Queues the person's earlier plays, a bounded step at a time. Answers true when it queued any.
+    private func importEarlierListens() async throws -> Bool {
+        var queuedAny = false
+        try store.database.fillListenKeys()
         while !(try store.hasImportedListens()) {
             try Task.checkCancellation()
-            if try store.importListensChunk() { break }
+            let step = try store.importListensChunk()
+            if step.queued > 0 { queuedAny = true }
+            if step.done { break }
+            await Task.yield()
         }
+        return queuedAny
     }
 
     private func syncPass() async throws -> Flow {
@@ -130,7 +166,10 @@ extension ServerSyncEngine {
             case .applied(let more, let outcome):
                 deliver(outcome, covers: &covers)
                 publishWorking()
-                if !more { return .done }
+                if !more {
+                    noteFirstPullComplete()
+                    return .done
+                }
             case .stale:
                 return .done
             case .reset:
@@ -142,10 +181,21 @@ extension ServerSyncEngine {
     private func pushNext(_ transport: any ServerSyncTransport) async throws -> PushStep {
         guard let request = try store.nextPush() else { return .nothing }
         let incarnation = try store.pullRequest().incarnation
-        try await uploadBlobs(for: request.mutations, transport: transport)
+        let unavailable = try await uploadBlobs(for: request.mutations, transport: transport)
+        var outgoing = request
+        outgoing.mutations = request.mutations.map { ReseedCovers.removing(unavailable, from: $0) }
         do {
-            let response = try await retrying { try await transport.push(request, incarnation: incarnation) }
+            let response = try await retrying { try await transport.push(outgoing, incarnation: incarnation) }
+            if try await keepRefusedReseeds(outgoing, response: response, transport: transport) { return .sent }
             var covers = Set<ServerCoverNeed>()
+            if response.results.contains(where: { $0.code == "forbidden" }),
+               let role = try await roleAfterRefusal(transport), !role.canWrite
+            {
+                _ = try store.onPushResponse(
+                    instance: request.instance, response: response, localNowMs: configuration.nowMs(), keepForbidden: true
+                )
+                throw AccountReadOnly(role: role)
+            }
             let outcome = try store.onPushResponse(
                 instance: request.instance, response: response, localNowMs: configuration.nowMs()
             )
@@ -165,6 +215,12 @@ extension ServerSyncEngine {
         }
     }
 
+    private func roleAfterRefusal(_ transport: any ServerSyncTransport) async throws -> ServerRole? {
+        let role = try await retrying { try await transport.hello() }.caller?.role
+        if let role { try store.setRole(role) }
+        return role
+    }
+
     private func recover(instance: String, failure: PushFailure) throws -> PushStep {
         switch try store.onPushFailure(instance: instance, failure: failure) {
         case .resend: .sent
@@ -173,14 +229,39 @@ extension ServerSyncEngine {
         }
     }
 
-    private func uploadBlobs(for mutations: [ServerMutation], transport: any ServerSyncTransport) async throws {
+    /// Uploads the cover images the mutations name. Answers the hashes that could not be uploaded, which a reseed must not name.
+    private func uploadBlobs(for mutations: [ServerMutation], transport: any ServerSyncTransport) async throws -> Set<String> {
+        var unavailable = Set<String>()
         for blob in try store.blobs(for: mutations) {
+            guard let data = blob.data else {
+                unavailable.insert(blob.hash)
+                continue
+            }
             do {
-                try await retrying { try await transport.putBlob(hash: blob.hash, data: blob.data, mime: Self.mime(of: blob.data)) }
+                try await retrying { try await transport.putBlob(hash: blob.hash, data: data, mime: Self.mime(of: data)) }
             } catch let error as ServerSyncError where !error.isTransient && !error.isUnreachable {
                 logError("A playlist cover was refused by the server: \(error.localizedDescription)")
+                unavailable.insert(blob.hash)
             }
         }
+        return unavailable
+    }
+
+    /// A reseed the server refused over a cover is not a failure: the images are uploaded again from the local copy once, and if
+    /// it is refused again the covers are left out. Answers true when it handled the answer.
+    private func keepRefusedReseeds(
+        _ request: ServerPushRequest, response: ServerPushResponse, transport: any ServerSyncTransport
+    ) async throws -> Bool {
+        let refused = Set(response.results.filter { $0.status == .invalid }.map(\.id))
+        let reseeds = request.mutations.filter { $0.name == SyncPending.reseed && refused.contains($0.id) }
+        guard reseeds.contains(where: { !ReseedCovers.hashes(in: $0).isEmpty }) else { return false }
+        let retried = try store.hasRetriedReseedCovers()
+        if !retried { _ = try await uploadBlobs(for: reseeds, transport: transport) }
+        log(retried ? "The server refused the reseeded covers again; sending the base without them" : "The server refused a reseeded cover; uploading it again")
+        try store.keepRefusedReseeds(
+            instance: request.instance, response: response, ids: Set(reseeds.map(\.id)), removeCovers: retried
+        )
+        return true
     }
 
     private static func mime(of data: Data) -> String {
@@ -193,6 +274,7 @@ extension ServerSyncEngine {
     private func readListens(_ transport: any ServerSyncTransport) async throws -> Flow {
         var written = 0
         defer {
+            noteListensMerged(written)
             if written > 0 {
                 var changes = ServerSyncChanges()
                 changes.listens = written

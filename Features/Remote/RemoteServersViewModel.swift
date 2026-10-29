@@ -33,7 +33,11 @@ final class RemoteServersViewModel {
 
     func start() {
         let center = NotificationCenter.default
-        for name in [RemoteServers.didChange, RemoteSyncStatus.didChange, RemoteAvailability.didChange] {
+        let names = [
+            RemoteServers.didChange, RemoteSyncStatus.didChange, RemoteAvailability.didChange,
+            FlaccyServerStatusStore.didChange,
+        ]
+        for name in names {
             observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.reload() }
             })
@@ -50,9 +54,18 @@ final class RemoteServersViewModel {
     func reload() {
         let records = (try? DatabaseManager.shared.fetchRemoteServers()) ?? []
         let counts = (try? DatabaseManager.shared.fetchRemoteSongCounts()) ?? [:]
-        rows = records.map { RemoteServerRow(record: $0, songCount: counts[$0.id] ?? 0) }
+        rows = records.map { record in
+            RemoteServerRow(record: record, songCount: counts[record.id] ?? 0, flaccy: flaccyModel(for: record, songCount: counts[record.id] ?? 0))
+        }
         onChange?()
         refreshCacheUsage()
+    }
+
+    private func flaccyModel(for record: RemoteServerRecord, songCount: Int) -> FlaccyServerRowModel? {
+        let store = FlaccyServerStatusStore.shared
+        guard record.isFlaccyServer, store.isConnected, ServerSyncService.engine.connectedServer?.url.absoluteString == record.baseURL
+        else { return nil }
+        return FlaccyServerRowModel(status: store.status, songCount: songCount, deviceCount: store.deviceCount)
     }
 
     func refreshCacheUsage() {

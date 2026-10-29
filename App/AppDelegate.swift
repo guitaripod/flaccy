@@ -23,6 +23,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         EqualizerEngine.shared.start()
         WatchSyncService.shared.activate()
         PurchaseManager.shared.start()
+        ServerSyncBackgroundRefresh.register()
+        ServerSyncLifecycle.shared.launched()
 
         Task {
             await AudioPlayer.shared.retryPendingScrobbles()

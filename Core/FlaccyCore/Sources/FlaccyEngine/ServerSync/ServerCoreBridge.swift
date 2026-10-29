@@ -58,6 +58,14 @@ enum ServerCoreBridge {
         )
     }
 
+    /// The `state.reseed` entities split the way the server accepts them, by the core's own rule.
+    static func chunkReseed(_ entities: [ServerJSON]) throws -> [[ServerJSON]] {
+        guard !entities.isEmpty else { return [] }
+        let typed = try decoder.decode([FlaccyServerCore.Entity].self, from: encoder.encode(entities))
+        let chunks = try ServerCore.chunkReseed(typed)
+        return try decoder.decode([[ServerJSON]].self, from: encoder.encode(chunks))
+    }
+
     static func eventIdRec(deviceId: String, instance: String, counter: UInt64) throws -> String {
         try ServerCore.eventIdRec(deviceId: deviceId, instance: instance, counter: counter)
     }

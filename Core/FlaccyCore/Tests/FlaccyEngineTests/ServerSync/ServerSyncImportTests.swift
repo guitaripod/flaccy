@@ -89,7 +89,7 @@ final class ServerSyncImportTests: XCTestCase {
         XCTAssertEqual(ids[0], ids[1])
     }
 
-    func testEarlierPlaysGoOutAsMigratedListensInBatchesOf500AndRepeatsAreHidden() async throws {
+    func testEarlierPlaysGoOutAsMigratedListensInResumableChunksAndRepeatsAreHidden() async throws {
         let server = FakeFlaccyServer()
         let device = try makeDevice(server)
         let start: TimeInterval = 1_600_000_000
@@ -103,22 +103,19 @@ final class ServerSyncImportTests: XCTestCase {
             trackTitle: "Song 0", artist: "Artist", albumTitle: "Album", timestamp: Date(timeIntervalSince1970: start), duration: 0, submitted: true
         ))
         _ = try await device.connect()
-        server.online = false
-        _ = await device.engine.syncNow()
-        let sizes = try args(device, "listen.record").map { $0["listens"]?.array?.count ?? 0 }
-        XCTAssertEqual(sizes, [500, 500, 203])
+        assertUpToDate(await device.engine.syncNow())
+        let sizes = server.allPushes().flatMap(\.mutations).filter { $0.name == "listen.record" }
+            .map { $0.args["listens"]?.array?.count ?? 0 }
+        XCTAssertEqual(sizes, [300, 300, 300, 300, 3])
         let hidden = try device.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM scrobbles WHERE suppressed = 1") }
         XCTAssertEqual(hidden, 1)
         let withoutId = try device.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM scrobbles WHERE eventId IS NULL") }
         XCTAssertEqual(withoutId, 1)
-        let first = try XCTUnwrap(args(device, "listen.record").first?["listens"]?.array?.first)
+        let first = try XCTUnwrap(server.allPushes().flatMap(\.mutations).first { $0.name == "listen.record" }?.args["listens"]?.array?.first)
         let expected = try ServerCore.eventIdsMig([(ts: Int64(start), titleKey: ListenHistory.titleKey("Song 0"), artistKey: ListenHistory.artistKey("Artist"))])
         XCTAssertEqual(first["eventId"]?.string, expected.first)
         XCTAssertEqual(first["recorded"]?.bool, false)
         XCTAssertEqual(try device.meta(SyncMeta.imported), "1")
-
-        server.online = true
-        assertUpToDate(await device.engine.syncNow())
         XCTAssertEqual(server.visiblePlays().count, 1_203)
     }
 

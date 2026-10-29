@@ -203,6 +203,7 @@ final class Library: LibraryProviding {
             await loadFromDatabase()
             publishLibraryTallies()
             MidgarLog.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
+            Task { await ServerSyncService.engine.resolveGhosts() }
         }
 
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)

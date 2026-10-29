@@ -76,7 +76,7 @@ extension DatabaseManager {
         }
         try dbQueue.write { db in
             try db.execute(sql: """
-                CREATE INDEX IF NOT EXISTS scrobbles_on_listen_play ON scrobbles(titleKey, artistKey, timestamp);
+                \(ServerSyncSchema.listenPlayIndex);
                 CREATE INDEX IF NOT EXISTS scrobbles_on_artistKey ON scrobbles(artistKey);
                 """)
         }

@@ -16,49 +16,69 @@ enum SyncBase {
         var scalarKey: String?
     }
 
-    /// Stores a pulled change as the base of its entity. A value this build cannot decode is skipped.
+    /// Stores a pulled change as the base of its entity. A value this build cannot read is skipped.
     static func put(_ db: Database, _ change: ServerChange) throws -> Stored? {
-        guard let decoded = ServerEntityValue(kind: change.kind, value: change.value),
-              let text = change.value.text
-        else { return nil }
-        let kind = change.kind.wireName
+        guard let shape = Shape(change), let text = change.value.text else { return nil }
+        let insert = try db.cachedStatement(sql: """
+            INSERT INTO sync_base (kind, id, parent, value_json, deleted) VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(kind, id) DO UPDATE SET
+                parent = excluded.parent, value_json = excluded.value_json, deleted = excluded.deleted
+            """)
+        try insert.execute(arguments: [change.kind.wireName, change.id, shape.parent, text, change.deleted])
+        return Stored(foldKey: shape.foldKey, scalarKey: shape.scalarKey)
+    }
+
+    /// What a change must carry to be stored and folded later, checked on the parsed document without decoding it a second time.
+    private struct Shape {
         var parent: String?
-        var stored = Stored()
-        switch decoded {
-        case .playlist(let value):
-            stored.foldKey = SyncPending.playlistKey(value.id)
-        case .entry(let value):
-            parent = value.playlist
-            stored.foldKey = SyncPending.playlistKey(value.playlist)
-        case .love(let value):
-            stored.foldKey = SyncPending.loveKey(value.songKey)
-        case .scalar(let value):
-            stored.foldKey = SyncPending.scalarKey(value.key)
-            stored.scalarKey = value.key
-        case .session, .rating:
-            break
-        case .listen:
-            return nil
+        var foldKey: String?
+        var scalarKey: String?
+
+        init?(_ change: ServerChange) {
+            let value = change.value
+            switch change.kind {
+            case .playlist:
+                guard value["id"]?.string == change.id, value["name"]?.string != nil, value["owner"]?.string != nil,
+                      value["alive"]?.bool != nil, value["stamps"] != nil
+                else { return nil }
+                foldKey = SyncPending.playlistKey(change.id)
+            case .playlistEntry:
+                guard value["id"]?.string == change.id, let playlist = value["playlist"]?.string, value["pos"]?.string != nil,
+                      value["alive"]?.bool != nil, value["stamps"] != nil, Self.isSongRef(value["ref"])
+                else { return nil }
+                parent = playlist
+                foldKey = SyncPending.playlistKey(playlist)
+            case .love:
+                guard value["songKey"]?.string == change.id, value["loved"]?.bool != nil, value["stamp"]?.int != nil,
+                      Self.isSongRef(value["ref"])
+                else { return nil }
+                foldKey = SyncPending.loveKey(change.id)
+            case .scalar:
+                guard value["key"]?.string == change.id, value["deleted"]?.bool != nil, value["stamp"]?.int != nil else { return nil }
+                foldKey = SyncPending.scalarKey(change.id)
+                scalarKey = change.id
+            case .session:
+                guard value["device"]?.string == change.id, value["session"] != nil else { return nil }
+            case .rating:
+                break
+            case .listen, .unknown:
+                return nil
+            }
         }
-        try db.execute(
-            sql: """
-                INSERT INTO sync_base (kind, id, parent, value_json, deleted) VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(kind, id) DO UPDATE SET
-                    parent = excluded.parent, value_json = excluded.value_json, deleted = excluded.deleted
-                """,
-            arguments: [kind, change.id, parent, text, change.deleted]
-        )
-        return stored
+
+        private static func isSongRef(_ value: ServerJSON?) -> Bool {
+            guard let value else { return false }
+            return value["songKey"]?.string != nil && value["title"]?.string != nil && value["artist"]?.string != nil
+        }
     }
 
     static func doc(_ db: Database, playlistID: String) throws -> CorePlaylistDoc? {
-        guard let text = try String.fetchOne(
-            db, sql: "SELECT value_json FROM sync_base WHERE kind = ? AND id = ?", arguments: [playlist, playlistID]
-        ) else { return nil }
+        let fetchHead = try db.cachedStatement(sql: "SELECT value_json FROM sync_base WHERE kind = ? AND id = ?")
+        guard let text = try String.fetchOne(fetchHead, arguments: [playlist, playlistID]) else { return nil }
         let head = try ServerCoreBridge.decode(CorePlaylist.self, from: text)
-        let entries = try String.fetchAll(
-            db, sql: "SELECT value_json FROM sync_base WHERE kind = ? AND parent = ?", arguments: [entry, playlistID]
-        ).map { try ServerCoreBridge.decode(CoreEntry.self, from: $0) }
+        let fetchEntries = try db.cachedStatement(sql: "SELECT value_json FROM sync_base WHERE kind = ? AND parent = ?")
+        let entries = try String.fetchAll(fetchEntries, arguments: [entry, playlistID])
+            .map { try ServerCoreBridge.decode(CoreEntry.self, from: $0) }
         return CorePlaylistDoc(playlist: head, entries: entries)
     }
 
@@ -71,9 +91,8 @@ enum SyncBase {
     }
 
     private static func value<T: Decodable>(_ db: Database, kind: String, id: String) throws -> T? {
-        guard let text = try String.fetchOne(
-            db, sql: "SELECT value_json FROM sync_base WHERE kind = ? AND id = ?", arguments: [kind, id]
-        ) else { return nil }
+        let fetch = try db.cachedStatement(sql: "SELECT value_json FROM sync_base WHERE kind = ? AND id = ?")
+        guard let text = try String.fetchOne(fetch, arguments: [kind, id]) else { return nil }
         return try ServerCoreBridge.decode(T.self, from: text)
     }
 

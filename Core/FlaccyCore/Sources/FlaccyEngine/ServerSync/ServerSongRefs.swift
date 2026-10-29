@@ -25,11 +25,10 @@ enum SyncSongRefs {
 
     /// The reference for a library track, by its `fileURL`. A server's song carries no path, because a path names one library.
     static func ref(_ db: Database, fileURL: String) throws -> ServerSongRef? {
-        guard let row = try Row.fetchOne(
-            db,
-            sql: "SELECT title, artist, albumTitle, duration, audioFingerprint, musicBrainzID FROM tracks WHERE fileURL = ?",
-            arguments: [fileURL]
-        ) else { return nil }
+        let fetch = try db.cachedStatement(
+            sql: "SELECT title, artist, albumTitle, duration, audioFingerprint, musicBrainzID FROM tracks WHERE fileURL = ?"
+        )
+        guard let row = try Row.fetchOne(fetch, arguments: [fileURL]) else { return nil }
         var song = try ref(title: row["title"], artist: row["artist"], album: row["albumTitle"])
         let duration: Double = row["duration"]
         song.durationMs = Int64((duration * 1000).rounded())
@@ -47,7 +46,7 @@ enum SyncSongRefs {
         while try refreshChunk(database) == chunkSize {}
     }
 
-    private static let chunkSize = 2_000
+    private static let chunkSize = 1_000
 
     private static func refreshChunk(_ database: DatabaseManager) throws -> Int {
         try database.dbQueue.write { db in
@@ -83,7 +82,7 @@ enum SyncSongRefs {
 }
 
 /// Finds the local track a reference names.
-struct SyncSongResolver {
+final class SyncSongResolver {
 
     private struct Candidate {
         var path: String
@@ -95,23 +94,40 @@ struct SyncSongResolver {
     private static let durationToleranceMs: Int64 = 2_000
 
     let db: Database
+    private var answers: [ServerSongRef: String?] = [:]
+    private var albumKeys: [String: String] = [:]
 
-    /// True when `fileURL` is a track of `songKey`: the check that keeps an entry on the file the person chose.
-    func pathHasSongKey(_ fileURL: String, _ songKey: String) throws -> Bool {
-        try Bool.fetchOne(
-            db,
-            sql: """
-                SELECT EXISTS (
-                    SELECT 1 FROM sync_song_keys k JOIN tracks t ON t.id = k.trackId
-                    WHERE t.fileURL = ? AND k.songKey = ?
-                )
-                """,
-            arguments: [fileURL, songKey]
-        ) ?? false
+    init(db: Database) {
+        self.db = db
+    }
+
+    /// The song key of the track behind each synced row of a playlist, so keeping an entry on the file the person chose costs one query.
+    func songKeys(ofRowsIn playlist: Int64) throws -> [String: String] {
+        let fetch = try db.cachedStatement(sql: """
+            SELECT pt.syncId, k.songKey FROM playlistTracks pt
+            CROSS JOIN tracks t ON t.fileURL = pt.trackFileURL CROSS JOIN sync_song_keys k ON k.trackId = t.id
+            WHERE pt.playlistId = ? AND +pt.syncId IS NOT NULL
+            """)
+        let rows = try Row.fetchAll(fetch, arguments: [playlist])
+        return Dictionary(rows.map { ($0["syncId"], $0["songKey"]) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    private func albumKey(_ album: String) -> String {
+        if let known = albumKeys[album] { return known }
+        let computed = ListenHistory.albumKey(album)
+        albumKeys[album] = computed
+        return computed
+    }
+
+    func resolve(_ song: ServerSongRef) throws -> String? {
+        if let known = answers[song] { return known }
+        let found = try resolveByLadder(song)
+        answers[song] = .some(found)
+        return found
     }
 
     /// The `fileURL` of the track `song` names, by the ladder: fingerprint, MusicBrainz id, song key with album and duration, song key alone, relative path.
-    func resolve(_ song: ServerSongRef) throws -> String? {
+    private func resolveByLadder(_ song: ServerSongRef) throws -> String? {
         if let fp = song.fp, !fp.isEmpty,
            let found = best(try byColumn("audioFingerprint", fp), song) { return found }
         if let mbid = song.mbid, !mbid.isEmpty,
@@ -137,7 +153,7 @@ struct SyncSongResolver {
     }
 
     private func candidates(sql: String, _ value: String) throws -> [Candidate] {
-        try Row.fetchAll(db, sql: sql, arguments: [value]).map { row in
+        try Row.fetchAll(try db.cachedStatement(sql: sql), arguments: [value]).map { row in
             let codec: String? = row["codec"]
             let duration: Double = row["duration"]
             return Candidate(
@@ -150,14 +166,14 @@ struct SyncSongResolver {
     private func exactEdition(_ candidates: [Candidate], _ song: ServerSongRef) -> String? {
         guard let albumKey = song.albumKey else { return nil }
         let matching = candidates.filter {
-            ListenHistory.albumKey($0.album) == albumKey
+            self.albumKey($0.album) == albumKey
                 && abs($0.durationMs - song.durationMs) <= Self.durationToleranceMs
         }
-        return Self.rank(matching, song)?.path
+        return rank(matching, song)?.path
     }
 
     private func best(_ candidates: [Candidate], _ song: ServerSongRef) -> String? {
-        Self.rank(candidates, song)?.path
+        rank(candidates, song)?.path
     }
 
     private func byPath(_ relPath: String?) throws -> String? {
@@ -166,11 +182,11 @@ struct SyncSongResolver {
     }
 
     /// Same album first, lossless over lossy, a local file over a server's, then the lowest path.
-    private static func rank(_ candidates: [Candidate], _ song: ServerSongRef) -> Candidate? {
-        let wanted = song.albumKey ?? ListenHistory.albumKey(song.album)
+    private func rank(_ candidates: [Candidate], _ song: ServerSongRef) -> Candidate? {
+        let wanted = song.albumKey ?? albumKey(song.album)
         func order(_ candidate: Candidate) -> [Int] {
             [
-                ListenHistory.albumKey(candidate.album) == wanted ? 0 : 1,
+                albumKey(candidate.album) == wanted ? 0 : 1,
                 candidate.lossless ? 0 : 1,
                 RemoteTrackPath.isRemote(candidate.path) ? 1 : 0,
             ]

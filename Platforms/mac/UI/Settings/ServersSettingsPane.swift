@@ -6,12 +6,20 @@ import MidgarCore
 /// cache that lets their songs replay without the server.
 final class ServersSettingsPane: SettingsPane {
 
-    private let model = RemoteServersViewModel()
-    private let listStack = NSStackView()
+    let model = RemoteServersViewModel()
+    lazy var share = ShareLibrarySection(host: self)
+    let listStack = NSStackView()
+    let nudge = NSStackView()
     private let cacheLimitLabel = NSTextField(labelWithString: "")
     private let cacheLimitStepper = NSStepper()
     private let cacheUsageLabel = NSTextField(labelWithString: "")
     private var rowsOnScreen: [RemoteServerRow] = []
+
+    override func makeRootView() -> NSView {
+        let drop = LinkDropView()
+        drop.onLink = { [weak self] link in self?.present(link: link) }
+        return drop
+    }
 
     override func buildForm() {
         formStack.addArrangedSubview(sectionLabel(String(localized: "Servers")))
@@ -22,10 +30,22 @@ final class ServersSettingsPane: SettingsPane {
         listStack.spacing = 10
         addFullWidth(listStack)
 
-        let add = NSButton(title: String(localized: "Add Server\u{2026}"), target: self, action: #selector(addTapped))
+        let addFlaccy = PanelButton(title: String(localized: "Add Flaccy Server\u{2026}")) { [weak self] in self?.addFlaccyTapped() }
+        addFlaccy.bezelStyle = .rounded
+        addFlaccy.setAccessibilityIdentifier("settings.addFlaccyServer")
+        let paste = PanelButton(title: String(localized: "Paste Link")) { [weak self] in self?.pasteTapped() }
+        paste.bezelStyle = .rounded
+        paste.setAccessibilityIdentifier("settings.pasteServerLink")
+        let add = PanelButton(title: String(localized: "Add Other Server\u{2026}")) { [weak self] in self?.addTapped() }
         add.bezelStyle = .rounded
         add.setAccessibilityIdentifier("settings.addServer")
-        addRow([add])
+        addRow([addFlaccy, paste, add])
+        buildNudge()
+        addFullWidth(nudge)
+        formStack.addArrangedSubview(separator())
+
+        formStack.addArrangedSubview(sectionLabel(SharingCopy.title))
+        addFullWidth(share.view)
         formStack.addArrangedSubview(separator())
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "Server Cache")))
@@ -51,19 +71,23 @@ final class ServersSettingsPane: SettingsPane {
         super.viewWillAppear()
         model.onChange = { [weak self] in self?.render() }
         model.start()
+        share.start()
         render()
     }
 
     override func viewWillDisappear() {
         super.viewWillDisappear()
         model.stop()
+        share.stop()
     }
 
     private func render() {
         cacheLimitStepper.integerValue = model.cacheLimitGigabytes
         cacheLimitLabel.stringValue = RemoteCopy.cacheLimit(gigabytes: model.cacheLimitGigabytes)
         cacheUsageLabel.stringValue = model.cacheCaption.isEmpty ? "\u{2026}" : model.cacheCaption
+        nudge.isHidden = !FlaccyServerNudge.isVisible(serverCount: model.rows.count)
         guard model.rows != rowsOnScreen else { return }
+        announceFlaccyStatusChange(from: rowsOnScreen, to: model.rows)
         rowsOnScreen = model.rows
         listStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         if model.rows.isEmpty {
@@ -80,6 +104,7 @@ final class ServersSettingsPane: SettingsPane {
     }
 
     private func makeRow(for server: RemoteServerRow) -> NSView {
+        if let flaccy = server.flaccy { return makeFlaccyRow(for: server, flaccy: flaccy) }
         let icon = NSImageView(image: NSImage(systemSymbolName: "server.rack", accessibilityDescription: nil) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 16, weight: .regular)
         icon.contentTintColor = .secondaryLabelColor
@@ -110,8 +135,8 @@ final class ServersSettingsPane: SettingsPane {
         return row
     }
 
-    private func button(_ title: String, symbol: String, action: @escaping () -> Void) -> NSButton {
-        let item = ClosureButton(title: title, action: action)
+    func button(_ title: String, symbol: String, action: @escaping () -> Void) -> NSButton {
+        let item = PanelButton(title: title, action: action)
         item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
         item.imagePosition = .imageLeading
         item.bezelStyle = .rounded
@@ -119,12 +144,12 @@ final class ServersSettingsPane: SettingsPane {
         return item
     }
 
-    @objc private func addTapped() {
+    private func addTapped() {
         presentAddServer(link: nil)
     }
 
-    func presentAddServer(link: ServerLink?) {
-        presentAsSheet(AddServerPanelViewController(servers: model, link: link))
+    func presentAddServer(link: ServerLink?, address: String? = nil) {
+        presentAsSheet(AddServerPanelViewController(servers: model, link: link, address: address))
     }
 
     @objc private func limitStepped() {
@@ -209,24 +234,4 @@ final class ServersSettingsPane: SettingsPane {
         }
     }
 
-}
-
-/// A push button that runs a closure when it is pressed.
-private final class ClosureButton: NSButton {
-
-    private let handler: () -> Void
-
-    init(title: String, action: @escaping () -> Void) {
-        handler = action
-        super.init(frame: .zero)
-        self.title = title
-        target = self
-        self.action = #selector(pressed)
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    @objc private func pressed() {
-        handler()
-    }
 }

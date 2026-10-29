@@ -142,7 +142,9 @@ actor RemoteServers {
     /// added under the same address and user gets the new secret instead of a second copy.
     /// The catalog sync starts on its own; await `RemoteCatalogSync.sync` to wait for it.
     @discardableResult
-    func add(address: String, name: String? = nil, authentication: RemoteAuthentication) async throws -> RemoteServerRecord {
+    func add(
+        address: String, name: String? = nil, authentication: RemoteAuthentication, serverType: String? = nil
+    ) async throws -> RemoteServerRecord {
         guard let base = ServerAddress.normalize(address) else { throw RemoteFailure.invalidAddress }
         let existing = try list().first { $0.baseURL == base.absoluteString && $0.username == authentication.username }
         let id = existing?.id ?? UUID().uuidString.lowercased()
@@ -160,7 +162,7 @@ actor RemoteServers {
         )
         if let name { record.name = name }
         record.authKind = authentication.kind.rawValue
-        record.serverType = hello.type
+        record.serverType = serverType ?? hello.type
         record.serverVersion = hello.serverVersion
         record.extensionNames = extensions
         try database.saveRemoteServer(record)

@@ -107,6 +107,9 @@ struct ReplayTests {
             let request = try JSONDecoder().decode(EventIdsMigRequest.self, from: input)
             let ids = try ServerCore.eventIdsMig(request.plays.map { ($0.ts, $0.titleKey, $0.artistKey) })
             return try encoder.encode(EventIdsAnswer(eventIds: ids))
+        case "chunkReseed":
+            let request = try JSONDecoder().decode(ChunkReseedRequest.self, from: input)
+            return try encoder.encode(ChunkReseedAnswer(chunks: ServerCore.chunkReseed(request.entities)))
         case "suppressedFlags":
             let request = try JSONDecoder().decode(SuppressedFlagsRequest.self, from: input)
             return try encoder.encode(FlagsAnswer(flags: ServerCore.suppressedFlags(request.events)))

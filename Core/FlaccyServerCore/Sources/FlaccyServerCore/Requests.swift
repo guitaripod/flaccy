@@ -92,6 +92,14 @@ struct EventIdsMigRequest: Codable {
     var plays: [MigratedPlayRequest]
 }
 
+struct ChunkReseedRequest: Codable {
+    var entities: [Entity]
+}
+
+struct ChunkReseedAnswer: Codable {
+    var chunks: [[Entity]]
+}
+
 struct SuppressedFlagsRequest: Codable {
     var events: [SecondEvent]
 }

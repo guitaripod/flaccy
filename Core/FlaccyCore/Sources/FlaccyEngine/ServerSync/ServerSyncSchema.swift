@@ -3,9 +3,42 @@ import GRDB
 /// The tables and columns Flaccy Server sync adds to the library database (migration v18).
 enum ServerSyncSchema {
 
-    static let tables = [
-        "sync_pending", "sync_base", "sync_ghosts", "sync_blobs", "sync_song_keys", "sync_meta",
+    static let serverState = [
+        "sync_pending_keys", "sync_pending", "sync_base", "sync_ghosts", "sync_blobs", "sync_meta",
     ]
+
+    /// The lookup from an entity to the queued mutations that touch it, so folding an entity never reads the whole queue.
+    static func createPendingKeys(_ db: Database) throws {
+        try db.execute(sql: """
+            CREATE TABLE sync_pending_keys (
+                key TEXT NOT NULL,
+                mutation_id INTEGER NOT NULL,
+                PRIMARY KEY (key, mutation_id)
+            ) WITHOUT ROWID;
+            CREATE INDEX sync_pending_keys_on_mutation ON sync_pending_keys(mutation_id);
+            INSERT OR IGNORE INTO sync_pending_keys (key, mutation_id)
+                SELECT j.value, p.mutation_id FROM sync_pending p, json_each(p.touches_json) j;
+            """)
+    }
+
+    /// The play indexes the Stats queries use, now carrying what the `suppressed = 0` filter reads so those queries stay covered.
+    static func refreshPlayIndexes(_ db: Database) throws {
+        try db.execute(sql: """
+            DROP INDEX IF EXISTS scrobbles_on_live_timestamp;
+            CREATE INDEX scrobbles_on_live_timestamp ON scrobbles(timestamp, duration) WHERE suppressed = 0;
+            """)
+        let hasListenIndex = try Bool.fetchOne(
+            db, sql: "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'scrobbles_on_listen_play')"
+        ) ?? false
+        if hasListenIndex {
+            try db.execute(sql: """
+                DROP INDEX scrobbles_on_listen_play;
+                \(listenPlayIndex);
+                """)
+        }
+    }
+
+    static let listenPlayIndex = "CREATE INDEX IF NOT EXISTS scrobbles_on_listen_play ON scrobbles(titleKey, artistKey, timestamp, suppressed)"
 
     static func create(_ db: Database) throws {
         try db.alter(table: "playlists") { t in

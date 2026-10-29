@@ -11,7 +11,7 @@ final class ServerSyncRecorderTests: XCTestCase {
     func testMigrationAddsTheSyncTablesAndColumns() throws {
         let device = try makeDevice(FakeFlaccyServer())
         let tables = try device.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'sync_%'") }
-        XCTAssertEqual(Set(tables), ["sync_meta", "sync_base", "sync_pending", "sync_ghosts", "sync_blobs", "sync_song_keys"])
+        XCTAssertEqual(Set(tables), ["sync_meta", "sync_base", "sync_pending", "sync_pending_keys", "sync_ghosts", "sync_blobs", "sync_song_keys"])
         let scrobbleColumns = try device.read { try String.fetchAll($0, sql: "SELECT name FROM pragma_table_info('scrobbles')") }
         XCTAssertTrue(scrobbleColumns.contains("eventId") && scrobbleColumns.contains("suppressed"))
         let playlistColumns = try device.read { try String.fetchAll($0, sql: "SELECT name FROM pragma_table_info('playlistTracks')") }

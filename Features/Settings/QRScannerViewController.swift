@@ -3,10 +3,10 @@ import FlaccyCore
 import MidgarCore
 import UIKit
 
-/// Reads the QR code a Flaccy Server prints for a new device and hands back its link.
+/// Reads the QR code a Flaccy Server prints for a new device and hands back its link, whichever kind it is.
 final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
 
-    private let onLink: (ServerLink) -> Void
+    private let onLink: (ParsedServerLink) -> Void
     private let session = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "cc.midgarcorp.flaccy.qr-scanner")
     private var previewLayer: AVCaptureVideoPreviewLayer?
@@ -14,7 +14,7 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     private let haptics = UINotificationFeedbackGenerator()
     private var hasDeliveredLink = false
 
-    init(onLink: @escaping (ServerLink) -> Void) {
+    init(onLink: @escaping (ParsedServerLink) -> Void) {
         self.onLink = onLink
         super.init(nibName: nil, bundle: nil)
     }
@@ -35,7 +35,7 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         hintLabel.textColor = .white
         hintLabel.numberOfLines = 0
         hintLabel.textAlignment = .center
-        hintLabel.text = String(localized: "Point the camera at the QR code your Flaccy Server printed.")
+        hintLabel.text = String(localized: "Point at the code on your computer")
         hintLabel.accessibilityIdentifier = "qrScanner.hint"
         hintLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(hintLabel)
@@ -74,7 +74,7 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     }
 
     private func showDenied() {
-        hintLabel.text = String(localized: "Flaccy can\u{2019}t use the camera. Allow it in Settings, or type the server\u{2019}s address and key instead.")
+        hintLabel.text = String(localized: "Flaccy can\u{2019}t use the camera. Allow it in Settings, or type the server\u{2019}s details instead.")
         haptics.notificationOccurred(.warning)
     }
 
@@ -82,7 +82,7 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         guard let device = AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: device), session.canAddInput(input)
         else {
-            hintLabel.text = String(localized: "This device has no camera to scan with. Type the server\u{2019}s address and key instead.")
+            hintLabel.text = String(localized: "This device has no camera to scan with. Type the server\u{2019}s details instead.")
             return
         }
         session.addInput(input)
@@ -107,11 +107,11 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         let payloads = metadataObjects.compactMap { ($0 as? AVMetadataMachineReadableCodeObject)?.stringValue }
         MainActor.assumeIsolated {
             guard !hasDeliveredLink, let payload = payloads.first else { return }
-            if let link = ServerLink(text: payload) {
+            if let link = ParsedServerLink(text: payload) {
                 hasDeliveredLink = true
                 onLink(link)
             } else {
-                hintLabel.text = String(localized: "That code isn\u{2019}t a Flaccy Server link. Scan the QR code printed by flaccy-server key add --url.")
+                hintLabel.text = String(localized: "That isn\u{2019}t a code from Flaccy Server. Run `flaccy-server enroll` on your computer and scan the code it prints.")
                 haptics.notificationOccurred(.warning)
             }
         }

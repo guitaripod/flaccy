@@ -74,6 +74,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
         startLibraryPipeline()
         RemoteLaunch.start()
+        MacServerSync.shared.start()
         #if LEGACY_MAC_HANDOFF
         LegacyMacHandoff.exportAtLaunch()
         LegacyMoveCardPresenter.presentOncePerLaunch(over: windowController)
@@ -89,6 +90,16 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         DebugDrive.runNewMixShotIfRequested(window: windowController.window)
         DebugDrive.runRemoteShotIfRequested(window: windowController.window)
         #endif
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard MacServerSync.shared.needsGracefulShutdown else { return .terminateNow }
+        MidgarLog.info("Quit requested; stopping the library server first", category: .sync)
+        Task {
+            await MacServerSync.shared.shutDown()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -171,23 +182,24 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         MacToast.show(message, style: .error, in: mainWindowController?.window)
     }
 
-    /// Opens the Add Server sheet filled in from a `flaccy://server` link; any other link is left alone.
+    /// Opens the Add Flaccy Server or Add Server sheet filled in from a `flaccy://server` link, without connecting; any other link
+    /// is left alone.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
-            guard let link = ServerLink(url: url) else { continue }
-            MidgarLog.info("Opened a server link for \(link.name ?? "a server")", category: .ui)
+            guard let link = ParsedServerLink(url: url) else { continue }
+            MidgarLog.info("Opened a server link", category: .ui)
             showServersSettings(link: link)
         }
     }
 
-    func showServersSettings(link: ServerLink? = nil) {
+    func showServersSettings(link: ParsedServerLink? = nil) {
         showSettings(nil)
         guard let tabs = settingsWindowController?.contentViewController as? SettingsTabViewController,
               let index = tabs.tabViewItems.firstIndex(where: { $0.viewController is ServersSettingsPane })
         else { return }
         tabs.selectedTabViewItemIndex = index
         guard let link, let pane = tabs.tabViewItems[index].viewController as? ServersSettingsPane else { return }
-        DispatchQueue.main.async { pane.presentAddServer(link: link) }
+        DispatchQueue.main.async { pane.present(link: link) }
     }
 
     @objc private func appDidBecomeActive() {

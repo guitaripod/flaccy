@@ -32,7 +32,8 @@ public final class DatabaseManager: Sendable {
                 Self.moveCorruptDatabaseAside(at: dbPath)
                 dbQueue = try Self.openDatabase(at: dbPath)
             }
-            serverSyncGate = ServerSyncGate(configured: Self.serverSyncIsConfigured(dbQueue))
+            let state = Self.serverSyncState(dbQueue)
+            serverSyncGate = ServerSyncGate(configured: state.configured, recording: state.recording)
             MidgarLog.info("Database initialized at \(dbPath)", category: .database)
         } catch {
             fatalError("Failed to initialize database after recovery attempt: \(error)")
@@ -45,11 +46,13 @@ public final class DatabaseManager: Sendable {
     public init(path: String, clock: @escaping @Sendable () -> Int64 = ServerSyncGate.systemClock) throws {
         let queue = try Self.openDatabase(at: path)
         dbQueue = queue
-        serverSyncGate = ServerSyncGate(configured: Self.serverSyncIsConfigured(queue), clock: clock)
+        let state = Self.serverSyncState(queue)
+        serverSyncGate = ServerSyncGate(configured: state.configured, recording: state.recording, clock: clock)
     }
 
-    private static func serverSyncIsConfigured(_ queue: DatabaseQueue) -> Bool {
-        (try? queue.read { try SyncMeta.isConfigured($0) }) ?? false
+    private static func serverSyncState(_ queue: DatabaseQueue) -> (configured: Bool, recording: Bool) {
+        let state = try? queue.read { (try SyncMeta.isConfigured($0), try SyncMeta.get($0, SyncMeta.recording) != nil) }
+        return state ?? (false, false)
     }
 
     /// Writes a consistent copy of the whole library to `url`, taken while the app keeps using it.

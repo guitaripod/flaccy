@@ -43,6 +43,19 @@ extension DatabaseManager {
         }
     }
 
+    /// Removes the songs of a server from the library and keeps the server, its sign-in and the playlist places that held them,
+    /// so showing the music again brings every place back. Returns the paths of the songs that were removed.
+    @discardableResult
+    public func deleteRemoteTracks(serverID: String) throws -> [String] {
+        try dbQueue.write { db in
+            let paths = try String.fetchAll(db, sql: "SELECT fileURL FROM tracks WHERE remoteServer = ?", arguments: [serverID])
+            _ = try TrackRecord.filter(Column("remoteServer") == serverID).deleteAll(db)
+            try db.execute(sql: "UPDATE remoteServers SET lastSyncedAt = NULL WHERE id = ?", arguments: [serverID])
+            try Self.sweepOrphanedAlbumEnrichment(in: db)
+            return paths
+        }
+    }
+
     /// The stored paths of every song of a server.
     public func fetchRemoteTrackPaths(serverID: String) throws -> [String] {
         try dbQueue.read { db in
