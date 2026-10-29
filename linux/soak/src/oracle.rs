@@ -54,7 +54,7 @@ pub struct Oracle {
     removed_issued: BTreeSet<String>,
     loves: BTreeMap<String, Field<bool>>,
     lyrics: BTreeMap<String, Field<i64>>,
-    listens: BTreeMap<String, (i64, String)>,
+    listens: BTreeSet<(i64, String)>,
     issued: u64,
     acked: u64,
     refused: u64,
@@ -136,8 +136,7 @@ impl Oracle {
             }
             "listen.record" => {
                 for listen in args["listens"].as_array().into_iter().flatten() {
-                    let key = (listen["ts"].as_i64().unwrap_or(0), text(&listen["ref"]["songKey"]));
-                    self.listens.insert(text(&listen["eventId"]), key);
+                    self.listens.insert((listen["ts"].as_i64().unwrap_or(0), text(&listen["ref"]["songKey"])));
                 }
             }
             _ => {}
@@ -225,23 +224,47 @@ impl Oracle {
         Ok(())
     }
 
+    /// A play is identified by its second and song, not by its id: a client that meets a stale instance gives its unanswered plays new ids.
     fn check_listens(&self, server: &ServerView) -> Result<(), String> {
-        let held: BTreeMap<&str, (i64, &str)> = server
+        let held: BTreeSet<(i64, &str)> = server
             .listens
             .iter()
-            .map(|item| (item.event_id.as_str(), (item.ts, item.song.song_key.as_str())))
+            .map(|item| (item.ts, item.song.song_key.as_str()))
             .collect();
-        for (event, (ts, song)) in &self.listens {
-            match held.get(event.as_str()) {
-                None => return Err(format!("listen {event} (ts {ts}, song {song}): acknowledged but absent on the server")),
-                Some((held_ts, held_song)) if held_ts != ts || held_song != song => {
-                    return Err(format!(
-                        "listen {event}: acknowledged as (ts {ts}, song {song}) but the server holds (ts {held_ts}, song {held_song}); a different play took its id"
-                    ));
-                }
-                Some(_) => {}
+        for (ts, song) in &self.listens {
+            if !held.contains(&(*ts, song.as_str())) {
+                return Err(format!("listen (ts {ts}, song {song}): acknowledged but absent on the server"));
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn row(stamp: i64, name: &str, args: Value) -> Row {
+        Row { stamp, name: name.into(), args, failed: false }
+    }
+
+    #[test]
+    fn the_later_stamp_wins_and_a_missing_love_is_reported() {
+        let mut oracle = Oracle::default();
+        oracle.note_retired(&row(5, "love.set", json!({"songKey": "k", "loved": true})));
+        oracle.note_retired(&row(9, "love.set", json!({"songKey": "k", "loved": false})));
+        let error = oracle.check(&ServerView::default()).unwrap_err();
+        assert!(error.contains("love k"));
+    }
+
+    #[test]
+    fn a_refused_mutation_is_counted_and_never_expected() {
+        let mut oracle = Oracle::default();
+        let mut refused = row(1, "entry.insert", json!({"id": "e"}));
+        refused.failed = true;
+        oracle.note_retired(&refused);
+        assert_eq!(oracle.refused(), 1);
+        assert!(oracle.check(&ServerView::default()).is_ok());
     }
 }

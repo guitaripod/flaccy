@@ -67,18 +67,27 @@ pub fn live(shared: &Shared, observer: &Observer, verdicts: &mut Verdicts) {
 pub fn finish(shared: &Shared, observer: &Observer, clients: &mut [Client], verdicts: &mut Verdicts) -> Option<RssSummary> {
     let settled = settle(clients);
     let oracle = locked(&shared.oracle).clone();
-    match settled {
-        Err(reason) => verdicts.fail(CONVERGENCE, reason),
-        Ok(()) => match snapshot_with_retries(observer) {
-            Err(reason) => verdicts.fail(CONVERGENCE, format!("final server snapshot failed: {reason}")),
-            Ok(view) => {
-                compare(shared, &view, clients, verdicts);
-                if let Err(reason) = oracle.check(&view) {
-                    verdicts.fail(ACKNOWLEDGED, reason);
-                }
-                check_unique_listens(&view, verdicts);
+    match snapshot_with_retries(observer) {
+        Err(reason) => verdicts.fail(CONVERGENCE, format!("final server snapshot failed: {reason}")),
+        Ok(view) => {
+            let differences = differences(shared, &view, clients);
+            if let Err(reason) = &settled {
+                verdicts.fail(CONVERGENCE, format!("{reason}; first differences: {}", differences.join(" | ")));
             }
-        },
+            for difference in differences {
+                verdicts.fail(CONVERGENCE, difference);
+            }
+            if let Err(reason) = oracle.check(&view) {
+                verdicts.fail(ACKNOWLEDGED, reason);
+            }
+            check_unique_listens(&view, verdicts);
+        }
+    }
+    if let Err(reason) = settled {
+        verdicts.fail(CONVERGENCE, reason);
+    }
+    if let Some(line) = crate::probe::memory_probe(shared) {
+        shared.note(line);
     }
     crate::monitor::terminate(shared);
     for exit in shared.server_exits() {
@@ -132,13 +141,15 @@ fn snapshot_with_retries(observer: &Observer) -> Result<ServerView, String> {
     Err(last)
 }
 
-fn compare(shared: &Shared, view: &ServerView, clients: &[Client], verdicts: &mut Verdicts) {
+fn differences(shared: &Shared, view: &ServerView, clients: &[Client]) -> Vec<String> {
     let server = Canon::of_server(view, &shared.catalog);
-    for client in clients {
-        if let Some(difference) = client.canon().first_difference(&server, client.name(), "the server") {
-            verdicts.fail(CONVERGENCE, format!("{}: {difference}", client.name()));
-        }
-    }
+    clients
+        .iter()
+        .filter_map(|client| {
+            let found = client.canon().first_difference(&server, client.name(), "the server");
+            found.map(|difference| format!("{}: {difference}", client.name()))
+        })
+        .collect()
 }
 
 fn check_unique_listens(view: &ServerView, verdicts: &mut Verdicts) {

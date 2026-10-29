@@ -54,7 +54,7 @@ fn run_in(root: &Path, args: &RunArgs, binary: &Path) -> Result<Outcome, String>
     let latency = Arc::new(Latency::default());
     let proxy_address = runtime.block_on(proxy::start(server.address(), faults.clone(), latency.clone()))?;
     let observer = Observer::enroll(&server.url(), &server.enroll_code()?)?;
-    let shared = Arc::new(Shared::new(args.seed, args.minutes, catalog, server, format!("http://{proxy_address}"), faults, latency));
+    let shared = Arc::new(Shared::new(args.seed, args, catalog, server, format!("http://{proxy_address}"), faults, latency));
     let mut clients = start_clients(args, root, &shared)?;
     report::progress(&format!("{} clients enrolled; chaos for {} minutes", clients.len(), args.minutes));
     let (controller, workers, deadline) = launch(args, &shared, &mut clients);

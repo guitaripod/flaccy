@@ -154,3 +154,30 @@ fn median(mut values: Vec<u64>) -> Option<u64> {
     values.sort_unstable();
     Some(values[values.len() / 2])
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn percentiles_pick_the_median_and_the_tail() {
+        let latency = Latency::default();
+        for millis in 1..=100 {
+            latency.record(Route::Push, Duration::from_millis(millis));
+        }
+        let push = &latency.summary()[0];
+        assert_eq!(push.count, 100);
+        assert!((push.p50_ms - 51.0).abs() <= 1.0);
+        assert!(push.p99_ms >= 99.0);
+    }
+
+    #[test]
+    fn memory_marks_compare_the_early_and_the_late_median() {
+        let samples: Vec<RssSample> = (0..100)
+            .map(|index| RssSample { at_ms: index * 10, kb: if index < 50 { 100 } else { 300 }, pid: 1 })
+            .collect();
+        let summary = summarise_rss(&samples, 1000).unwrap();
+        assert_eq!((summary.early_kb, summary.late_kb), (100, 300));
+        assert!((summary.ratio() - 3.0).abs() < f64::EPSILON);
+    }
+}

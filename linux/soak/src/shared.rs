@@ -17,6 +17,10 @@ pub struct Shared {
     pub seed: u64,
     /// Planned minutes of workload and chaos.
     pub minutes: u64,
+    /// Multiplier on client reinstall and restore rates.
+    pub lifecycle_boost: f64,
+    /// Idle seconds for the memory probe after the final checks.
+    pub quiet_secs: u64,
     /// The generated library.
     pub catalog: Catalog,
     /// The server child process.
@@ -43,10 +47,12 @@ pub struct Shared {
 
 impl Shared {
     /// Wires the shared state together.
-    pub fn new(seed: u64, minutes: u64, catalog: Catalog, server: Server, proxy_url: String, faults: Arc<Faults>, latency: Arc<Latency>) -> Shared {
+    pub fn new(seed: u64, args: &crate::args::RunArgs, catalog: Catalog, server: Server, proxy_url: String, faults: Arc<Faults>, latency: Arc<Latency>) -> Shared {
         Shared {
             seed,
-            minutes,
+            minutes: args.minutes,
+            lifecycle_boost: args.lifecycle_boost,
+            quiet_secs: args.quiet_secs,
             catalog,
             server,
             proxy_url,

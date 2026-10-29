@@ -35,6 +35,12 @@ pub struct RunArgs {
     /// An explicit flaccy-server binary instead of the one in the cargo target directory.
     #[arg(long)]
     pub server_bin: Option<PathBuf>,
+    /// Multiplies how often clients restore a stale backup and how often they save one; 0 turns restores off.
+    #[arg(long, default_value_t = 1.0)]
+    pub lifecycle_boost: f64,
+    /// Seconds to leave the server idle after the final checks while its memory is measured.
+    #[arg(long, default_value_t = 0)]
+    pub quiet_secs: u64,
     /// Keep the temp directory (databases, server log) after the run.
     #[arg(long)]
     pub keep: bool,

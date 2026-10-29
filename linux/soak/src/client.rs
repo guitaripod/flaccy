@@ -161,16 +161,16 @@ impl Client {
         }
     }
 
-    fn rare(&mut self, per_minute: f64) -> bool {
-        self.rng.random_bool((per_minute * TICK_SECONDS / 60.0).min(1.0))
+    fn rare(&mut self, per_minute: f64, boost: f64) -> bool {
+        self.rng.random_bool((per_minute * boost * TICK_SECONDS / 60.0).min(1.0))
     }
 
     fn lifecycle(&mut self) {
         self.maybe_save_copy();
-        if self.rare(REINSTALLS_PER_MINUTE) {
+        if self.rare(REINSTALLS_PER_MINUTE, 1.0) {
             let result = self.reinstall();
             self.report_failure("reinstall", result);
-        } else if self.rare(RESTORES_PER_MINUTE) {
+        } else if self.rare(RESTORES_PER_MINUTE, self.shared.lifecycle_boost) {
             let result = self.restore();
             self.report_failure("restore", result);
         }
@@ -234,7 +234,7 @@ impl Client {
     }
 
     fn maybe_save_copy(&mut self) {
-        if self.last_copy_attempt.elapsed() < COPY_EVERY {
+        if self.last_copy_attempt.elapsed() < COPY_EVERY.div_f64(self.shared.lifecycle_boost.max(0.001)) {
             return;
         }
         self.last_copy_attempt = Instant::now();
@@ -262,7 +262,7 @@ impl Client {
         let Some((copy, taken)) = self.copy.clone() else {
             return Ok(());
         };
-        if taken.elapsed() < COPY_MIN_AGE {
+        if taken.elapsed() < COPY_MIN_AGE.div_f64(self.shared.lifecycle_boost.max(0.001)) {
             return Ok(());
         }
         let next = self.next_dir();

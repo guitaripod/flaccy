@@ -10,6 +10,7 @@ mod invariants;
 mod metrics;
 mod monitor;
 mod oracle;
+mod probe;
 mod proxy;
 mod report;
 mod rngs;
