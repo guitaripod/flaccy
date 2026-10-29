@@ -338,3 +338,26 @@ fn song_keys_answers_in_input_order() {
     );
     assert_eq!(answer, json!({ "songKeys": [song_key("a", "b"), song_key("c", "d")] }));
 }
+
+#[test]
+fn chunk_reseed_splits_by_count_and_by_bytes_and_keeps_order() {
+    let by_count: Vec<Value> = (0..2_500)
+        .map(|index| json!({ "kind": "love", "id": format!("{index:032x}"), "value": { "n": index } }))
+        .collect();
+    let chunks = call(json_api::chunk_reseed_entities, json!({ "entities": by_count }));
+    let sizes: Vec<usize> = chunks["chunks"].as_array().unwrap().iter().map(|c| c.as_array().unwrap().len()).collect();
+    assert_eq!(sizes, vec![1_000, 1_000, 500]);
+    let padding = "x".repeat(2_000);
+    let by_bytes: Vec<Value> = (0..600)
+        .map(|index| json!({ "kind": "love", "id": format!("{index:032x}"), "value": { "pad": padding } }))
+        .collect();
+    let chunks = call(json_api::chunk_reseed_entities, json!({ "entities": by_bytes }));
+    let list = chunks["chunks"].as_array().unwrap();
+    assert!(list.len() >= 3);
+    for chunk in list {
+        assert!(chunk.to_string().len() <= 400_000);
+    }
+    let ids: Vec<&str> = list.iter().flat_map(|c| c.as_array().unwrap()).map(|e| e["id"].as_str().unwrap()).collect();
+    assert_eq!(ids.len(), 600);
+    assert!(ids.windows(2).all(|pair| pair[0] < pair[1]));
+}

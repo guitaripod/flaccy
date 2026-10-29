@@ -68,6 +68,7 @@ fn invoke(function: &str, input: &Value) -> Result<String, ServerCoreFfiError> {
         "entryId" => entry_id(input),
         "eventIdRec" => event_id_rec(input),
         "eventIdsMig" => event_ids_mig(input),
+        "chunkReseed" => chunk_reseed_entities(input),
         "suppressedFlags" => suppressed_flags(input),
         "nextStamp" => next_stamp(input),
         other => panic!("unknown function {other}"),
@@ -524,6 +525,11 @@ fn helper_cases(cases: &mut Cases) {
         "eventIdsMig",
         json!({ "plays": [{ "ts": 1700000000, "titleKey": "karma police", "artistKey": "radiohead" }, { "ts": 0, "titleKey": "", "artistKey": "" }] }),
     );
+    let entities: Vec<Value> = (0..1_003)
+        .map(|index| json!({ "kind": "love", "id": format!("{index:032x}"), "value": { "n": index } }))
+        .collect();
+    cases.add("chunked reseed over the entity limit", "chunkReseed", json!({ "entities": entities }));
+    cases.add("chunked reseed of nothing", "chunkReseed", json!({ "entities": [] }));
     cases.add(
         "next stamp from an empty clock",
         "nextStamp",
@@ -574,6 +580,7 @@ fn there_are_enough_cases_covering_errors_and_every_function() {
         "entryId",
         "eventIdRec",
         "eventIdsMig",
+        "chunkReseed",
         "suppressedFlags",
         "nextStamp",
     ] {

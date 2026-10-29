@@ -4,10 +4,9 @@ use super::schedule::{Outcome, Scheduler};
 use async_channel::Sender as Reply;
 use flaccy_library::db::Db;
 use flaccy_library::server_sync::live::{Live, LiveEvent};
-use flaccy_library::server_sync::merge::{undo_loves, undo_playlist};
 use flaccy_library::server_sync::{
     files_for_loves, library, resolve_ghosts, Blocker, DeviceInfo, Dirty, Driver, MergeReport,
-    MergedPlaylist, ServerIdentity, ServerLink, SyncError, SyncState, SyncStatus, TokenStore,
+    ServerIdentity, ServerLink, SyncError, SyncState, SyncStatus, TokenStore,
 };
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
@@ -82,20 +81,6 @@ pub enum Command {
         name: String,
         /// True when the music is meant to show.
         visible: bool,
-    },
-    /// Keep a combined playlist apart again.
-    UndoPlaylist {
-        /// The playlist as it was before the merge.
-        merged: MergedPlaylist,
-        /// Where the answer goes.
-        reply: Reply<Result<(), SyncError>>,
-    },
-    /// Unlove the songs the merge loved here.
-    UndoLoves {
-        /// The song keys.
-        keys: Vec<String>,
-        /// Where the answer goes.
-        reply: Reply<Result<usize, SyncError>>,
     },
     /// Another device changed something, said the live channel.
     ServerPoke {
@@ -287,16 +272,6 @@ impl Worker {
                     crate::logger::warn(LOG, &format!("library not in step: {message}"));
                 }
             }
-            Command::UndoPlaylist { merged, reply } => {
-                let result = undo_playlist(&self.db, &merged);
-                self.after_undo(result.is_ok());
-                let _ = reply.send_blocking(result);
-            }
-            Command::UndoLoves { keys, reply } => {
-                let result = undo_loves(&self.db, &keys);
-                self.after_undo(result.is_ok());
-                let _ = reply.send_blocking(result);
-            }
             Command::ServerPoke { head } => {
                 crate::logger::info(LOG, &format!("live poke head={head}: pulling"));
                 self.scheduler.server_poked(now);
@@ -306,12 +281,6 @@ impl Worker {
                 self.live = None;
                 self.scheduler.network_recovered(now);
             }
-        }
-    }
-
-    fn after_undo(&mut self, changed: bool) {
-        if changed {
-            self.scheduler.poke(Instant::now());
         }
     }
 

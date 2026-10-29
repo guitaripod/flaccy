@@ -83,6 +83,8 @@ export_json_functions!(
     event_id_rec,
     /// The ids of migrated listens: `{plays}` to `{eventIds}`.
     event_ids_mig,
+    /// The chunks a `state.reseed` must be sent in: `{entities}` to `{chunks}`.
+    chunk_reseed_entities,
     /// The ledger verdict for the events of one second: `{events}` to `{flags}`.
     suppressed_flags,
     /// The next client stamp: `{last, offsetMs, nowMs}` to `{stamp}`.

@@ -49,7 +49,7 @@ pub use link::ServerLink;
 pub use listens::{ListenItem, ListensPage, ListensRequest};
 pub use lookup::files_for_loves;
 pub use materialize::resolve_ghosts;
-pub use merge::{LocalEntry, MergeReport, MergedPlaylist};
+pub use merge::{MergeReport, MergedPlaylist};
 pub use poke::PokeHandle;
 pub use recorder::{clear_scalar, record_scalar, Recorder};
 pub use sink::ScalarSink;

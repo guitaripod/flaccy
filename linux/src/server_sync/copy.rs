@@ -49,7 +49,6 @@ pub const SERVICE_UNAVAILABLE: &str = "Sync isn't running. Restart Flaccy and tr
 
 pub const UPDATE_FLACCY_LINE: &str = "Update Flaccy to keep syncing.";
 pub const UPDATE_SERVER_LINE: &str = "Update your Flaccy Server to keep syncing.";
-pub const UNDO_FAILED: &str = "Couldn't undo that: the local data could not be updated. Restart Flaccy and try again.";
 
 pub const LIBRARY_TITLE: &str = "Library";
 pub const LIBRARY_COUNTING: &str = "Counting songs…";
@@ -60,8 +59,6 @@ pub const RENAME_EMPTY: &str = "A device needs a name. Type one and try again.";
 pub const RENAME_TOOLTIP: &str = "Rename this computer";
 pub const REMOVE_BUTTON: &str = "Remove";
 pub const REMOVE_TOOLTIP: &str = "Remove this device";
-pub const UNDO_BUTTON: &str = "Undo";
-pub const UNDONE: &str = "Undone.";
 
 pub const STATUS_NOT_SYNCED: &str = "Not synced yet";
 pub const STATUS_JUST_NOW: &str = "Synced just now";
@@ -167,9 +164,9 @@ pub fn merge_playlists_line(names: &[String]) -> String {
 /// The loves line of the first-connect summary.
 pub fn merge_loves_line(count: usize) -> String {
     if count == 1 {
-        "1 song is now loved here.".to_owned()
+        "1 song is now loved here, from your other devices.".to_owned()
     } else {
-        format!("{count} songs are now loved here.")
+        format!("{count} songs are now loved here, from your other devices.")
     }
 }
 
@@ -372,8 +369,8 @@ mod tests {
             merge_playlists_line(&names(&["Road Trip"])),
             "We combined your playlists. Road Trip was on both devices and is now one."
         );
-        assert_eq!(merge_loves_line(1), "1 song is now loved here.");
-        assert_eq!(merge_loves_line(12), "12 songs are now loved here.");
+        assert_eq!(merge_loves_line(1), "1 song is now loved here, from your other devices.");
+        assert_eq!(merge_loves_line(12), "12 songs are now loved here, from your other devices.");
     }
 
     #[test]

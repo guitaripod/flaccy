@@ -1,5 +1,5 @@
 use super::*;
-use flaccy_library::server_sync::{library, Blocker, MergedPlaylist, SyncState};
+use flaccy_library::server_sync::{library, Blocker, SyncState};
 
 impl Service {
     /// Gives a device of the account another name.
@@ -192,48 +192,6 @@ impl Service {
     /// What the first connect combined, for the summary sheet.
     pub fn merge(&self) -> Option<MergeReport> {
         self.merge.borrow().clone()
-    }
-
-    /// Keeps one combined playlist apart again.
-    pub async fn undo_playlist(self: &Rc<Self>, merged: MergedPlaylist) -> Result<(), String> {
-        let (reply, answer) = async_channel::bounded(1);
-        if !self.send(Command::UndoPlaylist { merged, reply }) {
-            return Err(copy::SERVICE_UNAVAILABLE.to_owned());
-        }
-        let outcome = answer.recv().await;
-        self.finish_undo(outcome.map(|result| result.map(|()| 1)))
-    }
-
-    /// Unloves the songs the first connect loved here.
-    pub async fn undo_loves(self: &Rc<Self>, keys: Vec<String>) -> Result<(), String> {
-        let (reply, answer) = async_channel::bounded(1);
-        if !self.send(Command::UndoLoves { keys, reply }) {
-            return Err(copy::SERVICE_UNAVAILABLE.to_owned());
-        }
-        let outcome = answer.recv().await;
-        self.finish_undo(outcome)
-    }
-
-    fn finish_undo(
-        self: &Rc<Self>,
-        outcome: Result<
-            Result<usize, flaccy_library::server_sync::SyncError>,
-            async_channel::RecvError,
-        >,
-    ) -> Result<(), String> {
-        match outcome {
-            Ok(Ok(_)) => {
-                if let Some(core) = self.core.upgrade() {
-                    core.reload_library();
-                }
-                Ok(())
-            }
-            Ok(Err(error)) => {
-                crate::logger::error(LOG, &format!("undo failed: {error}"));
-                Err(copy::UNDO_FAILED.to_owned())
-            }
-            Err(_) => Err(copy::SERVICE_UNAVAILABLE.to_owned()),
-        }
     }
 
     /// A remote sync brought songs in: playlist entries that waited for them can show now.

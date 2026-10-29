@@ -4,8 +4,8 @@
 
 use crate::apply::{self, Caller, Outcome};
 use crate::ledger::{self, SecondEvent};
-use crate::model::{Love, PlaylistDoc, Rating, Scalar, SessionDoc};
-use crate::mutation::{parse, Op};
+use crate::model::{Entity, Love, PlaylistDoc, Rating, Scalar, SessionDoc};
+use crate::mutation::{chunk_reseed, parse, Op};
 use crate::position;
 use crate::rebase::{self, PendingMutation};
 use crate::song;
@@ -345,5 +345,17 @@ pub fn event_ids_mig(input: &str) -> String {
             .map(|play| song::event_id_mig(play.ts, &play.title_key, &play.artist_key))
             .collect();
         Ok(json!({ "eventIds": ids }))
+    })
+}
+
+#[derive(Deserialize)]
+struct ChunkReseedInput {
+    entities: Vec<Entity>,
+}
+
+/// Splits the entities of a `state.reseed` into consecutive chunks the server accepts: at most 1,000 entities and 400 KB each, order kept. Input `{entities: [{kind, id, value}]}`, output `{chunks: [[{kind, id, value}]]}`.
+pub fn chunk_reseed_entities(input: &str) -> String {
+    run(input, |input: ChunkReseedInput| {
+        Ok(json!({ "chunks": chunk_reseed(input.entities) }))
     })
 }

@@ -103,7 +103,7 @@ fn a_core_error_document_becomes_the_error() {
 
 #[test]
 fn every_export_reports_malformed_input_as_an_error() {
-    let exports: [fn(String) -> Result<String, ServerCoreFfiError>; 17] = [
+    let exports: [fn(String) -> Result<String, ServerCoreFfiError>; 18] = [
         apply_playlist,
         apply_scalar,
         rebase_playlist,
@@ -119,6 +119,7 @@ fn every_export_reports_malformed_input_as_an_error() {
         entry_id,
         event_id_rec,
         event_ids_mig,
+        chunk_reseed_entities,
         suppressed_flags,
         next_stamp,
     ];
