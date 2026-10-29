@@ -6,6 +6,9 @@
 //! no GTK or GStreamer packages and is meant to sit behind `tailscale serve`
 //! or a reverse proxy that terminates HTTPS.
 
+/// The server's version, as `hello` reports it.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub mod admin;
 pub mod api;
 pub mod auth;
@@ -18,8 +21,10 @@ pub mod credentials;
 pub mod dbthread;
 pub mod doctor;
 pub mod error;
+pub mod embed;
 pub mod export;
 pub mod export_m3u;
+pub mod hosting;
 pub mod ids;
 pub mod lastfm;
 pub mod lock;

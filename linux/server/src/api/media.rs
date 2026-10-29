@@ -15,7 +15,7 @@ use super::{Call, Outcome};
 use crate::cover;
 use crate::error::ApiError;
 use crate::ids::{self, Entity};
-use crate::transcode::{self, Target};
+use crate::transcode::{self, Target, NO_FFMPEG_MESSAGE};
 
 const LOSSY_SUFFIXES: [&str; 4] = ["mp3", "m4a", "ogg", "opus"];
 
@@ -73,10 +73,13 @@ pub(super) async fn stream(call: &Call<'_>, parts: &Parts) -> Result<Outcome, Ap
         (None, Some(limit)) if !already_fits(&source, limit) => Some(Target::Mp3),
         (None, _) => None,
     };
+    let explicit_format = format.is_some();
+    let target = target.filter(|_| call.state.0.ffmpeg.is_some() || explicit_format);
     let response = match target {
         Some(target) => {
+            let ffmpeg = call.state.0.ffmpeg.as_deref().ok_or_else(|| ApiError::generic(NO_FFMPEG_MESSAGE))?;
             transcode::stream(
-                &call.state.0.ffmpeg,
+                ffmpeg,
                 &source.path,
                 target,
                 max_bit_rate,

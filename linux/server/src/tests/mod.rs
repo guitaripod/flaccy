@@ -21,7 +21,7 @@ use tower::ServiceExt;
 use crate::config::{Config, Mode};
 use crate::credentials::{self, Credentials};
 use crate::refresh::{refresh_now, ScanSummary};
-use crate::state::AppState;
+use crate::state::{AppState, OpenOptions};
 
 pub const USER: &str = "tester";
 pub const PASSWORD: &str = "sesame-seed";
@@ -107,6 +107,15 @@ impl TestServer {
     /// Like [`TestServer::with_ffmpeg`], handing the configuration to `prepare` before the state opens, so a test can
     /// leave files in the data folder the way an older server version did.
     pub async fn prepared(ffmpeg: &str, prepare: impl FnOnce(&Config)) -> Self {
+        Self::prepared_with(Some(ffmpeg), prepare).await
+    }
+
+    /// A server that has no ffmpeg at all, as an embedded one can be.
+    pub async fn without_ffmpeg() -> Self {
+        Self::prepared_with(None, |_| {}).await
+    }
+
+    async fn prepared_with(ffmpeg: Option<&str>, prepare: impl FnOnce(&Config)) -> Self {
         let dir = TestDir::new();
         let music = dir.path().join("music");
         std::fs::create_dir_all(&music).unwrap();
@@ -129,7 +138,8 @@ impl TestServer {
         let api_key = account.add_key("phone", "2026-10-25T12:00:00Z").unwrap();
         credentials::save(&config.credentials_path(), &account).unwrap();
         prepare(&config);
-        let state = AppState::open_with_ffmpeg(config, ffmpeg.to_string()).await.unwrap();
+        let options = OpenOptions { ffmpeg: ffmpeg.map(str::to_owned), name: None };
+        let state = AppState::open_with(config, options).await.unwrap();
         let router = crate::api::router(state.clone());
         Self { dir, state, router, api_key }
     }

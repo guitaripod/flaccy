@@ -4,13 +4,12 @@ use std::io::BufRead;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use axum::Router;
 use clap::{Parser, Subcommand};
 use flaccy_library::logger;
 use qrcode::render::unicode::Dense1x2;
 use qrcode::QrCode;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 
 use crate::admin::{self, AuditAction, DeviceAction, EnrollArgs, UserAction};
 use crate::backup;
@@ -19,20 +18,13 @@ use crate::credentials::{self, Credentials, DEFAULT_USERNAME};
 use crate::doctor;
 use crate::export::{self, ExportArgs};
 use crate::lastfm::{self, LastfmAction};
+use crate::hosting::{self, ffmpeg_program, Settings, CONFIG_FILE_PORT_ADVICE};
 use crate::lock::DataDirLock;
-use crate::maintenance;
-use crate::native;
-use crate::net::guard::ConnectionAddr;
-use crate::net::{self, descriptors, AllowedHosts, ConnectionLimits, EasyListener, Limits, TailnetAddresses};
-use crate::nightly;
 use crate::refresh;
 use crate::restore;
 use crate::setup::{self, SetupArgs};
-use crate::shutdown::{self, StopSignal};
-use crate::state::AppState;
-
-/// The address the configuration file defaults to; any other value is honoured as the only bind address.
-const DEFAULT_ADDRESS: &str = "127.0.0.1";
+use crate::shutdown::StopSignal;
+use crate::state::{AppState, OpenOptions};
 
 /// Exit code for a missing or unreadable configuration.
 const EXIT_NO_CONFIG: i32 = 2;
@@ -196,87 +188,8 @@ async fn serve(config: Config) -> Result<(), String> {
     logger::init(&config.data_dir());
     let stop = StopSignal::new();
     tokio::spawn(raise_on_stop_request(stop.clone()));
-    let state = AppState::open(config).await?;
-    if state.credentials().is_none() {
-        logger::warn(
-            "server",
-            "no account exists yet, so every OpenSubsonic login will be refused; run `flaccy-server password set` or `flaccy-server key add <name>` in another terminal, and `flaccy-server enroll --user <name>` to add a Flaccy device",
-        );
-    }
-    let background = [
-        tokio::spawn(refresh::keep_current(state.clone())),
-        tokio::spawn(nightly::keep_backed_up(state.clone())),
-        tokio::spawn(lastfm::run(state.clone())),
-        tokio::spawn(maintenance::keep_tidy(state.clone())),
-        state.0.live.shutdown_on(stop.clone()),
-    ];
-    let outcome = if state.0.config.address == DEFAULT_ADDRESS {
-        serve_easy(state.clone(), &stop).await
-    } else {
-        serve_on_address(state.clone(), &stop).await
-    };
-    for task in &background {
-        task.abort();
-    }
-    shutdown::close_databases(&state).await;
-    outcome
-}
-
-async fn serve_easy(state: AppState, stop: &StopSignal) -> Result<(), String> {
-    let port = state.0.config.port;
-    logger::info(
-        "server",
-        "the `address` setting is superseded by tailnet binding: the server listens on loopback and this machine's tailnet addresses; set `address` to another value to bind only that address",
-    );
-    let listener = EasyListener::bind(port).await.map_err(|err| {
-        format!(
-            "Could not listen on port {port}: {err}. Another program may be using that port; set a different `port` in the configuration file."
-        )
-    })?;
-    let hosts = AllowedHosts::new(&state.0.config.hosts, listener.handle().tailnet());
-    let app = native::app(state, hosts);
-    serve_connections(listener, app, stop).await
-}
-
-async fn serve_on_address(state: AppState, stop: &StopSignal) -> Result<(), String> {
-    let address = state.0.config.listen_address();
-    logger::warn(
-        "server",
-        &format!(
-            "`address` is {}, so the server listens only on {address} and not on the tailnet; list the host names clients use under `hosts`, or remove `address` to listen on loopback and the tailnet",
-            state.0.config.address
-        ),
-    );
-    let listener = TcpListener::bind(&address).await.map_err(|err| {
-        format!(
-            "Could not listen on {address}: {err}. Another program may be using that port; set a different `port` in the configuration file, or `address` if this machine does not own that address."
-        )
-    })?;
-    logger::info("server", &format!("listening on http://{address}"));
-    let hosts = AllowedHosts::new(&state.0.config.hosts, TailnetAddresses::default());
-    serve_connections(listener, native::app(state, hosts), stop).await
-}
-
-async fn serve_connections<L>(listener: L, app: Router, stop: &StopSignal) -> Result<(), String>
-where
-    L: axum::serve::Listener,
-    L::Io: AsyncRead + AsyncWrite + Unpin + Send + 'static,
-    L::Addr: ConnectionAddr + std::fmt::Debug,
-{
-    let draining = stop.clone();
-    let limits = Limits::default();
-    descriptors::warn_if_too_low(&limits);
-    let server = net::serve(listener, app, ConnectionLimits::new(limits), async move { draining.raised().await });
-    match shutdown::run_until_stopped(server, stop, shutdown::GRACE).await {
-        Some(result) => result.map_err(|err| format!("The server stopped: {err}. Start it again with `flaccy-server serve`; if this repeats, check the log in the data folder.")),
-        None => {
-            logger::warn(
-                "server",
-                &format!("open requests were still running {} seconds after the stop request; closing them", shutdown::GRACE.as_secs()),
-            );
-            Ok(())
-        }
-    }
+    let settings = Settings { open: OpenOptions { ffmpeg: Some(ffmpeg_program()), name: None }, warn_without_account: true, port_advice: CONFIG_FILE_PORT_ADVICE };
+    hosting::run(config, settings, stop, None).await
 }
 
 async fn raise_on_stop_request(stop: StopSignal) {

@@ -136,6 +136,23 @@ async fn a_missing_ffmpeg_answers_error_0_saying_to_install_it() {
     assert!(bad_format.text().contains("use raw, mp3, opus, aac or mp4"));
 }
 
+#[tokio::test]
+async fn a_server_without_ffmpeg_refuses_a_format_but_sends_the_original_for_a_bit_rate() {
+    let server = TestServer::without_ffmpeg().await;
+    server.standard_library();
+    let (id, original) = first_song(&server).await;
+    let reply = server.get(&format!("{}&f=json&format=mp3", stream_uri(&id))).await;
+    let answer: serde_json::Value = serde_json::from_slice(&reply.body).unwrap();
+    assert_eq!(answer["subsonic-response"]["error"]["code"], 0);
+    assert_eq!(
+        answer["subsonic-response"]["error"]["message"],
+        "Converting audio needs ffmpeg, which this server does not have; ask for the original file."
+    );
+    let limited = server.get(&format!("{}&maxBitRate=64", stream_uri(&id))).await;
+    assert_eq!(limited.status, StatusCode::OK);
+    assert_eq!(limited.body, original);
+}
+
 fn ffmpeg_present() -> bool {
     std::process::Command::new("ffmpeg")
         .arg("-version")

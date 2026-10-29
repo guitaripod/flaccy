@@ -1,0 +1,21 @@
+[package]
+name = "flaccy-soak"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Soak and chaos harness: the real flaccy-server binary and the Linux client engine, driven through a faulty TCP proxy until they converge"
+
+[[bin]]
+name = "flaccy-soak"
+path = "src/main.rs"
+
+[dependencies]
+flaccy-library = { path = "../library" }
+flaccy-server-core = { path = "../server-core" }
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "sync", "macros"] }
+rand = "0.9"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde_json = "1"
+dirs = "6"
+libc = "0.2"

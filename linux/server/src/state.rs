@@ -16,7 +16,7 @@ use crate::api::RestIdentities;
 use crate::catalog::Catalog;
 use crate::config::Config;
 use crate::credentials::{CredentialStore, Credentials};
-use crate::native::{BearerThrottle, LiveHub};
+use crate::native::{machine_name, BearerThrottle, LiveHub};
 use crate::security::{self, DeviceId};
 use crate::store::Store;
 use crate::sync::{self, migrate_legacy, DeviceRenamer};
@@ -84,10 +84,20 @@ pub struct Shared {
     pub rest_identities: RestIdentities,
     /// The open live-channel sockets and the presence they share.
     pub live: LiveHub,
-    /// The program that converts audio, `ffmpeg` unless `FLACCY_SERVER_FFMPEG` names another.
-    pub ffmpeg: String,
+    /// The program that converts audio, `ffmpeg` unless `FLACCY_SERVER_FFMPEG` names another; `None` when this server has none.
+    pub ffmpeg: Option<String>,
+    name: Option<String>,
     catalog: RwLock<Catalog>,
     pub(crate) refresh_gate: Mutex<()>,
+}
+
+/// What differs between the servers that share this code.
+#[derive(Clone, Debug, Default)]
+pub struct OpenOptions {
+    /// The program that converts audio; `None` turns conversion off.
+    pub ffmpeg: Option<String>,
+    /// The name clients see in `hello` and enrollment links instead of the machine's host name.
+    pub name: Option<String>,
 }
 
 /// A cheap handle to the shared pieces, cloned into every request.
@@ -99,12 +109,16 @@ impl AppState {
     /// builds the catalog from what the last scan stored. The music folder is
     /// not scanned here.
     pub async fn open(config: Config) -> Result<AppState, String> {
-        let ffmpeg = std::env::var("FLACCY_SERVER_FFMPEG").unwrap_or_else(|_| "ffmpeg".to_string());
-        Self::open_with_ffmpeg(config, ffmpeg).await
+        Self::open_with_ffmpeg(config, crate::hosting::ffmpeg_program()).await
     }
 
     /// Like `open`, converting audio with the program `ffmpeg` names.
     pub async fn open_with_ffmpeg(config: Config, ffmpeg: String) -> Result<AppState, String> {
+        Self::open_with(config, OpenOptions { ffmpeg: Some(ffmpeg), name: None }).await
+    }
+
+    /// Like `open`, with the choices `options` make.
+    pub async fn open_with(config: Config, options: OpenOptions) -> Result<AppState, String> {
         if !config.music_folder.is_dir() {
             return Err(format!(
                 "The music folder {} does not exist or is not a folder. Set `music_folder` in the configuration file to the folder your music lives in.",
@@ -141,7 +155,8 @@ impl AppState {
             views: UserViews::default(),
             rest_identities: RestIdentities::default(),
             live: LiveHub::new(),
-            ffmpeg,
+            ffmpeg: options.ffmpeg,
+            name: options.name,
             catalog: RwLock::new(catalog),
             refresh_gate: Mutex::new(()),
         }));
@@ -153,6 +168,11 @@ impl AppState {
     /// The music folder the library is indexed from.
     pub fn music_root(&self) -> &Path {
         &self.0.config.music_folder
+    }
+
+    /// The name clients see: the one given at open, else the machine's host name.
+    pub fn server_name(&self) -> &str {
+        self.0.name.as_deref().unwrap_or_else(|| machine_name())
     }
 
     /// The account and keys as they are on disk now.

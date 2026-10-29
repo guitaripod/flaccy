@@ -7,6 +7,8 @@ Everything here is built by one script from the `apps/flaccy` directory:
 It reads the version from `linux/server/Cargo.toml`, refuses a dirty git tree
 (`--allow-dirty` overrides) and writes to `~/.cache/flaccy-server-release/<version>/`.
 It builds and verifies only; nothing is pushed unless `docker --push --publish` is given.
+Publishing (GitHub release, subtree push, Homebrew tap, AUR, ghcr) is `publish --version X.Y.Z`, a dry run
+unless `--publish` is added: see `docs/server/RELEASING.md`.
 Needs `zig`, `cargo-zigbuild`, `cargo-deb`, `cargo-generate-rpm` and `docker`.
 
 | Artifact | What it is | Command |
@@ -14,14 +16,15 @@ Needs `zig`, `cargo-zigbuild`, `cargo-deb`, `cargo-generate-rpm` and `docker`.
 | `flaccy-server-<v>-linux-{x86_64,aarch64}.tar.gz` | Fully static musl binary, user unit, README, LICENSE | `scripts/server-release.sh build` |
 | `flaccy-server_<v>-1_{amd64,arm64}.deb` | Debian and Ubuntu package, system service as user `flaccy` | `scripts/server-release.sh deb` |
 | `flaccy-server-<v>-1.{x86_64,aarch64}.rpm` | Fedora, RHEL and openSUSE package, same layout | `scripts/server-release.sh rpm` |
+| `flaccy-server-<v>-macos-{arm64,x86_64}.tar.gz` | Ad-hoc signed binaries built on the Mac over ssh (`macbook`), cleaned up afterwards | `scripts/server-release.sh macos` |
 | `ghcr.io/guitaripod/flaccy-server:<v>` | Alpine image with ffmpeg, runs as uid 1000 | `scripts/server-release.sh docker` |
 | `SHA256SUMS`, `packaging/PKGBUILD`, `packaging/flaccy-server.rb` | Checksums, and the two templates below filled in | `scripts/server-release.sh checksums` |
 
 Sources in this directory:
 
 - `PKGBUILD`: AUR package `flaccy-server-bin`, installs the static tarball.
-- `homebrew/flaccy-server.rb`: formula for macOS arm64 and x86_64 with a launchd `service` block. The
-  macOS tarballs are built on a Mac and copied into the release directory before `checksums`.
+- `homebrew/flaccy-server.rb`: formula for macOS arm64 and x86_64 with a launchd `service` block. Run
+  `macos` before `checksums` so the macOS tarballs are in the release directory.
 - `docker/`: `Dockerfile`, `entrypoint.sh`, and `compose.yaml` with a Tailscale sidecar
   (copy `env.example` to `.env` and add your own `TS_AUTHKEY`; `serve.json` publishes HTTPS on the tailnet).
 - `systemd/`, `sysusers.d/`, `tmpfiles.d/`, `config.toml`, `scripts/`: the system service, its

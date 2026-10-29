@@ -22,6 +22,9 @@ const MAXIMUM_KBPS: u32 = 512;
 pub const CONCURRENT_CONVERSIONS: usize = 3;
 /// How long a conversion waits for a free slot before the request is answered 503.
 pub const QUEUE_WAIT: Duration = Duration::from_secs(20);
+/// What a request to convert audio is told by a server that has no ffmpeg.
+pub const NO_FFMPEG_MESSAGE: &str =
+    "Converting audio needs ffmpeg, which this server does not have; ask for the original file.";
 const RETRY_AFTER_SECONDS: &str = "20";
 
 static CONVERSION_SLOTS: Semaphore = Semaphore::const_new(CONCURRENT_CONVERSIONS);

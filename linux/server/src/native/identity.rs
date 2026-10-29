@@ -8,7 +8,6 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use super::extract::{Authed, JsonBody, MaybeAuthed, Source};
-use super::host::machine_name;
 use super::ApiError;
 use crate::lastfm;
 use crate::security::{self, Device, DeviceId, EnrollError, Enrolled, Principal, Role, User};
@@ -47,7 +46,7 @@ pub async fn hello(State(state): State<AppState>, MaybeAuthed(principal): MaybeA
     Json(Hello {
         protocol: vec![PROTOCOL_VERSION],
         server: ServerInfo {
-            name: machine_name().to_owned(),
+            name: state.server_name().to_owned(),
             version: env!("CARGO_PKG_VERSION").to_owned(),
             schema: CURRENT_VERSION,
         },
