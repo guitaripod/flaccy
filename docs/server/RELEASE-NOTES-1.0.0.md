@@ -1,7 +1,8 @@
-<!-- DRAFT: edit these notes, then delete this line. scripts/server-release.sh publish refuses to run while it is here. -->
 # Flaccy Server 1.0.0
 
-Flaccy Server turns one music folder on a computer you own into an OpenSubsonic server, and keeps your playlists, loves, ratings and listening history in step across Flaccy on iPhone, Mac and Linux. It runs headless, sends no telemetry and makes no outbound requests unless you turn Last.fm on.
+Flaccy Server turns one music folder on a computer you own into an OpenSubsonic server, and keeps your playlists, loves, ratings and listening history in step across Flaccy on iPhone, Mac and Linux. Your devices reach it through Tailscale. It runs headless, sends no telemetry and makes no outbound requests unless you turn Last.fm on.
+
+Flaccy for Linux 1.25.0 connects to it today. Flaccy for iPhone and Mac connect in their next App Store release, and that Mac release can also run the server for you (Settings, Servers, Share this Mac's library).
 
 ## What is in this release
 
@@ -13,6 +14,7 @@ Flaccy Server turns one music folder on a computer you own into an OpenSubsonic 
 - Nightly verified backups of the state and security databases, `restore`, and `export` to JSON, M3U8 and ListenBrainz-shaped JSONL.
 - Optional Last.fm: bring in a history and scrobble for third-party apps. Off until you add a Last.fm API key.
 - Conversion to AAC, Opus or MP3 through ffmpeg when you have it installed.
+- Built to survive its clients: a device restored from an old backup or running a copied database moves to a new history without losing a play, a server restored from a backup is repopulated by the devices, and a chaos soak (kills, restarts, stale restores, dropped and cut connections, four clients for 30 minutes) checks that every acknowledged change is on the server and every device converges.
 
 ## Install
 

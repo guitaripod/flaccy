@@ -1,6 +1,6 @@
 [package]
 name = "flaccy-server"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 license = "GPL-3.0-only"
 description = "Headless OpenSubsonic server for one person's music folder, built on Flaccy's library layer"
