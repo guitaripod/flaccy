@@ -59,6 +59,7 @@ protocol LibraryProviding: AnyObject {
     var albums: [Album] { get }
     var allTracks: [Track] { get }
     var isLoading: Bool { get }
+    var isRestoringIndexedLibrary: Bool { get }
     var loadProgress: LibraryLoadProgress { get }
     var loadFraction: Double { get }
     func reload() async
@@ -119,6 +120,19 @@ final class Library: LibraryProviding {
 
     private(set) var albums: [Album] = []
     private(set) var allTracks: [Track] = []
+
+    /// Whether `albums` can be believed yet: the library a previous launch
+    /// indexed is back, or the first load has finished with whatever there is.
+    private(set) var hasSettledFirstLoad = false
+
+    /// True while a library some earlier launch indexed is not back yet, the
+    /// window in which `albums` is empty only because nothing has been read.
+    /// Home holds its first frame through it, so a full library never opens on
+    /// the card that brings music in.
+    var isRestoringIndexedLibrary: Bool {
+        LibraryStartupProbe.hadIndexedLibrary && !hasSettledFirstLoad
+    }
+
     private var revisedVersions: [URL: TrackVersion] = [:]
     private(set) var isLoading: Bool = false {
         didSet { NotificationCenter.default.post(name: Library.loadingStateChanged, object: nil) }
@@ -198,14 +212,20 @@ final class Library: LibraryProviding {
         let sync = await syncFilesWithDatabase()
         let syncChanged = sync.changed
 
-        if firstLoad || syncChanged {
+        let rereads = syncChanged || (firstLoad && albums.isEmpty)
+        if rereads || firstLoad {
             emitProgress(force: true) { $0.phase = .buildingAlbums; $0.completed = 0; $0.total = 0 }
-            await loadFromDatabase()
+            if rereads {
+                await loadFromDatabase()
+            } else {
+                await settleRestoredCredits()
+            }
             publishLibraryTallies()
             MidgarLog.info("Library: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
             Task { await ServerSyncService.engine.resolveGhosts() }
         }
 
+        hasSettledFirstLoad = true
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         isLoading = false
 
@@ -219,11 +239,36 @@ final class Library: LibraryProviding {
     /// Shows whatever was indexed on a previous run before any disk work
     /// starts, so a relaunch lands on a usable library in milliseconds and the
     /// scan that follows is progress a person can watch rather than a wall.
+    /// Album credits are read as the last run settled them: resolving them is
+    /// a write over every row, and the load after the scan does it anyway.
     private func restoreLastIndexedLibrary() async {
-        await loadFromDatabase()
+        let began = DispatchTime.now().uptimeNanoseconds
+        await loadFromDatabase(resolvingCredits: false)
         guard !albums.isEmpty else { return }
+        hasSettledFirstLoad = true
         publishLibraryTallies()
+        let milliseconds = (DispatchTime.now().uptimeNanoseconds - began) / 1_000_000
+        MidgarLog.info("Library restored: \(albums.count) albums in \(milliseconds) ms", category: .performance)
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
+    }
+
+    /// The restore read album credits as the last run left them. With nothing
+    /// on disk changed they are almost always still right, so they are settled
+    /// on their own and the library is read again only when one moved, instead
+    /// of a second full read while Home is building its first frame.
+    private func settleRestoredCredits() async {
+        guard await settleAlbumCredits() > 0 else { return }
+        await loadFromDatabase(resolvingCredits: false)
+    }
+
+    @concurrent
+    nonisolated private func settleAlbumCredits() async -> Int {
+        do {
+            return try db.resolveAlbumCredits()
+        } catch {
+            MidgarLog.error("Failed to settle album credits: \(error.localizedDescription)", category: .database)
+            return 0
+        }
     }
 
     /// Publishes the tallies, and closes `.buildingAlbums` out on a real total so
@@ -534,9 +579,9 @@ final class Library: LibraryProviding {
         )
     }
 
-    private func loadFromDatabase() async {
+    private func loadFromDatabase(resolvingCredits: Bool = true) async {
         do {
-            let loadedAlbums = try await fetchAlbumsFromDatabase()
+            let loadedAlbums = try await fetchAlbumsFromDatabase(resolvingCredits: resolvingCredits)
             albums = loadedAlbums
             allTracks = loadedAlbums.flatMap(\.tracks)
             revisedVersions = Dictionary(
@@ -615,12 +660,19 @@ final class Library: LibraryProviding {
     /// bitmaps inside long-lived model structs would defeat
     /// `AlbumArtworkCache` eviction, and every reader already handles nil.
     @concurrent
-    nonisolated private func fetchAlbumsFromDatabase() async throws -> [Album] {
-        try db.resolveAlbumCredits()
+    nonisolated private func fetchAlbumsFromDatabase(resolvingCredits: Bool) async throws -> [Album] {
+        if resolvingCredits { try db.resolveAlbumCredits() }
         let albumsWithTracks = try db.fetchAlbumsWithTracksLightweight()
 
         var loadedAlbums: [Album] = []
         loadedAlbums.reserveCapacity(albumsWithTracks.count)
+        var leads: [String: String] = [:]
+        func lead(_ artist: String) -> String {
+            if let known = leads[artist] { return known }
+            let primary = LibraryHygiene.primaryArtist(artist)
+            leads[artist] = primary
+            return primary
+        }
 
         for (albumInfo, trackRecords) in albumsWithTracks {
             let tracks = trackRecords.map { record in
@@ -628,7 +680,7 @@ final class Library: LibraryProviding {
             }
             guard !tracks.isEmpty else { continue }
             let title = Self.majorityValue(tracks.map(\.albumTitle))
-            let artist = Self.majorityValue(tracks.map { LibraryHygiene.primaryArtist($0.artist) })
+            let artist = Self.majorityValue(tracks.map { lead($0.artist) })
             loadedAlbums.append(Album(
                 title: title,
                 artist: artist,

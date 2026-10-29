@@ -50,8 +50,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     var sleepTimerCapsule: GlassCapsule?
     var lyricsCapsule: GlassCapsule?
     var queueCapsule: GlassCapsule?
-    var actionCapsules: [UIView] = []
-    let actionRowContainer = UIStackView()
+    var actionRowEditor: PlayerActionRowEditor?
+    let actionRowContainer = PlayerActionRowView()
     let transportStack = UIStackView()
 
     var isMorphEmbedded = false
@@ -199,6 +199,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        actionRowEditor?.endEditing()
         backdropView.setPaused(true)
     }
 
@@ -337,12 +338,18 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             centerElements = [compactHeader, stateChildController?.view].compactMap { $0 }
         }
         let trailing: [Any] = isMorphEmbedded ? [grabberControl] : []
-        view.accessibilityElements = centerElements + [
+        var elements: [Any] = centerElements
+        elements += [
             scrubber, currentTimeLabel, remainingTimeLabel,
             skipBackButton, previousButton, playPauseButton, nextButton, skipForwardButton,
             volumeSlider, equalizerButton,
-            shuffleButton, repeatButton, airplayButton, sleepTimerButton, shareButton, lyricsButton, queueButton,
-        ] + trailing
+        ]
+        elements += actionRowEditor?.orderedControls ?? [
+            shuffleButton, repeatButton, airplayButton, sleepTimerButton,
+            shareButton, lyricsButton, queueButton,
+        ]
+        elements += trailing
+        view.accessibilityElements = elements
     }
 
     @objc func shuffleRepeatDidChange() {

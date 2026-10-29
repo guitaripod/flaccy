@@ -45,6 +45,10 @@ extension NowPlayingViewController {
         share.representedObject = button
         let copy = menu.addItem(withTitle: String(localized: "Copy Songlink URL"), action: #selector(copySonglink(_:)), keyEquivalent: "")
         copy.target = self
+        if LyricsService.shared.cachedLyrics(track: track.title, artist: track.artist) != nil {
+            let lyrics = menu.addItem(withTitle: LyricShareCopy.menuTitle, action: #selector(shareLyrics(_:)), keyEquivalent: "")
+            lyrics.target = self
+        }
         menu.addItem(.separator())
         let info = menu.addItem(withTitle: "\(track.title) — \(track.artist)", action: nil, keyEquivalent: "")
         info.isEnabled = false
@@ -68,6 +72,14 @@ extension NowPlayingViewController {
             ])
             picker.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
         }
+    }
+
+    @objc func shareLyrics(_ sender: NSMenuItem) {
+        guard let session = LyricShareSession.forCurrentTrack() else {
+            MacToast.show(LyricShareCopy.nothingToShare, style: .error, in: view.window)
+            return
+        }
+        LyricShareWindowController.present(session, from: view.window)
     }
 
     @objc func copySonglink(_ sender: NSMenuItem) {

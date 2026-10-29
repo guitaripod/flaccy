@@ -1,6 +1,6 @@
 import GRDB
 
-/// The tables and columns Flaccy Server sync adds to the library database (migration v18).
+/// The tables and columns Flaccy Server sync adds to the library database (migration v19).
 enum ServerSyncSchema {
 
     static let serverState = [

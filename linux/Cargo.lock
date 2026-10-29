@@ -935,7 +935,7 @@ checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
 name = "flaccy"
-version = "1.23.0"
+version = "1.24.0"
 dependencies = [
  "async-channel",
  "cairo-rs",
@@ -952,6 +952,7 @@ dependencies = [
  "libadwaita",
  "lofty",
  "mpris-server",
+ "pangocairo",
  "rand 0.9.4",
  "rusqlite",
  "serde",
@@ -2441,6 +2442,31 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps 7.0.8",
+]
+
+[[package]]
+name = "pangocairo"
+version = "0.22.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd199a0fef965b3ebda91a929a1ab5e7729538882c68e8de38e1904d2e094757"
+dependencies = [
+ "cairo-rs",
+ "glib",
+ "pango",
+ "pangocairo-sys",
+]
+
+[[package]]
+name = "pangocairo-sys"
+version = "0.22.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a649a616d67ae68539bc85f00fb45d36fba742ed20fc20e6712a15d8ee52bd3f"
+dependencies = [
+ "cairo-sys-rs",
+ "glib-sys",
+ "libc",
+ "pango-sys",
+ "system-deps 9.0.0",
 ]
 
 [[package]]

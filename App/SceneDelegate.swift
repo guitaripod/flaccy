@@ -52,6 +52,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         WatchSyncExercise.runIfRequested()
         WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
+        LyricShareExercise.runIfRequested()
         EqualizerShots.runIfRequested(in: window)
         #endif
         #if DEBUG && targetEnvironment(simulator)

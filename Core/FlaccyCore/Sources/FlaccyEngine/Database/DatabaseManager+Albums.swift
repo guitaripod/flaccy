@@ -60,6 +60,11 @@ extension DatabaseManager {
     /// artist). Edition folding happens in `LibraryHygiene.consolidateAlbums`
     /// after these light records become `Track`s, so quality ranking and
     /// `duplicateKey` dedupe stay in one place shared with Linux.
+    ///
+    /// The album details come from `albumInfo_on_title_artist_details` alone.
+    /// The table stores each cover ahead of the year and genre, so reading them
+    /// from the rows walks every cover's overflow pages, about 150 MB for a
+    /// thousand albums on a cold launch.
     public func fetchAlbumsWithTracksLightweight() throws -> [(album: AlbumInfoRecord?, tracks: [LightTrackRecord])] {
         try dbQueue.read { db in
             let columns: [Column] = [
@@ -80,8 +85,7 @@ extension DatabaseManager {
             )
 
             let allAlbumInfos = try Row.fetchAll(db, sql: """
-                SELECT id, title, artist, coverArtURL, musicBrainzID, year, genre, lastFetched,
-                       CASE WHEN coverArtData IS NOT NULL THEN 1 ELSE 0 END AS hasCoverArt
+                SELECT id, title, artist, coverArtURL, musicBrainzID, year, genre, lastFetched
                 FROM albumInfo
             """)
             var albumInfoByKey = [String: AlbumInfoRecord]()
@@ -101,18 +105,29 @@ extension DatabaseManager {
                 albumInfoByKey[key] = info
             }
 
+            var groupKeys: [String: String] = [:]
             var order: [String] = []
             var map: [String: [LightTrackRecord]] = [:]
             for track in allTracks {
-                let groupKey = Self.albumGroupingKey(albumTitle: track.albumTitle, credit: track.credit)
+                let spelling = track.albumTitle + "\u{0}" + track.credit
+                let groupKey = groupKeys[spelling] ?? Self.albumGroupingKey(albumTitle: track.albumTitle, credit: track.credit)
+                groupKeys[spelling] = groupKey
                 if map[groupKey] == nil { order.append(groupKey) }
                 map[groupKey, default: []].append(track)
+            }
+
+            var leads: [String: String] = [:]
+            func lead(_ credit: String) -> String {
+                if let known = leads[credit] { return known }
+                let primary = LibraryHygiene.primaryArtist(credit)
+                leads[credit] = primary
+                return primary
             }
 
             return order.compactMap { groupKey in
                 guard let tracks = map[groupKey], !tracks.isEmpty else { return nil }
                 let displayTitle = Self.majorityValue(tracks.map(\.albumTitle))
-                let displayArtist = Self.majorityValue(tracks.map { LibraryHygiene.primaryArtist($0.credit) })
+                let displayArtist = Self.majorityValue(tracks.map { lead($0.credit) })
                 let orderedTracks = TrackOrdering.ordered(
                     tracks,
                     number: { $0.trackNumber },

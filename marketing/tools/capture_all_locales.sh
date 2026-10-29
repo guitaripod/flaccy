@@ -3,7 +3,7 @@
 # usage: capture_all_locales.sh UDID OUTDIR [lang ...]   (no languages = all eleven)
 set -euo pipefail
 UDID="$1"; OUT="$2"; HERE="$(cd "$(dirname "$0")" && pwd)"
-DARK="songs,now-playing,lyrics,playlists,charts,year,artist,wantlist,album,queue,library"
+DARK="songs,now-playing,lyrics,lyric-share,playlists,charts,year,artist,wantlist,album,queue,library"
 LIGHT="songs,now-playing"
 declare -a LOCALES=("en:en_US" "de:de_DE" "es:es_ES" "fr:fr_FR" "it:it_IT" "ja:ja_JP" "ko:ko_KR" "pl:pl_PL" "pt-BR:pt_BR" "zh-Hans:zh_CN" "zh-Hant:zh_TW")
 WANT=("${@:3}")

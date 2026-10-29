@@ -89,6 +89,7 @@ enum DebugDrive {
         case nowPlaying
         case playlistDetail(String)
         case nowPlayingLyrics
+        case lyricShare
         case queuePanel(deep: Bool)
         case settings(paneIndex: Int)
         case paywall
@@ -105,6 +106,7 @@ enum DebugDrive {
         if CommandLine.arguments.contains("--shot-paywall") { return .paywall }
         if CommandLine.arguments.contains("--shot-playlists") { return .section(.playlists) }
         if let name = value(after: "--shot-playlist") { return .playlistDetail(name) }
+        if CommandLine.arguments.contains("--shot-lyric-share") { return .lyricShare }
         if CommandLine.arguments.contains("--shot-nowplaying-lyrics") { return .nowPlayingLyrics }
         if CommandLine.arguments.contains("--shot-nowplaying") { return .nowPlaying }
         if CommandLine.arguments.contains("--shot-queue-deep") { return .queuePanel(deep: true) }
@@ -246,6 +248,9 @@ enum DebugDrive {
             NotificationCenter.default.post(name: .flaccyToggleQueue, object: nil)
             try? await Task.sleep(for: .seconds(2))
             name = "flaccy-shot-nowplaying-lyrics"
+        case .lyricShare:
+            await driveLyricShare(window: window)
+            return
         case .queuePanel(let deep):
             if deep { startDeepPlayback() } else { startHeroPlayback() }
             try? await Task.sleep(for: .seconds(2))

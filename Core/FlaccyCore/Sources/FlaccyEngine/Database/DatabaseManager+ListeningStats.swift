@@ -36,6 +36,24 @@ extension DatabaseManager {
         }
     }
 
+    /// Every play as the mixes count it: its `ListenHistory.trackKey`, the
+    /// artist as credited and when it played. A row stored before plays kept
+    /// their keys is folded here instead.
+    public func fetchListens() throws -> [(key: String, artist: String, timestamp: Date)] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: "SELECT titleKey, artistKey, trackTitle, artist, timestamp FROM scrobbles")
+            return rows.map { row in
+                let titleKey: String = row["titleKey"]
+                let artistKey: String = row["artistKey"]
+                let artist: String = row["artist"]
+                let key = titleKey.isEmpty || artistKey.isEmpty
+                    ? ListenHistory.trackKey(title: row["trackTitle"], artist: artist)
+                    : Self.trackKey(titleKey: titleKey, artistKey: artistKey)
+                return (key: key, artist: artist, timestamp: row["timestamp"])
+            }
+        }
+    }
+
     /// Plays per song across the whole history, most played first, keyed by
     /// `ListenHistory.trackKey` so a library track is matched with
     /// `ListenHistory.trackKey(title:artist:)`.

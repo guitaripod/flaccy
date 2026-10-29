@@ -196,6 +196,7 @@ targets:
           - Home/HomeGlanceCards.swift
           - Home/HomeHeroCell.swift
           - Home/HomeJumpTileCell.swift
+          - Home/HomeLaunchPlaceholderView.swift
           - Home/HomeMixCardCell.swift
           - Home/HomeSegmentedProgressView.swift
           - Home/HomeSnapshotPlan.swift
@@ -225,6 +226,7 @@ targets:
           - Library/PlaylistDetailViewController.swift
           - Library/PlaylistListCells.swift
           - ListeningGuide/ListeningGuideViewController.swift
+          - LyricShare/LyricShareViewController.swift
           - Lyrics/LyricCells.swift
           - Lyrics/LyricWipeView.swift
           - Lyrics/LyricsViewController+Delegates.swift
@@ -245,6 +247,8 @@ targets:
           - NowPlaying/NowPlayingViewController+TrackPan.swift
           - NowPlaying/NowPlayingViewController+Views.swift
           - NowPlaying/NowPlayingViewController.swift
+          - NowPlaying/PlayerActionOrder.swift
+          - NowPlaying/PlayerActionRowEditor.swift
           - NowPlaying/PlayerContainerViewController.swift
           - NowPlaying/QueueViewController.swift
           - NowPlaying/ScrubberView.swift

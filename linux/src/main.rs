@@ -17,6 +17,7 @@ mod home_state;
 pub(crate) use flaccy_library::hygiene;
 mod history_sync;
 mod lastfm;
+mod launch_probe;
 pub(crate) use flaccy_library::library;
 /// The load bar mirrors `FlaccyCore.LibraryLoadProgress` and lives in the
 /// `flaccy-shared` workspace member, whose tests build on any machine — the
@@ -24,6 +25,7 @@ pub(crate) use flaccy_library::library;
 /// at the crate root so every `crate::load_progress::…` path still resolves.
 pub(crate) use flaccy_shared::load_progress;
 pub(crate) use flaccy_library::logger;
+mod lyric_share;
 mod lyrics;
 mod mpris;
 mod musicvideo;

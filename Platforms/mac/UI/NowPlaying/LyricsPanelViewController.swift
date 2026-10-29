@@ -36,6 +36,8 @@ final class LyricsPanelViewController: NSViewController {
     private let spinner = NSProgressIndicator()
     private let retryButton = NSButton(title: "", target: nil, action: nil)
     private let timingButton = NSButton()
+    private let shareButton = NSButton()
+    private var shareableLyrics: Lyrics?
     private let timingNoteChip = NSButton()
     private var timingNoteKind: LyricsTimingNoteKind?
     private var timingNotePopover: NSPopover?
@@ -137,7 +139,16 @@ final class LyricsPanelViewController: NSViewController {
         timingNoteChip.target = self
         timingNoteChip.action = #selector(toggleTimingNote(_:))
 
-        let timingControls = NSStackView(views: [timingNoteChip, timingButton])
+        shareButton.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: LyricShareCopy.sheetTitle)
+        shareButton.imagePosition = .imageOnly
+        shareButton.isBordered = false
+        shareButton.contentTintColor = .tertiaryLabelColor
+        shareButton.toolTip = LyricShareCopy.sheetTitle
+        shareButton.isHidden = true
+        shareButton.target = self
+        shareButton.action = #selector(shareLyricsTapped)
+
+        let timingControls = NSStackView(views: [shareButton, timingNoteChip, timingButton])
         timingControls.orientation = .horizontal
         timingControls.alignment = .centerY
         timingControls.spacing = 6
@@ -339,6 +350,7 @@ final class LyricsPanelViewController: NSViewController {
 
         document = LyricsDocument()
         lyrics = nil
+        shareableLyrics = nil
         litLines = []
         currentLineIndex = -1
         clearLines()
@@ -377,6 +389,8 @@ final class LyricsPanelViewController: NSViewController {
         if found.document.hasSynced {
             hideState()
             lyrics = found
+            shareableLyrics = found
+            shareButton.isHidden = false
             document = found.document
             timingButton.isHidden = false
             showTimingNote(for: found.document)
@@ -388,6 +402,8 @@ final class LyricsPanelViewController: NSViewController {
             hideState()
             plainTextView.stringValue = plain
             plainTextView.isHidden = false
+            shareableLyrics = found
+            shareButton.isHidden = false
             showTimingNote(for: found.document)
             scrollToTop()
             return
@@ -416,12 +432,45 @@ final class LyricsPanelViewController: NSViewController {
                 self.lastUserScroll = .distantPast
                 MidgarLog.info("Lyrics line seek to \(time)", category: .ui)
             }
+            lineView.contextMenuProvider = { [weak self] in self?.shareMenu(forLine: index) }
             linesStack.addArrangedSubview(lineView)
             lineView.widthAnchor.constraint(equalTo: linesStack.widthAnchor, constant: -40).isActive = true
             lineViews.append(lineView)
         }
         applyLineStyles(animated: false)
         scrollToTop()
+    }
+
+    @objc private func shareLyricsTapped() {
+        openShare(line: nil)
+    }
+
+    @objc private func shareFromLine(_ sender: NSMenuItem) {
+        guard let index = sender.representedObject as? Int else { return }
+        openShare(line: index)
+    }
+
+    /// Opens the share window on the lyrics showing for the playing track,
+    /// with the clip starting at `line` when one was picked.
+    private func openShare(line: Int?) {
+        guard let current = lyrics ?? shareableLyrics,
+              let session = LyricShareSession.forCurrentTrack(lyrics: current, line: line)
+        else {
+            MacToast.show(LyricShareCopy.nothingToShare, style: .error, in: view.window)
+            return
+        }
+        LyricShareWindowController.present(session, from: view.window)
+    }
+
+    /// The right-click menu of a sung line. An instrumental stretch has none:
+    /// there is nothing to sing in it.
+    private func shareMenu(forLine index: Int) -> NSMenu? {
+        guard index < document.lines.count, LyricShareClip.isSelectable(index, in: document) else { return nil }
+        let menu = NSMenu()
+        let item = menu.addItem(withTitle: LyricShareCopy.fromLine, action: #selector(shareFromLine(_:)), keyEquivalent: "")
+        item.target = self
+        item.representedObject = index
+        return menu
     }
 
     private func clearLines() {
@@ -599,6 +648,8 @@ final class LyricsPanelViewController: NSViewController {
     private func showState(icon: String?, words: LyricsStatusCopy.Words?) {
         retryButton.isHidden = true
         timingButton.isHidden = true
+        shareButton.isHidden = true
+        shareableLyrics = nil
         hideTimingNote()
         clearLines()
         document = LyricsDocument()
@@ -676,6 +727,7 @@ final class FlippedView: NSView {
 /// an instrumental stretch.
 protocol LyricRowView: NSView {
     var onClick: (() -> Void)? { get set }
+    var contextMenuProvider: (() -> NSMenu?)? { get set }
     func setCurrent(_ current: Bool, reduceMotion: Bool)
     func show(_ line: LyricsLine, time: TimeInterval)
     func clearProgress()
@@ -756,6 +808,7 @@ private final class LyricWipeView: NSView {
 final class LyricLineView: NSView, LyricRowView {
 
     var onClick: (() -> Void)?
+    var contextMenuProvider: (() -> NSMenu?)?
 
     private let label = NSTextField(wrappingLabelWithString: "")
     private let wipeView = LyricWipeView()
@@ -819,6 +872,10 @@ final class LyricLineView: NSView, LyricRowView {
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .pointingHand)
     }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenuProvider?() ?? super.menu(for: event)
+    }
 }
 
 /// An instrumental stretch: three beats that light one after another across
@@ -826,6 +883,7 @@ final class LyricLineView: NSView, LyricRowView {
 final class InterludeLineView: NSView, LyricRowView {
 
     var onClick: (() -> Void)?
+    var contextMenuProvider: (() -> NSMenu?)?
 
     private let beats: [NSView] = (0..<LyricsDocument.interludeBeats).map { _ in
         let beat = NSView()
@@ -890,5 +948,9 @@ final class InterludeLineView: NSView, LyricRowView {
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .pointingHand)
+    }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenuProvider?() ?? super.menu(for: event)
     }
 }

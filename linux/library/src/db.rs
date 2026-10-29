@@ -1951,6 +1951,14 @@ impl Db {
             .is_ok()
     }
 
+    /// Whether any song is indexed, answered from the first row alone so
+    /// launch can ask it before the library loads.
+    pub fn has_tracks(&self) -> bool {
+        self.conn
+            .query_row("SELECT 1 FROM tracks LIMIT 1", [], |_| Ok(()))
+            .is_ok()
+    }
+
     /// The scrobbles from `since_unix` onward, oldest first. The timestamp
     /// column is indexed text in one fixed UTC format, so the range is a plain
     /// index seek instead of a scan of the whole history.
@@ -2996,6 +3004,14 @@ mod cleanup_tests {
             .into_iter()
             .map(|track| (track.rel_path, track.album_artist))
             .collect()
+    }
+
+    #[test]
+    fn has_tracks_answers_from_the_first_row() {
+        let temp = TempDb::open();
+        assert!(!temp.db.has_tracks());
+        insert(&temp.db, "a/1.flac", "One", "Artist", "Album", 1, 200.0, "flac", Some(16), Some(44_100));
+        assert!(temp.db.has_tracks());
     }
 
     #[test]

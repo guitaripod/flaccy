@@ -3,7 +3,7 @@ members = ["shared", "library", "server", "server-core", "server-core-ffi", "ser
 
 [package]
 name = "flaccy"
-version = "1.23.0"
+version = "1.24.0"
 edition = "2021"
 license = "GPL-3.0-only"
 description = "Lossless music player for Linux"
@@ -14,6 +14,7 @@ flaccy-library = { path = "library" }
 gtk = { package = "gtk4", version = "0.11", features = ["v4_18"] }
 adw = { package = "libadwaita", version = "0.9", features = ["v1_7"] }
 cairo-rs = { version = "0.22", features = ["png"] }
+pangocairo = "0.22"
 gst = { package = "gstreamer", version = "0.25" }
 gst-base = { package = "gstreamer-base", version = "0.25" }
 gst-audio = { package = "gstreamer-audio", version = "0.25" }

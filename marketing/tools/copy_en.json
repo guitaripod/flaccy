@@ -23,6 +23,11 @@
     "headline": "Lyrics that follow\n*every word.*",
     "sub": "Tap any line to jump right there."
   },
+  "share": {
+    "kicker": "Share Lyrics",
+    "headline": "Your favorite line,\n*as a video.*",
+    "sub": "Set to the song itself, ready for Stories."
+  },
   "playlists": {
     "kicker": "Smart playlists",
     "headline": "Playlists that\n*build themselves.*",

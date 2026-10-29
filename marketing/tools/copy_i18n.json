@@ -24,6 +24,11 @@
       "headline": "Songtexte, die jedem\n*Wort folgen.*",
       "sub": "Tippe auf eine Zeile, um dorthin zu springen."
     },
+    "share": {
+      "kicker": "Songtext teilen",
+      "headline": "Deine Lieblingszeile,\n*als Video.*",
+      "sub": "Mit dem Song unterlegt, bereit für Stories."
+    },
     "playlists": {
       "kicker": "Smarte Playlists",
       "headline": "Playlists, die sich\n*selbst bauen.*",
@@ -94,6 +99,11 @@
       "kicker": "Letras sincronizadas",
       "headline": "Letras que siguen\n*cada palabra.*",
       "sub": "Toca cualquier línea para saltar justo ahí."
+    },
+    "share": {
+      "kicker": "Compartir letra",
+      "headline": "Tu verso favorito,\n*en vídeo.*",
+      "sub": "Con la propia canción de fondo, listo para Stories."
     },
     "playlists": {
       "kicker": "Listas inteligentes",
@@ -166,6 +176,11 @@
       "headline": "Des paroles qui\n*suivent chaque mot.*",
       "sub": "Touchez une ligne pour sauter directement là."
     },
+    "share": {
+      "kicker": "Partager les paroles",
+      "headline": "Votre ligne préférée,\n*en vidéo.*",
+      "sub": "Sur la chanson elle-même, prête pour les Stories."
+    },
     "playlists": {
       "kicker": "Playlists intelligentes",
       "headline": "Des playlists qui\n*se créent seules.*",
@@ -236,6 +251,11 @@
       "kicker": "Testi sincronizzati",
       "headline": "Testi che seguono\n*ogni parola.*",
       "sub": "Tocca una riga per saltare proprio lì."
+    },
+    "share": {
+      "kicker": "Condividi testo",
+      "headline": "La tua riga preferita,\n*in video.*",
+      "sub": "Sulla canzone stessa, pronto per le Storie."
     },
     "playlists": {
       "kicker": "Playlist intelligenti",
@@ -308,6 +328,11 @@
       "headline": "歌詞がすべての\n*言葉に追従。*",
       "sub": "行をタップすると、その位置にジャンプ。"
     },
+    "share": {
+      "kicker": "歌詞を共有",
+      "headline": "お気に入りの一節を、\n*動画にして。*",
+      "sub": "曲に合わせて、そのままストーリーズへ。"
+    },
     "playlists": {
       "kicker": "スマートプレイリスト",
       "headline": "プレイリストが\n*自動で編まれる。*",
@@ -378,6 +403,11 @@
       "kicker": "싱크 가사",
       "headline": "가사가 모든\n*단어를 따라갑니다.*",
       "sub": "줄을 탭하면 바로 그 부분으로 이동."
+    },
+    "share": {
+      "kicker": "가사 공유",
+      "headline": "가장 좋아하는 가사를\n*영상으로.*",
+      "sub": "노래에 맞춰, 스토리에 바로 올리세요."
     },
     "playlists": {
       "kicker": "스마트 재생목록",
@@ -450,6 +480,11 @@
       "headline": "Tekst, który podąża\n*za każdym słowem.*",
       "sub": "Dotknij linii, by przeskoczyć dokładnie tam."
     },
+    "share": {
+      "kicker": "Udostępnij tekst",
+      "headline": "Twój ulubiony wers,\n*jako wideo.*",
+      "sub": "Z samą piosenką w tle, gotowe na Stories."
+    },
     "playlists": {
       "kicker": "Inteligentne playlisty",
       "headline": "Playlisty, które\n*układają się same.*",
@@ -520,6 +555,11 @@
       "kicker": "Letras sincronizadas",
       "headline": "Letras que seguem\n*cada palavra.*",
       "sub": "Toque em qualquer linha para ir direto a ela."
+    },
+    "share": {
+      "kicker": "Compartilhar letra",
+      "headline": "Seu trecho favorito,\n*em vídeo.*",
+      "sub": "Com a própria música ao fundo, pronto para os Stories."
     },
     "playlists": {
       "kicker": "Playlists inteligentes",
@@ -592,6 +632,11 @@
       "headline": "歌词紧随\n*每一个字。*",
       "sub": "点击任意一行，直接跳到那里。"
     },
+    "share": {
+      "kicker": "分享歌词",
+      "headline": "最爱的那一句，\n*变成视频。*",
+      "sub": "配上歌曲本身，可直接发到 Stories。"
+    },
     "playlists": {
       "kicker": "智能播放列表",
       "headline": "播放列表，\n*自动为你生成。*",
@@ -662,6 +707,11 @@
       "kicker": "同步歌詞",
       "headline": "歌詞緊隨\n*每一個字。*",
       "sub": "點選任一行，直接跳到那裡。"
+    },
+    "share": {
+      "kicker": "分享歌詞",
+      "headline": "最愛的那一句，\n*變成影片。*",
+      "sub": "配上歌曲本身，可直接發到限時動態。"
     },
     "playlists": {
       "kicker": "智慧播放清單",

@@ -346,10 +346,18 @@ extension DatabaseManager {
         }
 
         migrator.registerMigration("v18") { db in
-            try ServerSyncSchema.create(db)
+            try db.create(
+                index: "albumInfo_on_title_artist_details",
+                on: "albumInfo",
+                columns: ["title", "artist", "coverArtURL", "musicBrainzID", "year", "genre", "lastFetched"]
+            )
         }
 
         migrator.registerMigration("v19") { db in
+            try ServerSyncSchema.create(db)
+        }
+
+        migrator.registerMigration("v20") { db in
             try ServerSyncSchema.refreshPlayIndexes(db)
             try ServerSyncSchema.createPendingKeys(db)
         }

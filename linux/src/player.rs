@@ -244,6 +244,21 @@ fn gapless_next_index(shared: &Shared) -> Option<usize> {
     }
 }
 
+/// Keeps the sound server from restoring a remembered volume onto Flaccy's
+/// stream. WirePlumber saves a stream's volume under the application name and
+/// puts it back on the next stream, so a muted stream from any other run of
+/// the app, a test instance included, made later songs start silent while the
+/// volume bar, which drives the player's own volume, still read full.
+fn opt_out_of_stream_restore(sink: &gst::Element) {
+    if sink.find_property("stream-properties").is_none() {
+        return;
+    }
+    let properties = gst::Structure::builder("props")
+        .field("state.restore-props", "false")
+        .build();
+    sink.set_property("stream-properties", &properties);
+}
+
 impl Player {
     pub fn new(hub: Rc<EventHub>, root: PathBuf, audio_filter: gst::Element) -> Rc<Self> {
         let playbin = gst::ElementFactory::make("playbin3")
@@ -251,6 +266,12 @@ impl Player {
             .expect("playbin3 must be available");
         playbin.set_property_from_str("flags", "audio+soft-volume");
         playbin.set_property("audio-filter", &audio_filter);
+        playbin.connect("deep-element-added", false, |args| {
+            if let Ok(element) = args[2].get::<gst::Element>() {
+                opt_out_of_stream_restore(&element);
+            }
+            None
+        });
 
         let shared = Arc::new(Mutex::new(Shared {
             queue: Vec::new(),

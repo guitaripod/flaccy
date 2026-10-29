@@ -17,8 +17,10 @@ final class HomeViewController: UIViewController {
     var dataSource: UICollectionViewDiffableDataSource<HomeSectionID, HomeItem>!
 
     private let backdrop = HomeBackdropView()
+    private let launchPlaceholder = HomeLaunchPlaceholderView()
     private let runwayBanner = TrialRunwayBannerView()
     private let statusBanner = LibraryStatusBanner()
+    private var placeholderInsets: (leading: NSLayoutConstraint, trailing: NSLayoutConstraint)?
     private var runwayHeight: NSLayoutConstraint!
     private var statusHeight: NSLayoutConstraint!
     private var runwayRequested = false
@@ -45,6 +47,7 @@ final class HomeViewController: UIViewController {
         setupSettingsButton()
         setupBackdrop()
         setupCollectionView()
+        setupLaunchPlaceholder()
         setupDataSource()
         setupBanners()
         bindSources()
@@ -63,6 +66,11 @@ final class HomeViewController: UIViewController {
         let width = collectionView.bounds.width
         let target = runwayBanner.expandedHeight(forWidth: width)
         if runwayHeight.constant != target { runwayHeight.constant = target }
+        if let placeholderInsets {
+            let inset = AdaptiveLayout.homeIsWide(contentWidth: contentWidth) ? 24.0 : 16.0
+            placeholderInsets.leading.constant = inset
+            placeholderInsets.trailing.constant = -inset
+        }
     }
 
     /// Home arranges itself from the room its own content area has, and
@@ -111,6 +119,56 @@ final class HomeViewController: UIViewController {
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+    }
+
+    /// Holds the page back until its first real frame, with the placeholder
+    /// standing where the hero and the first shelves will be.
+    private func setupLaunchPlaceholder() {
+        collectionView.alpha = 0
+        launchPlaceholder.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(launchPlaceholder)
+        let guide = view.safeAreaLayoutGuide
+        let leading = launchPlaceholder.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 16)
+        let trailing = launchPlaceholder.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -16)
+        NSLayoutConstraint.activate([
+            launchPlaceholder.topAnchor.constraint(equalTo: guide.topAnchor, constant: 8),
+            launchPlaceholder.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            leading,
+            trailing,
+        ])
+        placeholderInsets = (leading, trailing)
+        launchPlaceholder.appear()
+    }
+
+    /// The page fades up over the placeholder and settles a few points into
+    /// place, its covers already loaded, while the placeholder fades out.
+    private func revealFirstFrame() {
+        launchPlaceholder.dismiss()
+        placeholderInsets = nil
+        let animates = view.window != nil && !Self.isScreenshotLaunch
+        guard animates else {
+            collectionView.alpha = 1
+            return
+        }
+        let rises = !UIAccessibility.isReduceMotionEnabled
+        if rises { collectionView.transform = CGAffineTransform(translationX: 0, y: 12) }
+        UIView.animate(
+            withDuration: 0.55, delay: 0, usingSpringWithDamping: 0.92, initialSpringVelocity: 0,
+            options: [.allowUserInteraction, .beginFromCurrentState]
+        ) {
+            self.collectionView.alpha = 1
+            self.collectionView.transform = .identity
+        }
+    }
+
+    /// A DEBUG screenshot launch, whose captures must not catch the page mid
+    /// fade. Always false in a release build, where the seeder does not exist.
+    private static var isScreenshotLaunch: Bool {
+        #if DEBUG && (targetEnvironment(simulator) || os(macOS))
+        ScreenshotSeeder.isActive
+        #else
+        false
+        #endif
     }
 
     private func setupBanners() {
@@ -191,7 +249,9 @@ final class HomeViewController: UIViewController {
     }
 
     private func apply(_ newModel: HomeScreenModel) {
+        guard viewModel.hasLoaded else { return }
         model = newModel
+        let isFirstFrame = !hasRendered
         let plan = HomeSnapshotPlan.sections(
             for: newModel, showsRunwayBanner: showsRunwayBanner, showsStatusBanner: showsStatusBanner,
             isWide: isWide
@@ -209,6 +269,10 @@ final class HomeViewController: UIViewController {
         collectionView.collectionViewLayout.invalidateLayout()
         backdrop.show(album: newModel.backdropAlbum)
         view.setNeedsLayout()
+        if isFirstFrame {
+            view.layoutIfNeeded()
+            revealFirstFrame()
+        }
     }
 
     /// The sample album's button is the one place its download shows, so it
