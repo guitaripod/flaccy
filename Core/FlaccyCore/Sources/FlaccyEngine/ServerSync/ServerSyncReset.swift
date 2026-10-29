@@ -26,9 +26,21 @@ enum SyncReset {
         try SyncPending.renumber(db, leading: leading, nowMs: nowMs)
     }
 
-    /// The server met this instance's ids with different arguments (a restored phone backup, a copied database). Moves the queue to a new instance.
-    static func afterInstanceConflict(_ db: Database, nowMs: Int64) throws {
-        try SyncMeta.set(db, SyncMeta.instance, ServerSyncIDs.uuidV7(nowMs: nowMs))
+    /// The server met this instance's ids with different arguments (a restored phone backup, a copied database). Moves the queue to a
+    /// new instance and gives the plays it has not answered new ids, so they are neither taken for repeats of the server's own plays
+    /// nor shadow them when they are read back. With `rereadListens`, those plays are read again.
+    static func afterInstanceConflict(_ db: Database, nowMs: Int64, rereadListens: Bool = false) throws {
+        let instance = ServerSyncIDs.uuidV7(nowMs: nowMs)
+        try SyncMeta.set(db, SyncMeta.instance, instance)
+        if let link = try SyncMeta.link(db) {
+            try SyncPending.reassignUnacknowledgedListens(db) { old in
+                let counter = try SyncMeta.takeEventCounter(db)
+                let new = try ServerCoreBridge.eventIdRec(deviceId: link.device, instance: instance, counter: counter)
+                try db.execute(sql: "UPDATE scrobbles SET eventId = ? WHERE eventId = ?", arguments: [new, old])
+                return new
+            }
+        }
+        if rereadListens { try SyncListens.rewind(db) }
         try SyncPending.renumber(db, leading: [], nowMs: nowMs)
     }
 

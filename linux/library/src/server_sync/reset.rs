@@ -29,10 +29,14 @@ pub(crate) fn after_restore(conn: &Connection, incarnation: Option<&str>) -> Res
     })
 }
 
-/// The server met this instance's ids with different arguments (a restored phone backup, a copied database). Moves the queue to a new instance.
+/// The server met this instance's ids with different arguments (a restored phone backup, a copied database). Moves the queue to a new instance, gives the plays it has not answered new ids, and reads the listens again so the server's own plays under the old ids reach this copy.
 pub(crate) fn after_instance_conflict(conn: &Connection) -> Result<()> {
     atomically(conn, || {
-        meta::set(conn, meta::INSTANCE, &new_uuid_v7())?;
+        let link = meta::link(conn)?.ok_or(SyncError::NotConfigured)?;
+        let instance = new_uuid_v7();
+        meta::set(conn, meta::INSTANCE, &instance)?;
+        listens::rederive_unacknowledged(conn, &link.device, &instance)?;
+        listens::rewind(conn)?;
         pending::renumber(conn, Vec::new())
     })
 }

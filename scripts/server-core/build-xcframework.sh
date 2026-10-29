@@ -22,6 +22,7 @@ two XCFrameworks that both ship a module.modulemap overwrite each other in an Xc
 XCFRAMEWORK_STRIP=0 keeps the debug symbols: Xcode 27's strip -S breaks relocations in some Rust archives.
 Cargo profile overrides pass through the environment, for example
 CARGO_PROFILE_RELEASE_OPT_LEVEL=z CARGO_PROFILE_RELEASE_LTO=true.
+MACOSX_DEPLOYMENT_TARGET (default 26.0) and IPHONEOS_DEPLOYMENT_TARGET (default 18.6) match project.yml, so the linker does not warn that the Rust objects are newer than the app.
 USAGE
 }
 
@@ -89,7 +90,8 @@ cargo_target_dir() {
 }
 
 build_triple() {
-    cargo build --release --target "$1" \
+    MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-26.0}" IPHONEOS_DEPLOYMENT_TARGET="${IPHONEOS_DEPLOYMENT_TARGET:-18.6}" \
+        cargo build --release --target "$1" \
         --manifest-path "$CRATE_DIR/Cargo.toml" \
         --target-dir "$(cargo_target_dir)"
 }

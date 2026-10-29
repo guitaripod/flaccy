@@ -6,6 +6,7 @@ use super::songref::ref_for_play;
 use crate::db::{string_from_unix, unix_from_string};
 use crate::listen_history::ListenKeyCache;
 use flaccy_server_core::model::SongRef;
+use flaccy_server_core::song::event_id_rec;
 use rusqlite::{params, Connection};
 use serde::Deserialize;
 use serde_json::json;
@@ -193,6 +194,43 @@ pub(crate) fn requeue_all(conn: &Connection) -> Result<Vec<NewMutation>> {
         mutations.push(listen_mutation(batch));
     }
     Ok(mutations)
+}
+
+/// A stale copy reached an instance whose ids the server has already spent on other plays. Gives each recorded play that no push was answered for a new id under `instance`, in its `scrobbles` row and in the queued `listen.record`, so it is neither taken for a repeat of the server's play nor shadows it when that play is read back.
+pub(crate) fn rederive_unacknowledged(
+    conn: &Connection,
+    device: &str,
+    instance: &str,
+) -> Result<()> {
+    let queued: Vec<(i64, String)> = {
+        let mut stmt = conn.prepare(
+            "SELECT mutation_id, args_json FROM sync_pending WHERE name = ?1 AND acked = 0",
+        )?;
+        let rows = stmt.query_map(params![LISTEN_RECORD], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect::<std::result::Result<_, _>>()?
+    };
+    for (mutation_id, args) in queued {
+        let mut parsed: serde_json::Value = serde_json::from_str(&args)?;
+        let Some(listens) = parsed["listens"].as_array_mut() else {
+            continue;
+        };
+        for listen in listens.iter_mut().filter(|listen| listen["recorded"] == true) {
+            let Some(old) = listen["eventId"].as_str().map(str::to_owned) else {
+                continue;
+            };
+            let new = event_id_rec(device, instance, meta::take_event_counter(conn)?);
+            conn.execute(
+                "UPDATE scrobbles SET eventId = ?1 WHERE eventId = ?2",
+                params![new, old],
+            )?;
+            listen["eventId"] = json!(new);
+        }
+        conn.execute(
+            "UPDATE sync_pending SET args_json = ?1 WHERE mutation_id = ?2",
+            params![serde_json::to_string(&parsed)?, mutation_id],
+        )?;
+    }
+    Ok(())
 }
 
 fn listen_mutation(listens: Vec<serde_json::Value>) -> NewMutation {

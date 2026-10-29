@@ -130,6 +130,8 @@ Response `200`: `{"results": [{"id", "status", "code"?}], "serverTimeMs": …}`.
 
 The server keeps the stored result of the newest 1,000 mutations of each device and of the last 30 days, and prunes the rest daily. A retry of a pruned id is answered `409 instance_conflict`, which sends the client to a new instance as above.
 
+On `409 instance_conflict` a client also gives every recorded play it has no answer for a new `event_id` under the new instance (`event_id_rec` with a fresh counter), in its own history and in the queued `listen.record`, and reads `GET /listens` again from the start. A restored backup or a copied database reuses `(instance, counter)` pairs that the server already spent on other plays; without new ids the server would take the new play for a repeat of the old one, answer it as applied and drop it. A play the server did hold under its old id and now receives under a new one is suppressed by the ledger (same second, same song).
+
 ### 6.2 `GET /sync/pull?since=<seq>&limit=<n>`
 `limit` ≤ 5000, default 1000. Returns state entities (every kind except `listen`) whose change `seq` is greater than `since`, ascending, for the caller's scope plus `household`:
 ```

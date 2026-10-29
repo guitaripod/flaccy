@@ -105,6 +105,29 @@ enum SyncPending {
         try append(db, NewMutation(listenRecord, ["listens": [listen]]), nowMs: nowMs)
     }
 
+    /// Gives each recorded play in a queued `listen.record` that no push was answered for the id `newID` makes from its old one.
+    static func reassignUnacknowledgedListens(_ db: Database, to newID: (_ old: String) throws -> String) throws {
+        let rows = try Row.fetchAll(
+            db, sql: "SELECT mutation_id, args_json FROM sync_pending WHERE name = ? AND acked = 0", arguments: [listenRecord]
+        )
+        for row in rows {
+            let argsJSON: String = row["args_json"]
+            guard case .object(var args)? = ServerJSON(text: argsJSON), case .array(var listens)? = args["listens"] else { continue }
+            for index in listens.indices {
+                guard case .object(var listen) = listens[index], listen["recorded"] == .bool(true),
+                    case .string(let old)? = listen["eventId"]
+                else { continue }
+                listen["eventId"] = .string(try newID(old))
+                listens[index] = .object(listen)
+            }
+            args["listens"] = .array(listens)
+            try db.execute(
+                sql: "UPDATE sync_pending SET args_json = ? WHERE mutation_id = ?",
+                arguments: [try text(.object(args)), row["mutation_id"] as Int64]
+            )
+        }
+    }
+
     private static func openListenBatch(_ db: Database) throws -> (id: Int64, listens: ServerJSON)? {
         guard let row = try Row.fetchOne(
             db, sql: "SELECT mutation_id, name, sent, acked, args_json FROM sync_pending ORDER BY mutation_id DESC LIMIT 1"

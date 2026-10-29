@@ -237,7 +237,7 @@ final class ServerSyncStore: Sendable {
             case .clockBehind:
                 return .wait
             case .instanceConflict:
-                try SyncReset.afterInstanceConflict(db, nowMs: nowMs)
+                try SyncReset.afterInstanceConflict(db, nowMs: nowMs, rereadListens: true)
                 return .resend
             case .mutationGap(let have):
                 let retiredAhead = (try SyncPending.lowestId(db)).map { $0 > have + 1 } ?? false
@@ -386,7 +386,7 @@ final class ServerSyncStore: Sendable {
     }
 
     func onInstanceConflict() throws {
-        try database.dbQueue.write { try SyncReset.afterInstanceConflict($0, nowMs: nowMs) }
+        try database.dbQueue.write { try SyncReset.afterInstanceConflict($0, nowMs: nowMs, rereadListens: true) }
     }
 
     func listensRequest() throws -> ListensRequest {

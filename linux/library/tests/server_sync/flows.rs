@@ -148,6 +148,58 @@ fn a_copied_database_moves_to_a_new_instance_and_loses_nothing() {
 }
 
 #[test]
+fn plays_made_on_a_stale_copy_keep_their_own_ids_when_the_copy_moves_to_a_new_instance() {
+    let double = Double::start();
+    let library = songs(6);
+    let mut original = Device::new("a", &library);
+    original.connect(&double, "marcus");
+    original.play(&library[0], 1_700_000_100);
+    original.play(&library[1], 1_700_000_200);
+    original.sync();
+    let copy_dir = original.dir.join("copy");
+    std::fs::create_dir_all(&copy_dir).unwrap();
+    original
+        .raw()
+        .execute(
+            "VACUUM INTO ?1",
+            [copy_dir.join("library.sqlite").to_str().unwrap()],
+        )
+        .unwrap();
+    let mut copy = Device::new("copy", &[]);
+    copy.db = flaccy_library::db::Db::open(&copy_dir.join("library.sqlite")).unwrap();
+    copy.driver = flaccy_library::server_sync::Driver::new(
+        flaccy_library::server_sync::TokenStore::new(original.dir.join("sync-token")),
+        None,
+    )
+    .with_backoff(flaccy_library::server_sync::Backoff::NONE);
+    original.play(&library[2], 1_700_000_300);
+    original.play(&library[3], 1_700_000_400);
+    original.sync();
+    copy.play(&library[4], 1_700_000_500);
+    copy.play(&library[5], 1_700_000_600);
+    assert_eq!(copy.sync().state, SyncState::UpToDate);
+    original.sync();
+    copy.sync();
+    let held = double.with(|state| {
+        let mut plays: Vec<(i64, String)> = state
+            .listens
+            .rows
+            .values()
+            .map(|row| (row.ts, row.song.title.clone()))
+            .collect();
+        plays.sort();
+        plays
+    });
+    let expected: Vec<(i64, String)> = (0..6)
+        .map(|index| (1_700_000_100 + 100 * index, format!("Song {}", index + 1)))
+        .collect();
+    assert_eq!(held, expected);
+    for device in [&original, &copy] {
+        assert_eq!(device.db.scrobble_count(), 6);
+    }
+}
+
+#[test]
 fn a_restored_server_with_a_new_incarnation_gets_the_clients_state_back() {
     let double = Double::start();
     let library = songs(4);

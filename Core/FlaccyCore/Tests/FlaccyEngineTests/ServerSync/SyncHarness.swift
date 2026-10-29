@@ -32,11 +32,18 @@ final class SyncDevice: @unchecked Sendable {
 
     static let link = FlaccyServerLink(baseURL: URL(string: "http://fake:4545") ?? URL(fileURLWithPath: "/"), enrollmentCode: "GOODCODE", name: "Fake")
 
-    init(server: FakeFlaccyServer, transports: (any ServerSyncTransportFactory)? = nil, backoff: ServerSyncBackoff = .none) throws {
+    init(
+        server: FakeFlaccyServer, transports: (any ServerSyncTransportFactory)? = nil, backoff: ServerSyncBackoff = .none,
+        copying source: SyncDevice? = nil
+    ) throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("sync-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         self.folder = folder
-        let database = try DatabaseManager(path: folder.appendingPathComponent("library.sqlite").path)
+        let path = folder.appendingPathComponent("library.sqlite").path
+        if let source {
+            try source.database.dbQueue.writeWithoutTransaction { try $0.execute(sql: "VACUUM INTO ?", arguments: [path]) }
+        }
+        let database = try DatabaseManager(path: path)
         self.database = database
         let state = self.state
         engine = ServerSyncEngine(
@@ -47,6 +54,11 @@ final class SyncDevice: @unchecked Sendable {
                 localChangeDelaySeconds: nil, periodSeconds: 1
             )
         )
+    }
+
+    /// Hands this device the token of the device it was copied from, as a restored backup would carry it.
+    func adoptToken(of source: SyncDevice, serverID: String) throws {
+        if let token = source.tokens.token(serverID: serverID) { try tokens.setToken(token, serverID: serverID) }
     }
 
     var entitled: Bool {
