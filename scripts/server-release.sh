@@ -44,7 +44,7 @@ Usage: scripts/server-release.sh <command> [options]
 
 Commands:
   build      Static musl tarballs for x86_64 and aarch64, each with a .sha256 file
-  macos      Release binaries for aarch64 and x86_64 macOS, built on the Mac over ssh,
+  macos      Runs the Rust tests on the Mac, then release binaries for aarch64 and x86_64 macOS, built over ssh,
              ad-hoc signed, packed as flaccy-server-<version>-macos-{arm64,x86_64}.tar.gz
   docker     Build ghcr.io/guitaripod/flaccy-server:<version> and :latest
   deb        .deb packages for x86_64 and aarch64
@@ -240,6 +240,7 @@ shift 2
 export CARGO_TARGET_DIR="$dir/target"
 export MACOSX_DEPLOYMENT_TARGET=11.0
 cd "$dir/linux"
+cargo test --locked -p flaccy-server -p flaccy-server-core -p flaccy-library -p flaccy-soak
 for target in "$@"; do
     rustup target list --installed | grep -qx "$target" || rustup target add "$target"
     cargo build --release --locked -p flaccy-server --target "$target"

@@ -8,7 +8,7 @@ readonly DEFAULT_CLIENTS=4
 readonly DEFAULT_SEED=1
 
 usage() {
-    echo "usage: server-soak.sh [--minutes N] [--clients K] [--seed S] [--release] [--keep] [--server-bin PATH]"
+    echo "usage: server-soak.sh [--minutes N] [--clients K] [--seed S] [--release] [--keep] [--server-bin PATH] [--kills-until FRACTION]"
     echo "defaults: --minutes $DEFAULT_MINUTES --clients $DEFAULT_CLIENTS --seed $DEFAULT_SEED"
 }
 
@@ -53,6 +53,7 @@ main() {
             --release) release="yes"; shift ;;
             --keep) passthrough+=("--keep"); shift ;;
             --server-bin) passthrough+=("--server-bin" "$2"); shift 2 ;;
+            --kills-until) passthrough+=("--kills-until" "$2"); shift 2 ;;
             -h|--help) usage; exit 0 ;;
             *) usage >&2; exit 2 ;;
         esac
@@ -62,7 +63,7 @@ main() {
     if [[ "$release" == "yes" ]]; then
         release_flag=("--release")
     fi
-    exec "$(soak_binary "$release")" run --minutes "$minutes" --clients "$clients" --seed "$seed" "${release_flag[@]}" "${passthrough[@]}"
+    exec "$(soak_binary "$release")" run --minutes "$minutes" --clients "$clients" --seed "$seed" ${release_flag[@]+"${release_flag[@]}"} ${passthrough[@]+"${passthrough[@]}"}
 }
 
 main "$@"

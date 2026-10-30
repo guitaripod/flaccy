@@ -11,7 +11,10 @@ use std::time::{Duration, Instant};
 
 const READY_LIMIT: Duration = Duration::from_secs(60);
 const TERM_LIMIT: Duration = Duration::from_secs(40);
+#[cfg(target_os = "linux")]
 const ADDRESS: &str = "127.0.0.2";
+#[cfg(not(target_os = "linux"))]
+const ADDRESS: &str = "127.0.0.1";
 
 /// How a SIGTERM ended.
 #[derive(Debug)]

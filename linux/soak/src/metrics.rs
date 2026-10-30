@@ -92,11 +92,26 @@ pub struct RssSample {
     pub pid: u32,
 }
 
-/// Resident kilobytes of `pid`, from `/proc/<pid>/status`.
+/// Resident kilobytes of `pid`: `/proc/<pid>/status` where the system has one, `ps` otherwise (macOS).
 pub fn read_rss_kb(pid: u32) -> Option<u64> {
+    read_proc_status(pid).or_else(|| read_ps(pid))
+}
+
+/// The `VmRSS` line of `/proc/<pid>/status`.
+fn read_proc_status(pid: u32) -> Option<u64> {
     let status = std::fs::read_to_string(format!("/proc/{pid}/status")).ok()?;
     let line = status.lines().find(|line| line.starts_with("VmRSS:"))?;
     line.split_whitespace().nth(1)?.parse().ok()
+}
+
+/// What `ps -o rss= -p <pid>` prints: the resident kilobytes alone.
+fn read_ps(pid: u32) -> Option<u64> {
+    let output = std::process::Command::new("ps").args(["-o", "rss=", "-p", &pid.to_string()]).output().ok()?;
+    parse_ps(&String::from_utf8_lossy(&output.stdout))
+}
+
+fn parse_ps(text: &str) -> Option<u64> {
+    text.trim().parse().ok()
 }
 
 /// What the memory check concluded about the longest-lived server process.
@@ -173,6 +188,19 @@ fn median(mut values: Vec<u64>) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ps_prints_the_resident_kilobytes_alone() {
+        assert_eq!(parse_ps("  73216\n"), Some(73_216));
+        assert_eq!(parse_ps(""), None);
+        assert_eq!(parse_ps("RSS\n"), None);
+    }
+
+    #[test]
+    fn this_process_has_a_resident_size_on_every_unix() {
+        assert!(read_rss_kb(std::process::id()).is_some_and(|kb| kb > 0));
+        assert!(read_ps(std::process::id()).is_some_and(|kb| kb > 0));
+    }
 
     #[test]
     fn percentiles_pick_the_median_and_the_tail() {
