@@ -73,14 +73,15 @@ pub fn print_outcome(outcome: &Outcome) {
     }
     match &outcome.rss {
         Some(rss) => println!(
-            "server rss: early(10%)={}kB late(100%)={}kB ratio={:.2} peak={}kB samples={}",
-            rss.early_kb,
+            "server rss (longest process, {}s): middle={}kB end={}kB ratio={:.2} peak of the run={}kB samples={}",
+            rss.life_secs,
+            rss.mid_kb,
             rss.late_kb,
             rss.ratio(),
             rss.peak_kb,
             rss.samples
         ),
-        None => println!("server rss: too few samples"),
+        None => println!("server rss: no process lived long enough to judge"),
     }
     for note in &outcome.notes {
         println!("note: {note}");

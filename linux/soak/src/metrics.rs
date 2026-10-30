@@ -99,51 +99,66 @@ pub fn read_rss_kb(pid: u32) -> Option<u64> {
     line.split_whitespace().nth(1)?.parse().ok()
 }
 
-/// What the memory check concluded.
+/// What the memory check concluded about the longest-lived server process.
 #[derive(Clone, Debug)]
 pub struct RssSummary {
-    /// Median at the 10% mark, kilobytes.
-    pub early_kb: u64,
-    /// Median at the 100% mark, kilobytes.
+    /// Median over the middle fifth of that process's life, kilobytes.
+    pub mid_kb: u64,
+    /// Median over the last tenth of that process's life, kilobytes.
     pub late_kb: u64,
-    /// Highest sample, kilobytes.
+    /// Highest sample of the whole run, kilobytes.
     pub peak_kb: u64,
-    /// How many samples.
+    /// How many samples the run took.
     pub samples: usize,
+    /// How long that process lived, seconds.
+    pub life_secs: u64,
 }
 
 impl RssSummary {
-    /// Late over early.
+    /// Late over middle.
     pub fn ratio(&self) -> f64 {
-        if self.early_kb == 0 {
+        if self.mid_kb == 0 {
             return 0.0;
         }
-        self.late_kb as f64 / self.early_kb as f64
+        self.late_kb as f64 / self.mid_kb as f64
     }
 }
 
-/// Medians around the 10% mark and at the end of the run; `None` when too few samples exist.
-pub fn summarise_rss(samples: &[RssSample], total_ms: u64) -> Option<RssSummary> {
-    if samples.len() < 4 || total_ms == 0 {
+const MIN_LIFE_MS: u64 = 180_000;
+const MIN_LIFE_SAMPLES: usize = 60;
+
+/// Medians over the middle and the end of the life of the longest-lived server process; `None` when no process lived long enough
+/// to tell a plateau from a climb.
+pub fn summarise_rss(samples: &[RssSample]) -> Option<RssSummary> {
+    let mut lives: Vec<&[RssSample]> = Vec::new();
+    let mut start = 0;
+    for index in 1..=samples.len() {
+        if index == samples.len() || samples[index].pid != samples[start].pid {
+            lives.push(&samples[start..index]);
+            start = index;
+        }
+    }
+    let life = lives.into_iter().max_by_key(|life| life.len())?;
+    let (first, last) = (life.first()?, life.last()?);
+    let span = last.at_ms.saturating_sub(first.at_ms);
+    if span < MIN_LIFE_MS || life.len() < MIN_LIFE_SAMPLES {
         return None;
     }
     let window = |from: f64, to: f64| -> Vec<u64> {
-        samples
-            .iter()
+        life.iter()
             .filter(|sample| {
-                let fraction = sample.at_ms as f64 / total_ms as f64;
+                let fraction = (sample.at_ms - first.at_ms) as f64 / span as f64;
                 fraction >= from && fraction <= to
             })
             .map(|sample| sample.kb)
             .collect()
     };
-    let early = median(window(0.07, 0.13));
-    let late = median(window(0.95, 1.5));
     Some(RssSummary {
-        early_kb: early?,
-        late_kb: late?,
+        mid_kb: median(window(0.4, 0.6))?,
+        late_kb: median(window(0.9, 1.0))?,
         peak_kb: samples.iter().map(|sample| sample.kb).max().unwrap_or(0),
         samples: samples.len(),
+        life_secs: span / 1000,
     })
 }
 
@@ -171,13 +186,23 @@ mod tests {
         assert!(push.p99_ms >= 99.0);
     }
 
+    fn life(pid: u32, from_ms: u64, count: u64, kb: impl Fn(u64) -> u64) -> Vec<RssSample> {
+        (0..count).map(|index| RssSample { at_ms: from_ms + index * 3_000, kb: kb(index), pid }).collect()
+    }
+
     #[test]
-    fn memory_marks_compare_the_early_and_the_late_median() {
-        let samples: Vec<RssSample> = (0..100)
-            .map(|index| RssSample { at_ms: index * 10, kb: if index < 50 { 100 } else { 300 }, pid: 1 })
-            .collect();
-        let summary = summarise_rss(&samples, 1000).unwrap();
-        assert_eq!((summary.early_kb, summary.late_kb), (100, 300));
-        assert!((summary.ratio() - 3.0).abs() < f64::EPSILON);
+    fn the_longest_process_is_judged_by_its_middle_and_its_end() {
+        let mut samples = life(1, 0, 70, |_| 20_000);
+        samples.extend(life(2, 300_000, 120, |index| if index < 60 { 40_000 } else { 90_000 }));
+        let summary = summarise_rss(&samples).unwrap();
+        assert_eq!((summary.mid_kb, summary.late_kb), (90_000, 90_000));
+        let climbing = life(3, 0, 120, |index| 20_000 + index * 1_000);
+        let summary = summarise_rss(&climbing).unwrap();
+        assert!(summary.ratio() > 1.4);
+    }
+
+    #[test]
+    fn a_process_that_lived_briefly_gives_no_verdict() {
+        assert!(summarise_rss(&life(1, 0, 30, |_| 20_000)).is_none());
     }
 }

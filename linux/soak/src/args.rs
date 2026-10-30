@@ -38,6 +38,9 @@ pub struct RunArgs {
     /// Multiplies how often clients restore a stale backup and how often they save one; 0 turns restores off.
     #[arg(long, default_value_t = 1.0)]
     pub lifecycle_boost: f64,
+    /// The fraction of the run after which the server is no longer killed or stopped, so its last process lives long enough to show a memory plateau.
+    #[arg(long, default_value_t = 0.8)]
+    pub kills_until: f64,
     /// Seconds to leave the server idle after the final checks while its memory is measured.
     #[arg(long, default_value_t = 0)]
     pub quiet_secs: u64,

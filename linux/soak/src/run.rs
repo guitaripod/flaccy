@@ -18,7 +18,6 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 const LIVE_CHECK_EVERY: Duration = Duration::from_secs(60);
-const KILLS_STOP_AT: f64 = 0.8;
 
 /// Runs the whole soak and answers true when every invariant held.
 pub fn execute(args: &RunArgs) -> Result<bool, String> {
@@ -81,7 +80,7 @@ type Workers = Vec<JoinHandle<Client>>;
 fn launch(args: &RunArgs, shared: &Arc<Shared>, clients: &mut Vec<Client>) -> (JoinHandle<()>, Workers, Instant) {
     let begun = Instant::now();
     let chaos_until = begun + Duration::from_secs(args.minutes * 60);
-    let kills_until = begun + Duration::from_secs_f64(args.minutes as f64 * 60.0 * KILLS_STOP_AT);
+    let kills_until = begun + Duration::from_secs_f64(args.minutes as f64 * 60.0 * args.kills_until.clamp(0.0, 1.0));
     let controller = {
         let shared = shared.clone();
         std::thread::spawn(move || controller::run(shared, kills_until, chaos_until))

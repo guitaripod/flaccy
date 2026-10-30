@@ -15,8 +15,6 @@ const MAX_NOTES: usize = 40;
 pub struct Shared {
     /// The run seed.
     pub seed: u64,
-    /// Planned minutes of workload and chaos.
-    pub minutes: u64,
     /// Multiplier on client reinstall and restore rates.
     pub lifecycle_boost: f64,
     /// Idle seconds for the memory probe after the final checks.
@@ -50,7 +48,6 @@ impl Shared {
     pub fn new(seed: u64, args: &crate::args::RunArgs, catalog: Catalog, server: Server, proxy_url: String, faults: Arc<Faults>, latency: Arc<Latency>) -> Shared {
         Shared {
             seed,
-            minutes: args.minutes,
             lifecycle_boost: args.lifecycle_boost,
             quiet_secs: args.quiet_secs,
             catalog,
@@ -67,11 +64,6 @@ impl Shared {
             server_exits: Mutex::new(Vec::new()),
             rss: Mutex::new(Vec::new()),
         }
-    }
-
-    /// Planned chaos length in milliseconds.
-    pub fn chaos_ms(&self) -> u64 {
-        self.minutes * 60_000
     }
 
     /// A playlist name no other playlist has had in this run.

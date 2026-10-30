@@ -15,11 +15,13 @@ const CONVERGENCE: &str = "(a) clients converge on server state";
 const ACKNOWLEDGED: &str = "(b) acknowledged mutations survive";
 const LISTENS: &str = "(c) listen event ids unique";
 const INTEGRITY: &str = "(d) integrity and exit codes";
-const MEMORY: &str = "(e) server memory within 2x";
+const MEMORY: &str = "(e) server memory plateaus";
 const CURSORS: &str = "(g) cursors monotone";
 const ORDER: [&str; 6] = [CONVERGENCE, ACKNOWLEDGED, LISTENS, INTEGRITY, MEMORY, CURSORS];
 const SETTLE_LIMIT: Duration = Duration::from_secs(240);
-const MEMORY_RATIO_LIMIT: f64 = 2.0;
+const MEMORY_RATIO_LIMIT: f64 = 1.5;
+const MEMORY_GROWTH_FLOOR_KB: u64 = 32_768;
+const MEMORY_PEAK_LIMIT_KB: u64 = 524_288;
 
 /// The first violation seen per invariant.
 #[derive(Default)]
@@ -162,13 +164,20 @@ fn check_unique_listens(view: &ServerView, verdicts: &mut Verdicts) {
 }
 
 fn memory(shared: &Shared, verdicts: &mut Verdicts) -> Option<RssSummary> {
-    let total_ms = shared.chaos_ms();
-    let summary = summarise_rss(&shared.rss_samples(), total_ms)?;
-    if summary.ratio() > MEMORY_RATIO_LIMIT {
+    let samples = shared.rss_samples();
+    let summary = summarise_rss(&samples)?;
+    let climbing = summary.ratio() > MEMORY_RATIO_LIMIT && summary.late_kb.saturating_sub(summary.mid_kb) > MEMORY_GROWTH_FLOOR_KB;
+    if climbing {
         verdicts.fail(
             MEMORY,
-            format!("server RSS grew {:.2}x between the 10% mark ({} kB) and the 100% mark ({} kB)", summary.ratio(), summary.early_kb, summary.late_kb),
+            format!(
+                "the server process that lived {}s was still growing: {} kB over the middle of its life, {} kB over the end ({:.2}x)",
+                summary.life_secs, summary.mid_kb, summary.late_kb, summary.ratio()
+            ),
         );
+    }
+    if summary.peak_kb > MEMORY_PEAK_LIMIT_KB {
+        verdicts.fail(MEMORY, format!("the server reached {} kB, over the {} kB limit", summary.peak_kb, MEMORY_PEAK_LIMIT_KB));
     }
     Some(summary)
 }
