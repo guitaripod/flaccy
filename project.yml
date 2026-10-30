@@ -308,6 +308,11 @@ targets:
           - WatchSync/WatchSyncStorageMeter.swift
           - WatchSync/WatchSyncViewController.swift
           - WatchSync/WatchTranscoder.swift
+          - Welcome/ServerSetupGuideViewController.swift
+          - Welcome/WelcomeCopy.swift
+          - Welcome/WelcomeFlow.swift
+          - Welcome/WelcomeGate.swift
+          - Welcome/WelcomeViewController.swift
       - path: Resources
         type: syncedFolder
         excludes:

@@ -1,5 +1,6 @@
 import AppKit
 import FlaccyCore
+import FlaccyServerEmbed
 
 /// Act III. What the reader just watched being built, stated as facts, with the
 /// one paid capability that produced some of them named rather than implied.
@@ -10,6 +11,7 @@ final class MacDebutSummaryCard: NSView {
 
     var onDismiss: (() -> Void)?
     var onSeeWhatsIncluded: (() -> Void)?
+    var onShareWithIPhone: (() -> Void)?
 
     /// A faded-out view still sits on top of whatever is under it and, on current
     /// macOS, still answers hit tests, so the welcome panel's buttons — which are
@@ -95,7 +97,18 @@ final class MacDebutSummaryCard: NSView {
         secondary.isBordered = false
         secondary.contentTintColor = MacColors.secondaryLabel
 
-        let actions = NSStackView(views: [primary, secondary])
+        let share = NSButton(
+            title: String(localized: "Listen on Your iPhone…"), target: self, action: #selector(shareWithIPhone)
+        )
+        share.image = NSImage(systemSymbolName: "iphone", accessibilityDescription: nil)
+        share.imagePosition = .imageLeading
+        share.bezelStyle = .accessoryBarAction
+        share.isBordered = false
+        share.contentTintColor = .controlAccentColor
+        share.setAccessibilityIdentifier("debut.shareWithIPhone")
+        share.isHidden = MacLibrarySharing.shared.isEnabled
+
+        let actions = NSStackView(views: [primary, secondary, share])
         actions.orientation = .horizontal
         actions.alignment = .centerY
         actions.spacing = 18
@@ -125,6 +138,10 @@ final class MacDebutSummaryCard: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    @objc private func shareWithIPhone() {
+        onShareWithIPhone?()
+    }
 
     @objc private func seeWhatsIncluded() {
         onSeeWhatsIncluded?()

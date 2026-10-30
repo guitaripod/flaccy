@@ -41,7 +41,7 @@ The code works once and expires in 10 minutes. Make another with `flaccy-server 
 
 ## 3. Adding a server in the app
 
-One sheet, **Add Flaccy Server**, reached from Settings → Servers → Add, from the `flaccy://server` link, and from the getting-started guide.
+One sheet, **Add Flaccy Server**, reached from Settings → Servers → Add, from the `flaccy://server` link, from the getting-started guide and from the welcome (section 7). A scanned code connects at once, because pointing the camera is the person's tap; a link opened from elsewhere only fills the fields, and Connect is one tap.
 
 | Step | What the person sees |
 |---|---|
@@ -103,3 +103,17 @@ First connect with data on both sides shows one informational summary sheet, onl
 - Settings → Servers has a footer for people with no server: "Have a computer with your music on it? Flaccy Server shares it with your other devices, and keeps playlists, loves and history in sync. It's free: flaccy.app/server." (the address is whatever the website decision settles; until then the repo README link).
 - The getting-started guide gains one card, "Hear your whole library on every device", linking to the same sheet.
 - Nothing appears on Home, and nothing nags: a person who closes the footer or the card never sees it again.
+
+## 7. First launch
+
+A new Flaccy with no music and no server opens on a welcome (`Features/Welcome`) that asks one question, **Where is your music?**, with three answers and a way out:
+
+| Answer | Where it goes |
+|---|---|
+| **On my computer** (first, highlighted) | **Connect Your Computer**: three numbered steps. 1 Get Tailscale on both (button opens Tailscale or its App Store page). 2 Start Flaccy Server: on a Mac, Settings › Servers › Share this Mac's library; on Linux or a NAS, install and run `flaccy-server setup`; a button sends the setup guide (midgarcorp.cc/flaccy/server) to the computer by AirDrop, Messages or Mail. 3 **Scan the Code**, which opens the camera inside Add Flaccy Server; scanning connects at once, and Done closes the welcome on a library that already shows the server's music. "Type the Address Instead" opens the same screen without the camera |
+| **On this iPhone or in Files** | Closes the welcome and opens the Files picker |
+| **On a music server** | Closes the welcome and opens Add Server (Navidrome, Jellyfin, Subsonic) |
+| *Just looking? Play the free sample album* | Closes the welcome and downloads the sample |
+| **Not Now** | Closes the welcome; Home's get-started card stays |
+
+It shows once, never to a person who already has music or a server, and never in a test, exercise or screenshot run (`--show-welcome [server]` forces it). On the Mac, the first-launch panel has "Music on another computer? Connect to Flaccy Server…", and the summary after the first library scan offers **Listen on Your iPhone…**, which turns on Share this Mac's library and shows the code to scan.

@@ -21077,6 +21077,70 @@
         }
       }
     },
+    "Add songs and folders from Files, iCloud Drive or a USB drive.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge Songs und Ordner aus Dateien, iCloud Drive oder von einem USB-Laufwerk hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade canciones y carpetas desde Archivos, iCloud Drive o una unidad USB."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez des morceaux et des dossiers depuis Fichiers, iCloud Drive ou une clé USB."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi brani e cartelle da File, iCloud Drive o un'unità USB."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ファイル」、iCloud Drive、USBドライブから曲やフォルダを追加します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 앱, iCloud Drive 또는 USB 드라이브에서 노래와 폴더를 추가하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj utwory i foldery z Plików, iCloud Drive lub dysku USB."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicione músicas e pastas do Arquivos, do iCloud Drive ou de um pendrive."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从“文件”、iCloud 云盘或 USB 驱动器添加歌曲和文件夹。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從「檔案」、iCloud 雲碟或 USB 磁碟加入歌曲與檔案夾。"
+          }
+        }
+      }
+    },
     "Add songs from the Files app, a NAS or your computer, or start with a free sample album.": {
       "localizations": {
         "de": {
@@ -32061,6 +32125,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "連接 Last.fm…"
+          }
+        }
+      }
+    },
+    "Connect Navidrome, Jellyfin or another Subsonic server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde Navidrome, Jellyfin oder einen anderen Subsonic-Server."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta Navidrome, Jellyfin u otro servidor Subsonic."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez Navidrome, Jellyfin ou un autre serveur Subsonic."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega Navidrome, Jellyfin o un altro server Subsonic."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome、Jellyfin、その他のSubsonicサーバーに接続します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome, Jellyfin 또는 다른 Subsonic 서버를 연결하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Połącz Navidrome, Jellyfin lub inny serwer Subsonic."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte Navidrome, Jellyfin ou outro servidor Subsonic."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接 Navidrome、Jellyfin 或其他 Subsonic 服务器。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連接 Navidrome、Jellyfin 或其他 Subsonic 伺服器。"
+          }
+        }
+      }
+    },
+    "Connect Your Computer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Computer verbinden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta tu ordenador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez votre ordinateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega il tuo computer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータを接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터 연결"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Połącz komputer"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte seu computador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接你的电脑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連接你的電腦"
           }
         }
       }
@@ -48815,6 +49007,70 @@
         }
       }
     },
+    "Flaccy Server shares the music on your Mac or PC with this iPhone and keeps playlists, loves and history in step. It's free, and your music never leaves your own network.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server teilt die Musik auf deinem Mac oder PC mit diesem iPhone und hält Playlists, Favoriten und Verlauf synchron. Kostenlos, und deine Musik verlässt nie dein eigenes Netzwerk."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server comparte la música de tu Mac o PC con este iPhone y mantiene sincronizados listas, favoritos e historial. Es gratis y tu música nunca sale de tu propia red."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server partage la musique de votre Mac ou PC avec cet iPhone et garde playlists, coups de cœur et historique synchronisés. C'est gratuit, et votre musique ne quitte jamais votre propre réseau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server condivide la musica del tuo Mac o PC con questo iPhone e tiene sincronizzati playlist, preferiti e cronologia. È gratis e la tua musica non lascia mai la tua rete."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy ServerはMacやPCの音楽をこのiPhoneと共有し、プレイリスト、お気に入り、履歴を同期します。無料で、音楽が自分のネットワークの外に出ることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server는 Mac이나 PC의 음악을 이 iPhone과 공유하고 플레이리스트, 좋아요, 기록을 동기화합니다. 무료이며 음악이 내 네트워크 밖으로 나가지 않습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server udostępnia muzykę z twojego Maca lub PC temu iPhone'owi i synchronizuje playlisty, ulubione i historię. Za darmo, a twoja muzyka nigdy nie opuszcza twojej sieci."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy Server compartilha a música do seu Mac ou PC com este iPhone e mantém playlists, favoritos e histórico sincronizados. É grátis, e sua música nunca sai da sua própria rede."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server 将你 Mac 或 PC 上的音乐共享到这台 iPhone，并同步播放列表、喜欢和历史。免费，你的音乐永远不会离开你自己的网络。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server 會把你 Mac 或 PC 上的音樂分享到這部 iPhone，並同步播放列表、喜愛與記錄。免費，你的音樂永遠不會離開你自己的網路。"
+          }
+        }
+      }
+    },
     "Flaccy and Last.fm share one listening history. Every scrobble on your account, from Flaccy or any other app or device, flows into Stats, play counts and Most Played, and keeps flowing on its own.": {
       "localizations": {
         "de": {
@@ -52547,6 +52803,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "取得 Tailscale"
+          }
+        }
+      }
+    },
+    "Get Tailscale on both": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale auf beiden Geräten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale en los dos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale sur les deux"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale su entrambi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "両方にTailscaleを入れる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "양쪽에 Tailscale 설치"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale na obu"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale nos dois"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两边都装 Tailscale"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兩邊都安裝 Tailscale"
           }
         }
       }
@@ -57449,6 +57769,70 @@
         }
       }
     },
+    "Install Tailscale on this iPhone and on your computer, and sign in to the same account. It connects them safely, at home or away.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installiere Tailscale auf diesem iPhone und auf deinem Computer und melde dich mit demselben Konto an. Es verbindet beide sicher, zu Hause und unterwegs."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instala Tailscale en este iPhone y en tu ordenador, e inicia sesión con la misma cuenta. Los conecta de forma segura, en casa o fuera."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installez Tailscale sur cet iPhone et sur votre ordinateur, et connectez-vous au même compte. Il les relie en toute sécurité, chez vous ou ailleurs."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installa Tailscale su questo iPhone e sul computer, e accedi con lo stesso account. Li collega in modo sicuro, a casa o fuori."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このiPhoneとコンピュータにTailscaleをインストールし、同じアカウントでサインインします。自宅でも外出先でも安全につながります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPhone과 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인하세요. 집에서도 밖에서도 안전하게 연결됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zainstaluj Tailscale na tym iPhonie i na komputerze, i zaloguj się na to samo konto. Połączy je bezpiecznie, w domu i poza nim."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instale o Tailscale neste iPhone e no seu computador, e entre na mesma conta. Ele os conecta com segurança, em casa ou fora."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台 iPhone 和你的电脑上安装 Tailscale，并登录同一个账户。无论在家还是在外，它都能安全地连接两者。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這部 iPhone 和你的電腦上安裝 Tailscale，並登入同一個帳號。無論在家或外出，它都能安全地連接兩者。"
+          }
+        }
+      }
+    },
     "Instrumental": {
       "localizations": {
         "de": {
@@ -58359,6 +58743,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "跳至目前歌曲"
+          }
+        }
+      }
+    },
+    "Just looking? Play the free sample album": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur mal schauen? Spiel das kostenlose Beispielalbum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Solo echando un vistazo? Escucha el álbum de muestra gratis"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Juste pour voir ? Écoutez l'album d'exemple gratuit"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuoi solo dare un'occhiata? Ascolta l'album di esempio gratuito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まずは試したい？無料のサンプルアルバムを再生"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그냥 둘러보시나요? 무료 샘플 앨범 재생"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tylko się rozglądasz? Odtwórz darmowy przykładowy album"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só dando uma olhada? Toque o álbum de exemplo gratuito"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只是看看？播放免费示例专辑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只是看看？播放免費範例專輯"
           }
         }
       }
@@ -60955,6 +61403,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "列表列預覽"
+          }
+        }
+      }
+    },
+    "Listen on Your iPhone…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf dem iPhone hören …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escuchar en tu iPhone…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écouter sur votre iPhone…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ascolta sul tuo iPhone…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhoneで聴く…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone에서 듣기…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Słuchaj na iPhonie…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvir no seu iPhone…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iPhone 上收听…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iPhone 上聆聽…"
           }
         }
       }
@@ -66635,6 +67147,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "音樂資料夾無法使用——請重新連接磁碟機或選擇新的資料夾。"
+          }
+        }
+      }
+    },
+    "Music on another computer? Connect to Flaccy Server…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik auf einem anderen Computer? Mit Flaccy Server verbinden …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Música en otro ordenador? Conectar con Flaccy Server…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De la musique sur un autre ordinateur ? Se connecter à Flaccy Server…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musica su un altro computer? Collegati a Flaccy Server…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽が別のコンピュータにある？Flaccy Serverに接続…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 컴퓨터에 음악이 있나요? Flaccy Server에 연결…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muzyka na innym komputerze? Połącz z Flaccy Server…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Música em outro computador? Conectar ao Flaccy Server…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐在另一台电脑上？连接 Flaccy Server…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音樂在另一部電腦上？連接 Flaccy Server…"
           }
         }
       }
@@ -74201,6 +74777,198 @@
         }
       }
     },
+    "On a Mac, open Flaccy and turn on Settings › Servers › Share this Mac's library. On Linux or a NAS, install Flaccy Server and run flaccy-server setup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne auf einem Mac Flaccy und aktiviere Einstellungen › Server › Mediathek dieses Macs teilen. Installiere unter Linux oder auf einem NAS Flaccy Server und führe flaccy-server setup aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En un Mac, abre Flaccy y activa Ajustes › Servidores › Compartir la biblioteca de este Mac. En Linux o un NAS, instala Flaccy Server y ejecuta flaccy-server setup."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur un Mac, ouvrez Flaccy et activez Réglages › Serveurs › Partager la bibliothèque de ce Mac. Sous Linux ou sur un NAS, installez Flaccy Server et lancez flaccy-server setup."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su un Mac, apri Flaccy e attiva Impostazioni › Server › Condividi la libreria di questo Mac. Su Linux o un NAS, installa Flaccy Server ed esegui flaccy-server setup."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macでは、Flaccyを開いて「設定」›「サーバー」›「このMacのライブラリを共有」をオンにします。LinuxやNASでは、Flaccy Serverをインストールしてflaccy-server setupを実行します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac에서는 Flaccy를 열고 설정 › 서버 › 이 Mac의 보관함 공유를 켜세요. Linux나 NAS에서는 Flaccy Server를 설치하고 flaccy-server setup을 실행하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na Macu otwórz Flaccy i włącz Ustawienia › Serwery › Udostępnij bibliotekę tego Maca. Na Linuksie lub NAS zainstaluj Flaccy Server i uruchom flaccy-server setup."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Mac, abra o Flaccy e ative Ajustes › Servidores › Compartilhar a biblioteca deste Mac. No Linux ou em um NAS, instale o Flaccy Server e rode flaccy-server setup."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Mac 上，打开 Flaccy 并开启“设置 › 服务器 › 共享此 Mac 的资料库”。在 Linux 或 NAS 上，安装 Flaccy Server 并运行 flaccy-server setup。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Mac 上，打開 Flaccy 並開啟「設定 › 伺服器 › 共享此 Mac 的資料庫」。在 Linux 或 NAS 上，安裝 Flaccy Server 並執行 flaccy-server setup。"
+          }
+        }
+      }
+    },
+    "On a music server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf einem Musikserver"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En un servidor de música"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur un serveur de musique"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su un server musicale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽サーバー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악 서버"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na serwerze muzycznym"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em um servidor de música"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在音乐服务器上"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在音樂伺服器上"
+          }
+        }
+      }
+    },
+    "On my computer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf meinem Computer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En mi ordenador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur mon ordinateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sul mio computer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のコンピュータ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 컴퓨터"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na moim komputerze"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No meu computador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在我的电脑上"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在我的電腦上"
+          }
+        }
+      }
+    },
     "On this day in %@": {
       "localizations": {
         "de": {
@@ -74261,6 +75029,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 年的今天"
+          }
+        }
+      }
+    },
+    "On this iPhone or in Files": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem iPhone oder in Dateien"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este iPhone o en Archivos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur cet iPhone ou dans Fichiers"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo iPhone o in File"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このiPhoneまたは「ファイル」"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPhone 또는 파일 앱"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na tym iPhonie lub w Plikach"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neste iPhone ou no Arquivos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台 iPhone 或“文件”中"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這部 iPhone 或「檔案」中"
           }
         }
       }
@@ -79913,6 +80745,70 @@
         }
       }
     },
+    "Play it here and keep playlists, loves and history in sync with Flaccy Server. It's free.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hör sie hier und halte Playlists, Favoriten und Verlauf mit Flaccy Server synchron. Kostenlos."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escúchala aquí y mantén sincronizadas listas, favoritos e historial con Flaccy Server. Es gratis."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écoutez-la ici et gardez playlists, coups de cœur et historique synchronisés avec Flaccy Server. C'est gratuit."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ascoltala qui e tieni sincronizzati playlist, preferiti e cronologia con Flaccy Server. È gratis."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ここで再生し、プレイリスト、お気に入り、履歴をFlaccy Serverで同期。無料です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기서 듣고 Flaccy Server로 플레이리스트, 좋아요, 기록을 동기화하세요. 무료입니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Słuchaj tutaj i synchronizuj playlisty, ulubione i historię z Flaccy Server. Za darmo."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouça aqui e mantenha playlists, favoritos e histórico sincronizados com o Flaccy Server. É grátis."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这里播放，并用 Flaccy Server 同步播放列表、喜欢和历史。免费。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這裡播放，並用 Flaccy Server 同步播放列表、喜愛與記錄。免費。"
+          }
+        }
+      }
+    },
     "Play or pause": {
       "localizations": {
         "de": {
@@ -80613,6 +81509,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放來源：%@"
+          }
+        }
+      }
+    },
+    "Playing music from your server is free. Syncing playlists, loves and history across devices is part of Flaccy Pro.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik von deinem Server zu hören ist kostenlos. Playlists, Favoriten und Verlauf geräteübergreifend zu synchronisieren gehört zu Flaccy Pro."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escuchar música desde tu servidor es gratis. Sincronizar listas, favoritos e historial entre dispositivos forma parte de Flaccy Pro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écouter la musique de votre serveur est gratuit. Synchroniser playlists, coups de cœur et historique entre appareils fait partie de Flaccy Pro."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ascoltare la musica dal tuo server è gratis. Sincronizzare playlist, preferiti e cronologia tra dispositivi fa parte di Flaccy Pro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーの音楽の再生は無料です。デバイス間でのプレイリスト、お気に入り、履歴の同期はFlaccy Proの機能です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버의 음악 재생은 무료입니다. 기기 간 플레이리스트, 좋아요, 기록 동기화는 Flaccy Pro 기능입니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzanie muzyki z serwera jest darmowe. Synchronizacja playlist, ulubionych i historii między urządzeniami to część Flaccy Pro."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocar música do seu servidor é grátis. Sincronizar playlists, favoritos e histórico entre aparelhos faz parte do Flaccy Pro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放服务器上的音乐是免费的。在设备间同步播放列表、喜欢和历史属于 Flaccy Pro。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放伺服器上的音樂是免費的。在裝置間同步播放列表、喜愛與記錄屬於 Flaccy Pro。"
           }
         }
       }
@@ -94299,6 +95259,134 @@
         }
       }
     },
+    "Scan the Code": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code scannen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escanear el código"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanner le code"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scansiona il codice"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コードをスキャン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드 스캔"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeskanuj kod"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escanear o Código"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扫描代码"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "掃描代碼"
+          }
+        }
+      }
+    },
+    "Scan the code": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code scannen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escanea el código"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scannez le code"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scansiona il codice"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コードをスキャン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드 스캔"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeskanuj kod"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escaneie o código"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扫描代码"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "掃描代碼"
+          }
+        }
+      }
+    },
     "Scan this with Flaccy on your iPhone, Mac or Linux, or open the link on a device that has Flaccy.": {
       "localizations": {
         "de": {
@@ -95813,6 +96901,70 @@
         }
       }
     },
+    "Send the Setup Guide to My Computer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitung an meinen Computer senden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar la guía a mi ordenador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer le guide à mon ordinateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia la guida al mio computer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定ガイドをコンピュータに送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 가이드를 컴퓨터로 보내기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij instrukcję na mój komputer"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar o guia para meu computador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把设置指南发到我的电脑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把設定指南傳到我的電腦"
+          }
+        }
+      }
+    },
     "Send to Watch": {
       "localizations": {
         "de": {
@@ -97031,6 +98183,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "服務"
+          }
+        }
+      }
+    },
+    "Set up Flaccy Server on this computer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server auf diesem Computer einrichten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configura Flaccy Server en este ordenador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installer Flaccy Server sur cet ordinateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configura Flaccy Server su questo computer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このコンピュータにFlaccy Serverを設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 컴퓨터에 Flaccy Server 설정하기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skonfiguruj Flaccy Server na tym komputerze"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure o Flaccy Server neste computador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台电脑上设置 Flaccy Server"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這部電腦上設定 Flaccy Server"
           }
         }
       }
@@ -103249,6 +104465,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "獨立的 Apple Watch App"
+          }
+        }
+      }
+    },
+    "Start Flaccy Server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server starten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia Flaccy Server"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lancez Flaccy Server"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia Flaccy Server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Serverを起動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server 시작"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uruchom Flaccy Server"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicie o Flaccy Server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动 Flaccy Server"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟動 Flaccy Server"
           }
         }
       }
@@ -110863,6 +112143,70 @@
         }
       }
     },
+    "The player for the music you own.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Player für die Musik, die dir gehört."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El reproductor para la música que es tuya."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le lecteur de la musique qui vous appartient."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il lettore per la musica che possiedi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたが持っている音楽のためのプレーヤー。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내가 가진 음악을 위한 플레이어."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odtwarzacz muzyki, która należy do ciebie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O player para a música que é sua."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为你拥有的音乐而生的播放器。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為你擁有的音樂而生的播放器。"
+          }
+        }
+      }
+    },
     "The playlist is removed; your music files are not touched.": {
       "localizations": {
         "de": {
@@ -116813,6 +118157,70 @@
         }
       }
     },
+    "Type the Address Instead": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stattdessen Adresse eingeben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribir la dirección"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisir l'adresse à la place"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digita invece l'indirizzo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アドレスを入力する"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대신 주소 입력"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wpisz adres zamiast tego"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digitar o Endereço"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改为输入地址"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改為輸入位址"
+          }
+        }
+      }
+    },
     "Type the server’s address, then try again.": {
       "localizations": {
         "de": {
@@ -121831,6 +123239,70 @@
         }
       }
     },
+    "Where is your music?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo ist deine Musik?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Dónde está tu música?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Où se trouve votre musique ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dove si trova la tua musica?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽はどこにありますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악이 어디에 있나요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gdzie jest twoja muzyka?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onde está sua música?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的音乐在哪里？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的音樂在哪裡？"
+          }
+        }
+      }
+    },
     "Where you left off": {
       "localizations": {
         "de": {
@@ -125055,6 +126527,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "所選圖片將被移除，播放列表將重新顯示其專輯的拼貼圖。"
+          }
+        }
+      }
+    },
+    "Your computer shows a code when the server is ready. Scan it and Flaccy connects.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Computer zeigt einen Code, sobald der Server bereit ist. Scanne ihn, und Flaccy verbindet sich."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu ordenador muestra un código cuando el servidor está listo. Escanéalo y Flaccy se conecta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre ordinateur affiche un code quand le serveur est prêt. Scannez-le et Flaccy se connecte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il computer mostra un codice quando il server è pronto. Scansionalo e Flaccy si collega."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーの準備ができるとコンピュータにコードが表示されます。スキャンするとFlaccyが接続します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버가 준비되면 컴퓨터에 코드가 표시됩니다. 스캔하면 Flaccy가 연결됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gdy serwer będzie gotowy, komputer pokaże kod. Zeskanuj go, a Flaccy się połączy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu computador mostra um código quando o servidor está pronto. Escaneie e o Flaccy se conecta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器就绪后，你的电脑会显示一个代码。扫描它，Flaccy 就会连接。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器就緒後，你的電腦會顯示一個代碼。掃描它，Flaccy 就會連線。"
           }
         }
       }

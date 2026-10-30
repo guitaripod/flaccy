@@ -86,6 +86,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let launchLinks = connectionOptions.urlContexts.map(\.url)
         if !launchLinks.isEmpty {
             DispatchQueue.main.async { [weak self] in launchLinks.forEach { self?.openServerLink($0) } }
+        } else {
+            WelcomeFlow.presentIfNeeded(over: rootVC, tabs: tabs)
         }
     }
 

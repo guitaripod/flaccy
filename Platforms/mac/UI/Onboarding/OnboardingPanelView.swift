@@ -2,6 +2,7 @@ import AppKit
 import MidgarCore
 import Combine
 import FlaccyCore
+import FlaccyServerEmbed
 
 /// The one glass panel the Mac floats over the library, in three shapes.
 ///
@@ -33,6 +34,7 @@ final class OnboardingPanelView: NSView {
     private let progressLabel = NSTextField(labelWithString: "")
     private let spinner = NSProgressIndicator()
     private let sampleButton = GlassCapsuleButton(title: String(localized: "Download Sample Album"), symbolName: "arrow.down.circle")
+    private let serverButton = NSButton(title: String(localized: "Music on another computer? Connect to Flaccy Server…"), target: nil, action: nil)
     private let trialStartsLabel = NSTextField(wrappingLabelWithString: PaywallCopy.trialStartsLine)
     private var isDownloading = false
     private let isMovingLibrary = HandoffFolderPrompt.isPending
@@ -40,8 +42,8 @@ final class OnboardingPanelView: NSView {
     private let scrim = NSView()
     private let host = NSView()
     private lazy var welcomeContent: NSStackView = Self.makeWelcomeContent(
-        spinner: spinner, progressLabel: progressLabel, sampleButton: sampleButton, trialStartsLabel: trialStartsLabel,
-        movingLibrary: isMovingLibrary
+        spinner: spinner, progressLabel: progressLabel, sampleButton: sampleButton, serverButton: serverButton,
+        trialStartsLabel: trialStartsLabel, movingLibrary: isMovingLibrary
     )
     private let debutView = MacLibraryDebutView()
     private var summaryCard: MacDebutSummaryCard?
@@ -91,6 +93,8 @@ final class OnboardingPanelView: NSView {
         super.init(frame: frameRect)
 
         sampleButton.onClick = { [weak self] in self?.downloadSample() }
+        serverButton.target = self
+        serverButton.action = #selector(connectToServer)
 
         scrim.wantsLayer = true
         scrim.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.78).cgColor
@@ -254,6 +258,7 @@ final class OnboardingPanelView: NSView {
         card.alphaValue = 0
         card.onDismiss = { [weak self] in self?.onFinishDebut?(summary) }
         card.onSeeWhatsIncluded = { PurchaseManager.shared.requestPaywall() }
+        card.onShareWithIPhone = { [weak self] in self?.shareWithIPhone() }
         host.addSubview(card)
         NSLayoutConstraint.activate([
             card.topAnchor.constraint(equalTo: host.topAnchor),
@@ -269,6 +274,7 @@ final class OnboardingPanelView: NSView {
         spinner: NSProgressIndicator,
         progressLabel: NSTextField,
         sampleButton: GlassCapsuleButton,
+        serverButton: NSButton,
         trialStartsLabel: NSTextField,
         movingLibrary: Bool
     ) -> NSStackView {
@@ -326,10 +332,16 @@ final class OnboardingPanelView: NSView {
         trialStartsLabel.alignment = .center
         trialStartsLabel.preferredMaxLayoutWidth = 380
 
+        serverButton.bezelStyle = .accessoryBarAction
+        serverButton.isBordered = false
+        serverButton.font = .systemFont(ofSize: 12, weight: .medium)
+        serverButton.contentTintColor = .controlAccentColor
+        serverButton.setAccessibilityIdentifier("onboarding.connectServer")
+
         let content = NSStackView(
             views: movingLibrary
                 ? [icon, title, subtitle, buttons]
-                : [icon, title, subtitle, buttons, progressRow, hint, trialStartsLabel]
+                : [icon, title, subtitle, buttons, progressRow, hint, serverButton, trialStartsLabel]
         )
         content.orientation = .vertical
         content.alignment = .centerX
@@ -339,6 +351,24 @@ final class OnboardingPanelView: NSView {
         content.setCustomSpacing(10, after: buttons)
         content.edgeInsets = NSEdgeInsets(top: 40, left: 48, bottom: 36, right: 48)
         return content
+    }
+
+    /// Opens Add Flaccy Server for a person whose music lives on another computer running Flaccy Server.
+    @objc private func connectToServer() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        MidgarLog.info("Onboarding: connect to Flaccy Server", category: .ui)
+        window?.contentViewController?.presentAsSheet(AddFlaccyServerPanelViewController(link: nil))
+    }
+
+    /// Turns on Share this Mac's library and shows the code Flaccy on the iPhone scans, so a library the Mac just read
+    /// reaches the phone in one step. The summary card that offers it is the introduction Settings would otherwise show.
+    private func shareWithIPhone() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        MidgarLog.info("Onboarding: share this Mac's library with an iPhone", category: .ui)
+        let sharing = MacLibrarySharing.shared
+        sharing.hasBeenIntroduced = true
+        sharing.setEnabled(true)
+        window?.contentViewController?.presentAsSheet(AddDevicePanelViewController(sharing: sharing))
     }
 
     private func downloadSample() {

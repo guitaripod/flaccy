@@ -3,7 +3,8 @@ import MidgarCore
 import UIKit
 
 /// The Add Flaccy Server sheet of docs/server/UX.md section 3: scan the code the server printed, or type its address and the
-/// code, then Connect. A link only fills the fields in; nothing connects without a tap.
+/// code, then Connect. Scanning connects at once, since pointing the camera is the person's tap; a link only fills the fields
+/// in. Pushed inside the welcome it has no Cancel, and Done hands back to the welcome through `onFinish`.
 final class AddFlaccyServerViewController: UITableViewController {
 
     nonisolated enum Section: Int, Hashable {
@@ -31,6 +32,13 @@ final class AddFlaccyServerViewController: UITableViewController {
     private let notification = UINotificationFeedbackGenerator()
     private weak var codeCell: FormFieldCell?
     private var announcedState: AddFlaccyServerViewModel.State = .idle
+    private var hasOpenedScanner = false
+
+    /// Called by Done once connected, in place of dismissing the sheet.
+    var onFinish: (() -> Void)?
+
+    /// Opens the camera as soon as the screen appears, for a person who came here to scan.
+    var opensScannerOnAppear = false
 
     init(model: AddFlaccyServerViewModel = AddFlaccyServerViewModel(), link: FlaccyServerLink? = nil) {
         self.model = model
@@ -55,19 +63,25 @@ final class AddFlaccyServerViewController: UITableViewController {
         tableView.keyboardDismissMode = .interactive
         tableView.register(FormFieldCell.self, forCellReuseIdentifier: FormFieldCell.reuseID)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "ActionCell")
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            systemItem: .cancel, primaryAction: UIAction { [weak self] _ in self?.cancelTapped() }
-        )
+        if navigationController?.viewControllers.first === self {
+            navigationItem.leftBarButtonItem = UIBarButtonItem(
+                systemItem: .cancel, primaryAction: UIAction { [weak self] _ in self?.cancelTapped() }
+            )
+        }
         model.onChange = { [weak self] in self?.modelChanged() }
         applySnapshot(animated: false)
     }
 
-    #if DEBUG
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        #if DEBUG
         if FlaccyServerShot.drivesConnect, model.canConnect, case .idle = model.state { connectTapped() }
+        #endif
+        if opensScannerOnAppear, !hasOpenedScanner {
+            hasOpenedScanner = true
+            scanTapped()
+        }
     }
-    #endif
 
     private final class DataSource: UITableViewDiffableDataSource<Section, Row> {
         override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
@@ -110,6 +124,7 @@ final class AddFlaccyServerViewController: UITableViewController {
             announcedState = state
             applySnapshot(animated: true)
             navigationItem.leftBarButtonItem?.isHidden = model.isConnected
+            navigationItem.hidesBackButton = model.isConnected
             reactToNew(state)
         }
         var snapshot = dataSource.snapshot()
@@ -288,6 +303,7 @@ final class AddFlaccyServerViewController: UITableViewController {
                     self.notification.notificationOccurred(.success)
                     self.model.apply(link: link)
                     self.applySnapshot(animated: false)
+                    self.connectTapped()
                 case .subsonic(let link):
                     self.openRegularServerSheet(link: link, address: nil)
                 }
@@ -305,7 +321,11 @@ final class AddFlaccyServerViewController: UITableViewController {
 
     private func doneTapped() {
         impact.impactOccurred()
-        dismiss(animated: true)
+        if let onFinish {
+            onFinish()
+        } else {
+            dismiss(animated: true)
+        }
     }
 
     private func cancelTapped() {
@@ -351,7 +371,7 @@ final class AddFlaccyServerViewController: UITableViewController {
         }
     }
 
-    private static func openTailscale() {
+    static func openTailscale() {
         guard let app = URL(string: "tailscale://"), let store = URL(string: "https://apps.apple.com/app/tailscale/id1470499037") else { return }
         UIApplication.shared.open(app) { opened in
             if !opened { UIApplication.shared.open(store) }
