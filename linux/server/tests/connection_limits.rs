@@ -70,6 +70,10 @@ async fn start(limits: Limits) -> Running {
     Running { address, limits: held, stop: Some(stop), task }
 }
 
+/// The loopback address the many connections of the per-source test come from. Only Linux has 127.0.0.2; elsewhere
+/// they share 127.0.0.1 with the hello request, so the test lets them go before asking.
+const HOLDING_SOURCE: u8 = if cfg!(target_os = "linux") { 2 } else { 1 };
+
 async fn connect_from(source: u8, to: SocketAddr, first_bytes: &[u8]) -> TcpStream {
     let socket = TcpSocket::new_v4().unwrap();
     socket.bind(format!("127.0.0.{source}:0").parse().unwrap()).unwrap();
@@ -121,12 +125,11 @@ async fn seven_hundred_stalled_sockets_leave_hello_answering() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[cfg_attr(not(target_os = "linux"), ignore = "needs 127.0.0.2 to 127.0.0.13 aliased on lo0; see docs/server/RELEASING.md")]
 async fn one_source_holds_at_most_sixty_four_connections() {
     let running = start(Limits::default()).await;
     let mut streams = Vec::new();
     for _ in 0..100 {
-        streams.push(connect_from(2, running.address, PARTIAL_HEAD).await);
+        streams.push(connect_from(HOLDING_SOURCE, running.address, PARTIAL_HEAD).await);
     }
     let mut refused = 0;
     for stream in &mut streams {
@@ -135,6 +138,10 @@ async fn one_source_holds_at_most_sixty_four_connections() {
         }
     }
     assert_eq!(refused, 36);
+    if HOLDING_SOURCE == 1 {
+        streams.clear();
+        tokio::time::sleep(Duration::from_millis(300)).await;
+    }
     assert_eq!(hello_status(running.address).await.as_deref(), Some("HTTP/1.1 200 OK"));
     running.stop().await;
 }
