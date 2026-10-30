@@ -73,9 +73,10 @@ impl std::fmt::Display for ConfigError {
         match self {
             Self::Missing(path) => write!(
                 formatter,
-                "There is no configuration file at {path}.\nCreate it with the folder your music lives in:\n\n  mkdir -p {dir}\n  printf 'music_folder = \"/path/to/your/music\"\\n' > {path}\n\n`address` (default {DEFAULT_ADDRESS}), `port` (default {DEFAULT_PORT}) and `data_dir` (default ~/.local/share/flaccy-server) are optional. Then run `flaccy-server password set` and `flaccy-server serve`.",
+                "There is no configuration file at {path}.\nCreate it with the folder your music lives in:\n\n  mkdir -p {dir}\n  printf 'music_folder = \"/path/to/your/music\"\\n' > {path}\n\n`address` (default {DEFAULT_ADDRESS}), `port` (default {DEFAULT_PORT}) and `data_dir` (default {data}) are optional. Then run `flaccy-server password set` and `flaccy-server serve`.",
                 path = path.display(),
-                dir = path.parent().unwrap_or(Path::new(".")).display()
+                dir = path.parent().unwrap_or(Path::new(".")).display(),
+                data = Config::default_data_dir().display()
             ),
             Self::Unreadable(path, cause) => write!(
                 formatter,
@@ -98,7 +99,7 @@ impl std::fmt::Display for ConfigError {
 impl std::error::Error for ConfigError {}
 
 impl Config {
-    /// `~/.config/flaccy-server/config.toml`.
+    /// `~/.config/flaccy-server/config.toml` on Linux, `~/Library/Application Support/flaccy-server/config.toml` on a Mac.
     pub fn default_path() -> PathBuf {
         dirs::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
@@ -125,13 +126,14 @@ impl Config {
         Ok(config)
     }
 
+    /// `~/.local/share/flaccy-server` on Linux, `~/Library/Application Support/flaccy-server` on a Mac.
+    pub fn default_data_dir() -> PathBuf {
+        dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join("flaccy-server")
+    }
+
     /// Where the database, credentials, covers and log live.
     pub fn data_dir(&self) -> PathBuf {
-        self.data_dir.clone().unwrap_or_else(|| {
-            dirs::data_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join("flaccy-server")
-        })
+        self.data_dir.clone().unwrap_or_else(Config::default_data_dir)
     }
 
     /// The SQLite library database.
@@ -222,6 +224,12 @@ mod tests {
         let text = error.to_string();
         assert!(matches!(error, ConfigError::Missing(_)));
         assert!(text.contains("music_folder") && text.contains("password set"));
+    }
+
+    #[test]
+    fn a_missing_file_names_the_data_folder_this_system_uses() {
+        let text = Config::load(Path::new("/nonexistent/flaccy/config.toml")).unwrap_err().to_string();
+        assert!(text.contains(&Config::default_data_dir().display().to_string()), "{text}");
     }
 
     #[test]

@@ -82,7 +82,8 @@ finds them all busy for 20 seconds is answered `503` with `Retry-After`.
 
 ## Configure
 
-The configuration lives at `~/.config/flaccy-server/config.toml`:
+The configuration lives at `~/.config/flaccy-server/config.toml` (on a Mac,
+`~/Library/Application Support/flaccy-server/config.toml`):
 
     music_folder = "/home/you/Music"
     address = "127.0.0.1"
@@ -94,7 +95,8 @@ The configuration lives at `~/.config/flaccy-server/config.toml`:
     backup_dir = "/mnt/nas/flaccy"
 
 Only `music_folder` is required. `address` defaults to `127.0.0.1`, `port` to
-`4545` and `data_dir` to `~/.local/share/flaccy-server`, which holds the library
+`4545` and `data_dir` to `~/.local/share/flaccy-server` (on a Mac,
+`~/Library/Application Support/flaccy-server`), which holds the library
 database (`library.sqlite`), the users, devices and audit trail (`security.sqlite`),
 the sync state (`state.sqlite`), the credentials file, the cover cache and
 `flaccy.log`.

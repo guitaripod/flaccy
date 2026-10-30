@@ -41,12 +41,14 @@ async-channel = "2"
 if-addrs = "0.13"
 ureq = { version = "2", features = ["json"] }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [target.'cfg(target_os = "linux")'.dependencies]
 mimalloc = { version = "0.1", default-features = false }
 
 [dev-dependencies]
 flaccy-server-core = { path = "../server-core", features = ["sim"] }
-libc = "0.2"
 tokio-tungstenite = "0.28"
 futures-util = "0.3"
 

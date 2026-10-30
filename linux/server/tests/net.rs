@@ -172,7 +172,6 @@ mod unix_socket {
     use std::os::unix::net::UnixListener as StdUnixListener;
     use std::path::{Path, PathBuf};
 
-    use flaccy_library::fingerprint::fixtures::TempDir;
     use flaccy_server::net::UnixListenerSecure;
     use tokio::net::UnixStream;
 
@@ -182,13 +181,34 @@ mod unix_socket {
         std::fs::metadata(path).unwrap().permissions().mode() & 0o777
     }
 
-    fn socket_in(directory: &TempDir) -> PathBuf {
+    struct ShortDir(PathBuf);
+
+    impl ShortDir {
+        fn new(label: &str) -> Self {
+            let path = PathBuf::from(format!("/tmp/fl-{label}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&path);
+            std::fs::create_dir_all(&path).unwrap();
+            Self(path)
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+
+    impl Drop for ShortDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn socket_in(directory: &ShortDir) -> PathBuf {
         directory.path().join("run").join("s.sock")
     }
 
     #[tokio::test]
     async fn the_socket_is_private_and_so_is_the_directory_it_created() {
-        let directory = TempDir::new("net-private");
+        let directory = ShortDir::new("priv");
         let path = socket_in(&directory);
         let listener = UnixListenerSecure::bind(&path).unwrap();
         assert_eq!(mode_of(&path), 0o600);
@@ -199,7 +219,7 @@ mod unix_socket {
 
     #[tokio::test]
     async fn a_stale_socket_file_is_replaced() {
-        let directory = TempDir::new("net-stale");
+        let directory = ShortDir::new("stale");
         let path = socket_in(&directory);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         drop(StdUnixListener::bind(&path).unwrap());
@@ -211,7 +231,7 @@ mod unix_socket {
 
     #[tokio::test]
     async fn a_live_socket_and_a_regular_file_are_refused() {
-        let directory = TempDir::new("net-refuse");
+        let directory = ShortDir::new("refuse");
         let path = socket_in(&directory);
         let live = UnixListenerSecure::bind(&path).unwrap();
         let busy = UnixListenerSecure::bind(&path).err().unwrap();
@@ -224,8 +244,19 @@ mod unix_socket {
     }
 
     #[tokio::test]
+    async fn a_path_too_long_for_a_socket_is_refused_with_the_fix_before_anything_is_created() {
+        let directory = ShortDir::new("long");
+        let path = directory.path().join("a".repeat(120)).join("s.sock");
+        let refused = UnixListenerSecure::bind(&path).err().unwrap();
+        assert_eq!(refused.kind(), std::io::ErrorKind::InvalidInput);
+        let message = refused.to_string();
+        assert!(message.contains("bytes long") && message.contains("choose a shorter path"), "{message}");
+        assert!(!path.parent().unwrap().exists());
+    }
+
+    #[tokio::test]
     async fn requests_over_the_socket_carry_the_trusted_channel_marker() {
-        let directory = TempDir::new("net-serve");
+        let directory = ShortDir::new("serve");
         let path = socket_in(&directory);
         let listener = UnixListenerSecure::bind(&path).unwrap();
         let hosts = AllowedHosts::new(&[], Default::default());

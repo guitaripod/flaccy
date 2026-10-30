@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::routing::get;
 use axum::Router;
+use flaccy_server::net::descriptors::raise_soft_limit;
 use flaccy_server::net::{serve, ConnectionLimits, Limits};
 use futures_util::{SinkExt, StreamExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -48,6 +49,7 @@ async fn slow() -> &'static str {
 }
 
 async fn start(limits: Limits) -> Running {
+    raise_soft_limit();
     let app = Router::new()
         .route("/flaccy/v1/hello", get(|| async { "hello" }))
         .route("/slow", get(slow))
@@ -66,16 +68,6 @@ async fn start(limits: Limits) -> Running {
         }
     });
     Running { address, limits: held, stop: Some(stop), task }
-}
-
-/// Lifts the soft open-files limit to the hard one so the test can hold a thousand sockets.
-fn raise_descriptor_limit() {
-    let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
-    unsafe {
-        libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit);
-        limit.rlim_cur = limit.rlim_max.min(65_536);
-        libc::setrlimit(libc::RLIMIT_NOFILE, &limit);
-    }
 }
 
 async fn connect_from(source: u8, to: SocketAddr, first_bytes: &[u8]) -> TcpStream {
@@ -111,8 +103,8 @@ async fn read_hello_response(stream: &mut TcpStream) -> String {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[cfg_attr(not(target_os = "linux"), ignore = "needs 127.0.0.2 to 127.0.0.13 aliased on lo0; see docs/server/RELEASING.md")]
 async fn seven_hundred_stalled_sockets_leave_hello_answering() {
-    raise_descriptor_limit();
     let running = start(Limits::default()).await;
     let mut stalled = Vec::new();
     for count in 0..700u32 {
@@ -129,6 +121,7 @@ async fn seven_hundred_stalled_sockets_leave_hello_answering() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[cfg_attr(not(target_os = "linux"), ignore = "needs 127.0.0.2 to 127.0.0.13 aliased on lo0; see docs/server/RELEASING.md")]
 async fn one_source_holds_at_most_sixty_four_connections() {
     let running = start(Limits::default()).await;
     let mut streams = Vec::new();
@@ -151,13 +144,13 @@ async fn a_stalled_head_is_closed_at_its_deadline_and_a_kept_alive_connection_la
     let limits = Limits { head_timeout: Duration::from_millis(300), idle_timeout: Duration::from_millis(1_200), ..Limits::default() };
     let running = start(limits).await;
 
-    let mut stalled = connect_from(2, running.address, PARTIAL_HEAD).await;
+    let mut stalled = connect_from(1, running.address, PARTIAL_HEAD).await;
     let started = Instant::now();
     assert!(is_closed_by_server(&mut stalled, Duration::from_secs(2)).await);
     let waited = started.elapsed();
     assert!(waited >= Duration::from_millis(250) && waited < Duration::from_millis(1_100), "{waited:?}");
 
-    let mut kept = connect_from(3, running.address, FULL_REQUEST).await;
+    let mut kept = connect_from(1, running.address, FULL_REQUEST).await;
     assert!(read_hello_response(&mut kept).await.starts_with("HTTP/1.1 200 OK"));
     tokio::time::sleep(Duration::from_millis(600)).await;
     kept.write_all(FULL_REQUEST).await.unwrap();
@@ -173,7 +166,7 @@ async fn a_request_still_running_and_an_upgraded_socket_outlive_the_deadlines() 
     let limits = Limits { head_timeout: Duration::from_millis(300), idle_timeout: Duration::from_millis(300), ..Limits::default() };
     let running = start(limits).await;
 
-    let mut slow = connect_from(2, running.address, b"GET /slow HTTP/1.1\r\nHost: arch\r\nConnection: close\r\n\r\n").await;
+    let mut slow = connect_from(1, running.address, b"GET /slow HTTP/1.1\r\nHost: arch\r\nConnection: close\r\n\r\n").await;
     let mut raw = Vec::new();
     tokio::time::timeout(Duration::from_secs(5), slow.read_to_end(&mut raw)).await.unwrap().unwrap();
     assert!(String::from_utf8_lossy(&raw).ends_with("slow"));

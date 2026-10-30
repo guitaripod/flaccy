@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use flaccy_server::config::{Config, Mode};
 use flaccy_server::native;
+use flaccy_server::net::descriptors::raise_soft_limit;
 use flaccy_server::net::{serve, AllowedHosts, ConnectionLimits, Limits, TailnetAddresses};
 use flaccy_server::security::{DeviceId, Role, UserId};
 use flaccy_server::state::AppState;
@@ -126,6 +127,7 @@ impl Harness {
     }
 
     pub async fn start_in(dir: TempDir, config: Config) -> Self {
+        raise_soft_limit();
         let state = AppState::open(config).await.unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();

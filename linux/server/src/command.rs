@@ -34,7 +34,7 @@ const EXIT_FAILED: i32 = 1;
 #[derive(Parser, Debug)]
 #[command(name = "flaccy-server", version, about)]
 pub struct Cli {
-    /// Configuration file to use instead of ~/.config/flaccy-server/config.toml.
+    /// Configuration file to use instead of ~/.config/flaccy-server/config.toml (~/Library/Application Support/flaccy-server/config.toml on a Mac).
     #[arg(long, global = true, env = "FLACCY_SERVER_CONFIG")]
     pub config: Option<PathBuf>,
     #[command(subcommand)]

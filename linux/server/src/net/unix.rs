@@ -2,6 +2,7 @@
 
 use std::fs::{self, DirBuilder};
 use std::io;
+use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{DirBuilderExt, FileTypeExt, MetadataExt, PermissionsExt};
 use std::os::unix::net::{UnixListener as StdUnixListener, UnixStream as StdUnixStream};
 use std::path::{Path, PathBuf};
@@ -14,6 +15,11 @@ use super::listen::pause_after_accept_error;
 
 const DIRECTORY_MODE: u32 = 0o700;
 const SOCKET_MODE: u32 = 0o600;
+
+#[cfg(any(target_os = "linux", target_os = "android"))]
+const SOCKET_PATH_BYTES: usize = 108;
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+const SOCKET_PATH_BYTES: usize = 104;
 
 /// The peer of a connection on the Unix socket. The socket carries no address,
 /// so handlers see a [`TrustedChannel`](super::TrustedChannel) instead.
@@ -39,9 +45,10 @@ pub struct UnixListenerSecure {
 impl UnixListenerSecure {
     /// Binds `path`. Must run inside a Tokio runtime.
     pub fn bind(path: &Path) -> io::Result<Self> {
+        let staging = staging_path(path);
+        refuse_too_long(path, &staging)?;
         create_private_directory(path)?;
         refuse_live_or_foreign(path)?;
-        let staging = staging_path(path);
         let result = Self::publish(path, &staging);
         if result.is_err() {
             let _ = fs::remove_file(&staging);
@@ -129,7 +136,60 @@ fn refuse_live_or_foreign(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
+/// The name `path`'s socket is bound under before it is renamed into place, beside it so the rename is atomic.
 fn staging_path(path: &Path) -> PathBuf {
-    let name = path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
-    path.with_file_name(format!(".{name}.{}.{:08x}", std::process::id(), rand::random::<u32>()))
+    path.with_file_name(format!(".{:08x}", rand::random::<u32>()))
+}
+
+/// Errors when `path`, or the staging name beside it, does not fit the few bytes a socket address holds, which is
+/// fewer on a Mac (104) than on Linux (108) and which `bind` would otherwise report as "path must be shorter than SUN_LEN".
+fn refuse_too_long(path: &Path, staging: &Path) -> io::Result<()> {
+    let used = path.as_os_str().as_bytes().len();
+    let staged = staging.as_os_str().as_bytes().len();
+    if staged < SOCKET_PATH_BYTES && used < SOCKET_PATH_BYTES {
+        return Ok(());
+    }
+    let allowed = (SOCKET_PATH_BYTES - 1).min((SOCKET_PATH_BYTES - 1 + used).saturating_sub(staged));
+    Err(io::Error::new(
+        io::ErrorKind::InvalidInput,
+        format!(
+            "the socket path {} is {used} bytes long, but this system allows at most {allowed} bytes for a socket path; choose a shorter path, such as /tmp/flaccy.sock or a folder closer to the root",
+            path.display()
+        ),
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn path_of(bytes: usize) -> PathBuf {
+        PathBuf::from(format!("/{}", "p".repeat(bytes - 1)))
+    }
+
+    #[test]
+    fn the_staging_name_is_short_and_beside_the_socket() {
+        let staging = staging_path(Path::new("/run/flaccy/server.sock"));
+        assert_eq!(staging.parent(), Some(Path::new("/run/flaccy")));
+        assert_eq!(staging.file_name().unwrap().len(), 9);
+    }
+
+    #[test]
+    fn a_path_fits_until_its_staging_name_would_not() {
+        let longest = SOCKET_PATH_BYTES - 1;
+        let socket = path_of(longest);
+        let staging = path_of(longest);
+        assert!(refuse_too_long(&socket, &staging).is_ok());
+        let over = refuse_too_long(&path_of(longest + 1), &path_of(longest + 1)).unwrap_err();
+        assert_eq!(over.kind(), io::ErrorKind::InvalidInput);
+        assert!(over.to_string().contains(&format!("at most {longest} bytes")), "{over}");
+    }
+
+    #[test]
+    fn a_staging_name_longer_than_the_socket_name_lowers_what_is_allowed() {
+        let socket = path_of(SOCKET_PATH_BYTES - 5);
+        let staging = path_of(SOCKET_PATH_BYTES + 3);
+        let message = refuse_too_long(&socket, &staging).unwrap_err().to_string();
+        assert!(message.contains(&format!("at most {} bytes", SOCKET_PATH_BYTES - 1 - 8)), "{message}");
+    }
 }

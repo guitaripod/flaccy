@@ -131,7 +131,7 @@ where
 {
     let draining = stop.clone();
     let limits = Limits::default();
-    descriptors::warn_if_too_low(&limits);
+    descriptors::prepare(&limits);
     let server = net::serve(listener, app, ConnectionLimits::new(limits), async move { draining.raised().await });
     match shutdown::run_until_stopped(server, stop, shutdown::GRACE).await {
         Some(result) => result.map_err(|err| format!("The server stopped: {err}. Start it again with `flaccy-server serve`; if this repeats, check the log in the data folder.")),
