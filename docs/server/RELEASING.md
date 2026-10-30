@@ -10,8 +10,6 @@ Everything runs from `apps/flaccy` through `scripts/server-release.sh`. Artifact
 4. Rehearse: `scripts/server-release.sh publish --version X.Y.Z` (same as `--dry-run`). It prints what every step would do and lists what blocks a real run.
 5. Publish: `scripts/server-release.sh publish --version X.Y.Z --publish`.
 
-One connection-limit test (700 stalled sockets spread over twelve sources) needs 127.0.0.2 to 127.0.0.13 on the loopback, which only Linux has; it is ignored on a Mac, where the same admission rules are covered by the unit tests in `net/limits.rs`. To run them there once: `for n in 2 3 4 5 6 7 8 9 10 11 12 13; do sudo ifconfig lo0 alias 127.0.0.$n; done`, `cargo test -p flaccy-server --test connection_limits -- --ignored`, then `for n in 2 3 4 5 6 7 8 9 10 11 12 13; do sudo ifconfig lo0 -alias 127.0.0.$n; done`.
-
 Steps, in order: `verify-tree` (master, clean, version matches), `verify-artifacts` (files, SHA256SUMS, built from this commit, rendered templates), `release-notes`, `push-monorepo`, `push-subtree` (split of `apps/flaccy` to `guitaripod/flaccy` master, fast-forward only), `github-release` (`server-vX.Y.Z`, `--latest=false` because `get-flaccy.sh` reads `releases/latest`), `homebrew-tap`, `aur`, `docker`, `verify-release` (downloads every asset and checks its sha256, confirms the release is not latest, reads the tap formula, `git ls-remote` of the AUR repo).
 
 ## Credentials

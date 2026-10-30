@@ -1,6 +1,8 @@
 //! Connection limits over real sockets: a flood of stalled connections neither starves a device nor outlives its deadline.
 
 use std::net::SocketAddr;
+#[cfg(not(target_os = "linux"))]
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -49,12 +51,16 @@ async fn slow() -> &'static str {
 }
 
 async fn start(limits: Limits) -> Running {
+    start_on("127.0.0.1:0", limits).await
+}
+
+async fn start_on(bind: &str, limits: Limits) -> Running {
     raise_soft_limit();
     let app = Router::new()
         .route("/flaccy/v1/hello", get(|| async { "hello" }))
         .route("/slow", get(slow))
         .route("/ws", get(|upgrade: WebSocketUpgrade| async move { upgrade.on_upgrade(echo) }));
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind(bind).await.unwrap();
     let address = listener.local_addr().unwrap();
     let held = ConnectionLimits::new(limits);
     let (stop, stopped) = oneshot::channel::<()>();
@@ -107,7 +113,7 @@ async fn read_hello_response(stream: &mut TcpStream) -> String {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[cfg_attr(not(target_os = "linux"), ignore = "needs 127.0.0.2 to 127.0.0.13 aliased on lo0; see docs/server/RELEASING.md")]
+#[cfg(target_os = "linux")]
 async fn seven_hundred_stalled_sockets_leave_hello_answering() {
     let running = start(Limits::default()).await;
     let mut stalled = Vec::new();
@@ -119,6 +125,27 @@ async fn seven_hundred_stalled_sockets_leave_hello_answering() {
     assert!(running.limits.held() <= 512, "{} connections held", running.limits.held());
     let started = Instant::now();
     let status = hello_status(running.address).await;
+    assert_eq!(status.as_deref(), Some("HTTP/1.1 200 OK"));
+    assert!(started.elapsed() < Duration::from_secs(2));
+    running.stop().await;
+}
+
+/// Off Linux the loopback has no 127.0.0.2 to 127.0.0.13, so one source floods and another, over IPv6, asks: the
+/// server listens on both families, and the flooding source's cap is lifted so the whole house fills.
+#[cfg(not(target_os = "linux"))]
+#[tokio::test(flavor = "multi_thread")]
+async fn seven_hundred_stalled_sockets_from_one_source_leave_another_source_answering() {
+    let running = start_on("[::]:0", Limits { max_per_source: 1_000, ..Limits::default() }).await;
+    let port = running.address.port();
+    let flood = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
+    let mut stalled = Vec::new();
+    for _ in 0..700u32 {
+        stalled.push(connect_from(1, flood, PARTIAL_HEAD).await);
+    }
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(running.limits.held() <= 512, "{} connections held", running.limits.held());
+    let started = Instant::now();
+    let status = hello_status(SocketAddr::from((Ipv6Addr::LOCALHOST, port))).await;
     assert_eq!(status.as_deref(), Some("HTTP/1.1 200 OK"));
     assert!(started.elapsed() < Duration::from_secs(2));
     running.stop().await;
