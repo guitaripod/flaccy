@@ -1,7 +1,7 @@
 # security
 
 `security.sqlite` (schema: PROTOCOL.md 10.1, migration 1) behind a cheap-to-clone `Store`.
-One writer thread (`dbthread::DbThread`), `synchronous = FULL`, WAL, files mode 0600.
+One writer thread (`dbthread::DbThread`), `synchronous = FULL` (plus `fullfsync` on macOS), WAL, files mode 0600.
 Secrets are shown once and stored as SHA-256 only. Times are Unix milliseconds.
 Every mutation writes its audit row in the same `BEGIN IMMEDIATE` transaction.
 

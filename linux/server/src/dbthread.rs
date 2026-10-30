@@ -33,6 +33,12 @@ pub enum Durability {
 }
 
 impl Durability {
+    /// Whether commits must reach the disk itself, not just the drive's cache. macOS `fsync` stops at the cache and
+    /// only `F_FULLFSYNC` goes further, which SQLite uses when `fullfsync` is on; Linux's `fsync` already flushes.
+    fn flushes_drive_cache(self) -> bool {
+        cfg!(target_os = "macos") && self == Durability::Full
+    }
+
     fn synchronous(self) -> &'static str {
         match self {
             Durability::Full => "FULL",
@@ -201,6 +207,10 @@ fn open_connection(path: &Path, durability: Durability) -> Result<Connection, Db
     connection
         .pragma_update(None, "synchronous", durability.synchronous())
         .map_err(open_error)?;
+    if durability.flushes_drive_cache() {
+        connection.pragma_update(None, "fullfsync", "ON").map_err(open_error)?;
+        connection.pragma_update(None, "checkpoint_fullfsync", "ON").map_err(open_error)?;
+    }
     connection.pragma_update(None, "foreign_keys", "ON").map_err(open_error)?;
     Ok(connection)
 }
@@ -441,9 +451,14 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(settings, ("wal".into(), "2".into(), "1".into(), "5000".into()));
+        let flushes = full.call(|connection| Ok::<_, DbError>((pragma(connection, "fullfsync"), pragma(connection, "checkpoint_fullfsync")))).await.unwrap();
+        let expected = if cfg!(target_os = "macos") { "1" } else { "0" };
+        assert_eq!(flushes, (expected.to_string(), expected.to_string()));
         let normal = DbThread::open(&dir.file("normal.sqlite"), Durability::Normal).await.unwrap();
         let synchronous = normal.call(|connection| Ok::<_, DbError>(pragma(connection, "synchronous"))).await.unwrap();
         assert_eq!(synchronous, "1");
+        let normal_flushes = normal.call(|connection| Ok::<_, DbError>(pragma(connection, "fullfsync"))).await.unwrap();
+        assert_eq!(normal_flushes, "0");
         full.close().await.unwrap();
         normal.close().await.unwrap();
     }

@@ -184,7 +184,7 @@ Liveness: the server sends a WebSocket ping every 25 seconds, and closes (code 1
 
 ## 10. Storage
 
-Three SQLite files in the data directory, WAL mode, one writer thread each. `security.sqlite` and `state.sqlite` use `synchronous = FULL`; `library.sqlite` uses `NORMAL`.
+Three SQLite files in the data directory, WAL mode, one writer thread each. `security.sqlite` and `state.sqlite` use `synchronous = FULL`, and on macOS also `fullfsync` and `checkpoint_fullfsync`, because macOS `fsync` stops at the drive's cache and only `F_FULLFSYNC` makes a commit survive power loss (a commit costs about 16 ms there instead of 2 ms); `library.sqlite` uses `NORMAL`.
 
 ### 10.1 `security.sqlite`
 ```
