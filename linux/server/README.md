@@ -244,7 +244,10 @@ By default a user service stops when you log out. `setup` offers to keep it runn
     loginctl enable-linger $USER
 
 On a Mac `setup` writes `~/Library/LaunchAgents/cc.midgarcorp.flaccy-server.plist` and starts it
-with `launchctl`. On Windows it says so and you run `flaccy-server serve` yourself.
+with `launchctl`. The first time another device connects, macOS asks whether `flaccy-server` may accept
+incoming network connections: choose Allow, because until then other devices time out while this Mac
+still reaches the server on loopback. On Windows `setup` says it cannot install a service and you run
+`flaccy-server serve` yourself.
 
 While running, the server tidies itself once a day: it drops the stored results of mutations
 older than 30 days (and beyond the newest 1,000 per device), empties the write-ahead logs and

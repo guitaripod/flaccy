@@ -25,31 +25,37 @@ fn shortfall_message(soft: u64, limits: &Limits) -> Option<String> {
     })
 }
 
-/// Raises the soft open-files limit towards what a full house of connections needs and answers the limit in
-/// force afterwards; `None` where the system has no such limit to read.
+/// The soft open-files limit before and after [`raise_soft_limit`] ran.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SoftLimit {
+    /// What the process started with.
+    pub before: u64,
+    /// What it has now.
+    pub after: u64,
+}
+
+/// Raises the soft open-files limit towards what a full house of connections needs and answers what it was and is;
+/// `None` where the system has no such limit to read.
 #[cfg(unix)]
 #[allow(clippy::unnecessary_cast)]
-pub fn raise_soft_limit() -> Option<u64> {
+pub fn raise_soft_limit() -> Option<SoftLimit> {
     let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
     if unsafe { libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) } != 0 {
         return None;
     }
-    let soft = limit.rlim_cur as u64;
-    let target = raised_target(soft, limit.rlim_max as u64, WANTED_SOFT_LIMIT);
-    if target == soft {
-        return Some(soft);
+    let before = limit.rlim_cur as u64;
+    let target = raised_target(before, limit.rlim_max as u64, WANTED_SOFT_LIMIT);
+    if target == before {
+        return Some(SoftLimit { before, after: before });
     }
     let raised = libc::rlimit { rlim_cur: target as libc::rlim_t, rlim_max: limit.rlim_max };
-    if unsafe { libc::setrlimit(libc::RLIMIT_NOFILE, &raised) } == 0 {
-        Some(target)
-    } else {
-        Some(soft)
-    }
+    let after = if unsafe { libc::setrlimit(libc::RLIMIT_NOFILE, &raised) } == 0 { target } else { before };
+    Some(SoftLimit { before, after })
 }
 
 /// Raises the soft open-files limit; this system has none to raise.
 #[cfg(not(unix))]
-pub fn raise_soft_limit() -> Option<u64> {
+pub fn raise_soft_limit() -> Option<SoftLimit> {
     None
 }
 
@@ -58,7 +64,10 @@ pub fn prepare(limits: &Limits) {
     let Some(soft) = raise_soft_limit() else {
         return;
     };
-    if let Some(message) = shortfall_message(soft, limits) {
+    if soft.after > soft.before {
+        logger::info("server", &format!("the open-files limit was {}; raised to {}", soft.before, soft.after));
+    }
+    if let Some(message) = shortfall_message(soft.after, limits) {
         logger::warn("server", &message);
     }
 }
@@ -90,7 +99,8 @@ mod tests {
         let soft = raise_soft_limit().unwrap();
         let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
         unsafe { libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) };
-        assert_eq!(soft, limit.rlim_cur as u64);
-        assert!(soft >= (limit.rlim_max as u64).min(WANTED_SOFT_LIMIT));
+        assert_eq!(soft.after, limit.rlim_cur as u64);
+        assert!(soft.after >= soft.before);
+        assert!(soft.after >= (limit.rlim_max as u64).min(WANTED_SOFT_LIMIT));
     }
 }
