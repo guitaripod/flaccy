@@ -138,12 +138,9 @@ enum DebugShareLibraryDrive {
     }
 
     private static func get(_ url: URL, token: String?) async throws -> [String: Any] {
-        var request = URLRequest(url: url, timeoutInterval: 10)
-        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
-        let (data, response) = try await URLSession.shared.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let (status, object) = try await DebugDriveHTTPClient.object(at: url, token: token)
         try expect(status == 200, "\(url.path) answered \(status)")
-        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw Failure(step: "\(url.path) did not answer JSON") }
+        guard let object else { throw Failure(step: "\(url.path) did not answer JSON") }
         return object
     }
 
