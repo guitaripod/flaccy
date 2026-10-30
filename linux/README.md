@@ -1,71 +1,16 @@
 # Flaccy for Linux
 
-Lossless music player. GTK4/libadwaita, gapless GStreamer playback, a built-in equalizer, MPRIS, Last.fm scrobbling.
+Lossless music player: GTK4/libadwaita, gapless GStreamer playback, MPRIS, Last.fm scrobbling. Free and GPL.
 
-Home (the first page in the sidebar, and where Flaccy opens): resume the album or playlist
-you were in, jump back into what you played lately, start a mix built from your own
-listening or the endless Library Radio, see what's new in your library and what you were
-playing on this day in earlier years. Customize Home (main menu) reorders or hides any of
-it, and Preferences → Open at launch keeps opening where you left off instead.
-
-Equalizer (Ctrl+E): drag the curve or switch to Advanced for up to ten bands, 16 presets
-always in view beside the curve (hover one to hear it, click to keep it),
-Equalizer APO / AutoEq import, a profile per output (it follows your default sink) and a
-level-matched Hold to compare. With it off or flat the audio passes through untouched.
-
-Album artwork (right-click an album → Edit Artwork…, or the pencil on its cover): frame any
-cover in a square window — drag, wheel-zoom around the pointer, pinch, double-click for
-2.5×, arrow keys and +/− to nudge, 0 to fit — with live album, list and player previews and
-a warning when the crop is too small to stay sharp. Pick a picture from a file, the
-clipboard (image, file or link), a drop, the images in the album's folders, the art
-embedded in its tracks, or a search of Apple Music, Deezer and the Cover Art Archive.
-Dropping an image on a cover or an album tile opens the editor with it already framed.
-Nothing is written until Save; Use Original Artwork puts the files' own art back.
-
-Lyrics (Now Playing → Lyrics, or the sidebar): synced lines from lrclib, or from a `.lrc` / `.elrc`
-file beside the song or embedded in its tags. A line whose words are timed fills in as it is
-sung, with a soft edge inside the word you are on; an instrumental gap of four seconds or more
-shows three beats that light across it. The clock button shifts the lyrics earlier or later in
-0.1 s steps, remembered per song, for tracks whose timestamps run off the singing. Click a line
-to seek.
-
-Share Lyrics (lyrics panel share button, or right-click a line): pick lines and save a short video
-of them over the song itself, with its real audio and up to 30 s, or a still image card. Choose
-Spotlight, Verse, Poster or Pulse, a format (Story, Post, Square or Wide), colours drawn from the
-cover and a font; word timing fills in word by word. Save Video… needs `ffmpeg`; Save Image… does not.
-
-An adaptive theme engine retints the whole app with the dominant color of whatever's
-playing — ambient gradient backdrops, glass surfaces, a glowing now-playing pulse — or
-pick one of seven curated palettes in Preferences. Works in light and dark.
-
-Music video mode (Now Playing → Video): Flaccy finds the song's official music video,
-streams the picture, and locks it to the lossless file playing from your disk — your
-audio, its video, in step to within a frame or two. It works out the video's head start
-by listening to both recordings once, so a cold open or a spoken intro lines up on its
-own; nudge buttons and a full candidate list are there when you disagree. Deciding which
-result is the real music video — rather than a lyric video, a live take or a re-upload —
-is done by a scorer that weighs the uploader, the wording and the reach, with a local
-Ollama model breaking ties when the top two are close. Requires `yt-dlp`; Ollama is
-optional and everything works without it.
-
-Downloads (sidebar → Downloads, or Ctrl+D): paste a YouTube / YouTube Music /
-SoundCloud / Bandcamp link — a song, an album, or a whole playlist — and Flaccy pulls
-the best available audio, tags it (title, artist, album, track number, cover art), and
-drops it straight into your library. Requires `yt-dlp` and `ffmpeg`; the page walks you
-through the one-minute setup if they're missing.
-
-Servers (Preferences → Servers): add an OpenSubsonic server such as Navidrome, or Flaccy's own
-`flaccy-server`, with an address and a username and password or an API key. Test names the
-server type and version, or the exact failure: unreachable, a TLS problem, wrong credentials, or
-not an OpenSubsonic server. Its songs join your library beside the ones in your music folder —
-search, filters, playlists, stats, lyrics and the queue treat them alike — and the Songs page
-gets a source row (On this computer, one chip per server). They are pulled at launch and every
-six hours, and again on Refresh. Songs stream through a local proxy that caches what you play
-(2 GB by default, least recently played first) and fetches the rest of the playing song and the
-start of the next, so gapless playback and the equalizer work as they do for files. Download on
-an album, playlist or song keeps it on this computer; with the server out of reach, anything
-neither cached nor kept shows dimmed. Plays are reported to the server with `scrobble`, and Love
-stars the song there. Logins are stored in `~/.config/flaccy/servers.toml` (mode 0600).
+- **Home** opens where you left off, with mixes built from your own listening, Library Radio and On This Day; Customize Home reorders or hides any of it.
+- **Equalizer** (Ctrl+E): drag the curve or use up to ten parametric bands, 16 presets you hover to hear, AutoEq and Equalizer APO import, a profile per output; untouched audio when off or flat.
+- **Artwork editor** (right-click an album → Edit Artwork…): frame any cover from a file, the clipboard, a drop, the album's own images or a search of Apple Music, Deezer and the Cover Art Archive.
+- **Lyrics** from lrclib or `.lrc`/`.elrc` files, filling word by word when word-timed, with per-song timing offsets. **Share Lyrics** saves a short video of chosen lines over the song (needs `ffmpeg`) or a still card.
+- **Flaccy Server** (Preferences → Servers → Add Flaccy Server): open the `flaccy://server` link or type the address and code the server printed; playlists, loves and history sync for free, and its music joins your library. See the [setup guide](https://midgarcorp.cc/flaccy/server).
+- **Other servers**: add an OpenSubsonic server such as Navidrome; its songs stream through a local cache (2 GB by default) so gapless playback and the equalizer still work, and Download keeps any of them on this computer.
+- **Music video mode** (Now Playing → Video): the official video, streamed and locked to your own audio within a frame or two. Needs `yt-dlp`; a local Ollama model breaks ties when choosing the video.
+- **Downloads** (Ctrl+D): paste a YouTube, SoundCloud or Bandcamp link and get tagged audio in your library. Needs `yt-dlp` and `ffmpeg`.
+- **Adaptive theme** that retints the app to what is playing, or one of seven palettes.
 
 ## Install
 
@@ -105,7 +50,7 @@ FLACCY_LASTFM_KEY=<32 hex>
 
 There is no secret to build with: requests are signed by flaccy-api (`POST /v1/lastfm/sign`, keyed by an anonymous device id kept in `~/.config/flaccy/device-id`), so scrobbling needs network access to it.
 
-Without the key the app works fine and the scrobbling UI is hidden. A value that isn't a real 32-character hex credential is treated the same way rather than compiled in — a placeholder would otherwise build an app that offers scrobbling and then fails every submission.
+Without the key, or with anything but a real 32-character hex key, the app works and the scrobbling UI is hidden.
 
 ## Uninstall
 
