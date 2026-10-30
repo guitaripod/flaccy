@@ -226,22 +226,20 @@ fn record_result(
 }
 
 fn apply_new(
-    connection: &mut Connection,
+    transaction: &mut rusqlite::Transaction<'_>,
     caller: &Caller,
     request: &PushRequest,
     mutation: &Mutation,
     now_ms: i64,
     counters: &mut Counters,
-    effects: &Effects,
 ) -> Result<MutationResult, SyncError> {
     let stamp = counters.clock.store(mutation.stamp, now_ms);
-    let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let savepoint = transaction.savepoint()?;
     let mut ctx = Ctx { caller, stamp, counters };
-    let status = status_of(&transaction, mutation, &mut ctx)?;
-    let (wire, code) = record_result(&transaction, request, mutation, status, now_ms)?;
-    counters.save(&transaction)?;
-    transaction.commit()?;
-    effects.deliver(counters);
+    let status = status_of(&savepoint, mutation, &mut ctx)?;
+    let (wire, code) = record_result(&savepoint, request, mutation, status, now_ms)?;
+    counters.save(&savepoint)?;
+    savepoint.commit()?;
     Ok(MutationResult {
         id: mutation.id,
         status: wire,
@@ -263,14 +261,17 @@ fn run_push(
     let last = last_mutation_id(connection, request)?;
     check_sequence(connection, request, last)?;
     let mut results = Vec::with_capacity(request.mutations.len());
+    let mut transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
     for mutation in &request.mutations {
         let result = if mutation.id <= last {
-            stored_result(connection, request, mutation.id)?
+            stored_result(&transaction, request, mutation.id)?
         } else {
-            apply_new(connection, caller, request, mutation, now_ms, &mut counters, effects)?
+            apply_new(&mut transaction, caller, request, mutation, now_ms, &mut counters)?
         };
         results.push(result);
     }
+    transaction.commit()?;
+    effects.deliver(&mut counters);
     Ok(PushResponse {
         results,
         server_time_ms: now_ms,
@@ -293,8 +294,9 @@ impl Store {
     /// Applies a push as PROTOCOL.md section 6.1 describes.
     ///
     /// `claimed_incarnation` is the `Flaccy-Incarnation` header when the client sent one. The retry, gap and
-    /// conflict checks cover the whole request before the first mutation applies; each mutation then commits in
-    /// its own transaction together with its progress record.
+    /// conflict checks cover the whole request before the first mutation applies; the mutations then apply in
+    /// order inside one transaction, each in a savepoint together with its progress record, so a push costs one
+    /// fsync however many mutations it carries and a storage failure applies none of them.
     pub async fn push(
         &self,
         principal: &Principal,
@@ -314,5 +316,87 @@ impl Store {
         let now_ms = self.now_ms();
         let effects = self.effects();
         self.write(move |connection| run_push(connection, &caller, &request, now_ms, &effects)).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    use flaccy_library::fingerprint::fixtures::TempDir;
+    use flaccy_server_core::stamp::Stamp;
+    use serde_json::json;
+
+    use super::*;
+    use crate::security::{DeviceId, UserId};
+
+    fn principal() -> Principal {
+        Principal {
+            user: UserId("alice".to_owned()),
+            role: security::Role::Member,
+            device: Some(DeviceId("phone".to_owned())),
+        }
+    }
+
+    fn love(id: i64) -> Mutation {
+        let key = format!("{id:032x}");
+        Mutation {
+            id,
+            name: "love.set".to_owned(),
+            stamp: Stamp((1_790_000_000_000 << 16) + id),
+            args: json!({ "songKey": key, "ref": { "songKey": key, "title": "Title", "artist": "Artist" }, "loved": true }),
+        }
+    }
+
+    fn push_of(mutations: Vec<Mutation>) -> PushRequest {
+        PushRequest { device: "phone".to_owned(), instance: "i1".to_owned(), mutations }
+    }
+
+    async fn open_counting_commits(dir: &TempDir) -> (Store, Arc<AtomicUsize>) {
+        let store = Store::open(&dir.path().join("state.sqlite"), "inc".to_owned()).await.unwrap();
+        let commits = Arc::new(AtomicUsize::new(0));
+        let counted = commits.clone();
+        store
+            .write(move |connection| {
+                connection.commit_hook(Some(move || {
+                    counted.fetch_add(1, Ordering::SeqCst);
+                    false
+                }));
+                Ok::<_, SyncError>(())
+            })
+            .await
+            .unwrap();
+        (store, commits)
+    }
+
+    #[tokio::test]
+    async fn a_push_commits_once_however_many_mutations_it_carries() {
+        let dir = TempDir::new("push-commits");
+        let (store, commits) = open_counting_commits(&dir).await;
+        let response = store.push(&principal(), push_of((1..=50).map(love).collect()), None).await.unwrap();
+        assert_eq!(response.results.len(), 50);
+        assert!(response.results.iter().all(|result| result.status == MutationStatus::Applied));
+        assert_eq!(commits.load(Ordering::SeqCst), 1);
+        store.close().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_refused_mutation_in_the_middle_leaves_its_neighbours_applied_and_all_recorded() {
+        let dir = TempDir::new("push-savepoints");
+        let (store, commits) = open_counting_commits(&dir).await;
+        let mut mutations = vec![love(1), love(2), love(3)];
+        mutations[1].name = "not.a.mutation".to_owned();
+        let response = store.push(&principal(), push_of(mutations.clone()), None).await.unwrap();
+        let statuses: Vec<_> = response.results.iter().map(|result| result.status).collect();
+        assert_eq!(statuses, vec![MutationStatus::Applied, MutationStatus::Unsupported, MutationStatus::Applied]);
+        assert_eq!(commits.load(Ordering::SeqCst), 1);
+        let retry = store.push(&principal(), push_of(mutations), None).await.unwrap();
+        let again: Vec<_> = retry.results.iter().map(|result| result.status).collect();
+        assert_eq!(again, statuses);
+        let pulled = store.pull(&principal(), "i1", 0, 100, None).await.unwrap();
+        assert_eq!(pulled.last_mutation_id, 3);
+        assert_eq!(pulled.changes.len(), 2);
+        store.close().await.unwrap();
     }
 }

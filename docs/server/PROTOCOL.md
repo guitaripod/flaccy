@@ -117,7 +117,7 @@ A mutation: `{"id": <int>, "name": "<name>", "stamp": <i64>, "args": {…}}`. Na
 ```
 { "device": "<id>", "instance": "<uuid>", "mutations": [ … ] }
 ```
-At most 500 mutations and 1 MiB. Mutations are applied in order, each in its own transaction that also advances `last_mutation_id` for `(device, instance)`.
+At most 500 mutations and 1 MiB. Mutations are applied in order inside one transaction, each in a savepoint that also advances `last_mutation_id` for `(device, instance)`, and the transaction commits once after the last, so a push costs one fsync whatever its size. A storage failure rolls the whole request back; the client retries it and nothing is lost or applied twice.
 
 The retry and gap checks below run over the whole request before the first mutation applies, so a `409` leaves nothing applied.
 
