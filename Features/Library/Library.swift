@@ -473,8 +473,8 @@ final class Library: LibraryProviding {
                 let fileURL = documentsDirectory.appendingPathComponent(relPath)
                 group.addTask {
                     let metadata = await MetadataService.extractMetadata(from: fileURL)
-                    let signature = AudioFingerprinter.signature(of: fileURL)
-                    let fingerprint = AudioFingerprinter.fingerprint(of: fileURL)
+                    let fingerprint = AudioFingerprinter.quickFingerprint(of: fileURL)
+                    let signature = fingerprint == nil ? nil : AudioFingerprinter.signature(of: fileURL)
                     return TrackRecord(
                         fileURL: relPath,
                         title: metadata.title,
@@ -526,7 +526,7 @@ final class Library: LibraryProviding {
         }
 
         MidgarLog.info("Sync: \(diskPaths.count) files on disk, \(newPaths.count) new, \(removedPaths.count) removed", category: .content)
-        return LibrarySyncResult(changed: true, indexedOnDisk: indexedOnDisk)
+        return LibrarySyncResult(changed: true, indexedOnDisk: diskPaths)
     }
 
     private nonisolated static let insertBatchSize = 50

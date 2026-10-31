@@ -41,6 +41,21 @@ nonisolated enum AudioFingerprinter {
         }
     }
 
+    /// The fingerprint a first scan can take without reading the audio: a FLAC's own MD5 sits in its header.
+    /// Nil for every other format and for a FLAC whose MD5 was never set, which only hashing all of the audio can
+    /// identify; the revision pass does that in the background so the library lists the music first.
+    static func quickFingerprint(of url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let fileSize = try? handle.seekToEnd() else { return nil }
+        let reader = RangeReader(handle: handle)
+        let location = AudioPayload.locate(fileSize: Int64(fileSize)) { offset, length in
+            reader.read(at: offset, length: length)
+        }
+        guard case .flacMD5 = location else { return nil }
+        return TrackRevision.fingerprint(of: location, sha256Hex: nil)
+    }
+
     private static func sha256Hex(of ranges: [Range<Int64>], reader: RangeReader) -> String? {
         var hasher = SHA256()
         var hashed: Int64 = 0
