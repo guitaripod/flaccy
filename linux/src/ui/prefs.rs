@@ -438,7 +438,7 @@ fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
             }
             ui.core.config.borrow_mut().music_video_quality = *height;
             ui.core.save_config();
-            musicvideo::refresh(&ui.core);
+            musicvideo::requality(&ui.core);
         });
     }
     group.add(&quality);
@@ -457,17 +457,11 @@ fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
     group.add(&align);
 
-    let models = musicvideo::llm::installed_models();
-    let chosen =
-        musicvideo::llm::choose_model(&ui.core.config.borrow().music_video_llm_model, &models);
     let judge = adw::SwitchRow::builder()
         .title("Let a Local Model Decide")
-        .subtitle(match &chosen {
-            Some(model) => format!("Ollama breaks ties between close results using {model}"),
-            None => "No Ollama model found — the scorer decides on its own".to_string(),
-        })
+        .subtitle("Looking for Ollama…")
         .active(ui.core.config.borrow().music_video_llm)
-        .sensitive(chosen.is_some())
+        .sensitive(false)
         .build();
     {
         let ui = Rc::clone(ui);
@@ -478,9 +472,12 @@ fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
     group.add(&judge);
 
-    if models.len() > 1 {
-        group.add(&model_row(ui, &models));
-    }
+    let model = adw::ComboRow::builder()
+        .title("Model")
+        .visible(false)
+        .build();
+    group.add(&model);
+    probe_models(ui, &judge, &model);
 
     let matched = ui.core.db.music_video_count();
     let remembered = adw::ActionRow::builder()
@@ -513,17 +510,46 @@ fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     group
 }
 
-/// Only shown when there is a choice to make: which installed Ollama model
-/// gets the casting vote.
-fn model_row(ui: &Rc<Ui>, models: &[String]) -> adw::ComboRow {
+/// Asks Ollama for its models off the main thread — a slow or unreachable
+/// host must not freeze Preferences while it opens — then says which model
+/// will judge, and offers the choice when there is one to make.
+fn probe_models(ui: &Rc<Ui>, judge: &adw::SwitchRow, model: &adw::ComboRow) {
+    let (tx, rx) = async_channel::bounded::<Vec<String>>(1);
+    std::thread::Builder::new()
+        .name("flaccy-ollama-probe".into())
+        .spawn(move || {
+            let _ = tx.send_blocking(musicvideo::llm::installed_models());
+        })
+        .ok();
+    let ui = Rc::clone(ui);
+    let judge = judge.downgrade();
+    let model = model.downgrade();
+    glib::spawn_future_local(async move {
+        let Ok(models) = rx.recv().await else { return };
+        let (Some(judge), Some(model)) = (judge.upgrade(), model.upgrade()) else {
+            return;
+        };
+        let chosen =
+            musicvideo::llm::choose_model(&ui.core.config.borrow().music_video_llm_model, &models);
+        judge.set_subtitle(&match &chosen {
+            Some(model) => format!("Ollama breaks ties between close results using {model}"),
+            None => "No Ollama model found — the scorer decides on its own".to_string(),
+        });
+        judge.set_sensitive(chosen.is_some());
+        if models.len() > 1 {
+            fill_model_row(&ui, &model, &models);
+            model.set_visible(true);
+        }
+    });
+}
+
+/// Fills the row choosing which installed Ollama model gets the casting vote.
+fn fill_model_row(ui: &Rc<Ui>, row: &adw::ComboRow, models: &[String]) {
     let mut names = vec!["Automatic".to_string()];
     names.extend(models.iter().cloned());
-    let row = adw::ComboRow::builder()
-        .title("Model")
-        .model(&gtk::StringList::new(
-            &names.iter().map(String::as_str).collect::<Vec<_>>(),
-        ))
-        .build();
+    row.set_model(Some(&gtk::StringList::new(
+        &names.iter().map(String::as_str).collect::<Vec<_>>(),
+    )));
     let configured = ui.core.config.borrow().music_video_llm_model.clone();
     row.set_selected(
         names
@@ -545,7 +571,6 @@ fn model_row(ui: &Rc<Ui>, models: &[String]) -> adw::ComboRow {
         ui.core.config.borrow_mut().music_video_llm_model = chosen;
         ui.core.save_config();
     });
-    row
 }
 
 fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {

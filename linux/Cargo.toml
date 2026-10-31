@@ -31,7 +31,7 @@ mpris-server = "0.9"
 chrono = "0.4"
 rand = "0.9"
 async-channel = "2"
-gst-plugin-gtk4 = { version = "0.15", features = ["gtk_v4_18"] }
+gst-plugin-gtk4 = { version = "0.15", features = ["gtk_v4_18", "wayland", "x11egl", "dmabuf"] }
 
 [profile.release]
 lto = "thin"

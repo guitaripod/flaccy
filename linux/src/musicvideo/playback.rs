@@ -1,4 +1,5 @@
-use super::sync::{self, Correction, Governor};
+use super::sync::{Correction, Governor};
+use super::VideoMatch;
 use gst::prelude::*;
 use gtk::gdk;
 use gtk::glib;
@@ -18,6 +19,11 @@ const BUFFER_DURATION_SECONDS: u64 = 5;
 /// twentieth of one.
 const PIPELINE_FLAGS: &str = "video+download";
 
+/// With a GL sink, playbin's own software converters are left out
+/// (`native-video`): they would force every decoded frame into system memory,
+/// where `glsinkbin` can take the decoder's GL or DMA-BUF frames as they are.
+const GL_PIPELINE_FLAGS: &str = "video+download+native-video";
+
 type StateObserver = Box<dyn Fn(&StageState)>;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -34,10 +40,20 @@ pub enum StageState {
 /// show. The lossless file on disk stays the clock; this follows it.
 pub struct VideoStage {
     pipeline: gst::Element,
+    sink: Sink,
     pub paintable: gdk::Paintable,
     governor: RefCell<Governor>,
     state: RefCell<StageState>,
-    offset: Cell<f64>,
+    /// How the video's timeline maps onto the audio's: the alignment, its
+    /// cuts and the listener's trim.
+    mapping: RefCell<Option<VideoMatch>>,
+    /// Set while the audio is still before the video's first frame — an album
+    /// intro the video's edit doesn't have. The picture waits on that frame
+    /// instead of being seeked back to it over and over.
+    holding: Cell<bool>,
+    /// The cut whose jump has already been made, so it is made once.
+    crossed_cut: Cell<Option<f64>>,
+    caps_logged: Cell<bool>,
     /// Set while a seek is outstanding: drift measured against a pipeline
     /// mid-seek is meaningless and would trigger another one.
     seeking: Cell<bool>,
@@ -60,6 +76,10 @@ pub struct VideoStage {
 /// won't do them. One refusal usually just means the pipeline wasn't ready.
 const RATE_CHANGE_GIVE_UP: u32 = 4;
 
+/// How far before the video's first frame the audio must be before the
+/// picture waits for it rather than chasing it.
+const HOLD_MARGIN: f64 = 0.05;
+
 /// Seconds a flushing seek is given to report back before the sync loop stops
 /// waiting on it.
 const SEEK_WATCHDOG: f64 = 4.0;
@@ -80,16 +100,19 @@ pub fn register_sink() -> Result<(), String> {
 
 impl VideoStage {
     pub fn new() -> Result<Rc<Self>, String> {
-        let sink = gst::ElementFactory::make("gtk4paintablesink")
-            .build()
-            .map_err(|_| "the GTK video sink is unavailable".to_string())?;
-        let paintable: gdk::Paintable = sink.property("paintable");
+        let sink = build_sink()?;
+        let paintable = sink.paintable.clone();
 
         let pipeline = gst::ElementFactory::make("playbin3")
             .build()
             .map_err(|_| "playbin3 is unavailable".to_string())?;
-        pipeline.set_property_from_str("flags", PIPELINE_FLAGS);
-        pipeline.set_property("video-sink", &sink);
+        let flags = if sink.gl {
+            GL_PIPELINE_FLAGS
+        } else {
+            PIPELINE_FLAGS
+        };
+        pipeline.set_property_from_str("flags", flags);
+        pipeline.set_property("video-sink", &sink.element);
         pipeline.set_property(
             "buffer-duration",
             (BUFFER_DURATION_SECONDS * gst::ClockTime::SECOND.nseconds()) as i64,
@@ -97,10 +120,14 @@ impl VideoStage {
 
         let stage = Rc::new(Self {
             pipeline,
+            sink,
             paintable,
             governor: RefCell::new(Governor::default()),
             state: RefCell::new(StageState::Idle),
-            offset: Cell::new(0.0),
+            mapping: RefCell::new(None),
+            holding: Cell::new(false),
+            crossed_cut: Cell::new(None),
+            caps_logged: Cell::new(false),
             seeking: Cell::new(false),
             wants_playing: Cell::new(false),
             loaded_url: RefCell::new(None),
@@ -124,8 +151,34 @@ impl VideoStage {
         self.state.borrow().clone()
     }
 
-    pub fn set_offset(&self, offset: f64) {
-        self.offset.set(offset);
+    pub fn set_mapping(&self, found: &VideoMatch) {
+        *self.mapping.borrow_mut() = Some(found.clone());
+        self.crossed_cut.set(None);
+    }
+
+    /// Where the video should be for a moment in the local audio, unclamped:
+    /// negative while an album intro plays that the video doesn't have.
+    fn target(&self, audio_position: f64) -> f64 {
+        self.mapping
+            .borrow()
+            .as_ref()
+            .map(|found| found.video_time(audio_position))
+            .unwrap_or(audio_position)
+    }
+
+    fn base_rate(&self, audio_position: f64) -> f64 {
+        self.mapping
+            .borrow()
+            .as_ref()
+            .map(|found| found.rate_at(audio_position))
+            .unwrap_or(1.0)
+    }
+
+    fn next_cut_after(&self, audio_position: f64) -> Option<f64> {
+        self.mapping
+            .borrow()
+            .as_ref()
+            .and_then(|found| found.map.next_cut_after(audio_position))
     }
 
     /// Points the stage at a stream and parks it at `audio_position`. Reloading
@@ -142,9 +195,12 @@ impl VideoStage {
         self.seeking.set(false);
         self.rate_change_failures.set(0);
         self.seek_latency.set(0.0);
+        self.caps_logged.set(false);
+        self.crossed_cut.set(None);
         self.governor.borrow_mut().reset(self.now());
-        self.pending_start
-            .set(Some(sync::target(audio_position, self.offset.get())));
+        let start = self.target(audio_position);
+        self.holding.set(start < -HOLD_MARGIN);
+        self.pending_start.set(Some(start.max(0.0)));
         self.publish(StageState::Opening);
         let _ = self.pipeline.set_state(gst::State::Paused);
     }
@@ -154,6 +210,7 @@ impl VideoStage {
         *self.loaded_url.borrow_mut() = None;
         self.wants_playing.set(false);
         self.seeking.set(false);
+        self.holding.set(false);
         self.pending_start.set(None);
         self.governor.borrow_mut().reset(self.now());
         self.publish(StageState::Idle);
@@ -169,7 +226,7 @@ impl VideoStage {
         if matches!(*self.state.borrow(), StageState::Failed(_)) {
             return;
         }
-        let target = if playing {
+        let target = if playing && !self.holding.get() {
             gst::State::Playing
         } else {
             gst::State::Paused
@@ -184,7 +241,11 @@ impl VideoStage {
             return;
         }
         self.governor.borrow_mut().reset(self.now());
-        self.seek_to(sync::target(audio_position, self.offset.get()));
+        self.crossed_cut.set(None);
+        if self.hold_if_early(audio_position) {
+            return;
+        }
+        self.seek_for(audio_position);
     }
 
     /// One step of the sync loop. Returns the measured drift so the view can
@@ -202,15 +263,59 @@ impl VideoStage {
         ) {
             return None;
         }
+        if self.hold_if_early(audio_position) {
+            return None;
+        }
+        if self.cut_is_due(audio_position) {
+            self.seek_for(audio_position);
+            return None;
+        }
         let position = self.position()?;
-        let target = sync::target(audio_position, self.offset.get());
-        let drift = position - target;
-        match self.governor.borrow_mut().step(drift, self.now()) {
-            Some(Correction::Seek) => self.seek_to(target),
+        let drift = position - self.target(audio_position);
+        let base = self.base_rate(audio_position);
+        let correction = self.governor.borrow_mut().step(drift, self.now(), base);
+        match correction {
+            Some(Correction::Seek) => self.seek_for(audio_position),
             Some(Correction::Rate(rate)) => self.set_rate(rate),
             None => {}
         }
         Some(drift)
+    }
+
+    /// Keeps the picture parked on the video's first frame while the audio is
+    /// still in an intro the video's edit cut, and lets it go the moment the
+    /// two meet. Returns true while holding.
+    fn hold_if_early(&self, audio_position: f64) -> bool {
+        let early = self.target(audio_position) < -HOLD_MARGIN;
+        if early == self.holding.get() {
+            return early;
+        }
+        self.holding.set(early);
+        if early {
+            let _ = self.pipeline.set_state(gst::State::Paused);
+            self.seek_to(0.0, 1.0);
+        } else {
+            self.seek_for(audio_position);
+            if self.wants_playing.get() {
+                let _ = self.pipeline.set_state(gst::State::Playing);
+            }
+        }
+        early
+    }
+
+    /// True once the audio, by the time a seek issued now would land, is past
+    /// the next cut in the video's edit. The jump is made then, ahead of the
+    /// sync loop noticing the drift, so the picture changes on the cut.
+    fn cut_is_due(&self, audio_position: f64) -> bool {
+        let landing = audio_position + self.seek_latency.get();
+        let Some(cut) = self.next_cut_after(audio_position - self.seek_latency.get() - 0.5) else {
+            return false;
+        };
+        if cut > landing || self.crossed_cut.get() == Some(cut) {
+            return false;
+        }
+        self.crossed_cut.set(Some(cut));
+        true
     }
 
     pub fn position(&self) -> Option<f64> {
@@ -233,7 +338,7 @@ impl VideoStage {
         let Some(duration) = self.duration() else {
             return false;
         };
-        duration > 0.0 && sync::target(audio_position, self.offset.get()) > duration + 0.5
+        duration > 0.0 && self.target(audio_position) > duration + 0.5
     }
 
     fn now(&self) -> f64 {
@@ -243,16 +348,32 @@ impl VideoStage {
     /// Seeks to where the audio will be by the time the seek lands, not to
     /// where it is now. A flushing seek over the network takes long enough
     /// that aiming at the present would leave the video permanently that far
-    /// behind, seeking again and again to chase it.
-    fn seek_to(&self, seconds: f64) {
-        let aim = seconds.max(0.0) + self.seek_latency.get();
+    /// behind, seeking again and again to chase it. The landing is mapped
+    /// through the alignment, so a seek that lands past a cut lands on the
+    /// far side of it.
+    fn seek_for(&self, audio_position: f64) {
+        let landing = audio_position + self.seek_latency.get();
+        self.seek_to(self.target(landing), self.base_rate(landing));
+    }
+
+    /// A flushing seek that also sets the rate, since a flush otherwise puts
+    /// the pipeline back to real time.
+    fn seek_to(&self, seconds: f64, rate: f64) {
+        let aim = seconds.max(0.0);
         let position =
             gst::ClockTime::from_nseconds((aim * gst::ClockTime::SECOND.nseconds() as f64) as u64);
         self.seeking.set(true);
         self.seek_started_at.set(self.now());
         if self
             .pipeline
-            .seek_simple(gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE, position)
+            .seek(
+                rate,
+                gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE,
+                gst::SeekType::Set,
+                position,
+                gst::SeekType::None,
+                gst::ClockTime::NONE,
+            )
             .is_err()
         {
             self.seeking.set(false);
@@ -376,18 +497,109 @@ impl VideoStage {
         self.seeking.set(false);
         self.resume_if_wanted();
         if let Some(start) = self.pending_start.take() {
-            self.seek_to(start);
+            self.seek_to(start, 1.0);
         }
+        self.log_negotiated_caps();
     }
 
     fn resume_if_wanted(&self) {
-        if self.wants_playing.get() {
+        if self.wants_playing.get() && !self.holding.get() {
             let _ = self.pipeline.set_state(gst::State::Playing);
         }
         if !matches!(*self.state.borrow(), StageState::Failed(_)) {
             self.publish(StageState::Playing);
         }
     }
+}
+
+impl VideoStage {
+    /// Notes once per video what the decoder handed over and what reached
+    /// GTK. GL or DMA-BUF memory end to end means the frames never left the
+    /// GPU; system memory means each one was copied through the CPU.
+    fn log_negotiated_caps(&self) {
+        if self.caps_logged.get() {
+            return;
+        }
+        let Some(decoded) = pad_caps(&self.sink.element) else {
+            return;
+        };
+        self.caps_logged.set(true);
+        let shown = pad_caps(&self.sink.paintable_sink).unwrap_or_else(|| "?".into());
+        crate::logger::info(
+            "musicvideo",
+            &format!(
+                "decoder hands over {decoded}; GTK paints {shown}{}",
+                if self.sink.gl { " (GL sink)" } else { "" }
+            ),
+        );
+    }
+}
+
+/// A sink pad's negotiated memory, format and size, in one short phrase.
+fn pad_caps(element: &gst::Element) -> Option<String> {
+    let caps = element.static_pad("sink")?.current_caps()?;
+    let memory = caps
+        .features(0)
+        .map(|features| features.to_string())
+        .filter(|features| !features.is_empty())
+        .unwrap_or_else(|| "memory:SystemMemory".to_string());
+    let structure = caps.structure(0)?;
+    let field = |name: &str| {
+        structure
+            .value(name)
+            .ok()
+            .and_then(|value| value.serialize().ok())
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "?".into())
+    };
+    Some(format!(
+        "{memory} {} {}x{}",
+        field("format"),
+        field("width"),
+        field("height")
+    ))
+}
+
+/// The element playbin renders into, the paintable sink inside it, and
+/// whether frames can stay on the GPU on the way.
+struct Sink {
+    element: gst::Element,
+    paintable_sink: gst::Element,
+    paintable: gdk::Paintable,
+    gl: bool,
+}
+
+/// The paintable sink, wrapped so frames can stay on the GPU. When GTK hands
+/// the sink a GL context, `glsinkbin` takes a hardware decoder's GL or
+/// DMA-BUF output without a round trip through system memory; without one,
+/// playbin's own converter feeds the sink plain frames.
+fn build_sink() -> Result<Sink, String> {
+    let paintable_sink = gst::ElementFactory::make("gtk4paintablesink")
+        .build()
+        .map_err(|_| "the GTK video sink is unavailable".to_string())?;
+    let paintable: gdk::Paintable = paintable_sink.property("paintable");
+    let has_gl = paintable
+        .property::<Option<gdk::GLContext>>("gl-context")
+        .is_some();
+    if has_gl {
+        if let Ok(bin) = gst::ElementFactory::make("glsinkbin")
+            .property("sink", &paintable_sink)
+            .build()
+        {
+            return Ok(Sink {
+                element: bin,
+                paintable_sink,
+                paintable,
+                gl: true,
+            });
+        }
+    }
+    Ok(Sink {
+        element: paintable_sink.clone(),
+        paintable_sink,
+        paintable,
+        gl: false,
+    })
 }
 
 impl Drop for VideoStage {
@@ -397,8 +609,9 @@ impl Drop for VideoStage {
 }
 
 /// Turns GStreamer's wording into something worth putting on screen. A stream
-/// URL that has aged out is the common case and is worth naming, because the
-/// fix — reopening the video — is one the app can offer.
+/// URL YouTube refuses — aged out, or too new to serve yet — is the common
+/// case and is worth naming, because the fix, a fresh URL, is one the app can
+/// make by itself.
 pub fn friendly_pipeline_error(raw: &str) -> String {
     let lowered = raw.to_lowercase();
     if lowered.contains("plug-in")
@@ -410,7 +623,7 @@ pub fn friendly_pipeline_error(raw: &str) -> String {
         return NO_DECODER.to_string();
     }
     if lowered.contains("403") || lowered.contains("forbidden") || lowered.contains("not found") {
-        return "This video\'s stream expired".to_string();
+        return STREAM_REFUSED.to_string();
     }
     if lowered.contains("resolve") || lowered.contains("network") || lowered.contains("connect") {
         return "Couldn\'t reach the video's server — check your connection".to_string();
@@ -437,6 +650,9 @@ fn first_line(raw: &str) -> String {
 /// asking the site for a format this machine can actually decode.
 pub const NO_DECODER: &str = "No decoder for this video";
 
+/// Named because the resolver watches for it: a fresh URL fixes it.
+pub const STREAM_REFUSED: &str = "YouTube refused this video's stream";
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -445,7 +661,7 @@ mod tests {
     fn names_the_failures_worth_naming() {
         assert_eq!(
             friendly_pipeline_error("Server returned 403 Forbidden"),
-            "This video's stream expired"
+            STREAM_REFUSED
         );
         assert_eq!(
             friendly_pipeline_error("Could not resolve server name"),

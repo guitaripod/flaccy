@@ -243,6 +243,9 @@ pub struct MusicVideoRow {
     pub chosen_by_user: bool,
     pub reason: String,
     pub age_days: f64,
+    pub map: crate::music_video::TimeMap,
+    pub trim: f64,
+    pub align_version: i64,
 }
 
 pub struct AlbumRetitle {
@@ -641,6 +644,15 @@ impl Db {
             let _ = self
                 .conn
                 .execute(&format!("ALTER TABLE tracks ADD COLUMN {column}"), []);
+        }
+        for column in [
+            "timeMap TEXT NOT NULL DEFAULT ''",
+            "trimSeconds DOUBLE NOT NULL DEFAULT 0",
+            "alignVersion INTEGER NOT NULL DEFAULT 0",
+        ] {
+            let _ = self
+                .conn
+                .execute(&format!("ALTER TABLE musicVideos ADD COLUMN {column}"), []);
         }
         self.migrate_remote_columns()?;
         self.migrate_listen_key_columns()?;
@@ -1831,7 +1843,8 @@ impl Db {
             .query_row(
                 "SELECT videoId, videoTitle, channel, duration, offsetSeconds, aligned,
                         chosenByUser, reason,
-                        COALESCE(julianday('now') - julianday(fetchedAt), 0.0)
+                        COALESCE(julianday('now') - julianday(fetchedAt), 0.0),
+                        timeMap, trimSeconds, alignVersion
                  FROM musicVideos WHERE trackTitle = ?1 AND artist = ?2",
                 params![title, artist],
                 |row| {
@@ -1845,6 +1858,9 @@ impl Db {
                         chosen_by_user: row.get(6)?,
                         reason: row.get(7)?,
                         age_days: row.get(8)?,
+                        map: crate::music_video::TimeMap::decode(&row.get::<_, String>(9)?),
+                        trim: row.get(10)?,
+                        align_version: row.get(11)?,
                     })
                 },
             )
@@ -1865,8 +1881,9 @@ impl Db {
         let _ = self.conn.execute(
             "INSERT INTO musicVideos
              (trackTitle, artist, videoId, videoTitle, channel, duration, offsetSeconds,
-              aligned, chosenByUser, score, reason, fetchedAt)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+              aligned, chosenByUser, score, reason, fetchedAt, timeMap, trimSeconds,
+              alignVersion)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
              ON CONFLICT(trackTitle, artist) DO UPDATE SET
                 videoId = excluded.videoId,
                 videoTitle = excluded.videoTitle,
@@ -1877,7 +1894,10 @@ impl Db {
                 chosenByUser = excluded.chosenByUser,
                 score = excluded.score,
                 reason = excluded.reason,
-                fetchedAt = excluded.fetchedAt",
+                fetchedAt = excluded.fetchedAt,
+                timeMap = excluded.timeMap,
+                trimSeconds = excluded.trimSeconds,
+                alignVersion = excluded.alignVersion",
             params![
                 title,
                 artist,
@@ -1890,16 +1910,44 @@ impl Db {
                 found.is_some_and(|f| f.chosen_by_user),
                 score,
                 found.map(|f| f.reason.as_str()).unwrap_or_default(),
-                now_string()
+                now_string(),
+                found.map(|f| f.map.encode()).unwrap_or_default(),
+                found.map(|f| f.trim).unwrap_or(0.0),
+                found.map(|f| f.align_version).unwrap_or(0)
             ],
         );
     }
 
-    pub fn set_music_video_offset(&self, title: &str, artist: &str, offset: f64, aligned: bool) {
+    /// Stores what an aligner heard, leaving the listener's trim alone. Only
+    /// touches the row while it still holds `video_id`, so an alignment that
+    /// finishes after the match was replaced can't land on the new video.
+    pub fn set_music_video_alignment(
+        &self,
+        title: &str,
+        artist: &str,
+        video_id: &str,
+        found: &crate::music_video::VideoMatch,
+    ) {
         let _ = self.conn.execute(
-            "UPDATE musicVideos SET offsetSeconds = ?3, aligned = ?4
-             WHERE trackTitle = ?1 AND artist = ?2",
-            params![title, artist, offset, aligned],
+            "UPDATE musicVideos SET offsetSeconds = ?4, aligned = ?5, timeMap = ?6,
+                    alignVersion = ?7
+             WHERE trackTitle = ?1 AND artist = ?2 AND videoId = ?3",
+            params![
+                title,
+                artist,
+                video_id,
+                found.offset,
+                found.aligned,
+                found.map.encode(),
+                found.align_version
+            ],
+        );
+    }
+
+    pub fn set_music_video_trim(&self, title: &str, artist: &str, trim: f64) {
+        let _ = self.conn.execute(
+            "UPDATE musicVideos SET trimSeconds = ?3 WHERE trackTitle = ?1 AND artist = ?2",
+            params![title, artist, trim],
         );
     }
 
@@ -2946,6 +2994,57 @@ mod cleanup_tests {
         fn drop(&mut self) {
             remove_all(&self.path);
         }
+    }
+
+    fn music_video(video_id: &str) -> crate::music_video::VideoMatch {
+        crate::music_video::VideoMatch {
+            video_id: video_id.into(),
+            title: "Song (Official Video)".into(),
+            channel: "Band".into(),
+            duration: 205.0,
+            offset: 0.0,
+            aligned: false,
+            chosen_by_user: false,
+            reason: "Matched".into(),
+            map: Default::default(),
+            trim: 0.0,
+            align_version: 0,
+        }
+    }
+
+    #[test]
+    fn a_music_videos_time_map_and_trim_round_trip() {
+        use crate::music_video::{Segment, TimeMap};
+        let temp = TempDb::open();
+        let db = &temp.db;
+        db.save_music_video("Song", "Band", Some(&music_video("abc")), 1.0);
+
+        let mut aligned = music_video("abc");
+        aligned.map = TimeMap::new(vec![
+            Segment { start: 0.0, offset: 10.5, rate: 1.0 },
+            Segment { start: 71.9, offset: 5.25, rate: 1.0016 },
+        ]);
+        aligned.offset = 10.5;
+        aligned.aligned = true;
+        aligned.align_version = 2;
+        db.set_music_video_trim("Song", "Band", 0.25);
+        db.set_music_video_alignment("Song", "Band", "abc", &aligned);
+
+        let row = db.fetch_music_video("Song", "Band").expect("row");
+        assert_eq!(row.map, aligned.map);
+        assert_eq!(row.offset, 10.5);
+        assert!(row.aligned);
+        assert_eq!(row.align_version, 2);
+        assert_eq!(row.trim, 0.25, "an alignment never overwrites the listener's trim");
+
+        db.save_music_video("Song", "Band", Some(&music_video("xyz")), 1.0);
+        db.set_music_video_alignment("Song", "Band", "abc", &aligned);
+        let replaced = db.fetch_music_video("Song", "Band").expect("row");
+        assert_eq!(replaced.video_id.as_deref(), Some("xyz"));
+        assert!(
+            replaced.map.is_empty(),
+            "a late alignment of the old video must not land on the new one"
+        );
     }
 
     fn remove_all(path: &Path) {

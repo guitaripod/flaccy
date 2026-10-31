@@ -527,19 +527,32 @@ fn restore_chosen_queue(ui: &Rc<Ui>, queue_toggle: &gtk::ToggleButton, syncing: 
     }
 }
 
-/// Parks the video pipeline whenever Now Playing isn't on screen, so browsing
-/// the library with music video mode on streams nothing, and resumes it on the
-/// way back in.
+/// Parks the video pipeline whenever Now Playing isn't on screen — another
+/// page, or a window the compositor has minimised or hidden — so nothing is
+/// decoded that nobody sees, and resumes it on the way back in.
 fn park_video_off_screen(ui: &Rc<Ui>, host: &gtk::Overlay, video_toggle: &gtk::ToggleButton) {
+    let update: Rc<dyn Fn()> = {
+        let ui = Rc::clone(ui);
+        let host = host.downgrade();
+        let video_toggle = video_toggle.downgrade();
+        Rc::new(move || {
+            let (Some(host), Some(video_toggle)) = (host.upgrade(), video_toggle.upgrade()) else {
+                return;
+            };
+            let showing =
+                host.is_mapped() && video_toggle.is_active() && !ui.window.is_suspended();
+            crate::musicvideo::set_visible(&ui.core, showing);
+        })
+    };
+    {
+        let update = Rc::clone(&update);
+        host.connect_map(move |_| update());
+    }
     {
         let ui = Rc::clone(ui);
-        let video_toggle = video_toggle.clone();
-        host.connect_map(move |_| {
-            crate::musicvideo::set_visible(&ui.core, video_toggle.is_active());
-        });
+        host.connect_unmap(move |_| crate::musicvideo::set_visible(&ui.core, false));
     }
-    let ui = Rc::clone(ui);
-    host.connect_unmap(move |_| crate::musicvideo::set_visible(&ui.core, false));
+    ui.window.connect_suspended_notify(move |_| update());
 }
 
 /// A pill toggle carrying an icon + label, returned with its label so a live

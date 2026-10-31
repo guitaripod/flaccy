@@ -823,7 +823,6 @@ button.pill.suggested-action:active {
 .mv-stage {
   background-color: #000;
   border-radius: 16px;
-  overflow: hidden;
   box-shadow:
     inset 0 0 0 1px alpha(#fff, 0.08),
     0 18px 48px alpha(#000, 0.45);
@@ -884,6 +883,11 @@ button.pill.suggested-action:active {
 
 .mv-fullscreen {
   background-color: #000;
+}
+
+.mv-thumb {
+  border-radius: 6px;
+  background-color: alpha(currentColor, 0.08);
 }
 
 .mini-art {
