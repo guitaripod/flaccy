@@ -26,7 +26,8 @@ fi
 
 echo "Syncing sources to $REMOTE:$REMOTE_DIR..."
 rsync -a --delete --exclude target \
-  "$HERE/Cargo.toml" "$HERE/Cargo.lock" "$HERE/src" "$HERE/shared" "$HERE/library" "$HERE/server" "$HERE/data" \
+  "$HERE/Cargo.toml" "$HERE/Cargo.lock" "$HERE/src" "$HERE/shared" "$HERE/library" "$HERE/server" \
+  "$HERE/server-core" "$HERE/server-core-ffi" "$HERE/server-embed-ffi" "$HERE/soak" "$HERE/data" \
   "$HERE/install.sh" "$HERE/README.md" "$HERE/LICENSE" \
   "$REMOTE:$REMOTE_DIR/"
 
