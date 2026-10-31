@@ -56,7 +56,7 @@ final class TrialReminderScheduler {
     }
 
     func disable() {
-        cancelAll()
+        Task { await cancelAll() }
         UserDefaults.standard.set(false, forKey: Self.enabledKey)
         MidgarLog.info("Trial reminders disabled", category: .purchases)
     }
@@ -67,16 +67,16 @@ final class TrialReminderScheduler {
     /// are off.
     func refresh() async {
         guard isEnabled else {
-            cancelAll()
+            await cancelAll()
             return
         }
         let manager = PurchaseManager.shared
         guard !manager.state.isPurchased else {
-            cancelAll()
+            await cancelAll()
             return
         }
         guard manager.state != .trialNotStarted else {
-            cancelAll()
+            await cancelAll()
             return
         }
         guard !manager.trialClockIsOverridden else {
@@ -94,8 +94,8 @@ final class TrialReminderScheduler {
         await replacePending(with: wanted, welcomeBackEnds: TrialRunway.lapsedOfferEnd(start: start))
     }
 
-    func cancelAll() {
-        center.removePendingNotificationRequests(withIdentifiers: Self.identifiers)
+    func cancelAll() async {
+        await PendingNotifications.remove(withIdentifiers: Self.identifiers)
     }
 
     func hasPendingRequests() async -> Bool {
@@ -141,7 +141,7 @@ final class TrialReminderScheduler {
     }
 
     private func replacePending(with reminders: [TrialRunway.Reminder], welcomeBackEnds: Date) async {
-        cancelAll()
+        await cancelAll()
         for request in Self.requests(for: reminders, welcomeBackEnds: welcomeBackEnds) {
             do {
                 try await center.add(request)

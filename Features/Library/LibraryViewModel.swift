@@ -110,7 +110,7 @@ final class LibraryViewModel {
     private(set) var filter: LibraryFilter = .persisted
     private(set) var source: LibrarySource? = LibrarySource.persisted(key: LibrarySource.iosStorageKey)
 
-    struct TrackMeta {
+    nonisolated struct TrackMeta: Sendable {
         let track: Track
         let dateAdded: Date
         let lastPlayed: Date?
@@ -143,39 +143,70 @@ final class LibraryViewModel {
 
     var trackMeta: [String: TrackMeta] {
         let key = ObjectIdentifier(library)
-        Self.sharedMetaLock.lock()
-        if let cached = Self.sharedMeta[key] {
-            Self.sharedMetaLock.unlock()
-            return cached
-        }
-        let generation = Self.sharedMetaGeneration
-        Self.sharedMetaLock.unlock()
+        let (cached, generation) = Self.sharedMetaState(for: key)
+        if let cached { return cached }
+        Self.noteMetaBuild()
+        return Self.storeSharedMeta(Self.buildTrackMeta(), for: key, generation: generation)
+    }
 
+    /// Builds the shared track metadata off the main actor when a library
+    /// change has dropped it, so the snapshot that follows finds it ready.
+    /// Building it inside `buildSnapshot` read every track from the database
+    /// on the main thread, which froze a large library for seconds after each
+    /// change whenever a pivot or sort needed a date added or a last play.
+    func warmTrackMeta() async {
+        let key = ObjectIdentifier(library)
+        let (cached, generation) = Self.sharedMetaState(for: key)
+        guard cached == nil else { return }
+        Self.noteMetaBuild()
+        let map = await Self.buildTrackMetaOffMain()
+        _ = Self.storeSharedMeta(map, for: key, generation: generation)
+    }
+
+    private static func sharedMetaState(for key: ObjectIdentifier) -> ([String: TrackMeta]?, Int) {
+        sharedMetaLock.lock()
+        defer { sharedMetaLock.unlock() }
+        return (sharedMeta[key], sharedMetaGeneration)
+    }
+
+    /// Keeps `map` unless the library changed while it was being built, and
+    /// returns whichever map the cache now holds.
+    private static func storeSharedMeta(
+        _ map: [String: TrackMeta], for key: ObjectIdentifier, generation: Int
+    ) -> [String: TrackMeta] {
+        sharedMetaLock.lock()
+        defer { sharedMetaLock.unlock() }
+        if generation == sharedMetaGeneration {
+            sharedMeta[key] = map
+        }
+        return sharedMeta[key] ?? map
+    }
+
+    private static func noteMetaBuild() {
         #if DEBUG
-        Self.sharedMetaLock.lock()
-        Self.debugMetaBuildCount += 1
-        Self.sharedMetaLock.unlock()
+        sharedMetaLock.lock()
+        debugMetaBuildCount += 1
+        sharedMetaLock.unlock()
         #endif
+    }
 
+    @concurrent
+    nonisolated private static func buildTrackMetaOffMain() async -> [String: TrackMeta] {
+        buildTrackMeta()
+    }
+
+    nonisolated private static func buildTrackMeta() -> [String: TrackMeta] {
         var map = [String: TrackMeta]()
-        if let records = try? DatabaseManager.shared.fetchAllTracks() {
-            map.reserveCapacity(records.count)
-            for record in records {
-                map[record.fileURL] = TrackMeta(
-                    track: Track.from(record: record, artwork: nil),
-                    dateAdded: record.dateAdded,
-                    lastPlayed: record.lastPlayed
-                )
-            }
+        guard let records = try? DatabaseManager.shared.fetchAllTracks() else { return map }
+        map.reserveCapacity(records.count)
+        for record in records {
+            map[record.fileURL] = TrackMeta(
+                track: Track.from(record: record, artwork: nil),
+                dateAdded: record.dateAdded,
+                lastPlayed: record.lastPlayed
+            )
         }
-
-        Self.sharedMetaLock.lock()
-        if generation == Self.sharedMetaGeneration {
-            Self.sharedMeta[key] = map
-        }
-        let result = Self.sharedMeta[key] ?? map
-        Self.sharedMetaLock.unlock()
-        return result
+        return map
     }
 
     static func invalidateSharedMeta() {
@@ -471,6 +502,8 @@ final class LibraryViewModel {
         snapshotIntent = intent
         Task { @MainActor [weak self] in
             guard let self, epoch == self.snapshotEpoch else { return }
+            await self.warmTrackMeta()
+            guard epoch == self.snapshotEpoch else { return }
             self.snapshotPublisher.send(self.buildSnapshot())
         }
     }

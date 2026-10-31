@@ -20,6 +20,8 @@ use std::path::{Path, PathBuf};
 /// already on disk. Year and genre need no equivalent: `library::load` already
 /// falls back to a member's metadata row, and enrichment deliberately keeps
 /// asking Last.fm under the performing artist, which is the name it can answer.
+/// Releases whose credited row already has a cover are left out before the
+/// `MIN` reads a single BLOB, so an adoption pass costs what it adopts.
 const ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL: &str = "
     INSERT INTO albumInfo (title, artist, coverArtData)
     SELECT t.albumTitle, t.albumArtist, MIN(ai.coverArtData)
@@ -29,6 +31,12 @@ const ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL: &str = "
       AND t.albumArtist <> ''
       AND t.albumArtist <> t.artist
       AND ai.coverArtData IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM albumInfo credited
+          WHERE credited.title = t.albumTitle
+            AND credited.artist = t.albumArtist
+            AND credited.coverArtData IS NOT NULL
+      )
     GROUP BY t.albumTitle, t.albumArtist
     ON CONFLICT(title, artist) DO UPDATE SET coverArtData = excluded.coverArtData
     WHERE albumInfo.coverArtData IS NULL";

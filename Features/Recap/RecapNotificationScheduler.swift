@@ -133,7 +133,7 @@ final class RecapNotificationScheduler {
     func setFrequency(_ frequency: RecapNotificationFrequency) async -> Bool {
         UserDefaults.standard.set(frequency.rawValue, forKey: Self.frequencyKey)
         guard frequency != .off else {
-            center.removePendingNotificationRequests(withIdentifiers: [Self.periodicIdentifier, Self.yearlyIdentifier])
+            await PendingNotifications.remove(withIdentifiers: [Self.periodicIdentifier, Self.yearlyIdentifier])
             MidgarLog.info("Recap notifications turned off", category: .general)
             return true
         }
@@ -159,7 +159,7 @@ final class RecapNotificationScheduler {
     func refreshSchedule(force: Bool = false) async {
         let frequency = frequency
         guard frequency != .off else {
-            center.removePendingNotificationRequests(withIdentifiers: [Self.periodicIdentifier, Self.yearlyIdentifier])
+            await PendingNotifications.remove(withIdentifiers: [Self.periodicIdentifier, Self.yearlyIdentifier])
             return
         }
 
@@ -173,7 +173,7 @@ final class RecapNotificationScheduler {
             return
         }
 
-        center.removePendingNotificationRequests(withIdentifiers: [Self.periodicIdentifier, Self.yearlyIdentifier])
+        await PendingNotifications.remove(withIdentifiers: [Self.periodicIdentifier, Self.yearlyIdentifier])
         await schedulePeriodic(frequency: frequency)
         await scheduleYearly()
         UserDefaults.standard.set(Date(), forKey: Self.lastRefreshKey)

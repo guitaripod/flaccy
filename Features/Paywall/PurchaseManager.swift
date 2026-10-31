@@ -554,7 +554,7 @@ final class PurchaseManager {
         MidgarLog.info("Entitlement state \(state) -> \(newState)", category: .purchases)
         state = newState
         if newState.isPurchased {
-            TrialReminderScheduler.shared.cancelAll()
+            Task { await TrialReminderScheduler.shared.cancelAll() }
         }
         NotificationCenter.default.post(name: Self.stateDidChange, object: nil)
     }

@@ -8,7 +8,7 @@ nonisolated extension Track {
     /// path is resolved under the library folder.
     static func fileURL(forStoredPath path: String) -> URL {
         if let song = RemoteTrackPath(path: path) { return song.assetURL }
-        return LibraryPaths.root.appendingPathComponent(path)
+        return LibraryPaths.root.appendingPathComponent(path, isDirectory: false)
     }
 
     static func from(record: TrackRecord, artwork: PlatformImage?) -> Track {

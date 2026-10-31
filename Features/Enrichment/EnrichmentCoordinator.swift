@@ -73,6 +73,8 @@ actor EnrichmentCoordinator {
     private static var isScreenshotLaunch: Bool {
         #if DEBUG && (targetEnvironment(simulator) || os(macOS))
         ScreenshotSeeder.isActive
+        #elseif DEBUG
+        ScanBench.isRunning
         #else
         false
         #endif

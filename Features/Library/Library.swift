@@ -60,6 +60,7 @@ protocol LibraryProviding: AnyObject {
     var allTracks: [Track] { get }
     var isLoading: Bool { get }
     var isRestoringIndexedLibrary: Bool { get }
+    var isListingPartial: Bool { get }
     var loadProgress: LibraryLoadProgress { get }
     var loadFraction: Double { get }
     func reload() async
@@ -132,6 +133,18 @@ final class Library: LibraryProviding {
     var isRestoringIndexedLibrary: Bool {
         LibraryStartupProbe.hadIndexedLibrary && !hasSettledFirstLoad
     }
+
+    /// True while `albums` holds the songs a first scan has read so far rather
+    /// than the whole library. Anything that would forget a song because it is
+    /// missing (a watch request, a wantlist entry) waits until this is false;
+    /// the final `didUpdateNotification` of the scan always comes after it.
+    private(set) var isListingPartial = false
+
+    /// Set while a scan that started from an empty library is reading tags, the
+    /// window in which `publishListingIfDue()` shows the songs found so far.
+    private var listingScan: LiveListingPace?
+    private var isListingInFlight = false
+    private var listingGeneration = 0
 
     private var revisedVersions: [URL: TrackVersion] = [:]
     private(set) var isLoading: Bool = false {
@@ -209,7 +222,9 @@ final class Library: LibraryProviding {
         }
 
         emitProgress(force: true) { $0.phase = .findingFiles }
+        if albums.isEmpty { listingScan = LiveListingPace(began: .now) }
         let sync = await syncFilesWithDatabase()
+        endListingScan()
         let syncChanged = sync.changed
 
         let rereads = syncChanged || (firstLoad && albums.isEmpty)
@@ -226,6 +241,7 @@ final class Library: LibraryProviding {
         }
 
         hasSettledFirstLoad = true
+        isListingPartial = false
         NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
         isLoading = false
 
@@ -234,6 +250,31 @@ final class Library: LibraryProviding {
             Task.detached(priority: .utility) { PreviousVersions.purgeExpired(now: Date()) }
         }
         scheduleRevisionPass(for: sync.indexedOnDisk)
+    }
+
+    /// Shows a first scan's songs while it is still reading tags, so a large
+    /// library is browsable and playable seconds into its first scan instead
+    /// of after its last file. `LiveListingPace` keeps the rebuilds rare
+    /// enough that the screens redrawing never add up to a stall, and a
+    /// listing that finishes after the scan has moved on is dropped.
+    private func publishListingIfDue() async {
+        guard let pace = listingScan, !isListingInFlight, pace.isDue(at: .now) else { return }
+        isListingInFlight = true
+        let generation = listingGeneration
+        let loaded = try? await fetchAlbumsFromDatabase(resolvingCredits: false)
+        isListingInFlight = false
+        guard let loaded, !loaded.isEmpty, generation == listingGeneration, listingScan != nil else { return }
+        listingScan?.noteListed(at: .now)
+        adopt(loaded)
+        isListingPartial = true
+        hasSettledFirstLoad = true
+        MidgarLog.info("Listing while scanning: \(albums.count) albums, \(allTracks.count) tracks", category: .content)
+        NotificationCenter.default.post(name: Library.didUpdateNotification, object: nil)
+    }
+
+    private func endListingScan() {
+        listingScan = nil
+        listingGeneration += 1
     }
 
     /// Shows whatever was indexed on a previous run before any disk work
@@ -429,7 +470,7 @@ final class Library: LibraryProviding {
                 $0.total = knownPaths.count
                 $0.tracksIndexed = knownPaths.count
             }
-            return LibrarySyncResult(changed: false, indexedOnDisk: indexedOnDisk)
+            return LibrarySyncResult(changed: false, indexedOnDisk: indexedOnDisk.subtracting(ScanJournal.quarantinedPaths()))
         }
 
         if !removedPaths.isEmpty {
@@ -457,6 +498,7 @@ final class Library: LibraryProviding {
 
         let newCount = newPaths.count
         let alreadyIndexed = knownPaths.count - removedPaths.count
+        let covers = ScanCoverLedger()
         emitProgress(force: true) {
             $0.phase = .readingTags
             $0.completed = 0
@@ -464,72 +506,121 @@ final class Library: LibraryProviding {
             $0.tracksIndexed = alreadyIndexed
         }
 
-        await withTaskGroup(of: TrackRecord?.self) { group in
-            var pending = newPaths.makeIterator()
-            var inflight = 0
-            let maxInflight = 8
-            func addNext(_ group: inout TaskGroup<TrackRecord?>) -> Bool {
+        let journal = ScanJournal(onDisk: diskPaths)
+        let filedByName = newPaths.intersection(journal.quarantined)
+        let alone = newPaths.intersection(journal.replay.suspects).subtracting(filedByName)
+        let together = newPaths.subtracting(filedByName).subtracting(alone)
+        var buffer: [TrackRecord] = []
+        var read = 0
+        func collect(_ record: TrackRecord) {
+            read += 1
+            let done = read
+            emitProgress {
+                $0.completed = done
+                $0.tracksIndexed = alreadyIndexed + done
+            }
+            buffer.append(record)
+            guard buffer.count >= Self.insertBatchSize else { return }
+            insertBatch(buffer)
+            buffer.removeAll(keepingCapacity: true)
+        }
+
+        for relPath in filedByName.sorted() {
+            let fileURL = documentsDirectory.appendingPathComponent(relPath, isDirectory: false)
+            collect(Self.trackRecord(relPath, metadata: MetadataService.metadataFromPath(of: fileURL)))
+        }
+        for relPath in alone.sorted() {
+            journal.note(ScanJournalReplay.aloneMark, relPath)
+            let record = await readTrackRecord(relPath, covers: covers)
+            journal.note(ScanJournalReplay.doneMark, relPath)
+            collect(record)
+        }
+        await withTaskGroup(of: TrackRecord.self) { group in
+            var pending = together.makeIterator()
+            func addNext() -> Bool {
                 guard let relPath = pending.next() else { return false }
-                let fileURL = documentsDirectory.appendingPathComponent(relPath)
                 group.addTask {
-                    let metadata = await MetadataService.extractMetadata(from: fileURL)
-                    let fingerprint = AudioFingerprinter.quickFingerprint(of: fileURL)
-                    let signature = fingerprint == nil ? nil : AudioFingerprinter.signature(of: fileURL)
-                    return TrackRecord(
-                        fileURL: relPath,
-                        title: metadata.title,
-                        artist: metadata.artist,
-                        albumTitle: metadata.albumTitle,
-                        albumArtist: metadata.albumArtist,
-                        trackNumber: metadata.trackNumber,
-                        duration: metadata.duration,
-                        artworkData: metadata.artwork?.jpegData(compressionQuality: 0.8),
-                        lastFMArtworkURL: nil,
-                        musicBrainzID: nil,
-                        albumMusicBrainzID: nil,
-                        dateAdded: Date(),
-                        lastPlayed: nil,
-                        playCount: 0,
-                        aiAnalyzed: false,
-                        analysisAttemptedAt: nil,
-                        codec: metadata.codec,
-                        bitDepth: metadata.bitDepth,
-                        sampleRate: metadata.sampleRate,
-                        channels: metadata.channels,
-                        fileSize: signature?.size,
-                        fileModifiedMs: signature?.modifiedMilliseconds,
-                        audioFingerprint: fingerprint
-                    )
+                    journal.note(ScanJournalReplay.readingMark, relPath)
+                    let record = await self.readTrackRecord(relPath, covers: covers)
+                    journal.note(ScanJournalReplay.doneMark, relPath)
+                    return record
                 }
                 return true
             }
-            while inflight < maxInflight && addNext(&group) { inflight += 1 }
-
-            var buffer: [TrackRecord] = []
-            var read = 0
+            var inflight = 0
+            while inflight < Self.readersInFlight && addNext() { inflight += 1 }
             for await record in group {
-                read += 1
-                inflight -= 1
-                emitProgress {
-                    $0.completed = read
-                    $0.tracksIndexed = alreadyIndexed + read
-                }
-                if addNext(&group) { inflight += 1 }
-                guard let record else { continue }
-                buffer.append(record)
-                if buffer.count >= Self.insertBatchSize {
-                    insertBatch(buffer)
-                    buffer.removeAll(keepingCapacity: true)
-                }
+                collect(record)
+                _ = addNext()
             }
-            insertBatch(buffer)
         }
+        insertBatch(buffer)
+        journal.close()
 
         MidgarLog.info("Sync: \(diskPaths.count) files on disk, \(newPaths.count) new, \(removedPaths.count) removed", category: .content)
-        return LibrarySyncResult(changed: true, indexedOnDisk: diskPaths)
+        return LibrarySyncResult(changed: true, indexedOnDisk: diskPaths.subtracting(journal.quarantined))
+    }
+
+    /// Reads one new file into a row: its tags within `tagReadLimit`, its
+    /// cover only while the album still lacks one, and the cheap fingerprint.
+    nonisolated private func readTrackRecord(_ relPath: String, covers: ScanCoverLedger) async -> TrackRecord {
+        let fileURL = documentsDirectory.appendingPathComponent(relPath, isDirectory: false)
+        let metadata = await MetadataService.extractMetadata(
+            from: fileURL,
+            within: Self.tagReadLimit,
+            wantsArtwork: { covers.needsCover(albumTitle: $0, artist: $1) }
+        )
+        let artworkData = metadata.artwork?.jpegData(compressionQuality: 0.8)
+        if artworkData != nil {
+            covers.noteCovered(albumTitle: metadata.albumTitle, artist: metadata.artist)
+        }
+        let fingerprint = AudioFingerprinter.quickFingerprint(of: fileURL)
+        let signature = fingerprint == nil ? nil : AudioFingerprinter.signature(of: fileURL)
+        return Self.trackRecord(
+            relPath, metadata: metadata, artworkData: artworkData, signature: signature, fingerprint: fingerprint
+        )
+    }
+
+    nonisolated private static func trackRecord(
+        _ relPath: String,
+        metadata: Track,
+        artworkData: Data? = nil,
+        signature: FileSignature? = nil,
+        fingerprint: String? = nil
+    ) -> TrackRecord {
+        TrackRecord(
+            fileURL: relPath,
+            title: metadata.title,
+            artist: metadata.artist,
+            albumTitle: metadata.albumTitle,
+            albumArtist: metadata.albumArtist,
+            trackNumber: metadata.trackNumber,
+            duration: metadata.duration,
+            artworkData: artworkData,
+            lastFMArtworkURL: nil,
+            musicBrainzID: nil,
+            albumMusicBrainzID: nil,
+            dateAdded: Date(),
+            lastPlayed: nil,
+            playCount: 0,
+            aiAnalyzed: false,
+            analysisAttemptedAt: nil,
+            codec: metadata.codec,
+            bitDepth: metadata.bitDepth,
+            sampleRate: metadata.sampleRate,
+            channels: metadata.channels,
+            fileSize: signature?.size,
+            fileModifiedMs: signature?.modifiedMilliseconds,
+            audioFingerprint: fingerprint
+        )
     }
 
     private nonisolated static let insertBatchSize = 50
+    private nonisolated static let readersInFlight = 8
+
+    /// How long one file's tags may take before it is filed by its name: far
+    /// beyond any healthy read, even of a large file on a slow device.
+    private nonisolated static let tagReadLimit: Duration = .seconds(20)
 
     #if os(macOS)
     private nonisolated static let rootIdentityKey = "flaccy.mac.libraryRootIdentity"
@@ -554,6 +645,7 @@ final class Library: LibraryProviding {
         } catch {
             MidgarLog.error("Insert tracks error: \(error.localizedDescription)", category: .database)
         }
+        Task { @MainActor [weak self] in await self?.publishListingIfDue() }
     }
 
     /// Announces the covers this batch just hoisted into `albumInfo`, so the
@@ -581,17 +673,20 @@ final class Library: LibraryProviding {
 
     private func loadFromDatabase(resolvingCredits: Bool = true) async {
         do {
-            let loadedAlbums = try await fetchAlbumsFromDatabase(resolvingCredits: resolvingCredits)
-            albums = loadedAlbums
-            allTracks = loadedAlbums.flatMap(\.tracks)
-            revisedVersions = Dictionary(
-                allTracks.compactMap { track in TrackVersion(track: track).map { (track.fileURL, $0) } },
-                uniquingKeysWith: { first, _ in first }
-            )
+            adopt(try await fetchAlbumsFromDatabase(resolvingCredits: resolvingCredits))
             recordIndexedLibrary()
         } catch {
             MidgarLog.error("Load from DB failed: \(error.localizedDescription)", category: .database)
         }
+    }
+
+    private func adopt(_ loadedAlbums: [Album]) {
+        albums = loadedAlbums
+        allTracks = loadedAlbums.flatMap(\.tracks)
+        revisedVersions = Dictionary(
+            allTracks.compactMap { track in TrackVersion(track: track).map { (track.fileURL, $0) } },
+            uniquingKeysWith: { first, _ in first }
+        )
     }
 
     /// What the library knows of a song's versions right now, or nil for a song

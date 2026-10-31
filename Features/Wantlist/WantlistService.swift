@@ -79,8 +79,11 @@ final class WantlistService {
     /// Crosses off wanted rows the library now covers and announces the wins.
     /// Gap and upgrade rows describe an already-owned album, so they resolve
     /// when the deficiency disappears (album completed / re-ripped lossless),
-    /// and quietly retire if the album leaves the library altogether.
+    /// and quietly retire if the album leaves the library altogether. A first
+    /// scan's partial listing is never settled against: it would retire an
+    /// album the scan has not read yet.
     func resolveAgainstLibrary() {
+        guard !Library.shared.isListingPartial else { return }
         let albums = Library.shared.albums
         let ownership = WantlistOwnership(albums: albums, tracks: Library.shared.allTracks)
         let openDeficiencies = Set(Self.localSuggestions(albums: albums).map(\.normKey))

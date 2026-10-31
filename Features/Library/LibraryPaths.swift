@@ -11,9 +11,17 @@ nonisolated enum LibraryPaths {
         #if os(macOS)
         LibraryRoot.current
         #else
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+        documentsRoot
         #endif
     }
+
+    #if !os(macOS)
+    /// The Documents folder, looked up once: it cannot move while the app
+    /// runs, and every row of every library load asks for it through
+    /// `Track.from`, where asking `FileManager` each time cost a launch seconds.
+    private static let documentsRoot =
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
+    #endif
 
     /// The slash-separated path of `url` under the root, the key a track is
     /// stored and synced under, in the Unicode form the watch sync uses on the Mac.

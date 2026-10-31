@@ -10,7 +10,13 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        #if DEBUG
+        ScanBench.prepare()
+        #endif
         FlaccyMidgar.configureLogging()
+        #if DEBUG
+        ScanBench.start()
+        #endif
         FlaccyMidgar.shared.start()
         ReviewPrompt.beginSession()
         do {
@@ -21,17 +27,29 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 
         UNUserNotificationCenter.current().delegate = self
         EqualizerEngine.shared.start()
-        WatchSyncService.shared.activate()
+        if !Self.isScanBench {
+            WatchSyncService.shared.activate()
+        }
         PurchaseManager.shared.start()
         ServerSyncBackgroundRefresh.register()
         ServerSyncLifecycle.shared.launched()
 
-        Task {
-            await AudioPlayer.shared.retryPendingScrobbles()
-            ListenHistorySync.shared.start()
+        if !Self.isScanBench {
+            Task {
+                await AudioPlayer.shared.retryPendingScrobbles()
+                ListenHistorySync.shared.start()
+            }
         }
 
         return true
+    }
+
+    private static var isScanBench: Bool {
+        #if DEBUG
+        ScanBench.isRunning
+        #else
+        false
+        #endif
     }
 }
 

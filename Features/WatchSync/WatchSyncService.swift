@@ -443,10 +443,11 @@ final class WatchSyncService: NSObject {
     }
 
     /// Withdraws requests whose track is gone from the library, but only once
-    /// the library has something in it: an empty library at launch means
-    /// "not loaded yet", and acting on it would forget everything requested.
+    /// the whole library is on hand: an empty library at launch means "not
+    /// loaded yet", and a first scan's partial listing is missing the songs it
+    /// has not read; acting on either would forget what was requested.
     func refreshRequestedFromLibrary() {
-        guard !Library.shared.allTracks.isEmpty else { return }
+        guard !Library.shared.allTracks.isEmpty, !Library.shared.isListingPartial else { return }
         var orphans: [String] = []
         for stem in ledger.requested {
             if let track = track(forStem: stem) {

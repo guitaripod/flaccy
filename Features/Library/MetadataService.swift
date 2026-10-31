@@ -1,5 +1,6 @@
 import FlaccyCore
 import FlaccyEngine
+import MidgarCore
 import Foundation
 
 #if canImport(UIKit)
@@ -11,14 +12,29 @@ import AppKit
 enum MetadataService {
 
     nonisolated static func extractMetadata(from url: URL) async -> Track {
-        let result = await AudioMetadataReader.read(from: url)
+        await extractMetadata(from: url, wantsArtwork: { _, _ in true })
+    }
 
+    /// Reads the file's tags, loading its picture only when `wantsArtwork`
+    /// asks for it with the album title and artist the track will be filed
+    /// under (the tags, or the folders and the "Unknown" names standing in).
+    nonisolated static func extractMetadata(
+        from url: URL,
+        wantsArtwork: @escaping @Sendable (_ albumTitle: String, _ artist: String) -> Bool
+    ) async -> Track {
         let pathInfo = parsePathInfo(from: url)
+        let result = await AudioMetadataReader.read(from: url) { albumTitle, artist in
+            wantsArtwork(
+                albumTitle ?? pathInfo.album ?? unknownAlbum,
+                artist ?? pathInfo.artist ?? unknownArtist
+            )
+        }
+
         let fileInfo = parseFilename(url.deletingPathExtension().lastPathComponent)
 
         let title = result.title ?? fileInfo.title
-        let artist = result.artist ?? pathInfo.artist ?? "Unknown Artist"
-        let albumTitle = result.albumTitle ?? pathInfo.album ?? "Unknown Album"
+        let artist = result.artist ?? pathInfo.artist ?? unknownArtist
+        let albumTitle = result.albumTitle ?? pathInfo.album ?? unknownAlbum
         let trackNumber = result.trackNumber > 0 ? result.trackNumber : fileInfo.trackNumber
         let artwork = result.artworkData.flatMap(PlatformImage.init(data:))
 
@@ -38,6 +54,50 @@ enum MetadataService {
             channels: result.channels
         )
     }
+
+    /// Reads the tags as `extractMetadata(from:wantsArtwork:)` does, or files
+    /// the song under what its name and folders say once `limit` passes, so a
+    /// file the decoder cannot get through never holds a scan up.
+    nonisolated static func extractMetadata(
+        from url: URL,
+        within limit: Duration,
+        wantsArtwork: @escaping @Sendable (_ albumTitle: String, _ artist: String) -> Bool
+    ) async -> Track {
+        if let read = await Deadline.value(within: limit, { await extractMetadata(from: url, wantsArtwork: wantsArtwork) }) {
+            return read
+        }
+        MidgarLog.notice(
+            "Tags of \(url.lastPathComponent) were not read within \(limit); filed by its name and folders",
+            category: .content
+        )
+        return metadataFromPath(of: url)
+    }
+
+    /// A track built from the file's name and the folders it sits in, with the
+    /// format read from its header, for a file whose tags could not be read.
+    nonisolated static func metadataFromPath(of url: URL) -> Track {
+        let pathInfo = parsePathInfo(from: url)
+        let fileInfo = parseFilename(url.deletingPathExtension().lastPathComponent)
+        let format = AudioMetadataReader.readFormat(from: url)
+        return Track(
+            fileURL: url,
+            title: fileInfo.title,
+            artist: pathInfo.artist ?? unknownArtist,
+            albumTitle: pathInfo.album ?? unknownAlbum,
+            albumArtist: nil,
+            trackNumber: fileInfo.trackNumber,
+            duration: 0,
+            artwork: nil,
+            dbID: nil,
+            codec: format.codec,
+            bitDepth: format.bitDepth,
+            sampleRate: format.sampleRate,
+            channels: format.channels
+        )
+    }
+
+    nonisolated private static let unknownArtist = "Unknown Artist"
+    nonisolated private static let unknownAlbum = "Unknown Album"
 
     /// What a fresh read of the file says, shaped for refreshing its existing track row.
     nonisolated static func refresh(from url: URL) async -> TrackMetadataRefresh {

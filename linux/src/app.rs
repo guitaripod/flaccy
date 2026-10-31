@@ -15,6 +15,7 @@ use flaccy_shared::home::{self, ContextKind, PlaybackContext, RecentContexts};
 use flaccy_shared::home_copy;
 use flaccy_shared::import_plan;
 use flaccy_shared::library_debut::DebutSummary;
+use flaccy_shared::live_listing::LiveListingPace;
 use flaccy_shared::track_revision::copy;
 use gtk::glib;
 use std::cell::{Cell, RefCell};
@@ -23,7 +24,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub struct AppCore {
     pub db: Db,
@@ -75,6 +76,14 @@ pub struct AppCore {
     building_albums: Cell<bool>,
     reload_in_flight: Cell<bool>,
     reload_pending: Cell<bool>,
+    /// Set while a scan that started from an empty library reads tags, the
+    /// window in which `list_while_scanning` shows the songs read so far.
+    listing_pace: RefCell<Option<LiveListingPace>>,
+    listing_in_flight: Cell<bool>,
+    listing_generation: Cell<u64>,
+    /// Whether the library on show is a scan's partial listing rather than a
+    /// full load, so the next listing may replace it.
+    listing_partial: Cell<bool>,
     /// Whether an earlier launch already indexed a library, read once from the
     /// database before any disk work starts.
     had_indexed_library: bool,
@@ -189,6 +198,10 @@ impl AppCore {
             building_albums: Cell::new(false),
             reload_in_flight: Cell::new(false),
             reload_pending: Cell::new(false),
+            listing_pace: RefCell::new(None),
+            listing_in_flight: Cell::new(false),
+            listing_generation: Cell::new(0),
+            listing_partial: Cell::new(false),
             had_indexed_library,
             first_load_settled: Cell::new(false),
             job: RefCell::new(JobProgress::idle()),
@@ -387,6 +400,7 @@ impl AppCore {
                 ),
             );
             *core.library.borrow_mut() = Rc::new(library);
+            core.listing_partial.set(false);
             core.first_load_settled.set(true);
             core.refresh_previous_versions();
             core.record_library_debut();
@@ -400,6 +414,65 @@ impl AppCore {
                 core.reload_library();
             }
         });
+    }
+
+    /// Shows a first scan's songs while it is still reading tags, so a large
+    /// library is browsable and playable seconds into its first scan instead
+    /// of after its last file, as on the Apple clients. Only while the library
+    /// on show is empty or an earlier listing; `LiveListingPace` keeps the
+    /// rebuilds rare, and a listing that lands after the scan ended is dropped
+    /// for the full load that follows it. Album credits are left to that load,
+    /// which resolves them while nothing else writes.
+    fn list_while_scanning(self: &Rc<Self>) {
+        let due = self
+            .listing_pace
+            .borrow()
+            .is_some_and(|pace| pace.is_due(Instant::now()));
+        let replaceable = self.listing_partial.get() || self.library.borrow().tracks.is_empty();
+        if !due || !replaceable || self.listing_in_flight.replace(true) {
+            return;
+        }
+        let generation = self.listing_generation.get();
+        let db_path = self.db_path.clone();
+        let group_album_editions = self.config.borrow().group_album_editions;
+        let (tx, rx) = async_channel::bounded::<Library>(1);
+        std::thread::Builder::new()
+            .name("flaccy-listing".into())
+            .spawn(move || {
+                let Ok(db) = Db::open(&db_path) else { return };
+                let _ = tx.send_blocking(library::load(&db, group_album_editions));
+            })
+            .ok();
+        let core = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let received = rx.recv().await;
+            core.listing_in_flight.set(false);
+            let Ok(library) = received else { return };
+            let current = generation == core.listing_generation.get();
+            if !current || library.tracks.is_empty() {
+                return;
+            }
+            if let Some(pace) = core.listing_pace.borrow_mut().as_mut() {
+                pace.note_listed(Instant::now());
+            }
+            crate::logger::info(
+                "library",
+                &format!(
+                    "listing while scanning: {} tracks, {} albums",
+                    library.tracks.len(),
+                    library.albums.len()
+                ),
+            );
+            *core.library.borrow_mut() = Rc::new(library);
+            core.listing_partial.set(true);
+            core.first_load_settled.set(true);
+            core.hub.emit(&AppEvent::LibraryReloaded);
+        });
+    }
+
+    fn end_listing_scan(&self) {
+        self.listing_pace.borrow_mut().take();
+        self.listing_generation.set(self.listing_generation.get() + 1);
     }
 
     /// Whether Home must hold its first frame: an earlier launch indexed a
@@ -666,6 +739,9 @@ impl AppCore {
             return;
         }
         self.scanning.set(true);
+        if self.library.borrow().tracks.is_empty() {
+            *self.listing_pace.borrow_mut() = Some(LiveListingPace::new(Instant::now()));
+        }
         self.hub.emit(&AppEvent::ScanStarted);
         let (tx, rx) = async_channel::unbounded::<ScanEvent>();
         scanner::spawn_scan(self.music_root(), self.db_path.clone(), tx);
@@ -674,12 +750,17 @@ impl AppCore {
             while let Ok(event) = rx.recv().await {
                 match event {
                     ScanEvent::Progress(progress) => {
+                        let reading = progress.phase == LoadPhase::ReadingTags;
                         core.hub.emit(&AppEvent::ScanProgress(progress));
+                        if reading {
+                            core.list_while_scanning();
+                        }
                     }
                     ScanEvent::CoversHoisted(covers) => {
                         core.hub.emit(&AppEvent::AlbumCoversHoisted(covers));
                     }
                     ScanEvent::Done { added, removed } => {
+                        core.end_listing_scan();
                         core.scanning.set(false);
                         if added > 0 || removed > 0 {
                             let indexed = core.library.borrow().tracks.len();
@@ -700,6 +781,7 @@ impl AppCore {
                     ScanEvent::Retagged => core.reload_library(),
                     ScanEvent::Failed(message) => {
                         crate::logger::error("library", &format!("scan failed: {message}"));
+                        core.end_listing_scan();
                         core.scanning.set(false);
                         crate::enrichment::request_background_pass(&core);
                         core.hub.emit(&AppEvent::ScanFinished {

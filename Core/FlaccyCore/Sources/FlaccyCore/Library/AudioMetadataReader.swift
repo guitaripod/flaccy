@@ -61,6 +61,16 @@ public enum AudioMetadataReader {
     }
 
     public static func read(from url: URL) async -> Result {
+        await read(from: url, wantsArtwork: { _, _ in true })
+    }
+
+    /// Reads the file, asking `wantsArtwork` with the album and artist tags
+    /// before the picture's bytes are loaded, so a scan that already holds this
+    /// album's cover never reads or decodes the same picture again.
+    public static func read(
+        from url: URL,
+        wantsArtwork: @Sendable (_ albumTitle: String?, _ artist: String?) -> Bool
+    ) async -> Result {
         let asset = AVURLAsset(url: url)
         let duration: TimeInterval
         let metadata: LoadedMetadata
@@ -79,18 +89,20 @@ public enum AudioMetadataReader {
         async let albumTask = stringValue(for: .commonIdentifierAlbumName, in: metadata.items)
         async let albumArtistTask = albumArtistValue(from: metadata.items)
         async let trackTask = trackNumberValue(from: metadata.items)
-        async let artworkTask = artworkData(from: metadata.items)
 
         let format = readFormat(from: url)
+        let albumTitle = await albumTask
+        let artist = await artistTask
+        let artwork = wantsArtwork(albumTitle, artist) ? await artworkData(from: metadata.items) : nil
 
         return Result(
             title: await titleTask,
-            artist: await artistTask,
-            albumTitle: await albumTask,
+            artist: artist,
+            albumTitle: albumTitle,
             albumArtist: await albumArtistTask,
             trackNumber: await trackTask,
             duration: duration.isNaN ? 0 : duration,
-            artworkData: await artworkTask,
+            artworkData: artwork,
             codec: format.codec,
             bitDepth: format.bitDepth,
             sampleRate: format.sampleRate,
