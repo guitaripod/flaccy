@@ -17,6 +17,7 @@ use crate::catalog::Catalog;
 use crate::config::Config;
 use crate::credentials::{CredentialStore, Credentials};
 use crate::native::{machine_name, BearerThrottle, LiveHub};
+use crate::scan_progress::ScanProgress;
 use crate::security::{self, DeviceId};
 use crate::store::Store;
 use crate::sync::{self, migrate_legacy, DeviceRenamer};
@@ -80,6 +81,8 @@ pub struct Shared {
     pub sync: sync::Store,
     /// Each user's stars, ratings and plays, as the OpenSubsonic calls show them.
     pub views: UserViews,
+    /// How far the running scan has got.
+    pub scan: ScanProgress,
     /// What the OpenSubsonic logins remember about identities.
     pub rest_identities: RestIdentities,
     /// The open live-channel sockets and the presence they share.
@@ -153,6 +156,7 @@ impl AppState {
             security,
             sync,
             views: UserViews::default(),
+            scan: ScanProgress::default(),
             rest_identities: RestIdentities::default(),
             live: LiveHub::new(),
             ffmpeg: options.ffmpeg,

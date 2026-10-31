@@ -190,6 +190,10 @@ async fn identity_calls_describe_the_server() {
     }
     assert!(!extensions.envelope.supports("transcoding"));
 
+    let idle = server.json("getScanStatus", "").await;
+    assert_eq!(idle.raw["scanStatus"]["scanning"], false);
+    assert!(idle.raw["scanStatus"]["count"].as_u64().unwrap() > 0);
+
     let folders = server.json("getMusicFolders", "").await;
     assert_eq!(folders.envelope.music_folders.unwrap().music_folder.unwrap()[0].id, Some(1));
 

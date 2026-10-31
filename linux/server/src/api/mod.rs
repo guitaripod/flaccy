@@ -158,6 +158,7 @@ async fn dispatch(call: &Call<'_>, parts: &Parts) -> Result<Outcome, ApiError> {
         "getopensubsonicextensions" => system::extensions(),
         "getuser" => system::user(call)?,
         "getmusicfolders" => system::music_folders(),
+        "getscanstatus" => system::scan_status(call),
         "getindexes" => browse::indexes(call),
         "getartists" => browse::artists(call),
         "getartist" => browse::artist(call)?,

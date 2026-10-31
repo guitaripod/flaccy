@@ -37,6 +37,12 @@ pub(super) fn extensions() -> Fields {
     )
 }
 
+/// `getScanStatus`: whether a scan is running and how many songs the library holds so far.
+pub(super) fn scan_status(call: &Call<'_>) -> Fields {
+    let scan = call.state.0.scan.snapshot();
+    one("scanStatus", json!({"scanning": scan.scanning, "count": scan.indexed}))
+}
+
 /// `getUser`: the calling user. Roles for features the server does not offer are false.
 pub(super) fn user(call: &Call<'_>) -> Result<Fields, ApiError> {
     if let Some(asked) = call.params.get("username") {

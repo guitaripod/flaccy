@@ -40,6 +40,7 @@ pub mod request;
 pub mod restore;
 pub mod runner;
 pub mod retention;
+pub mod scan_progress;
 pub mod security;
 pub mod service;
 pub mod setup;

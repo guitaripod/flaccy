@@ -313,6 +313,7 @@ async fn report(state: &AppState, account: Option<credentials::Credentials>) -> 
         .store
         .state("lastScanAt")
         .map(|at| json!({ "at": at, "summary": state.0.store.state("lastScanSummary").unwrap_or_default() }));
+    let scanning = crate::scan_progress::current_for_status(state).map(|(read, total)| json!({ "read": read, "total": total }));
     let keys: Vec<Value> = account
         .as_ref()
         .map(|account| account.keys.iter().map(|key| json!({ "name": key.name, "created": key.created })).collect())
@@ -325,6 +326,7 @@ async fn report(state: &AppState, account: Option<credentials::Credentials>) -> 
         "dataFolder": config.data_dir().display().to_string(),
         "library": { "songs": songs, "albums": albums, "artists": artists, "playlists": state.0.store.playlist_count() },
         "lastScan": last_scan,
+        "scanning": scanning,
         "account": account_block,
         "apiKeys": keys,
         "backup": { "lastAt": last_backup.last_at, "ok": last_backup.last_ok, "error": last_backup.last_error },
@@ -358,6 +360,9 @@ fn print_report(report: &Value) {
         "Library:      {} songs, {} albums, {} artists, {} playlists",
         library["songs"], library["albums"], library["artists"], library["playlists"]
     ));
+    if let (Some(read), Some(total)) = (report["scanning"]["read"].as_u64(), report["scanning"]["total"].as_u64()) {
+        say(&format!("Scanning:     {}", crate::scan_progress::status_line(read as usize, total as usize)));
+    }
     match report["lastScan"].as_object() {
         Some(scan) => say(&format!("Last scan:    {} ({})", text(&scan["at"]), text(&scan["summary"]))),
         None => say("Last scan:    never; run `flaccy-server scan` or `flaccy-server serve`"),

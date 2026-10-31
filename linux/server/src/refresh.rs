@@ -2,16 +2,24 @@
 //! three seconds after the last change, whenever the music folder changes.
 
 use std::path::Path;
-use std::time::Duration;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use flaccy_library::logger;
-use flaccy_library::scanner::{spawn_scan, ScanEvent};
+use flaccy_library::scanner::{spawn_scan_with, ScanEvent, ScanOptions};
 use notify::{EventKind, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 
+use crate::scan_progress::ScanReporter;
 use crate::state::AppState;
 
 const SETTLE: Duration = Duration::from_secs(3);
+/// How long one background scan may spend hashing the audio of files that have no MD5 of their own, before it
+/// lets the next change to the music folder in.
+const FINGERPRINT_SLICE: Duration = Duration::from_secs(60);
+/// The pause between two slices of that hashing.
+const FINGERPRINT_PAUSE: Duration = Duration::from_secs(1);
 
 /// What one scan and revision pass found.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -20,6 +28,8 @@ pub struct ScanSummary {
     pub removed: usize,
     pub new_versions: usize,
     pub retagged: bool,
+    /// Songs whose audio still has to be fingerprinted by a later background scan.
+    pub backlog: usize,
     pub failure: Option<String>,
 }
 
@@ -29,11 +39,15 @@ impl ScanSummary {
         match &self.failure {
             Some(failure) => format!("scan failed: {failure}"),
             None => format!(
-                "scan finished: {} added, {} removed, {} new versions{}, {songs} songs in the library",
+                "scan finished: {} added, {} removed, {} new versions{}, {songs} songs in the library{}",
                 self.added,
                 self.removed,
                 self.new_versions,
-                if self.retagged { ", tags refreshed" } else { "" }
+                if self.retagged { ", tags refreshed" } else { "" },
+                match self.backlog {
+                    0 => String::new(),
+                    left => format!("; {} still being fingerprinted in the background", crate::setup::grouped(left)),
+                }
             ),
         }
     }
@@ -42,23 +56,42 @@ impl ScanSummary {
 /// Scans the music folder, runs the revision pass behind it and rebuilds the
 /// catalog. Blocks until all of it is done, so call it from a blocking thread.
 pub fn refresh_now(state: &AppState) -> ScanSummary {
+    refresh_with(state, ScanOptions::default())
+}
+
+/// [`refresh_now`] for the running server: the hashing of audio that has no MD5 of its own gets a minute at a
+/// time, so a change to the music folder is never kept waiting for hours behind a first scan.
+fn refresh_slice(state: &AppState) -> ScanSummary {
+    refresh_with(
+        state,
+        ScanOptions { revision_budget: Some(FINGERPRINT_SLICE), backlog: Some(Arc::new(AtomicUsize::new(0))) },
+    )
+}
+
+fn refresh_with(state: &AppState, options: ScanOptions) -> ScanSummary {
     let _only_one = state
         .0
         .refresh_gate
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let (sender, receiver) = async_channel::unbounded();
-    spawn_scan(
+    let backlog = options.backlog.clone();
+    spawn_scan_with(
         state.music_root().to_path_buf(),
         state.0.config.database_path(),
         sender,
+        options,
     );
     let mut summary = ScanSummary::default();
+    state.0.scan.begin();
+    let mut reporter = ScanReporter::new(Instant::now());
     while let Ok(event) = receiver.recv_blocking() {
         match event {
             ScanEvent::Done { added, removed } => {
                 summary.added = added;
                 summary.removed = removed;
+                reporter.finished(state);
+                state.rebuild_catalog();
             }
             ScanEvent::Revised(paths) => summary.new_versions = paths.len(),
             ScanEvent::Retagged => summary.retagged = true,
@@ -68,10 +101,15 @@ pub fn refresh_now(state: &AppState) -> ScanSummary {
                     state.music_root().display()
                 ));
             }
-            ScanEvent::Progress(_) | ScanEvent::CoversHoisted(_) => {}
+            ScanEvent::Progress(progress) => reporter.observe(state, &progress),
+            ScanEvent::CoversHoisted(_) => {}
         }
     }
-    state.rebuild_catalog();
+    summary.backlog = backlog.map_or(0, |left| left.load(Ordering::SeqCst));
+    reporter.finished(state);
+    if summary.backlog == 0 || summary.retagged || summary.new_versions > 0 {
+        state.rebuild_catalog();
+    }
     let songs = state.catalog().song_count();
     let line = summary.describe(songs);
     match summary.failure {
@@ -86,27 +124,46 @@ pub fn refresh_now(state: &AppState) -> ScanSummary {
     summary
 }
 
-async fn refresh_in_background(state: &AppState) {
+async fn refresh_in_background(state: &AppState) -> usize {
     let state = state.clone();
-    if let Err(err) = tokio::task::spawn_blocking(move || refresh_now(&state)).await {
-        logger::error(
-            "server",
-            &format!("the scan thread stopped unexpectedly: {err}; the next change to the music folder starts a new one"),
-        );
+    match tokio::task::spawn_blocking(move || refresh_slice(&state)).await {
+        Ok(summary) => summary.backlog,
+        Err(err) => {
+            logger::error(
+                "server",
+                &format!("the scan thread stopped unexpectedly: {err}; the next change to the music folder starts a new one"),
+            );
+            0
+        }
     }
 }
 
 /// Scans once at start, then again after every burst of changes to the music
-/// folder, until the task is dropped. Runs the scans on blocking threads so
-/// requests are never held up.
+/// folder, until the task is dropped, and keeps going through the hashing a big
+/// first scan leaves behind. Runs the scans on blocking threads so requests are
+/// never held up.
 pub async fn keep_current(state: AppState) {
     let (sender, mut changes) = mpsc::unbounded_channel::<()>();
     let _watcher = watch_folder(&state, sender);
-    refresh_in_background(&state).await;
-    while changes.recv().await.is_some() {
-        while let Ok(Some(())) = tokio::time::timeout(SETTLE, changes.recv()).await {}
-        logger::info("server", "the music folder changed; scanning");
-        refresh_in_background(&state).await;
+    let mut backlog = refresh_in_background(&state).await;
+    loop {
+        let changed = if backlog > 0 {
+            match tokio::time::timeout(FINGERPRINT_PAUSE, changes.recv()).await {
+                Ok(None) => return,
+                Ok(Some(())) => true,
+                Err(_) => false,
+            }
+        } else {
+            match changes.recv().await {
+                Some(()) => true,
+                None => return,
+            }
+        };
+        if changed {
+            while let Ok(Some(())) = tokio::time::timeout(SETTLE, changes.recv()).await {}
+            logger::info("server", "the music folder changed; scanning");
+        }
+        backlog = refresh_in_background(&state).await;
     }
 }
 
