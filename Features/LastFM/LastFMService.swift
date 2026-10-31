@@ -79,12 +79,9 @@ nonisolated final class LastFMService: @unchecked Sendable {
             callbackURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
                 let session = ASWebAuthenticationSession(
                     url: authURL,
-                    callbackURLScheme: "flaccy"
-                ) { url, error in
-                    if let error { continuation.resume(throwing: error) }
-                    else if let url { continuation.resume(returning: url) }
-                    else { continuation.resume(throwing: LastFMError.authenticationFailed) }
-                }
+                    callbackURLScheme: "flaccy",
+                    completionHandler: Self.completionHandler(resuming: continuation)
+                )
                 let contextProvider = WebAuthContextProvider(anchor: anchor)
                 session.presentationContextProvider = contextProvider
                 session.prefersEphemeralWebBrowserSession = false
@@ -125,6 +122,18 @@ nonisolated final class LastFMService: @unchecked Sendable {
         username = session["name"] as? String
         MidgarLog.info("Last.fm authentication successful", category: .auth)
         NotificationCenter.default.post(name: Self.authDidChange, object: nil)
+    }
+
+    /// The completion handler of the web sign-in. Apple calls it on its own XPC queue, so it is built outside the
+    /// main-actor `authenticate` and must not inherit that isolation.
+    private nonisolated static func completionHandler(
+        resuming continuation: CheckedContinuation<URL, Error>
+    ) -> ASWebAuthenticationSession.CompletionHandler {
+        { url, error in
+            if let error { continuation.resume(throwing: error) }
+            else if let url { continuation.resume(returning: url) }
+            else { continuation.resume(throwing: LastFMError.authenticationFailed) }
+        }
     }
 
     /// Cancels and forgets any sign-in session left over from an earlier
