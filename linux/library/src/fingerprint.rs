@@ -35,6 +35,22 @@ pub fn fingerprint(path: &Path) -> Option<String> {
     track_revision::fingerprint(&location, digest.as_deref())
 }
 
+/// The fingerprint a first scan can take without reading the audio: a FLAC's own MD5 sits in its header. `None`
+/// for every other format and for a FLAC whose MD5 was never set, which only hashing all of the audio can
+/// identify; the revision pass does that in the background so the music is listed first.
+pub fn quick_fingerprint(path: &Path) -> Option<String> {
+    let mut file = File::open(path).ok()?;
+    let size = file.metadata().ok()?.len();
+    let location = {
+        let mut read = |offset: u64, length: usize| read_at(&mut file, offset, length);
+        audio_payload::locate(size, &mut read)
+    };
+    match location {
+        Location::FlacMd5(_) => track_revision::fingerprint(&location, None),
+        Location::Ranges(_) => None,
+    }
+}
+
 fn read_at(file: &mut File, offset: u64, length: usize) -> Vec<u8> {
     let mut buffer = Vec::new();
     if file.seek(SeekFrom::Start(offset)).is_err() {

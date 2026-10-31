@@ -5,9 +5,12 @@ use lofty::file::{AudioFile, FileType, TaggedFile, TaggedFileExt};
 use lofty::prelude::*;
 use lofty::tag::ItemKey;
 use flaccy_shared::track_revision::{self, Outcome};
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// Held for the whole revision pass, so a scan started while the previous one
 /// is still fingerprinting waits for it and then finds the rows already settled
@@ -39,11 +42,27 @@ pub enum ScanEvent {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct RevisionReport {
     pub baseline: usize,
+    /// Files that still have to be fingerprinted because the time budget ran out.
+    pub backlog: usize,
     pub retagged: usize,
     pub new_versions: Vec<String>,
 }
 
+/// How a scan differs from the default of the desktop client.
+#[derive(Clone, Default)]
+pub struct ScanOptions {
+    /// How long the revision pass behind the scan may spend fingerprinting files whose audio has to be read to
+    /// the end; what it leaves undone is counted in `backlog` and taken up by the next scan. `None` finishes it.
+    pub revision_budget: Option<Duration>,
+    /// Receives how many files the budget left unfingerprinted.
+    pub backlog: Option<Arc<AtomicUsize>>,
+}
+
 pub fn spawn_scan(root: PathBuf, db_path: PathBuf, tx: async_channel::Sender<ScanEvent>) {
+    spawn_scan_with(root, db_path, tx, ScanOptions::default());
+}
+
+pub fn spawn_scan_with(root: PathBuf, db_path: PathBuf, tx: async_channel::Sender<ScanEvent>, options: ScanOptions) {
     std::thread::Builder::new()
         .name("flaccy-scan".into())
         .spawn(move || {
@@ -53,7 +72,7 @@ pub fn spawn_scan(root: PathBuf, db_path: PathBuf, tx: async_channel::Sender<Sca
                         added: outcome.added,
                         removed: outcome.removed,
                     });
-                    announce_revisions(&root, &db_path, &outcome.files, &tx);
+                    announce_revisions(&root, &db_path, &outcome.files, &tx, &options);
                 }
                 Err(message) => {
                     let _ = tx.send_blocking(ScanEvent::Failed(message));
@@ -76,9 +95,14 @@ fn announce_revisions(
     db_path: &Path,
     files: &[PathBuf],
     tx: &async_channel::Sender<ScanEvent>,
+    options: &ScanOptions,
 ) {
     let Ok(db) = Db::open(db_path) else { return };
-    let report = run_revision_pass(root, &db, files);
+    let deadline = options.revision_budget.map(|budget| Instant::now() + budget);
+    let report = run_revision_pass_until(root, &db, files, deadline);
+    if let Some(backlog) = &options.backlog {
+        backlog.store(report.backlog, Ordering::SeqCst);
+    }
     if report.baseline + report.retagged + report.new_versions.len() > 0 {
         crate::logger::info(
             "library",
@@ -98,6 +122,12 @@ fn announce_revisions(
     }
 }
 
+/// [`run_revision_pass_until`] with no time limit.
+#[cfg(test)]
+pub(crate) fn run_revision_pass(root: &Path, db: &Db, files: &[PathBuf]) -> RevisionReport {
+    run_revision_pass_until(root, db, files, None)
+}
+
 /// Looks at every file that is both on disk and already indexed. A file whose
 /// size and modification time match what is stored is not read; one that moved
 /// is fingerprinted, and `track_revision` decides whether only its tags
@@ -105,7 +135,10 @@ fn announce_revisions(
 /// did (the row is refreshed and its revision goes up). A file that changed
 /// again while it was being read, or cannot be read as audio yet, is left for
 /// the next scan.
-pub(crate) fn run_revision_pass(root: &Path, db: &Db, files: &[PathBuf]) -> RevisionReport {
+///
+/// With a `deadline`, files whose audio has still to be read are left once it has passed and counted in
+/// `backlog`, for the next scan to take up.
+pub(crate) fn run_revision_pass_until(root: &Path, db: &Db, files: &[PathBuf], deadline: Option<Instant>) -> RevisionReport {
     let _held = REVISION_PASS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let stored = db.fetch_stored_versions();
     let mut report = RevisionReport::default();
@@ -119,6 +152,10 @@ pub(crate) fn run_revision_pass(root: &Path, db: &Db, files: &[PathBuf]) -> Revi
             continue;
         };
         if !track_revision::needs_inspection(known, &signature) {
+            continue;
+        }
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            report.backlog += 1;
             continue;
         }
         let digest = fingerprint::fingerprint(path);
@@ -208,7 +245,7 @@ fn run_scan(
 
     let mut batch = InsertBatch::new(&db);
 
-    for (index, path) in to_add.iter().enumerate() {
+    read_in_order(root, &to_add, |index, rel, track| {
         if index % 25 == 0 || index + 1 == total {
             progress.completed = index + 1;
             progress.tracks_indexed = already_indexed + added;
@@ -218,8 +255,7 @@ fn run_scan(
                 let _ = tx.send_blocking(ScanEvent::CoversHoisted(std::mem::take(&mut hoisted)));
             }
         }
-        let rel = relative_path(root, path);
-        match read_track(path, &rel) {
+        match track {
             Some(track) => {
                 let cover = track.artwork.is_some() && !track.album.is_empty();
                 if let Err(err) = batch.insert(&track) {
@@ -235,7 +271,7 @@ fn run_scan(
                 crate::logger::warn("library", &format!("skipped unreadable audio: {rel}"));
             }
         }
-    }
+    });
     batch.commit();
     if !hoisted.is_empty() {
         let _ = tx.send_blocking(ScanEvent::CoversHoisted(hoisted));
@@ -256,6 +292,73 @@ fn run_scan(
         removed,
         files,
     })
+}
+
+/// How many files are read at once. A cold file on an SD card, a NAS or a
+/// network share costs a round trip of its own, so reading them one by one
+/// leaves the volume idle; eight in flight read a slow volume many times
+/// faster and still leave a fast one to the processor.
+const TAG_READERS: usize = 8;
+
+/// How far the readers may run ahead of the file the scan is waiting for, so
+/// the tracks held in memory (each may carry a cover) stay few.
+const READ_AHEAD: usize = 32;
+
+/// Lets the readers go when the scan stops waiting for them, even by panicking.
+struct ReleaseReaders<'a>(&'a AtomicUsize);
+
+impl Drop for ReleaseReaders<'_> {
+    fn drop(&mut self) {
+        self.0.store(usize::MAX / 2, Ordering::SeqCst);
+    }
+}
+
+/// Reads `paths` on [`TAG_READERS`] threads and hands each result to `consume`
+/// in the order of `paths`, with its relative path, so rows are inserted exactly
+/// as a one-by-one scan would insert them. A file that panics the reader counts
+/// as unreadable.
+fn read_in_order<F>(root: &Path, paths: &[&PathBuf], mut consume: F)
+where
+    F: FnMut(usize, &str, Option<NewTrack>),
+{
+    if paths.is_empty() {
+        return;
+    }
+    let claimed = AtomicUsize::new(0);
+    let consumed = AtomicUsize::new(0);
+    let (sender, receiver) = mpsc::channel::<(usize, Option<NewTrack>)>();
+    std::thread::scope(|scope| {
+        for _ in 0..TAG_READERS.min(paths.len()) {
+            let sender = sender.clone();
+            let (claimed, consumed) = (&claimed, &consumed);
+            scope.spawn(move || loop {
+                let index = claimed.fetch_add(1, Ordering::SeqCst);
+                if index >= paths.len() {
+                    break;
+                }
+                while index >= consumed.load(Ordering::SeqCst).saturating_add(READ_AHEAD) {
+                    std::thread::sleep(Duration::from_millis(2));
+                }
+                let rel = relative_path(root, paths[index]);
+                let track = catch_unwind(AssertUnwindSafe(|| read_track_deferring_audio_hash(paths[index], &rel))).unwrap_or(None);
+                if sender.send((index, track)).is_err() {
+                    break;
+                }
+            });
+        }
+        drop(sender);
+        let _release = ReleaseReaders(&consumed);
+        let mut waiting: BTreeMap<usize, Option<NewTrack>> = BTreeMap::new();
+        let mut next = 0;
+        for (index, track) in receiver {
+            waiting.insert(index, track);
+            while let Some(track) = waiting.remove(&next) {
+                consume(next, &relative_path(root, paths[next]), track);
+                next += 1;
+                consumed.store(next, Ordering::SeqCst);
+            }
+        }
+    });
 }
 
 const INSERT_BATCH_SIZE: usize = 200;
@@ -347,10 +450,23 @@ pub(crate) fn relative_path(root: &Path, path: &Path) -> String {
 
 /// A new file's tags together with the signature and fingerprint that baseline
 /// it, so the first re-export is told apart from the original.
+#[cfg(test)]
 fn read_track(path: &Path, rel_path: &str) -> Option<NewTrack> {
     let mut track = read_metadata(path, rel_path)?;
     track.signature = fingerprint::signature(path);
     track.fingerprint = fingerprint::fingerprint(path);
+    Some(track)
+}
+
+/// [`read_track`] for a scan: a file whose audio would have to be read to the end to fingerprint it is stored
+/// without signature or fingerprint, which the revision pass behind the scan takes for a file never baselined and
+/// fingerprints in the background, so the library lists the music after the tags alone.
+fn read_track_deferring_audio_hash(path: &Path, rel_path: &str) -> Option<NewTrack> {
+    let mut track = read_metadata(path, rel_path)?;
+    if let Some(fingerprint) = fingerprint::quick_fingerprint(path) {
+        track.signature = fingerprint::signature(path);
+        track.fingerprint = Some(fingerprint);
+    }
     Some(track)
 }
 
@@ -630,6 +746,158 @@ mod tests {
         drop(db);
         drop(reader);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+    mod parallel_reading {
+        use super::super::*;
+        use crate::fingerprint::fixtures::{info_tags, tone, wav_bytes, TempDir};
+
+        fn library_of(count: usize) -> (TempDir, PathBuf) {
+            let dir = TempDir::new("parallel-scan");
+            let root = dir.path().join("music");
+            for number in 0..count {
+                let folder = root.join(format!("Artist {:02}", number % 7)).join(format!("Album {:02}", number % 3));
+                std::fs::create_dir_all(&folder).unwrap();
+                let tags = info_tags(&format!("Song {number:03}"), &format!("Artist {:02}", number % 7), &format!("Album {:02}", number % 3));
+                std::fs::write(folder.join(format!("{number:03}.wav")), wav_bytes(&tone(2000 + number, 5), Some(&tags))).unwrap();
+            }
+            (dir, root)
+        }
+
+        fn paths_in_insertion_order(db_path: &Path) -> Vec<String> {
+            let mut rows = Db::open(db_path).unwrap().fetch_all_tracks();
+            rows.sort_by_key(|row| row.id);
+            rows.into_iter().map(|row| row.rel_path).collect()
+        }
+
+        fn scan(root: &Path, db_path: &Path) -> (usize, Vec<usize>) {
+            let (sender, receiver) = async_channel::unbounded();
+            let outcome = run_scan(root, db_path, &sender).expect("scan");
+            drop(sender);
+            let mut completed = Vec::new();
+            while let Ok(event) = receiver.try_recv() {
+                if let ScanEvent::Progress(progress) = event {
+                    completed.push(progress.completed);
+                }
+            }
+            (outcome.added, completed)
+        }
+
+        #[test]
+        fn rows_are_inserted_in_listing_order_however_the_readers_interleave() {
+            let (dir, root) = library_of(90);
+            let db_path = dir.path().join("data/library.sqlite");
+            let (added, completed) = scan(&root, &db_path);
+            assert_eq!(added, 90);
+            let listed: Vec<String> = collect_audio_files(&root).iter().map(|path| relative_path(&root, path)).collect();
+            assert_eq!(paths_in_insertion_order(&db_path), listed);
+            assert!(completed.windows(2).all(|pair| pair[0] <= pair[1]), "{completed:?}");
+            assert_eq!(completed.last(), Some(&90));
+        }
+
+        #[test]
+        fn an_unreadable_file_is_skipped_and_its_neighbours_still_land_in_order() {
+            let (dir, root) = library_of(40);
+            std::fs::write(root.join("Artist 00").join("Album 00").join("000.wav"), b"RIFF not a wave").unwrap();
+            let db_path = dir.path().join("data/library.sqlite");
+            let (added, _) = scan(&root, &db_path);
+            assert_eq!(added, 39);
+            let paths = paths_in_insertion_order(&db_path);
+            let listed: Vec<String> = collect_audio_files(&root)
+                .iter()
+                .map(|path| relative_path(&root, path))
+                .filter(|path| path != "Artist 00/Album 00/000.wav")
+                .collect();
+            assert_eq!(paths, listed);
+        }
+
+        #[test]
+        fn nothing_to_read_returns_without_starting_readers() {
+            let mut calls = 0;
+            read_in_order(Path::new("/nonexistent"), &[], |_, _, _| calls += 1);
+            assert_eq!(calls, 0);
+        }
+    }
+    mod deferred_hashing {
+        use super::super::*;
+        use crate::fingerprint::fixtures::{info_tags, tone, wav_bytes, TempDir};
+
+        fn flac_header(md5: [u8; 16]) -> Vec<u8> {
+            let mut bytes = b"fLaC".to_vec();
+            bytes.extend_from_slice(&[0x80, 0, 0, 34]);
+            let mut info = vec![0u8; 34];
+            info[18..34].copy_from_slice(&md5);
+            bytes.extend_from_slice(&info);
+            bytes.extend_from_slice(&[0u8; 64]);
+            bytes
+        }
+
+        fn scanned_wavs(count: usize) -> (TempDir, PathBuf, PathBuf) {
+            let dir = TempDir::new("deferred");
+            let root = dir.path().join("music");
+            std::fs::create_dir_all(&root).unwrap();
+            for number in 0..count {
+                let tags = info_tags(&format!("Song {number}"), "Band", "Record");
+                std::fs::write(root.join(format!("{number}.wav")), wav_bytes(&tone(3000 + number, 5), Some(&tags))).unwrap();
+            }
+            let db_path = dir.path().join("data/library.sqlite");
+            let (sender, _receiver) = async_channel::unbounded();
+            run_scan(&root, &db_path, &sender).expect("scan");
+            (dir, root, db_path)
+        }
+
+        #[test]
+        fn only_a_flac_with_an_md5_is_fingerprinted_without_reading_its_audio() {
+            let dir = TempDir::new("quick");
+            let with_md5 = dir.path().join("with.flac");
+            let without_md5 = dir.path().join("without.flac");
+            let wave = dir.path().join("song.wav");
+            std::fs::write(&with_md5, flac_header([7u8; 16])).unwrap();
+            std::fs::write(&without_md5, flac_header([0u8; 16])).unwrap();
+            std::fs::write(&wave, wav_bytes(&tone(2000, 3), None)).unwrap();
+            assert_eq!(fingerprint::quick_fingerprint(&with_md5).as_deref(), Some("flac:07070707070707070707070707070707"));
+            assert_eq!(fingerprint::quick_fingerprint(&without_md5), None);
+            assert_eq!(fingerprint::quick_fingerprint(&wave), None);
+        }
+
+        #[test]
+        fn a_scan_lists_files_that_need_their_audio_hashed_and_leaves_the_hash_to_the_revision_pass() {
+            let (_dir, root, db_path) = scanned_wavs(5);
+            let db = Db::open(&db_path).unwrap();
+            assert_eq!(db.fetch_all_tracks().len(), 5);
+            assert!(db.fetch_stored_versions().values().all(|version| version.signature.is_none() && version.fingerprint.is_none()));
+
+            let files = collect_audio_files(&root);
+            let first = run_revision_pass(&root, &db, &files);
+            assert_eq!((first.baseline, first.retagged, first.backlog, first.new_versions.len()), (5, 0, 0, 0));
+            assert!(db.fetch_stored_versions().values().all(|version| version.signature.is_some() && version.fingerprint.is_some()));
+            assert_eq!(run_revision_pass(&root, &db, &files), RevisionReport::default());
+        }
+
+        #[test]
+        fn a_spent_budget_leaves_the_hashing_counted_for_the_next_scan() {
+            let (_dir, root, db_path) = scanned_wavs(4);
+            let db = Db::open(&db_path).unwrap();
+            let files = collect_audio_files(&root);
+
+            let none_done = run_revision_pass_until(&root, &db, &files, Some(Instant::now()));
+            assert_eq!((none_done.baseline, none_done.backlog), (0, 4));
+            assert!(db.fetch_stored_versions().values().all(|version| version.fingerprint.is_none()));
+
+            let rest = run_revision_pass_until(&root, &db, &files, Some(Instant::now() + Duration::from_secs(60)));
+            assert_eq!((rest.baseline, rest.backlog), (4, 0));
+        }
+
+        #[test]
+        fn the_backlog_reaches_the_caller_through_the_options() {
+            let (dir, root, db_path) = scanned_wavs(3);
+            let backlog = Arc::new(AtomicUsize::new(99));
+            let (sender, receiver) = async_channel::unbounded();
+            let options = ScanOptions { revision_budget: Some(Duration::ZERO), backlog: Some(backlog.clone()) };
+            spawn_scan_with(root, db_path, sender, options);
+            while receiver.recv_blocking().is_ok() {}
+            assert_eq!(backlog.load(Ordering::SeqCst), 3);
+            drop(dir);
+        }
     }
     mod revision_pass {
         use super::super::*;
