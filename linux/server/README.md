@@ -37,6 +37,17 @@ The same steps by hand:
 4. In Flaccy, add a server and scan the QR code, or open the link on the device. The
    device receives a token of its own, shown once.
 
+The first scan of a big library is built to show music early. Tags are read eight files at a
+time, which matters most on an SD card, a NAS or a network share where each file costs a round
+trip, and what is indexed is listed in the apps while the scan goes on, then in full when the tags
+are read (a 7,400-song library on an exFAT SD card was listed in about a minute). Audio that has
+no checksum of its own, which is every MP3, Opus and WAV file and any FLAC whose encoder left its
+MD5 empty, is fingerprinted afterwards in the background, a minute at a time, so a new file in the
+music folder is never kept waiting behind it; that is what tells a re-exported mix from a retag.
+Progress is in the log (`flaccy.log` in the data folder, a line every fifteen seconds), in
+`flaccy-server status` (`Scanning:`, and the songs still to fingerprint in `Last scan:`) and in
+the OpenSubsonic call `getScanStatus`, whose `scanning` flag and `count` an app can poll.
+
 The server keeps each user's playlists, loves, ratings, preferences and listens and
 hands them to every device they enrolled; the wire contract is
 `docs/server/PROTOCOL.md` and the calls live under `/flaccy/v1`. The OpenSubsonic API

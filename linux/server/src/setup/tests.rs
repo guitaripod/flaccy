@@ -206,3 +206,29 @@ async fn an_interactive_run_asks_the_questions_in_order() {
     assert!(out.contains("Keep it running after you log out? [Y/n] "), "{out}");
     assert!(out.contains("Keeping it running after you log out... skipped."), "{out}");
 }
+
+#[test]
+fn a_ready_server_says_where_the_music_shows_up_and_a_mac_adds_the_firewall_hint() {
+    let sandbox = Sandbox::new("readiness");
+    let config = Config {
+        music_folder: sandbox.root.join("music"),
+        address: "127.0.0.1".to_owned(),
+        port: 4545,
+        data_dir: Some(sandbox.root.join("data")),
+        behind_proxy: false,
+        mode: crate::config::Mode::Easy,
+        lastfm: Default::default(),
+        hosts: Vec::new(),
+        backup_dir: None,
+    };
+    let mut mac = ScriptedTerminal::silent();
+    report_readiness(&mut mac, &config, Platform::MacOs, true);
+    assert!(mac.output.contains("ready.") && mac.output.contains("shows up in Flaccy as it is found"), "{}", mac.output);
+    assert!(mac.output.contains("choose Allow"), "{}", mac.output);
+    let mut linux = ScriptedTerminal::silent();
+    report_readiness(&mut linux, &config, Platform::Linux, true);
+    assert!(linux.output.contains("shows up in Flaccy as it is found") && !linux.output.contains("Allow"), "{}", linux.output);
+    let mut waiting = ScriptedTerminal::silent();
+    report_readiness(&mut waiting, &config, Platform::MacOs, false);
+    assert!(waiting.output.contains("started, but not answering yet.") && !waiting.output.contains("Allow"), "{}", waiting.output);
+}

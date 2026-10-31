@@ -255,7 +255,7 @@ fn counted(number: usize, one: &str, many: &str) -> String {
     format!("{} {}", grouped(number), if number == 1 { one } else { many })
 }
 
-fn grouped(number: usize) -> String {
+pub(crate) fn grouped(number: usize) -> String {
     let digits = number.to_string();
     let mut text = String::new();
     for (index, digit) in digits.chars().enumerate() {
@@ -322,7 +322,7 @@ async fn start_server(environment: &SetupEnvironment<'_>, terminal: &mut dyn Ter
     let home = ServiceHome { config_dir: environment.config_dir.clone(), home: environment.home.clone() };
     match service::install(environment.platform, environment.runner, &home, &spec) {
         Ok(installed) => {
-            report_readiness(terminal, config, probe::wait_for_hello(port, environment.ready_wait).await);
+            report_readiness(terminal, config, environment.platform, probe::wait_for_hello(port, environment.ready_wait).await);
             Some(installed)
         }
         Err(error) => {
@@ -332,9 +332,13 @@ async fn start_server(environment: &SetupEnvironment<'_>, terminal: &mut dyn Ter
     }
 }
 
-fn report_readiness(terminal: &mut dyn Terminal, config: &Config, ready: bool) {
+fn report_readiness(terminal: &mut dyn Terminal, config: &Config, platform: Platform, ready: bool) {
     if ready {
         terminal.say("ready.");
+        terminal.say("  Your music is indexed in the background and shows up in Flaccy as it is found; `flaccy-server status` shows how far it has got.");
+        if platform == Platform::MacOs {
+            terminal.say("  If macOS asks whether flaccy-server may accept incoming network connections, choose Allow; until then your other devices cannot reach it.");
+        }
     } else {
         terminal.say("started, but not answering yet.");
         terminal.say(&format!("  Its log is {}.", config.data_dir().join("flaccy.log").display()));
