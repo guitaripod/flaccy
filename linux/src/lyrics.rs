@@ -26,6 +26,10 @@ const LONGEST_RETRY_WAIT: f64 = 3.0;
 /// is community-contributed and grows.
 const MISS_TTL_DAYS: f64 = 30.0;
 
+/// A miss is stored already this many days old, at most, so a library fetched
+/// in one afternoon does not come due for a second pass all at once.
+const MISS_JITTER_DAYS: f64 = 7.5;
+
 /// One track's lyrics together with the listener's own timing correction.
 #[derive(Clone, Default)]
 pub struct Lyrics {
@@ -130,6 +134,14 @@ fn is_current(row: &LyricsRow) -> bool {
     } else {
         row.age_days <= MISS_TTL_DAYS
     }
+}
+
+/// Whether the track's lyrics need no lookup: a current answer is stored,
+/// found or missing.
+pub fn is_cached(db: &Db, track: &Track) -> bool {
+    db.fetch_lyrics(&track.title, &track.artist)
+        .as_ref()
+        .is_some_and(is_current)
 }
 
 fn found_or_missing(lyrics: Lyrics) -> LyricsResult {
@@ -239,6 +251,13 @@ fn resolve(
                             instrumental: false,
                             revision: REVISION,
                         },
+                    );
+                }
+                if let Some(db) = &db {
+                    let _ = db.age_lyrics(
+                        &track.title,
+                        &track.artist,
+                        rand::random::<f64>() * MISS_JITTER_DAYS,
                     );
                 }
                 crate::logger::info(
@@ -530,10 +549,23 @@ fn search_fallback(
 }
 
 /// One GET, retried once when the server is overloaded or throttling, waiting
-/// as long as it asks within reason. A 404 is an answer, not a failure.
+/// as long as it asks within reason. A 404 is an answer, not a failure. Every
+/// attempt waits its turn at the shared gate, and a 429 starts the gate's
+/// cooldown for the full time the server asked, so a request that would break
+/// that promise is not sent.
 fn request(agent: &ureq::Agent, ua: &str, url: &str) -> Reply {
+    request_through(&crate::precache::LRCLIB, agent, ua, url)
+}
+
+fn request_through(gate: &crate::precache::governor::Gate, agent: &ureq::Agent, ua: &str, url: &str) -> Reply {
     let mut last_failure = LyricsFailure::Unreachable;
     for attempt in 0..2 {
+        if gate
+            .wait_turn(Duration::from_secs_f64(LONGEST_RETRY_WAIT))
+            .is_err()
+        {
+            return Reply::Failed(LyricsFailure::Busy);
+        }
         match agent.get(url).set("User-Agent", ua).call() {
             Ok(response) => {
                 return response
@@ -542,16 +574,22 @@ fn request(agent: &ureq::Agent, ua: &str, url: &str) -> Reply {
                     .unwrap_or(Reply::Failed(LyricsFailure::Unreachable));
             }
             Err(ureq::Error::Status(404, _)) => return Reply::NotFound,
-            Err(ureq::Error::Status(code, response))
-                if attempt == 0 && (code == 429 || code >= 500) =>
-            {
-                let wait = response
+            Err(ureq::Error::Status(code, response)) if code == 429 || code >= 500 => {
+                let asked = response
                     .header("Retry-After")
                     .and_then(|value| value.trim().parse::<f64>().ok())
                     .unwrap_or(DEFAULT_RETRY_WAIT)
-                    .clamp(SHORTEST_RETRY_WAIT, LONGEST_RETRY_WAIT);
+                    .max(SHORTEST_RETRY_WAIT);
                 last_failure = LyricsFailure::from_status(code);
-                std::thread::sleep(Duration::from_secs_f64(wait));
+                if code == 429 {
+                    gate.throttled(Duration::from_secs_f64(asked));
+                }
+                if attempt == 1 {
+                    break;
+                }
+                if code != 429 {
+                    std::thread::sleep(Duration::from_secs_f64(asked.min(LONGEST_RETRY_WAIT)));
+                }
             }
             Err(err) => {
                 crate::logger::warn("lyrics", &format!("lrclib request failed: {err}"));
@@ -893,6 +931,86 @@ mod tests {
             ));
         }
         assert!(FLIGHTS.lock().unwrap().is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn stub(answer: &'static str) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::io::{BufRead, BufReader, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/api/get", listener.local_addr().unwrap());
+        let hits = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counted = std::sync::Arc::clone(&hits);
+        std::thread::spawn(move || {
+            for mut stream in listener.incoming().flatten() {
+                counted.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                loop {
+                    let mut line = String::new();
+                    if reader.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" {
+                        break;
+                    }
+                }
+                let _ = stream.write_all(answer.as_bytes());
+            }
+        });
+        (url, hits)
+    }
+
+    fn agent() -> ureq::Agent {
+        ureq::AgentBuilder::new().timeout(Duration::from_secs(5)).build()
+    }
+
+    #[test]
+    fn a_429_starts_a_cooldown_for_the_whole_time_asked_and_is_not_retried_inside_it() {
+        use crate::precache::governor::Gate;
+        let (url, hits) = stub("HTTP/1.1 429 Slow\r\nRetry-After: 60\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        let gate = Gate::new(Duration::from_millis(1));
+        let reply = request_through(&gate, &agent(), "test", &url);
+        assert!(matches!(reply, Reply::Failed(LyricsFailure::Busy)));
+        assert_eq!(hits.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(gate.cooldown_left() >= Duration::from_secs(59));
+    }
+
+    #[test]
+    fn nothing_is_sent_while_a_cooldown_is_running() {
+        use crate::precache::governor::Gate;
+        let (url, hits) = stub("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}");
+        let gate = Gate::new(Duration::from_millis(1));
+        gate.throttled(Duration::from_secs(60));
+        let reply = request_through(&gate, &agent(), "test", &url);
+        assert!(matches!(reply, Reply::Failed(LyricsFailure::Busy)));
+        assert_eq!(hits.load(std::sync::atomic::Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn an_answer_and_a_not_found_pass_through_the_gate() {
+        use crate::precache::governor::Gate;
+        let gate = Gate::new(Duration::from_millis(1));
+        let (found, _) = stub("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}");
+        assert!(matches!(request_through(&gate, &agent(), "test", &found), Reply::Body(body) if body == "{}"));
+        let (missing, _) = stub("HTTP/1.1 404 No\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        assert!(matches!(request_through(&gate, &agent(), "test", &missing), Reply::NotFound));
+    }
+
+    #[test]
+    fn a_miss_is_stored_up_to_a_week_old_and_a_found_answer_is_not_aged() {
+        let dir = scratch_dir("aged");
+        let db = Db::open(&dir.join("library.sqlite")).unwrap();
+        let miss = LyricsContent {
+            synced: None,
+            plain: None,
+            lyricsfile: None,
+            instrumental: false,
+            revision: REVISION,
+        };
+        db.save_lyrics("Song", "Artist", &miss).unwrap();
+        db.age_lyrics("Song", "Artist", 7.0).unwrap();
+        let aged = db.fetch_lyrics("Song", "Artist").unwrap();
+        assert!(aged.age_days > 6.99 && aged.age_days < 7.1, "{}", aged.age_days);
+        assert!(is_current(&aged));
+        db.age_lyrics("Song", "Artist", MISS_TTL_DAYS).unwrap();
+        assert!(!is_current(&db.fetch_lyrics("Song", "Artist").unwrap()));
+        assert!(!is_cached(&db, &track("x.flac")));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

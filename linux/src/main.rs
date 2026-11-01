@@ -31,6 +31,7 @@ mod mpris;
 mod musicvideo;
 mod palette;
 mod player;
+mod precache;
 pub(crate) use flaccy_library::recap;
 mod reexport_drill;
 mod remote;

@@ -55,6 +55,7 @@ pub struct AppCore {
     pub wantlist_in_flight: Cell<bool>,
     pub downloads: crate::downloads::DownloadHandle,
     pub music_video: crate::musicvideo::MusicVideoHandle,
+    pub precache: crate::precache::PrecacheHandle,
     /// GIO's reachability verdict, shared with the enrichment workers so an
     /// offline stretch suspends the job instead of burning attempts on it.
     pub network_available: Arc<AtomicBool>,
@@ -191,6 +192,7 @@ impl AppCore {
             wantlist_in_flight: Cell::new(false),
             downloads: crate::downloads::DownloadHandle::new(),
             music_video: crate::musicvideo::MusicVideoHandle::new(),
+            precache: crate::precache::PrecacheHandle::new(),
             network_available: Arc::new(AtomicBool::new(true)),
             enrich_in_flight: Cell::new(0),
             enrich_rerun: Cell::new(false),
@@ -671,6 +673,7 @@ impl AppCore {
         crate::enrichment::start(self);
         crate::downloads::start(self);
         crate::musicvideo::start(self);
+        crate::precache::start(self);
         self.wire_autoplay();
         self.rescan();
         self.start_remote();

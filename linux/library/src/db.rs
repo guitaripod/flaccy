@@ -43,8 +43,11 @@ const ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL: &str = "
 
 mod listens;
 mod remote;
+mod video_cache;
+
 pub use listens::{ListenTally, PulledListen};
 pub use remote::{ApplyReport, MissingCover, RemoteSongMeta};
+pub use video_cache::{VideoCacheRow, STATE_FAILED, STATE_PART, STATE_READY};
 
 /// The read-only twin of `ADOPT_COVERS_FOR_CREDITED_RELEASES_SQL`: yields a row
 /// exactly when that statement would insert a credited release's `albumInfo`
@@ -582,6 +585,25 @@ impl Db {
                 fetchedAt DATETIME NOT NULL,
                 UNIQUE(trackTitle, artist)
             );
+            CREATE TABLE IF NOT EXISTS videoCache (
+                videoId TEXT NOT NULL,
+                ceiling INTEGER NOT NULL,
+                height INTEGER NOT NULL DEFAULT 0,
+                codec TEXT NOT NULL DEFAULT '',
+                bytes INTEGER NOT NULL DEFAULT 0,
+                expectedBytes INTEGER NOT NULL DEFAULT 0,
+                state TEXT NOT NULL,
+                fileName TEXT NOT NULL DEFAULT '',
+                pinned BOOLEAN NOT NULL DEFAULT 0,
+                plays INTEGER NOT NULL DEFAULT 0,
+                createdAt INTEGER NOT NULL,
+                lastPlayedAt INTEGER,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                nextAttemptAt INTEGER,
+                failureClass TEXT,
+                failure TEXT,
+                PRIMARY KEY (videoId, ceiling)
+            ) WITHOUT ROWID;
             CREATE TABLE IF NOT EXISTS enrichmentState (
                 scope TEXT NOT NULL,
                 key TEXT NOT NULL,
@@ -1812,6 +1834,16 @@ impl Db {
         Ok(())
     }
 
+    /// Makes a stored answer look `days` older than it is.
+    pub fn age_lyrics(&self, title: &str, artist: &str, days: f64) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "UPDATE lyrics SET fetchedAt = datetime(fetchedAt, '-' || ?3 || ' days')
+             WHERE trackTitle = ?1 AND artist = ?2",
+            params![title, artist, days],
+        )?;
+        Ok(())
+    }
+
     pub fn save_lyrics_offset(
         &self,
         title: &str,
@@ -1840,6 +1872,19 @@ impl Db {
             params![title, artist, revision],
         )?;
         Ok(())
+    }
+
+    /// Every song with a video, as (title, artist, video id).
+    pub fn music_video_matches(&self) -> Vec<(String, String, String)> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT trackTitle, artist, videoId FROM musicVideos WHERE videoId IS NOT NULL AND videoId <> ''",
+        ) else {
+            return Vec::new();
+        };
+        let Ok(rows) = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))) else {
+            return Vec::new();
+        };
+        rows.flatten().collect()
     }
 
     pub fn fetch_music_video(&self, title: &str, artist: &str) -> Option<MusicVideoRow> {

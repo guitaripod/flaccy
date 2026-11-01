@@ -28,6 +28,7 @@ pub fn present(ui: &Rc<Ui>) {
     if musicvideo::available() {
         page.add(&music_video_group(ui));
     }
+    page.add(&prepare_group(ui));
     page.add(&library_group(ui));
     page.add(&metadata_group(ui));
     if lastfm::keys_available() {
@@ -508,6 +509,126 @@ fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     group.add(&remembered);
 
     group
+}
+
+/// Lyrics and music videos fetched before they are asked for: what is allowed,
+/// how much disk the videos may take, and what the background lanes are doing
+/// right now, refreshed while the page is open.
+fn prepare_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title("Prepare Ahead")
+        .description(
+            "Lyrics and music videos for the songs coming up are fetched before you reach them, \
+             at a pace the services accept, and paused whenever they ask for fewer requests",
+        )
+        .build();
+
+    let whole_library = adw::SwitchRow::builder()
+        .title("Lyrics for My Whole Library")
+        .subtitle(
+            "Asks lrclib about every song, which tells it your library's titles and artists. \
+             Off, only the queue and the songs you play are looked up",
+        )
+        .active(ui.core.config.borrow().precache_lyrics_library)
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        whole_library.connect_active_notify(move |row| {
+            ui.core.config.borrow_mut().precache_lyrics_library = row.is_active();
+            ui.core.save_config();
+            crate::precache::refresh(&ui.core);
+        });
+    }
+    group.add(&whole_library);
+
+    let lyrics_status = adw::ActionRow::builder().title("Lyrics").build();
+    group.add(&lyrics_status);
+
+    if !musicvideo::available() {
+        return group;
+    }
+
+    let videos = adw::SwitchRow::builder()
+        .title("Prepare Music Videos")
+        .subtitle("Downloads the videos of the songs coming up while the video lens is on")
+        .active(ui.core.config.borrow().precache_video)
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        videos.connect_active_notify(move |row| {
+            ui.core.config.borrow_mut().precache_video = row.is_active();
+            ui.core.save_config();
+            crate::precache::refresh(&ui.core);
+        });
+    }
+    group.add(&videos);
+
+    let limit = adw::SpinRow::with_range(
+        f64::from(crate::config::PRECACHE_VIDEO_CAP_MIN_GB),
+        f64::from(crate::config::PRECACHE_VIDEO_CAP_MAX_GB),
+        1.0,
+    );
+    limit.set_title("Video Limit (GB)");
+    limit.set_subtitle("The least likely to play go first once it is reached");
+    limit.set_value(f64::from(ui.core.config.borrow().precache_video_cap_gb));
+    {
+        let ui = Rc::clone(ui);
+        limit.connect_value_notify(move |row| {
+            ui.core.config.borrow_mut().precache_video_cap_gb = row.value().round() as u32;
+            ui.core.save_config();
+            crate::precache::refresh(&ui.core);
+        });
+    }
+    group.add(&limit);
+
+    let video_status = adw::ActionRow::builder().title("Videos").build();
+    let clear = gtk::Button::with_label("Clear");
+    clear.set_valign(gtk::Align::Center);
+    clear.add_css_class("destructive-action");
+    {
+        let ui = Rc::clone(ui);
+        clear.connect_clicked(move |_| {
+            musicvideo::clear_prepared(&ui.core);
+            ui.core.toast("Removing prepared music videos");
+        });
+    }
+    video_status.add_suffix(&clear);
+    group.add(&video_status);
+
+    render_prepare_status(ui, &lyrics_status, &video_status);
+    {
+        let ui = Rc::clone(ui);
+        let lyrics_status = lyrics_status.clone();
+        let video_status = video_status.clone();
+        glib::timeout_add_seconds_local(2, move || {
+            if lyrics_status.root().is_none() {
+                return glib::ControlFlow::Break;
+            }
+            render_prepare_status(&ui, &lyrics_status, &video_status);
+            glib::ControlFlow::Continue
+        });
+    }
+    group
+}
+
+fn render_prepare_status(ui: &Rc<Ui>, lyrics: &adw::ActionRow, videos: &adw::ActionRow) {
+    let status = crate::precache::status::snapshot();
+    let now = chrono::Utc::now().timestamp();
+    lyrics.set_subtitle(&crate::precache::status::lyrics_line(&status, now));
+    let (enabled, lens_on) = (
+        ui.core.config.borrow().precache_video,
+        ui.core.music_video.is_enabled(),
+    );
+    let line = crate::precache::status::video_line(&status, enabled, lens_on, now);
+    let held = match status.video_files {
+        0 => "nothing prepared yet".to_string(),
+        1 => format!("1 video, {}", crate::ui::servers::format_bytes(status.video_bytes)),
+        count => format!(
+            "{count} videos, {}",
+            crate::ui::servers::format_bytes(status.video_bytes)
+        ),
+    };
+    videos.set_subtitle(&format!("{line}\n{held}"));
 }
 
 /// Asks Ollama for its models off the main thread — a slow or unreachable

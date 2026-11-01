@@ -24,6 +24,14 @@ const PIPELINE_FLAGS: &str = "video+download";
 /// where `glsinkbin` can take the decoder's GL or DMA-BUF frames as they are.
 const GL_PIPELINE_FLAGS: &str = "video+download+native-video";
 
+/// A prepared file is already on the disk and seekable, so nothing is spooled.
+const FILE_PIPELINE_FLAGS: &str = "video";
+const GL_FILE_PIPELINE_FLAGS: &str = "video+native-video";
+
+fn is_local(url: &str) -> bool {
+    url.starts_with("file://")
+}
+
 type StateObserver = Box<dyn Fn(&StageState)>;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -98,6 +106,15 @@ pub fn register_sink() -> Result<(), String> {
     gstgtk4::plugin_register_static().map_err(|err| err.to_string())
 }
 
+fn pipeline_flags(gl: bool, local: bool) -> &'static str {
+    match (gl, local) {
+        (true, true) => GL_FILE_PIPELINE_FLAGS,
+        (false, true) => FILE_PIPELINE_FLAGS,
+        (true, false) => GL_PIPELINE_FLAGS,
+        (false, false) => PIPELINE_FLAGS,
+    }
+}
+
 impl VideoStage {
     pub fn new() -> Result<Rc<Self>, String> {
         let sink = build_sink()?;
@@ -106,12 +123,7 @@ impl VideoStage {
         let pipeline = gst::ElementFactory::make("playbin3")
             .build()
             .map_err(|_| "playbin3 is unavailable".to_string())?;
-        let flags = if sink.gl {
-            GL_PIPELINE_FLAGS
-        } else {
-            PIPELINE_FLAGS
-        };
-        pipeline.set_property_from_str("flags", flags);
+        pipeline.set_property_from_str("flags", pipeline_flags(sink.gl, false));
         pipeline.set_property("video-sink", &sink.element);
         pipeline.set_property(
             "buffer-duration",
@@ -189,6 +201,8 @@ impl VideoStage {
             return;
         }
         let _ = self.pipeline.set_state(gst::State::Null);
+        self.pipeline
+            .set_property_from_str("flags", pipeline_flags(self.sink.gl, is_local(url)));
         self.pipeline.set_property("uri", url);
         *self.loaded_url.borrow_mut() = Some(url.to_string());
         self.wants_playing.set(playing);
@@ -656,6 +670,17 @@ pub const STREAM_REFUSED: &str = "YouTube refused this video's stream";
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_a_stream_over_the_network_is_spooled_to_disk() {
+        for gl in [false, true] {
+            assert!(pipeline_flags(gl, false).contains("download"));
+            assert!(!pipeline_flags(gl, true).contains("download"));
+            assert_eq!(pipeline_flags(gl, true).contains("native-video"), gl);
+        }
+        assert!(is_local("file:///home/me/.cache/flaccy/musicvideo/abcdefghijk.720.mp4"));
+        assert!(!is_local("https://rr2.googlevideo.com/videoplayback"));
+    }
 
     #[test]
     fn names_the_failures_worth_naming() {

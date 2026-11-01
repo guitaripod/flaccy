@@ -27,6 +27,7 @@ pub mod load_progress;
 pub mod lyrics;
 pub mod lyric_share;
 pub mod playlist_cover;
+pub mod precache;
 pub mod remote;
 pub mod track_page_layout;
 pub mod track_revision;

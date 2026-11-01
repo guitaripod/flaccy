@@ -1,3 +1,8 @@
+mod cache;
+mod download;
+#[cfg(test)]
+mod test_server;
+
 use super::stream::{self, Codec, Stream};
 use super::{align, llm, score, search, Candidate, Phase, Settings, VideoMatch, VideoState};
 use crate::db::Db;
@@ -74,6 +79,17 @@ pub enum Request {
         settings: Settings,
         strict: bool,
     },
+    /// The songs coming up, for the lane that prepares videos ahead of time
+    /// to match, fetch and align. A newer one replaces an older.
+    Warm {
+        queue: Vec<Track>,
+        settings: Settings,
+        cap_bytes: u64,
+        enabled: bool,
+        blocker: crate::precache::Blocker,
+    },
+    /// Deletes every prepared video that is not pinned.
+    ClearPrepared,
 }
 
 pub enum Response {
@@ -123,6 +139,11 @@ struct Shared {
     prefetched: Condvar,
     aligning: Mutex<HashSet<String>>,
     responses: async_channel::Sender<Response>,
+    cache: cache::Index,
+    lane: async_channel::Sender<cache::Msg>,
+    /// Raised when a newer plan is sent to the lane, so the one it is working
+    /// through stops at the next safe point.
+    preempt: std::sync::atomic::AtomicBool,
 }
 
 impl Shared {
@@ -152,6 +173,11 @@ impl Shared {
     ) -> Result<(Stream, Candidate), String> {
         let key = (video_id.to_string(), settings.max_height, strict);
         let now = chrono::Utc::now().timestamp();
+        if !fresh && !strict {
+            if let Some(stream) = self.cached_stream(video_id, settings.max_height) {
+                return Ok((stream, Candidate::bare(video_id)));
+            }
+        }
         if !fresh {
             if let Some(stream) = self
                 .streams
@@ -245,6 +271,7 @@ pub fn spawn(
     let (request_tx, request_rx) = async_channel::unbounded::<Request>();
     let (prefetch_tx, prefetch_rx) = async_channel::unbounded::<(Track, Settings)>();
     let (response_tx, response_rx) = async_channel::unbounded::<Response>();
+    let (lane_tx, lane_rx) = async_channel::unbounded::<cache::Msg>();
     let shared = Arc::new(Shared {
         db_path,
         root,
@@ -256,6 +283,9 @@ pub fn spawn(
         prefetched: Condvar::new(),
         aligning: Mutex::new(HashSet::new()),
         responses: response_tx,
+        cache: cache::Index::default(),
+        lane: lane_tx,
+        preempt: std::sync::atomic::AtomicBool::new(false),
     });
     crate::logger::info(
         "musicvideo",
@@ -274,6 +304,7 @@ pub fn spawn(
         ),
     );
 
+    cache::spawn(Arc::clone(&shared), lane_rx);
     {
         let shared = Arc::clone(&shared);
         std::thread::Builder::new()
@@ -340,12 +371,27 @@ fn serve(
                 let list = ranked_for_chooser(&track, list);
                 shared.send(Response::Candidates { seq, list });
             }
+            Request::Warm {
+                queue,
+                settings,
+                cap_bytes,
+                enabled,
+                blocker,
+            } => shared.tell_lane(cache::Msg::Warm(cache::Warm {
+                queue,
+                settings,
+                cap_bytes,
+                enabled,
+                blocker,
+            })),
+            Request::ClearPrepared => shared.tell_lane(cache::Msg::Clear),
             Request::Renew {
                 seq,
                 video_id,
                 settings,
                 strict,
             } => {
+                shared.drop_cached(&video_id, settings.max_height);
                 let stream = match shared.stream_for(&video_id, &settings, strict, true) {
                     Ok((stream, _)) => Some(stream),
                     Err(err) => {
@@ -766,6 +812,13 @@ fn deliver(shared: &Arc<Shared>, seq: u64, track: &Track, found: VideoMatch, set
         Ok((stream, _)) => {
             if shared.stale(Some(seq)) {
                 return;
+            }
+            if stream.url.starts_with("file://") {
+                crate::logger::info(
+                    "musicvideo",
+                    &format!("playing the prepared file for {}", found.video_id),
+                );
+                shared.note_played(&found.video_id, settings.max_height);
             }
             shared.send(Response::Resolved {
                 seq,

@@ -69,6 +69,13 @@ pub struct Config {
     /// Empty means "whichever installed Ollama model looks most suitable".
     pub music_video_llm_model: String,
     pub music_video_align: bool,
+    /// Fetch lyrics for every song in the library in the background, not only
+    /// the queue and what is played.
+    pub precache_lyrics_library: bool,
+    /// Prepare the music videos of the songs coming up ahead of time.
+    pub precache_video: bool,
+    /// How much disk prepared music videos may use, in gigabytes.
+    pub precache_video_cap_gb: u32,
     /// How much disk the remote songs' cache may use before the least recently
     /// played go, in gigabytes. Kept downloads sit outside it.
     pub remote_cache_cap_gb: u32,
@@ -87,6 +94,10 @@ pub struct Config {
 pub const REMOTE_CACHE_CAP_DEFAULT_GB: u32 = 2;
 pub const REMOTE_CACHE_CAP_MIN_GB: u32 = 1;
 pub const REMOTE_CACHE_CAP_MAX_GB: u32 = 500;
+
+pub const PRECACHE_VIDEO_CAP_DEFAULT_GB: u32 = 10;
+pub const PRECACHE_VIDEO_CAP_MIN_GB: u32 = 1;
+pub const PRECACHE_VIDEO_CAP_MAX_GB: u32 = 500;
 
 pub const DEFAULT_SIDEBAR_PAGE: &str = "albums";
 pub const LAUNCH_HOME: &str = "home";
@@ -135,6 +146,17 @@ pub fn clamp_ui_scale(scale: f64) -> f64 {
 }
 
 impl Config {
+    /// What prepared music videos may take, in bytes, kept inside the range
+    /// Preferences offers.
+    pub fn precache_video_cap_bytes(&self) -> u64 {
+        u64::from(
+            self.precache_video_cap_gb
+                .clamp(PRECACHE_VIDEO_CAP_MIN_GB, PRECACHE_VIDEO_CAP_MAX_GB),
+        ) * 1024
+            * 1024
+            * 1024
+    }
+
     /// The remote cache cap in bytes, kept inside the range Preferences offers.
     pub fn remote_cache_cap_bytes(&self) -> u64 {
         u64::from(
@@ -210,6 +232,9 @@ impl Default for Config {
             music_video_llm: true,
             music_video_llm_model: String::new(),
             music_video_align: true,
+            precache_lyrics_library: false,
+            precache_video: true,
+            precache_video_cap_gb: PRECACHE_VIDEO_CAP_DEFAULT_GB,
             remote_cache_cap_gb: REMOTE_CACHE_CAP_DEFAULT_GB,
             songs_source: String::new(),
             flaccy_server_name: String::new(),

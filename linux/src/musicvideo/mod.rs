@@ -144,6 +144,11 @@ impl MusicVideoHandle {
         self.state.borrow().clone()
     }
 
+    /// Whether the video lens is switched on.
+    pub fn is_enabled(&self) -> bool {
+        self.enabled.get()
+    }
+
     pub fn drift(&self) -> Option<f64> {
         self.drift.get()
     }
@@ -372,6 +377,7 @@ pub fn set_enabled(core: &Rc<AppCore>, enabled: bool) {
     }
     core.config.borrow_mut().music_video_mode = enabled;
     crate::config::save(&core.config.borrow());
+    crate::precache::refresh(core);
     if enabled {
         request_resolve(core, false);
     } else {
@@ -490,6 +496,7 @@ pub fn retry(core: &Rc<AppCore>) {
 /// The quality ceiling changed: the match stands, only its stream is
 /// re-resolved at the new height.
 pub fn requality(core: &Rc<AppCore>) {
+    crate::precache::refresh(core);
     if !core.music_video.enabled.get() {
         return;
     }
@@ -641,6 +648,34 @@ fn prefetch_next(core: &Rc<AppCore>) {
             settings: settings(core),
         },
     );
+}
+
+/// Hands the lane that prepares videos ahead of time the queue as it stands,
+/// from the playing song on. It matches, fetches and aligns what the planner
+/// picks, only while the video lens is on.
+pub fn warm(core: &Rc<AppCore>, queue: Vec<crate::library::Track>) {
+    let (enabled, cap_bytes) = {
+        let config = core.config.borrow();
+        (
+            config.precache_video && core.music_video.enabled.get() && available(),
+            config.precache_video_cap_bytes(),
+        )
+    };
+    send(
+        core,
+        Request::Warm {
+            queue,
+            settings: settings(core),
+            cap_bytes,
+            enabled,
+            blocker: crate::precache::blocker(core),
+        },
+    );
+}
+
+/// Deletes every prepared video that is not pinned.
+pub fn clear_prepared(core: &Rc<AppCore>) {
+    send(core, Request::ClearPrepared);
 }
 
 fn settings(core: &Rc<AppCore>) -> Settings {

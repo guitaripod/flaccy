@@ -502,7 +502,7 @@ fn render_usage(row: &adw::ActionRow) {
     ));
 }
 
-fn format_bytes(bytes: u64) -> String {
+pub(crate) fn format_bytes(bytes: u64) -> String {
     const MB: f64 = 1024.0 * 1024.0;
     let megabytes = bytes as f64 / MB;
     if megabytes >= 1024.0 {
