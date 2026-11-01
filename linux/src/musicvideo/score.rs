@@ -30,6 +30,11 @@ const FREE_DURATION_DRIFT: f64 = 8.0;
 /// album cut.
 const DURATION_SPAN: f64 = 90.0;
 
+/// What a still-image upload of the album track costs on intent: enough that
+/// the artist's real video, a cut shorter and far more watched, beats it, and
+/// little enough that it still plays when nothing better exists.
+const ART_TRACK_PENALTY: f64 = 0.3;
+
 pub struct Scored<'a> {
     pub candidate: &'a Candidate,
     pub score: f64,
@@ -118,13 +123,27 @@ pub fn score(
     let uploader = channel_score(&channel, &wanted_artist);
     let artist_named = f64::max(phrase_score(&video_title, &wanted_artist), uploader);
 
+    let intent = if art_track(&video_title, &wanted_title, uploader) {
+        (intent_score(&video_title, &channel) - ART_TRACK_PENALTY).max(0.0)
+    } else {
+        intent_score(&video_title, &channel)
+    };
     let raw = 0.26 * title_hit
         + 0.10 * artist_named
         + 0.22 * uploader
-        + 0.24 * intent_score(&video_title, &channel)
+        + 0.24 * intent
         + 0.12 * reach_score(candidate.view_count, most_watched)
         + 0.06 * duration_score(duration, candidate.duration);
     raw.clamp(0.0, 1.0)
+}
+
+/// An upload titled with nothing but the song's name on the artist's own
+/// channel is the label's art track: the album cut over a still of the cover,
+/// which an official artist channel absorbs from its "- Topic" twin. It matches
+/// the title and the runtime perfectly, so without this it beats the real
+/// video, which is titled "Artist - Song" and is often an edit.
+fn art_track(video_title: &str, wanted_title: &str, uploader: f64) -> bool {
+    uploader >= 0.85 && !wanted_title.is_empty() && video_title == wanted_title
 }
 
 /// Watch counts span several orders of magnitude, so they are compared on a
@@ -459,6 +478,25 @@ mod tests {
         );
         assert_eq!(normalize("Don't — Stop!"), "don t stop");
         assert_eq!(normalize("  "), "");
+    }
+
+    #[test]
+    fn the_artists_video_beats_the_still_image_art_track_on_the_same_channel() {
+        let candidates = vec![
+            watched("Stronger", "Kanye West", 313.0, 32_037_567),
+            watched("Kanye West - Stronger", "Kanye West", 267.0, 562_011_485),
+            watched("Kanye West - Stronger (lyrics)", "Lyrixa", 315.0, 1_384_757),
+        ];
+        let ranked = rank("Stronger", "Kanye West", 312.0, &candidates);
+        assert_eq!(ranked[0].candidate.title, "Kanye West - Stronger");
+        assert_eq!(ranked[1].candidate.title, "Stronger");
+    }
+
+    #[test]
+    fn an_art_track_still_plays_when_nothing_better_turned_up() {
+        let candidates = vec![watched("Skit #2", "Kanye West", 31.0, 900_000)];
+        let ranked = rank("Skit #2", "Kanye West", 31.0, &candidates);
+        assert!(ranked[0].score >= ACCEPT, "{}", ranked[0].score);
     }
 
     #[test]

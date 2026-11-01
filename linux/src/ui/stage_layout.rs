@@ -31,7 +31,7 @@ const FILL_CROP: f64 = 0.08;
 /// this share of the picture's width.
 const CAPTIONS_WHEN_COVERING: f64 = 0.42;
 /// How far the shade under a column reaches past the column itself.
-const SCRIM_REACH: f64 = 1.45;
+const SCRIM_REACH: f64 = 1.55;
 /// The captions band: its share of the picture height, its least height, how
 /// far above the picture's foot the text sits, and the picture height their
 /// scale is measured against.

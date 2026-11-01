@@ -862,14 +862,14 @@ button.pill.suggested-action:active {
 }
 
 .np-stage headerbar {
-  background-image: linear-gradient(to bottom, alpha(#000, 0.55), alpha(#000, 0));
+  background-image: linear-gradient(to bottom, alpha(#000, 0.8), alpha(#000, 0));
   color: #fff;
   box-shadow: none;
 }
 
 .np-stage .np-transport {
   background-color: transparent;
-  background-image: linear-gradient(to bottom, alpha(#000, 0), alpha(#000, 0.78) 55%);
+  background-image: linear-gradient(to bottom, alpha(#000, 0), alpha(#000, 0.9) 38%);
   border-top: none;
   color: #fff;
 }
@@ -896,8 +896,31 @@ button.pill.suggested-action:active {
   opacity: 0;
 }
 
+.np-stage-lyrics .lyric-line,
+.np-stage-lyrics .lyric-text {
+  opacity: 0.68;
+}
+
+.np-stage-lyrics .lyric-line-near {
+  opacity: 0.86;
+}
+
 .np-stage-lyrics .lyric-line-current {
+  opacity: 1;
   color: mix(@accent_bg_color, #fff, 0.35);
+}
+
+/* The lyrics' own controls ride over the lines on the stage, so they wear a
+   pill of their own and leave with the rest of the chrome. */
+.np-stage-lyrics .lyrics-corner {
+  background-color: alpha(#000, 0.55);
+  border-radius: 9999px;
+  padding: 2px 6px;
+  transition: opacity 200ms ease;
+}
+
+.np-chrome-hidden .np-stage-lyrics .lyrics-corner {
+  opacity: 0;
 }
 
 .np-stage-lyrics .lyric-beat-lit {

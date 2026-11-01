@@ -852,6 +852,13 @@ impl StageChrome {
         if self.shown.replace(shown) != shown {
             self.toolbar.set_reveal_top_bars(shown);
             self.toolbar.set_reveal_bottom_bars(shown);
+            if let Some(root) = self.root.borrow().as_ref().and_then(|root| root.upgrade()) {
+                if shown {
+                    root.remove_css_class("np-chrome-hidden");
+                } else {
+                    root.add_css_class("np-chrome-hidden");
+                }
+            }
             if shown {
                 self.stage.set_cursor(None);
             } else {

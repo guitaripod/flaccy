@@ -18,7 +18,7 @@ const POSTER_SHARE: f64 = 0.78;
 /// How far Up Next slides in from its edge as it appears.
 const SHEET_SLIDE: f64 = 40.0;
 /// The shade under a column over the picture, darkest at its outer edge.
-const SCRIM_STOPS: [(f32, f32); 3] = [(0.0, 0.74), (0.5, 0.48), (1.0, 0.0)];
+const SCRIM_STOPS: [(f32, f32); 3] = [(0.0, 0.86), (0.55, 0.68), (1.0, 0.0)];
 
 /// Told after a layout pass that changed where things go.
 type ArrangedListener = Rc<dyn Fn(&Arrangement)>;

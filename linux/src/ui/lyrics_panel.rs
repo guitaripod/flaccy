@@ -939,6 +939,7 @@ fn corner_cluster(children: &[&gtk::Widget]) -> gtk::Box {
         .margin_top(CORNER_MARGIN)
         .margin_end(6)
         .build();
+    cluster.add_css_class("lyrics-corner");
     for child in children {
         cluster.append(*child);
     }
