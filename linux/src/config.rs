@@ -15,6 +15,9 @@ pub struct Config {
     pub theme: String,
     pub autoplay_continuation: bool,
     pub group_album_editions: bool,
+    /// One row per song in the Songs list, and one play per song in stations
+    /// and mixes, however many releases it sits on.
+    pub hide_duplicate_songs: bool,
     pub import_page_cursor: u32,
     /// The sidebar page the library shell was left on (`PAGES` names). Replaces
     /// the positional `sidebar_index`, which `load` migrates once.
@@ -174,6 +177,7 @@ impl Default for Config {
             theme: "adaptive".to_string(),
             autoplay_continuation: true,
             group_album_editions: true,
+            hide_duplicate_songs: true,
             import_page_cursor: 1,
             sidebar_page: DEFAULT_SIDEBAR_PAGE.to_string(),
             sidebar_index: None,

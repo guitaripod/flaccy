@@ -882,7 +882,8 @@ impl AppCore {
 
     /// Every library track `artist` is on, in album order.
     pub fn artist_tracks(&self, artist: &str) -> Vec<Track> {
-        self.library.borrow().artist_tracks(artist)
+        let tracks = self.library.borrow().artist_tracks(artist);
+        crate::station::station_pool(tracks, self.config.borrow().hide_duplicate_songs, &[])
     }
 
     pub fn play_artist(self: &Rc<Self>, artist: &str, shuffle: bool) {
@@ -921,11 +922,13 @@ impl AppCore {
     /// song is played.
     pub fn start_library_radio(self: &Rc<Self>) {
         let pool = self.library.borrow().tracks.clone();
+        let hide_duplicates = self.config.borrow().hide_duplicate_songs;
         let db_path = self.db_path.clone();
         let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
         std::thread::Builder::new()
             .name("flaccy-library-radio".into())
             .spawn(move || {
+                let pool = crate::station::station_pool(pool, hide_duplicates, &[]);
                 let counts = crate::db::Db::open(&db_path)
                     .map(|db| db.play_counts_by_track())
                     .unwrap_or_default();
@@ -1378,6 +1381,16 @@ impl AppCore {
         config::save(&self.config.borrow());
     }
 
+    pub fn set_hide_duplicate_songs(&self, hide: bool) {
+        if self.config.borrow().hide_duplicate_songs == hide {
+            return;
+        }
+        self.config.borrow_mut().hide_duplicate_songs = hide;
+        self.save_config();
+        crate::logger::info("ui", &format!("hide duplicate songs set to {hide}"));
+        self.hub.emit(&AppEvent::HideDuplicatesChanged);
+    }
+
     fn schedule_periodic_drain(self: &Rc<Self>) {
         let core = Rc::clone(self);
         glib::timeout_add_local(Duration::from_secs(300), move || {
@@ -1514,6 +1527,7 @@ impl AppCore {
         let pool = library.tracks.clone();
         let library_songs = pool.len();
         let library_artists: Vec<String> = library.artists.iter().map(|a| a.name.clone()).collect();
+        let hide_duplicates = self.config.borrow().hide_duplicate_songs;
         let db_path = self.db_path.clone();
         let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());
         let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
@@ -1522,6 +1536,11 @@ impl AppCore {
         std::thread::Builder::new()
             .name("flaccy-station".into())
             .spawn(move || {
+                let pool = crate::station::station_pool(
+                    pool,
+                    hide_duplicates,
+                    seed_track.as_slice(),
+                );
                 let similar = crate::db::Db::open(&db_path)
                     .map(|db| {
                         let client = crate::lastfm::LastFmClient::new(session_key);
@@ -1630,6 +1649,8 @@ impl AppCore {
         let snapshot = self.player.queue_snapshot();
         let excluding: std::collections::HashSet<String> =
             snapshot.queue.iter().map(|t| t.rel_path.clone()).collect();
+        let hide_duplicates = self.config.borrow().hide_duplicate_songs;
+        let queued = snapshot.queue.clone();
         let db_path = self.db_path.clone();
         let session_key = self.session.borrow().as_ref().map(|s| s.key.clone());
         let (tx, rx) = async_channel::bounded::<Vec<Track>>(1);
@@ -1637,6 +1658,7 @@ impl AppCore {
         std::thread::Builder::new()
             .name("flaccy-autoplay".into())
             .spawn(move || {
+                let pool = crate::station::station_pool(pool, hide_duplicates, &queued);
                 let batch = crate::db::Db::open(&db_path)
                     .map(|db| {
                         let client = crate::lastfm::LastFmClient::new(session_key);

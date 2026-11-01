@@ -5,6 +5,17 @@ use std::collections::HashMap;
 pub const STATION_SIZE: usize = 60;
 pub const CONTINUATION_BATCH_SIZE: usize = 30;
 
+/// The pool a station draws from: each song once when Hide Duplicate Songs is
+/// on, so a queue built from it never plays one recording twice. Tracks in
+/// `preferring` stay as the copy of their song.
+pub fn station_pool(pool: Vec<Track>, hide_duplicates: bool, preferring: &[Track]) -> Vec<Track> {
+    if hide_duplicates {
+        crate::hygiene::unique_pool(&pool, preferring)
+    } else {
+        pool
+    }
+}
+
 /// Weighted random ordering (Efraimidis–Spirakis): each element gets the key
 /// `u^(1/weight)` for a uniform `u`, sorted descending, so higher weights tend
 /// to sort earlier while every element keeps a chance.

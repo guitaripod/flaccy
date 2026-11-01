@@ -142,7 +142,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         ui.core
             .hub
             .subscribe_widget(&scroll, move |_, event| match event {
-                AppEvent::LibraryReloaded => state.refresh(true),
+                AppEvent::LibraryReloaded | AppEvent::HideDuplicatesChanged => state.refresh(true),
                 AppEvent::ScrobbleRecorded | AppEvent::HistorySynced { .. } => state.refresh(false),
                 AppEvent::TrackChanged(_)
                 | AppEvent::PlayingChanged(_)
@@ -179,6 +179,7 @@ impl State {
             Vec::new()
         };
         let previous = self.fetched.borrow().mixes.clone();
+        let hide_duplicates = self.ui.core.config.borrow().hide_duplicate_songs;
         let db_path = self.ui.core.db_path.clone();
         let now = chrono::Utc::now().timestamp();
         let offset = local_offset();
@@ -186,6 +187,7 @@ impl State {
         std::thread::Builder::new()
             .name("flaccy-home".into())
             .spawn(move || {
+                let pool = crate::station::station_pool(pool, hide_duplicates && with_mixes, &[]);
                 let _ = tx.send_blocking(home_data::fetch(
                     &db_path, pool, previous, with_mixes, now, offset,
                 ));

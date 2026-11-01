@@ -1,6 +1,7 @@
 use crate::db::Db;
 use crate::events::AppEvent;
 use crate::filters::{self, LibraryFilter};
+use crate::hygiene;
 use crate::library::{format_last_played, format_time, format_total_duration, Track};
 use crate::recap::Period;
 use crate::ui::filter_chips::{ChipBar, SourceBar};
@@ -61,9 +62,24 @@ struct Mode {
     source: RefCell<String>,
     range_plays: RefCell<HashMap<String, i64>>,
     rank: RefCell<HashMap<i64, usize>>,
+    needle: filters::SearchNeedle,
+    hidden: RefCell<HashSet<String>>,
 }
 
 impl Mode {
+    /// Whether the row belongs in the list: the source and chip admit it, the
+    /// search finds it and it is not a copy hidden behind another.
+    fn shows(&self, track: &Track, query: &str) -> bool {
+        self.admits(track)
+            && self.matches_query(track, query)
+            && !self.hidden.borrow().contains(&track.rel_path)
+    }
+
+    fn matches_query(&self, track: &Track, query: &str) -> bool {
+        self.needle
+            .matches(query, &[&track.title, &track.artist, &track.album])
+    }
+
     fn admits(&self, track: &Track) -> bool {
         filters::source_admits(&self.source.borrow(), &track.rel_path) && self.admits_filter(track)
     }
@@ -150,9 +166,11 @@ struct View {
     chips: RefCell<Option<Rc<ChipBar>>>,
     sources: RefCell<Option<Rc<SourceBar>>>,
     actions: RefCell<Vec<gtk::Button>>,
+    duplicates_toggle: gtk::ToggleButton,
     epoch: Cell<u64>,
     applied_rows: RefCell<Vec<u64>>,
     total_seconds: Cell<f64>,
+    song_keys: RefCell<hygiene::SongKeyMemo>,
     pending: Pending,
 }
 
@@ -194,22 +212,19 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         source: RefCell::new(saved_source),
         range_plays: RefCell::new(HashMap::new()),
         rank: RefCell::new(HashMap::new()),
+        needle: filters::SearchNeedle::default(),
+        hidden: RefCell::new(HashSet::new()),
     });
 
     let filter = {
         let query = Rc::clone(&ui.query);
         let mode = Rc::clone(&mode);
-        let needle = filters::SearchNeedle::default();
         gtk::CustomFilter::new(move |obj| {
             let Some(boxed) = obj.downcast_ref::<BoxedAnyObject>() else {
                 return true;
             };
             let track = boxed.borrow::<Track>();
-            if !mode.admits(&track) {
-                return false;
-            }
-            let query = query.borrow();
-            needle.matches(&query, &[&track.title, &track.artist, &track.album])
+            mode.shows(&track, &query.borrow())
         })
     };
     let filter_model = gtk::FilterListModel::new(Some(store.clone()), Some(filter.clone()));
@@ -453,9 +468,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
         chips: RefCell::new(None),
         sources: RefCell::new(None),
         actions: RefCell::new(Vec::new()),
+        duplicates_toggle: gtk::ToggleButton::new(),
         epoch: Cell::new(0),
         applied_rows: RefCell::new(Vec::new()),
         total_seconds: Cell::new(0.0),
+        song_keys: RefCell::new(hygiene::SongKeyMemo::default()),
         pending: Pending::default(),
     });
 
@@ -484,6 +501,7 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
                 AppEvent::NaturalEnd(_) => view.on_play_ended(),
                 AppEvent::RemoteChanged => view.refresh_sources(),
                 AppEvent::SearchChanged(_) => view.on_search_changed(),
+                AppEvent::HideDuplicatesChanged => view.on_hide_duplicates_changed(),
                 AppEvent::LocateCurrent => view.locate_current(),
                 _ => {}
             });
@@ -581,6 +599,8 @@ impl View {
             self.actions.borrow_mut().push(button);
         }
 
+        actions.append(&self.duplicates_button());
+
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         row.append(&scroller);
         row.append(&actions);
@@ -588,6 +608,64 @@ impl View {
         header.append(&row);
         header.append(&self.source_row());
         header.upcast()
+    }
+
+    /// The switch for Hide Duplicate Songs, beside the buttons that act on the
+    /// list: it is the same setting Preferences holds.
+    fn duplicates_button(self: &Rc<Self>) -> gtk::ToggleButton {
+        let button = self.duplicates_toggle.clone();
+        button.set_icon_name("edit-copy-symbolic");
+        button.add_css_class("flat");
+        button.add_css_class("circular");
+        button.set_tooltip_text(Some("Hide duplicate songs"));
+        button.set_active(self.hides_duplicates());
+        let view = Rc::downgrade(self);
+        button.connect_toggled(move |button| {
+            if let Some(view) = view.upgrade() {
+                view.ui.core.set_hide_duplicate_songs(button.is_active());
+            }
+        });
+        button
+    }
+
+    fn hides_duplicates(&self) -> bool {
+        self.ui.core.config.borrow().hide_duplicate_songs
+    }
+
+    /// Runs the list through the filter again, after deciding which copies of
+    /// a song stand behind another. Every change to what the list admits goes
+    /// through here, because which copy survives depends on the rest.
+    fn refilter(&self) {
+        self.hide_duplicate_copies();
+        self.filter.changed(gtk::FilterChange::Different);
+    }
+
+    /// Hides all but one copy of every song among the rows the chip, source
+    /// and search admit, preferring the copy that was loved and then the one
+    /// that was played, so Favorites and Recently Played keep their rows.
+    fn hide_duplicate_copies(&self) {
+        let mut hidden = self.mode.hidden.borrow_mut();
+        hidden.clear();
+        if !self.hides_duplicates() {
+            return;
+        }
+        let query = self.ui.query.borrow();
+        let rows: Vec<BoxedAnyObject> = self
+            .store
+            .iter::<BoxedAnyObject>()
+            .filter_map(Result::ok)
+            .collect();
+        let admitted: Vec<std::cell::Ref<Track>> = rows
+            .iter()
+            .map(|row| row.borrow::<Track>())
+            .filter(|track| self.mode.admits(track) && self.mode.matches_query(track, &query))
+            .collect();
+        let found = hygiene::collapsing_duplicate_songs(
+            admitted.iter().map(|track| &**track),
+            &mut self.song_keys.borrow_mut(),
+            |track| i32::from(track.loved) * 2 + i32::from(track.last_played.is_some()),
+        );
+        *hidden = found.hidden;
     }
 
     /// The source chips on a row of their own under the filter chips, which
@@ -699,7 +777,7 @@ impl View {
             }
         }
         *self.mode.source.borrow_mut() = source;
-        self.filter.changed(gtk::FilterChange::Different);
+        self.refilter();
         self.update_status(true);
     }
 
@@ -794,7 +872,7 @@ impl View {
         if let Some(sorter) = self.columns.plays.sorter() {
             sorter.changed(gtk::SorterChange::Different);
         }
-        self.filter.changed(gtk::FilterChange::Different);
+        self.refilter();
         self.rebind_rows();
         if natural_sort {
             self.scroll_to_top();
@@ -886,15 +964,15 @@ impl View {
     fn refresh_membership(self: &Rc<Self>, library: &crate::library::Library, change: RowChange) {
         match self.mode.filter.get() {
             LibraryFilter::MostPlayed => self.fetch_most_played(false),
-            LibraryFilter::All if change == RowChange::Patched => {}
+            LibraryFilter::All if change == RowChange::Patched && !self.hides_duplicates() => {}
             LibraryFilter::All | LibraryFilter::Favorites | LibraryFilter::Lossless => {
-                self.filter.changed(gtk::FilterChange::Different);
+                self.refilter();
             }
             filter => {
                 let now = chrono::Utc::now().timestamp();
                 *self.mode.allowed.borrow_mut() =
                     filters::songs_allowed(filter, &library.tracks, &library.albums, now);
-                self.filter.changed(gtk::FilterChange::Different);
+                self.refilter();
             }
         }
     }
@@ -933,7 +1011,13 @@ impl View {
             self.pending.search.set(true);
             return;
         }
-        self.filter.changed(gtk::FilterChange::Different);
+        self.refilter();
+    }
+
+    fn on_hide_duplicates_changed(&self) {
+        self.duplicates_toggle
+            .set_active(self.hides_duplicates());
+        self.on_search_changed();
     }
 
     /// Catches the table up with everything that happened while it was off
@@ -949,7 +1033,7 @@ impl View {
             self.fetch_most_played(false);
         }
         if search {
-            self.filter.changed(gtk::FilterChange::Different);
+            self.refilter();
         }
     }
 
@@ -977,9 +1061,10 @@ impl View {
         let text = if noun.is_empty() {
             let word = if count == 1 { "song" } else { "songs" };
             format!(
-                "{} {word} · {}",
+                "{} {word} · {}{}",
                 group_digits(count),
-                format_total_duration(seconds)
+                format_total_duration(seconds),
+                self.hidden_note()
             )
         } else {
             format!(
@@ -992,6 +1077,16 @@ impl View {
         let has_rows = self.selection.n_items() > 0;
         for button in self.actions.borrow().iter() {
             button.set_sensitive(has_rows);
+        }
+    }
+
+    /// " · 12 duplicates hidden", so a song that is missing from the list has
+    /// an explanation and the switch that brings it back is easy to find.
+    fn hidden_note(&self) -> String {
+        match self.mode.hidden.borrow().len() {
+            0 => String::new(),
+            1 => " · 1 duplicate hidden".to_string(),
+            count => format!(" · {} duplicates hidden", group_digits(count)),
         }
     }
 

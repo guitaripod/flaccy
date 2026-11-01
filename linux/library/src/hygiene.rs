@@ -456,6 +456,139 @@ fn track_quality_scalar(track: &Track) -> i64 {
         + track.sample_rate.unwrap_or(0) as i64
 }
 
+/// What marks a bracketed or dashed title suffix as the same recording
+/// re-released. Live, acoustic, demo, instrumental and remix are left out on
+/// purpose: those are different recordings of the song. Must stay in sync with
+/// the Apple `LibraryHygiene.songEditionKeywords`.
+pub const SONG_EDITION_KEYWORDS: [&str; 17] = [
+    "remaster",
+    "remastered",
+    "remasters",
+    "mono",
+    "stereo",
+    "explicit",
+    "clean",
+    "deluxe",
+    "edition",
+    "bonus",
+    "reissue",
+    "reissued",
+    "expanded",
+    "anniversary",
+    "feat",
+    "featuring",
+    "ft.",
+];
+
+/// Copies of one song whose lengths differ by more than this many seconds are
+/// different recordings even when title and artist agree.
+pub const SONG_DURATION_TOLERANCE: f64 = 3.0;
+
+/// The identity of a song regardless of the release it sits on: the lead
+/// artist and the title with re-release decoration removed.
+pub fn song_key(title: &str, artist: &str) -> String {
+    format!(
+        "{}\u{0}{}",
+        artist_key(artist),
+        base_title_with(title, &SONG_EDITION_KEYWORDS)
+    )
+}
+
+/// Remembers the `song_key` of every spelling it is asked about, because
+/// folding a title is the costly step of a pass over a whole library and the
+/// Songs list asks again on every keystroke.
+#[derive(Default)]
+pub struct SongKeyMemo {
+    keys: HashMap<(String, String), String>,
+}
+
+impl SongKeyMemo {
+    pub fn key(&mut self, title: &str, artist: &str) -> &str {
+        self.keys
+            .entry((title.to_string(), artist.to_string()))
+            .or_insert_with(|| song_key(title, artist))
+    }
+}
+
+/// The songs a duplicate pass hid and the copies standing behind each keeper.
+#[derive(Default)]
+pub struct DuplicateSongs {
+    pub hidden: HashSet<String>,
+    pub copies: HashMap<String, Vec<Track>>,
+}
+
+/// Finds the copies of every song in `tracks` that should be hidden behind one
+/// keeper. Same song means the same `song_key` with lengths that chain together
+/// within `SONG_DURATION_TOLERANCE`. The keeper is the copy `prefers` ranks
+/// highest (the one the person loved or plays), then the highest fidelity, then
+/// the oldest row. Songs on a server and songs in the music folder are one
+/// pool: a server's copy is as much a duplicate as a local one.
+pub fn collapsing_duplicate_songs<'a>(
+    tracks: impl IntoIterator<Item = &'a Track>,
+    memo: &mut SongKeyMemo,
+    prefers: impl Fn(&Track) -> i32,
+) -> DuplicateSongs {
+    let mut by_key: HashMap<String, Vec<&Track>> = HashMap::new();
+    for track in tracks.into_iter().filter(|track| !track.title.is_empty()) {
+        let key = memo.key(&track.title, &track.artist).to_string();
+        by_key.entry(key).or_default().push(track);
+    }
+    let mut found = DuplicateSongs::default();
+    for mut members in by_key.into_values().filter(|members| members.len() >= 2) {
+        members.sort_by(|a, b| a.duration.total_cmp(&b.duration));
+        let mut cluster: Vec<&Track> = Vec::new();
+        for track in members {
+            let breaks = cluster
+                .last()
+                .is_some_and(|last| track.duration - last.duration > SONG_DURATION_TOLERANCE);
+            if breaks {
+                hide_copies(std::mem::take(&mut cluster), &prefers, &mut found);
+            }
+            cluster.push(track);
+        }
+        hide_copies(cluster, &prefers, &mut found);
+    }
+    found
+}
+
+/// Ranks one run of copies and records every one but the keeper as hidden.
+fn hide_copies(mut cluster: Vec<&Track>, prefers: &impl Fn(&Track) -> i32, found: &mut DuplicateSongs) {
+    if cluster.len() < 2 {
+        return;
+    }
+    cluster.sort_by(|a, b| {
+        prefers(b)
+            .cmp(&prefers(a))
+            .then_with(|| track_quality_scalar(b).cmp(&track_quality_scalar(a)))
+            .then_with(|| a.id.cmp(&b.id))
+            .then_with(|| a.rel_path.cmp(&b.rel_path))
+    });
+    let keeper = cluster[0].rel_path.clone();
+    let losers: Vec<Track> = cluster[1..].iter().map(|track| (*track).clone()).collect();
+    found
+        .hidden
+        .extend(losers.iter().map(|track| track.rel_path.clone()));
+    found.copies.insert(keeper, losers);
+}
+
+/// A pool for stations and suggestions with each song once, so a queue built
+/// from it never plays the same recording twice. Tracks in `preferring` always
+/// survive as the copy of their song, which lets the caller then exclude them
+/// without a hidden twin slipping back in.
+pub fn unique_pool(pool: &[Track], preferring: &[Track]) -> Vec<Track> {
+    let preferred: HashSet<&str> = preferring.iter().map(|track| track.rel_path.as_str()).collect();
+    let found = collapsing_duplicate_songs(pool, &mut SongKeyMemo::default(), |track| {
+        i32::from(preferred.contains(track.rel_path.as_str()))
+    });
+    if found.hidden.is_empty() {
+        return pool.to_vec();
+    }
+    pool.iter()
+        .filter(|track| !found.hidden.contains(&track.rel_path))
+        .cloned()
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -852,5 +985,174 @@ mod tests {
         assert_eq!(song_a.bit_depth, Some(24));
         assert_eq!(song_a.sample_rate, Some(96000));
         assert_eq!(song_a.album, "Album (Deluxe Edition)");
+    }
+
+    fn song(
+        title: &str,
+        album: &str,
+        id: i64,
+        duration: f64,
+        codec: &str,
+        bit_depth: Option<i32>,
+    ) -> Track {
+        let mut track = detailed_track(title, "Aurelia Vance", album, 1, codec, bit_depth, Some(44_100));
+        track.id = id;
+        track.duration = duration;
+        track
+    }
+
+    fn collapse(tracks: &[Track]) -> DuplicateSongs {
+        collapsing_duplicate_songs(tracks, &mut SongKeyMemo::default(), |_| 0)
+    }
+
+    fn survivors(tracks: &[Track], found: &DuplicateSongs) -> Vec<i64> {
+        tracks
+            .iter()
+            .filter(|track| !found.hidden.contains(&track.rel_path))
+            .map(|track| track.id)
+            .collect()
+    }
+
+    #[test]
+    fn the_same_song_on_two_albums_collapses_to_one() {
+        let tracks = [
+            song("Glass Harbor", "Glass Harbor - Single", 1, 215.0, "flac", Some(16)),
+            song("Glass Harbor", "Tidewater", 2, 216.0, "flac", Some(16)),
+        ];
+        let found = collapse(&tracks);
+        assert_eq!(survivors(&tracks, &found), [1]);
+        assert_eq!(found.copies.values().next().map(Vec::len), Some(1));
+    }
+
+    #[test]
+    fn a_remaster_suffix_is_the_same_song() {
+        let tracks = [
+            song("Glass Harbor", "Tidewater", 1, 215.0, "flac", Some(16)),
+            song("Glass Harbor (2011 Remaster)", "Tidewater Deluxe", 2, 215.0, "flac", Some(16)),
+        ];
+        assert_eq!(survivors(&tracks, &collapse(&tracks)).len(), 1);
+    }
+
+    #[test]
+    fn live_and_acoustic_versions_stay_separate() {
+        let tracks = [
+            song("Glass Harbor", "Tidewater", 1, 215.0, "flac", Some(16)),
+            song("Glass Harbor (Live)", "Live at the Pier", 2, 215.0, "flac", Some(16)),
+            song("Glass Harbor - Acoustic", "Stripped", 3, 215.0, "flac", Some(16)),
+        ];
+        assert_eq!(survivors(&tracks, &collapse(&tracks)).len(), 3);
+    }
+
+    #[test]
+    fn different_lengths_are_different_recordings() {
+        let tracks = [
+            song("Glass Harbor", "Singles", 1, 190.0, "flac", Some(16)),
+            song("Glass Harbor", "Tidewater", 2, 261.0, "flac", Some(16)),
+        ];
+        assert_eq!(survivors(&tracks, &collapse(&tracks)).len(), 2);
+    }
+
+    #[test]
+    fn lengths_that_chain_within_the_tolerance_are_one_recording() {
+        let tracks = [
+            song("Glass Harbor", "A", 1, 210.0, "flac", Some(16)),
+            song("Glass Harbor", "B", 2, 212.5, "flac", Some(16)),
+            song("Glass Harbor", "C", 3, 215.0, "flac", Some(16)),
+        ];
+        assert_eq!(survivors(&tracks, &collapse(&tracks)).len(), 1);
+    }
+
+    #[test]
+    fn the_same_title_by_different_artists_stays_separate() {
+        let first = song("Intro", "Tidewater", 1, 60.0, "flac", Some(16));
+        let mut second = song("Intro", "Roost", 2, 60.0, "flac", Some(16));
+        second.artist = "Corvid & Crane".to_string();
+        let tracks = [first, second];
+        assert_eq!(survivors(&tracks, &collapse(&tracks)).len(), 2);
+    }
+
+    #[test]
+    fn the_keeper_is_the_highest_fidelity_copy() {
+        let tracks = [
+            song("Glass Harbor", "Hits", 1, 215.0, "mp3", None),
+            song("Glass Harbor", "Tidewater", 2, 215.0, "flac", Some(24)),
+        ];
+        assert_eq!(survivors(&tracks, &collapse(&tracks)), [2]);
+    }
+
+    #[test]
+    fn a_preferred_copy_beats_fidelity() {
+        let tracks = [
+            song("Glass Harbor", "Hits", 1, 215.0, "mp3", None),
+            song("Glass Harbor", "Tidewater", 2, 215.0, "flac", Some(24)),
+        ];
+        let found = collapsing_duplicate_songs(&tracks, &mut SongKeyMemo::default(), |track| {
+            i32::from(track.id == 1)
+        });
+        assert_eq!(survivors(&tracks, &found), [1]);
+    }
+
+    #[test]
+    fn equal_copies_keep_the_oldest_row() {
+        let tracks = [
+            song("Glass Harbor", "B", 7, 215.0, "flac", Some(16)),
+            song("Glass Harbor", "A", 3, 215.0, "flac", Some(16)),
+        ];
+        assert_eq!(survivors(&tracks, &collapse(&tracks)), [3]);
+    }
+
+    #[test]
+    fn survivors_keep_the_list_order() {
+        let mut bravo = song("Bravo", "One", 2, 200.0, "flac", Some(16));
+        bravo.track_number = 2;
+        let tracks = [
+            song("Alpha", "One", 1, 200.0, "flac", Some(16)),
+            bravo,
+            song("Alpha", "Two", 3, 200.0, "mp3", None),
+        ];
+        assert_eq!(survivors(&tracks, &collapse(&tracks)), [1, 2]);
+    }
+
+    #[test]
+    fn a_list_without_duplicates_hides_nothing() {
+        let tracks = [
+            song("Alpha", "One", 1, 200.0, "flac", Some(16)),
+            song("Bravo", "One", 2, 200.0, "flac", Some(16)),
+        ];
+        let found = collapse(&tracks);
+        assert!(found.hidden.is_empty());
+        assert!(found.copies.is_empty());
+    }
+
+    #[test]
+    fn a_song_with_no_title_is_never_a_duplicate() {
+        let tracks = [
+            song("", "One", 1, 200.0, "flac", Some(16)),
+            song("", "Two", 2, 200.0, "flac", Some(16)),
+        ];
+        assert!(collapse(&tracks).hidden.is_empty());
+    }
+
+    #[test]
+    fn a_unique_pool_keeps_the_preferred_copy() {
+        let tracks = vec![
+            song("Glass Harbor", "Hits", 1, 215.0, "mp3", None),
+            song("Glass Harbor", "Tidewater", 2, 215.0, "flac", Some(24)),
+        ];
+        let pool = unique_pool(&tracks, &tracks[..1]);
+        assert_eq!(pool.iter().map(|track| track.id).collect::<Vec<_>>(), [1]);
+        assert_eq!(unique_pool(&tracks, &[]).len(), 1);
+    }
+
+    #[test]
+    fn song_keys_strip_only_re_release_decoration() {
+        let base = song_key("Glass Harbor", "Aurelia Vance");
+        assert_eq!(song_key("Glass Harbor (Remastered 2011)", "Aurelia Vance"), base);
+        assert_eq!(song_key("Glass Harbor [Explicit]", "Aurelia Vance"), base);
+        assert_eq!(song_key("Glass Harbor (feat. Corvid)", "Aurelia Vance & Corvid"), base);
+        assert_eq!(song_key("Glass Harbor - Mono", "aurelia vance"), base);
+        assert_ne!(song_key("Glass Harbor (Live)", "Aurelia Vance"), base);
+        assert_ne!(song_key("Glass Harbor (Remix)", "Aurelia Vance"), base);
+        assert_ne!(song_key("Glass Harbor (Demo)", "Aurelia Vance"), base);
     }
 }

@@ -647,6 +647,19 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     }
     group.add(&group_editions_row);
 
+    let hide_duplicates_row = adw::SwitchRow::builder()
+        .title("Hide Duplicate Songs")
+        .subtitle("Show a song once in Songs and play it once in stations and mixes, however many releases it is on")
+        .active(ui.core.config.borrow().hide_duplicate_songs)
+        .build();
+    {
+        let ui = Rc::clone(ui);
+        hide_duplicates_row.connect_active_notify(move |row| {
+            ui.core.set_hide_duplicate_songs(row.is_active());
+        });
+    }
+    group.add(&hide_duplicates_row);
+
     let rescan_row = adw::ActionRow::builder()
         .title("Rescan Library")
         .subtitle("Diff the folder against the database")

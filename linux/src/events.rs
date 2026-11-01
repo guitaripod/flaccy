@@ -46,6 +46,9 @@ pub enum AppEvent {
     /// The Songs table changed what its columns count (the Plays column moved
     /// to or from a time range); every visible cell re-reads its text.
     SongCellsChanged,
+    /// Hide Duplicate Songs was switched: the Songs list and the mixes built
+    /// from the library are drawn again.
+    HideDuplicatesChanged,
     /// The compositor suspended the window (minimized, on another workspace) or
     /// brought it back. Anything that wakes on a timer to keep a picture moving
     /// stops while it is suspended and picks up again on resume.
