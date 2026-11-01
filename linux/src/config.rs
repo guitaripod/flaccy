@@ -58,6 +58,8 @@ pub struct Config {
     /// this with their own `lyrics_font_size`.
     pub ui_scale: f64,
     pub np_show_video: bool,
+    /// How lyrics sit on a music video (`stage_layout::LyricsStyle::id`).
+    pub np_video_lyrics: String,
     pub music_video_mode: bool,
     pub music_video_quality: i32,
     pub music_video_llm: bool,
@@ -198,6 +200,7 @@ impl Default for Config {
             lyrics_font_size: LYRICS_FONT_DEFAULT,
             ui_scale: UI_SCALE_DEFAULT,
             np_show_video: false,
+            np_video_lyrics: "auto".to_string(),
             music_video_mode: false,
             music_video_quality: MUSIC_VIDEO_QUALITY_DEFAULT,
             music_video_llm: true,

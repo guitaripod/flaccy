@@ -105,7 +105,6 @@ pub struct MusicVideoHandle {
     seq: Cell<u64>,
     enabled: Cell<bool>,
     visible: Cell<bool>,
-    fullscreen: Cell<bool>,
     drift: Cell<Option<f64>>,
     catching_up: Cell<bool>,
     exhausted: Cell<bool>,
@@ -129,7 +128,6 @@ impl MusicVideoHandle {
             seq: Cell::new(0),
             enabled: Cell::new(false),
             visible: Cell::new(false),
-            fullscreen: Cell::new(false),
             drift: Cell::new(None),
             catching_up: Cell::new(false),
             exhausted: Cell::new(false),
@@ -184,10 +182,9 @@ impl MusicVideoHandle {
             .unwrap_or(StageState::Idle)
     }
 
-    /// Whether any surface — the lens or the full-screen window — shows the
-    /// video.
+    /// Whether the stage shows the video, full screen or not.
     pub fn is_showing(&self) -> bool {
-        self.visible.get() || self.fullscreen.get()
+        self.visible.get()
     }
 
     /// Where the picture is in the video's own timeline, for opening the
@@ -394,14 +391,6 @@ pub fn set_enabled(core: &Rc<AppCore>, enabled: bool) {
 /// rather than torn down, so returning to the lens is instant.
 pub fn set_visible(core: &Rc<AppCore>, visible: bool) {
     core.music_video.visible.set(visible);
-    apply_showing(core);
-}
-
-/// Whether the full-screen window is open. It counts as a surface of its own,
-/// so a main window the compositor considers hidden behind it doesn't park
-/// the picture it is showing.
-pub fn set_fullscreen(core: &Rc<AppCore>, open: bool) {
-    core.music_video.fullscreen.set(open);
     apply_showing(core);
 }
 

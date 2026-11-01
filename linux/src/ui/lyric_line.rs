@@ -65,6 +65,30 @@ pub fn edge_inside(start: f32, end: f32, fraction: f64) -> f32 {
 /// Stands for "no wrap width": the line is laid out on one row.
 const UNWRAPPED: i32 = -1;
 
+/// How a line sets its text beyond what the stylesheet says: centred, as a
+/// caption over a video is, and scaled on top of the lyrics font size.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Look {
+    pub centered: bool,
+    pub scale: f64,
+}
+
+impl Default for Look {
+    fn default() -> Self {
+        Self {
+            centered: false,
+            scale: 1.0,
+        }
+    }
+}
+
+/// Where a position measured from the start of its wrapped row sits in the
+/// line's own coordinates: a centred or right-to-left row does not start at
+/// the left edge.
+pub fn row_x(row_left: f32, x_in_row: f32) -> f32 {
+    row_left + x_in_row
+}
+
 /// The one layout a line keeps, shared by measuring and drawing. It is rebuilt
 /// only when the font, the scale factor or the text direction it was built
 /// under changes, and re-wrapped only when it is asked for another width.
@@ -72,6 +96,7 @@ pub struct Cached {
     font: Option<pango::FontDescription>,
     scale_factor: i32,
     direction: gtk::TextDirection,
+    look: Look,
     layout: pango::Layout,
     width: i32,
     rows: Vec<VisualLine>,
@@ -90,6 +115,7 @@ mod imp {
         pub cached: RefCell<Option<Cached>>,
         pub progress: Cell<Option<LineProgress>>,
         pub last_edge: Cell<Option<SungEdge>>,
+        pub look: Cell<Look>,
     }
 
     #[glib::object_subclass]
@@ -204,6 +230,17 @@ impl LyricLine {
         line
     }
 
+    /// Centres the text, scaled by `scale` over the lyrics font size, as a
+    /// caption is set.
+    pub fn set_look(&self, look: Look) {
+        let imp = self.imp();
+        if imp.look.replace(look) == look {
+            return;
+        }
+        imp.last_edge.set(None);
+        self.queue_resize();
+    }
+
     /// Starts, moves or ends the fill. `None` draws the line plainly.
     pub fn set_progress(&self, progress: Option<LineProgress>) {
         let imp = self.imp();
@@ -239,19 +276,23 @@ impl LyricLine {
         let font = self.pango_context().font_description();
         let scale_factor = self.scale_factor();
         let direction = self.direction();
+        let look = imp.look.get();
         let mut cached = imp.cached.borrow_mut();
         let current = cached.as_ref().is_some_and(|cached| {
             cached.font == font
                 && cached.scale_factor == scale_factor
                 && cached.direction == direction
+                && cached.look == look
         });
         if !current {
             let layout = self.create_pango_layout(Some(imp.text.borrow().as_str()));
             layout.set_wrap(pango::WrapMode::WordChar);
+            apply_look(&layout, look);
             *cached = Some(Cached {
                 font,
                 scale_factor,
                 direction,
+                look,
                 layout,
                 width: UNWRAPPED,
                 rows: Vec::new(),
@@ -315,17 +356,13 @@ impl LyricLine {
                 let scale = pango::SCALE as f32;
                 let (line, from) = cached.layout.index_to_line_x(start as i32, false);
                 let (end_line, to) = cached.layout.index_to_line_x(end as i32, false);
-                let from = from as f32 / scale;
+                let row = cached.rows.get(line.max(0) as usize).copied();
+                let left = row.map_or(0.0, |row| row.left);
+                let from = row_x(left, from as f32 / scale);
                 let to = if end_line == line {
-                    to as f32 / scale
+                    row_x(left, to as f32 / scale)
                 } else {
-                    cached.rows.get(line as usize).map_or(from, |row| {
-                        if row.rtl {
-                            row.left
-                        } else {
-                            row.right
-                        }
-                    })
+                    row.map_or(from, |row| if row.rtl { row.left } else { row.right })
                 };
                 SungEdge::At {
                     line: line.max(0) as usize,
@@ -333,6 +370,19 @@ impl LyricLine {
                 }
             }
         }
+    }
+}
+
+/// Sets the layout's alignment and scale from `look`; the default look leaves
+/// the layout exactly as the stylesheet made it.
+fn apply_look(layout: &pango::Layout, look: Look) {
+    if look.centered {
+        layout.set_alignment(pango::Alignment::Center);
+    }
+    if (look.scale - 1.0).abs() > f64::EPSILON {
+        let attributes = pango::AttrList::new();
+        attributes.insert(pango::AttrFloat::new_scale(look.scale));
+        layout.set_attributes(Some(&attributes));
     }
 }
 
@@ -395,6 +445,12 @@ mod tests {
         assert_eq!(edge_inside(10.0, 50.0, 0.0), 10.0);
         assert_eq!(edge_inside(10.0, 50.0, 0.5), 30.0);
         assert_eq!(edge_inside(10.0, 50.0, 2.0), 50.0);
+    }
+
+    #[test]
+    fn a_centred_row_measures_its_edge_from_where_the_row_starts() {
+        assert_eq!(row_x(0.0, 25.0), 25.0);
+        assert_eq!(row_x(120.0, 25.0), 145.0);
     }
 
     #[test]

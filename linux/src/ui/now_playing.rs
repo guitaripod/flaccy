@@ -2,18 +2,23 @@ use crate::events::AppEvent;
 use crate::ui::controls::{
     apply_repeat, attach_label_nav, build_volume_control, set_love_appearance,
 };
-use crate::ui::lyrics_panel::{self, LyricsOptions};
+use crate::ui::lyrics_panel::{self, LyricsOptions, Presentation};
 use crate::ui::queue_panel::{self, QueueOptions};
 use crate::ui::seek_bar;
 use crate::ui::slider::SliderMetrics;
-use crate::ui::video_view;
+use crate::ui::stage_layout::{Arrangement, LyricsStyle, Placement, Side, DEFAULT_ASPECT};
+use crate::ui::video_stage::{Layer, VideoStage};
+use crate::ui::video_view::{self, VideoView};
 use crate::ui::Ui;
 use adw::prelude::*;
 use crate::library::Track;
 use flaccy_shared::track_revision::copy;
+use gtk::gdk;
+use gtk::glib;
 use gtk::pango;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::time::Duration;
 
 /// The skip buttons either side of previous/next, matching the ±15 s the
 /// iPhone and Mac players offer, and the Shift+←/→ shortcuts.
@@ -21,6 +26,11 @@ pub const SKIP_SECONDS: f64 = 15.0;
 /// The dock's side padding plus some slack: an optional control only comes
 /// back once it fits with room to spare, so the dock never flickers at the edge.
 const DOCK_CHROME: i32 = 64;
+/// How long the header, the dock and the pointer stay up over a playing video
+/// after the pointer last moved.
+const CHROME_LINGER: Duration = Duration::from_millis(2500);
+/// How long the title card stays up after a song starts on the stage.
+const CARD_HOLD: Duration = Duration::from_secs(6);
 
 /// Full-window "focus" player pushed onto the outer nav (ui.shell). A blurred,
 /// accent-washed cover fills the page; the hero artwork sits centered with
@@ -28,10 +38,11 @@ const DOCK_CHROME: i32 = 64;
 /// toggled, so any combination of the three can be shown at once, and a header
 /// swap button flips which side each column lives on (persisted) — over a
 /// single persistent transport dock with a volume cluster. The artist and
-/// album labels navigate to their library pages. A third toggle swaps the
-/// hero art for the music video lens — the video takes the centre column's
-/// place rather than becoming a fourth panel, because it is another way of
-/// looking at the song playing and it wants the width the artwork was using.
+/// album labels navigate to their library pages. The Video toggle turns the
+/// page into a stage: the music video as large as the window allows, the glow
+/// it casts around it, and the lyrics and Up Next laid beside, under or over
+/// the picture, with the header and dock floating over it and stepping out of
+/// the way while the pointer rests.
 pub fn present(ui: &Rc<Ui>) {
     if ui
         .shell
@@ -115,27 +126,37 @@ pub fn present(ui: &Rc<Ui>) {
     // A collapsed side reveals nothing and (via its toggle) drops hexpand, so
     // the visible columns always share the row equally — art alone, art+one
     // half/half, or all three in thirds.
-    let video = video_view::build(ui);
-    let centre = gtk::Stack::builder()
-        .transition_type(gtk::StackTransitionType::Crossfade)
-        .transition_duration(220)
-        .hexpand(true)
-        .vexpand(true)
-        .build();
-    centre.add_named(&art_page, Some("art"));
-    centre.add_named(&video.widget, Some("video"));
-
     let size_group = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
     size_group.add_widget(&lyrics.widget);
-    size_group.add_widget(&centre);
+    size_group.add_widget(&art_page);
     size_group.add_widget(&queue.widget);
 
     let content = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     content.set_hexpand(true);
     content.set_vexpand(true);
     content.append(&lyrics_reveal);
-    content.append(&centre);
+    content.append(&art_page);
     content.append(&queue_reveal);
+
+    let video = video_view::build(ui);
+    let poster = poster_for(&art);
+    let card = title_card(ui);
+    let stage = VideoStage::default();
+    stage.set_zoom(crate::ui::ui_scale::current());
+    stage.set_layer(Layer::Ambient, Some(&video.ambient));
+    stage.set_layer(Layer::Poster, Some(&poster));
+    stage.set_layer(Layer::Video, Some(&video.picture));
+    stage.set_layer(Layer::Status, Some(&video.status));
+    stage.set_layer(Layer::Card, Some(&card.widget));
+
+    let composition = gtk::Stack::builder()
+        .transition_type(gtk::StackTransitionType::Crossfade)
+        .transition_duration(220)
+        .hexpand(true)
+        .vexpand(true)
+        .build();
+    composition.add_named(&content, Some("columns"));
+    composition.add_named(&stage, Some("stage"));
 
     // Suppresses the config write while the view restores saved panels or the
     // width adaptation folds one away, so a narrow window never overwrites the
@@ -143,57 +164,142 @@ pub fn present(ui: &Rc<Ui>) {
     let syncing = Rc::new(Cell::new(true));
 
     let (lyrics_toggle, _lyrics_label) = toggle_button("format-justify-center-symbolic", "Lyrics");
+    let (queue_toggle, queue_label) = toggle_button("view-list-symbolic", "Up Next");
+    let (video_toggle, _video_label) = toggle_button("video-display-symbolic", "Video");
+    video_toggle.set_tooltip_text(Some(
+        "Play the song's music video, synced to your lossless audio",
+    ));
+    video_toggle.set_visible(crate::musicvideo::available());
+
+    let fullscreen = gtk::Button::from_icon_name("view-fullscreen-symbolic");
+    fullscreen.add_css_class("flat");
+    fullscreen.set_tooltip_text(Some("Full Screen (F11)"));
+    video.tools.set_visible(false);
+
+    let swap = gtk::Button::from_icon_name("object-flip-horizontal-symbolic");
+    swap.add_css_class("flat");
+    swap.add_css_class("np-swap");
+    swap.set_tooltip_text(Some("Swap Lyrics and Up Next sides"));
+
+    let toggles = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    toggles.set_halign(gtk::Align::Center);
+    toggles.add_css_class("np-toggles");
+    toggles.append(&lyrics_toggle);
+    toggles.append(&video_toggle);
+    toggles.append(&queue_toggle);
+    toggles.append(&swap);
+
+    let controls_row = gtk::CenterBox::new();
+    controls_row.set_center_widget(Some(&transport.container));
+    controls_row.set_end_widget(Some(&volume.container));
+
+    let np_transport = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    np_transport.add_css_class("np-transport");
+    np_transport.append(&seek.container);
+    np_transport.append(&controls_row);
+
+    let header = adw::HeaderBar::builder()
+        .title_widget(&toggles)
+        .show_end_title_buttons(true)
+        .build();
+    header.add_css_class("flat");
+    header.pack_end(&fullscreen);
+    header.pack_end(&video.tools);
+
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_css_class("np-toolbar");
+    toolbar.set_top_bar_style(adw::ToolbarStyle::Flat);
+    toolbar.add_top_bar(&header);
+    toolbar.set_content(Some(&composition));
+    toolbar.add_bottom_bar(&np_transport);
+
+    let overlay = gtk::Overlay::new();
+    overlay.add_css_class("np-root");
+    overlay.set_child(Some(&backdrop));
+    overlay.add_overlay(&scrim);
+    overlay.add_overlay(&toolbar);
+    overlay.add_overlay(&seek.bubble);
+    overlay.add_overlay(&volume.bubble);
+
+    let chrome = StageChrome::new(ui, &toolbar, &header, &np_transport, &stage, &card, &video);
+    chrome.install(&overlay);
+
+    let layout = Rc::new(Layout {
+        ui: Rc::clone(ui),
+        composition: composition.clone(),
+        stage: stage.clone(),
+        toolbar: toolbar.clone(),
+        content: content.clone(),
+        art_page: art_page.clone(),
+        size_group,
+        lyrics_widget: lyrics.widget.clone(),
+        lyrics_reveal,
+        queue_widget: queue.widget.clone(),
+        queue_reveal,
+        lyrics_toggle: lyrics_toggle.clone(),
+        queue_toggle: queue_toggle.clone(),
+        video_toggle: video_toggle.clone(),
+        tools: video.tools.clone(),
+        set_presentation: Rc::clone(&lyrics.set_presentation),
+        set_lyrics_insets: Rc::clone(&lyrics.set_insets),
+        chrome: Rc::clone(&chrome),
+        in_stage: Cell::new(false),
+    });
+    follow_the_stage(&layout, &video, &lyrics.set_caption_layout, &poster);
+
     {
-        let lyrics_reveal = lyrics_reveal.clone();
+        let layout = Rc::clone(&layout);
         let set_active = Rc::clone(&lyrics.set_active);
         let ui = Rc::clone(ui);
         let syncing = Rc::clone(&syncing);
         lyrics_toggle.connect_toggled(move |button| {
             let active = button.is_active();
-            lyrics_reveal.set_reveal_child(active);
-            lyrics_reveal.set_hexpand(active);
             set_active(active);
+            layout.apply();
             if !syncing.get() {
                 ui.core.config.borrow_mut().np_show_lyrics = active;
                 ui.core.save_config();
             }
         });
     }
-    let (queue_toggle, queue_label) = toggle_button("view-list-symbolic", "Up Next");
     {
-        let queue_reveal = queue_reveal.clone();
+        let layout = Rc::clone(&layout);
         let set_active = Rc::clone(&queue.set_active);
         let ui = Rc::clone(ui);
         let syncing = Rc::clone(&syncing);
         queue_toggle.connect_toggled(move |button| {
             let active = button.is_active();
-            queue_reveal.set_reveal_child(active);
-            queue_reveal.set_hexpand(active);
             set_active(active);
+            layout.apply();
             if !syncing.get() {
                 ui.core.config.borrow_mut().np_show_queue = active;
                 ui.core.save_config();
             }
         });
     }
-    let (video_toggle, _video_label) = toggle_button("video-display-symbolic", "Video");
-    video_toggle.set_tooltip_text(Some(
-        "Play the song's music video, synced to your lossless audio",
-    ));
-    video_toggle.set_visible(crate::musicvideo::available());
     {
-        let centre = centre.clone();
+        let layout = Rc::clone(&layout);
         let set_active = Rc::clone(&video.set_active);
         let ui = Rc::clone(ui);
         let syncing = Rc::clone(&syncing);
         video_toggle.connect_toggled(move |button| {
             let active = button.is_active();
-            centre.set_visible_child_name(if active { "video" } else { "art" });
+            layout.apply();
             set_active(active);
             if !syncing.get() {
                 ui.core.config.borrow_mut().np_show_video = active;
                 ui.core.save_config();
             }
+        });
+    }
+    {
+        let layout = Rc::clone(&layout);
+        let ui = Rc::clone(ui);
+        video.lyrics_style.connect_active_name_notify(move |group| {
+            let style = LyricsStyle::from_id(group.active_name().as_deref().unwrap_or_default());
+            ui.core.config.borrow_mut().np_video_lyrics = style.id().to_string();
+            ui.core.save_config();
+            layout.apply();
         });
     }
     {
@@ -219,39 +325,18 @@ pub fn present(ui: &Rc<Ui>) {
     // Below this width, keep at most one side panel open so art stays readable.
     install_now_playing_width_adaptation(
         ui,
-        &content,
+        &composition,
         &lyrics_toggle,
         &queue_toggle,
         dock,
         &syncing,
     );
 
-    let apply_sides: Rc<dyn Fn(bool)> = {
-        let content = content.clone();
-        let centre = centre.clone();
-        let lyrics_reveal = lyrics_reveal.clone();
-        let queue_reveal = queue_reveal.clone();
-        Rc::new(move |swapped| {
-            let (left, right) = if swapped {
-                (&queue_reveal, &lyrics_reveal)
-            } else {
-                (&lyrics_reveal, &queue_reveal)
-            };
-            left.set_transition_type(gtk::RevealerTransitionType::SlideRight);
-            right.set_transition_type(gtk::RevealerTransitionType::SlideLeft);
-            content.reorder_child_after(left, gtk::Widget::NONE);
-            content.reorder_child_after(right, Some(&centre));
-        })
-    };
-    apply_sides(ui.core.config.borrow().np_swap_sides);
-
-    let swap = gtk::Button::from_icon_name("object-flip-horizontal-symbolic");
-    swap.add_css_class("flat");
-    swap.add_css_class("np-swap");
-    swap.set_tooltip_text(Some("Swap Lyrics and Up Next sides"));
     {
+        let layout = Rc::clone(&layout);
+        let swapped = ui.core.config.borrow().np_swap_sides;
+        layout.apply_sides(swapped);
         let ui = Rc::clone(ui);
-        let apply_sides = Rc::clone(&apply_sides);
         swap.connect_clicked(move |_| {
             let swapped = {
                 let mut config = ui.core.config.borrow_mut();
@@ -259,47 +344,10 @@ pub fn present(ui: &Rc<Ui>) {
                 config.np_swap_sides
             };
             ui.core.save_config();
-            apply_sides(swapped);
+            layout.apply_sides(swapped);
         });
     }
-
-    let toggles = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    toggles.set_halign(gtk::Align::Center);
-    toggles.add_css_class("np-toggles");
-    toggles.append(&lyrics_toggle);
-    toggles.append(&video_toggle);
-    toggles.append(&queue_toggle);
-    toggles.append(&swap);
-
-    let controls_row = gtk::CenterBox::new();
-    controls_row.set_center_widget(Some(&transport.container));
-    controls_row.set_end_widget(Some(&volume.container));
-
-    let np_transport = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    np_transport.add_css_class("np-transport");
-    np_transport.append(&seek.container);
-    np_transport.append(&controls_row);
-
-    let header = adw::HeaderBar::builder()
-        .title_widget(&toggles)
-        .show_end_title_buttons(true)
-        .build();
-    header.add_css_class("flat");
-
-    let toolbar = adw::ToolbarView::new();
-    toolbar.add_css_class("np-toolbar");
-    toolbar.set_top_bar_style(adw::ToolbarStyle::Flat);
-    toolbar.add_top_bar(&header);
-    toolbar.set_content(Some(&content));
-    toolbar.add_bottom_bar(&np_transport);
-
-    let overlay = gtk::Overlay::new();
-    overlay.add_css_class("np-root");
-    overlay.set_child(Some(&backdrop));
-    overlay.add_overlay(&scrim);
-    overlay.add_overlay(&toolbar);
-    overlay.add_overlay(&seek.bubble);
-    overlay.add_overlay(&volume.bubble);
+    install_fullscreen(ui, &overlay, &fullscreen, &video, &poster);
 
     let update = build_updater(
         ui,
@@ -341,6 +389,592 @@ pub fn present(ui: &Rc<Ui>) {
         .child(&overlay)
         .build();
     ui.shell.push(&page);
+}
+
+/// Where the lyrics and Up Next panels live and how they are shown: columns
+/// either side of the art, or layers on the video stage.
+struct Layout {
+    ui: Rc<Ui>,
+    composition: gtk::Stack,
+    stage: VideoStage,
+    toolbar: adw::ToolbarView,
+    content: gtk::Box,
+    art_page: gtk::Widget,
+    size_group: gtk::SizeGroup,
+    lyrics_widget: gtk::Widget,
+    lyrics_reveal: gtk::Revealer,
+    queue_widget: gtk::Widget,
+    queue_reveal: gtk::Revealer,
+    lyrics_toggle: gtk::ToggleButton,
+    queue_toggle: gtk::ToggleButton,
+    video_toggle: gtk::ToggleButton,
+    tools: gtk::MenuButton,
+    set_presentation: Rc<dyn Fn(Presentation)>,
+    set_lyrics_insets: Rc<dyn Fn(i32, i32)>,
+    chrome: Rc<StageChrome>,
+    in_stage: Cell<bool>,
+}
+
+impl Layout {
+    /// Brings the page in line with the three toggles.
+    fn apply(&self) {
+        let video = self.video_toggle.is_active();
+        let lyrics = self.lyrics_toggle.is_active();
+        let queue = self.queue_toggle.is_active();
+        if self.in_stage.replace(video) != video {
+            if video {
+                self.panels_to_stage();
+            } else {
+                self.panels_to_columns();
+            }
+            self.composition
+                .set_visible_child_name(if video { "stage" } else { "columns" });
+            self.tools.set_visible(video);
+            self.chrome.set_stage(video);
+        }
+        if video {
+            let style = LyricsStyle::from_id(&self.ui.core.config.borrow().np_video_lyrics);
+            self.stage.set_lyrics(lyrics.then_some(style));
+            self.stage.set_queue(queue);
+        } else {
+            self.lyrics_reveal.set_reveal_child(lyrics);
+            self.lyrics_reveal.set_hexpand(lyrics);
+            self.queue_reveal.set_reveal_child(queue);
+            self.queue_reveal.set_hexpand(queue);
+        }
+    }
+
+    /// Puts the lyrics on the left (or right, swapped) in both layouts.
+    fn apply_sides(&self, swapped: bool) {
+        let (left, right) = if swapped {
+            (&self.queue_reveal, &self.lyrics_reveal)
+        } else {
+            (&self.lyrics_reveal, &self.queue_reveal)
+        };
+        left.set_transition_type(gtk::RevealerTransitionType::SlideRight);
+        right.set_transition_type(gtk::RevealerTransitionType::SlideLeft);
+        self.content.reorder_child_after(left, gtk::Widget::NONE);
+        self.content.reorder_child_after(right, Some(&self.art_page));
+        self.stage
+            .set_lyrics_side(if swapped { Side::Right } else { Side::Left });
+    }
+
+    fn panels_to_stage(&self) {
+        for (widget, reveal) in [
+            (&self.lyrics_widget, &self.lyrics_reveal),
+            (&self.queue_widget, &self.queue_reveal),
+        ] {
+            reveal.set_child(gtk::Widget::NONE);
+            self.size_group.remove_widget(widget);
+        }
+        self.lyrics_widget.remove_css_class("np-side");
+        self.lyrics_widget.add_css_class("np-stage-lyrics");
+        self.queue_widget.add_css_class("np-stage-queue");
+        self.stage.set_layer(Layer::Lyrics, Some(&self.lyrics_widget));
+        self.stage.set_layer(Layer::Queue, Some(&self.queue_widget));
+        self.stage.rearrange();
+    }
+
+    fn panels_to_columns(&self) {
+        self.stage.set_layer(Layer::Lyrics, gtk::Widget::NONE);
+        self.stage.set_layer(Layer::Queue, gtk::Widget::NONE);
+        (self.set_presentation)(Presentation::Column);
+        (self.set_lyrics_insets)(0, 0);
+        self.lyrics_widget.remove_css_class("np-stage-lyrics");
+        self.lyrics_widget.add_css_class("np-side");
+        self.queue_widget.remove_css_class("np-stage-queue");
+        for (widget, reveal) in [
+            (&self.lyrics_widget, &self.lyrics_reveal),
+            (&self.queue_widget, &self.queue_reveal),
+        ] {
+            widget.set_opacity(1.0);
+            widget.set_child_visible(true);
+            reveal.set_child(Some(widget));
+            self.size_group.add_widget(widget);
+        }
+    }
+}
+
+/// Keeps the stage and the lyrics in step with each other: the picture's
+/// shape (bars cropped away included), whether there is a picture at all or
+/// only the cover to show, how far the header and dock reach, and whether the
+/// lyrics are a column or captions wherever the stage put them.
+fn follow_the_stage(
+    layout: &Rc<Layout>,
+    video: &VideoView,
+    set_caption_layout: &Rc<dyn Fn(f64, f64)>,
+    poster: &gtk::Picture,
+) {
+    let stage = layout.stage.clone();
+    let show_picture: Rc<dyn Fn()> = {
+        let ui = Rc::clone(&layout.ui);
+        let surface = video.surface.clone();
+        let picture = video.picture.clone();
+        let poster = poster.clone();
+        let stage = stage.clone();
+        Rc::new(move || {
+            let has_picture =
+                ui.core.music_video.state().matched().is_some() && surface.has_frame();
+            picture.set_visible(has_picture);
+            poster.set_visible(!has_picture);
+            stage.set_aspect(surface.aspect().unwrap_or(DEFAULT_ASPECT));
+        })
+    };
+    show_picture();
+    {
+        let show_picture = Rc::clone(&show_picture);
+        video.surface.connect_shape(move || show_picture());
+    }
+    {
+        let show_picture = Rc::clone(&show_picture);
+        layout
+            .ui
+            .core
+            .hub
+            .subscribe_widget(&stage, move |_, event| {
+                if matches!(event, AppEvent::MusicVideoChanged | AppEvent::TrackChanged(_)) {
+                    show_picture();
+                }
+            });
+    }
+
+    let insets: Rc<dyn Fn()> = {
+        let layout = Rc::downgrade(layout);
+        Rc::new(move || {
+            let Some(layout) = layout.upgrade() else { return };
+            let (top, bottom) = (
+                layout.toolbar.top_bar_height() as f64,
+                layout.toolbar.bottom_bar_height() as f64,
+            );
+            layout.stage.set_insets(top, bottom);
+        })
+    };
+    insets();
+    {
+        let insets = Rc::clone(&insets);
+        layout
+            .toolbar
+            .connect_top_bar_height_notify(move |_| insets());
+    }
+    layout
+        .toolbar
+        .connect_bottom_bar_height_notify(move |_| insets());
+
+    let weak = Rc::downgrade(layout);
+    let picture = video.picture.clone();
+    let poster = poster.clone();
+    let set_caption_layout = Rc::clone(set_caption_layout);
+    stage.connect_arranged(move |arrangement: &Arrangement| {
+        let Some(layout) = weak.upgrade() else { return };
+        if !layout.in_stage.get() {
+            return;
+        }
+        let captions = arrangement.placement() == Some(Placement::Captions);
+        (layout.set_presentation)(if captions {
+            Presentation::Captions
+        } else {
+            Presentation::Column
+        });
+        if let Some(band) = arrangement.captions {
+            set_caption_layout(band.scale, band.margin);
+        }
+        if let Some((_, rect)) = arrangement.lyrics {
+            let top = layout.toolbar.top_bar_height() as f64 - rect.y;
+            let foot = layout.stage.height() as f64 - layout.toolbar.bottom_bar_height() as f64;
+            let bottom = rect.bottom() - foot;
+            (layout.set_lyrics_insets)(top.max(0.0) as i32, bottom.max(0.0) as i32);
+        }
+        for widget in [picture.upcast_ref::<gtk::Widget>(), poster.upcast_ref()] {
+            if arrangement.floating {
+                widget.add_css_class("floating");
+            } else {
+                widget.remove_css_class("floating");
+            }
+        }
+    });
+}
+
+/// The cover, shown on the stage in the picture's place while there is no
+/// picture: searching, nothing found, or the stream still opening.
+fn poster_for(art: &gtk::Picture) -> gtk::Picture {
+    let poster = gtk::Picture::builder()
+        .content_fit(gtk::ContentFit::Cover)
+        .build();
+    poster.set_overflow(gtk::Overflow::Hidden);
+    poster.add_css_class("np-poster");
+    poster.set_paintable(art.paintable().as_ref());
+    let weak = poster.downgrade();
+    art.connect_paintable_notify(move |art| {
+        if let Some(poster) = weak.upgrade() {
+            poster.set_paintable(art.paintable().as_ref());
+        }
+    });
+    poster
+}
+
+/// The music-television title card over the picture: artist, title, album
+/// and the file's quality, shown as a song starts and whenever the chrome is.
+struct TitleCard {
+    widget: gtk::Revealer,
+}
+
+fn title_card(ui: &Rc<Ui>) -> TitleCard {
+    let artist = gtk::Label::builder()
+        .xalign(0.0)
+        .ellipsize(pango::EllipsizeMode::End)
+        .build();
+    artist.add_css_class("np-card-artist");
+    let title = gtk::Label::builder()
+        .xalign(0.0)
+        .wrap(true)
+        .wrap_mode(pango::WrapMode::WordChar)
+        .ellipsize(pango::EllipsizeMode::End)
+        .lines(2)
+        .max_width_chars(28)
+        .build();
+    title.add_css_class("np-card-title");
+    let meta = gtk::Label::builder()
+        .xalign(0.0)
+        .ellipsize(pango::EllipsizeMode::End)
+        .build();
+    meta.add_css_class("np-card-meta");
+    attach_label_nav(ui, &artist, "Go to Artist", |ui| {
+        if let Some(track) = ui.core.player.current_track() {
+            crate::ui::goto_artist(ui, &track.artist);
+        }
+    });
+    attach_label_nav(ui, &meta, "Go to Album", |ui| {
+        if let Some(track) = ui.core.player.current_track() {
+            crate::ui::goto_album_of_track(ui, &track.rel_path);
+        }
+    });
+    let body = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    body.add_css_class("np-card");
+    body.append(&artist);
+    body.append(&title);
+    body.append(&meta);
+    let widget = gtk::Revealer::builder()
+        .transition_type(gtk::RevealerTransitionType::Crossfade)
+        .transition_duration(360)
+        .child(&body)
+        .build();
+
+    let fill = {
+        let ui = Rc::clone(ui);
+        move || {
+            let Some(track) = ui.core.player.current_track() else {
+                return;
+            };
+            artist.set_label(&track.artist);
+            title.set_label(&track.title);
+            let line = match track.quality_badge() {
+                Some(badge) if !track.album.is_empty() => format!("{} · {badge}", track.album),
+                Some(badge) => badge,
+                None => track.album.clone(),
+            };
+            meta.set_label(&line);
+        }
+    };
+    fill();
+    ui.core.hub.subscribe_widget(&widget, move |_, event| {
+        if matches!(event, AppEvent::TrackChanged(_)) {
+            fill();
+        }
+    });
+    TitleCard { widget }
+}
+
+/// The header, the dock and the pointer over a playing video: shown while the
+/// pointer moves, a key is pressed, the video pauses or a menu is open, and
+/// out of the way once the pointer rests, the way a video player behaves.
+/// Over the art they never hide.
+struct StageChrome {
+    ui: Rc<Ui>,
+    toolbar: adw::ToolbarView,
+    stage: VideoStage,
+    root: RefCell<Option<glib::WeakRef<gtk::Overlay>>>,
+    header_hover: gtk::EventControllerMotion,
+    dock_hover: gtk::EventControllerMotion,
+    tools: gtk::MenuButton,
+    card: gtk::Revealer,
+    active: Cell<bool>,
+    shown: Cell<bool>,
+    holding_card: Cell<bool>,
+    linger: RefCell<Option<glib::SourceId>>,
+    hold: RefCell<Option<glib::SourceId>>,
+    pointer: Cell<(f64, f64)>,
+}
+
+impl StageChrome {
+    fn new(
+        ui: &Rc<Ui>,
+        toolbar: &adw::ToolbarView,
+        header: &adw::HeaderBar,
+        dock: &gtk::Box,
+        stage: &VideoStage,
+        card: &TitleCard,
+        video: &VideoView,
+    ) -> Rc<Self> {
+        let header_hover = gtk::EventControllerMotion::new();
+        header.add_controller(header_hover.clone());
+        let dock_hover = gtk::EventControllerMotion::new();
+        dock.add_controller(dock_hover.clone());
+        Rc::new(Self {
+            ui: Rc::clone(ui),
+            toolbar: toolbar.clone(),
+            stage: stage.clone(),
+            root: RefCell::new(None),
+            header_hover,
+            dock_hover,
+            tools: video.tools.clone(),
+            card: card.widget.clone(),
+            active: Cell::new(false),
+            shown: Cell::new(true),
+            holding_card: Cell::new(false),
+            linger: RefCell::new(None),
+            hold: RefCell::new(None),
+            pointer: Cell::new((f64::NAN, f64::NAN)),
+        })
+    }
+
+    /// Listens on the page for the pointer and keys, and to the player for
+    /// pauses and new songs.
+    fn install(self: &Rc<Self>, root: &gtk::Overlay) {
+        *self.root.borrow_mut() = Some(root.downgrade());
+        let motion = gtk::EventControllerMotion::new();
+        {
+            let chrome = Rc::downgrade(self);
+            motion.connect_motion(move |_, x, y| {
+                let Some(chrome) = chrome.upgrade() else { return };
+                if chrome.pointer.replace((x, y)) != (x, y) {
+                    chrome.wake();
+                }
+            });
+        }
+        root.add_controller(motion);
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        {
+            let chrome = Rc::downgrade(self);
+            keys.connect_key_pressed(move |_, _, _, _| {
+                if let Some(chrome) = chrome.upgrade() {
+                    chrome.wake();
+                }
+                glib::Propagation::Proceed
+            });
+        }
+        root.add_controller(keys);
+        {
+            let chrome = Rc::downgrade(self);
+            self.tools.connect_active_notify(move |_| {
+                if let Some(chrome) = chrome.upgrade() {
+                    chrome.wake();
+                }
+            });
+        }
+        let chrome = Rc::downgrade(self);
+        self.ui.core.hub.subscribe_widget(root, move |_, event| {
+            let Some(chrome) = chrome.upgrade() else { return };
+            match event {
+                AppEvent::TrackChanged(_) => chrome.hold_card(),
+                AppEvent::PlayingChanged(_) | AppEvent::MusicVideoChanged => chrome.reconsider(),
+                _ => {}
+            }
+        });
+    }
+
+    /// Floats the bars over the stage, or gives them back their own room
+    /// over the art.
+    fn set_stage(self: &Rc<Self>, active: bool) {
+        self.active.set(active);
+        self.toolbar.set_extend_content_to_top_edge(active);
+        self.toolbar.set_extend_content_to_bottom_edge(active);
+        if let Some(root) = self.root.borrow().as_ref().and_then(|root| root.upgrade()) {
+            if active {
+                root.add_css_class("np-stage");
+            } else {
+                root.remove_css_class("np-stage");
+            }
+        }
+        if active {
+            self.hold_card();
+        }
+        self.wake();
+    }
+
+    fn wake(self: &Rc<Self>) {
+        self.reveal(true);
+        if let Some(source) = self.linger.borrow_mut().take() {
+            source.remove();
+        }
+        if !self.active.get() {
+            return;
+        }
+        let chrome = Rc::downgrade(self);
+        let source = glib::timeout_add_local_once(CHROME_LINGER, move || {
+            let Some(chrome) = chrome.upgrade() else { return };
+            chrome.linger.borrow_mut().take();
+            if chrome.may_rest() {
+                chrome.reveal(false);
+            }
+        });
+        *self.linger.borrow_mut() = Some(source);
+    }
+
+    /// After a pause, a new song or a change in the video: the chrome comes
+    /// back when the music stops or the picture goes, and a playing picture
+    /// gets its rest timer if none is running. A buffering blip never brings
+    /// the chrome back by itself.
+    fn reconsider(self: &Rc<Self>) {
+        if !self.active.get() {
+            return;
+        }
+        let picture = self.ui.core.music_video.state().matched().is_some();
+        let stopped = !self.ui.core.player.is_playing() || !picture;
+        let untimed = self.shown.get() && self.linger.borrow().is_none();
+        if stopped || untimed {
+            self.wake();
+        }
+    }
+
+    /// The chrome steps aside only over a video that is playing, with the
+    /// pointer off the bars and no menu open.
+    fn may_rest(&self) -> bool {
+        self.active.get()
+            && video_view::is_playing_video(&self.ui)
+            && !self.header_hover.contains_pointer()
+            && !self.dock_hover.contains_pointer()
+            && !self.tools.is_active()
+    }
+
+    fn reveal(&self, shown: bool) {
+        let shown = shown || !self.active.get();
+        if self.shown.replace(shown) != shown {
+            self.toolbar.set_reveal_top_bars(shown);
+            self.toolbar.set_reveal_bottom_bars(shown);
+            if shown {
+                self.stage.set_cursor(None);
+            } else {
+                self.stage.set_cursor_from_name(Some("none"));
+            }
+        }
+        self.show_card();
+    }
+
+    /// Keeps the title card up for a while as a song starts, chrome or not.
+    fn hold_card(self: &Rc<Self>) {
+        if let Some(source) = self.hold.borrow_mut().take() {
+            source.remove();
+        }
+        self.holding_card.set(true);
+        let chrome = Rc::downgrade(self);
+        let source = glib::timeout_add_local_once(CARD_HOLD, move || {
+            let Some(chrome) = chrome.upgrade() else { return };
+            chrome.hold.borrow_mut().take();
+            chrome.holding_card.set(false);
+            chrome.show_card();
+        });
+        *self.hold.borrow_mut() = Some(source);
+        self.show_card();
+    }
+
+    fn show_card(&self) {
+        let wanted = self.active.get()
+            && (self.shown.get() || self.holding_card.get())
+            && self.ui.core.player.current_track().is_some();
+        self.card.set_reveal_child(wanted);
+    }
+}
+
+/// Full screen for the whole window from the header button, F11 or a double
+/// click on the picture; Escape leaves it, and so does leaving Now Playing.
+fn install_fullscreen(
+    ui: &Rc<Ui>,
+    root: &gtk::Overlay,
+    button: &gtk::Button,
+    video: &VideoView,
+    poster: &gtk::Picture,
+) {
+    let made_full = Rc::new(Cell::new(false));
+    let toggle: Rc<dyn Fn()> = {
+        let window = ui.window.clone();
+        let made_full = Rc::clone(&made_full);
+        Rc::new(move || {
+            if window.is_fullscreen() {
+                window.unfullscreen();
+            } else {
+                made_full.set(true);
+                window.fullscreen();
+            }
+        })
+    };
+    {
+        let toggle = Rc::clone(&toggle);
+        button.connect_clicked(move |_| toggle());
+    }
+    for surface in [video.picture.clone(), poster.clone().upcast()] {
+        let click = gtk::GestureClick::new();
+        let toggle = Rc::clone(&toggle);
+        click.connect_pressed(move |gesture, presses, _, _| {
+            if presses == 2 {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                toggle();
+            }
+        });
+        surface.add_controller(click);
+    }
+    let keys = gtk::EventControllerKey::new();
+    {
+        let window = ui.window.clone();
+        let toggle = Rc::clone(&toggle);
+        keys.connect_key_pressed(move |_, key, _, _| match key {
+            gdk::Key::F11 => {
+                toggle();
+                glib::Propagation::Stop
+            }
+            gdk::Key::Escape if window.is_fullscreen() => {
+                window.unfullscreen();
+                glib::Propagation::Stop
+            }
+            _ => glib::Propagation::Proceed,
+        });
+    }
+    root.add_controller(keys);
+
+    let show_state = {
+        let button = button.downgrade();
+        move |window: &adw::ApplicationWindow| {
+            let Some(button) = button.upgrade() else { return };
+            let full = window.is_fullscreen();
+            button.set_icon_name(if full {
+                "view-restore-symbolic"
+            } else {
+                "view-fullscreen-symbolic"
+            });
+            button.set_tooltip_text(Some(if full {
+                "Leave Full Screen (Esc)"
+            } else {
+                "Full Screen (F11)"
+            }));
+        }
+    };
+    show_state(&ui.window);
+    let handler = ui.window.connect_fullscreened_notify(show_state);
+    {
+        let window = ui.window.clone();
+        root.connect_unmap(move |_| {
+            if made_full.replace(false) && window.is_fullscreen() {
+                window.unfullscreen();
+            }
+        });
+    }
+    let window = ui.window.clone();
+    let handler = RefCell::new(Some(handler));
+    root.connect_destroy(move |_| {
+        if let Some(handler) = handler.borrow_mut().take() {
+            window.disconnect(handler);
+        }
+    });
 }
 
 /// The centered player lens: hero art, big title/artist, album line, and a
@@ -493,7 +1127,7 @@ impl DockFit {
 /// their centerline.
 fn install_now_playing_width_adaptation(
     ui: &Rc<Ui>,
-    content: &gtk::Box,
+    content: &impl IsA<gtk::Widget>,
     lyrics_toggle: &gtk::ToggleButton,
     queue_toggle: &gtk::ToggleButton,
     dock: DockFit,

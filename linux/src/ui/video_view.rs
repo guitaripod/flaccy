@@ -1,10 +1,12 @@
 use crate::events::AppEvent;
 use crate::library::format_time;
 use crate::musicvideo::{self, playback::StageState, Candidate, Phase, VideoMatch, VideoState};
+use crate::ui::ambient::AmbientGlow;
+use crate::ui::stage_layout::LyricsStyle;
+use crate::ui::video_surface::VideoSurface;
 use crate::ui::Ui;
 use adw::prelude::*;
 use gtk::glib;
-use gtk::pango;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
@@ -13,92 +15,69 @@ use std::time::Duration;
 /// sound. Small enough to land on a cut, large enough to feel like progress.
 const NUDGE_STEP: f64 = 0.25;
 
-/// How long the control strip and the pointer stay up after the pointer last
-/// moved over the picture.
-const CONTROLS_LINGER: Duration = Duration::from_millis(2500);
-
-/// How far the arrow keys move playback in the full-screen window.
-const FULLSCREEN_SEEK_STEP: f64 = 5.0;
-
 /// The thumbnail size the chooser asks YouTube for, 320×180.
 const THUMBNAIL: &str = "mqdefault.jpg";
 
+/// The music video lens's parts, which the Now Playing stage lays out: the
+/// picture, streamed from the web and slaved to the lossless file playing from
+/// disk, the glow it casts, what covers it while there is nothing to show, and
+/// the options that matter when the automatic match or its alignment needs a
+/// human opinion.
 pub struct VideoView {
-    pub widget: gtk::Widget,
+    /// The picture, wrapped so the compositor can show the decoder's frames
+    /// directly.
+    pub picture: gtk::Widget,
+    pub surface: VideoSurface,
+    pub status: gtk::Widget,
+    pub ambient: AmbientGlow,
+    /// The header button whose popover holds the sync, the lyrics style and
+    /// the choice of video.
+    pub tools: gtk::MenuButton,
+    pub lyrics_style: adw::ToggleGroup,
     /// Activating loads and syncs a video for whatever is playing;
     /// deactivating parks the pipeline so nothing streams off screen.
     pub set_active: Rc<dyn Fn(bool)>,
 }
 
-/// The music video lens: the picture, streamed from the web and slaved to the
-/// lossless file playing from disk, with the controls that matter when the
-/// automatic match or its alignment needs a human opinion.
 pub fn build(ui: &Rc<Ui>) -> VideoView {
-    let picture = video_picture();
-    let offload = offloaded(&picture);
-
-    let frame = gtk::AspectFrame::builder()
-        .ratio(16.0 / 9.0)
-        .obey_child(false)
-        .halign(gtk::Align::Fill)
-        .valign(gtk::Align::Center)
-        .hexpand(true)
-        .child(&offload)
-        .build();
-    frame.add_css_class("mv-stage");
-    frame.set_overflow(gtk::Overflow::Hidden);
-
+    let surface = VideoSurface::default();
+    surface.add_css_class("mv-picture");
+    let picture = offloaded(&surface);
+    let ambient = AmbientGlow::default();
+    {
+        let surface = surface.downgrade();
+        ambient.connect_crop(move |crop| {
+            if let Some(surface) = surface.upgrade() {
+                surface.set_crop(crop);
+            }
+        });
+    }
     let status = StatusLayer::new(ui);
-    let controls = ControlBar::new(ui);
-
-    let overlay = gtk::Overlay::new();
-    overlay.set_child(Some(&frame));
-    overlay.add_overlay(&status.widget);
-    overlay.add_overlay(&controls.widget);
-    reveal_controls_on_motion(&overlay, &controls);
-    open_fullscreen_on_double_click(ui, &overlay);
-
-    let column = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(14)
-        .valign(gtk::Align::Center)
-        .hexpand(true)
-        .margin_top(24)
-        .margin_bottom(24)
-        .margin_start(16)
-        .margin_end(16)
-        .build();
-    column.append(&overlay);
-    column.append(&controls.caption);
-
-    let clamp = adw::Clamp::builder()
-        .maximum_size(900)
-        .tightening_threshold(400)
-        .child(&column)
-        .build();
-    let scroll = gtk::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .hexpand(true)
-        .vexpand(true)
-        .child(&clamp)
-        .build();
+    let tools = Tools::new(ui);
 
     let render: Rc<dyn Fn()> = {
         let ui = Rc::clone(ui);
-        let picture = picture.clone();
+        let surface = surface.clone();
+        let ambient = ambient.clone();
         let status = status.clone();
-        let controls = controls.clone();
+        let tools = tools.clone();
         Rc::new(move || {
-            if picture.paintable().is_none() {
+            if surface.paintable().is_none() {
                 if let Some(paintable) = ui.core.music_video.paintable() {
-                    picture.set_paintable(Some(&paintable));
+                    surface.set_paintable(Some(&paintable));
+                    ambient.set_source(Some(&paintable));
                 }
             }
             let state = ui.core.music_video.state();
             let stage = ui.core.music_video.stage_state();
             let exhausted = ui.core.music_video.exhausted();
             status.render(&state, &stage, exhausted);
-            controls.render(&ui, &state);
+            tools.render(&ui, &state);
+            match state.matched() {
+                Some(found) => ambient.set_video(&found.video_id),
+                None => ambient.clear(),
+            }
+            ambient.set_running(is_playing_video(&ui));
         })
     };
     render();
@@ -107,10 +86,10 @@ pub fn build(ui: &Rc<Ui>) -> VideoView {
     {
         let render = Rc::clone(&render);
         let inhibitor = Rc::clone(&inhibitor);
-        ui.core.hub.subscribe_widget(&scroll, move |_, event| {
+        ui.core.hub.subscribe_widget(&picture, move |_, event| {
             if matches!(
                 event,
-                AppEvent::MusicVideoChanged | AppEvent::TrackChanged(_)
+                AppEvent::MusicVideoChanged | AppEvent::TrackChanged(_) | AppEvent::PlayingChanged(_)
             ) {
                 render();
             }
@@ -126,7 +105,7 @@ pub fn build(ui: &Rc<Ui>) -> VideoView {
     let set_active: Rc<dyn Fn(bool)> = {
         let ui = Rc::clone(ui);
         let render = Rc::clone(&render);
-        let lens = scroll.downgrade();
+        let lens = ambient.downgrade();
         Rc::new(move |active| {
             musicvideo::set_enabled(&ui.core, active);
             let on_screen =
@@ -138,31 +117,236 @@ pub fn build(ui: &Rc<Ui>) -> VideoView {
     };
 
     VideoView {
-        widget: scroll.upcast(),
+        picture,
+        surface,
+        status: status.widget.upcast(),
+        ambient,
+        lyrics_style: tools.lyrics_style.clone(),
+        tools: tools.button,
         set_active,
     }
 }
 
-fn video_picture() -> gtk::Picture {
-    let picture = gtk::Picture::builder()
-        .content_fit(gtk::ContentFit::Contain)
-        .hexpand(true)
-        .vexpand(true)
-        .build();
-    picture.add_css_class("mv-picture");
-    picture
+/// Whether the video is playing where someone can see it: what keeps the
+/// screen awake, the glow looking and the chrome out of the way.
+pub fn is_playing_video(ui: &Ui) -> bool {
+    let video = &ui.core.music_video;
+    video.is_showing()
+        && ui.core.player.is_playing()
+        && video.state().matched().is_some()
+        && matches!(video.stage_state(), StageState::Playing)
+        && !video.exhausted()
 }
 
 /// Lets the compositor show the decoder's frames directly when they arrive as
 /// DMA-BUFs, instead of GTK compositing every frame itself; anything else
 /// draws as before.
-fn offloaded(picture: &gtk::Picture) -> gtk::GraphicsOffload {
-    let offload = gtk::GraphicsOffload::new(Some(picture));
+fn offloaded(surface: &VideoSurface) -> gtk::Widget {
+    let offload = gtk::GraphicsOffload::new(Some(surface));
     offload.set_enabled(gtk::GraphicsOffloadEnabled::Enabled);
     offload.set_black_background(true);
-    offload.set_hexpand(true);
-    offload.set_vexpand(true);
-    offload
+    offload.set_overflow(gtk::Overflow::Hidden);
+    offload.add_css_class("mv-stage");
+    offload.upcast()
+}
+
+/// The video's options, in a popover off the header: what is playing and how
+/// it was chosen, how the picture is synced, the picture timing nudges, how
+/// lyrics sit on the video, and the way to a different video.
+#[derive(Clone)]
+struct Tools {
+    button: gtk::MenuButton,
+    lyrics_style: adw::ToggleGroup,
+    matched: gtk::Box,
+    title: gtk::Label,
+    provenance: gtk::Label,
+    sync: gtk::Label,
+    reset: gtk::Button,
+    open: gtk::Button,
+}
+
+impl Tools {
+    fn new(ui: &Rc<Ui>) -> Self {
+        let title = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .max_width_chars(34)
+            .build();
+        title.add_css_class("heading");
+        let provenance = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .max_width_chars(34)
+            .build();
+        provenance.add_css_class("dim");
+        provenance.add_css_class("caption");
+        let sync = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .max_width_chars(34)
+            .build();
+        sync.add_css_class("caption");
+        sync.add_css_class("numeric");
+
+        let earlier = icon_button("go-previous-symbolic", "Show the video earlier");
+        let reset = icon_button("edit-undo-symbolic", "Back to the automatic sync");
+        let later = icon_button("go-next-symbolic", "Show the video later");
+        {
+            let ui = Rc::clone(ui);
+            earlier.connect_clicked(move |_| musicvideo::nudge_offset(&ui.core, -NUDGE_STEP));
+        }
+        {
+            let ui = Rc::clone(ui);
+            later.connect_clicked(move |_| musicvideo::nudge_offset(&ui.core, NUDGE_STEP));
+        }
+        {
+            let ui = Rc::clone(ui);
+            reset.connect_clicked(move |_| musicvideo::reset_offset(&ui.core));
+        }
+        let nudges = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        nudges.add_css_class("linked");
+        nudges.append(&earlier);
+        nudges.append(&reset);
+        nudges.append(&later);
+        let timing = option_row("Picture timing", &nudges);
+
+        let matched = gtk::Box::new(gtk::Orientation::Vertical, 6);
+        matched.append(&title);
+        matched.append(&provenance);
+        matched.append(&sync);
+        matched.append(&timing);
+
+        let lyrics_style = adw::ToggleGroup::new();
+        lyrics_style.add_css_class("round");
+        for style in LyricsStyle::ALL {
+            lyrics_style.add(
+                adw::Toggle::builder()
+                    .name(style.id())
+                    .label(style.label())
+                    .build(),
+            );
+        }
+        lyrics_style.set_active_name(Some(
+            LyricsStyle::from_id(&ui.core.config.borrow().np_video_lyrics).id(),
+        ));
+        let style_caption = gtk::Label::builder()
+            .label("Lyrics on the video")
+            .xalign(0.0)
+            .build();
+        style_caption.add_css_class("caption-heading");
+        let style_hint = gtk::Label::builder()
+            .label("Auto sets a column beside, under or over the picture, and captions when a column would hide too much of it.")
+            .xalign(0.0)
+            .wrap(true)
+            .max_width_chars(34)
+            .build();
+        style_hint.add_css_class("dim");
+        style_hint.add_css_class("caption");
+
+        let choose = menu_button("Choose a Different Video…");
+        let open = menu_button("Open on YouTube at This Moment");
+
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(10)
+            .margin_top(10)
+            .margin_bottom(8)
+            .margin_start(10)
+            .margin_end(10)
+            .width_request(300)
+            .build();
+        content.append(&matched);
+        content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        content.append(&style_caption);
+        content.append(&lyrics_style);
+        content.append(&style_hint);
+        content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        content.append(&choose);
+        content.append(&open);
+
+        let popover = gtk::Popover::builder().child(&content).build();
+        let button = gtk::MenuButton::builder()
+            .icon_name("view-more-symbolic")
+            .tooltip_text("Video Options")
+            .popover(&popover)
+            .valign(gtk::Align::Center)
+            .build();
+        button.add_css_class("flat");
+        {
+            let ui = Rc::clone(ui);
+            let popover = popover.downgrade();
+            choose.connect_clicked(move |_| {
+                if let Some(popover) = popover.upgrade() {
+                    popover.popdown();
+                }
+                present_chooser(&ui);
+            });
+        }
+        {
+            let ui = Rc::clone(ui);
+            let popover = popover.downgrade();
+            open.connect_clicked(move |_| {
+                if let Some(popover) = popover.upgrade() {
+                    popover.popdown();
+                }
+                open_on_youtube(&ui);
+            });
+        }
+
+        Self {
+            button,
+            lyrics_style,
+            matched,
+            title,
+            provenance,
+            sync,
+            reset,
+            open,
+        }
+    }
+
+    fn render(&self, ui: &Rc<Ui>, state: &VideoState) {
+        let Some(found) = state.matched() else {
+            self.matched.set_visible(false);
+            self.open.set_sensitive(false);
+            return;
+        };
+        self.matched.set_visible(true);
+        self.open.set_sensitive(true);
+        self.title.set_label(&found.title);
+        self.provenance.set_label(&provenance_line(found));
+        let video = &ui.core.music_video;
+        self.sync.set_label(&sync_line(
+            found,
+            video.drift(),
+            video.stream_height(),
+            video.stream_codec().map(|codec| codec.label()),
+        ));
+        self.reset.set_sensitive(found.trim.abs() >= 0.005);
+    }
+}
+
+/// A caption on the left and a control on the right.
+fn option_row(caption: &str, control: &impl IsA<gtk::Widget>) -> gtk::Box {
+    let label = gtk::Label::builder()
+        .label(caption)
+        .xalign(0.0)
+        .hexpand(true)
+        .build();
+    label.add_css_class("caption-heading");
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    row.set_margin_top(4);
+    row.append(&label);
+    row.append(control);
+    row
+}
+
+/// A full-width flat button that reads like a menu item.
+fn menu_button(text: &str) -> gtk::Button {
+    let label = gtk::Label::builder().label(text).xalign(0.0).build();
+    let button = gtk::Button::builder().child(&label).build();
+    button.add_css_class("flat");
+    button
 }
 
 /// Keeps the screen awake while a music video plays where someone can watch
@@ -181,12 +365,7 @@ impl IdleInhibitor {
     }
 
     fn update(&self) {
-        let video = &self.ui.core.music_video;
-        let wanted = video.is_showing()
-            && self.ui.core.player.is_playing()
-            && video.state().matched().is_some()
-            && matches!(video.stage_state(), StageState::Playing)
-            && !video.exhausted();
+        let wanted = is_playing_video(&self.ui);
         let Some(app) = self.ui.window.application() else {
             return;
         };
@@ -407,134 +586,6 @@ fn describe(state: &VideoState, stage: &StageState, exhausted: bool) -> Descript
     }
 }
 
-/// The hovering strip along the foot of the picture, plus the caption beneath
-/// it naming what is playing and how it was chosen.
-#[derive(Clone)]
-struct ControlBar {
-    widget: gtk::Revealer,
-    /// Whether there is anything to control. The bar is revealed by moving
-    /// the pointer over the picture, so it must never appear over an empty
-    /// stage.
-    available: Rc<Cell<bool>>,
-    caption: gtk::Box,
-    title: gtk::Label,
-    provenance: gtk::Label,
-    sync_chip: gtk::Label,
-    reset: gtk::Button,
-}
-
-impl ControlBar {
-    fn new(ui: &Rc<Ui>) -> Self {
-        let sync_chip = gtk::Label::new(None);
-        sync_chip.add_css_class("mv-chip");
-
-        let earlier = icon_button("go-previous-symbolic", "Show the video earlier");
-        let later = icon_button("go-next-symbolic", "Show the video later");
-        let reset = icon_button("edit-undo-symbolic", "Back to the automatic sync");
-        let choose = icon_button("view-list-symbolic", "Choose a different video");
-        let open = icon_button("external-link-symbolic", "Open on YouTube at this moment");
-        let fullscreen = icon_button("view-fullscreen-symbolic", "Full screen");
-
-        {
-            let ui = Rc::clone(ui);
-            earlier.connect_clicked(move |_| musicvideo::nudge_offset(&ui.core, -NUDGE_STEP));
-        }
-        {
-            let ui = Rc::clone(ui);
-            later.connect_clicked(move |_| musicvideo::nudge_offset(&ui.core, NUDGE_STEP));
-        }
-        {
-            let ui = Rc::clone(ui);
-            reset.connect_clicked(move |_| musicvideo::reset_offset(&ui.core));
-        }
-        {
-            let ui = Rc::clone(ui);
-            choose.connect_clicked(move |_| present_chooser(&ui));
-        }
-        {
-            let ui = Rc::clone(ui);
-            open.connect_clicked(move |_| open_on_youtube(&ui));
-        }
-        {
-            let ui = Rc::clone(ui);
-            fullscreen.connect_clicked(move |_| present_fullscreen(&ui));
-        }
-
-        let bar = gtk::Box::new(gtk::Orientation::Horizontal, 4);
-        bar.add_css_class("mv-controls");
-        bar.set_halign(gtk::Align::Center);
-        bar.append(&sync_chip);
-        bar.append(&separator());
-        bar.append(&earlier);
-        bar.append(&reset);
-        bar.append(&later);
-        bar.append(&separator());
-        bar.append(&choose);
-        bar.append(&open);
-        bar.append(&fullscreen);
-
-        let widget = gtk::Revealer::builder()
-            .transition_type(gtk::RevealerTransitionType::Crossfade)
-            .transition_duration(160)
-            .halign(gtk::Align::Center)
-            .valign(gtk::Align::End)
-            .margin_bottom(14)
-            .child(&bar)
-            .build();
-
-        let title = gtk::Label::builder()
-            .ellipsize(pango::EllipsizeMode::End)
-            .justify(gtk::Justification::Center)
-            .build();
-        title.add_css_class("mv-title");
-        let provenance = gtk::Label::builder()
-            .ellipsize(pango::EllipsizeMode::End)
-            .justify(gtk::Justification::Center)
-            .build();
-        provenance.add_css_class("dim");
-        provenance.add_css_class("caption");
-
-        let caption = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(3)
-            .halign(gtk::Align::Center)
-            .build();
-        caption.append(&title);
-        caption.append(&provenance);
-
-        Self {
-            widget,
-            available: Rc::new(Cell::new(false)),
-            caption,
-            title,
-            provenance,
-            sync_chip,
-            reset,
-        }
-    }
-
-    fn render(&self, ui: &Rc<Ui>, state: &VideoState) {
-        let Some(found) = state.matched() else {
-            self.available.set(false);
-            self.widget.set_reveal_child(false);
-            self.caption.set_visible(false);
-            return;
-        };
-        self.available.set(true);
-        self.caption.set_visible(true);
-        self.title.set_label(&found.title);
-        self.provenance.set_label(&provenance_line(found));
-        let video = &ui.core.music_video;
-        self.sync_chip.set_label(&sync_line(
-            found,
-            video.drift(),
-            video.stream_height(),
-            video.stream_codec().map(|codec| codec.label()),
-        ));
-        self.reset.set_sensitive(found.trim.abs() >= 0.005);
-    }
-}
-
 /// Opens the video on YouTube at the moment the picture is showing.
 fn open_on_youtube(ui: &Rc<Ui>) {
     let Some(found) = ui.core.music_video.state().matched().cloned() else {
@@ -608,80 +659,9 @@ fn sync_line(
     line
 }
 
-/// Shows the control strip while the pointer moves over the picture and
-/// hides it once the pointer rests, the way a video player does.
-fn reveal_controls_on_motion(host: &gtk::Overlay, controls: &ControlBar) {
-    let motion = gtk::EventControllerMotion::new();
-    let hide: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
-    let show = {
-        let revealer = controls.widget.clone();
-        let available = Rc::clone(&controls.available);
-        let hide = Rc::clone(&hide);
-        move |hover: &gtk::EventControllerMotion| {
-            revealer.set_reveal_child(available.get());
-            if let Some(source) = hide.borrow_mut().take() {
-                source.remove();
-            }
-            let revealer = revealer.clone();
-            let controller = hover.clone();
-            let slot = Rc::clone(&hide);
-            let source = glib::timeout_add_local_once(CONTROLS_LINGER, move || {
-                slot.borrow_mut().take();
-                if !pointer_over_controls(&controller, &revealer) {
-                    revealer.set_reveal_child(false);
-                }
-            });
-            *hide.borrow_mut() = Some(source);
-        }
-    };
-    {
-        let show = show.clone();
-        motion.connect_enter(move |hover, _, _| show(hover));
-    }
-    motion.connect_motion(move |hover, _, _| show(hover));
-    {
-        let revealer = controls.widget.clone();
-        let hide = Rc::clone(&hide);
-        motion.connect_leave(move |_| {
-            if let Some(source) = hide.borrow_mut().take() {
-                source.remove();
-            }
-            revealer.set_reveal_child(false);
-        });
-    }
-    host.add_controller(motion);
-}
-
-/// The strip stays up while the pointer rests on one of its own buttons.
-fn pointer_over_controls(motion: &gtk::EventControllerMotion, revealer: &gtk::Revealer) -> bool {
-    motion.contains_pointer()
-        && revealer
-            .child()
-            .is_some_and(|bar| bar.state_flags().contains(gtk::StateFlags::PRELIGHT))
-}
-
-fn open_fullscreen_on_double_click(ui: &Rc<Ui>, host: &gtk::Overlay) {
-    let click = gtk::GestureClick::new();
-    let ui = Rc::clone(ui);
-    click.connect_pressed(move |gesture, presses, _, _| {
-        if presses == 2 && ui.core.music_video.state().matched().is_some() {
-            gesture.set_state(gtk::EventSequenceState::Claimed);
-            present_fullscreen(&ui);
-        }
-    });
-    host.add_controller(click);
-}
-
-fn separator() -> gtk::Separator {
-    let separator = gtk::Separator::new(gtk::Orientation::Vertical);
-    separator.add_css_class("mv-sep");
-    separator
-}
-
 fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {
     let button = gtk::Button::from_icon_name(icon);
     button.add_css_class("flat");
-    button.add_css_class("mv-button");
     button.set_tooltip_text(Some(tooltip));
     button
 }
@@ -955,120 +935,6 @@ fn compact_count(value: u64) -> String {
         }
     }
     value.to_string()
-}
-
-thread_local! {
-    static FULLSCREEN: RefCell<Option<gtk::Window>> = const { RefCell::new(None) };
-}
-
-/// A second window showing the same paintable, so going full screen costs no
-/// reload and the sync loop never notices. One at a time: asking again brings
-/// the open one forward. Space plays and pauses, the arrows seek, and the
-/// pointer hides while it rests.
-fn present_fullscreen(ui: &Rc<Ui>) {
-    if let Some(open) = FULLSCREEN.with(|slot| slot.borrow().clone()) {
-        open.present();
-        return;
-    }
-    let Some(paintable) = ui.core.music_video.paintable() else {
-        ui.core
-            .toast("No video is playing yet — wait for the picture, then go full screen");
-        return;
-    };
-    let picture = video_picture();
-    picture.set_paintable(Some(&paintable));
-    let holder = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    holder.add_css_class("mv-fullscreen");
-    holder.append(&offloaded(&picture));
-
-    let window = gtk::Window::builder()
-        .transient_for(&ui.window)
-        .title("Music Video")
-        .child(&holder)
-        .fullscreened(true)
-        .build();
-
-    let keys = gtk::EventControllerKey::new();
-    {
-        let window = window.clone();
-        let ui = Rc::clone(ui);
-        keys.connect_key_pressed(move |_, key, _, _| {
-            match key {
-                gtk::gdk::Key::Escape | gtk::gdk::Key::f | gtk::gdk::Key::q => window.close(),
-                gtk::gdk::Key::space => ui.core.player.toggle_play_pause(),
-                gtk::gdk::Key::Left => seek_by(&ui, -FULLSCREEN_SEEK_STEP),
-                gtk::gdk::Key::Right => seek_by(&ui, FULLSCREEN_SEEK_STEP),
-                _ => return glib::Propagation::Proceed,
-            }
-            glib::Propagation::Stop
-        });
-    }
-    window.add_controller(keys);
-
-    let click = gtk::GestureClick::new();
-    {
-        let window = window.clone();
-        click.connect_pressed(move |_, presses, _, _| {
-            if presses >= 2 {
-                window.close();
-            }
-        });
-    }
-    holder.add_controller(click);
-    hide_resting_pointer(&holder);
-
-    {
-        let ui = Rc::clone(ui);
-        window.connect_close_request(move |_| {
-            FULLSCREEN.with(|slot| slot.borrow_mut().take());
-            musicvideo::set_fullscreen(&ui.core, false);
-            glib::Propagation::Proceed
-        });
-    }
-    FULLSCREEN.with(|slot| *slot.borrow_mut() = Some(window.clone()));
-    musicvideo::set_fullscreen(&ui.core, true);
-    window.present();
-}
-
-fn seek_by(ui: &Rc<Ui>, delta: f64) {
-    let Some(position) = ui.core.player.position() else {
-        return;
-    };
-    let duration = ui.core.player.duration().unwrap_or(f64::MAX);
-    ui.core
-        .player
-        .seek((position + delta).clamp(0.0, (duration - 1.0).max(0.0)));
-}
-
-/// Hides the pointer over the full-screen picture once it stops moving, and
-/// brings it back on the next motion.
-fn hide_resting_pointer(surface: &gtk::Box) {
-    let motion = gtk::EventControllerMotion::new();
-    let pending: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
-    let last = Rc::new(Cell::new((f64::NAN, f64::NAN)));
-    let surface_weak = surface.downgrade();
-    motion.connect_motion(move |_, x, y| {
-        if last.replace((x, y)) == (x, y) {
-            return;
-        }
-        let Some(surface) = surface_weak.upgrade() else {
-            return;
-        };
-        surface.set_cursor(None);
-        if let Some(source) = pending.borrow_mut().take() {
-            source.remove();
-        }
-        let slot = Rc::clone(&pending);
-        let resting = surface.downgrade();
-        let source = glib::timeout_add_local_once(CONTROLS_LINGER, move || {
-            slot.borrow_mut().take();
-            if let Some(surface) = resting.upgrade() {
-                surface.set_cursor_from_name(Some("none"));
-            }
-        });
-        *pending.borrow_mut() = Some(source);
-    });
-    surface.add_controller(motion);
 }
 
 #[cfg(test)]

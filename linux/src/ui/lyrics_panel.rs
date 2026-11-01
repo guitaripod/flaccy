@@ -1,6 +1,7 @@
 use crate::events::AppEvent;
 use crate::library::Track;
 use crate::lyrics::{Lyrics, LyricsResult, Pace};
+use crate::ui::lyric_captions::CaptionStrip;
 use crate::ui::lyric_line::LyricLine;
 use crate::ui::screen::is_watched;
 use crate::ui::Ui;
@@ -28,6 +29,8 @@ const LINE_ROW_OFFSET: i32 = 1;
 /// How far a tap on a line seeks before the line's own start, so the first
 /// syllable is not clipped.
 const SEEK_LEAD_IN: f64 = 0.15;
+/// The corner controls' distance from the top of the lines.
+const CORNER_MARGIN: i32 = 6;
 /// One press of Earlier or Later, and the most the correction may reach.
 const OFFSET_STEP_MS: i64 = 100;
 const OFFSET_LIMIT_MS: i64 = 10_000;
@@ -81,6 +84,40 @@ pub struct LyricsPanel {
     /// Activate/deactivate the panel: activating fetches lyrics for the current
     /// track. Drive it from the ViewStack lens switch for the in-view instance.
     pub set_active: Rc<dyn Fn(bool)>,
+    /// A scrolling column, or captions over a music video.
+    pub set_presentation: Rc<dyn Fn(Presentation)>,
+    /// How large captions are set and how far above the panel's foot.
+    pub set_caption_layout: Rc<dyn Fn(f64, f64)>,
+    /// How far a header and a dock reach over the panel, so its corner
+    /// controls and the Jump to Current pill stay clear of them.
+    pub set_insets: Rc<dyn Fn(i32, i32)>,
+}
+
+/// How the panel shows synced lyrics.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Presentation {
+    Column,
+    Captions,
+}
+
+/// What the panel has to show, whichever way it shows it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Content {
+    Status,
+    Synced,
+    Plain,
+}
+
+/// The page for `content` shown as `presentation`. Captions only ever show
+/// synced lines; anything else leaves the picture clear.
+fn page_for(content: Content, presentation: Presentation) -> &'static str {
+    match (presentation, content) {
+        (Presentation::Captions, Content::Synced) => "captions",
+        (Presentation::Captions, _) => "none",
+        (Presentation::Column, Content::Status) => "status",
+        (Presentation::Column, Content::Synced) => "synced",
+        (Presentation::Column, Content::Plain) => "plain",
+    }
 }
 
 fn show_status(page: &adw::StatusPage, status: &LyricsStatus) {
@@ -190,25 +227,30 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
     let plain_note = NoteChip::new();
     let synced_share = share_button();
     let plain_share = share_button();
-    let synced_overlay = gtk::Overlay::new();
-    synced_overlay.set_child(Some(&synced_scroll));
-    synced_overlay.add_overlay(&resume_reveal);
-    synced_overlay.add_overlay(&corner_cluster(&[
+    let synced_corner = corner_cluster(&[
         synced_share.upcast_ref(),
         synced_note.button.upcast_ref(),
         timing.button.upcast_ref(),
-    ]));
-    let plain_overlay = gtk::Overlay::new();
-    plain_overlay.set_child(Some(&plain_scroll));
-    plain_overlay.add_overlay(&corner_cluster(&[
+    ]);
+    let plain_corner = corner_cluster(&[
         plain_share.upcast_ref(),
         plain_note.button.upcast_ref(),
-    ]));
+    ]);
+    let synced_overlay = gtk::Overlay::new();
+    synced_overlay.set_child(Some(&synced_scroll));
+    synced_overlay.add_overlay(&resume_reveal);
+    synced_overlay.add_overlay(&synced_corner);
+    let plain_overlay = gtk::Overlay::new();
+    plain_overlay.set_child(Some(&plain_scroll));
+    plain_overlay.add_overlay(&plain_corner);
 
+    let captions = Rc::new(CaptionStrip::new());
     let stack = gtk::Stack::new();
     stack.add_named(&status, Some("status"));
     stack.add_named(&synced_overlay, Some("synced"));
     stack.add_named(&plain_overlay, Some("plain"));
+    stack.add_named(&captions.widget, Some("captions"));
+    stack.add_named(&gtk::Box::new(gtk::Orientation::Vertical, 0), Some("none"));
     stack.set_vexpand(true);
 
     let panel = gtk::Box::new(gtk::Orientation::Vertical, 4);
@@ -227,6 +269,25 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
     }
     panel.append(&stack);
 
+    let presentation = Rc::new(Cell::new(Presentation::Column));
+    let content = Rc::new(Cell::new(Content::Status));
+    let show_content: Rc<dyn Fn(Content)> = {
+        let stack = stack.clone();
+        let panel = panel.clone();
+        let content = Rc::clone(&content);
+        let presentation = Rc::clone(&presentation);
+        Rc::new(move |shown: Content| {
+            content.set(shown);
+            let page = page_for(shown, presentation.get());
+            stack.set_visible_child_name(page);
+            if page == "captions" {
+                panel.add_css_class("lyrics-caption-band");
+            } else {
+                panel.remove_css_class("lyrics-caption-band");
+            }
+        })
+    };
+
     let state: Rc<RefCell<PanelState>> = Rc::new(RefCell::new(PanelState::default()));
     let visible = Rc::new(Cell::new(false));
     let last_user_scroll: Rc<Cell<Option<Instant>>> = Rc::new(Cell::new(None));
@@ -244,6 +305,8 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         refresh: Rc::clone(&refresh),
         driver: FrameDriver::default(),
         nap: RefCell::new(None),
+        captions: Rc::clone(&captions),
+        presentation: Rc::clone(&presentation),
     });
     let sync_driver: Rc<dyn Fn()> = {
         let follower = Rc::clone(&follower);
@@ -404,7 +467,8 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
 
     let apply_lyrics = {
         let list = list.clone();
-        let stack = stack.clone();
+        let show_content = Rc::clone(&show_content);
+        let captions = Rc::clone(&captions);
         let plain_view = plain_view.clone();
         let status = status.clone();
         let retry = retry.clone();
@@ -433,6 +497,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
             }
             resume_reveal.set_reveal_child(false);
             scroller.reset();
+            captions.reset();
             retry.set_visible(false);
             timing_button.set_visible(false);
             let song = state
@@ -454,14 +519,14 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                 LyricsResult::Found(lyrics) => lyrics,
                 LyricsResult::Missing => {
                     show_status(&status, &missing_status(&song));
-                    stack.set_visible_child_name("status");
+                    show_content(Content::Status);
                     sync_driver();
                     return;
                 }
                 LyricsResult::Failed(failure) => {
                     show_status(&status, &failure_status(*failure));
                     retry.set_visible(true);
-                    stack.set_visible_child_name("status");
+                    show_content(Content::Status);
                     sync_driver();
                     return;
                 }
@@ -469,7 +534,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
             let document = &lyrics.document;
             if document.instrumental {
                 show_status(&status, &instrumental_status());
-                stack.set_visible_child_name("status");
+                show_content(Content::Status);
             } else if document.has_synced() {
                 list.append(&head_spacer);
                 let rows: Vec<LineRow> = document.lines.iter().map(LineRow::new).collect();
@@ -481,14 +546,14 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                 offset_label.set_label(&offset_text(lyrics.offset_ms));
                 timing_button.set_visible(true);
                 synced_note.show(timing_note(document));
-                stack.set_visible_child_name("synced");
+                show_content(Content::Synced);
             } else if let Some(plain) = document.plain.as_deref() {
                 plain_view.set_label(plain);
                 plain_note.show(timing_note(document));
-                stack.set_visible_child_name("plain");
+                show_content(Content::Plain);
             } else {
                 show_status(&status, &missing_status(&song));
-                stack.set_visible_child_name("status");
+                show_content(Content::Status);
             }
             sync_driver();
         })
@@ -500,7 +565,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let apply_lyrics = Rc::clone(&apply_lyrics);
         let subtitle = subtitle.clone();
         let status = status.clone();
-        let stack = stack.clone();
+        let show_content = Rc::clone(&show_content);
         let retry = retry.clone();
         Rc::new(move |track: &Track, pace: Pace| {
             let generation = {
@@ -512,7 +577,7 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
             subtitle.set_label(&format!("{} — {}", track.title, track.artist));
             show_status(&status, &searching_status());
             retry.set_visible(false);
-            stack.set_visible_child_name("status");
+            show_content(Content::Status);
 
             crate::lyrics::want(track);
             let ui = Rc::clone(&ui);
@@ -625,9 +690,39 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
             });
     }
 
+    let set_presentation: Rc<dyn Fn(Presentation)> = {
+        let presentation = Rc::clone(&presentation);
+        let content = Rc::clone(&content);
+        let show_content = Rc::clone(&show_content);
+        let captions = Rc::clone(&captions);
+        let refresh = Rc::clone(&refresh);
+        let sync_driver = Rc::clone(&sync_driver);
+        Rc::new(move |chosen: Presentation| {
+            if presentation.replace(chosen) == chosen {
+                return;
+            }
+            captions.reset();
+            show_content(content.get());
+            refresh.set(true);
+            sync_driver();
+        })
+    };
+    let set_caption_layout: Rc<dyn Fn(f64, f64)> = {
+        let captions = Rc::clone(&captions);
+        Rc::new(move |scale, margin| captions.set_layout(scale, margin))
+    };
+    let set_insets: Rc<dyn Fn(i32, i32)> = Rc::new(move |top, bottom| {
+        synced_corner.set_margin_top(CORNER_MARGIN + top);
+        plain_corner.set_margin_top(CORNER_MARGIN + top);
+        resume_reveal.set_margin_bottom(bottom);
+    });
+
     LyricsPanel {
         widget: panel.upcast(),
         set_active,
+        set_presentation,
+        set_caption_layout,
+        set_insets,
     }
 }
 
@@ -841,7 +936,7 @@ fn corner_cluster(children: &[&gtk::Widget]) -> gtk::Box {
         .spacing(4)
         .halign(gtk::Align::End)
         .valign(gtk::Align::Start)
-        .margin_top(6)
+        .margin_top(CORNER_MARGIN)
         .margin_end(6)
         .build();
     for child in children {
@@ -1063,6 +1158,8 @@ struct Follower {
     refresh: Rc<Cell<bool>>,
     driver: FrameDriver,
     nap: RefCell<Option<glib::SourceId>>,
+    captions: Rc<CaptionStrip>,
+    presentation: Rc<Cell<Presentation>>,
 }
 
 impl Follower {
@@ -1137,6 +1234,13 @@ impl Follower {
     /// hand a moment ago. Returns whether a fill is mid-word and needs frames.
     fn follow_clock(&self) -> bool {
         let time = self.song_time();
+        if self.presentation.get() == Presentation::Captions {
+            let state = self.state.borrow();
+            let document = &state.lyrics.document;
+            return self
+                .captions
+                .follow(document, document.primary_index(time), time);
+        }
         let (primary, lit) = {
             let state = self.state.borrow();
             let document = &state.lyrics.document;
