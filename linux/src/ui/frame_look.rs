@@ -1,6 +1,9 @@
 /// A channel value at or under this counts as black. Bars decode to 0, and
 /// compression noise along their edge stays well below it.
-const BLACK: u8 = 28;
+const BLACK: u8 = 24;
+/// A bar is flat as well as dark: its average stays under this, where the
+/// shadows of a dark stage, however deep, carry texture.
+const FLAT_BLACK: f64 = 6.0;
 /// The picture inside the bars must reach this brightness somewhere, or the
 /// frame is too dark to tell a bar from a dark scene.
 const BRIGHT_ENOUGH: u8 = 56;
@@ -110,35 +113,20 @@ impl Crop {
 }
 
 /// The black bars burnt into one frame, snapped to the standard shape they
-/// frame. `None` when the frame is too dark, or too nearly black, to tell.
+/// frame. `None` when the frame is too dark to tell, or its dark edges frame
+/// no standard shape.
 pub fn measure_bars(frame: &Frame, frame_aspect: f64) -> Option<Crop> {
     if !frame.is_whole() {
         return None;
     }
-    let columns: Vec<u8> = (0..frame.width)
-        .map(|x| {
-            (0..frame.height)
-                .map(|y| frame.brightest(x, y))
-                .max()
-                .unwrap_or(0)
-        })
+    let columns: Vec<bool> = (0..frame.width)
+        .map(|x| is_bar((0..frame.height).map(|y| frame.brightest(x, y))))
         .collect();
-    let rows: Vec<u8> = (0..frame.height)
-        .map(|y| {
-            (0..frame.width)
-                .map(|x| frame.brightest(x, y))
-                .max()
-                .unwrap_or(0)
-        })
+    let rows: Vec<bool> = (0..frame.height)
+        .map(|y| is_bar((0..frame.width).map(|x| frame.brightest(x, y))))
         .collect();
-    let leading = |values: &[u8]| values.iter().take_while(|value| **value <= BLACK).count();
-    let trailing = |values: &[u8]| {
-        values
-            .iter()
-            .rev()
-            .take_while(|value| **value <= BLACK)
-            .count()
-    };
+    let leading = |bars: &[bool]| bars.iter().take_while(|bar| **bar).count();
+    let trailing = |bars: &[bool]| bars.iter().rev().take_while(|bar| **bar).count();
     let (left, right) = (leading(&columns), trailing(&columns));
     let (top, bottom) = (leading(&rows), trailing(&rows));
     if left >= frame.width || top >= frame.height {
@@ -167,7 +155,7 @@ pub fn measure_bars(frame: &Frame, frame_aspect: f64) -> Option<Crop> {
     };
     let horizontal = pair(left, right, frame.width)?;
     let vertical = pair(top, bottom, frame.height)?;
-    Some(snap(
+    snap(
         Crop {
             left: horizontal,
             right: horizontal,
@@ -175,13 +163,31 @@ pub fn measure_bars(frame: &Frame, frame_aspect: f64) -> Option<Crop> {
             bottom: vertical,
         },
         frame_aspect,
-    ))
+    )
+}
+
+/// Whether one row or column of the frame is bar: never above black, and
+/// flat on average.
+fn is_bar(values: impl Iterator<Item = u8>) -> bool {
+    let (mut count, mut sum) = (0usize, 0usize);
+    for value in values {
+        if value > BLACK {
+            return false;
+        }
+        count += 1;
+        sum += value as usize;
+    }
+    count > 0 && (sum as f64 / count as f64) <= FLAT_BLACK
 }
 
 /// Pillarbox or letterbox bars measured on a small frame are a pixel or two
 /// out; the picture inside them is almost always a standard shape, so a
-/// measurement close to one is taken as exactly it.
-fn snap(crop: Crop, frame_aspect: f64) -> Crop {
+/// measurement close to one is taken as exactly it. One close to none is a
+/// dark stage either side of the subject, not bars, and says nothing.
+fn snap(crop: Crop, frame_aspect: f64) -> Option<Crop> {
+    if crop.is_none() {
+        return Some(Crop::NONE);
+    }
     let nearest = |aspect: f64| {
         STANDARD_ASPECTS
             .into_iter()
@@ -195,26 +201,24 @@ fn snap(crop: Crop, frame_aspect: f64) -> Crop {
     let pillarbox = crop.left > 0.0 && crop.top == 0.0;
     let letterbox = crop.top > 0.0 && crop.left == 0.0;
     if pillarbox {
-        if let Some(standard) = nearest(crop.aspect(frame_aspect)).filter(|s| *s < frame_aspect) {
-            let side = (1.0 - standard / frame_aspect) / 2.0;
-            return Crop {
-                left: side,
-                right: side,
-                ..Crop::NONE
-            };
-        }
+        let standard = nearest(crop.aspect(frame_aspect)).filter(|s| *s < frame_aspect)?;
+        let side = (1.0 - standard / frame_aspect) / 2.0;
+        return Some(Crop {
+            left: side,
+            right: side,
+            ..Crop::NONE
+        });
     }
     if letterbox {
-        if let Some(standard) = nearest(crop.aspect(frame_aspect)).filter(|s| *s > frame_aspect) {
-            let side = (1.0 - frame_aspect / standard) / 2.0;
-            return Crop {
-                top: side,
-                bottom: side,
-                ..Crop::NONE
-            };
-        }
+        let standard = nearest(crop.aspect(frame_aspect)).filter(|s| *s > frame_aspect)?;
+        let side = (1.0 - frame_aspect / standard) / 2.0;
+        return Some(Crop {
+            top: side,
+            bottom: side,
+            ..Crop::NONE
+        });
     }
-    crop
+    None
 }
 
 /// Settles on a crop only once several looks agree, so a dark scene with a
@@ -427,6 +431,25 @@ mod tests {
     #[test]
     fn a_dark_strip_down_one_side_only_is_not_a_bar() {
         let pixels = framed(20, 0, 0, 0, 200);
+        assert_eq!(measure_bars(&frame(&pixels), WIDE), Some(Crop::NONE));
+    }
+
+    #[test]
+    fn a_dark_stage_either_side_of_a_four_by_three_picture_is_not_cropped_into() {
+        let pixels = framed(37, 37, 0, 0, 200);
+        assert_eq!(measure_bars(&frame(&pixels), WIDE), None);
+    }
+
+    #[test]
+    fn dim_textured_sides_are_picture_not_bars() {
+        let mut pixels = framed(16, 16, 0, 0, 200);
+        for y in 0..72 {
+            for x in (0..16).chain(112..128) {
+                let at = (y * 128 + x) * 3;
+                let shade = 6 + ((x * 7 + y * 13) % 14) as u8;
+                pixels[at..at + 3].copy_from_slice(&[shade, shade, shade]);
+            }
+        }
         assert_eq!(measure_bars(&frame(&pixels), WIDE), Some(Crop::NONE));
     }
 

@@ -24,11 +24,12 @@ const GUTTER: f64 = 28.0;
 /// A column only moves beside or under the picture when the picture keeps at
 /// least this share of the area it has on its own; otherwise it lies over it.
 const KEEP_SHARE: f64 = 0.85;
-/// A picture alone fills the stage edge to edge when that crops at most this
-/// share of it: a widescreen picture in a 16:10 or squarer desktop window,
-/// including one whose burnt-in letterbox has been trimmed to 1.85:1, while a
-/// scope picture keeps its bands.
-const FILL_CROP: f64 = 0.25;
+/// The picture fills the stage edge to edge, the background everything else
+/// floats on, unless that crops more than this share of it: a widescreen or
+/// 4:3 video fills any desktop window from 4:3 to 21:9, and only a window far
+/// off the picture's shape — a portrait one, a 32:9 one — frames it instead
+/// and sets the columns beside or under it.
+const FILL_CROP: f64 = 0.4;
 /// Automatic lyrics turn into captions once a column would cover more than
 /// this share of the picture's width.
 const CAPTIONS_WHEN_COVERING: f64 = 0.42;
@@ -701,15 +702,23 @@ mod tests {
     }
 
     #[test]
-    fn an_ultrawide_window_sets_the_lyrics_beside_a_framed_picture() {
+    fn an_ultrawide_window_is_filled_by_the_picture_with_the_lyrics_over_it() {
         let arrangement = arrange(with_lyrics(3440.0, 1440.0, LyricsStyle::Auto));
+        assert_eq!(arrangement.placement(), Some(Placement::Over));
+        let visible = arrangement.visible_video(3440.0, 1440.0);
+        assert_eq!(visible, Rect::new(0.0, 0.0, 3440.0, 1440.0));
+    }
+
+    #[test]
+    fn a_super_ultrawide_window_sets_the_lyrics_beside_a_framed_picture() {
+        let arrangement = arrange(with_lyrics(5120.0, 1440.0, LyricsStyle::Auto));
         assert_eq!(arrangement.placement(), Some(Placement::Beside));
         let (_, column) = arrangement.lyrics.unwrap();
         assert!(!overlaps(column, arrangement.video));
         assert!(column.right() <= arrangement.video.x);
         assert!(arrangement.floating);
         assert!(arrangement.scrim.is_none());
-        let alone = Rect::new(0.0, 0.0, 3440.0, 1440.0)
+        let alone = Rect::new(0.0, 0.0, 5120.0, 1440.0)
             .fit(DEFAULT_ASPECT)
             .area();
         assert!(arrangement.video.area() >= KEEP_SHARE * alone);
@@ -775,8 +784,8 @@ mod tests {
 
     #[test]
     fn a_picture_alone_is_fitted_when_filling_would_crop_too_much() {
-        let arrangement = arrange(input(1600.0, 1300.0));
-        assert_eq!(arrangement.video, Rect::new(0.0, 200.0, 1600.0, 900.0));
+        let arrangement = arrange(input(1600.0, 1600.0));
+        assert_eq!(arrangement.video, Rect::new(0.0, 350.0, 1600.0, 900.0));
         assert!(!arrangement.floating);
     }
 
@@ -799,17 +808,22 @@ mod tests {
     }
 
     #[test]
-    fn a_four_by_three_picture_moves_away_from_the_column_over_it() {
+    fn a_four_by_three_picture_fills_a_wide_window_under_both_columns() {
         let stage = StageInput {
             aspect: 4.0 / 3.0,
-            ..with_lyrics(1800.0, 1000.0, LyricsStyle::Auto)
+            queue: true,
+            lyrics_side: Side::Right,
+            zoom: 1.4,
+            ..with_lyrics(2160.0, 1035.0, LyricsStyle::Auto)
         };
         let arrangement = arrange(stage);
         assert_eq!(arrangement.placement(), Some(Placement::Over));
-        assert!((arrangement.video.right() - 1800.0).abs() < 1e-9);
-        let (_, column) = arrangement.lyrics.unwrap();
-        let covered = column.intersection(arrangement.video).width / arrangement.video.width;
-        assert!(covered < 0.25, "covered {covered}");
+        assert_eq!(
+            arrangement.visible_video(2160.0, 1035.0),
+            Rect::new(0.0, 0.0, 2160.0, 1035.0)
+        );
+        let (_, floating) = arrangement.queue.unwrap();
+        assert!(floating);
     }
 
     #[test]
@@ -881,9 +895,9 @@ mod tests {
     fn a_nonsense_aspect_falls_back_to_widescreen() {
         let stage = StageInput {
             aspect: f64::NAN,
-            ..input(1600.0, 1300.0)
+            ..input(1600.0, 1600.0)
         };
-        assert_eq!(arrange(stage).video, Rect::new(0.0, 200.0, 1600.0, 900.0));
+        assert_eq!(arrange(stage).video, Rect::new(0.0, 350.0, 1600.0, 900.0));
     }
 
     #[test]
