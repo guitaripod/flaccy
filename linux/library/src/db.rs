@@ -246,6 +246,9 @@ pub struct MusicVideoRow {
     pub map: crate::music_video::TimeMap,
     pub trim: f64,
     pub align_version: i64,
+    /// Which version of the matcher made this decision, so a better matcher
+    /// can look at an older one's again.
+    pub match_version: i64,
 }
 
 pub struct AlbumRetitle {
@@ -649,6 +652,7 @@ impl Db {
             "timeMap TEXT NOT NULL DEFAULT ''",
             "trimSeconds DOUBLE NOT NULL DEFAULT 0",
             "alignVersion INTEGER NOT NULL DEFAULT 0",
+            "matchVersion INTEGER NOT NULL DEFAULT 0",
         ] {
             let _ = self
                 .conn
@@ -1844,7 +1848,7 @@ impl Db {
                 "SELECT videoId, videoTitle, channel, duration, offsetSeconds, aligned,
                         chosenByUser, reason,
                         COALESCE(julianday('now') - julianday(fetchedAt), 0.0),
-                        timeMap, trimSeconds, alignVersion
+                        timeMap, trimSeconds, alignVersion, matchVersion
                  FROM musicVideos WHERE trackTitle = ?1 AND artist = ?2",
                 params![title, artist],
                 |row| {
@@ -1861,6 +1865,7 @@ impl Db {
                         map: crate::music_video::TimeMap::decode(&row.get::<_, String>(9)?),
                         trim: row.get(10)?,
                         align_version: row.get(11)?,
+                        match_version: row.get(12)?,
                     })
                 },
             )
@@ -1869,21 +1874,23 @@ impl Db {
             .flatten()
     }
 
-    /// Records a decision. `None` stores the fact that nothing matched, which
-    /// expires on its own so a video uploaded later is still found.
+    /// Records a decision made by matcher version `matcher`. `None` stores
+    /// the fact that nothing matched, which expires on its own so a video
+    /// uploaded later is still found.
     pub fn save_music_video(
         &self,
         title: &str,
         artist: &str,
         found: Option<&crate::music_video::VideoMatch>,
         score: f64,
+        matcher: i64,
     ) {
         let _ = self.conn.execute(
             "INSERT INTO musicVideos
              (trackTitle, artist, videoId, videoTitle, channel, duration, offsetSeconds,
               aligned, chosenByUser, score, reason, fetchedAt, timeMap, trimSeconds,
-              alignVersion)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+              alignVersion, matchVersion)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
              ON CONFLICT(trackTitle, artist) DO UPDATE SET
                 videoId = excluded.videoId,
                 videoTitle = excluded.videoTitle,
@@ -1897,7 +1904,8 @@ impl Db {
                 fetchedAt = excluded.fetchedAt,
                 timeMap = excluded.timeMap,
                 trimSeconds = excluded.trimSeconds,
-                alignVersion = excluded.alignVersion",
+                alignVersion = excluded.alignVersion,
+                matchVersion = excluded.matchVersion",
             params![
                 title,
                 artist,
@@ -1913,8 +1921,18 @@ impl Db {
                 now_string(),
                 found.map(|f| f.map.encode()).unwrap_or_default(),
                 found.map(|f| f.trim).unwrap_or(0.0),
-                found.map(|f| f.align_version).unwrap_or(0)
+                found.map(|f| f.align_version).unwrap_or(0),
+                matcher
             ],
+        );
+    }
+
+    /// Marks a remembered match as looked at again by matcher version
+    /// `matcher`, which kept it.
+    pub fn set_music_video_matcher(&self, title: &str, artist: &str, matcher: i64) {
+        let _ = self.conn.execute(
+            "UPDATE musicVideos SET matchVersion = ?3 WHERE trackTitle = ?1 AND artist = ?2",
+            params![title, artist, matcher],
         );
     }
 
@@ -3017,7 +3035,7 @@ mod cleanup_tests {
         use crate::music_video::{Segment, TimeMap};
         let temp = TempDb::open();
         let db = &temp.db;
-        db.save_music_video("Song", "Band", Some(&music_video("abc")), 1.0);
+        db.save_music_video("Song", "Band", Some(&music_video("abc")), 1.0, 1);
 
         let mut aligned = music_video("abc");
         aligned.map = TimeMap::new(vec![
@@ -3037,7 +3055,7 @@ mod cleanup_tests {
         assert_eq!(row.align_version, 2);
         assert_eq!(row.trim, 0.25, "an alignment never overwrites the listener's trim");
 
-        db.save_music_video("Song", "Band", Some(&music_video("xyz")), 1.0);
+        db.save_music_video("Song", "Band", Some(&music_video("xyz")), 1.0, 1);
         db.set_music_video_alignment("Song", "Band", "abc", &aligned);
         let replaced = db.fetch_music_video("Song", "Band").expect("row");
         assert_eq!(replaced.video_id.as_deref(), Some("xyz"));
@@ -3045,6 +3063,11 @@ mod cleanup_tests {
             replaced.map.is_empty(),
             "a late alignment of the old video must not land on the new one"
         );
+        assert_eq!(replaced.match_version, 1);
+        db.set_music_video_matcher("Song", "Band", 3);
+        let rechecked = db.fetch_music_video("Song", "Band").expect("row");
+        assert_eq!(rechecked.match_version, 3);
+        assert_eq!(rechecked.video_id.as_deref(), Some("xyz"));
     }
 
     fn remove_all(path: &Path) {

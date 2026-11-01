@@ -16,6 +16,11 @@ const MISS_TTL_DAYS: f64 = 30.0;
 /// an older one are listened to again, once.
 pub const ALIGN_VERSION: i64 = 2;
 
+/// The matcher that reads past a track number in the title and passes over
+/// still-image art tracks. What an older one decided — a miss, or a match the
+/// listener did not pick — is decided again, once.
+pub const MATCH_VERSION: i64 = 2;
+
 /// How long a search's results are reused for the chooser.
 const SEARCH_REUSE: Duration = Duration::from_secs(3600);
 
@@ -315,7 +320,7 @@ fn serve(
             } => {
                 let mut found = build_match(&candidate, "You picked this one");
                 found.chosen_by_user = true;
-                db.save_music_video(&track.title, &track.artist, Some(&found), 1.0);
+                db.save_music_video(&track.title, &track.artist, Some(&found), 1.0, MATCH_VERSION);
                 deliver(shared, seq, &track, found, &settings);
             }
             Request::ChooseLink {
@@ -394,17 +399,27 @@ fn prefetch_loop(shared: &Arc<Shared>, rx: async_channel::Receiver<(Track, Setti
 fn prefetch(shared: &Arc<Shared>, db: &Db, track: &Track, settings: &Settings) {
     let found = match remembered(db, track) {
         Remembered::Match(found) => found,
+        Remembered::Recheck(old) => match recheck(shared, db, track, settings, None, old) {
+            Some(found) => found,
+            None => return,
+        },
         Remembered::Miss => return,
         Remembered::Unknown => match pick(shared, track, settings, None) {
             Pick::Chosen(found) => {
-                db.save_music_video(&track.title, &track.artist, Some(&found), 1.0);
+                note_pick(track, &found, "the next song");
+                db.save_music_video(&track.title, &track.artist, Some(&found), 1.0, MATCH_VERSION);
                 found
             }
-            Pick::Nothing(_) => {
-                db.save_music_video(&track.title, &track.artist, None, 0.0);
+            Pick::Nothing(reason) => {
+                note_nothing(track, &reason);
+                db.save_music_video(&track.title, &track.artist, None, 0.0, MATCH_VERSION);
                 return;
             }
-            Pick::Failed(_) | Pick::Stale => return,
+            Pick::Failed(err) => {
+                note_failed(track, &err);
+                return;
+            }
+            Pick::Stale => return,
         },
     };
     if let Err(err) = shared.stream_for(&found.video_id, settings, false, false) {
@@ -427,6 +442,8 @@ fn prefetch(shared: &Arc<Shared>, db: &Db, track: &Track, settings: &Settings) {
 
 enum Remembered {
     Match(VideoMatch),
+    /// A match an older matcher made on its own, to be decided again.
+    Recheck(VideoMatch),
     Miss,
     Unknown,
 }
@@ -435,8 +452,10 @@ fn remembered(db: &Db, track: &Track) -> Remembered {
     let Some(row) = db.fetch_music_video(&track.title, &track.artist) else {
         return Remembered::Unknown;
     };
+    let outdated = row.match_version < MATCH_VERSION;
     match row.video_id {
-        Some(video_id) => Remembered::Match(VideoMatch {
+        Some(video_id) => {
+            let found = VideoMatch {
             video_id,
             title: row.video_title,
             channel: row.channel,
@@ -448,10 +467,82 @@ fn remembered(db: &Db, track: &Track) -> Remembered {
             map: row.map,
             trim: row.trim,
             align_version: row.align_version,
-        }),
+            };
+            if outdated && !found.chosen_by_user {
+                Remembered::Recheck(found)
+            } else {
+                Remembered::Match(found)
+            }
+        }
+        None if outdated => Remembered::Unknown,
         None if row.age_days <= MISS_TTL_DAYS => Remembered::Miss,
         None => Remembered::Unknown,
     }
+}
+
+/// Decides an older matcher's pick again. The same video keeps everything
+/// learned about it, alignment and trim included; a better one replaces it;
+/// and when the search turns up nothing better, or cannot run, the old pick
+/// stays rather than leaving the song without its video. `None` only when
+/// the listener moved on meanwhile.
+fn recheck(
+    shared: &Arc<Shared>,
+    db: &Db,
+    track: &Track,
+    settings: &Settings,
+    seq: Option<u64>,
+    old: VideoMatch,
+) -> Option<VideoMatch> {
+    match pick(shared, track, settings, seq) {
+        Pick::Chosen(found) if found.video_id == old.video_id => {
+            db.set_music_video_matcher(&track.title, &track.artist, MATCH_VERSION);
+            Some(old)
+        }
+        Pick::Chosen(found) => {
+            crate::logger::info(
+                "musicvideo",
+                &format!(
+                    "rechecked \u{201c}{}\u{201d}: {} replaces {}",
+                    track.title, found.video_id, old.video_id
+                ),
+            );
+            db.save_music_video(&track.title, &track.artist, Some(&found), 1.0, MATCH_VERSION);
+            Some(found)
+        }
+        Pick::Nothing(_) => {
+            db.set_music_video_matcher(&track.title, &track.artist, MATCH_VERSION);
+            Some(old)
+        }
+        Pick::Failed(err) => {
+            note_failed(track, &err);
+            Some(old)
+        }
+        Pick::Stale => None,
+    }
+}
+
+fn note_pick(track: &Track, found: &VideoMatch, for_whom: &str) {
+    crate::logger::info(
+        "musicvideo",
+        &format!(
+            "matched {} \u{201c}{}\u{201d} ({}) to \u{201c}{}\u{201d} for {for_whom}: {}",
+            found.video_id, found.title, found.channel, track.title, found.reason
+        ),
+    );
+}
+
+fn note_nothing(track: &Track, reason: &str) {
+    crate::logger::info(
+        "musicvideo",
+        &format!("no music video for \u{201c}{}\u{201d} by {}: {reason}", track.title, track.artist),
+    );
+}
+
+fn note_failed(track: &Track, err: &str) {
+    crate::logger::warn(
+        "musicvideo",
+        &format!("search for \u{201c}{}\u{201d} failed: {err}", track.title),
+    );
 }
 
 fn resolve(
@@ -472,6 +563,12 @@ fn resolve(
                 deliver(shared, seq, track, found, settings);
                 return;
             }
+            Remembered::Recheck(old) => {
+                if let Some(found) = recheck(shared, db, track, settings, Some(seq), old) {
+                    deliver(shared, seq, track, found, settings);
+                }
+                return;
+            }
             Remembered::Miss => {
                 shared.send(Response::Resolved {
                     seq,
@@ -488,22 +585,27 @@ fn resolve(
 
     match pick(shared, track, settings, Some(seq)) {
         Pick::Chosen(found) => {
-            db.save_music_video(&track.title, &track.artist, Some(&found), 1.0);
+            note_pick(track, &found, "the song playing");
+            db.save_music_video(&track.title, &track.artist, Some(&found), 1.0, MATCH_VERSION);
             deliver(shared, seq, track, found, settings);
         }
         Pick::Nothing(reason) => {
-            db.save_music_video(&track.title, &track.artist, None, 0.0);
+            note_nothing(track, &reason);
+            db.save_music_video(&track.title, &track.artist, None, 0.0, MATCH_VERSION);
             shared.send(Response::Resolved {
                 seq,
                 state: VideoState::Missing(reason),
                 stream: None,
             });
         }
-        Pick::Failed(err) => shared.send(Response::Resolved {
-            seq,
-            state: VideoState::Failed(format!("Couldn't search YouTube: {err}")),
-            stream: None,
-        }),
+        Pick::Failed(err) => {
+            note_failed(track, &err);
+            shared.send(Response::Resolved {
+                seq,
+                state: VideoState::Failed(format!("Couldn't search YouTube: {err}")),
+                stream: None,
+            });
+        }
         Pick::Stale => {}
     }
 }
@@ -521,7 +623,7 @@ fn choose_link(
             let mut found = build_match(&video, "You picked this one");
             found.video_id = video_id.to_string();
             found.chosen_by_user = true;
-            db.save_music_video(&track.title, &track.artist, Some(&found), 1.0);
+            db.save_music_video(&track.title, &track.artist, Some(&found), 1.0, MATCH_VERSION);
             shared.send(Response::Resolved {
                 seq,
                 state: VideoState::Ready(found.clone()),
@@ -672,11 +774,17 @@ fn deliver(shared: &Arc<Shared>, seq: u64, track: &Track, found: VideoMatch, set
             });
             align_later(shared, track, found, settings);
         }
-        Err(err) => shared.send(Response::Resolved {
-            seq,
-            state: VideoState::Failed(format!("Couldn't load the video's stream: {err}")),
-            stream: None,
-        }),
+        Err(err) => {
+            crate::logger::warn(
+                "musicvideo",
+                &format!("stream for {} (\u{201c}{}\u{201d}) failed: {err}", found.video_id, track.title),
+            );
+            shared.send(Response::Resolved {
+                seq,
+                state: VideoState::Failed(format!("Couldn't load the video's stream: {err}")),
+                stream: None,
+            });
+        }
     }
 }
 

@@ -25,8 +25,10 @@ const GUTTER: f64 = 28.0;
 /// least this share of the area it has on its own; otherwise it lies over it.
 const KEEP_SHARE: f64 = 0.85;
 /// A picture alone fills the stage edge to edge when that crops at most this
-/// share of it.
-const FILL_CROP: f64 = 0.08;
+/// share of it: a widescreen picture in a 16:10 or squarer desktop window,
+/// including one whose burnt-in letterbox has been trimmed to 1.85:1, while a
+/// scope picture keeps its bands.
+const FILL_CROP: f64 = 0.25;
 /// Automatic lyrics turn into captions once a column would cover more than
 /// this share of the picture's width.
 const CAPTIONS_WHEN_COVERING: f64 = 0.42;
@@ -296,7 +298,9 @@ pub fn arrange(input: StageInput) -> Arrangement {
         ..input
     };
     let stage = Rect::new(0.0, 0.0, input.width, input.height);
-    let alone = stage.fit(input.aspect).area();
+    let alone = alone_picture(stage, input.aspect)
+        .intersection(stage)
+        .area();
     let column = (input.width * COLUMN_SHARE)
         .clamp(COLUMN_MIN * input.zoom, COLUMN_MAX * input.zoom)
         .min(input.width * COLUMN_CEILING);
@@ -771,20 +775,38 @@ mod tests {
 
     #[test]
     fn a_picture_alone_is_fitted_when_filling_would_crop_too_much() {
-        let arrangement = arrange(input(1600.0, 1000.0));
-        assert_eq!(arrangement.video, Rect::new(0.0, 50.0, 1600.0, 900.0));
+        let arrangement = arrange(input(1600.0, 1300.0));
+        assert_eq!(arrangement.video, Rect::new(0.0, 200.0, 1600.0, 900.0));
         assert!(!arrangement.floating);
+    }
+
+    #[test]
+    fn a_widescreen_picture_fills_a_sixteen_by_ten_or_squarer_desktop_window() {
+        for (width, height, aspect) in [
+            (1600.0, 1000.0, DEFAULT_ASPECT),
+            (2152.0, 1459.0, DEFAULT_ASPECT),
+            (2152.0, 1459.0, 1.85),
+        ] {
+            let stage = StageInput {
+                aspect,
+                ..with_lyrics(width, height, LyricsStyle::Auto)
+            };
+            let arrangement = arrange(stage);
+            let visible = arrangement.visible_video(width, height);
+            assert_eq!(visible, Rect::new(0.0, 0.0, width, height), "{width}x{height}");
+            assert_eq!(arrangement.placement(), Some(Placement::Over));
+        }
     }
 
     #[test]
     fn a_four_by_three_picture_moves_away_from_the_column_over_it() {
         let stage = StageInput {
             aspect: 4.0 / 3.0,
-            ..with_lyrics(1600.0, 1000.0, LyricsStyle::Auto)
+            ..with_lyrics(1800.0, 1000.0, LyricsStyle::Auto)
         };
         let arrangement = arrange(stage);
         assert_eq!(arrangement.placement(), Some(Placement::Over));
-        assert!((arrangement.video.right() - 1600.0).abs() < 1e-9);
+        assert!((arrangement.video.right() - 1800.0).abs() < 1e-9);
         let (_, column) = arrangement.lyrics.unwrap();
         let covered = column.intersection(arrangement.video).width / arrangement.video.width;
         assert!(covered < 0.25, "covered {covered}");
@@ -859,9 +881,9 @@ mod tests {
     fn a_nonsense_aspect_falls_back_to_widescreen() {
         let stage = StageInput {
             aspect: f64::NAN,
-            ..input(1600.0, 1000.0)
+            ..input(1600.0, 1300.0)
         };
-        assert_eq!(arrange(stage).video, Rect::new(0.0, 50.0, 1600.0, 900.0));
+        assert_eq!(arrange(stage).video, Rect::new(0.0, 200.0, 1600.0, 900.0));
     }
 
     #[test]

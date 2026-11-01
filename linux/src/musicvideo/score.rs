@@ -337,6 +337,7 @@ const PRESSING_WORDS: [&str; 27] = [
 /// pressing qualifier removed. "Heart-Shaped Box (Album Version)" is looking
 /// for the video of "Heart-Shaped Box".
 pub fn search_title(title: &str) -> String {
+    let title = without_track_number(title);
     let mut out = String::with_capacity(title.len());
     let mut group = String::new();
     let mut depth = 0usize;
@@ -373,6 +374,42 @@ pub fn search_title(title: &str) -> String {
         title.trim().to_string()
     } else {
         trimmed
+    }
+}
+
+/// A title tagged with its track number in front of it — "03 - Heartless",
+/// "01. Dark Fantasy", "(07) Song", "A2 - Song" — loses the number, which no
+/// video is titled with. A number that is the title or starts it without a
+/// separator ("99 Problems", "1979", "7 Rings") stays.
+fn without_track_number(title: &str) -> &str {
+    let trimmed = title.trim_start();
+    let bracketed = trimmed.starts_with('(') || trimmed.starts_with('[');
+    let body = if bracketed { &trimmed[1..] } else { trimmed };
+    let side = body
+        .chars()
+        .next()
+        .filter(|first| matches!(first, 'A'..='D' | 'a'..='d'))
+        .filter(|_| body.chars().nth(1).is_some_and(|second| second.is_ascii_digit()))
+        .map_or(0, char::len_utf8);
+    let digits = body[side..].chars().take_while(char::is_ascii_digit).count();
+    if digits == 0 || digits > 3 {
+        return title;
+    }
+    let after_number = &body[side + digits..];
+    let rest = if bracketed {
+        after_number.strip_prefix([')', ']'])
+    } else {
+        after_number
+            .trim_start()
+            .strip_prefix(['-', '.', '\u{2013}', '\u{2014}', '_', ')'])
+    };
+    let Some(rest) = rest.map(str::trim_start) else {
+        return title;
+    };
+    if rest.chars().any(char::is_alphabetic) {
+        rest
+    } else {
+        title
     }
 }
 
@@ -478,6 +515,38 @@ mod tests {
         );
         assert_eq!(normalize("Don't — Stop!"), "don t stop");
         assert_eq!(normalize("  "), "");
+    }
+
+    #[test]
+    fn a_track_number_in_front_of_the_title_is_not_searched_for() {
+        assert_eq!(search_title("03 - Heartless"), "Heartless");
+        assert_eq!(search_title("01. Dark Fantasy"), "Dark Fantasy");
+        assert_eq!(search_title("13 \u{2013} Big Brother"), "Big Brother");
+        assert_eq!(search_title("(07) Gold Digger"), "Gold Digger");
+        assert_eq!(search_title("A2 - Side Song"), "Side Song");
+        assert_eq!(
+            search_title("08 - Guilt Trip (Feat Kid Cudi)"),
+            "Guilt Trip (Feat Kid Cudi)"
+        );
+    }
+
+    #[test]
+    fn a_title_that_is_or_starts_with_a_number_keeps_it() {
+        for title in ["99 Problems", "1979", "7 Rings", "22", "3005", "2 - 1", "1999 - Remix"] {
+            let kept = search_title(title);
+            assert!(kept.starts_with(title.split(' ').next().unwrap()), "{title} -> {kept}");
+        }
+    }
+
+    #[test]
+    fn a_numbered_title_still_finds_its_video() {
+        let candidates = vec![
+            watched("Kanye West - Heartless", "Kanye West", 211.0, 300_000_000),
+            watched("Heartless (lyrics)", "Lyric Vault", 211.0, 2_000_000),
+        ];
+        let ranked = rank("03 - Heartless", "Kanye West", 211.0, &candidates);
+        assert_eq!(ranked[0].candidate.title, "Kanye West - Heartless");
+        assert!(ranked[0].score >= ACCEPT, "{}", ranked[0].score);
     }
 
     #[test]
