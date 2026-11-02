@@ -242,11 +242,12 @@ final class PurchaseManager {
 
     /// Called by both paywalls once their offers have loaded, and recorded with
     /// the schema's generic `paywall` placement because both are one view
-    /// whichever surface opens them. The `--trial-day` clock is a fiction, so
-    /// nothing it produces reaches the counts a pricing decision is made from.
+    /// whichever surface opens them; the review policy hears it too. The
+    /// `--trial-day` clock is a fiction, so nothing it produces reaches the
+    /// counts a pricing decision is made from.
     func notePaywallShown() {
         guard !trialClockIsOverridden else { return }
-        Task { await MidgarSignals.shared?.send(.paywallView(placement: .paywall)) }
+        MidgarPaywallMoments.noteShown(placement: .paywall)
     }
 
     /// Re-derives the trial day from the stored start, for a process that has
