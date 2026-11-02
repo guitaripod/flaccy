@@ -9,6 +9,7 @@ mod clock;
 mod document;
 mod lrc;
 mod lyricsfile;
+mod patience;
 mod query;
 mod score;
 mod status;
@@ -20,6 +21,7 @@ pub use document::{
 };
 pub use lrc::{parse_lrc, parse_raw_lines, parse_timestamp};
 pub use lyricsfile::parse_lyricsfile;
+pub use patience::{next_retry, tries_next_question, Retry, QUIET_DELAYS, SLOW_DELAY};
 pub use query::{clean_title, lead_artist, EDITION_KEYWORDS};
 pub use score::{
     best_candidate, score, similarity, Candidate, Wanted, ACCEPTED_SCORE, MAX_DURATION_DRIFT,

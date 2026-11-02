@@ -1,12 +1,13 @@
 use crate::db::{Db, LyricsContent, LyricsRow};
 use crate::library::Track;
 use flaccy_shared::lyrics::{
-    best_candidate, clean_title, lead_artist, parse_lrc, parse_lyricsfile, Candidate, Document,
-    LyricsFailure, Wanted,
+    best_candidate, clean_title, lead_artist, next_retry, parse_lrc, parse_lyricsfile,
+    tries_next_question, Candidate, Document, LyricsFailure, Retry, Wanted,
 };
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// The generation of the lyrics pipeline that stores rows. Rows saved before
 /// line ends and word timing existed hold content that a second look at the
@@ -63,6 +64,16 @@ pub enum LyricsResult {
     Found(Lyrics),
     Missing,
     Failed(LyricsFailure),
+}
+
+/// Where lrclib is. `FLACCY_LRCLIB_URL` names a stand-in for drills that need
+/// the server to misbehave: a 503 for a minute, a 429 with a long `Retry-After`.
+fn lrclib_base() -> String {
+    std::env::var("FLACCY_LRCLIB_URL")
+        .ok()
+        .map(|url| url.trim().trim_end_matches('/').to_string())
+        .filter(|url| !url.is_empty())
+        .unwrap_or_else(|| "https://lrclib.net".to_string())
 }
 
 fn user_agent() -> String {
@@ -407,6 +418,81 @@ pub fn fetch_shared(
     }
 }
 
+/// How often a wait between retries looks at whether anyone still wants the
+/// answer.
+const WAIT_SLICE: Duration = Duration::from_millis(250);
+
+/// Sleeps for `seconds` in slices and says whether the answer is still wanted
+/// afterwards: not once the listener moved to another track, `stop` was raised
+/// or the receiving end went away.
+fn keep_waiting(
+    seconds: f64,
+    still_wanted: &dyn Fn() -> bool,
+    stop: &AtomicBool,
+    tx: &async_channel::Sender<Option<LyricsResult>>,
+) -> bool {
+    let until = Instant::now() + Duration::from_secs_f64(seconds);
+    loop {
+        if stop.load(Ordering::Relaxed) || tx.is_closed() || !still_wanted() {
+            return false;
+        }
+        let left = until.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return true;
+        }
+        std::thread::sleep(left.min(WAIT_SLICE));
+    }
+}
+
+/// `fetch_shared` for the lyrics a listener is waiting on: a lookup lrclib
+/// could not answer is asked again with growing pauses, out of sight, instead
+/// of being reported at once. The answer goes to `tx` (`None` when the track
+/// was skipped away from first); a failure that outlasts the quiet window is
+/// sent once, and the pauses go on at a slow pace so the lyrics still arrive
+/// when lrclib returns. The lookup ends with `stop`, with the track no longer
+/// being the wanted one, or with `tx` closing.
+pub fn fetch_patient(
+    db_path: &Path,
+    music_root: &Path,
+    track: &Track,
+    pace: Pace,
+    stop: &AtomicBool,
+    tx: &async_channel::Sender<Option<LyricsResult>>,
+) {
+    let key = flight_key(track);
+    let mut pace = pace;
+    let mut failures = 0;
+    loop {
+        let outcome = fetch_shared(db_path, music_root, track, pace);
+        pace = Pace::Immediate;
+        let Some(LyricsResult::Failed(failure)) = outcome else {
+            let _ = tx.send_blocking(outcome);
+            return;
+        };
+        failures += 1;
+        let cooldown = crate::precache::LRCLIB.cooldown_left().as_secs_f64();
+        let pause = match next_retry(failure, failures, cooldown) {
+            Retry::GiveUp => {
+                let _ = tx.send_blocking(Some(LyricsResult::Failed(failure)));
+                return;
+            }
+            Retry::Show(pause) => {
+                if tx
+                    .send_blocking(Some(LyricsResult::Failed(failure)))
+                    .is_err()
+                {
+                    return;
+                }
+                pause
+            }
+            Retry::Quietly(pause) => pause,
+        };
+        if !keep_waiting(pause, &|| is_wanted(&key), stop, tx) {
+            return;
+        }
+    }
+}
+
 /// Remembers the listener's timing correction for a track's lyrics.
 pub fn save_offset(db_path: &Path, track: &Track, offset_ms: i64) {
     if let Ok(db) = Db::open(db_path) {
@@ -433,6 +519,19 @@ enum Reply {
     Failed(LyricsFailure),
 }
 
+/// One question put to lrclib on the way to a song's lyrics.
+enum Question<'a> {
+    Exact {
+        title: &'a str,
+        artist: &'a str,
+        album: Option<&'a str>,
+    },
+    Search {
+        title: &'a str,
+        artist: &'a str,
+    },
+}
+
 /// lrclib's exact-match endpoint is strict about the album name and about the
 /// title as tagged, which are the commonest causes of a false 404. So: try the
 /// full signature, then drop the album, then the title and artist with edition
@@ -441,24 +540,64 @@ enum Reply {
 fn lookup_remote(track: &Track) -> Remote {
     let agent = ureq::AgentBuilder::new().timeout(REQUEST_TIMEOUT).build();
     let ua = user_agent();
+    lookup_through(track, &mut |question| match question {
+        Question::Exact {
+            title,
+            artist,
+            album,
+        } => get_exact(&agent, &ua, title, artist, *album, track.duration),
+        Question::Search { title, artist } => search_fallback(&agent, &ua, track, title, artist),
+    })
+}
+
+/// Asks the questions in order until one is answered with lyrics. A question
+/// lrclib answered "busy" does not end the lookup, because lrclib is still
+/// working on it and the plainer ones after it are often answered at once; if
+/// none of the others finds the song either, the lookup failed rather than
+/// came up empty, since the busy question might have found it. Any other
+/// failure ends the lookup, as the server is not answering at all.
+fn lookup_through(track: &Track, ask: &mut dyn FnMut(&Question) -> Remote) -> Remote {
     let title = clean_title(&track.title);
     let artist = lead_artist(&track.artist);
 
-    let mut attempts: Vec<(&str, &str, Option<&str>)> = Vec::new();
+    let mut questions: Vec<Question> = Vec::new();
     if !track.album.trim().is_empty() {
-        attempts.push((&track.title, &track.artist, Some(&track.album)));
+        questions.push(Question::Exact {
+            title: &track.title,
+            artist: &track.artist,
+            album: Some(&track.album),
+        });
     }
-    attempts.push((&track.title, &track.artist, None));
+    questions.push(Question::Exact {
+        title: &track.title,
+        artist: &track.artist,
+        album: None,
+    });
     if title != track.title || artist != track.artist {
-        attempts.push((&title, &artist, None));
+        questions.push(Question::Exact {
+            title: &title,
+            artist: &artist,
+            album: None,
+        });
     }
-    for (attempt_title, attempt_artist, album) in attempts {
-        match get_exact(&agent, &ua, attempt_title, attempt_artist, album, track.duration) {
+    questions.push(Question::Search {
+        title: &title,
+        artist: &artist,
+    });
+
+    let mut busy = None;
+    for question in &questions {
+        match ask(question) {
+            Remote::Found(fetched) => return Remote::Found(fetched),
             Remote::Missing => {}
-            other => return other,
+            Remote::Failed(failure) if tries_next_question(failure) => busy = Some(failure),
+            Remote::Failed(failure) => return Remote::Failed(failure),
         }
     }
-    search_fallback(&agent, &ua, track, &title, &artist)
+    match busy {
+        Some(failure) => Remote::Failed(failure),
+        None => Remote::Missing,
+    }
 }
 
 fn get_exact(
@@ -470,7 +609,8 @@ fn get_exact(
     duration: f64,
 ) -> Remote {
     let mut url = format!(
-        "https://lrclib.net/api/get?track_name={}&artist_name={}",
+        "{}/api/get?track_name={}&artist_name={}",
+        lrclib_base(),
         url_encode(title),
         url_encode(artist)
     );
@@ -495,7 +635,8 @@ fn search_fallback(
     artist: &str,
 ) -> Remote {
     let url = format!(
-        "https://lrclib.net/api/search?track_name={}&artist_name={}",
+        "{}/api/search?track_name={}&artist_name={}",
+        lrclib_base(),
         url_encode(title),
         url_encode(artist)
     );
@@ -930,8 +1071,124 @@ mod tests {
                 Some(LyricsResult::Found(_))
             ));
         }
-        assert!(FLIGHTS.lock().unwrap().is_empty());
+        let key = flight_key(&track("song.flac"));
+        assert!(!FLIGHTS.lock().unwrap().iter().any(|flight| flight.key == key));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_patient_lookup_that_finds_the_answer_sends_it_once_and_ends() {
+        let dir = scratch_dir("patient-hit");
+        let db_path = dir.join("library.sqlite");
+        cache_found(&db_path);
+        let (tx, rx) = async_channel::unbounded();
+        fetch_patient(&db_path, &dir, &track("patient.flac"), Pace::Immediate, &AtomicBool::new(false), &tx);
+        drop(tx);
+        assert!(matches!(rx.try_recv(), Ok(Some(LyricsResult::Found(_)))));
+        assert!(rx.try_recv().is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_patient_lookup_skipped_away_from_says_so_and_ends() {
+        let dir = scratch_dir("patient-skipped");
+        let db_path = dir.join("library.sqlite");
+        drop(Db::open(&db_path).unwrap());
+        let (tx, rx) = async_channel::unbounded();
+        fetch_patient(&db_path, &dir, &track("gone.flac"), Pace::Settled, &AtomicBool::new(false), &tx);
+        drop(tx);
+        assert!(matches!(rx.try_recv(), Ok(None)));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn waiting_between_retries_ends_for_a_stop_a_closed_listener_or_another_track() {
+        let (tx, rx) = async_channel::unbounded();
+        let wanted = || true;
+        assert!(keep_waiting(0.0, &wanted, &AtomicBool::new(false), &tx));
+        assert!(!keep_waiting(5.0, &wanted, &AtomicBool::new(true), &tx));
+        assert!(!keep_waiting(5.0, &|| false, &AtomicBool::new(false), &tx));
+        drop(rx);
+        assert!(!keep_waiting(5.0, &wanted, &AtomicBool::new(false), &tx));
+    }
+
+    fn fetched() -> Fetched {
+        Fetched {
+            synced: Some("[00:01.00]words".to_string()),
+            plain: None,
+            lyricsfile: None,
+            instrumental: false,
+        }
+    }
+
+    fn scripted(answers: Vec<fn() -> Remote>) -> (Remote, usize) {
+        let mut asked = 0;
+        let remote = lookup_through(&track("song.flac"), &mut |_| {
+            let answer = answers.get(asked).map_or(Remote::Missing, |answer| answer());
+            asked += 1;
+            answer
+        });
+        (remote, asked)
+    }
+
+    #[test]
+    fn a_busy_answer_lets_the_plainer_question_find_the_song() {
+        let (remote, asked) = scripted(vec![
+            || Remote::Failed(LyricsFailure::Server(503)),
+            || Remote::Found(fetched()),
+        ]);
+        assert!(matches!(remote, Remote::Found(_)));
+        assert_eq!(asked, 2);
+    }
+
+    #[test]
+    fn questions_that_were_all_busy_make_the_lookup_a_failure_not_a_miss() {
+        let (remote, asked) = scripted(vec![
+            || Remote::Failed(LyricsFailure::Server(503)),
+            || Remote::Missing,
+            || Remote::Missing,
+        ]);
+        assert!(matches!(remote, Remote::Failed(LyricsFailure::Server(503))));
+        assert_eq!(asked, 3);
+    }
+
+    #[test]
+    fn a_lookup_where_every_question_was_answered_empty_is_a_miss() {
+        let (remote, asked) = scripted(vec![]);
+        assert!(matches!(remote, Remote::Missing));
+        assert_eq!(asked, 3);
+    }
+
+    #[test]
+    fn a_server_that_is_not_answering_ends_the_lookup_at_once() {
+        for failure in [
+            LyricsFailure::Unreachable,
+            LyricsFailure::TimedOut,
+            LyricsFailure::Busy,
+            LyricsFailure::Server(502),
+            LyricsFailure::Rejected(403),
+        ] {
+            let mut asked = 0;
+            let remote = lookup_through(&track("song.flac"), &mut |_| {
+                asked += 1;
+                Remote::Failed(failure)
+            });
+            assert!(matches!(remote, Remote::Failed(got) if got == failure));
+            assert_eq!(asked, 1, "{failure:?}");
+        }
+    }
+
+    #[test]
+    fn a_decorated_title_adds_a_question_with_the_edition_removed() {
+        let mut decorated = track("song.flac");
+        decorated.title = "Song (Remastered 2011)".to_string();
+        let mut asked = 0;
+        let remote = lookup_through(&decorated, &mut |_| {
+            asked += 1;
+            Remote::Missing
+        });
+        assert!(matches!(remote, Remote::Missing));
+        assert_eq!(asked, 4);
     }
 
     fn stub(answer: &'static str) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {

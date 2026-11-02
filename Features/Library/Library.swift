@@ -246,6 +246,7 @@ final class Library: LibraryProviding {
         isLoading = false
 
         Task { await EnrichmentCoordinator.shared.resume() }
+        LyricsPrecache.shared.refresh()
         if firstLoad {
             Task.detached(priority: .utility) { PreviousVersions.purgeExpired(now: Date()) }
         }
@@ -359,6 +360,7 @@ final class Library: LibraryProviding {
         forgetIndexedLibrary()
 
         Task { await EnrichmentCoordinator.shared.resume() }
+        LyricsPrecache.shared.refresh()
         scheduleRevisionPass(for: sync.indexedOnDisk)
     }
 

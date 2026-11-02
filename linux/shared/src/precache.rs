@@ -200,6 +200,10 @@ pub fn make_room(held: &[Held], need: u64, budget: u64, chance: f64) -> Option<V
 pub enum Failure {
     /// The network or the server hiccuped.
     Transient,
+    /// The server is up and answered "busy" to this one question: it gives up
+    /// on what it cannot answer from memory within moments and keeps working
+    /// on it, so the same question a little later is usually answered.
+    Busy,
     /// The server asked for fewer requests.
     Throttled,
     /// The server refuses this client.
@@ -214,6 +218,7 @@ impl Failure {
     pub fn id(self) -> &'static str {
         match self {
             Failure::Transient => "transient",
+            Failure::Busy => "busy",
             Failure::Throttled => "throttled",
             Failure::Blocked => "blocked",
             Failure::NotFound => "not-found",
@@ -224,6 +229,7 @@ impl Failure {
     pub fn from_id(id: &str) -> Option<Failure> {
         [
             Failure::Transient,
+            Failure::Busy,
             Failure::Throttled,
             Failure::Blocked,
             Failure::NotFound,
@@ -243,13 +249,71 @@ pub fn retry_delay_seconds(failure: Failure, attempts: u32, jitter: f64) -> i64 
         base.saturating_mul(1i64 << exponent).min(cap)
     };
     let base = match failure {
-        Failure::Transient => doubling(30, 60 * 60),
+        Failure::Transient | Failure::Busy => doubling(30, 60 * 60),
         Failure::Throttled => doubling(5 * 60, 6 * 60 * 60),
         Failure::Blocked => doubling(30 * 60, 24 * 60 * 60),
         Failure::NotFound => 7 * 24 * 60 * 60,
         Failure::Permanent => 30 * 24 * 60 * 60,
     };
     (base as f64 * (1.0 + 0.3 * jitter.clamp(0.0, 1.0))) as i64
+}
+
+/// The songs a lane tried and could not finish, with when each may be tried
+/// again. Times are unix seconds, passed in, so the rules need no clock.
+#[derive(Clone, Debug, Default)]
+pub struct RetryLedger {
+    entries: std::collections::HashMap<String, LedgerEntry>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct LedgerEntry {
+    attempts: u32,
+    due_unix: i64,
+}
+
+impl RetryLedger {
+    /// Notes a failure: the song waits `retry_delay_seconds` for its
+    /// `attempts`-th failure in a row before it is tried again.
+    pub fn failed(&mut self, key: &str, failure: Failure, now_unix: i64, jitter: f64) {
+        let attempts = self.entries.get(key).map_or(0, |entry| entry.attempts) + 1;
+        let wait = retry_delay_seconds(failure, attempts, jitter);
+        self.entries.insert(
+            key.to_string(),
+            LedgerEntry {
+                attempts,
+                due_unix: now_unix.saturating_add(wait),
+            },
+        );
+    }
+
+    /// The song was prepared: whatever kept it waiting is forgotten.
+    pub fn succeeded(&mut self, key: &str) {
+        self.entries.remove(key);
+    }
+
+    /// Whether the song is still being left alone at `now_unix`.
+    pub fn is_waiting(&self, key: &str, now_unix: i64) -> bool {
+        self.entries
+            .get(key)
+            .is_some_and(|entry| entry.due_unix > now_unix)
+    }
+
+    /// How many songs are still being left alone.
+    pub fn waiting(&self, now_unix: i64) -> usize {
+        self.entries
+            .values()
+            .filter(|entry| entry.due_unix > now_unix)
+            .count()
+    }
+
+    /// When the first waiting song may be tried again.
+    pub fn next_due(&self, now_unix: i64) -> Option<i64> {
+        self.entries
+            .values()
+            .map(|entry| entry.due_unix)
+            .filter(|due| *due > now_unix)
+            .min()
+    }
 }
 
 #[cfg(test)]
@@ -449,6 +513,8 @@ mod tests {
         assert_eq!(retry_delay_seconds(Failure::Transient, 1, 0.0), 30);
         assert_eq!(retry_delay_seconds(Failure::Transient, 3, 0.0), 120);
         assert_eq!(retry_delay_seconds(Failure::Transient, 30, 0.0), 3600);
+        assert_eq!(retry_delay_seconds(Failure::Busy, 1, 0.0), 30);
+        assert_eq!(retry_delay_seconds(Failure::Busy, 3, 0.0), 120);
         assert_eq!(retry_delay_seconds(Failure::Throttled, 1, 0.0), 300);
         assert_eq!(retry_delay_seconds(Failure::Blocked, 20, 0.0), 24 * 3600);
         assert_eq!(retry_delay_seconds(Failure::NotFound, 1, 0.0), 7 * 24 * 3600);
@@ -466,6 +532,7 @@ mod tests {
     fn failure_ids_round_trip() {
         for failure in [
             Failure::Transient,
+            Failure::Busy,
             Failure::Throttled,
             Failure::Blocked,
             Failure::NotFound,
@@ -474,5 +541,30 @@ mod tests {
             assert_eq!(Failure::from_id(failure.id()), Some(failure));
         }
         assert_eq!(Failure::from_id("unknown"), None);
+    }
+
+    #[test]
+    fn a_failed_song_waits_longer_each_time_and_is_forgiven_by_a_success() {
+        let mut ledger = RetryLedger::default();
+        ledger.failed("a", Failure::Transient, 1_000, 0.0);
+        assert!(ledger.is_waiting("a", 1_029));
+        assert!(!ledger.is_waiting("a", 1_030));
+        ledger.failed("a", Failure::Transient, 1_030, 0.0);
+        assert_eq!(ledger.next_due(1_030), Some(1_090));
+        ledger.succeeded("a");
+        assert!(!ledger.is_waiting("a", 1_031));
+        assert_eq!(ledger.next_due(1_031), None);
+    }
+
+    #[test]
+    fn the_ledger_counts_only_the_songs_still_waiting_and_names_the_first_due() {
+        let mut ledger = RetryLedger::default();
+        ledger.failed("quick", Failure::Transient, 0, 0.0);
+        ledger.failed("slow", Failure::Throttled, 0, 0.0);
+        assert_eq!(ledger.waiting(0), 2);
+        assert_eq!(ledger.next_due(0), Some(30));
+        assert_eq!(ledger.waiting(60), 1);
+        assert_eq!(ledger.next_due(60), Some(300));
+        assert!(!ledger.is_waiting("never-failed", 0));
     }
 }

@@ -526,15 +526,16 @@ fn prepare_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let whole_library = adw::SwitchRow::builder()
         .title("Lyrics for My Whole Library")
         .subtitle(
-            "Asks lrclib about every song, which tells it your library's titles and artists. \
-             Off, only the queue and the songs you play are looked up",
+            "Looks up every song's lyrics in the background and retries until they are found, \
+             which tells lrclib your library's titles and artists. Off, only the queue and the \
+             songs you play are looked up",
         )
-        .active(ui.core.config.borrow().precache_lyrics_library)
+        .active(ui.core.config.borrow().lyrics_whole_library)
         .build();
     {
         let ui = Rc::clone(ui);
         whole_library.connect_active_notify(move |row| {
-            ui.core.config.borrow_mut().precache_lyrics_library = row.is_active();
+            ui.core.config.borrow_mut().lyrics_whole_library = row.is_active();
             ui.core.save_config();
             crate::precache::refresh(&ui.core);
         });

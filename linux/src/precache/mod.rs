@@ -133,7 +133,7 @@ fn push(core: &Rc<AppCore>) {
         .take(candidates::QUEUE_WINDOW)
         .cloned()
         .collect();
-    let whole_library = core.config.borrow().precache_lyrics_library;
+    let whole_library = core.config.borrow().lyrics_whole_library;
     if let Some(tx) = core.precache.lyrics.borrow().as_ref() {
         let _ = tx.send_blocking(Some(lyrics_lane::Intent {
             queue: queue.clone(),

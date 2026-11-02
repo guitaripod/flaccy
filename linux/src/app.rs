@@ -1138,27 +1138,26 @@ impl AppCore {
     /// lyrics panel reads, so opening it on this song is instant. The panel asks
     /// for the same track at the same moment; the two share one lookup, and
     /// nothing goes to the network for a song skipped within a third of a second.
+    /// While lrclib cannot answer the lookup goes on quietly until the track
+    /// changes, so the seek bar's hover line catches up once it can.
     pub fn prefetch_lyrics(self: &Rc<Self>, track: &Track) {
         *self.lyrics.borrow_mut() = crate::lyrics::Lyrics::default();
         crate::lyrics::want(track);
-        let (tx, rx) = async_channel::bounded::<crate::lyrics::Lyrics>(1);
+        let (tx, rx) = async_channel::unbounded::<Option<crate::lyrics::LyricsResult>>();
         let db_path = self.db_path.clone();
         let music_root = self.music_root();
         let for_thread = track.clone();
         let spawned = std::thread::Builder::new()
             .name("flaccy-lyrics-prefetch".into())
             .spawn(move || {
-                let outcome = crate::lyrics::fetch_shared(
+                crate::lyrics::fetch_patient(
                     &db_path,
                     &music_root,
                     &for_thread,
                     crate::lyrics::Pace::Settled,
+                    &std::sync::atomic::AtomicBool::new(false),
+                    &tx,
                 );
-                let lyrics = match outcome {
-                    Some(crate::lyrics::LyricsResult::Found(lyrics)) => lyrics,
-                    _ => crate::lyrics::Lyrics::default(),
-                };
-                let _ = tx.send_blocking(lyrics);
             });
         if spawned.is_err() {
             return;
@@ -1166,18 +1165,21 @@ impl AppCore {
         let weak = Rc::downgrade(self);
         let rel_path = track.rel_path.clone();
         glib::spawn_future_local(async move {
-            let Ok(lyrics) = rx.recv().await else {
+            while let Ok(outcome) = rx.recv().await {
+                let Some(crate::lyrics::LyricsResult::Found(lyrics)) = outcome else {
+                    continue;
+                };
+                let Some(core) = weak.upgrade() else {
+                    return;
+                };
+                let still_playing = core
+                    .player
+                    .current_track()
+                    .is_some_and(|track| track.rel_path == rel_path);
+                if still_playing {
+                    *core.lyrics.borrow_mut() = lyrics;
+                }
                 return;
-            };
-            let Some(core) = weak.upgrade() else {
-                return;
-            };
-            let still_playing = core
-                .player
-                .current_track()
-                .is_some_and(|track| track.rel_path == rel_path);
-            if still_playing {
-                *core.lyrics.borrow_mut() = lyrics;
             }
         });
     }

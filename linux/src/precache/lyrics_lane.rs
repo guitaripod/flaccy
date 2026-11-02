@@ -1,6 +1,8 @@
 //! Fetches lyrics before they are asked for. The lane works down the planner's
 //! order one song at a time, behind the same gate as the lyrics panel, and
-//! rests when lrclib or the network does.
+//! rests when lrclib or the network does. A song lrclib could not answer for
+//! goes into a ledger and is asked about again after a pause that grows with
+//! each failure, so the library fills up by itself once lrclib is back.
 
 use super::candidates::{self, Ranked};
 use super::governor::{Breaker, LRCLIB};
@@ -8,8 +10,8 @@ use super::status::{self, LaneState};
 use crate::db::Db;
 use crate::library::Track;
 use crate::lyrics::{self, LyricsResult, Pace};
-use flaccy_shared::lyrics::LyricsFailure;
-use flaccy_shared::precache::{lyrics_order, Failure};
+use flaccy_shared::lyrics::{tries_next_question, LyricsFailure};
+use flaccy_shared::precache::{lyrics_order, Failure, RetryLedger};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -47,6 +49,10 @@ fn newest(rx: &async_channel::Receiver<Option<Intent>>) -> Option<Option<Intent>
     latest
 }
 
+fn now_unix() -> i64 {
+    chrono::Utc::now().timestamp()
+}
+
 fn run(
     db_path: &PathBuf,
     music_root: &PathBuf,
@@ -54,6 +60,7 @@ fn run(
     rx: &async_channel::Receiver<Option<Intent>>,
 ) {
     let mut breaker = Breaker::default();
+    let mut ledger = RetryLedger::default();
     let mut intent = None;
     loop {
         if intent.is_none() {
@@ -77,20 +84,67 @@ fn run(
             std::thread::sleep(NAP);
             continue;
         };
-        let pending = pending_tracks(&db, &current);
+        let pending = pending_tracks(&db, &current, &ledger, now_unix());
         status::update(|status| status.lyrics_waiting = pending.len());
-        if pending.is_empty() {
-            status::update(|status| status.lyrics = LaneState::Idle);
-            intent = None;
-            continue;
+        if !pending.is_empty() {
+            match work(
+                &pending,
+                &db,
+                music_root,
+                db_path,
+                blocker,
+                rx,
+                &mut breaker,
+                &mut ledger,
+            ) {
+                Worked::Finished => {}
+                Worked::Replaced(next) => {
+                    intent = Some(next);
+                    continue;
+                }
+            }
         }
-        match work(&pending, music_root, db_path, blocker, rx, &mut breaker) {
-            Worked::Finished => {
+        match ledger.next_due(now_unix()) {
+            Some(due) => {
+                if let Some(next) = wait_for_retries(due, ledger.waiting(now_unix()), rx) {
+                    intent = Some(next);
+                }
+            }
+            None => {
                 status::update(|status| status.lyrics = LaneState::Idle);
                 intent = None;
             }
-            Worked::Replaced(next) => intent = Some(next),
         }
+    }
+}
+
+/// Rests until the first song in the ledger is due again, leaving at once if a
+/// newer intent arrives, which it hands back.
+fn wait_for_retries(
+    due_unix: i64,
+    songs: usize,
+    rx: &async_channel::Receiver<Option<Intent>>,
+) -> Option<Option<Intent>> {
+    let reason = retry_reason(songs);
+    status::update(|status| {
+        status.lyrics = LaneState::Resting {
+            until_unix: due_unix,
+            reason,
+        }
+    });
+    while now_unix() < due_unix {
+        if let Some(newer) = newest(rx) {
+            return Some(newer);
+        }
+        std::thread::sleep(NAP);
+    }
+    None
+}
+
+fn retry_reason(songs: usize) -> String {
+    match songs {
+        1 => "lrclib could not answer for 1 song".to_string(),
+        count => format!("lrclib could not answer for {count} songs"),
     }
 }
 
@@ -99,9 +153,9 @@ enum Worked {
     Replaced(Option<Intent>),
 }
 
-/// The tracks that still need a lookup, in the order the planner wants them.
-fn pending_tracks(db: &Db, intent: &Intent) -> Vec<Track> {
-    let now = chrono::Utc::now().timestamp();
+/// The tracks that still need a lookup, in the order the planner wants them,
+/// leaving out the ones the ledger is still giving a rest.
+fn pending_tracks(db: &Db, intent: &Intent, ledger: &RetryLedger, now: i64) -> Vec<Track> {
     let ranked = candidates::build(db, &intent.queue, now);
     let order = lyrics_order(
         &ranked
@@ -118,17 +172,19 @@ fn pending_tracks(db: &Db, intent: &Intent) -> Vec<Track> {
         .into_iter()
         .filter_map(|key| by_key.remove(&key))
         .map(|entry| entry.track)
-        .filter(|track| !lyrics::is_cached(db, track))
+        .filter(|track| !ledger.is_waiting(&track.rel_path, now) && !lyrics::is_cached(db, track))
         .collect()
 }
 
 fn work(
     pending: &[Track],
+    db: &Db,
     music_root: &PathBuf,
     db_path: &PathBuf,
     blocker: &dyn Fn() -> Option<&'static str>,
     rx: &async_channel::Receiver<Option<Intent>>,
     breaker: &mut Breaker,
+    ledger: &mut RetryLedger,
 ) -> Worked {
     let total = pending.len();
     for (done, track) in pending.iter().enumerate() {
@@ -138,7 +194,7 @@ fn work(
             }
             let rest = breaker.rest_left().max(LRCLIB.cooldown_left());
             if !rest.is_zero() {
-                let until = chrono::Utc::now().timestamp() + rest.as_secs() as i64;
+                let until = now_unix() + rest.as_secs() as i64;
                 let reason = rest_reason(breaker.last());
                 status::update(|status| {
                     status.lyrics = LaneState::Resting {
@@ -152,7 +208,7 @@ fn work(
             if let Some(reason) = blocker() {
                 status::update(|status| {
                     status.lyrics = LaneState::Resting {
-                        until_unix: chrono::Utc::now().timestamp() + 5,
+                        until_unix: now_unix() + 5,
                         reason: reason.to_string(),
                     }
                 });
@@ -173,10 +229,23 @@ fn work(
                     &format!("lyrics for {} failed ({}): {failure:?}", track.title, class.id()),
                 );
                 breaker.failed(class);
+                ledger.failed(&track.rel_path, class, now_unix(), rand::random::<f64>());
+            }
+            Some(_) if lyrics::is_cached(db, track) => {
+                breaker.succeeded();
+                ledger.succeeded(&track.rel_path);
+                status::update(|status| status.lyrics_prepared += 1);
             }
             Some(_) => {
-                breaker.succeeded();
-                status::update(|status| status.lyrics_prepared += 1);
+                crate::logger::warn(
+                    "precache",
+                    &format!(
+                        "lyrics for {} are still not stored after the lookup, asking again later",
+                        track.title
+                    ),
+                );
+                breaker.failed(Failure::Transient);
+                ledger.failed(&track.rel_path, Failure::Transient, now_unix(), rand::random::<f64>());
             }
             None => {}
         }
@@ -188,6 +257,7 @@ fn classify(failure: &LyricsFailure) -> Failure {
     match failure {
         LyricsFailure::Busy => Failure::Throttled,
         LyricsFailure::Rejected(_) => Failure::Blocked,
+        busy if tries_next_question(*busy) => Failure::Busy,
         LyricsFailure::Unreachable | LyricsFailure::TimedOut | LyricsFailure::Server(_) => {
             Failure::Transient
         }
@@ -198,6 +268,7 @@ fn rest_reason(last: Option<Failure>) -> String {
     match last {
         Some(Failure::Throttled) => "lrclib asked for fewer requests".to_string(),
         Some(Failure::Blocked) => "lrclib turned the requests away".to_string(),
+        Some(Failure::Busy) => "lrclib is busy".to_string(),
         Some(Failure::Transient) => "lrclib could not be reached".to_string(),
         _ => "lrclib asked for fewer requests".to_string(),
     }
@@ -228,7 +299,7 @@ mod tests {
     fn the_queue_comes_first_then_habit_then_the_album_and_never_the_stranger() {
         let temp = temp_db("lane-order");
         library(&temp.db);
-        let pending = pending_tracks(&temp.db, &intent(&temp.db, &["x/1.flac", "x/2.flac"], false));
+        let pending = pending_tracks(&temp.db, &intent(&temp.db, &["x/1.flac", "x/2.flac"], false), &RetryLedger::default(), now_unix());
         assert_eq!(rel_paths(&pending), ["x/1.flac", "x/2.flac", "y/1.flac", "x/3.flac"]);
     }
 
@@ -236,7 +307,7 @@ mod tests {
     fn the_whole_library_adds_the_stranger_last() {
         let temp = temp_db("lane-whole");
         library(&temp.db);
-        let pending = pending_tracks(&temp.db, &intent(&temp.db, &["x/1.flac"], true));
+        let pending = pending_tracks(&temp.db, &intent(&temp.db, &["x/1.flac"], true), &RetryLedger::default(), now_unix());
         assert_eq!(rel_paths(&pending).last(), Some(&"z/1.flac"));
         assert_eq!(pending.len(), 5);
     }
@@ -253,8 +324,28 @@ mod tests {
             revision: 2,
         };
         temp.db.save_lyrics("Second", "Pilot", &miss).unwrap();
-        let pending = pending_tracks(&temp.db, &intent(&temp.db, &["x/1.flac", "x/2.flac"], false));
+        let pending = pending_tracks(&temp.db, &intent(&temp.db, &["x/1.flac", "x/2.flac"], false), &RetryLedger::default(), now_unix());
         assert_eq!(rel_paths(&pending), ["x/1.flac", "y/1.flac", "x/3.flac"]);
+    }
+
+    #[test]
+    fn a_song_the_ledger_is_resting_waits_and_returns_when_it_is_due() {
+        let temp = temp_db("lane-ledger");
+        library(&temp.db);
+        let now = now_unix();
+        let mut ledger = RetryLedger::default();
+        ledger.failed("x/2.flac", Failure::Transient, now, 0.0);
+        let queue = intent(&temp.db, &["x/1.flac", "x/2.flac"], false);
+        let resting = pending_tracks(&temp.db, &queue, &ledger, now);
+        assert_eq!(rel_paths(&resting), ["x/1.flac", "y/1.flac", "x/3.flac"]);
+        let due = pending_tracks(&temp.db, &queue, &ledger, now + 31);
+        assert_eq!(rel_paths(&due), ["x/1.flac", "x/2.flac", "y/1.flac", "x/3.flac"]);
+    }
+
+    #[test]
+    fn the_reason_for_resting_counts_the_songs_waiting() {
+        assert_eq!(retry_reason(1), "lrclib could not answer for 1 song");
+        assert_eq!(retry_reason(12), "lrclib could not answer for 12 songs");
     }
 
     #[test]
@@ -263,5 +354,6 @@ mod tests {
         assert_eq!(classify(&LyricsFailure::Rejected(403)), Failure::Blocked);
         assert_eq!(classify(&LyricsFailure::TimedOut), Failure::Transient);
         assert_eq!(classify(&LyricsFailure::Server(502)), Failure::Transient);
+        assert_eq!(classify(&LyricsFailure::Server(503)), Failure::Busy);
     }
 }

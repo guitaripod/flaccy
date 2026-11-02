@@ -122,7 +122,7 @@ nonisolated enum LyricsResolution {
     }
 }
 
-final class LyricsService {
+nonisolated final class LyricsService: Sendable {
 
     static let shared = LyricsService()
 
@@ -176,7 +176,9 @@ final class LyricsService {
     /// Resolution order: the local database cache, then lyrics the user keeps
     /// alongside the audio (an `.lrc` sidecar or an embedded tag), then lrclib.
     /// A cached answer from an older pipeline revision is shown if the server
-    /// cannot improve on it.
+    /// cannot improve on it. Runs off the main actor: the cache, the files and
+    /// the network are all read here.
+    @concurrent
     func fetchLyrics(
         track: String, artist: String, album: String,
         fileURL: URL? = nil, duration: TimeInterval = 0
@@ -230,6 +232,53 @@ final class LyricsService {
         }
     }
 
+    /// `fetchLyrics` for the lyrics a listener is waiting on. A lookup lrclib
+    /// could not answer is asked again with growing pauses, out of sight; a
+    /// failure that outlasts those is yielded once, and the asking goes on at a
+    /// slow pace so the lyrics still arrive when the server returns. The stream
+    /// ends with the lyrics (or their absence), when asking again cannot help,
+    /// or when the task reading it is cancelled.
+    func lyricsUpdates(
+        track: String, artist: String, album: String,
+        fileURL: URL? = nil, duration: TimeInterval = 0
+    ) -> AsyncStream<LyricsOutcome> {
+        AsyncStream { continuation in
+            let task = Task {
+                var failures = 0
+                while !Task.isCancelled {
+                    let outcome = await fetchLyrics(
+                        track: track, artist: artist, album: album, fileURL: fileURL, duration: duration
+                    )
+                    guard case .failed(let failure) = outcome else {
+                        continuation.yield(outcome)
+                        break
+                    }
+                    failures += 1
+                    let cooldown = await LyricsRequestGate.shared.cooldownLeft()
+                    let pause: TimeInterval
+                    switch LyricsPatience.next(after: failure, failures: failures, cooldownLeft: cooldown) {
+                    case .giveUp:
+                        continuation.yield(outcome)
+                        continuation.finish()
+                        return
+                    case .show(let after):
+                        continuation.yield(outcome)
+                        pause = after
+                    case .quietly(let after):
+                        pause = after
+                    }
+                    do {
+                        try await Task.sleep(for: .seconds(pause))
+                    } catch {
+                        break
+                    }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// Stores what a source answered. The listener's offset rides along from
     /// the row being replaced: a refetch must not undo a correction they made
     /// by ear.
@@ -265,17 +314,23 @@ final class LyricsService {
         }
     }
 
-    private struct Fetched {
+    struct Fetched {
         let synced: String?
         let plain: String?
         let lyricsfile: String?
         let instrumental: Bool
     }
 
-    private enum Remote {
+    enum Remote {
         case found(Fetched)
         case missing
         case failed(LyricsFailure)
+    }
+
+    /// One question put to lrclib on the way to a song's lyrics.
+    enum Question: Equatable {
+        case exact(title: String, artist: String, album: String?)
+        case search(title: String, artist: String)
     }
 
     private enum Reply {
@@ -291,27 +346,55 @@ final class LyricsService {
     /// search endpoint, ranking its results here (the endpoint itself is
     /// duration-blind).
     private func lookupRemote(track: String, artist: String, album: String, duration: TimeInterval) async -> Remote {
+        await Self.lookup(track: track, artist: artist, album: album) { question in
+            switch question {
+            case .exact(let title, let artist, let album):
+                return await self.getExact(title: title, artist: artist, album: album, duration: duration)
+            case .search(let title, let lead):
+                return await self.searchFallback(
+                    track: track, artist: artist, album: album, duration: duration, title: title, lead: lead
+                )
+            }
+        }
+    }
+
+    /// Asks the questions in order until one is answered with lyrics. A
+    /// question lrclib answered "busy" does not end the lookup, because lrclib
+    /// is still working on it and the plainer ones after it are often answered
+    /// at once; if none of the others finds the song either, the lookup failed
+    /// rather than came up empty, since the busy question might have found it.
+    /// Any other failure ends the lookup, as the server is not answering at
+    /// all. Mirrors `lookup_through` in `linux/src/lyrics.rs`.
+    static func lookup(
+        track: String, artist: String, album: String, ask: (Question) async -> Remote
+    ) async -> Remote {
         let title = LyricsQuery.cleanTitle(track)
         let lead = LyricsQuery.leadArtist(artist)
 
-        var attempts: [(title: String, artist: String, album: String?)] = []
+        var questions: [Question] = []
         if !album.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            attempts.append((track, artist, album))
+            questions.append(.exact(title: track, artist: artist, album: album))
         }
-        attempts.append((track, artist, nil))
+        questions.append(.exact(title: track, artist: artist, album: nil))
         if title != track || lead != artist {
-            attempts.append((title, lead, nil))
+            questions.append(.exact(title: title, artist: lead, album: nil))
         }
-        for attempt in attempts {
-            let result = await getExact(
-                title: attempt.title, artist: attempt.artist, album: attempt.album, duration: duration
-            )
-            if case .missing = result { continue }
-            return result
+        questions.append(.search(title: title, artist: lead))
+
+        var busy: LyricsFailure?
+        for question in questions {
+            switch await ask(question) {
+            case .found(let fetched):
+                return .found(fetched)
+            case .missing:
+                continue
+            case .failed(let failure) where LyricsPatience.triesNextQuestion(after: failure):
+                busy = failure
+            case .failed(let failure):
+                return .failed(failure)
+            }
         }
-        return await searchFallback(
-            track: track, artist: artist, album: album, duration: duration, title: title, lead: lead
-        )
+        return busy.map { .failed($0) } ?? .missing
     }
 
     private func getExact(title: String, artist: String, album: String?, duration: TimeInterval) async -> Remote {
@@ -363,16 +446,24 @@ final class LyricsService {
 
     /// One GET, retried once when the server is overloaded or throttling,
     /// waiting as long as it asks within reason. A 404 is an answer, not a
-    /// failure.
+    /// failure. Every attempt waits its turn at the shared gate, and a 429
+    /// starts the gate's cooldown for the full time the server asked, so a
+    /// request that would break that promise is not sent.
     private func request(path: String, query: String) async -> Reply {
         guard let url = URL(string: "https://lrclib.net\(path)?\(query)") else { return .failed(.rejected(400)) }
         var urlRequest = URLRequest(url: url)
         urlRequest.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
         var lastFailure = LyricsFailure.unreachable
         for attempt in 0..<2 {
+            guard await LyricsRequestGate.shared.waitTurn(patience: Self.longestRetryWait) else {
+                return .failed(.busy)
+            }
             do {
                 let (data, response) = try await client.data(for: urlRequest)
                 guard let http = response as? HTTPURLResponse else { return .failed(.unreachable) }
+                if http.statusCode == 429 {
+                    await LyricsRequestGate.shared.throttled(retryAfter: Self.askedWait(for: http))
+                }
                 switch http.statusCode {
                 case 200..<300:
                     return .body(data)
@@ -380,7 +471,9 @@ final class LyricsService {
                     return .notFound
                 case let code where attempt == 0 && (code == 429 || code >= 500):
                     lastFailure = .forStatus(code)
-                    try await Task.sleep(for: .seconds(Self.retryWait(for: http)))
+                    if code != 429 {
+                        try await Task.sleep(for: .seconds(min(Self.askedWait(for: http), Self.longestRetryWait)))
+                    }
                 default:
                     MidgarLog.error("Lyrics request failed: HTTP \(http.statusCode)", category: .content)
                     return .failed(.forStatus(http.statusCode))
@@ -397,10 +490,11 @@ final class LyricsService {
         (error as? URLError)?.code == .timedOut ? .timedOut : .unreachable
     }
 
-    private static func retryWait(for response: HTTPURLResponse) -> TimeInterval {
+    /// How long the server asked to be left alone, at least `shortestRetryWait`.
+    private static func askedWait(for response: HTTPURLResponse) -> TimeInterval {
         let asked = response.value(forHTTPHeaderField: "Retry-After")
             .flatMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-        return min(max(asked ?? defaultRetryWait, shortestRetryWait), longestRetryWait)
+        return max(asked ?? defaultRetryWait, shortestRetryWait)
     }
 
     private static func parseRecord(_ body: Data) -> Remote {

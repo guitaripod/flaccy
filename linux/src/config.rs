@@ -70,8 +70,8 @@ pub struct Config {
     pub music_video_llm_model: String,
     pub music_video_align: bool,
     /// Fetch lyrics for every song in the library in the background, not only
-    /// the queue and what is played.
-    pub precache_lyrics_library: bool,
+    /// the queue and what is played. On unless the person turned it off.
+    pub lyrics_whole_library: bool,
     /// Prepare the music videos of the songs coming up ahead of time.
     pub precache_video: bool,
     /// How much disk prepared music videos may use, in gigabytes.
@@ -232,7 +232,7 @@ impl Default for Config {
             music_video_llm: true,
             music_video_llm_model: String::new(),
             music_video_align: true,
-            precache_lyrics_library: false,
+            lyrics_whole_library: true,
             precache_video: true,
             precache_video_cap_gb: PRECACHE_VIDEO_CAP_DEFAULT_GB,
             remote_cache_cap_gb: REMOTE_CACHE_CAP_DEFAULT_GB,

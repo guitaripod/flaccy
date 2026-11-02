@@ -117,6 +117,12 @@ pub struct Breaker {
 /// Failures in a row before the lane rests.
 const TRIP_AFTER: u32 = 3;
 
+/// A server that answers "busy" is alive and merely slow on the questions it
+/// was asked, so it takes a longer run of them, with no song done in between,
+/// before the whole lane rests: a few songs lrclib has to think about must not
+/// hold up the ones behind them.
+const BUSY_TRIP_AFTER: u32 = 8;
+
 impl Breaker {
     pub fn succeeded(&mut self) {
         self.consecutive = 0;
@@ -126,13 +132,21 @@ impl Breaker {
 
     /// Counts a failure. A refusal (`Throttled`, `Blocked`) rests the lane at
     /// once, since the server has said it does not want more; a hiccup needs
-    /// `TRIP_AFTER` in a row.
+    /// `TRIP_AFTER` in a row and a busy answer `BUSY_TRIP_AFTER`, after which
+    /// the rests lengthen from the shortest.
     pub fn failed_at(&mut self, now: Instant, failure: Failure, jitter: f64) {
         self.consecutive += 1;
         self.last = Some(failure);
         let refused = matches!(failure, Failure::Throttled | Failure::Blocked);
-        if refused || self.consecutive >= TRIP_AFTER {
-            let rest = retry_delay_seconds(failure, self.consecutive, jitter);
+        let busy = failure == Failure::Busy;
+        let threshold = if busy { BUSY_TRIP_AFTER } else { TRIP_AFTER };
+        if refused || self.consecutive >= threshold {
+            let attempts = if busy {
+                self.consecutive - BUSY_TRIP_AFTER + 1
+            } else {
+                self.consecutive
+            };
+            let rest = retry_delay_seconds(failure, attempts, jitter);
             self.resting_until = Some(now + Duration::from_secs(rest.max(1) as u64));
         }
     }
@@ -225,6 +239,22 @@ mod tests {
         assert_eq!(hiccups.rest_left_at(now), Duration::ZERO);
         hiccups.failed_at(now, Failure::Transient, 0.0);
         assert_eq!(hiccups.rest_left_at(now), Duration::from_secs(120));
+    }
+
+    #[test]
+    fn a_busy_answer_needs_eight_in_a_row_and_then_rests_briefly() {
+        let now = Instant::now();
+        let mut busy = Breaker::default();
+        for _ in 0..7 {
+            busy.failed_at(now, Failure::Busy, 0.0);
+        }
+        assert_eq!(busy.rest_left_at(now), Duration::ZERO);
+        busy.failed_at(now, Failure::Busy, 0.0);
+        assert_eq!(busy.rest_left_at(now), Duration::from_secs(30));
+        busy.failed_at(now, Failure::Busy, 0.0);
+        assert_eq!(busy.rest_left_at(now), Duration::from_secs(60));
+        busy.succeeded();
+        assert_eq!(busy.rest_left_at(now), Duration::ZERO);
     }
 
     #[test]

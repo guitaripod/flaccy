@@ -36,6 +36,7 @@ final class LyricsViewController: UIViewController {
     var progressObserver: NSObjectProtocol?
     var trackObserver: NSObjectProtocol?
     var loadGeneration = 0
+    var lyricsLoad: LyricsLoad?
     var isUserScrolling = false
     var scrollResumeWorkItem: DispatchWorkItem?
     let lineSelectionFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -210,48 +211,61 @@ final class LyricsViewController: UIViewController {
 
         let current = AudioPlayer.shared.currentTrack
         let matchesCurrent = current?.title == trackTitle && current?.artist == artistName
-        Task {
-            let outcome = await LyricsService.shared.fetchLyrics(
-                track: trackTitle,
-                artist: artistName,
-                album: albumName,
-                fileURL: matchesCurrent ? current?.fileURL : nil,
-                duration: matchesCurrent ? (current?.duration ?? 0) : 0
-            )
-            guard generation == loadGeneration else { return }
+        let updates = LyricsService.shared.lyricsUpdates(
+            track: trackTitle,
+            artist: artistName,
+            album: albumName,
+            fileURL: matchesCurrent ? current?.fileURL : nil,
+            duration: matchesCurrent ? (current?.duration ?? 0) : 0
+        )
+        lyricsLoad = LyricsLoad(Task { [weak self] in
+            for await outcome in updates {
+                guard let self, generation == self.loadGeneration else { return }
+                self.show(outcome)
+            }
+        })
+    }
+
+    /// Puts one answer on screen. A failure that outlasted the quiet retries
+    /// is followed, when lrclib comes back, by the lyrics themselves, which
+    /// replace the message and the button.
+    func show(_ outcome: LyricsOutcome) {
+        let found: Lyrics
+        switch outcome {
+        case .found(let result):
+            found = result
+        case .missing:
             spinner.stopAnimating()
+            retryButton.isHidden = true
+            showStatus(LyricsStatusCopy.missing(song: trackTitle), symbol: "quote.bubble")
+            return
+        case .failed(let failure):
+            spinner.stopAnimating()
+            showStatus(LyricsStatusCopy.failed(failure), symbol: Self.symbol(for: failure))
+            retryButton.isHidden = false
+            return
+        }
+        spinner.stopAnimating()
+        retryButton.isHidden = true
+        statusLabel.isHidden = true
 
-            let found: Lyrics
-            switch outcome {
-            case .found(let result):
-                found = result
-            case .missing:
-                showStatus(LyricsStatusCopy.missing(song: trackTitle), symbol: "quote.bubble")
-                return
-            case .failed(let failure):
-                showStatus(LyricsStatusCopy.failed(failure), symbol: Self.symbol(for: failure))
-                retryButton.isHidden = false
-                return
-            }
+        if found.document.instrumental {
+            showStatus(LyricsStatusCopy.instrumental, symbol: "music.note")
+            return
+        }
 
-            if found.document.instrumental {
-                showStatus(LyricsStatusCopy.instrumental, symbol: "music.note")
-                return
-            }
-
-            if found.document.hasSynced || found.document.plain != nil {
-                lyrics = found
-                shareButton.isHidden = !isCurrentTrack
-            }
-            if found.document.hasSynced {
-                showSyncedLyrics(found)
-                showTimingNote(for: found.document)
-            } else if let plain = found.document.plain, !plain.isEmpty {
-                showPlainLyrics(plain)
-                showTimingNote(for: found.document)
-            } else {
-                showStatus(LyricsStatusCopy.missing(song: trackTitle), symbol: "quote.bubble")
-            }
+        if found.document.hasSynced || found.document.plain != nil {
+            lyrics = found
+            shareButton.isHidden = !isCurrentTrack
+        }
+        if found.document.hasSynced {
+            showSyncedLyrics(found)
+            showTimingNote(for: found.document)
+        } else if let plain = found.document.plain, !plain.isEmpty {
+            showPlainLyrics(plain)
+            showTimingNote(for: found.document)
+        } else {
+            showStatus(LyricsStatusCopy.missing(song: trackTitle), symbol: "quote.bubble")
         }
     }
 

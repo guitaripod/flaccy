@@ -54,6 +54,7 @@ final class LyricsPanelViewController: NSViewController {
     private var lastLyricTime: TimeInterval = 0
     private var currentLineIndex = -1
     private var loadGeneration = 0
+    private var lyricsLoad: LyricsLoad?
     private var loadedTrackKey: String?
     private var lastUserScroll: Date = .distantPast
     private var isProgrammaticScroll = false
@@ -358,15 +359,17 @@ final class LyricsPanelViewController: NSViewController {
         showState(icon: nil, words: nil)
         spinner.startAnimation(nil)
 
-        Task { [weak self] in
-            let outcome = await LyricsService.shared.fetchLyrics(
-                track: track.title, artist: track.artist, album: track.albumTitle,
-                fileURL: track.fileURL, duration: track.duration
-            )
-            guard let self, self.loadGeneration == generation else { return }
-            self.spinner.stopAnimation(nil)
-            self.render(outcome, song: track.title)
-        }
+        let updates = LyricsService.shared.lyricsUpdates(
+            track: track.title, artist: track.artist, album: track.albumTitle,
+            fileURL: track.fileURL, duration: track.duration
+        )
+        lyricsLoad = LyricsLoad(Task { [weak self] in
+            for await outcome in updates {
+                guard let self, self.loadGeneration == generation else { return }
+                self.spinner.stopAnimation(nil)
+                self.render(outcome, song: track.title)
+            }
+        })
     }
 
     private func render(_ outcome: LyricsOutcome, song: String) {
@@ -671,6 +674,7 @@ final class LyricsPanelViewController: NSViewController {
     }
 
     private func hideState() {
+        retryButton.isHidden = true
         stateTitle.isHidden = true
         stateLabel.isHidden = true
         stateIcon.isHidden = true

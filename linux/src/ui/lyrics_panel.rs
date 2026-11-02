@@ -16,6 +16,8 @@ use gtk::glib;
 use gtk::pango;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// How long the view stays out of the way after the user scrolls by hand.
@@ -568,11 +570,13 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let show_content = Rc::clone(&show_content);
         let retry = retry.clone();
         Rc::new(move |track: &Track, pace: Pace| {
-            let generation = {
+            let (generation, stop) = {
                 let mut state = state.borrow_mut();
+                state.stop.store(true, Ordering::Relaxed);
+                state.stop = Arc::new(AtomicBool::new(false));
                 state.generation += 1;
                 state.lyrics = Lyrics::default();
-                state.generation
+                (state.generation, Arc::clone(&state.stop))
             };
             subtitle.set_label(&format!("{} — {}", track.title, track.artist));
             show_status(&status, &searching_status());
@@ -585,10 +589,8 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
             let apply_lyrics = Rc::clone(&apply_lyrics);
             let track = track.clone();
             glib::spawn_future_local(async move {
-                let mut pace = pace;
-                loop {
-                    let rx = lookup_channel(&ui, &track, pace);
-                    let Ok(outcome) = rx.recv().await else { return };
+                let mut rx = lookup_channel(&ui, &track, pace, Arc::clone(&stop));
+                while let Ok(outcome) = rx.recv().await {
                     if state.borrow().generation != generation {
                         return;
                     }
@@ -596,14 +598,13 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
                         if !ui.core.player.is_current_path(&track.rel_path) {
                             return;
                         }
-                        pace = Pace::Immediate;
+                        rx = lookup_channel(&ui, &track, Pace::Immediate, Arc::clone(&stop));
                         continue;
                     };
                     if let LyricsResult::Found(lyrics) = &result {
                         state.borrow_mut().lyrics = lyrics.clone();
                     }
                     apply_lyrics(&result);
-                    return;
                 }
             });
         })
@@ -632,6 +633,9 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
         let ui = Rc::clone(ui);
         Rc::new(move |active: bool| {
             visible.set(active);
+            if !active {
+                state.borrow().stop.store(true, Ordering::Relaxed);
+            }
             if active {
                 let track = state
                     .borrow()
@@ -727,20 +731,22 @@ pub fn build(ui: &Rc<Ui>, opts: LyricsOptions) -> LyricsPanel {
 }
 
 /// Starts a lookup for the track on its own thread, joining one that is
-/// already running for it, and returns the channel its answer arrives on
-/// (`None` when the track was skipped away from before the network was used).
+/// already running for it, and returns the channel its answers arrive on: the
+/// lyrics, or a failure that outlasted the quiet retries followed later by the
+/// lyrics once lrclib answers (`None` when the track was skipped away from
+/// before the network was used). Raising `stop` ends the lookup.
 fn lookup_channel(
     ui: &Rc<Ui>,
     track: &Track,
     pace: Pace,
+    stop: Arc<AtomicBool>,
 ) -> async_channel::Receiver<Option<LyricsResult>> {
-    let (tx, rx) = async_channel::bounded::<Option<LyricsResult>>(1);
+    let (tx, rx) = async_channel::unbounded::<Option<LyricsResult>>();
     let db_path = ui.core.db_path.clone();
     let music_root = ui.core.music_root();
     let track = track.clone();
     std::thread::spawn(move || {
-        let outcome = crate::lyrics::fetch_shared(&db_path, &music_root, &track, pace);
-        let _ = tx.send_blocking(outcome);
+        crate::lyrics::fetch_patient(&db_path, &music_root, &track, pace, &stop, &tx);
     });
     rx
 }
@@ -1328,6 +1334,7 @@ struct PanelState {
     track: Option<Track>,
     lyrics: Lyrics,
     generation: u64,
+    stop: Arc<AtomicBool>,
     current_line: Option<usize>,
     highlighted: Vec<usize>,
     rows: Vec<LineRow>,
