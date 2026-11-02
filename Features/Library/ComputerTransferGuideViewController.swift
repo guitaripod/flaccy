@@ -2,9 +2,10 @@ import UIKit
 import MidgarCore
 
 /// The routes that really get music from a computer onto the phone, each one
-/// something the app supports today: Finder file sharing and the Files app's
-/// On My iPhone folder (`UIFileSharingEnabled`), and the Add Music picker
-/// reading iCloud Drive, network shares and wherever AirDrop saved a file.
+/// something the app supports today: Wi-Fi Transfer from any web browser,
+/// Finder file sharing and the Files app's On My iPhone folder
+/// (`UIFileSharingEnabled`), and the Add Music picker reading iCloud Drive,
+/// network shares and wherever AirDrop saved a file.
 final class ComputerTransferGuideViewController: UIViewController {
 
     private struct Route {
@@ -49,7 +50,7 @@ final class ComputerTransferGuideViewController: UIViewController {
     }
 
     private func buildContent() {
-        var rows = Self.routes.map(makeRow)
+        var rows = [makeWiFiTransferCard()] + Self.routes.map(makeRow)
         if !FlaccyServerNudge.isDismissed, FlaccyServerLibrary.record() == nil { rows.append(makeServerCard()) }
         let stack = UIStackView(arrangedSubviews: rows + [makeFootnote()])
         stack.axis = .vertical
@@ -105,6 +106,29 @@ final class ComputerTransferGuideViewController: UIViewController {
         row.isAccessibilityElement = true
         row.accessibilityLabel = "\(route.title). \(route.detail)"
         return row
+    }
+
+    /// The quickest route, and the only one that needs nothing on the computer, so it leads with a button of its own.
+    private func makeWiFiTransferCard() -> UIView {
+        let row = makeRow(Route(
+            symbol: "wifi",
+            title: String(localized: "Wi-Fi, from any web browser"),
+            detail: String(localized: "No cable and nothing to install. Open the address Flaccy shows on your computer and drop folders onto the page.")
+        ))
+        var configuration = UIButton.Configuration.filled()
+        configuration.title = HomeCopy.sendFromComputer
+        configuration.cornerStyle = .capsule
+        let open = UIButton(configuration: configuration, primaryAction: UIAction { [weak self] _ in
+            self?.impact.impactOccurred()
+            self?.navigationController?.pushViewController(WiFiTransferViewController(offersFlaccyServer: false), animated: true)
+        })
+        open.accessibilityIdentifier = "guide.wifiTransfer"
+        let content = UIStackView(arrangedSubviews: [row, open])
+        content.axis = .vertical
+        content.alignment = .leading
+        content.spacing = 12
+        row.widthAnchor.constraint(equalTo: content.widthAnchor).isActive = true
+        return content
     }
 
     private func makeServerCard() -> UIView {

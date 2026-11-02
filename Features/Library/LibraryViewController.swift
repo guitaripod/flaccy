@@ -75,6 +75,20 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self?.importTapped()
         })
     }()
+    lazy var wifiTransferButton: UIButton = {
+        var config = UIButton.Configuration.bordered()
+        config.title = HomeCopy.sendFromComputer
+        config.subtitle = HomeCopy.sendFromComputerDetail
+        config.image = UIImage(systemName: "wifi")
+        config.imagePadding = 8
+        config.titleAlignment = .center
+        config.cornerStyle = .large
+        let button = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.presentWiFiTransfer()
+        })
+        button.accessibilityIdentifier = "library.wifiTransfer"
+        return button
+    }()
     lazy var sampleMusicButton: UIButton = {
         var config = UIButton.Configuration.bordered()
         config.title = String(localized: "Add Sample Music")
@@ -117,7 +131,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         label.numberOfLines = 0
         label.textAlignment = .center
 
-        let buttons = UIStackView(arrangedSubviews: [addMusicButton, sampleMusicButton])
+        let buttons = UIStackView(arrangedSubviews: [addMusicButton, wifiTransferButton, sampleMusicButton])
         buttons.axis = .vertical
         buttons.spacing = 10
         buttons.alignment = .fill
@@ -519,6 +533,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             emptyStateIconView.image = UIImage(systemName: "music.note.list")
             emptyStateLabel.text = String(localized: "Add songs or whole folders from iCloud Drive, a USB drive, or a network share you've connected in the Files app.")
             addMusicButton.isHidden = false
+            wifiTransferButton.isHidden = false
             sampleMusicButton.isHidden = false
             computerGuideButton.isHidden = false
             applySampleButtonState()
@@ -528,6 +543,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             emptyStateIconView.image = UIImage(systemName: "magnifyingglass")
             emptyStateLabel.text = String(localized: "No results for \u{201C}\(query)\u{201D}")
             addMusicButton.isHidden = true
+            wifiTransferButton.isHidden = true
             sampleMusicButton.isHidden = true
             computerGuideButton.isHidden = true
             trialStartsLabel.isHidden = true

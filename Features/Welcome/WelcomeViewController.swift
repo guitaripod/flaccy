@@ -2,7 +2,8 @@ import MidgarCore
 import UIKit
 
 /// The first thing a new Flaccy shows: where the person's music is, and the shortest way in from there. Picking a place
-/// closes the welcome and starts that way in, except "On my computer", which goes on to connecting Flaccy Server.
+/// closes the welcome and starts that way in, except "On my computer", which goes on to Wi-Fi Transfer, with Flaccy
+/// Server one tap further for a library to stream rather than copy.
 final class WelcomeViewController: UIViewController {
 
     enum Choice: Equatable {
@@ -11,6 +12,7 @@ final class WelcomeViewController: UIViewController {
         case sample
         case notNow
         case serverConnected
+        case wifiTransferDone
     }
 
     var onChoice: ((Choice) -> Void)?
@@ -114,7 +116,9 @@ final class WelcomeViewController: UIViewController {
     private func computerTapped() {
         impact.impactOccurred()
         MidgarLog.info("Welcome: on my computer", category: .ui)
-        showServerStep(animated: true)
+        let transfer = WiFiTransferViewController(offersFlaccyServer: true)
+        transfer.onDone = { [weak self] in self?.choose(.wifiTransferDone) }
+        navigationController?.pushViewController(transfer, animated: true)
     }
 
     private func choose(_ choice: Choice) {

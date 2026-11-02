@@ -25,6 +25,7 @@ extension HomeViewController {
         let library = self.library
         switch action {
         case .addMusic: library.performWhenVisible { library.importTapped() }
+        case .wifiTransfer: library.performWhenVisible { library.presentWiFiTransfer() }
         case .playSample: library.performWhenVisible { library.sampleMusicTapped() }
         case .computerGuide: library.performWhenVisible { library.presentComputerTransferGuide() }
         case .seePlans, .getLifetime: PurchaseManager.shared.requestPaywall()

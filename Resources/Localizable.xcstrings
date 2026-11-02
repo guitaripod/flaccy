@@ -12953,6 +12953,196 @@
         }
       }
     },
+    "%lld songs received": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Song empfangen"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Songs empfangen"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld song received"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld songs received"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld canción recibida"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld canciones recibidas"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld morceau reçu"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld morceaux reçus"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld brano ricevuto"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld brani ricevuti"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld曲を受信しました"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld곡 수신됨"
+                }
+              }
+            }
+          }
+        },
+        "pl": {
+          "variations": {
+            "plural": {
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Odebrano %lld utwory"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Odebrano %lld utworów"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Odebrano %lld utwór"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Odebrano %lld utworu"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld música recebida"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld músicas recebidas"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "已接收 %lld 首歌曲"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "已接收 %lld 首歌曲"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld songs replaced with newer versions": {
       "localizations": {
         "de": {
@@ -22175,6 +22365,196 @@
         }
       }
     },
+    "Adding %lld songs to your library…": {
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Song wird zur Mediathek hinzugefügt …"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Songs werden zur Mediathek hinzugefügt …"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Adding %lld song to your library…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Adding %lld songs to your library…"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Añadiendo %lld canción a tu biblioteca…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Añadiendo %lld canciones a tu biblioteca…"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Ajout de %lld morceau à votre bibliothèque…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Ajout de %lld morceaux à votre bibliothèque…"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Aggiunta di %lld brano alla libreria…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Aggiunta di %lld brani alla libreria…"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld曲をライブラリに追加中…"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "보관함에 %lld곡 추가 중…"
+                }
+              }
+            }
+          }
+        },
+        "pl": {
+          "variations": {
+            "plural": {
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Dodawanie %lld utworów do biblioteki…"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Dodawanie %lld utworów do biblioteki…"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Dodawanie %lld utworu do biblioteki…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Dodawanie %lld utworu do biblioteki…"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Adicionando %lld música à sua biblioteca…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Adicionando %lld músicas à sua biblioteca…"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "正在将 %lld 首歌曲加入资料库…"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "正在將 %lld 首歌曲加入資料庫…"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Adding to library…": {
       "localizations": {
         "de": {
@@ -29333,6 +29713,71 @@
         }
       }
     },
+    "Choose Files": {
+      "comment": "Wi-Fi Transfer web page: button",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien auswählen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir archivos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir des fichiers"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 선택"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz pliki"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher arquivos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇檔案"
+          }
+        }
+      }
+    },
     "Choose File…": {
       "localizations": {
         "de": {
@@ -29521,6 +29966,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "選擇新的資料夾…"
+          }
+        }
+      }
+    },
+    "Choose a Folder": {
+      "comment": "Wi-Fi Transfer web page: button",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner auswählen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir una carpeta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir un dossier"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli una cartella"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더 선택"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz folder"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher uma pasta"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择文件夹"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇資料夾"
           }
         }
       }
@@ -32253,6 +32763,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "連接你的電腦"
+          }
+        }
+      }
+    },
+    "Connect this iPhone to Wi-Fi to send music to it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde dieses iPhone mit einem WLAN, um Musik darauf zu senden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta este iPhone a una Wi-Fi para enviarle música."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez cet iPhone au Wi-Fi pour lui envoyer de la musique."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega questo iPhone a una rete Wi-Fi per inviargli musica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽を転送するには、このiPhoneをWi-Fiに接続してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악을 보내려면 이 iPhone을 Wi-Fi에 연결하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Połącz ten iPhone z Wi-Fi, aby wysłać na niego muzykę."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte este iPhone a uma rede Wi-Fi para enviar música a ele."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请将这台 iPhone 连接到 Wi-Fi 以接收音乐。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請將這部 iPhone 連上 Wi-Fi 以接收音樂。"
           }
         }
       }
@@ -43897,6 +44471,135 @@
         }
       }
     },
+    "Drop music here": {
+      "comment": "Wi-Fi Transfer web page: drop zone",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik hier ablegen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suelta la música aquí"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déposez la musique ici"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina qui la musica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ここに音楽をドロップ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기에 음악을 놓으세요"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upuść muzykę tutaj"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solte a música aqui"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把音乐拖到这里"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把音樂拖到這裡"
+          }
+        }
+      }
+    },
+    "Drop your music folders onto the page. Keep Flaccy open until they arrive.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zieh deine Musikordner auf die Seite. Lass Flaccy geöffnet, bis alles angekommen ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra tus carpetas de música a la página. Mantén Flaccy abierta hasta que lleguen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déposez vos dossiers de musique sur la page. Gardez Flaccy ouvert jusqu'à leur arrivée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina le cartelle di musica sulla pagina. Tieni Flaccy aperto finché non arrivano."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽フォルダをページにドロップします。届くまでFlaccyを開いたままにしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악 폴더를 페이지에 끌어다 놓으세요. 도착할 때까지 Flaccy를 열어 두세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przeciągnij foldery z muzyką na stronę. Nie zamykaj Flaccy, dopóki nie dotrą."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste suas pastas de música para a página. Mantenha o Flaccy aberto até que cheguem."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把音乐文件夹拖到网页上。在传输完成前请保持 Flaccy 打开。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把音樂資料夾拖到網頁上。傳送完成前請讓 Flaccy 保持開啟。"
+          }
+        }
+      }
+    },
     "Dropped image": {
       "localizations": {
         "de": {
@@ -46431,6 +47134,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "FLAC、ALAC、WAV 和 AIFF 專輯可無縫播放，沒有任何例外。"
+          }
+        }
+      }
+    },
+    "FLAC, ALAC, WAV, AIFF, MP3 and AAC, plus .lrc lyrics. Anything else is skipped.": {
+      "comment": "Wi-Fi Transfer web page: what can be sent",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 und AAC sowie .lrc-Songtexte. Alles andere wird übersprungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 y AAC, además de letras .lrc. Lo demás se omite."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 et AAC, ainsi que les paroles .lrc. Le reste est ignoré."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 e AAC, più i testi .lrc. Tutto il resto viene saltato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC、ALAC、WAV、AIFF、MP3、AAC、および.lrc歌詞に対応。それ以外はスキップされます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3, AAC 및 .lrc 가사. 그 밖의 파일은 건너뜁니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 i AAC oraz teksty .lrc. Wszystko inne jest pomijane."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLAC, ALAC, WAV, AIFF, MP3 e AAC, além de letras .lrc. O resto é ignorado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持 FLAC、ALAC、WAV、AIFF、MP3 和 AAC，以及 .lrc 歌词。其他文件会被跳过。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援 FLAC、ALAC、WAV、AIFF、MP3 和 AAC，以及 .lrc 歌詞。其他檔案會略過。"
           }
         }
       }
@@ -51453,6 +52221,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "來自此播放列表"
+          }
+        }
+      }
+    },
+    "From any computer on the same Wi-Fi, in its web browser. Nothing to install.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von jedem Computer im selben WLAN, direkt im Webbrowser. Keine Installation nötig."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desde cualquier ordenador en la misma Wi-Fi, en su navegador web. Sin instalar nada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Depuis n'importe quel ordinateur sur le même Wi-Fi, dans son navigateur web. Rien à installer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da qualsiasi computer sulla stessa rete Wi-Fi, nel suo browser web. Niente da installare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同じWi-Fi上のコンピュータのWebブラウザから。インストール不要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 Wi-Fi에 연결된 컴퓨터의 웹 브라우저에서. 설치할 것이 없습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z dowolnego komputera w tej samej sieci Wi-Fi, w jego przeglądarce. Bez instalowania czegokolwiek."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De qualquer computador na mesma rede Wi-Fi, no navegador. Nada para instalar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在同一 Wi-Fi 下的任意电脑上，用网页浏览器即可，无需安装任何软件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在同一個 Wi-Fi 下的任何電腦上，用網頁瀏覽器即可，不必安裝任何軟體。"
           }
         }
       }
@@ -58941,6 +59773,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "繼續編輯"
+          }
+        }
+      }
+    },
+    "Keep Flaccy open on your iPhone until everything has arrived.": {
+      "comment": "Wi-Fi Transfer web page",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lass Flaccy auf deinem iPhone geöffnet, bis alles angekommen ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantén Flaccy abierta en tu iPhone hasta que llegue todo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gardez Flaccy ouvert sur votre iPhone jusqu'à ce que tout soit arrivé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni Flaccy aperto sul tuo iPhone finché non è arrivato tutto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて届くまで、iPhoneでFlaccyを開いたままにしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 도착할 때까지 iPhone에서 Flaccy를 열어 두세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie zamykaj Flaccy na iPhonie, dopóki wszystko nie dotrze."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantenha o Flaccy aberto no iPhone até que tudo chegue."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在全部传完之前，请在 iPhone 上保持 Flaccy 打开。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在全部傳完之前，請讓 iPhone 上的 Flaccy 保持開啟。"
           }
         }
       }
@@ -69961,6 +70858,70 @@
         }
       }
     },
+    "No cable and nothing to install. Open the address Flaccy shows on your computer and drop folders onto the page.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Kabel, keine Installation. Öffne die Adresse, die Flaccy anzeigt, auf deinem Computer und zieh Ordner auf die Seite."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin cables ni instalaciones. Abre en tu ordenador la dirección que muestra Flaccy y arrastra carpetas a la página."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans câble ni installation. Ouvrez sur votre ordinateur l'adresse affichée par Flaccy et déposez des dossiers sur la page."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niente cavi né installazioni. Apri sul computer l'indirizzo che mostra Flaccy e trascina le cartelle sulla pagina."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ケーブルもインストールも不要。Flaccyに表示されるアドレスをコンピュータで開き、ページにフォルダをドロップします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "케이블도 설치도 필요 없습니다. Flaccy에 표시된 주소를 컴퓨터에서 열고 페이지에 폴더를 끌어다 놓으세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bez kabla i bez instalowania. Otwórz na komputerze adres pokazany przez Flaccy i przeciągnij foldery na stronę."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem cabo e sem instalar nada. Abra no computador o endereço que o Flaccy mostra e arraste pastas para a página."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需数据线，也无需安装。在电脑上打开 Flaccy 显示的地址，把文件夹拖到网页上即可。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不需傳輸線，也不必安裝。在電腦上打開 Flaccy 顯示的位址，把資料夾拖到網頁上即可。"
+          }
+        }
+      }
+    },
     "No cover chosen yet": {
       "localizations": {
         "de": {
@@ -73313,6 +74274,71 @@
         }
       }
     },
+    "Nothing to send: none of those files is music Flaccy plays.": {
+      "comment": "Wi-Fi Transfer web page",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nichts zu senden: Keine dieser Dateien ist Musik, die Flaccy abspielt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada que enviar: ninguno de esos archivos es música que Flaccy reproduzca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien à envoyer : aucun de ces fichiers n'est de la musique que Flaccy lit."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niente da inviare: nessuno di questi file è musica che Flaccy riproduce."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送れるものがありません。Flaccyで再生できる音楽ファイルが含まれていません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보낼 것이 없습니다. Flaccy에서 재생할 수 있는 음악 파일이 없습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie ma czego wysłać: żaden z tych plików nie jest muzyką odtwarzaną przez Flaccy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada para enviar: nenhum desses arquivos é música que o Flaccy reproduz."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可发送的内容：这些文件都不是 Flaccy 能播放的音乐。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有可傳送的內容：這些檔案都不是 Flaccy 能播放的音樂。"
+          }
+        }
+      }
+    },
     "Notifications Are Off": {
       "localizations": {
         "de": {
@@ -75093,6 +76119,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "在這部 iPhone 或「檔案」中"
+          }
+        }
+      }
+    },
+    "On your computer, open this address:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne diese Adresse auf deinem Computer:"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En tu ordenador, abre esta dirección:"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur votre ordinateur, ouvrez cette adresse :"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sul computer, apri questo indirizzo:"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータでこのアドレスを開いてください："
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터에서 이 주소를 여세요:"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na komputerze otwórz ten adres:"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No computador, abra este endereço:"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在电脑上打开此地址："
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在電腦上打開此位址："
           }
         }
       }
@@ -77811,6 +78901,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "輸出"
+          }
+        }
+      }
+    },
+    "Over Wi-Fi, from any web browser": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per WLAN, aus jedem Webbrowser"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por Wi-Fi, desde cualquier navegador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par Wi-Fi, depuis n'importe quel navigateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Via Wi-Fi, da qualsiasi browser"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi経由、どのWebブラウザからでも"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi로, 어떤 웹 브라우저에서든"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przez Wi-Fi, z dowolnej przeglądarki"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por Wi-Fi, de qualquer navegador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 Wi-Fi，使用任意网页浏览器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 Wi-Fi，使用任何網頁瀏覽器"
           }
         }
       }
@@ -80741,70 +81895,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放記錄時間範圍"
-          }
-        }
-      }
-    },
-    "Play it here and keep playlists, loves and history in sync with Flaccy Server. It's free.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hör sie hier und halte Playlists, Favoriten und Verlauf mit Flaccy Server synchron. Kostenlos."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Escúchala aquí y mantén sincronizadas listas, favoritos e historial con Flaccy Server. Es gratis."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Écoutez-la ici et gardez playlists, coups de cœur et historique synchronisés avec Flaccy Server. C'est gratuit."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ascoltala qui e tieni sincronizzati playlist, preferiti e cronologia con Flaccy Server. È gratis."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ここで再生し、プレイリスト、お気に入り、履歴をFlaccy Serverで同期。無料です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "여기서 듣고 Flaccy Server로 플레이리스트, 좋아요, 기록을 동기화하세요. 무료입니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Słuchaj tutaj i synchronizuj playlisty, ulubione i historię z Flaccy Server. Za darmo."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouça aqui e mantenha playlists, favoritos e histórico sincronizados com o Flaccy Server. É grátis."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在这里播放，并用 Flaccy Server 同步播放列表、喜欢和历史。免费。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在這裡播放，並用 Flaccy Server 同步播放列表、喜愛與記錄。免費。"
           }
         }
       }
@@ -86917,6 +88007,70 @@
         }
       }
     },
+    "Rather stream your whole library without copying it?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lieber die ganze Mediathek streamen, ohne sie zu kopieren?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Prefieres escuchar toda tu biblioteca en streaming sin copiarla?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous préférez diffuser toute votre bibliothèque sans la copier ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preferisci ascoltare in streaming tutta la libreria senza copiarla?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーせずにライブラリ全体をストリーミングしたいですか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사하지 않고 보관함 전체를 스트리밍하고 싶나요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wolisz strumieniować całą bibliotekę bez kopiowania?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prefere transmitir toda a biblioteca sem copiá-la?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想在不复制的情况下串流整个资料库？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想在不複製的情況下串流整個資料庫？"
+          }
+        }
+      }
+    },
     "Re-analyze": {
       "localizations": {
         "de": {
@@ -88321,6 +89475,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "回顧通知會在這部裝置上、依你本機的播放記錄產生，並附上可分享的年度音樂故事。"
+          }
+        }
+      }
+    },
+    "Receiving “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wird empfangen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recibiendo «%@»"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réception de « %@ »"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricezione di «%@»"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を受信中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” 수신 중"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odbieranie „%@”"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recebendo “%@”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在接收“%@”"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在接收「%@」"
           }
         }
       }
@@ -96773,6 +97991,134 @@
         }
       }
     },
+    "Send Link": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link senden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar enlace"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer le lien"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia link"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクを送信"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크 보내기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij link"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar link"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送链接"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳送連結"
+          }
+        }
+      }
+    },
+    "Send Music over Wi-Fi": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik über WLAN senden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar música por Wi-Fi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer de la musique par Wi-Fi"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia musica via Wi-Fi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fiで音楽を転送"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi로 음악 보내기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij muzykę przez Wi-Fi"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar música por Wi-Fi"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 Wi-Fi 传输音乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 Wi-Fi 傳送音樂"
+          }
+        }
+      }
+    },
     "Send Test Notification": {
       "localizations": {
         "de": {
@@ -96897,6 +98243,199 @@
           "stringUnit": {
             "state": "translated",
             "value": "傳送失敗"
+          }
+        }
+      }
+    },
+    "Send from a Computer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Computer senden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar desde un ordenador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer depuis un ordinateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia da un computer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータから転送"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터에서 보내기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij z komputera"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar de um computador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从电脑发送"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從電腦傳送"
+          }
+        }
+      }
+    },
+    "Send it over Wi-Fi from the computer's web browser, or stream all of it with Flaccy Server. Both free.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sende sie per WLAN aus dem Webbrowser des Computers oder streame alles mit Flaccy Server. Beides kostenlos."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envíala por Wi-Fi desde el navegador del ordenador o escúchala entera en streaming con Flaccy Server. Ambas opciones son gratis."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyez-la par Wi-Fi depuis le navigateur de l'ordinateur, ou diffusez-la en entier avec Flaccy Server. Les deux sont gratuits."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inviala via Wi-Fi dal browser del computer, oppure ascoltala tutta in streaming con Flaccy Server. Entrambi gratis."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータのWebブラウザからWi-Fiで転送するか、Flaccy Serverですべてをストリーミング。どちらも無料です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터의 웹 브라우저에서 Wi-Fi로 보내거나, Flaccy Server로 전부 스트리밍하세요. 둘 다 무료입니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij ją przez Wi-Fi z przeglądarki na komputerze albo strumieniuj całość przez Flaccy Server. Oba sposoby są darmowe."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envie por Wi-Fi pelo navegador do computador ou transmita tudo com o Flaccy Server. Ambos grátis."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过电脑的网页浏览器用 Wi-Fi 传过来，或用 Flaccy Server 串流全部音乐。两种方式都免费。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過電腦的網頁瀏覽器用 Wi-Fi 傳過來，或用 Flaccy Server 串流全部音樂。兩種方式都免費。"
+          }
+        }
+      }
+    },
+    "Send music to Flaccy": {
+      "comment": "Wi-Fi Transfer web page: title",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik an Flaccy senden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar música a Flaccy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer de la musique à Flaccy"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia musica a Flaccy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccyに音楽を送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy로 음악 보내기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij muzykę do Flaccy"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar música para o Flaccy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把音乐发送到 Flaccy"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把音樂傳送到 Flaccy"
           }
         }
       }
@@ -97803,6 +99342,71 @@
         }
       }
     },
+    "Sending {count} of {total}…": {
+      "comment": "Wi-Fi Transfer web page: progress; keep {count} and {total} as they are",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sende {count} von {total} …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviando {count} de {total}…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoi de {count} sur {total}…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invio {count} di {total}…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{total}件中{count}件目を送信中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{total}개 중 {count}번째 보내는 중…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wysyłanie {count} z {total}…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviando {count} de {total}…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在发送第 {count} 个，共 {total} 个…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在傳送第 {count} 個，共 {total} 個…"
+          }
+        }
+      }
+    },
     "Sending, %@": {
       "localizations": {
         "de": {
@@ -97927,6 +99531,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新傳送再次停止的歌曲"
+          }
+        }
+      }
+    },
+    "Sent {count} of {total} to your iPhone.": {
+      "comment": "Wi-Fi Transfer web page: finished; keep {count} and {total} as they are",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} von {total} an dein iPhone gesendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviadas {count} de {total} a tu iPhone."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} sur {total} envoyés à votre iPhone."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inviati {count} di {total} al tuo iPhone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{total}件中{count}件をiPhoneに送信しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{total}개 중 {count}개를 iPhone으로 보냈습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wysłano {count} z {total} na iPhone’a."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} de {total} enviadas para o seu iPhone."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已发送 {count} 个到你的 iPhone，共 {total} 个。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已傳送 {count} 個到你的 iPhone，共 {total} 個。"
           }
         }
       }
@@ -98183,6 +99852,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "服務"
+          }
+        }
+      }
+    },
+    "Set Up Flaccy Server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server einrichten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurar Flaccy Server"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurer Flaccy Server"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configura Flaccy Server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Serverを設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server 설정"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skonfiguruj Flaccy Server"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurar o Flaccy Server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置 Flaccy Server"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定 Flaccy Server"
           }
         }
       }
@@ -102465,6 +104198,71 @@
         }
       }
     },
+    "Skipped {count} files that aren't music.": {
+      "comment": "Wi-Fi Transfer web page; keep {count} as it is",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} Dateien übersprungen, die keine Musik sind."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se omitieron {count} archivos que no son música."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} fichiers qui ne sont pas de la musique ont été ignorés."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saltati {count} file che non sono musica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽以外のファイル{count}件をスキップしました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악이 아닌 파일 {count}개를 건너뛰었습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pominięto pliki niebędące muzyką: {count}."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} arquivos que não são música foram ignorados."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳过 {count} 个非音乐文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已略過 {count} 個非音樂檔案。"
+          }
+        }
+      }
+    },
     "Sleep": {
       "localizations": {
         "de": {
@@ -103569,6 +105367,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "歌曲"
+          }
+        }
+      }
+    },
+    "Songs and whole folders go straight to your iPhone.": {
+      "comment": "Wi-Fi Transfer web page: line under the title",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Songs und ganze Ordner landen direkt auf deinem iPhone."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las canciones y carpetas enteras van directas a tu iPhone."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les morceaux et dossiers entiers arrivent directement sur votre iPhone."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brani e intere cartelle arrivano direttamente sul tuo iPhone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲もフォルダごとも、そのままiPhoneへ届きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노래와 폴더 전체가 바로 iPhone으로 전송됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory i całe foldery trafiają prosto na iPhone’a."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Músicas e pastas inteiras vão direto para o seu iPhone."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲和整个文件夹都会直接传到你的 iPhone。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲和整個資料夾都會直接傳到你的 iPhone。"
           }
         }
       }
@@ -114245,6 +116108,70 @@
         }
       }
     },
+    "This iPhone is out of space. Free some up, then send the rest again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses iPhone hat keinen Speicherplatz mehr. Gib etwas frei und sende den Rest erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este iPhone no tiene espacio. Libera algo y vuelve a enviar el resto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet iPhone n'a plus d'espace. Libérez-en un peu, puis renvoyez le reste."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo iPhone ha esaurito lo spazio. Liberane un po' e invia di nuovo il resto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このiPhoneの空き容量が足りません。容量を空けてから、残りをもう一度送ってください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPhone의 저장 공간이 부족합니다. 공간을 확보한 다음 나머지를 다시 보내세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na tym iPhonie zabrakło miejsca. Zwolnij trochę i wyślij resztę ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este iPhone está sem espaço. Libere um pouco e envie o restante de novo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台 iPhone 空间不足。请释放一些空间后重新发送剩余内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這部 iPhone 空間不足。請釋放一些空間後重新傳送其餘內容。"
+          }
+        }
+      }
+    },
     "This iPhone stops syncing with %@. Your playlists and history stay here, and %@ keeps its copy.": {
       "localizations": {
         "de": {
@@ -118221,6 +120148,70 @@
         }
       }
     },
+    "Type the address into Safari, Chrome, Edge or Firefox.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die Adresse in Safari, Chrome, Edge oder Firefox ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribe la dirección en Safari, Chrome, Edge o Firefox."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez l'adresse dans Safari, Chrome, Edge ou Firefox."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digita l'indirizzo in Safari, Chrome, Edge o Firefox."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari、Chrome、Edge、Firefoxのいずれかにアドレスを入力します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari, Chrome, Edge 또는 Firefox에 주소를 입력하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wpisz adres w Safari, Chrome, Edge lub Firefoksie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite o endereço no Safari, Chrome, Edge ou Firefox."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Safari、Chrome、Edge 或 Firefox 中输入该地址。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Safari、Chrome、Edge 或 Firefox 中輸入該位址。"
+          }
+        }
+      }
+    },
     "Type the server’s address, then try again.": {
       "localizations": {
         "de": {
@@ -121947,6 +123938,70 @@
         }
       }
     },
+    "Waiting for your computer…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warte auf deinen Computer …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esperando a tu ordenador…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En attente de votre ordinateur…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In attesa del computer…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータを待っています…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터를 기다리는 중…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czekam na komputer…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aguardando o computador…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在等待你的电脑…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在等待你的電腦…"
+          }
+        }
+      }
+    },
     "Waiting to send  ·  %@": {
       "localizations": {
         "de": {
@@ -123491,6 +125546,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "為什麼有些專輯仍然會有「喀」聲"
+          }
+        }
+      }
+    },
+    "Wi-Fi Transfer couldn't start. Close this screen and open it again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die WLAN-Übertragung konnte nicht starten. Schließe diesen Bildschirm und öffne ihn erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La transferencia por Wi-Fi no pudo iniciarse. Cierra esta pantalla y vuelve a abrirla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le transfert Wi-Fi n'a pas pu démarrer. Fermez cet écran et rouvrez-le."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il trasferimento Wi-Fi non è partito. Chiudi questa schermata e riaprila."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi転送を開始できませんでした。この画面を閉じて、もう一度開いてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi 전송을 시작할 수 없습니다. 이 화면을 닫고 다시 여세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się uruchomić przesyłania przez Wi-Fi. Zamknij ten ekran i otwórz go ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A transferência por Wi-Fi não pôde começar. Feche esta tela e abra de novo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法启动 Wi-Fi 传输。请关闭此页面后重新打开。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法啟動 Wi-Fi 傳送。請關閉此畫面後重新開啟。"
+          }
+        }
+      }
+    },
+    "Wi-Fi, from any web browser": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WLAN, aus jedem Webbrowser"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi, desde cualquier navegador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi, depuis n'importe quel navigateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi, da qualsiasi browser"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi、どのWebブラウザからでも"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi, 어떤 웹 브라우저에서든"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi, z dowolnej przeglądarki"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi, de qualquer navegador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi，使用任意网页浏览器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi，使用任何網頁瀏覽器"
           }
         }
       }
@@ -126531,6 +128714,70 @@
         }
       }
     },
+    "Your computer and this iPhone need to be on the same Wi-Fi.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Computer und dieses iPhone müssen im selben WLAN sein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu ordenador y este iPhone deben estar en la misma Wi-Fi."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre ordinateur et cet iPhone doivent être sur le même Wi-Fi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il computer e questo iPhone devono essere sulla stessa rete Wi-Fi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータとこのiPhoneを同じWi-Fiに接続してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터와 이 iPhone이 같은 Wi-Fi에 연결되어 있어야 합니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komputer i ten iPhone muszą być w tej samej sieci Wi-Fi."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O computador e este iPhone precisam estar na mesma rede Wi-Fi."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电脑和这台 iPhone 需要连接同一个 Wi-Fi。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電腦和這部 iPhone 需要連接同一個 Wi-Fi。"
+          }
+        }
+      }
+    },
     "Your computer shows a code when the server is ready. Scan it and Flaccy connects.": {
       "localizations": {
         "de": {
@@ -128609,6 +130856,71 @@
         }
       }
     },
+    "couldn't be sent": {
+      "comment": "Wi-Fi Transfer web page: after a file's name",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "konnte nicht gesendet werden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no se pudo enviar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "n'a pas pu être envoyé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "non è stato possibile inviarlo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信できませんでした"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보낼 수 없습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nie udało się wysłać"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "não pôde ser enviado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法发送"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法傳送"
+          }
+        }
+      }
+    },
     "estimating time…": {
       "localizations": {
         "de": {
@@ -128989,6 +131301,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "還剩不到一分鐘"
+          }
+        }
+      }
+    },
+    "lost the connection. Is Flaccy still open on your iPhone?": {
+      "comment": "Wi-Fi Transfer web page: after a file's name",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindung verloren. Ist Flaccy auf deinem iPhone noch geöffnet?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "se perdió la conexión. ¿Sigue Flaccy abierta en tu iPhone?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "connexion perdue. Flaccy est-il toujours ouvert sur votre iPhone ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "connessione persa. Flaccy è ancora aperto sul tuo iPhone?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続が切れました。iPhoneでFlaccyが開いたままになっていますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결이 끊어졌습니다. iPhone에서 Flaccy가 아직 열려 있나요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "utracono połączenie. Czy Flaccy jest nadal otwarty na iPhonie?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a conexão caiu. O Flaccy ainda está aberto no seu iPhone?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接已断开。iPhone 上的 Flaccy 还开着吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連線已中斷。iPhone 上的 Flaccy 還開著嗎？"
           }
         }
       }
@@ -129441,6 +131818,136 @@
         }
       }
     },
+    "not a format Flaccy plays": {
+      "comment": "Wi-Fi Transfer web page: after a file's name",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kein Format, das Flaccy abspielt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no es un formato que Flaccy reproduzca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pas un format que Flaccy lit"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "non è un formato che Flaccy riproduce"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccyで再生できない形式です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy가 재생하지 않는 형식입니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy nie odtwarza tego formatu"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "não é um formato que o Flaccy reproduz"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不是 Flaccy 能播放的格式"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不是 Flaccy 能播放的格式"
+          }
+        }
+      }
+    },
+    "or": {
+      "comment": "Wi-Fi Transfer web page: between the drop zone and its buttons",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "oder"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "o"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ou"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "oppure"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "または"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "또는"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "lub"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ou"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "或"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "或"
+          }
+        }
+      }
+    },
     "or drop an image here": {
       "localizations": {
         "de": {
@@ -129763,6 +132270,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "未知"
+          }
+        }
+      }
+    },
+    "your iPhone is out of space": {
+      "comment": "Wi-Fi Transfer web page: after a file's name",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dein iPhone hat keinen Speicherplatz mehr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tu iPhone no tiene espacio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "votre iPhone n'a plus d'espace"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "il tuo iPhone ha esaurito lo spazio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhoneの空き容量が足りません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone의 저장 공간이 부족합니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "na iPhonie zabrakło miejsca"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "seu iPhone está sem espaço"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 iPhone 空间不足"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 iPhone 空間不足"
           }
         }
       }

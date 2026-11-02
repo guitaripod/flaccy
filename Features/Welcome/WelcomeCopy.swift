@@ -9,7 +9,7 @@ nonisolated enum WelcomeCopy {
 
     static var computerTitle: String { String(localized: "On my computer") }
     static var computerDetail: String {
-        String(localized: "Play it here and keep playlists, loves and history in sync with Flaccy Server. It's free.")
+        String(localized: "Send it over Wi-Fi from the computer's web browser, or stream all of it with Flaccy Server. Both free.")
     }
     static var filesTitle: String { String(localized: "On this iPhone or in Files") }
     static var filesDetail: String { String(localized: "Add songs and folders from Files, iCloud Drive or a USB drive.") }

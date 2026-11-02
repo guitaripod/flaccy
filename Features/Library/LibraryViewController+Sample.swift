@@ -13,6 +13,7 @@ extension LibraryViewController {
             try? await Task.sleep(for: .seconds(6))
             switch step {
             case "guide": self?.presentComputerTransferGuide()
+            case "wifi": self?.presentWiFiTransfer()
             case "sample": self?.sampleMusicTapped()
             case "sample-retry":
                 self?.sampleMusicTapped()
@@ -23,6 +24,11 @@ extension LibraryViewController {
         }
     }
     #endif
+
+    func presentWiFiTransfer() {
+        impactLight.impactOccurred()
+        WiFiTransferViewController.present(from: self)
+    }
 
     func presentComputerTransferGuide() {
         impactLight.impactOccurred()

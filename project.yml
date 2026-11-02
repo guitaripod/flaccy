@@ -157,6 +157,8 @@ targets:
           - UI/ToastView.swift
           - UI/TrackContextMenu.swift
           - UI/TrackGridCell.swift
+          - Network/WiFiAddressMonitor.swift
+          - Network/WiFiTransferServer.swift
       - path: Features
         type: syncedFolder
         excludes:
@@ -313,11 +315,15 @@ targets:
           - Welcome/WelcomeFlow.swift
           - Welcome/WelcomeGate.swift
           - Welcome/WelcomeViewController.swift
+          - WiFiTransfer/WiFiTransferCopy.swift
+          - WiFiTransfer/WiFiTransferSession.swift
+          - WiFiTransfer/WiFiTransferViewController.swift
       - path: Resources
         type: syncedFolder
         excludes:
           - Assets.xcassets
           - PrivacyInfo.xcprivacy
+          - WiFiTransferPage.html
     dependencies:
       - package: FlaccyCore
       - package: FlaccyCore

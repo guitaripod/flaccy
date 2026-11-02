@@ -2,6 +2,7 @@ import UIKit
 
 enum HomePromoAction {
     case addMusic
+    case wifiTransfer
     case playSample
     case computerGuide
     case seePlans
@@ -151,6 +152,9 @@ final class HomeGetStartedCell: HomePromoCardCell {
         self.content.addArrangedSubview(label(content.body, style: .subheadline, size: 15, weight: .regular, color: .secondaryLabel))
         self.content.setCustomSpacing(18, after: self.content.arrangedSubviews.last ?? title)
         self.content.addArrangedSubview(primaryButton(title: HomeCopy.addMusic, symbol: "plus", action: .addMusic))
+        self.content.addArrangedSubview(secondaryButton(
+            title: HomeCopy.sendFromComputer, subtitle: HomeCopy.sendFromComputerDetail, symbol: "wifi", action: .wifiTransfer
+        ))
         let sampleButton = secondaryButton(
             title: sample.title, subtitle: sample.subtitle, symbol: sample.isDownloading ? nil : "play.circle",
             showsActivity: sample.isDownloading, action: .playSample

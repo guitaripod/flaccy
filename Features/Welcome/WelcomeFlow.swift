@@ -44,7 +44,7 @@ enum WelcomeFlow {
             library.performWhenVisible { library.sampleMusicTapped() }
         case .musicServer:
             AddServerViewController.present(from: host, servers: RemoteServersViewModel())
-        case .notNow, .serverConnected:
+        case .notNow, .serverConnected, .wifiTransferDone:
             break
         }
     }

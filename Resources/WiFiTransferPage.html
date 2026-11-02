@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="__FLACCY_LANG__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Flaccy</title>
+<style>
+:root {
+  --bg: #f4f4f7; --card: #ffffff; --text: #111114; --muted: #6b6b75; --line: #dcdce3;
+  --accent: #6e3df5; --accent-soft: rgba(110, 61, 245, .1); --ok: #1f9d55; --bad: #d93a3a;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0e0e11; --card: #1a1a20; --text: #f2f2f5; --muted: #9a9aa6; --line: #2c2c35;
+    --accent: #9b7bff; --accent-soft: rgba(155, 123, 255, .14); }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+main { max-width: 680px; margin: 0 auto; padding: 48px 20px 64px; }
+h1 { font-size: 32px; line-height: 1.15; margin: 0 0 8px; letter-spacing: -.01em; }
+.lead { color: var(--muted); margin: 0 0 28px; font-size: 18px; }
+#drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  min-height: 260px; padding: 32px 20px; border: 2px dashed var(--line); border-radius: 20px;
+  background: var(--card); text-align: center; transition: border-color .15s, background .15s; }
+#drop.over { border-color: var(--accent); background: var(--accent-soft); }
+#drop svg { width: 56px; height: 56px; color: var(--accent); }
+.drop-title { font-size: 22px; font-weight: 600; margin: 0; }
+.or { color: var(--muted); margin: 0; }
+.buttons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+button { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 11px 18px; cursor: pointer;
+  background: var(--accent); color: #fff; }
+button.secondary { background: var(--accent-soft); color: var(--accent); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.note { color: var(--muted); font-size: 14px; margin: 16px 2px 0; }
+#status { margin-top: 28px; padding: 18px 20px; border-radius: 16px; background: var(--card); display: none; }
+#status.shown { display: block; }
+#headline { font-weight: 600; margin: 0 0 10px; }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+#current { color: var(--muted); font-size: 14px; margin: 8px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#problems { margin: 12px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--bad); }
+#problems li { margin-top: 4px; overflow-wrap: anywhere; }
+.done #headline { color: var(--ok); }
+input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1 data-text="title"></h1>
+  <p class="lead" data-text="lead"></p>
+  <section id="drop" aria-labelledby="drop-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+    </svg>
+    <p class="drop-title" id="drop-title" data-text="drop"></p>
+    <p class="or" data-text="or"></p>
+    <div class="buttons">
+      <button type="button" id="pick-folder" data-text="chooseFolder"></button>
+      <button type="button" id="pick-files" class="secondary" data-text="chooseFiles"></button>
+    </div>
+    <input type="file" id="folder-input" webkitdirectory multiple>
+    <input type="file" id="files-input" multiple>
+  </section>
+  <p class="note" data-text="formats"></p>
+  <p class="note" data-text="keepOpen"></p>
+  <section id="status" aria-live="polite">
+    <p id="headline"></p>
+    <div class="bar"><div id="fill"></div></div>
+    <p id="current"></p>
+    <ul id="problems"></ul>
+  </section>
+</main>
+<script>
+"use strict";
+const TEXT = __FLACCY_STRINGS__;
+const ACCEPTED = new Set(__FLACCY_EXTENSIONS__);
+const BASE = location.pathname.endsWith("/") ? location.pathname : location.pathname + "/";
+
+for (const node of document.querySelectorAll("[data-text]")) node.textContent = TEXT[node.dataset.text] || "";
+document.title = TEXT.title;
+
+const say = (key, values) => (TEXT[key] || "").replace(/\{(\w+)\}/g, (_, name) => String(values[name]));
+const drop = document.getElementById("drop");
+const status = document.getElementById("status");
+const headline = document.getElementById("headline");
+const fill = document.getElementById("fill");
+const current = document.getElementById("current");
+const problems = document.getElementById("problems");
+
+const queue = [];
+let running = false;
+let total = 0;
+let sent = 0;
+let skipped = 0;
+let totalBytes = 0;
+let sentBytes = 0;
+
+const extensionOf = (name) => (name.includes(".") ? name.split(".").pop().toLowerCase() : "");
+const isHidden = (path) => path.split("/").some((part) => part.startsWith("."));
+
+function enqueue(items, batch) {
+  for (const { file, path } of items) {
+    if (isHidden(path)) continue;
+    if (!ACCEPTED.has(extensionOf(file.name))) { skipped += 1; continue; }
+    queue.push({ file, path, batch });
+    total += 1;
+    totalBytes += file.size;
+  }
+  queue.push({ finish: batch });
+  render();
+  if (!running) run();
+}
+
+function newBatch() {
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+}
+
+async function run() {
+  running = true;
+  while (queue.length) {
+    const item = queue.shift();
+    if (item.finish) { await finish(item.finish); continue; }
+    try {
+      await upload(item);
+      sent += 1;
+    } catch (error) {
+      problems.insertAdjacentHTML("beforeend", "<li></li>");
+      problems.lastChild.textContent = item.path + " — " + (TEXT[error.message] || TEXT.failed);
+      if (error.message === "unreachable") { queue.length = 0; break; }
+    }
+    sentBytes += item.file.size;
+    render();
+  }
+  running = false;
+  render(true);
+}
+
+function upload({ file, path, batch }) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("PUT", BASE + "upload?batch=" + encodeURIComponent(batch) + "&path=" + encodeURIComponent(path));
+    request.upload.onprogress = (event) => {
+      fill.style.width = percent(sentBytes + event.loaded) + "%";
+    };
+    request.onload = () => {
+      if (request.status === 201) return resolve();
+      reject(new Error(request.status === 507 ? "space" : request.status === 415 ? "unsupported" : "failed"));
+    };
+    request.onerror = () => reject(new Error("unreachable"));
+    current.textContent = path;
+    request.send(file);
+  });
+}
+
+function finish(batch) {
+  return fetch(BASE + "done?batch=" + encodeURIComponent(batch), { method: "POST" }).catch(() => {});
+}
+
+function percent(bytes) {
+  return totalBytes === 0 ? 100 : Math.min(100, Math.round((bytes / totalBytes) * 100));
+}
+
+function render(finished) {
+  status.classList.add("shown");
+  status.classList.toggle("done", Boolean(finished) && sent === total && total > 0);
+  if (finished) {
+    headline.textContent = total === 0 ? TEXT.nothing : say("sent", { count: sent, total });
+    current.textContent = skipped > 0 ? say("skipped", { count: skipped }) : "";
+    fill.style.width = total === 0 ? "0%" : "100%";
+  } else {
+    headline.textContent = say("sending", { count: Math.min(sent + 1, total), total });
+    fill.style.width = percent(sentBytes) + "%";
+  }
+}
+
+function fromInput(input) {
+  const batch = newBatch();
+  enqueue(Array.from(input.files, (file) => ({ file, path: file.webkitRelativePath || file.name })), batch);
+  input.value = "";
+}
+
+function readEntries(reader) {
+  return new Promise((resolve) => reader.readEntries(resolve, () => resolve([])));
+}
+
+async function walk(entry, prefix, out) {
+  const path = prefix ? prefix + "/" + entry.name : entry.name;
+  if (entry.isFile) {
+    const file = await new Promise((resolve) => entry.file(resolve, () => resolve(null)));
+    if (file) out.push({ file, path });
+    return;
+  }
+  if (!entry.isDirectory) return;
+  const reader = entry.createReader();
+  for (let batch = await readEntries(reader); batch.length; batch = await readEntries(reader)) {
+    for (const child of batch) await walk(child, path, out);
+  }
+}
+
+async function fromDrop(dataTransfer) {
+  const entries = Array.from(dataTransfer.items || [], (item) => item.webkitGetAsEntry && item.webkitGetAsEntry()).filter(Boolean);
+  const out = [];
+  if (entries.length) {
+    for (const entry of entries) await walk(entry, "", out);
+  } else {
+    for (const file of dataTransfer.files) out.push({ file, path: file.name });
+  }
+  enqueue(out, newBatch());
+}
+
+document.getElementById("pick-folder").addEventListener("click", () => document.getElementById("folder-input").click());
+document.getElementById("pick-files").addEventListener("click", () => document.getElementById("files-input").click());
+document.getElementById("folder-input").addEventListener("change", (event) => fromInput(event.target));
+document.getElementById("files-input").addEventListener("change", (event) => fromInput(event.target));
+
+for (const type of ["dragenter", "dragover"]) {
+  document.addEventListener(type, (event) => { event.preventDefault(); drop.classList.add("over"); });
+}
+document.addEventListener("dragleave", (event) => {
+  if (event.relatedTarget === null) drop.classList.remove("over");
+});
+document.addEventListener("drop", (event) => {
+  event.preventDefault();
+  drop.classList.remove("over");
+  fromDrop(event.dataTransfer);
+});
+window.addEventListener("beforeunload", (event) => {
+  if (running) { event.preventDefault(); event.returnValue = ""; }
+});
+</script>
+</body>
+</html>

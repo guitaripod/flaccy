@@ -137,6 +137,8 @@ enum HomeCopy {
     static var addMusic: String { String(localized: "Add Music") }
     static var playSampleAlbum: String { String(localized: "Play the Sample Album") }
     static var otherWaysToAdd: String { String(localized: "Other ways to add music") }
+    static var sendFromComputer: String { String(localized: "Send from a Computer") }
+    static var sendFromComputerDetail: String { String(localized: "Over Wi-Fi, from any web browser") }
     static var keepListeningTitle: String { String(localized: "Keep listening with Flaccy Pro") }
     static var seePlans: String { String(localized: "See Plans") }
     static var restorePurchases: String { String(localized: "Restore Purchases") }
