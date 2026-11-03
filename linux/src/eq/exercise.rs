@@ -347,7 +347,7 @@ async fn settled_level(eq: &EqEngine) -> f32 {
         }
         sleep(120).await;
     }
-    20.0 * loudest.max(1e-6).log10()
+    (20.0 * f64::from(loudest.max(1e-6)).log10()) as f32
 }
 
 async fn song_volume_drill(core: &Rc<AppCore>) {
