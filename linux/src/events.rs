@@ -65,6 +65,10 @@ pub enum AppEvent {
         title: String,
         artist: String,
     },
+    /// The enrichment job stored a photo or a biography for this artist.
+    ArtistEnriched {
+        name: String,
+    },
     /// The person chose a cover for this (title, artist) or went back to the
     /// original. Sent once per key the cover is stored under, after the
     /// artwork cache has dropped everything it held for that key, so every

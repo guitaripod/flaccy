@@ -455,7 +455,7 @@ fn rounded_bar(cr: &gtk::cairo::Context, x: f64, y: f64, width: f64, height: f64
 
 /// Honors the desktop's "reduce animation" preference, so the indicator settles
 /// into a static silhouette instead of bouncing forever.
-fn animations_enabled() -> bool {
+pub fn animations_enabled() -> bool {
     gtk::Settings::default().is_none_or(|settings| settings.is_gtk_enable_animations())
 }
 

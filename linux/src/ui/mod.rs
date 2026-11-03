@@ -1,6 +1,7 @@
 pub mod album_layouts;
 pub mod ambient;
 pub mod albums;
+pub mod artist_page;
 pub mod artists;
 pub mod artwork;
 pub mod artwork_crop;
@@ -184,7 +185,7 @@ pub fn goto_artist(ui: &Rc<Ui>, artist: &str) {
         return;
     }
     leave_now_playing(ui);
-    artists::push_artist_page(ui, &lead);
+    artist_page::push_artist_page(ui, &lead);
 }
 
 /// Opens the album detail page for the album containing `rel_path`, falling

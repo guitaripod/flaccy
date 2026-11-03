@@ -3,6 +3,7 @@
 //! text keys they share. It builds with no GTK or GStreamer packages so a
 //! headless server can reuse it.
 
+pub mod artist_listening;
 pub mod db;
 pub mod fingerprint;
 pub mod hygiene;

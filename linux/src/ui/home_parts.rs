@@ -724,15 +724,15 @@ fn play_target(ui: &Rc<Ui>, target: &Target, context: &PlaybackContext) {
 }
 
 /// What a tile says under its cover, and the badge laid over a corner of it.
-struct TileWords<'a> {
-    title: &'a str,
-    subtitle: &'a str,
-    badge: Option<&'a str>,
+pub struct TileWords<'a> {
+    pub title: &'a str,
+    pub subtitle: &'a str,
+    pub badge: Option<&'a str>,
 }
 
 /// A square cover over a title and subtitle: clicking opens, the round button
 /// that appears on hover or focus plays.
-fn tile(
+pub fn tile(
     ui: &Rc<Ui>,
     cover_model: &Cover,
     side: i32,

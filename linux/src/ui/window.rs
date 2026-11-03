@@ -325,7 +325,8 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
                 core_for_rows.save_config();
             }
             crate::logger::info("ui", &format!("sidebar selected: {}", page.name));
-            if nav.visible_page().and_then(|p| p.tag()).as_deref() != Some("root") {
+            let restoring = restoring_launch_page.get();
+            if !restoring && nav.visible_page().and_then(|p| p.tag()).as_deref() != Some("root") {
                 nav.pop_to_tag("root");
             }
             stack.set_visible_child_name(page.name);
@@ -1947,10 +1948,15 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
         let ui = Rc::clone(ui);
         glib::timeout_add_local(std::time::Duration::from_millis(700), move || {
             let library = ui.core.library.borrow().clone();
-            if !library.artists.iter().any(|a| a.name == artist) {
+            let key = crate::hygiene::artist_key(&artist);
+            let Some(entry) = library
+                .artists
+                .iter()
+                .find(|a| crate::hygiene::artist_key(&a.name) == key)
+            else {
                 return glib::ControlFlow::Continue;
-            }
-            crate::ui::artists::push_artist_page(&ui, &artist);
+            };
+            crate::ui::artist_page::push_artist_page(&ui, &entry.name);
             glib::ControlFlow::Break
         });
     }

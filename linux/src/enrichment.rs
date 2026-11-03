@@ -224,6 +224,10 @@ fn drain_completions(core: &Rc<AppCore>, done_rx: async_channel::Receiver<Outcom
                         title: outcome.title.clone(),
                         artist: outcome.artist.clone(),
                     });
+                } else {
+                    core.hub.emit(&AppEvent::ArtistEnriched {
+                        name: outcome.artist.clone(),
+                    });
                 }
                 reload.note_change(&core);
             }

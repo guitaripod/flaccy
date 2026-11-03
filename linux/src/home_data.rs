@@ -791,7 +791,7 @@ fn recently_added(inputs: &Inputs) -> Vec<AlbumCard> {
 
 /// The quality badge of an album's first hi-res song, none for the rest:
 /// the cards only call out what is better than a CD.
-fn hi_res_badge(album: &Album) -> Option<String> {
+pub fn hi_res_badge(album: &Album) -> Option<String> {
     album
         .tracks
         .iter()

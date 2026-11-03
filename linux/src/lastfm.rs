@@ -370,6 +370,29 @@ impl LastFmClient {
         ))
     }
 
+    /// artist.getInfo's stats → (listeners, plays) across Last.fm, the reach
+    /// the artist page's hero states.
+    pub fn fetch_artist_reach(&self, artist: &str) -> Result<(u64, u64), String> {
+        let mut params = self.base_params("artist.getInfo");
+        params.insert("artist".to_string(), artist.to_string());
+        params.insert("autocorrect".to_string(), "1".to_string());
+        let json = self.unsigned_get(params)?;
+        let stats = &json["artist"]["stats"];
+        let count = |field: &str| -> Option<u64> {
+            stats[field]
+                .as_str()
+                .and_then(|text| text.parse().ok())
+                .or_else(|| stats[field].as_u64())
+        };
+        match (count("listeners"), count("playcount")) {
+            (Some(listeners), Some(plays)) => Ok((listeners, plays)),
+            _ => Err(format!(
+                "artist.getInfo: {}",
+                json["message"].as_str().unwrap_or("no stats")
+            )),
+        }
+    }
+
     /// artist.getSimilar (limit 100) → [(name, match)].
     pub fn fetch_similar_artists(&self, artist: &str) -> Result<Vec<(String, f64)>, String> {
         let mut params = self.base_params("artist.getSimilar");

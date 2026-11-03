@@ -4,6 +4,7 @@
 //! "Sigur Rós", and plays, charts and dedup all agree on what one song is.
 
 use super::{string_from_unix, unix_from_string, Db};
+use crate::artist_listening::{ArtistListening, ArtistPlay};
 use crate::listen_history::{fold_spellings, HistorySyncState, ListenKeyCache, Spelling, StoredListen};
 use rusqlite::params;
 use std::collections::HashMap;
@@ -397,6 +398,60 @@ impl Db {
         folded.into_iter().map(|(name, plays, _)| (name, plays)).collect()
     }
 
+    /// `artist`'s listening history, ranked among every artist played. Reads
+    /// the artist's plays through the artist key index, so a page costs the
+    /// artist's plays plus one grouped pass for the rank.
+    pub fn artist_listening(&self, artist: &str) -> ArtistListening {
+        let key = crate::listen_history::artist_listen_key(artist);
+        if key.is_empty() {
+            return ArtistListening::default();
+        }
+        let mut listening = crate::artist_listening::tally(
+            &self.artist_plays(&key),
+            chrono::Datelike::year(&chrono::Local::now()),
+        );
+        if listening.plays > 0 {
+            listening.rank = self.artist_rank(listening.plays);
+        }
+        listening
+    }
+
+    fn artist_plays(&self, artist_key: &str) -> Vec<ArtistPlay> {
+        let Ok(mut stmt) = self.conn.prepare(
+            "SELECT timestamp, titleKey, trackTitle, duration FROM scrobbles
+             WHERE artistKey = ?1 AND suppressed = 0",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map([artist_key], |row| {
+            Ok(ArtistPlay {
+                timestamp_unix: unix_from_string(&row.get::<_, String>(0)?),
+                title_key: row.get(1)?,
+                title: row.get(2)?,
+                duration: row.get(3)?,
+            })
+        });
+        match rows {
+            Ok(rows) => rows.flatten().collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// 1 plus the number of artists played more than `plays` times.
+    fn artist_rank(&self, plays: i64) -> Option<usize> {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*) FROM (
+                     SELECT artistKey FROM scrobbles WHERE suppressed = 0 AND artistKey <> ''
+                     GROUP BY artistKey HAVING COUNT(*) > ?1
+                 )",
+                [plays],
+                |row| row.get::<_, i64>(0),
+            )
+            .ok()
+            .map(|above| above as usize + 1)
+    }
+
     /// Runs a `key, name, plays, seconds, latest` grouping over the plays
     /// since `since_unix` (all of them when `None`).
     fn spellings(&self, sql: &str, since_unix: Option<i64>) -> Vec<Spelling<String>> {
@@ -499,6 +554,32 @@ mod tests {
         assert_eq!(tracks[0], ("Hoppípolla — Sigur Rós".to_string(), 4));
         let albums = db.top_listen_albums(Some(1_700_000_050), 10);
         assert_eq!(albums, vec![("Takk... — Sigur Rós".to_string(), 4)]);
+    }
+
+    #[test]
+    fn an_artist_history_folds_spellings_and_ranks_among_artists() {
+        let temp = TempDb::open();
+        let db = &temp.db;
+        db.insert_pulled_listens(&[
+            pulled(1_700_000_000, "One", "Metallica", "...And Justice for All"),
+            pulled(1_700_000_050, "One", "Metallica", "...And Justice for All"),
+            pulled(1_700_000_100, "One - Remastered", "METALLICA", "...And Justice for All"),
+            pulled(1_700_000_200, "Hoppípolla", "Sigur Rós", "Takk..."),
+            pulled(1_700_000_300, "Glósóli", "Sigur Rós", "Takk..."),
+            pulled(1_700_000_400, "Sæglópur", "Sigur Rós", "Takk..."),
+            pulled(1_700_000_450, "Hoppipolla", "Sigur Ros", "Takk..."),
+            pulled(1_700_000_500, "Song", "Third", "X"),
+        ])
+        .unwrap();
+        let listening = db.artist_listening("Metallica");
+        assert_eq!(listening.plays, 3);
+        assert_eq!(listening.rank, Some(2));
+        assert_eq!(listening.songs.len(), 1);
+        assert_eq!(listening.songs[0].title, "One");
+        assert_eq!(listening.songs[0].unmeasured_plays, 3);
+        assert_eq!(listening.last_unix, Some(1_700_000_100));
+        assert_eq!(db.artist_listening("Sigur Ros").rank, Some(1));
+        assert_eq!(db.artist_listening("Nobody"), ArtistListening::default());
     }
 
     #[test]
