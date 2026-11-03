@@ -66,6 +66,7 @@ protocol LibraryProviding: AnyObject {
     func reload() async
     func resetAndReload() async
     func reloadFromDatabase() async
+    func rescanIfFolderChanged(checkingVersions: Bool) async
     func debutSummary() async -> LibraryDebutSummary
     @discardableResult
     func importFiles(
@@ -79,6 +80,8 @@ protocol LibraryProviding: AnyObject {
 }
 
 extension LibraryProviding {
+
+    func rescanIfFolderChanged(checkingVersions: Bool) async {}
 
     /// An import with nobody to ask: a newer version of a song already in the
     /// library is kept beside it rather than replacing it.
@@ -194,6 +197,17 @@ final class Library: LibraryProviding {
 
     private var isReloading = false
     private var reloadPending = false
+    private var unsettledFolderChange: Set<String> = []
+
+    /// How long a new file must have been left alone before the index reads it.
+    nonisolated private static let settleInterval: TimeInterval = 10
+
+    nonisolated private enum FolderComparison: Sendable {
+        case inSync(indexedOnDisk: Set<String>)
+        case changed(Set<String>)
+        case settling
+    }
+
     var revisionTask: Task<Void, Never>?
     var pendingRevisionPaths: Set<String>?
 
@@ -211,6 +225,61 @@ final class Library: LibraryProviding {
             reloadPending = false
             await doReload()
         } while reloadPending
+    }
+
+    /// Brings the index level with the folder after the app has been running:
+    /// songs copied in over a cable, from the Files app or from a computer, and
+    /// songs removed the same way. It looks first and says nothing when the
+    /// folder and the index agree, so a screen is never told about a scan that
+    /// found nothing; only a difference starts a full `reload()`. A difference
+    /// that a reload could not settle is not reloaded again until it changes,
+    /// and a file written a moment ago is left for the next look, since a copy
+    /// still arriving would be indexed half read. `checkingVersions` also runs
+    /// the revision pass, for a song replaced in place.
+    func rescanIfFolderChanged(checkingVersions: Bool) async {
+        guard hasSettledFirstLoad, !isReloading else { return }
+        switch await compareFolderWithIndex() {
+        case .settling:
+            return
+        case .inSync(let indexedOnDisk):
+            unsettledFolderChange = []
+            if checkingVersions { scheduleRevisionPass(for: indexedOnDisk) }
+        case .changed(let paths):
+            guard paths != unsettledFolderChange else { return }
+            unsettledFolderChange = paths
+            MidgarLog.info("Library folder changed while running: \(paths.count) songs added or removed, rescanning", category: .content)
+            await reload()
+        }
+    }
+
+    @concurrent
+    nonisolated private func compareFolderWithIndex() async -> FolderComparison {
+        guard let diskPaths = audioPathsOnDisk() else { return .settling }
+        let knownPaths: Set<String>
+        do {
+            knownPaths = try db.fetchAllTrackRelativePaths()
+        } catch {
+            MidgarLog.error("DB fetch paths error: \(error.localizedDescription)", category: .database)
+            return .settling
+        }
+        let added = diskPaths.subtracting(knownPaths)
+        let removed = knownPaths.subtracting(diskPaths)
+        guard !added.isEmpty || !removed.isEmpty else {
+            return .inSync(indexedOnDisk: diskPaths.subtracting(ScanJournal.quarantinedPaths()))
+        }
+        guard !added.contains(where: wasWrittenJustNow) else { return .settling }
+        return .changed(added.union(removed))
+    }
+
+    /// Whether the file changed within `settleInterval` of now, which a copy
+    /// still in flight keeps doing and a finished one stops doing. A modified
+    /// date far in the future, from a computer with its clock or zone wrong, is
+    /// not a copy in flight and must not keep the song out of the library.
+    nonisolated private func wasWrittenJustNow(_ relativePath: String) -> Bool {
+        let url = documentsDirectory.appendingPathComponent(relativePath, isDirectory: false)
+        guard let modified = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+        else { return false }
+        return abs(Date().timeIntervalSince(modified)) < Self.settleInterval
     }
 
     private func doReload() async {
@@ -419,6 +488,21 @@ final class Library: LibraryProviding {
         await reload()
     }
 
+    /// Every audio file under the library root by relative path, or nil when
+    /// the folder cannot be walked. `found` hears the running count.
+    nonisolated private func audioPathsOnDisk(found: (Int) -> Void = { _ in }) -> Set<String>? {
+        guard let enumerator = FileManager.default.enumerator(
+            at: documentsDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+        ) else { return nil }
+        var paths = Set<String>()
+        while let fileURL = enumerator.nextObject() as? URL {
+            guard Self.audioExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
+            paths.insert(relativePath(for: fileURL))
+            found(paths.count)
+        }
+        return paths
+    }
+
     @discardableResult
     @concurrent
     nonisolated private func syncFilesWithDatabase() async -> LibrarySyncResult {
@@ -431,19 +515,8 @@ final class Library: LibraryProviding {
             return .unchanged
         }
         #endif
-        let fm = FileManager.default
-        guard let enumerator = fm.enumerator(
-            at: documentsDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-        ) else { return .unchanged }
-
-        var diskPaths = Set<String>()
-
-        while let fileURL = enumerator.nextObject() as? URL {
-            guard Self.audioExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
-            let relPath = relativePath(for: fileURL)
-            diskPaths.insert(relPath)
-            let found = diskPaths.count
-            emitProgress { $0.filesFound = found }
+        guard let diskPaths = audioPathsOnDisk(found: { count in emitProgress { $0.filesFound = count } }) else {
+            return .unchanged
         }
         let filesOnDisk = diskPaths.count
         emitProgress(force: true) { $0.filesFound = filesOnDisk }

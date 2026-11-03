@@ -10,6 +10,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private var rootController: RootContainerViewController?
     private var deferredPaywallObserver: NSObjectProtocol?
     private var mergePresenter: ServerMergePresenter?
+    private let folderPoller = LibraryFolderPoller()
 
     func scene(
         _ scene: UIScene,
@@ -174,11 +175,13 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
+        folderPoller.stop()
         ServerSyncLifecycle.shared.enteredBackground()
         ServerSyncBackgroundRefresh.schedule()
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
+        folderPoller.start()
         TrialRunwayPresenter.refresh(in: window)
         ServerSyncLifecycle.shared.becameActive()
         RemoteLaunch.becameActive()

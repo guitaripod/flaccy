@@ -212,6 +212,7 @@ targets:
           - Library/AlbumCell.swift
           - Library/ComputerTransferGuideViewController.swift
           - Library/DuplicateCopiesViewController.swift
+          - Library/LibraryFolderPoller.swift
           - Library/LibraryMosaicView.swift
           - Library/LibraryStatusBanner.swift
           - Library/LibraryViewController+Banners.swift
