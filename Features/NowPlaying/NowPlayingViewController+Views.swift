@@ -287,7 +287,7 @@ extension NowPlayingViewController {
         badgeStrip.axis = .horizontal
         badgeStrip.spacing = 8
         badgeStrip.alignment = .center
-        for badge in [qualityBadge, equalizerBadge] { badgeStrip.addArrangedSubview(badge) }
+        for badge in [qualityBadge, equalizerBadge, songVolumeBadge] { badgeStrip.addArrangedSubview(badge) }
         badgeStrip.setContentHuggingPriority(.required, for: .horizontal)
         badgeStrip.setContentCompressionResistancePriority(.required, for: .horizontal)
 
@@ -330,6 +330,7 @@ extension NowPlayingViewController {
         let track = AudioPlayer.shared.currentTrack
         qualityBadge.configure(with: track)
         versionRow.configure(with: track)
+        updateSongVolumeBadge()
         loveButton.isEnabled = track != nil
         let loved = track.map { LovedTracksService.shared.isLoved(track: $0) } ?? false
         loveButton.setLoved(loved, animated: false)

@@ -663,6 +663,14 @@ fn scalar_keys_are_validated_by_prefix() {
         "scalar.set",
         json!({ "key": format!("meta/{key}"), "value": { "a": 1 } }),
     );
+    ok(
+        "scalar.set",
+        json!({ "key": format!("gain/{key}"), "value": 35 }),
+    );
+    ok(
+        "scalar.set",
+        json!({ "key": format!("gain/{key}"), "value": -240 }),
+    );
     let bad = |args, code| {
         let result = parse(&mutation(1, "scalar.set", 1, args));
         assert_eq!(result, Err(ParseError::Invalid(code)));
@@ -681,6 +689,15 @@ fn scalar_keys_are_validated_by_prefix() {
     );
     bad(
         json!({ "key": format!("meta/{key}"), "value": [1] }),
+        ErrorCode::BadArgs,
+    );
+    bad(json!({ "key": "gain/short", "value": 10 }), ErrorCode::BadKey);
+    bad(
+        json!({ "key": format!("gain/{key}"), "value": 241 }),
+        ErrorCode::BadArgs,
+    );
+    bad(
+        json!({ "key": format!("gain/{key}"), "value": 3.5 }),
         ErrorCode::BadArgs,
     );
     bad(

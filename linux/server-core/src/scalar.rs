@@ -6,13 +6,15 @@ use serde_json::Value;
 
 const MAX_VALUE_BYTES: usize = 64 * 1024;
 const MAX_PREF_BYTES: usize = 4 * 1024;
+/// The loudest a song's own volume may be set, in tenths of a decibel either way.
+pub const MAX_SONG_GAIN_TENTHS: i64 = 240;
 
-/// Checks a key's prefix and, for `lyr/` and `meta/`, its song key.
+/// Checks a key's prefix and, for `lyr/`, `gain/` and `meta/`, its song key.
 pub fn validate_scalar_key(key: &str) -> Result<(), ErrorCode> {
     let (prefix, rest) = key.split_once('/').ok_or(ErrorCode::BadKey)?;
     let known = match prefix {
         "pref" | "eq" | "want" | "lastfm" | "offline" => true,
-        "lyr" | "meta" => is_song_key(rest),
+        "lyr" | "gain" | "meta" => is_song_key(rest),
         _ => false,
     };
     if known && !rest.is_empty() {
@@ -29,6 +31,9 @@ pub fn validate_scalar(key: &str, value: &Value) -> Result<(), ErrorCode> {
     let prefix = key.split_once('/').map_or("", |(prefix, _)| prefix);
     let shape_ok = match prefix {
         "lyr" => value.as_i64().is_some_and(|ms| ms >= 0),
+        "gain" => value
+            .as_i64()
+            .is_some_and(|tenths| tenths.abs() <= MAX_SONG_GAIN_TENTHS),
         "meta" => value.is_object(),
         _ => true,
     };

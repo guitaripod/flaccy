@@ -90,6 +90,12 @@ enum MainMenu {
         volumeUp.keyEquivalentModifierMask = [.command]
         let volumeDown = menu.addItem(withTitle: String(localized: "Decrease Volume"), action: #selector(MacAppDelegate.decreaseVolume(_:)), keyEquivalent: downArrowKey)
         volumeDown.keyEquivalentModifierMask = [.command]
+        menu.addItem(.separator())
+        menu.addItem(withTitle: SongVolumeCopy.menuTitle, action: #selector(MacAppDelegate.showSongVolume(_:)), keyEquivalent: "")
+        let songLouder = menu.addItem(withTitle: SongVolumeCopy.songLouder, action: #selector(MacAppDelegate.songLouder(_:)), keyEquivalent: upArrowKey)
+        songLouder.keyEquivalentModifierMask = [.command, .shift]
+        let songQuieter = menu.addItem(withTitle: SongVolumeCopy.songQuieter, action: #selector(MacAppDelegate.songQuieter(_:)), keyEquivalent: downArrowKey)
+        songQuieter.keyEquivalentModifierMask = [.command, .shift]
         return submenuItem(menu)
     }
 

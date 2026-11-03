@@ -38,7 +38,7 @@ extension NowPlayingViewController {
     func appearanceGroups() -> [[UIView]] {
         [
             [artworkContainer],
-            [titleMarquee, versionRow, qualityBadge, equalizerBadge, loveButton, artistAvatarButton, artistButton, dashLabel, albumLabel, playingFromLabel],
+            [titleMarquee, versionRow, qualityBadge, equalizerBadge, songVolumeBadge, loveButton, artistAvatarButton, artistButton, dashLabel, albumLabel, playingFromLabel],
             [scrubber, currentTimeLabel, remainingTimeLabel, skipBackButton, previousButton,
              playPauseButton, nextButton, skipForwardButton],
         ]

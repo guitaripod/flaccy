@@ -8,7 +8,7 @@ use super::error::Result;
 use super::ids::new_uuid_v7;
 use super::listens::{append_all, requeue_all};
 use super::meta;
-use super::pending::{self, love_key, playlist_key, NewMutation};
+use super::pending::{self, love_key, playlist_key, scalar_key, NewMutation};
 use super::songref::ref_for_track;
 use crate::db::unix_from_string;
 use crate::listen_history::ListenKeyCache;
@@ -29,11 +29,13 @@ pub struct ImportReport {
     pub entries: usize,
     /// Loved songs queued.
     pub loves: usize,
+    /// Songs with a volume of their own queued.
+    pub song_gains: usize,
     /// Plays that received a migrated event id.
     pub listens: usize,
 }
 
-/// Queues the local playlists, loves and plays once. A database that has already imported queues nothing.
+/// Queues the local playlists, loves, song volumes and plays once. A database that has already imported queues nothing.
 pub(crate) fn run(conn: &Connection) -> Result<ImportReport> {
     if meta::get(conn, meta::IMPORTED)?.is_some() {
         return Ok(ImportReport::default());
@@ -41,6 +43,7 @@ pub(crate) fn run(conn: &Connection) -> Result<ImportReport> {
     let mut report = ImportReport::default();
     import_playlists(conn, &mut report)?;
     import_loves(conn, &mut report)?;
+    import_song_gains(conn, &mut report)?;
     report.listens = assign_event_ids(conn)?;
     append_all(conn, requeue_all(conn)?)?;
     meta::set(conn, meta::IMPORTED, "1")?;
@@ -147,6 +150,27 @@ fn import_loves(conn: &Connection, report: &mut ImportReport) -> Result<()> {
             NewMutation::new("love.set", args, vec![love_key(&key)]).stamped(floor),
         )?;
         report.loves += 1;
+    }
+    Ok(())
+}
+
+fn import_song_gains(conn: &Connection, report: &mut ImportReport) -> Result<()> {
+    let levels: Vec<(String, i64)> = {
+        let mut stmt = conn.prepare(
+            "SELECT songKey, tenths FROM songGains WHERE tenths <> 0 ORDER BY songKey",
+        )?;
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect::<std::result::Result<_, _>>()?
+    };
+    let floor = Stamp::from_wall_ms(IMPORT_FLOOR_MS);
+    for (song_key, tenths) in levels {
+        let key = format!("gain/{song_key}");
+        let args = json!({ "key": key, "value": tenths });
+        pending::append(
+            conn,
+            NewMutation::new("scalar.set", args, vec![scalar_key(&key)]).stamped(floor),
+        )?;
+        report.song_gains += 1;
     }
     Ok(())
 }

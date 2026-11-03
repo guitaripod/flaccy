@@ -1047,6 +1047,12 @@ fn register_actions(app: &adw::Application, ui: &Rc<Ui>, search: &gtk::SearchEnt
     add_string_action(ui, "track-station", |ui, rel| {
         ui.core.start_track_station(rel);
     });
+    add_string_action(ui, "track-song-volume", |ui, rel| {
+        let track = ui.core.library.borrow().track_by_rel_path(rel).cloned();
+        if let Some(track) = track.or_else(|| ui.core.player.current_track().filter(|track| track.rel_path == rel)) {
+            ui::song_volume::present(ui, &track);
+        }
+    });
     add_string_action(ui, "playlist-choose", |ui, rel| {
         ui::playlists::present_add_to_playlist(ui, rel);
     });
@@ -1542,6 +1548,8 @@ fn present_shortcuts(window: &adw::ApplicationWindow) {
                 ("Shift+←", "Back 15 seconds"),
                 ("Ctrl+↑", "Volume up"),
                 ("Ctrl+↓", "Volume down"),
+                ("Ctrl+Shift+↑", "This song louder by 0.5 dB"),
+                ("Ctrl+Shift+↓", "This song quieter by 0.5 dB"),
                 ("Ctrl+L", "Love current track"),
                 ("Ctrl+J", "Show the playing song in Songs"),
             ],
@@ -1759,11 +1767,15 @@ fn is_editing(ui: &Ui) -> bool {
 
 /// Ctrl+↑/↓ move the volume by a sixteenth, as ⌘↑/↓ do on the Mac.
 const VOLUME_KEY_STEP: f64 = 1.0 / 16.0;
+/// Ctrl+Shift+↑/↓ move the playing song's own volume by half a decibel.
+const SONG_VOLUME_MODIFIERS: gdk::ModifierType =
+    gdk::ModifierType::CONTROL_MASK.union(gdk::ModifierType::SHIFT_MASK);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum PlaybackKey {
     Skip(f64),
     Volume(f64),
+    SongVolume(i32),
 }
 
 fn playback_key(key: gdk::Key, modifiers: gdk::ModifierType) -> Option<PlaybackKey> {
@@ -1786,12 +1798,18 @@ fn playback_key(key: gdk::Key, modifiers: gdk::ModifierType) -> Option<PlaybackK
         gdk::Key::Down | gdk::Key::KP_Down if held == gdk::ModifierType::CONTROL_MASK => {
             Some(PlaybackKey::Volume(-VOLUME_KEY_STEP))
         }
+        gdk::Key::Up | gdk::Key::KP_Up if held == SONG_VOLUME_MODIFIERS => {
+            Some(PlaybackKey::SongVolume(1))
+        }
+        gdk::Key::Down | gdk::Key::KP_Down if held == SONG_VOLUME_MODIFIERS => {
+            Some(PlaybackKey::SongVolume(-1))
+        }
         _ => None,
     }
 }
 
-/// Shift+←/→ skip 15 seconds and Ctrl+↑/↓ step the volume from anywhere in
-/// the window, Now Playing included. Caught in the capture phase so a focused
+/// Shift+←/→ skip 15 seconds, Ctrl+↑/↓ step the volume and Ctrl+Shift+↑/↓
+/// the playing song's own volume from anywhere in the window, Now Playing included. Caught in the capture phase so a focused
 /// list can't swallow them, and left alone while a text field is being edited
 /// or a dialog is open.
 fn attach_playback_keys(ui: &Rc<Ui>) {
@@ -1808,6 +1826,7 @@ fn attach_playback_keys(ui: &Rc<Ui>) {
         match action {
             PlaybackKey::Skip(seconds) => key_ui.core.skip_by(seconds),
             PlaybackKey::Volume(delta) => key_ui.core.nudge_volume(delta),
+            PlaybackKey::SongVolume(steps) => key_ui.core.nudge_song_gain(steps),
         }
         glib::Propagation::Stop
     });
@@ -2062,6 +2081,17 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {
             ui::equalizer::demo::drive(&ui);
+        });
+    }
+    if let Ok(level) = std::env::var("FLACCY_DEMO_SONG_VOLUME") {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(1800), move || {
+            let first = ui.core.library.borrow().tracks.first().cloned();
+            if let Some(track) = first {
+                ui.core.player.play_queue(vec![track.clone()], 0);
+                ui.core.set_song_gain(&track, level.parse().unwrap_or(35));
+                ui::song_volume::present(&ui, &track);
+            }
         });
     }
     if let Ok(mode) = std::env::var("FLACCY_DEMO_EQ") {

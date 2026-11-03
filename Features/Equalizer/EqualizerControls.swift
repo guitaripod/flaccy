@@ -479,6 +479,12 @@ final class EqualizerBadgeView: UIControl {
         didSet { alpha = isHighlighted ? 0.6 : 1 }
     }
 
+    /// Shows other words than "EQ", for a badge of the same family such as a song's own volume.
+    func setText(_ text: String, accessibilityLabel: String) {
+        label.text = text
+        self.accessibilityLabel = accessibilityLabel
+    }
+
     private func applyTint() {
         backgroundColor = accent.withAlphaComponent(0.22)
         layer.borderColor = accent.withAlphaComponent(0.7).cgColor

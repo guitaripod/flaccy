@@ -53,6 +53,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         WatchSyncExercise.runIfRequested()
         WatchRemoteExercise.runIfRequested()
         EqualizerExercise.runIfRequested()
+        SongVolumeExercise.runIfRequested()
         LyricShareExercise.runIfRequested()
         EqualizerShots.runIfRequested(in: window)
         #endif

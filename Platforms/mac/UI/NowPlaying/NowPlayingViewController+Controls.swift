@@ -170,7 +170,9 @@ extension NowPlayingViewController {
         routePicker.widthAnchor.constraint(equalToConstant: 34).isActive = true
         routePicker.heightAnchor.constraint(equalToConstant: 26).isActive = true
 
-        let row = NSStackView(views: [sleepCapsule, shareCapsule, equalizerButton, routePicker])
+        let songVolumePill = MacSongVolumePill()
+        MacSongVolumePresenter.register(anchor: equalizerButton)
+        let row = NSStackView(views: [sleepCapsule, shareCapsule, equalizerButton, songVolumePill, routePicker])
         row.orientation = .horizontal
         row.spacing = 10
         row.alignment = .centerY

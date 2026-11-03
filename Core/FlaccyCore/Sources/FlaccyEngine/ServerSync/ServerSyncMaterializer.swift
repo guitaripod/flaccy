@@ -6,6 +6,7 @@ import GRDB
 enum SyncMaterializer {
 
     static let lyricsPrefix = "lyr/"
+    static let songGainPrefix = "gain/"
 
     static func caller(_ db: Database) throws -> CoreCaller? {
         try SyncMeta.link(db).map { CoreCaller(user: $0.user, role: .member, device: $0.device) }
@@ -40,6 +41,12 @@ enum SyncMaterializer {
             let visible = try index.hasPending(for: pendingKey)
                 ? try ServerCoreBridge.rebaseScalar(key: key, base: base, caller: caller, pending: index.pending(for: pendingKey))
                 : base
+            if key.hasPrefix(songGainPrefix) {
+                if let visible, try SongGainTable.write(db, songKey: String(key.dropFirst(songGainPrefix.count)), tenths: try visibleSongGain(visible)) {
+                    outcome.changes.songGains = true
+                }
+                continue
+            }
             let value: ServerJSON? = try visible.flatMap { $0.deleted ? nil : try ServerCoreBridge.json($0.value) }
             if let songKey = key.hasPrefix(lyricsPrefix) ? String(key.dropFirst(lyricsPrefix.count)) : nil {
                 if let offset = value?.int, try setLyricsOffset(db, songKey: songKey, offsetMs: offset) {
@@ -51,6 +58,13 @@ enum SyncMaterializer {
             }
         }
         return outcome
+    }
+
+    /// The level a synced song volume asks for. A cleared one is 0; a key with nothing visible, which is what a server too old to
+    /// accept `gain/` leaves, never reaches here, so the level set on this device stays.
+    private static func visibleSongGain(_ scalar: CoreScalar) throws -> Int {
+        guard !scalar.deleted, let tenths = try ServerCoreBridge.json(scalar.value).int else { return 0 }
+        return SongGain.fromServer(tenths)
     }
 
     private static func setLoved(_ db: Database, songKey: String, loved: Bool) throws -> Bool {

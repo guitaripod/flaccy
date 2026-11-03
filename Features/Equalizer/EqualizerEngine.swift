@@ -4,11 +4,14 @@ import FlaccyCore
 import Foundation
 
 /// The equalizer as the rest of the app sees it: the saved state, the output it
-/// is following, and the taps that put the curve into every `AVPlayerItem`.
+/// is following, and the taps that put the curve, and each song's own volume,
+/// into every `AVPlayerItem`.
 ///
 /// Audio takes the cheapest honest path. With the equalizer off, flat, or bound
-/// to Off for the current output, no item carries a tap at all, so samples go
-/// from the decoder to the output untouched. While it runs, each item gets an
+/// to Off for the current output, an item at 0 dB of song volume carries no tap
+/// at all, so samples go from the decoder to the output untouched. An item
+/// whose song has a volume of its own gets its own tap, so the level changes
+/// exactly where one song gives way to the next. While it runs, each item gets an
 /// `MTAudioProcessingTap` through an `AVAudioMix`, which leaves `AVQueuePlayer`,
 /// gapless preloading, Now Playing and AirPlay exactly as they were. Edits are
 /// published as a new immutable config; each tap's kernel ramps to it, so
@@ -46,6 +49,13 @@ final class EqualizerEngine {
     private final class Attachment {
         var hasMix = false
         var isLoading = false
+        var songKey: String?
+        let songGain: SongGainBox
+
+        init(songKey: String?, tenths: Int) {
+            self.songKey = songKey
+            songGain = SongGainBox(tenths: tenths)
+        }
     }
 
     private init() {
@@ -320,14 +330,28 @@ final class EqualizerEngine {
         EqualizerTapRegistry.shared.preparedCount
     }
 
-    /// Called by the player for every item it builds, before or just after the item starts.
-    func attach(to item: AVPlayerItem) {
+    /// Called by the player for every item it builds, before or just after the
+    /// item starts, with the song's key and its own volume in tenths of a decibel.
+    func attach(to item: AVPlayerItem, songKey: String?, songGain tenths: Int) {
         items.add(item)
+        let attachment = attachment(for: item, songKey: songKey, tenths: tenths)
+        attachment.songKey = songKey
+        attachment.songGain.write(tenths)
         refresh(item)
     }
 
-    private var needsTap: Bool {
-        box.read().isEngaged || !analysisOwners.isEmpty
+    /// A song's own volume changed: every item of that song, playing or
+    /// waiting, takes the new level, the playing one gliding to it.
+    func setSongGain(_ tenths: Int, songKey: String) {
+        for item in items.allObjects {
+            guard let attachment = attachments.object(forKey: item), attachment.songKey == songKey else { continue }
+            attachment.songGain.write(tenths)
+            refresh(item)
+        }
+    }
+
+    private func needsTap(_ attachment: Attachment) -> Bool {
+        box.read().isEngaged || !analysisOwners.isEmpty || attachment.songGain.read() != 0
     }
 
     private func commit(reason: String) {
@@ -392,23 +416,23 @@ final class EqualizerEngine {
         }
     }
 
-    private func attachment(for item: AVPlayerItem) -> Attachment {
+    private func attachment(for item: AVPlayerItem, songKey: String? = nil, tenths: Int = 0) -> Attachment {
         if let existing = attachments.object(forKey: item) { return existing }
-        let created = Attachment()
+        let created = Attachment(songKey: songKey, tenths: tenths)
         attachments.setObject(created, forKey: item)
         return created
     }
 
     private func refresh(_ item: AVPlayerItem) {
         let attachment = attachment(for: item)
-        if needsTap {
+        if needsTap(attachment) {
             guard !attachment.hasMix, !attachment.isLoading else { return }
             attachment.isLoading = true
             Task { [weak self, weak item] in
                 guard let item else { return }
                 let tracks = try? await item.asset.loadTracks(withMediaType: .audio)
                 attachment.isLoading = false
-                guard let self, self.needsTap else { return }
+                guard let self, self.needsTap(attachment) else { return }
                 guard let track = tracks?.first else {
                     MidgarLog.notice("Equalizer tap skipped: the item has no audio track to attach to", category: .playback)
                     return
@@ -421,13 +445,13 @@ final class EqualizerEngine {
     }
 
     /// An item this close to its beginning is still starting, so its tap
-    /// brings the curve in at once; further along, turning the equalizer on
-    /// has to fade in to avoid a click.
+    /// brings the curve and the song's volume in at once; further along,
+    /// turning either on has to fade in to avoid a click.
     private static let freshItemSeconds = 0.25
 
     private func installTap(on item: AVPlayerItem, track: AVAssetTrack, attachment: Attachment) {
         let startsEngaged = item.currentTime().seconds < Self.freshItemSeconds
-        guard !attachment.hasMix, let tap = EqualizerTapFactory.makeTap(box: box, startsEngaged: startsEngaged) else {
+        guard !attachment.hasMix, let tap = EqualizerTapFactory.makeTap(box: box, songGain: attachment.songGain, startsEngaged: startsEngaged) else {
             if !attachment.hasMix { MidgarLog.notice("Equalizer tap could not be created", category: .playback) }
             return
         }
@@ -442,7 +466,7 @@ final class EqualizerEngine {
 
     private func scheduleDetach(_ item: AVPlayerItem, attachment: Attachment) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self, weak item] in
-            guard let self, let item, !self.needsTap, attachment.hasMix else { return }
+            guard let self, let item, !self.needsTap(attachment), attachment.hasMix else { return }
             item.audioMix = nil
             attachment.hasMix = false
             MidgarLog.info("Equalizer tap detached", category: .playback)

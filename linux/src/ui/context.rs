@@ -30,6 +30,7 @@ pub fn track_menu(rel_path: &str, loved: bool, has_previous: bool) -> gio::Menu 
     let love_label = if loved { "Unlove" } else { "Love on Last.fm" };
     actions_section.append_item(&item(love_label, "win.track-love", rel_path));
     actions_section.append_item(&item("Add to Playlist…", "win.playlist-choose", rel_path));
+    actions_section.append_item(&item("Song Volume…", "win.track-song-volume", rel_path));
     actions_section.append_item(&item("Share Songlink…", "win.track-share", rel_path));
     actions_section.append_item(&item("Copy Songlink", "win.track-songlink", rel_path));
     if remote {

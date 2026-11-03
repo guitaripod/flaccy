@@ -71,7 +71,7 @@ Every synced thing is an *entity* `(kind, id)` with a JSON `value`. Kinds and id
 
 `visibility` is `private` or `household`. `alive` is a boolean. `createdAt` is Unix seconds. `ts` is Unix seconds. `source` is `flaccy`, `lastfm`, `opensubsonic` or `migrated`. `eventId` is 24 lowercase hex characters (12 bytes): clients derive it as the first 12 bytes of `SHA-256("rec" || deviceId || instance || counter)`; the server derives Last.fm ones as `SHA-256("lfm" || account || ts || songKey)` and migrated ones as `SHA-256("mig" || ts || titleKey || artistKey)`. Parts are concatenated with no separator and integers (`counter`, `ts`) are written in decimal ASCII.
 
-Scalar keys are validated by prefix: `pref/…` (≤ 4 KiB), `eq/…`, `lyr/<songKey>` (integer milliseconds), `meta/<songKey>` (object), `want/…`, `lastfm/…`, `offline/…`. Unknown prefixes are `invalid`.
+Scalar keys are validated by prefix: `pref/…` (≤ 4 KiB), `eq/…`, `lyr/<songKey>` (integer milliseconds), `gain/<songKey>` (the song's own volume: integer tenths of a decibel from −240 to 240; clients offer ±12 dB and clear the key for 0), `meta/<songKey>` (object), `want/…`, `lastfm/…`, `offline/…`. Unknown prefixes are `invalid`, so a server older than 1.2.0 answers `gain/` with `invalid bad_key`.
 
 ## 5. Mutations
 

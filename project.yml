@@ -189,6 +189,7 @@ targets:
           - Equalizer/EqualizerViewController+Layout.swift
           - Equalizer/EqualizerViewController+Presets.swift
           - Equalizer/EqualizerViewController.swift
+          - SongVolume/SongVolumeViewController.swift
           - Home/EditHomeViewController.swift
           - Home/HomeAlbumCardCell.swift
           - Home/HomeArtView.swift

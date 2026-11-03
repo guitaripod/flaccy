@@ -16,6 +16,7 @@ pub mod plot_model;
 pub mod presets;
 pub mod profile;
 pub mod profile_text;
+pub mod song_gain;
 pub mod spectrum;
 pub mod state;
 

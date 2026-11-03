@@ -181,6 +181,66 @@ fn a_lyrics_offset_follows_the_song_to_the_other_device() {
     );
 }
 
+#[test]
+fn a_song_volume_follows_the_song_to_the_other_device_and_back_to_zero() {
+    let double = Double::start();
+    let library = songs(2);
+    let mut first = Device::new("a", &library);
+    let mut second = Device::new("b", &library);
+    first.connect(&double, "marcus");
+    second.connect(&double, "marcus");
+    assert_eq!(first.db.set_song_gain("Song 1", "The Artist", 35).unwrap(), 35);
+    first.db.set_song_gain("Song 1", "The Artist", 35).unwrap();
+    first.db.set_song_gain("Song 2", "The Artist", 0).unwrap();
+    assert_eq!(count(&first, "SELECT COUNT(*) FROM sync_pending"), 1, "an unchanged level queues nothing");
+    assert_eq!(first.db.set_song_gain("Song 2", "The Artist", -400).unwrap(), -120);
+    first.sync();
+    second.sync();
+    assert_eq!(second.db.song_gain("Song 1", "The Artist").unwrap(), 35);
+    assert_eq!(second.db.song_gain("Song 2", "The Artist").unwrap(), -120);
+    assert_eq!(second.db.song_gain("Song 1", "Someone Else").unwrap(), 0);
+
+    second.db.set_song_gain("Song 1", "The Artist", 0).unwrap();
+    second.sync();
+    first.sync();
+    assert_eq!(first.db.song_gain("Song 1", "The Artist").unwrap(), 0);
+    assert_eq!(first.db.song_gains().unwrap().len(), 1);
+    assert_eq!(count(&first, "SELECT COUNT(*) FROM songGains"), 1);
+}
+
+#[test]
+fn a_song_volume_set_before_connecting_reaches_the_other_device() {
+    let double = Double::start();
+    let library = songs(1);
+    let mut first = Device::new("a", &library);
+    let mut second = Device::new("b", &library);
+    first.db.set_song_gain("Song 1", "The Artist", 60).unwrap();
+    assert_eq!(count(&first, "SELECT COUNT(*) FROM sync_pending"), 0);
+    let report = first.connect(&double, "marcus");
+    assert_eq!(report.song_gains, 1);
+    first.sync();
+    second.connect(&double, "marcus");
+    second.sync();
+    assert_eq!(second.db.song_gain("Song 1", "The Artist").unwrap(), 60);
+}
+
+#[test]
+fn a_later_song_volume_wins_over_an_imported_one() {
+    let double = Double::start();
+    let library = songs(1);
+    let mut first = Device::new("a", &library);
+    let mut second = Device::new("b", &library);
+    first.db.set_song_gain("Song 1", "The Artist", 60).unwrap();
+    second.connect(&double, "marcus");
+    second.db.set_song_gain("Song 1", "The Artist", -15).unwrap();
+    second.sync();
+    first.connect(&double, "marcus");
+    first.sync();
+    second.sync();
+    assert_eq!(first.db.song_gain("Song 1", "The Artist").unwrap(), -15);
+    assert_eq!(second.db.song_gain("Song 1", "The Artist").unwrap(), -15);
+}
+
 #[derive(Default)]
 struct Collected(Mutex<Vec<(String, Option<Value>)>>);
 

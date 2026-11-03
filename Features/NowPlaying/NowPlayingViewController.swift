@@ -43,6 +43,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     let queueButton = UIButton(type: .system)
     let equalizerButton = UIButton(type: .system)
     let equalizerBadge = EqualizerBadgeView()
+    let songVolumeBadge = EqualizerBadgeView()
     var equalizerCapsule: GlassCapsule?
 
     var shuffleCapsule: GlassCapsule?
@@ -183,6 +184,9 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(equalizerOutputDidChange(_:)), name: EqualizerEngine.outputDidChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(songVolumeDidChange), name: SongVolumeStore.didChange, object: nil
         )
     }
 

@@ -143,7 +143,7 @@ nonisolated final class PlaybackEngineRemoteQueueTests: XCTestCase {
     private final class StubHost: PlaybackEngineHost {
         var libraryRoot: URL { LibraryPaths.root }
         func isPlaybackGated() -> Bool { false }
-        func attachEqualizer(to item: AVPlayerItem) {}
+        func attachEqualizer(to item: AVPlayerItem, for track: Track) {}
         func remoteAsset(for track: Track) -> AVURLAsset { AVURLAsset(url: track.fileURL) }
         func activateAudioSession() {}
         func playFeedback(_ kind: PlaybackFeedbackKind) {}

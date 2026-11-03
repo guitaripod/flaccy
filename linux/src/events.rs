@@ -30,6 +30,8 @@ pub enum AppEvent {
         rel_path: String,
         loved: bool,
     },
+    /// A song's own volume changed, here or through Flaccy Server.
+    SongGainChanged,
     LastFmChanged,
     /// The first connect to a Flaccy Server combined playlists or loves, and the summary sheet has something to say.
     ServerMergeReady,

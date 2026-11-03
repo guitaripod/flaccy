@@ -21,7 +21,7 @@ extension AVPlayerItem {
 
 extension PlaybackEngine {
 
-    /// The single place an item is built, so the equalizer can attach its tap to every one.
+    /// The single place an item is built, so the equalizer can attach its tap, and the song's own volume, to every one.
     /// A song on a server gets its asset from the host, which plays the cached file when it
     /// is complete and streams through a resource loader when it is not.
     func makePlayerItem(for track: Track) -> AVPlayerItem {
@@ -32,7 +32,7 @@ extension PlaybackEngine {
             asset = AVURLAsset(url: track.fileURL)
         }
         let item = TrackPlayerItem(asset: asset, trackURL: track.fileURL)
-        host?.attachEqualizer(to: item)
+        host?.attachEqualizer(to: item, for: track)
         return item
     }
 

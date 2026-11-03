@@ -83,6 +83,7 @@ extension NowPlayingViewController {
         equalizerButton.addAction(UIAction { [weak self] _ in self?.presentEqualizer() }, for: .touchUpInside)
         equalizerBadge.addAction(UIAction { [weak self] _ in self?.presentEqualizer() }, for: .touchUpInside)
         updateEqualizerState()
+        configureSongVolumeBadge()
     }
 
     func presentEqualizer() {
@@ -96,6 +97,29 @@ extension NowPlayingViewController {
         equalizerButton.accessibilityValue = isRunning ? String(localized: "On") : String(localized: "Off")
         equalizerCapsule?.setActive(isRunning, animated: hasAppliedInitialState)
         equalizerBadge.isHidden = !isRunning
+    }
+
+    func configureSongVolumeBadge() {
+        songVolumeBadge.accessibilityIdentifier = "nowplaying.songVolume"
+        songVolumeBadge.accessibilityHint = String(localized: "Sets how loud this song plays")
+        songVolumeBadge.addAction(UIAction { [weak self] _ in self?.presentSongVolume() }, for: .touchUpInside)
+        updateSongVolumeBadge()
+    }
+
+    func presentSongVolume() {
+        guard let track = AudioPlayer.shared.currentTrack else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        present(SongVolumeViewController.makePresented(for: track), animated: true)
+    }
+
+    func updateSongVolumeBadge() {
+        let level = AudioPlayer.shared.currentTrack.map { SongVolumeStore.shared.level(for: $0) } ?? 0
+        songVolumeBadge.setText(SongVolumeCopy.level(level), accessibilityLabel: SongVolumeCopy.accessibilityLevel(level))
+        songVolumeBadge.isHidden = level == 0
+    }
+
+    @objc func songVolumeDidChange() {
+        updateSongVolumeBadge()
     }
 
     @objc func equalizerStateDidChange() {

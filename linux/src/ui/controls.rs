@@ -191,6 +191,7 @@ pub fn build_volume_control(ui: &Rc<Ui>) -> VolumeControl {
     let container = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     container.add_css_class("volume-control");
     container.append(&crate::ui::equalizer::capsule_button(ui));
+    container.append(&crate::ui::song_volume::level_pill(ui));
     container.append(&mute);
     container.append(slider.area());
     let bubble = slider.bubble().clone();

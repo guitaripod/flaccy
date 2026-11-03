@@ -44,6 +44,7 @@ pub mod screen;
 pub mod seek_bar;
 pub mod servers;
 pub mod slider;
+pub mod song_volume;
 pub mod songlink_dialog;
 pub mod songs;
 pub mod stage_layout;

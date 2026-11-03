@@ -157,6 +157,16 @@ final class ServerSyncRecorder {
         try scalar(key: ServerScalarRules.lyricsKey(songKey: SyncSongRefs.songKey(title: title, artist: artist)), value: .int(Int64(offsetMs)))
     }
 
+    /// The person set a song's own volume, in tenths of a decibel; 0 clears it on the server too.
+    func songGain(songKey: String, tenths: Int) throws {
+        let key = ServerScalarRules.songGainKey(songKey: songKey)
+        if tenths == 0 {
+            try scalarCleared(key: key)
+        } else {
+            try scalar(key: key, value: .int(Int64(tenths)))
+        }
+    }
+
     func scalar(key: String, value: ServerJSON) throws {
         guard ServerScalarRules.isValid(key: key, value: value) else { return }
         try queue("scalar.set", ["key": .string(key), "value": value], touches: [SyncPending.scalarKey(key)])

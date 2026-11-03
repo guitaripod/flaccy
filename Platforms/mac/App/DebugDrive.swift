@@ -97,6 +97,7 @@ enum DebugDrive {
         case stats(ChartPeriod)
         case songs(SongsTableViewModel.Filter, ChartPeriod?)
         case home(String)
+        case songVolume
     }
 
     static func plannedShot() -> Shot? {
@@ -104,6 +105,7 @@ enum DebugDrive {
         if CommandLine.arguments.contains("--shot-onboarding") { return .onboarding }
         if CommandLine.arguments.contains("--shot-legacy-move") { return .legacyMove }
         if CommandLine.arguments.contains("--shot-paywall") { return .paywall }
+        if CommandLine.arguments.contains("--shot-song-volume") { return .songVolume }
         if CommandLine.arguments.contains("--shot-playlists") { return .section(.playlists) }
         if let name = value(after: "--shot-playlist") { return .playlistDetail(name) }
         if CommandLine.arguments.contains("--shot-lyric-share") { return .lyricShare }
@@ -171,6 +173,10 @@ enum DebugDrive {
         if case .legacyMove = shot {
             try? await Task.sleep(for: .seconds(6))
             captureSheet(of: window, name: "flaccy-shot-legacy-move")
+            return
+        }
+        if case .songVolume = shot {
+            await DebugSongVolumeShot.run(window: window)
             return
         }
         var attempts = 0
@@ -330,7 +336,7 @@ enum DebugDrive {
             try? await Task.sleep(for: .seconds(3))
             captureSheet(of: window, name: "flaccy-shot-paywall")
             return
-        case .onboarding, .home:
+        case .onboarding, .home, .songVolume:
             return
         case .legacyMove:
             return

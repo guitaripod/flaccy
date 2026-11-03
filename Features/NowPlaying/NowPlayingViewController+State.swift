@@ -184,6 +184,7 @@ extension NowPlayingViewController {
         ArtworkPaletteExtractor.palette(for: artwork, cacheKey: cacheKey, fallbackSeed: seed) { [weak self] palette in
             self?.backdropView.apply(palette, animated: animated)
             self?.equalizerBadge.accent = EqualizerTheme.accent(from: palette)
+            self?.songVolumeBadge.accent = EqualizerTheme.accent(from: palette)
         }
     }
 

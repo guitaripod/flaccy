@@ -71,6 +71,20 @@ final class ServerSyncImportTests: XCTestCase {
         XCTAssertGreaterThan(try XCTUnwrap(create), floor)
     }
 
+    func testSongVolumesSetBeforeConnectingGoOutAtTheImportFloor() async throws {
+        let device = try makeDevice(FakeFlaccyServer())
+        try device.database.setSongGain(title: "A", artist: "Artist", tenths: 60)
+        XCTAssertEqual(try device.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM sync_pending") }, 0)
+        let connection = try await device.connect()
+        XCTAssertEqual(connection.imported.songGains, 1)
+        let rows = try device.read { try Row.fetchAll($0, sql: "SELECT args_json, stamp FROM sync_pending WHERE name = 'scalar.set'") }
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows.first?["stamp"] as Int64?, 1_577_836_800_000 << 16)
+        let args = try XCTUnwrap(ServerJSON(text: try XCTUnwrap(rows.first?["args_json"] as String?)))
+        XCTAssertEqual(args["key"]?.string, "gain/\(try device.songKey("A"))")
+        XCTAssertEqual(args["value"]?.int, 60)
+    }
+
     func testTwoDevicesWithTheSamePlaylistDeriveTheSameIds() async throws {
         let server = FakeFlaccyServer()
         let first = try makeDevice(server)

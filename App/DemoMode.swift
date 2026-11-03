@@ -623,6 +623,15 @@ enum DemoRouter {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                 player.beginActionRowEditing()
             }
+        case "song-volume":
+            player.expand()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                guard let track = AudioPlayer.shared.currentTrack else { return }
+                _ = try? SongVolumeStore.shared.set(35, for: track)
+                var top: UIViewController = tabs
+                while let presented = top.presentedViewController { top = presented }
+                top.present(SongVolumeViewController.makePresented(for: track), animated: false)
+            }
         case "queue": player.expandShowingQueue()
         case "lyrics": player.expandShowingLyrics()
         case "lyric-share":

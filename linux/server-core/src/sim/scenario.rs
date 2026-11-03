@@ -59,7 +59,7 @@ fn blob(rng: &mut Rng) -> String {
 
 fn scalar_key_and_value(rng: &mut Rng) -> (String, Value) {
     let song = random_song(rng);
-    match rng.below(6) {
+    match rng.below(7) {
         0 => ("pref/theme".to_owned(), json!(rng.below(5))),
         1 => ("pref/volume".to_owned(), json!({ "level": rng.below(100) })),
         2 => (
@@ -68,6 +68,10 @@ fn scalar_key_and_value(rng: &mut Rng) -> (String, Value) {
         ),
         3 => ("want/album".to_owned(), json!([rng.below(9), rng.below(9)])),
         4 => (format!("lyr/{}", song_key_of(song)), json!(rng.below(5000))),
+        5 => (
+            format!("gain/{}", song_key_of(song)),
+            json!(rng.below(481) as i64 - 240),
+        ),
         _ => (
             format!("meta/{}", song_key_of(song)),
             json!({ "plays": rng.below(50) }),

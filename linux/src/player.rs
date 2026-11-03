@@ -1,3 +1,4 @@
+use crate::eq::EqShared;
 use crate::events::{AppEvent, EventHub};
 use crate::library::Track;
 use gst::prelude::*;
@@ -199,6 +200,7 @@ fn resolve_pending_index(shared: &Shared, track: &Track) -> Option<usize> {
 pub struct Player {
     playbin: gst::Element,
     shared: Arc<Mutex<Shared>>,
+    song_levels: Arc<EqShared>,
     playing: Cell<bool>,
     eos_reset: Cell<bool>,
     hub: Rc<EventHub>,
@@ -260,7 +262,12 @@ fn opt_out_of_stream_restore(sink: &gst::Element) {
 }
 
 impl Player {
-    pub fn new(hub: Rc<EventHub>, root: PathBuf, audio_filter: gst::Element) -> Rc<Self> {
+    pub fn new(
+        hub: Rc<EventHub>,
+        root: PathBuf,
+        audio_filter: gst::Element,
+        song_levels: Arc<EqShared>,
+    ) -> Rc<Self> {
         let playbin = gst::ElementFactory::make("playbin3")
             .build()
             .expect("playbin3 must be available");
@@ -290,6 +297,7 @@ impl Player {
 
         {
             let shared = Arc::clone(&shared);
+            let song_levels = Arc::clone(&song_levels);
             playbin.connect("about-to-finish", false, move |args| {
                 let Some(playbin) = args.first().and_then(|v| v.get::<gst::Element>().ok()) else {
                     return None;
@@ -307,6 +315,7 @@ impl Player {
                         return None;
                     }
                     if let Some(uri) = uri_for(&guard.root, &track) {
+                        song_levels.hand_over(&track.title, &track.artist);
                         playbin.set_property("uri", &uri);
                         guard.pending_advance = Some(track);
                     }
@@ -318,6 +327,7 @@ impl Player {
         let player = Rc::new_cyclic(|weak_self| Self {
             playbin: playbin.clone(),
             shared,
+            song_levels,
             playing: Cell::new(false),
             eos_reset: Cell::new(false),
             hub,
@@ -601,6 +611,7 @@ impl Player {
         }
         self.clear_seeks();
         let _ = self.playbin.set_state(gst::State::Null);
+        self.song_levels.hand_over(&track.title, &track.artist);
         self.playbin.set_property("uri", &uri);
         let _ = self.playbin.set_state(gst::State::Playing);
         self.hold_seeks_for_preroll(0.0);
@@ -1155,6 +1166,7 @@ impl Player {
         let resume = self.playing.get();
         self.clear_seeks();
         let _ = self.playbin.set_state(gst::State::Null);
+        self.song_levels.hand_over(&track.title, &track.artist);
         self.playbin.set_property("uri", &uri);
         let _ = self.playbin.set_state(gst::State::Paused);
         {

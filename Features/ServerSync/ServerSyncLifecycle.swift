@@ -120,10 +120,11 @@ final class ServerSyncLifecycle {
 
     private func deliver(_ changes: ServerSyncChanges) {
         MidgarLog.info(
-            "A sync brought changes: playlists \(changes.playlists), loves \(changes.loves), plays \(changes.listens)",
+            "A sync brought changes: playlists \(changes.playlists), loves \(changes.loves), song volumes \(changes.songGains), plays \(changes.listens)",
             category: .sync
         )
         if changes.loves { LovedTracksService.shared.reloadFromDatabase() }
+        if changes.songGains { SongVolumeStore.shared.reload() }
         if changes.listens > 0 { NotificationCenter.default.post(name: ListenHistorySync.didChange, object: nil) }
         if changes.playlists || changes.lyricsOffsets || changes.listens > 0 {
             NotificationCenter.default.post(name: Self.changesDidArrive, object: nil)

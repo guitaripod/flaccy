@@ -53,6 +53,29 @@ nonisolated final class EqualizerConfigBox: @unchecked Sendable {
     }()
 }
 
+/// One item's own song volume, in tenths of a decibel, written by the engine
+/// and read by that item's tap. The render thread only tries the lock, like
+/// the config box, and keeps the level it has when it cannot get it.
+nonisolated final class SongGainBox: @unchecked Sendable {
+    private let lock: OSAllocatedUnfairLock<Int>
+
+    init(tenths: Int) {
+        lock = OSAllocatedUnfairLock(initialState: SongGain.clamped(tenths))
+    }
+
+    func write(_ tenths: Int) {
+        lock.withLock { $0 = SongGain.clamped(tenths) }
+    }
+
+    func read() -> Int {
+        lock.withLock { $0 }
+    }
+
+    func tryRead() -> Int? {
+        lock.withLockIfAvailable { $0 }
+    }
+}
+
 /// What the screens read back from the audio thread: how loud the output is,
 /// whether the guard is acting, and the latest mono samples for the spectrum.
 nonisolated struct EqualizerMeter: Equatable, Sendable {
@@ -64,6 +87,7 @@ nonisolated struct EqualizerMeter: Equatable, Sendable {
 /// tells the engine which tap is the one currently making sound.
 nonisolated final class EqualizerTapContext: @unchecked Sendable {
     let box: EqualizerConfigBox
+    let songGain: SongGainBox
     let startsEngaged: Bool
     private let kernelSlot = OSAllocatedUnfairLock<EqualizerKernel?>(initialState: nil)
     private(set) var lastProcessTick: UInt64 = 0
@@ -75,9 +99,11 @@ nonisolated final class EqualizerTapContext: @unchecked Sendable {
     private var planes: UnsafeMutablePointer<UnsafeMutablePointer<Float>>?
     private var isInterleaved = false
     private var appliedVersion: UInt64 = 0
+    private var appliedGain = 0
 
-    init(box: EqualizerConfigBox, startsEngaged: Bool) {
+    init(box: EqualizerConfigBox, songGain: SongGainBox, startsEngaged: Bool) {
         self.box = box
+        self.songGain = songGain
         self.startsEngaged = startsEngaged
     }
 
@@ -99,7 +125,7 @@ nonisolated final class EqualizerTapContext: @unchecked Sendable {
         guard supportsFormat else { return }
         planes = .allocate(capacity: channels)
         let kernel = EqualizerKernel(channelCount: channels, sampleRate: format.mSampleRate)
-        applyConfig(box.read(), to: kernel, startsEngaged: startsEngaged)
+        applyConfig(box.read(), gain: songGain.read(), to: kernel, startsEngaged: startsEngaged)
         kernelSlot.withLock { $0 = kernel }
         EqualizerTapRegistry.shared.register(self)
     }
@@ -113,8 +139,9 @@ nonisolated final class EqualizerTapContext: @unchecked Sendable {
 
     func process(_ bufferList: UnsafeMutablePointer<AudioBufferList>, frames: Int, startOfStream: Bool) {
         guard supportsFormat, frames > 0, let planes, let kernel = kernelSlot.withLockIfAvailable({ $0 }).flatMap({ $0 }) else { return }
-        if let config = box.tryRead(), config.version != appliedVersion {
-            applyConfig(config, to: kernel)
+        let gain = songGain.tryRead() ?? appliedGain
+        if let config = box.tryRead(), config.version != appliedVersion || gain != appliedGain {
+            applyConfig(config, gain: gain, to: kernel)
         }
         if startOfStream { kernel.reset() }
 
@@ -150,15 +177,23 @@ nonisolated final class EqualizerTapContext: @unchecked Sendable {
         return true
     }
 
-    private func applyConfig(_ config: EqualizerConfig, to kernel: EqualizerKernel, startsEngaged: Bool = false) {
-        kernel.configure(
+    private func applyConfig(_ config: EqualizerConfig, gain: Int, to kernel: EqualizerKernel, startsEngaged: Bool = false) {
+        let stage = SongGain.stage(
+            isEngaged: config.isEngaged,
             bands: config.bands,
             preampDecibels: config.preampDecibels,
-            isEngaged: config.isEngaged,
             peakGuard: config.peakGuard,
+            tenths: gain
+        )
+        kernel.configure(
+            bands: stage.bands,
+            preampDecibels: stage.preampDecibels,
+            isEngaged: stage.isEngaged,
+            peakGuard: stage.peakGuard,
             startsEngaged: startsEngaged
         )
         appliedVersion = config.version
+        appliedGain = gain
     }
 }
 
@@ -196,10 +231,10 @@ nonisolated final class EqualizerTapRegistry: @unchecked Sendable {
 nonisolated enum EqualizerTapFactory {
 
     /// `startsEngaged` is true for a tap on an item that has not begun playing,
-    /// so the curve is in force from its first sample; a tap added under a song
-    /// already playing fades in instead.
-    static func makeTap(box: EqualizerConfigBox, startsEngaged: Bool) -> MTAudioProcessingTap? {
-        let context = EqualizerTapContext(box: box, startsEngaged: startsEngaged)
+    /// so the curve and the song's own volume are in force from its first
+    /// sample; a tap added under a song already playing fades in instead.
+    static func makeTap(box: EqualizerConfigBox, songGain: SongGainBox, startsEngaged: Bool) -> MTAudioProcessingTap? {
+        let context = EqualizerTapContext(box: box, songGain: songGain, startsEngaged: startsEngaged)
         let retained = Unmanaged.passRetained(context)
         var callbacks = MTAudioProcessingTapCallbacks(
             version: kMTAudioProcessingTapCallbacksVersion_0,

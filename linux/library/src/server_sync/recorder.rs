@@ -205,6 +205,16 @@ impl<'c> Recorder<'c> {
         self.scalar(&key, json!(offset_ms))
     }
 
+    /// The person set a song's own volume, in tenths of a decibel; 0 clears it on the server too.
+    pub fn song_gain(&self, song_key: &str, tenths: i32) -> Result<()> {
+        let key = format!("gain/{song_key}");
+        if tenths == 0 {
+            self.scalar_cleared(&key)
+        } else {
+            self.scalar(&key, json!(tenths))
+        }
+    }
+
     /// The person changed a synced setting. `key` must satisfy the scalar key schema; others are refused quietly.
     pub fn scalar(&self, key: &str, value: Value) -> Result<()> {
         if !self.enabled || validate_scalar(key, &value).is_err() {

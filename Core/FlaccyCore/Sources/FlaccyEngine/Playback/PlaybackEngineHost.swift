@@ -27,14 +27,14 @@ public struct ContinuationRequest: Sendable {
 
 public typealias ContinuationBuilder = @Sendable (ContinuationRequest) async -> [Track]
 
-/// What the app supplies to the engine: the trial gate, the equalizer tap, the
+/// What the app supplies to the engine: the trial gate, the equalizer tap with the song's own volume, the
 /// audio session, haptics, Now Playing and scrobbling hooks, and the library
 /// facts the engine cannot know (root folder, artwork, track pool).
 @MainActor
 public protocol PlaybackEngineHost: AnyObject {
     var libraryRoot: URL { get }
     func isPlaybackGated() -> Bool
-    func attachEqualizer(to item: AVPlayerItem)
+    func attachEqualizer(to item: AVPlayerItem, for track: Track)
     func remoteAsset(for track: Track) -> AVURLAsset
     func activateAudioSession()
     func playFeedback(_ kind: PlaybackFeedbackKind)

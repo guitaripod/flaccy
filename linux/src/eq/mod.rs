@@ -20,9 +20,11 @@ pub mod store;
 
 pub use engine::EqEngine;
 
+use flaccy_library::server_sync::song_key_of;
 use flaccy_shared::equalizer::profile::EqualizerBand;
 use flaccy_shared::equalizer::spectrum::SpectrumAnalyzer;
-use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU32, AtomicU64, Ordering};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Once};
 use std::time::Instant;
 
@@ -48,6 +50,16 @@ impl EqConfig {
     }
 }
 
+/// The person's own song volumes, and which song each level belongs to: the
+/// one being heard, and the one handed to playbin that is heard from its
+/// stream start on.
+#[derive(Default)]
+struct SongLevels {
+    levels: HashMap<String, i32>,
+    heard: Option<String>,
+    handed_over: Option<String>,
+}
+
 struct AnalysisSlot {
     rate: f64,
     samples: Vec<f32>,
@@ -69,6 +81,8 @@ pub struct EqShared {
     largest_gap_ns: AtomicU64,
     least_lead_ns: AtomicI64,
     analysis: Mutex<AnalysisSlot>,
+    song_levels: Mutex<SongLevels>,
+    level_heard: AtomicI32,
     epoch: Instant,
 }
 
@@ -90,6 +104,8 @@ impl EqShared {
                 samples: vec![0.0; SpectrumAnalyzer::WINDOW_SIZE],
                 written: false,
             }),
+            song_levels: Mutex::new(SongLevels::default()),
+            level_heard: AtomicI32::new(0),
             epoch: Instant::now(),
         })
     }
@@ -109,6 +125,56 @@ impl EqShared {
 
     fn try_current(&self) -> Option<Arc<EqConfig>> {
         self.config.try_lock().ok().map(|slot| Arc::clone(&slot))
+    }
+
+    /// Replaces every song volume, as the library database holds them.
+    pub fn set_song_levels(&self, levels: HashMap<String, i32>) {
+        if let Ok(mut slot) = self.song_levels.lock() {
+            slot.levels = levels;
+            let heard = slot.level_of(slot.heard.as_deref());
+            self.level_heard.store(heard, Ordering::Relaxed);
+        }
+    }
+
+    /// One song's volume changed. The song being heard glides to it at once; the
+    /// song already handed to playbin picks it up at its stream start.
+    pub fn set_song_level(&self, title: &str, artist: &str, tenths: i32) {
+        let key = song_key_of(title, artist);
+        if let Ok(mut slot) = self.song_levels.lock() {
+            if tenths == 0 {
+                slot.levels.remove(&key);
+            } else {
+                slot.levels.insert(key.clone(), tenths);
+            }
+            if slot.heard.as_deref() == Some(key.as_str()) {
+                self.level_heard.store(tenths, Ordering::Relaxed);
+            }
+        }
+    }
+
+    /// Called whenever playbin is given a song's URI, before it is: from that
+    /// song's stream start on, its own volume is the one in force.
+    pub fn hand_over(&self, title: &str, artist: &str) {
+        let key = song_key_of(title, artist);
+        if let Ok(mut slot) = self.song_levels.lock() {
+            slot.handed_over = Some(key);
+        }
+    }
+
+    /// The volume of the song being heard, in tenths of a decibel.
+    pub fn level_heard(&self) -> i32 {
+        self.level_heard.load(Ordering::Relaxed)
+    }
+
+    /// A stream started: the song handed over last is now the one heard. Answers
+    /// its level, or `None` when no song was handed over since the last start.
+    fn begin_song(&self) -> Option<i32> {
+        let mut slot = self.song_levels.lock().ok()?;
+        let key = slot.handed_over.take()?;
+        let level = slot.level_of(Some(&key));
+        slot.heard = Some(key);
+        self.level_heard.store(level, Ordering::Relaxed);
+        Some(level)
     }
 
     pub fn set_analysis_requested(&self, requested: bool) {
@@ -207,6 +273,12 @@ impl EqShared {
         }
         output.copy_from_slice(&slot.samples);
         Some(slot.rate)
+    }
+}
+
+impl SongLevels {
+    fn level_of(&self, key: Option<&str>) -> i32 {
+        key.and_then(|key| self.levels.get(key)).copied().unwrap_or(0)
     }
 }
 

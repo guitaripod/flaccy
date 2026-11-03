@@ -36,6 +36,7 @@ final class TransportBarViewController: NSViewController {
     private let elapsedLabel = NSTextField(labelWithString: "0:00")
     private let remainingLabel = NSTextField(labelWithString: "-0:00")
     private let volumeSlider = VolumeSlider()
+    private let songVolumePill = MacSongVolumePill()
     private let routePicker = AVRoutePickerView()
 
     private var chaseInFlight = false
@@ -88,7 +89,7 @@ final class TransportBarViewController: NSViewController {
         sleepCountdownLabel.isHidden = true
 
         let rightCluster = NSStackView(views: [
-            volumeIcon, volumeSlider, routePicker, equalizerButton, sleepTimerButton, sleepCountdownLabel,
+            volumeIcon, volumeSlider, routePicker, equalizerButton, songVolumePill, sleepTimerButton, sleepCountdownLabel,
             queueButton, lyricsButton, nowPlayingButton,
         ])
         rightCluster.orientation = .horizontal
@@ -127,6 +128,7 @@ final class TransportBarViewController: NSViewController {
         super.viewDidLoad()
         observePlayback()
         refreshEverything()
+        MacSongVolumePresenter.register(anchor: volumeSlider)
         artworkObserver = ArtworkChangeObserver { [weak self] in self?.reloadArtwork() }
     }
 

@@ -11,6 +11,7 @@ use crate::ui;
 use crate::versions;
 use adw::prelude::*;
 use flaccy_shared::enrichment_job::{Activity, JobProgress, Scope};
+use flaccy_shared::equalizer::song_gain;
 use flaccy_shared::home::{self, ContextKind, PlaybackContext, RecentContexts};
 use flaccy_shared::home_copy;
 use flaccy_shared::import_plan;
@@ -143,7 +144,8 @@ impl AppCore {
         let root = config.music_root();
         crate::logger::info("lifecycle", &format!("library root: {}", root.display()));
         let eq = EqEngine::new(Rc::clone(&hub));
-        let player = Player::new(Rc::clone(&hub), root, eq.element());
+        eq.shared().set_song_levels(db.song_gains().unwrap_or_default());
+        let player = Player::new(Rc::clone(&hub), root, eq.element(), Arc::clone(eq.shared()));
         player.set_volume(config.volume);
         player.set_shuffle(config.shuffle);
         player.set_repeat(crate::player::RepeatMode::from_id(&config.repeat_mode));
@@ -1094,6 +1096,69 @@ impl AppCore {
         self.config.borrow_mut().volume = volume;
         self.save_config_soon();
         self.hub.emit(&AppEvent::VolumeChanged(volume));
+    }
+
+    /// A song's own volume, in tenths of a decibel: 0 when the person never set one.
+    pub fn song_gain(&self, track: &Track) -> i32 {
+        self.db.song_gain(&track.title, &track.artist).unwrap_or_else(|err| {
+            crate::logger::error("database", &format!("song volume read failed: {err}"));
+            0
+        })
+    }
+
+    /// Plays a song at `tenths` without saving it, while a slider is still moving.
+    pub fn preview_song_gain(&self, track: &Track, tenths: i32) {
+        let level = song_gain::clamped(tenths);
+        self.eq.shared().set_song_level(&track.title, &track.artist, level);
+    }
+
+    /// Sets a song's own volume everywhere: the sound at once, the library
+    /// database, and through Flaccy Server every other Flaccy. Returns the
+    /// level in force.
+    pub fn set_song_gain(&self, track: &Track, tenths: i32) -> i32 {
+        let level = match self.db.set_song_gain(&track.title, &track.artist, tenths) {
+            Ok(level) => level,
+            Err(err) => {
+                crate::logger::error("database", &format!("song volume save failed: {err}"));
+                let stored = self.song_gain(track);
+                self.preview_song_gain(track, stored);
+                self.toast(&format!(
+                    "Couldn't save the volume of “{}” — the library database refused the write ({err}). Try again.",
+                    track.title
+                ));
+                return stored;
+            }
+        };
+        self.preview_song_gain(track, level);
+        crate::logger::info(
+            "playback",
+            &format!("song volume {} for {} — {}", song_gain::label(level), track.title, track.artist),
+        );
+        self.hub.emit(&AppEvent::SongGainChanged);
+        if let Some(sync) = self.server_sync.get() {
+            sync.poke();
+        }
+        level
+    }
+
+    /// Moves the playing song's own volume by `steps` half-decibel steps and says where it landed.
+    pub fn nudge_song_gain(&self, steps: i32) {
+        let Some(track) = self.player.current_track() else {
+            return;
+        };
+        let level = self.set_song_gain(&track, song_gain::stepped(self.song_gain(&track), steps));
+        self.toast(&format!("Song volume {} · {}", song_gain::label(level), track.title));
+    }
+
+    /// Reads every song's own volume again, after Flaccy Server brought new ones.
+    pub fn reload_song_gains(&self) {
+        match self.db.song_gains() {
+            Ok(levels) => {
+                self.eq.shared().set_song_levels(levels);
+                self.hub.emit(&AppEvent::SongGainChanged);
+            }
+            Err(err) => crate::logger::error("database", &format!("song volume reload failed: {err}")),
+        }
     }
 
     pub fn nudge_volume(self: &Rc<Self>, delta: f64) {

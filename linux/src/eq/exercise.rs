@@ -5,6 +5,9 @@
 //! than the same hand-off with the equalizer off, and the element returns to
 //! true passthrough when the equalizer is switched off. `FLACCY_DEMO_EQ=scrub` plays
 //! the same files with the equalizer engaged and runs the scrub drill on them.
+//! `FLACCY_DEMO_EQ=song-volume` gives each file a volume of its own and proves
+//! the level follows the song: raised, lowered live, switched at the gapless
+//! hand-off, and gone again (passthrough) at 0 dB.
 //!
 //! Put `eqtest-a.flac` (44.1 kHz, 16 bit, a 220 Hz tone) and `eqtest-b.flac`
 //! (96 kHz, 24 bit, a 1 kHz tone) in `~/eqtest` and read the app log afterwards.
@@ -30,6 +33,7 @@ pub fn run(core: &Rc<AppCore>, mode: &str) {
     glib::spawn_future_local(async move {
         match mode.as_str() {
             "scrub" => scrub_drill(&core).await,
+            "song-volume" => song_volume_drill(&core).await,
             _ => full_exercise(&core).await,
         }
     });
@@ -330,4 +334,78 @@ async fn scrub_drill(core: &Rc<AppCore>) {
         "the element kept processing while the drill ran",
         eq.shared().frames_processed() > before && eq.is_running(),
     );
+}
+
+/// The sample peak the element let through over the last moments, in dBFS: a
+/// pure tone's level, read exactly rather than through the spectrum's bins.
+async fn settled_level(eq: &EqEngine) -> f32 {
+    sleep(1200).await;
+    let mut loudest = 0.0f32;
+    for _ in 0..5 {
+        if let Some(meter) = eq.meter() {
+            loudest = loudest.max(meter.peak);
+        }
+        sleep(120).await;
+    }
+    20.0 * loudest.max(1e-6).log10()
+}
+
+async fn song_volume_drill(core: &Rc<AppCore>) {
+    let eq = Rc::clone(&core.eq);
+    eq.set_enabled(false);
+    let first = track("eqtest-a.flac", "Tone A");
+    let second = track("eqtest-b.flac", "Tone B");
+    core.set_song_gain(&first, 0);
+    core.set_song_gain(&second, 0);
+    eq.begin_analysis();
+    if !start_playback(core) {
+        finish(core);
+        return;
+    }
+    let running = wait_until(10.0, || eq.shared().frames_processed() > 0).await;
+    report("SongVolume: the first song is playing", running);
+    if !running {
+        finish(core);
+        return;
+    }
+    let dry = settled_level(&eq).await;
+    report(&format!("SongVolume: the first song at 0 dB reads {dry:.1} dB"), (dry + 20.0).abs() < 0.5);
+
+    let stored = core.set_song_gain(&first, 60);
+    let raised = settled_level(&eq).await;
+    report(
+        &format!("SongVolume: raising the playing song to +6 dB lifts it by {:.1} dB while it plays", raised - dry),
+        stored == 60 && ((raised - dry) - 6.0).abs() < LEVEL_TOLERANCE_DECIBELS,
+    );
+    report(
+        "SongVolume: the level is stored for the song",
+        core.song_gain(&first) == 60 && core.db.song_gain("Tone A", "Equalizer Exercise").unwrap_or(0) == 60,
+    );
+
+    core.set_song_gain(&second, -60);
+    let unchanged = settled_level(&eq).await;
+    report(
+        &format!("SongVolume: setting the next song's level leaves the playing one at {:.1} dB", unchanged - dry),
+        ((unchanged - dry) - 6.0).abs() < LEVEL_TOLERANCE_DECIBELS,
+    );
+
+    let (advanced, _, lead) = cross_boundary(core).await;
+    report("SongVolume: the queue advanced gaplessly to the second song", advanced && lead.is_some_and(|lead| lead > 0.0));
+    let after = settled_level(&eq).await;
+    report(
+        &format!("SongVolume: the second song plays at its own -6 dB: {after:.1} dB against {dry:.1} dB dry"),
+        ((after - dry) + 6.0).abs() < LEVEL_TOLERANCE_DECIBELS,
+    );
+    report("SongVolume: the element reports the second song's level", eq.shared().level_heard() == -60);
+
+    core.set_song_gain(&second, 0);
+    let back = settled_level(&eq).await;
+    report(&format!("SongVolume: back to 0 dB the song reads {back:.1} dB"), (back - dry).abs() < LEVEL_TOLERANCE_DECIBELS);
+    eq.end_analysis();
+    let passthrough = wait_until(4.0, || eq.is_element_passthrough()).await;
+    report("SongVolume: at 0 dB with the equalizer off the element is in passthrough again", passthrough);
+
+    core.set_song_gain(&first, 0);
+    crate::logger::info("equalizer", "SONG VOLUME DRILL FINISHED");
+    finish(core);
 }

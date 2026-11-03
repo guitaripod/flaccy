@@ -38,19 +38,21 @@ public struct ServerSyncChanges: Sendable, Equatable {
     public var playlists = false
     public var loves = false
     public var lyricsOffsets = false
+    public var songGains = false
     public var listens = 0
     public var scalarKeys: Set<String> = []
 
     public init() {}
 
     public var isEmpty: Bool {
-        !playlists && !loves && !lyricsOffsets && listens == 0 && scalarKeys.isEmpty
+        !playlists && !loves && !lyricsOffsets && !songGains && listens == 0 && scalarKeys.isEmpty
     }
 
     mutating func merge(_ other: ServerSyncChanges) {
         playlists = playlists || other.playlists
         loves = loves || other.loves
         lyricsOffsets = lyricsOffsets || other.lyricsOffsets
+        songGains = songGains || other.songGains
         listens += other.listens
         scalarKeys.formUnion(other.scalarKeys)
     }

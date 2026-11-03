@@ -7,6 +7,7 @@
 
 use super::{EqConfig, EqShared};
 use flaccy_shared::equalizer::kernel::{EqualizerKernel, Plane};
+use flaccy_shared::equalizer::song_gain;
 use flaccy_shared::equalizer::spectrum::SpectrumAnalyzer;
 use gst::glib;
 use gst::prelude::*;
@@ -174,7 +175,7 @@ struct Stream {
     planes: Vec<Plane>,
     scratch: Vec<f32>,
     analysis: Vec<f32>,
-    applied: Option<u64>,
+    applied: Option<(u64, i32)>,
     dither: Dither,
     engaged: bool,
     was_processing: bool,
@@ -201,17 +202,35 @@ impl Stream {
         }
     }
 
-    fn apply(&mut self, config: &EqConfig) {
+    /// Runs `config` with the song's own volume folded in. The first call of a
+    /// kernel puts it in force on the first sample; later ones glide.
+    fn apply(&mut self, config: &EqConfig, level: i32) {
         let starts_engaged = self.applied.is_none();
-        self.kernel.configure_starting(
+        let stage = song_gain::stage(
+            config.is_engaged,
             &config.bands,
             config.preamp_db,
-            config.is_engaged,
             config.peak_guard,
+            level,
+        );
+        self.kernel.configure_starting(
+            &stage.bands,
+            stage.preamp_db,
+            stage.is_engaged,
+            stage.peak_guard,
             starts_engaged,
         );
-        self.engaged = config.is_engaged;
-        self.applied = Some(config.version);
+        self.engaged = stage.is_engaged;
+        self.applied = Some((config.version, level));
+    }
+
+    /// A new song begins at another volume: a fresh kernel puts its level in
+    /// force from its first sample instead of gliding over from the last song's.
+    fn begin_song(&mut self, level: i32) {
+        if self.applied.map(|(_, applied)| applied) != Some(level) {
+            self.kernel = EqualizerKernel::new(self.channels, self.rate);
+            self.applied = None;
+        }
     }
 
     fn needs_processing(&self, analysis_requested: bool) -> bool {
@@ -349,7 +368,7 @@ mod imp {
             }
             let shared = self.shared();
             let mut stream = Stream::new(format, channels, info.rate() as f64);
-            stream.apply(&shared.current());
+            stream.apply(&shared.current(), shared.level_heard());
             shared.note_stream(info.rate(), channels as u32);
             if let Ok(mut guard) = self.stream.lock() {
                 *guard = Some(stream);
@@ -359,6 +378,11 @@ mod imp {
 
         fn sink_event(&self, event: gst::Event) -> bool {
             match event.view() {
+                gst::EventView::StreamStart(_) => {
+                    if let Some(level) = self.shared().begin_song() {
+                        self.with_stream(|stream| stream.begin_song(level));
+                    }
+                }
                 gst::EventView::FlushStop(_) => {
                     self.shared().forget_last_buffer();
                     self.with_stream(|stream| stream.kernel.reset());
@@ -380,8 +404,9 @@ mod imp {
             let analysis = shared.analysis_requested();
             let processing = self.with_stream(|stream| {
                 if let Some(config) = shared.try_current() {
-                    if stream.applied != Some(config.version) {
-                        stream.apply(&config);
+                    let level = shared.level_heard();
+                    if stream.applied != Some((config.version, level)) {
+                        stream.apply(&config, level);
                     }
                 }
                 let processing = stream.needs_processing(analysis);
@@ -594,6 +619,62 @@ mod tests {
     #[test]
     fn a_nine_decibel_bell_lifts_a_220_hz_tone_in_s16() {
         bell_lifts_the_tone_by_nine_decibels(SampleFormat::S16);
+    }
+
+    impl Rig {
+        fn start_song(&self, title: &str) {
+            self.shared.hand_over(title, "Artist");
+            let pad = self.eq.static_pad("sink").expect("sink pad");
+            assert!(pad.send_event(gst::event::StreamStart::new(title)));
+        }
+
+        fn peak_of(&self, bytes: &[u8]) -> f32 {
+            self.decode_left(bytes).iter().fold(0.0f32, |peak, value| peak.max(value.abs()))
+        }
+    }
+
+    #[test]
+    fn a_song_plays_at_its_own_level_from_its_first_sample_and_the_next_at_its_own() {
+        let rig = Rig::new(SampleFormat::F32);
+        rig.shared.set_song_level("Raised", "Artist", 60);
+        rig.shared.set_song_level("Lowered", "Artist", -60);
+        rig.start_song("Raised");
+        let first = rig.run(&rig.encode(0.1, 220.0, 0, BLOCK_FRAMES));
+        let raised = 0.1 * 10f32.powf(6.0 / 20.0);
+        assert!((rig.peak_of(&first) - raised).abs() < 0.002, "raised from the start: {}", rig.peak_of(&first));
+        assert_eq!(rig.shared.level_heard(), 60);
+
+        rig.start_song("Lowered");
+        let second = rig.run(&rig.encode(0.1, 220.0, BLOCK_FRAMES, 256));
+        let lowered = 0.1 * 10f32.powf(-6.0 / 20.0);
+        assert!(
+            (rig.peak_of(&second) - lowered).abs() < 0.002,
+            "no glide from the last song's level: {}",
+            rig.peak_of(&second)
+        );
+
+        rig.start_song("Untouched");
+        let input = rig.encode(0.1, 220.0, BLOCK_FRAMES + 256, BLOCK_FRAMES);
+        assert_eq!(rig.run(&input), input, "a song at 0 dB crosses bit for bit");
+        assert!(rig.is_passthrough());
+    }
+
+    #[test]
+    fn changing_the_playing_songs_level_glides_and_a_raised_song_never_clips() {
+        let rig = Rig::new(SampleFormat::F32);
+        rig.start_song("Song");
+        let input = rig.encode(0.9, 220.0, 0, BLOCK_FRAMES);
+        assert_eq!(rig.run(&input), input);
+        rig.shared.set_song_level("Song", "Artist", 120);
+        let mut loudest = 0.0f32;
+        for block in 1..8 {
+            loudest = loudest.max(rig.peak_of(&rig.run(&rig.encode(0.9, 220.0, block * BLOCK_FRAMES, BLOCK_FRAMES))));
+        }
+        assert!(loudest <= 1.0001, "the guard holds a +12 dB song at full scale: {loudest}");
+        assert!(loudest > 0.99, "and it is raised up to it: {loudest}");
+        rig.shared.set_song_level("Other", "Artist", -120);
+        let still = rig.peak_of(&rig.run(&rig.encode(0.9, 220.0, 8 * BLOCK_FRAMES, BLOCK_FRAMES)));
+        assert!(still > 0.99, "another song's level leaves this one alone: {still}");
     }
 
     fn switching_off_crossfades_back_and_ends_bit_exact(format: SampleFormat) {

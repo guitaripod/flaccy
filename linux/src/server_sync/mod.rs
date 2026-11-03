@@ -31,12 +31,14 @@ pub use worker::Connected;
 
 const LOG: &str = "server-sync";
 const REFRESH_COALESCE: Duration = Duration::from_millis(250);
+const SONG_GAIN_PREFIX: &str = "gain/";
 
 /// What pulled pages changed, waiting for one refresh of the views.
 #[derive(Default)]
 struct Pending {
     library: bool,
     playlists: bool,
+    song_gains: bool,
     plays: usize,
 }
 
@@ -200,6 +202,7 @@ impl Service {
             let mut pending = self.pending.borrow_mut();
             pending.library |= !dirty.loves.is_empty();
             pending.playlists |= !dirty.playlists.is_empty();
+            pending.song_gains |= dirty.scalars.iter().any(|key| key.starts_with(SONG_GAIN_PREFIX));
             pending.plays += dirty.listens;
         }
         if self.refresh_queued.replace(true) {
@@ -238,14 +241,17 @@ impl Service {
         crate::logger::info(
             LOG,
             &format!(
-                "views refresh: library={} playlists={} plays={}",
-                pending.library, pending.playlists, pending.plays
+                "views refresh: library={} playlists={} song volumes={} plays={}",
+                pending.library, pending.playlists, pending.song_gains, pending.plays
             ),
         );
         if pending.library {
             core.reload_library();
         } else if pending.playlists {
             core.hub.emit(&AppEvent::LibraryReloaded);
+        }
+        if pending.song_gains {
+            core.reload_song_gains();
         }
         if pending.plays > 0 {
             core.hub.emit(&AppEvent::HistorySynced {

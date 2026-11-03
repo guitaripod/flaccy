@@ -362,6 +362,13 @@ extension DatabaseManager {
             try ServerSyncSchema.createPendingKeys(db)
         }
 
+        migrator.registerMigration("v21") { db in
+            try db.create(table: "songGains", options: [.withoutRowID]) { t in
+                t.column("songKey", .text).primaryKey()
+                t.column("tenths", .integer).notNull()
+            }
+        }
+
         return migrator
     }
 }

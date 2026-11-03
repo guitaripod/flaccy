@@ -45,6 +45,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         EqualizerEngine.shared.start()
         #if DEBUG
         EqualizerExercise.runIfRequested()
+        SongVolumeExercise.runIfRequested()
         LyricShareExercise.runIfRequested()
         RemoteExercise.runIfRequested()
         #endif
@@ -441,6 +442,18 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         AudioPlayer.shared.volume = max(0, AudioPlayer.shared.volume - 0.0625)
     }
 
+    @objc func showSongVolume(_ sender: Any?) {
+        MacSongVolumePresenter.presentForPlayingSong()
+    }
+
+    @objc func songLouder(_ sender: Any?) {
+        MacSongVolumePresenter.nudgePlayingSong(by: 1)
+    }
+
+    @objc func songQuieter(_ sender: Any?) {
+        MacSongVolumePresenter.nudgePlayingSong(by: -1)
+    }
+
     @objc func showSection(_ sender: NSMenuItem) {
         NotificationCenter.default.post(
             name: .flaccyShowSection,
@@ -513,7 +526,7 @@ extension MacAppDelegate: NSMenuItemValidation {
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
-        case #selector(toggleLove(_:)):
+        case #selector(toggleLove(_:)), #selector(showSongVolume(_:)), #selector(songLouder(_:)), #selector(songQuieter(_:)):
             return AudioPlayer.shared.currentTrack != nil
         case #selector(togglePlayPause(_:)), #selector(nextTrack(_:)), #selector(previousTrack(_:)),
              #selector(toggleShuffle(_:)), #selector(cycleRepeatMode(_:)):

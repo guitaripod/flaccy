@@ -28,6 +28,7 @@ enum TrackContextMenu {
         playback.append(stationAction(for: track, in: host))
         sections.append(UIMenu(options: .displayInline, children: playback))
         var collection = collectionActions(for: track, in: host)
+        collection.append(songVolumeAction(for: track, in: host))
         if let download = RemoteDownloadActions.action(for: [track], in: host) { collection.append(download) }
         sections.append(UIMenu(options: .displayInline, children: collection))
 
@@ -158,6 +159,16 @@ enum TrackContextMenu {
             }]
         )
         return [love, playlistMenu]
+    }
+
+    private static func songVolumeAction(for track: Track, in host: UIViewController) -> UIMenuElement {
+        let level = SongVolumeStore.shared.level(for: track)
+        let action = UIAction(title: SongVolumeCopy.menuTitle, image: UIImage(systemName: "speaker.wave.2")) { [weak host] _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            host?.present(SongVolumeViewController.makePresented(for: track), animated: true)
+        }
+        if level != 0 { action.subtitle = SongVolumeCopy.level(level) }
+        return action
     }
 
     private static func playlistActions(for track: Track, in host: UIViewController?) -> [UIMenuElement] {

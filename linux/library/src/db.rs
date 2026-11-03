@@ -3,6 +3,7 @@ use crate::server_sync;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use flaccy_shared::album_credit;
 use flaccy_shared::enrichment_job::{self as job, EnrichmentRecord, Fields, Scope, Status};
+use flaccy_shared::equalizer::song_gain;
 use flaccy_shared::library_debut::DebutSummary;
 use flaccy_shared::track_revision::{FileSignature, StoredVersion};
 use rusqlite::functions::FunctionFlags;
@@ -627,7 +628,11 @@ impl Db {
                 trackFileURL TEXT PRIMARY KEY,
                 storedPath TEXT NOT NULL,
                 movedAt DATETIME NOT NULL
-            );",
+            );
+            CREATE TABLE IF NOT EXISTS songGains (
+                songKey TEXT PRIMARY KEY,
+                tenths INTEGER NOT NULL
+            ) WITHOUT ROWID;",
         )?;
         // Added after 1.8.0 so a remembered "no lyrics" answer can expire;
         // duplicate-column on an already-migrated database is the success case.
@@ -1859,6 +1864,49 @@ impl Db {
         })
     }
 
+    /// The person's own volume for a song, in tenths of a decibel: 0 when they
+    /// never set one. Mirrors `DatabaseManager.songGain(title:artist:)`.
+    pub fn song_gain(&self, title: &str, artist: &str) -> Result<i32, rusqlite::Error> {
+        let key = server_sync::song_key_of(title, artist);
+        self.conn
+            .query_row(
+                "SELECT tenths FROM songGains WHERE songKey = ?1",
+                params![key],
+                |row| row.get(0),
+            )
+            .optional()
+            .map(|level| level.unwrap_or(0))
+    }
+
+    /// Every song the person gave a volume of its own, by song key.
+    pub fn song_gains(&self) -> Result<HashMap<String, i32>, rusqlite::Error> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT songKey, tenths FROM songGains")?;
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect()
+    }
+
+    /// Sets a song's own volume and queues it for Flaccy Server; 0 forgets it.
+    /// Returns the level stored, kept inside what the controls offer. Mirrors
+    /// `DatabaseManager.setSongGain(title:artist:tenths:)`.
+    pub fn set_song_gain(
+        &self,
+        title: &str,
+        artist: &str,
+        tenths: i32,
+    ) -> Result<i32, rusqlite::Error> {
+        let level = song_gain::clamped(tenths);
+        let key = server_sync::song_key_of(title, artist);
+        server_sync::record(&self.conn, |recorder| {
+            if write_song_gain(&self.conn, &key, level)? {
+                recorder.song_gain(&key, level)?;
+            }
+            Ok(())
+        })?;
+        Ok(level)
+    }
+
     /// Marks a row as current without changing what it holds, for when the
     /// source was asked again and had nothing better.
     pub fn set_lyrics_revision(
@@ -2766,6 +2814,22 @@ impl Db {
 /// Decodes one `enrichmentState` row through the shared record's persistence
 /// contract, so timestamp encoding lives in exactly one place across both
 /// languages.
+/// Stores a song's own volume by song key, forgetting it at 0. True when the stored level changed.
+pub(crate) fn write_song_gain(conn: &Connection, song_key: &str, tenths: i32) -> rusqlite::Result<bool> {
+    let changed = if tenths == 0 {
+        conn.prepare_cached("DELETE FROM songGains WHERE songKey = ?1")?
+            .execute(params![song_key])?
+    } else {
+        conn.prepare_cached(
+            "INSERT INTO songGains (songKey, tenths) VALUES (?1, ?2)
+             ON CONFLICT(songKey) DO UPDATE SET tenths = excluded.tenths
+             WHERE tenths <> excluded.tenths",
+        )?
+        .execute(params![song_key, tenths])?
+    };
+    Ok(changed > 0)
+}
+
 fn previous_version_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<PreviousVersion> {
     Ok(PreviousVersion {
         rel_path: row.get(0)?,

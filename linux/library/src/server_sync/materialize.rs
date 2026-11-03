@@ -5,15 +5,17 @@ use super::meta;
 use super::pending::{love_key, playlist_key, scalar_key, PendingIndex};
 use super::songref::{refresh_index, Resolver};
 use super::store::atomically;
-use crate::db::{string_from_unix, Db};
+use crate::db::{string_from_unix, write_song_gain, Db};
+use flaccy_shared::equalizer::song_gain;
 use flaccy_server_core::apply::Caller;
-use flaccy_server_core::model::{Entry, PlaylistDoc};
+use flaccy_server_core::model::{Entry, PlaylistDoc, Scalar};
 use flaccy_server_core::rebase::{fold_love, fold_playlist, fold_scalar};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 
 const LYRICS_PREFIX: &str = "lyr/";
+const SONG_GAIN_PREFIX: &str = "gain/";
 
 /// A scalar whose visible value was recomputed; `None` means it is deleted.
 pub(crate) struct ScalarChange {
@@ -58,6 +60,12 @@ pub(crate) fn refresh(
             caller,
             index.for_key(&scalar_key(key)),
         );
+        if let Some(song_key) = key.strip_prefix(SONG_GAIN_PREFIX) {
+            if let Some(scalar) = &visible {
+                write_song_gain(conn, song_key, visible_song_gain(scalar))?;
+            }
+            continue;
+        }
         let value = visible
             .filter(|scalar| !scalar.deleted)
             .map(|scalar| scalar.value);
@@ -71,6 +79,16 @@ pub(crate) fn refresh(
         }
     }
     Ok(changes)
+}
+
+/// The level a synced song volume asks for. A cleared one is 0; a key with
+/// nothing visible, which is what a server too old to accept `gain/` leaves,
+/// never reaches here, so the level set on this device stays.
+fn visible_song_gain(scalar: &Scalar) -> i32 {
+    if scalar.deleted {
+        return 0;
+    }
+    scalar.value.as_i64().map_or(0, song_gain::from_server)
 }
 
 fn sync_playlist(

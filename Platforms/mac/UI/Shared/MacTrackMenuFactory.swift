@@ -60,6 +60,7 @@ enum MacTrackMenuFactory {
         if let download = MacRemoteDownloadActions.menuItem(for: [track], window: window) {
             menu.addItem(download)
         }
+        menu.addItem(songVolumeItem(for: track))
         menu.addItem(.separator())
 
         if options.includeGoToAlbum {
@@ -105,6 +106,16 @@ enum MacTrackMenuFactory {
             })
         }
         return menu
+    }
+
+    /// Opens the song's own volume, showing the level beneath the title when it has one.
+    private static func songVolumeItem(for track: Track) -> NSMenuItem {
+        let item = ClosureMenuItem(title: SongVolumeCopy.menuTitle, systemImage: "speaker.wave.2") {
+            MacSongVolumePresenter.present(for: track)
+        }
+        let level = SongVolumeStore.shared.level(for: track)
+        if level != 0 { item.subtitle = SongVolumeCopy.level(level) }
+        return item
     }
 
     /// Swaps the song back to the version it had before it was last replaced.

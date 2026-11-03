@@ -17,8 +17,9 @@ extension AudioPlayer: PlaybackEngineHost {
         return true
     }
 
-    func attachEqualizer(to item: AVPlayerItem) {
-        EqualizerEngine.shared.attach(to: item)
+    func attachEqualizer(to item: AVPlayerItem, for track: Track) {
+        let store = SongVolumeStore.shared
+        EqualizerEngine.shared.attach(to: item, songKey: store.key(for: track), songGain: store.level(for: track))
     }
 
     /// A song on a server plays from its cached file once that is whole, and streams through the

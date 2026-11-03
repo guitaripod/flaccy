@@ -116,6 +116,42 @@ final class ServerSyncMaterializeTests: XCTestCase {
         XCTAssertEqual(device.sink.calls.count, 0, "lyric offsets never reach the scalar sink")
     }
 
+    func testSongVolumesFollowTheSongToTheOtherDeviceAndAClearResetsThem() async throws {
+        let server = FakeFlaccyServer()
+        let author = try makeDevice(server)
+        let reader = try makeDevice(server)
+        server.newCode("SECOND")
+        _ = try await author.connect()
+        XCTAssertEqual(try author.database.setSongGain(title: "Song", artist: "Artist", tenths: 35), 35)
+        XCTAssertEqual(try author.database.setSongGain(title: "Quiet", artist: "Artist", tenths: -400), -120)
+        try author.database.setSongGain(title: "Song", artist: "Artist", tenths: 35)
+        try author.database.setSongGain(title: "Never", artist: "Artist", tenths: 0)
+        XCTAssertEqual(try author.pendingNames().filter { $0 == "scalar.set" || $0 == "scalar.clear" }.count, 2, "an unchanged level queues nothing")
+        assertUpToDate(await author.settle())
+
+        _ = try await reader.connect(code: "SECOND")
+        assertUpToDate(await reader.settle())
+        XCTAssertEqual(try reader.database.songGain(title: "Song", artist: "Artist"), 35)
+        XCTAssertEqual(try reader.database.songGain(title: "Quiet", artist: "Artist"), -120)
+        XCTAssertEqual(try reader.database.songGain(title: "Song", artist: "Someone Else"), 0)
+        XCTAssertEqual(reader.sink.calls.count, 0, "song volumes never reach the scalar sink")
+
+        try reader.database.setSongGain(title: "Song", artist: "Artist", tenths: 0)
+        assertUpToDate(await reader.settle())
+        assertUpToDate(await author.settle())
+        XCTAssertEqual(try author.database.songGain(title: "Song", artist: "Artist"), 0)
+        XCTAssertEqual(try author.database.songGains().count, 1)
+    }
+
+    func testASongVolumeFromAWiderClientIsHeldInsideTheControlsRange() async throws {
+        let server = FakeFlaccyServer()
+        let device = try makeDevice(server)
+        _ = try await device.connect()
+        try server.plantScalar("gain/\(try device.songKey("Loud"))", .int(240), stamp: Int64(1_000) << 16)
+        assertUpToDate(await device.settle())
+        XCTAssertEqual(try device.database.songGain(title: "Loud", artist: "Artist"), 120)
+    }
+
     func testOtherScalarsGoToTheSinkAndClearingThemResetsTheSetting() async throws {
         let server = FakeFlaccyServer()
         let device = try makeDevice(server)

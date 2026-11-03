@@ -8,6 +8,7 @@ public struct ServerSyncImportReport: Sendable, Equatable {
     public var playlists = 0
     public var entries = 0
     public var loves = 0
+    public var songGains = 0
     public var covers = 0
 
     public init() {}
@@ -16,6 +17,7 @@ public struct ServerSyncImportReport: Sendable, Equatable {
         playlists += other.playlists
         entries += other.entries
         loves += other.loves
+        songGains += other.songGains
         covers += other.covers
     }
 }
@@ -36,9 +38,9 @@ final class NormalizedPlaylistNames: @unchecked Sendable {
     }
 }
 
-/// The first connect (PROTOCOL.md section 13): what a database that already holds playlists, loves and plays hands to a server it
-/// has just enrolled with. Playlists and entries get ids every device derives identically, loves and covers go out at the import
-/// floor stamp so any real action wins over them, and plays go out as migrated listens in batches of 500.
+/// The first connect (PROTOCOL.md section 13): what a database that already holds playlists, loves, song volumes and plays hands to a
+/// server it has just enrolled with. Playlists and entries get ids every device derives identically, loves, song volumes and covers go
+/// out at the import floor stamp so any real action wins over them, and plays go out as migrated listens in batches of 500.
 ///
 /// The work is cut into steps that each commit in a few milliseconds, so the person's own writes never wait on it, and it is
 /// resumable: its place is kept in `sync_meta` as cursors over row ids. Writes made while it runs are recorded as usual; a row
@@ -49,6 +51,7 @@ enum SyncImport {
     static let playlistBatch = 100
     static let entryChunk = 300
     static let loveChunk = 400
+    static let songGainChunk = 400
     static let listenChunk = 300
     static let maxCoverBytes = 2 * 1024 * 1024
 
@@ -57,6 +60,7 @@ enum SyncImport {
     static let entryFloor = "import_entry_floor"
     static let entryCursor = "import_entry_cursor"
     static let loveCursor = "import_love_cursor"
+    static let songGainCursor = "import_gain_cursor"
     static let structureDone = "structure_imported"
 
     /// Marks everything the library holds now as waiting to be imported, and imports the first playlists, in the caller's transaction.
@@ -66,6 +70,7 @@ enum SyncImport {
         try SyncMeta.setInt(db, entryFloor, try Int64.fetchOne(db, sql: "SELECT COALESCE(MAX(id), 0) FROM playlistTracks") ?? 0)
         try SyncMeta.setInt(db, entryCursor, 0)
         try SyncMeta.setInt(db, loveCursor, 0)
+        try SyncMeta.set(db, songGainCursor, "")
         try SyncMeta.remove(db, structureDone)
         return try importPlaylistBatch(db, nowMs: nowMs).report
     }
@@ -82,6 +87,8 @@ enum SyncImport {
         if entries.consumed { return (entries.report, false) }
         let loves = try importLoves(db, nowMs: nowMs)
         if loves.consumed { return (loves.report, false) }
+        let songGains = try importSongGains(db, nowMs: nowMs)
+        if songGains.consumed { return (songGains.report, false) }
         try SyncMeta.set(db, structureDone, "1")
         return (ServerSyncImportReport(), true)
     }
@@ -328,6 +335,28 @@ enum SyncImport {
         }
         try SyncPending.appendAll(db, batch, nowMs: nowMs)
         try SyncMeta.setInt(db, loveCursor, last["id"])
+        return (report, true)
+    }
+
+    private static func importSongGains(_ db: Database, nowMs: Int64) throws -> (report: ServerSyncImportReport, consumed: Bool) {
+        var report = ServerSyncImportReport()
+        let cursor = try SyncMeta.get(db, songGainCursor) ?? ""
+        let rows = try Row.fetchAll(
+            db,
+            sql: "SELECT songKey, tenths FROM songGains WHERE songKey > ? AND tenths <> 0 ORDER BY songKey LIMIT ?",
+            arguments: [cursor, songGainChunk]
+        )
+        guard let last = rows.last else { return (report, false) }
+        let batch: [NewMutation] = rows.map { row in
+            let key = ServerScalarRules.songGainKey(songKey: row["songKey"])
+            let tenths: Int64 = row["tenths"]
+            return NewMutation(
+                "scalar.set", ["key": .string(key), "value": .int(tenths)], touches: [SyncPending.scalarKey(key)], stamp: floorStamp
+            )
+        }
+        report.songGains = batch.count
+        try SyncPending.appendAll(db, batch, nowMs: nowMs)
+        try SyncMeta.set(db, songGainCursor, last["songKey"])
         return (report, true)
     }
 
