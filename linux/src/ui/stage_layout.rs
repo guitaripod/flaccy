@@ -24,6 +24,16 @@ const GUTTER: f64 = 28.0;
 /// A column only moves beside or under the picture when the picture keeps at
 /// least this share of the area it has on its own; otherwise it lies over it.
 const KEEP_SHARE: f64 = 0.85;
+/// The same for the cover, which is there to be recognised rather than
+/// watched, so it gives way to the columns far sooner.
+const COVER_KEEP_SHARE: f64 = 0.3;
+/// The widest the cover is drawn, in logical pixels at 100 % zoom: past this
+/// a cover only shows its pixels, and the stage reads as empty around it.
+pub const COVER_MAX: f64 = 600.0;
+/// The space between the cover and the title under it.
+const COVER_TITLE_GAP: f64 = 22.0;
+/// The narrowest a title under the cover is set.
+const COVER_TITLE_MIN: f64 = 220.0;
 /// The picture fills the stage edge to edge, the background everything else
 /// floats on, unless that crops more than this share of it: a widescreen or
 /// 4:3 video fills any desktop window from 4:3 to 21:9, and only a window far
@@ -47,8 +57,10 @@ const CAPTION_BASE_SCALE: f64 = 1.4;
 /// dock or the picture's foot.
 const CARD_INSET: f64 = 24.0;
 const CARD_LIFT: f64 = 20.0;
-/// The narrowest picture that still gets a title card.
+/// The narrowest picture that still gets a title card, and the share of the
+/// picture's width the card may take.
 const CARD_MIN_WIDTH: f64 = 280.0;
+const CARD_SHARE: f64 = 0.6;
 /// The gap between a floating Up Next sheet and the stage edge and chrome.
 const SHEET_GAP: f64 = 12.0;
 
@@ -206,6 +218,17 @@ pub struct StageInput {
     /// How far the header and the transport dock reach into the stage.
     pub top_inset: f64,
     pub bottom_inset: f64,
+    /// How far they reach while they show, which panels beside or over the
+    /// picture keep clear of even while the chrome rests.
+    pub chrome_top: f64,
+    pub chrome_bottom: f64,
+    /// The picture is the album cover, because the song has no music video
+    /// or its first frame has not arrived: a square kept clear of the header
+    /// and the dock with its title under it, which the columns stand beside
+    /// rather than over whenever they can.
+    pub framed: bool,
+    /// How tall the title under a framed cover is.
+    pub title_height: f64,
 }
 
 impl Default for StageInput {
@@ -220,6 +243,10 @@ impl Default for StageInput {
             zoom: 1.0,
             top_inset: 0.0,
             bottom_inset: 0.0,
+            chrome_top: 0.0,
+            chrome_bottom: 0.0,
+            framed: false,
+            title_height: 0.0,
         }
     }
 }
@@ -235,13 +262,16 @@ pub struct Captions {
 }
 
 /// Where the title card is pinned: a corner point, which way the card grows
-/// from it, and whether it hangs down from it or stands up on it.
+/// from it, whether it hangs down from it or stands up on it, and how wide
+/// it may grow. A centred card is centred on `x`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Anchor {
     pub x: f64,
     pub y: f64,
     pub align_right: bool,
+    pub centered: bool,
     pub from_top: bool,
+    pub max_width: f64,
 }
 
 /// The shade laid under a column that lies over the picture, darkest on
@@ -258,6 +288,8 @@ pub struct Arrangement {
     /// Where the picture is drawn. A picture filling the stage overhangs it
     /// and is clipped.
     pub video: Rect,
+    /// The picture is the album cover (`StageInput::framed`).
+    pub framed: bool,
     /// Whether the picture stands clear of every stage edge, so it is drawn
     /// as a framed screen with rounded corners.
     pub floating: bool,
@@ -296,12 +328,14 @@ pub fn arrange(input: StageInput) -> Arrangement {
             DEFAULT_ASPECT
         },
         zoom: input.zoom.max(0.25),
+        lyrics: match input.lyrics {
+            Some(_) if input.framed => Some(LyricsStyle::Column),
+            lyrics => lyrics,
+        },
         ..input
     };
     let stage = Rect::new(0.0, 0.0, input.width, input.height);
-    let alone = alone_picture(stage, input.aspect)
-        .intersection(stage)
-        .area();
+    let alone = alone_picture(&input).intersection(stage).area();
     let column = (input.width * COLUMN_SHARE)
         .clamp(COLUMN_MIN * input.zoom, COLUMN_MAX * input.zoom)
         .min(input.width * COLUMN_CEILING);
@@ -340,7 +374,7 @@ pub fn arrange(input: StageInput) -> Arrangement {
             return arrangement;
         }
     }
-    let video = alone_picture(stage, input.aspect);
+    let video = alone_picture(&input);
     finish(
         &input,
         video,
@@ -352,13 +386,102 @@ pub fn arrange(input: StageInput) -> Arrangement {
 }
 
 /// The picture with nothing beside it: edge to edge when that crops little,
-/// otherwise fitted.
-fn alone_picture(stage: Rect, aspect: f64) -> Rect {
-    let fitted = stage.fit(aspect);
+/// otherwise fitted. A cover is always fitted, between the header and the
+/// dock with its title under it.
+fn alone_picture(input: &StageInput) -> Rect {
+    let stage = Rect::new(0.0, 0.0, input.width, input.height);
+    if input.framed {
+        let margin = MARGIN * input.zoom;
+        let (top, height) = picture_band(input);
+        let room = Rect::new(margin, top, input.width - 2.0 * margin, height);
+        let cover = fit_picture(input, room);
+        return Rect::new(
+            (input.width - cover.width) / 2.0,
+            picture_top(input, cover.height),
+            cover.width,
+            cover.height,
+        );
+    }
+    let fitted = stage.fit(input.aspect);
     if 1.0 - fitted.area() / stage.area() <= FILL_CROP {
-        stage.cover(aspect)
+        stage.cover(input.aspect)
     } else {
         fitted
+    }
+}
+
+/// The stretch of the stage's height a picture beside a column may use: all
+/// of it for a video, which the header and the dock float over, and the
+/// stretch between them for a cover, less the room its title takes.
+fn picture_band(input: &StageInput) -> (f64, f64) {
+    let margin = MARGIN * input.zoom;
+    if input.framed {
+        let top = input.top_inset + margin;
+        let bottom = input.height - input.bottom_inset - margin - title_room(input);
+        (top, bottom - top)
+    } else {
+        (margin, input.height - 2.0 * margin)
+    }
+}
+
+/// Where a picture of `height` starts: centred on the stage for a video, and
+/// for a cover centred together with its title between the header and the
+/// dock.
+fn picture_top(input: &StageInput, height: f64) -> f64 {
+    if !input.framed {
+        return (input.height - height) / 2.0;
+    }
+    let margin = MARGIN * input.zoom;
+    let top = input.top_inset + margin;
+    let room = input.height - input.bottom_inset - margin - top;
+    top + ((room - height - title_room(input)) / 2.0).max(0.0)
+}
+
+fn title_room(input: &StageInput) -> f64 {
+    if input.framed {
+        input.title_height + COVER_TITLE_GAP * input.zoom
+    } else {
+        0.0
+    }
+}
+
+/// The largest picture that fits `room`, and for a cover no larger than
+/// `COVER_MAX`.
+fn fit_picture(input: &StageInput, room: Rect) -> Rect {
+    if room.width <= 0.0 || room.height <= 0.0 {
+        return Rect::new(room.x, room.y, 0.0, 0.0);
+    }
+    let picture = room.fit(input.aspect);
+    let limit = COVER_MAX * input.zoom;
+    if !input.framed || picture.width.max(picture.height) <= limit {
+        return picture;
+    }
+    let scale = limit / picture.width.max(picture.height);
+    Rect::new(
+        picture.x + picture.width * (1.0 - scale) / 2.0,
+        picture.y + picture.height * (1.0 - scale) / 2.0,
+        picture.width * scale,
+        picture.height * scale,
+    )
+}
+
+fn keep_share(input: &StageInput) -> f64 {
+    if input.framed {
+        COVER_KEEP_SHARE
+    } else {
+        KEEP_SHARE
+    }
+}
+
+/// A column beside the picture: the stage's full height over a video, where
+/// the lyrics scroll under the header and the dock, and the stretch between
+/// them beside a cover, where every column is a panel of its own.
+fn side_column(input: &StageInput, x: f64, width: f64) -> Rect {
+    let rect = Rect::new(x, 0.0, width, input.height);
+    if input.framed {
+        column_between_chrome(input, rect)
+    } else {
+        rect
     }
 }
 
@@ -369,17 +492,13 @@ fn beside(input: &StageInput, alone: f64, lyrics: f64, queue: f64) -> Option<Arr
     let gutter = GUTTER * zoom;
     let margin = MARGIN * zoom;
     let used = lyrics + gutter + if queue > 0.0 { queue + gutter } else { 0.0 };
-    let room = Rect::new(
-        margin,
-        margin,
-        input.width - 2.0 * margin - used,
-        input.height - 2.0 * margin,
-    );
+    let (top, height) = picture_band(input);
+    let room = Rect::new(margin, top, input.width - 2.0 * margin - used, height);
     if room.width <= 0.0 || room.height <= 0.0 {
         return None;
     }
-    let picture = room.fit(input.aspect);
-    if picture.area() < KEEP_SHARE * alone {
+    let picture = fit_picture(input, room);
+    if picture.area() < keep_share(input) * alone {
         return None;
     }
     let group = used + picture.width;
@@ -388,16 +507,16 @@ fn beside(input: &StageInput, alone: f64, lyrics: f64, queue: f64) -> Option<Arr
         Side::Left => (lyrics, queue),
         Side::Right => (queue, lyrics),
     };
-    let left = (left_width > 0.0).then(|| Rect::new(start, 0.0, left_width, input.height));
+    let left = (left_width > 0.0).then(|| side_column(input, start, left_width));
     let picture_x = start + left.map_or(0.0, |rect| rect.width + gutter);
     let video = Rect::new(
         picture_x,
-        (input.height - picture.height) / 2.0,
+        picture_top(input, picture.height),
         picture.width,
         picture.height,
     );
-    let right = (right_width > 0.0)
-        .then(|| Rect::new(video.right() + gutter, 0.0, right_width, input.height));
+    let right =
+        (right_width > 0.0).then(|| side_column(input, video.right() + gutter, right_width));
     let (lyrics_rect, queue_rect) = match input.lyrics_side {
         Side::Left => (left, right),
         Side::Right => (right, left),
@@ -427,17 +546,13 @@ fn beside_queue(input: &StageInput, alone: f64, queue: f64, captions: bool) -> O
     let zoom = input.zoom;
     let gutter = GUTTER * zoom;
     let margin = MARGIN * zoom;
-    let room = Rect::new(
-        margin,
-        margin,
-        input.width - 2.0 * margin - queue - gutter,
-        input.height - 2.0 * margin,
-    );
+    let (top, height) = picture_band(input);
+    let room = Rect::new(margin, top, input.width - 2.0 * margin - queue - gutter, height);
     if room.width <= 0.0 || room.height <= 0.0 {
         return None;
     }
-    let picture = room.fit(input.aspect);
-    if picture.area() < KEEP_SHARE * alone {
+    let picture = fit_picture(input, room);
+    if picture.area() < keep_share(input) * alone {
         return None;
     }
     let group = queue + gutter + picture.width;
@@ -448,7 +563,7 @@ fn beside_queue(input: &StageInput, alone: f64, queue: f64, captions: bool) -> O
     };
     let video = Rect::new(
         video_x,
-        (input.height - picture.height) / 2.0,
+        picture_top(input, picture.height),
         picture.width,
         picture.height,
     );
@@ -468,18 +583,27 @@ fn beside_queue(input: &StageInput, alone: f64, queue: f64, captions: bool) -> O
 fn below(input: &StageInput, alone: f64) -> Option<Arrangement> {
     let zoom = input.zoom;
     let margin = MARGIN * zoom;
-    let top = margin.max(input.top_inset + margin / 2.0);
+    let top = if input.framed {
+        input.top_inset + margin
+    } else {
+        margin.max(input.top_inset + margin / 2.0)
+    };
+    let foot = if input.framed {
+        input.bottom_inset + SHEET_GAP * zoom
+    } else {
+        0.0
+    };
     let room = Rect::new(
         margin,
         top,
         input.width - 2.0 * margin,
-        input.height - top - GUTTER * zoom - BELOW_MIN * zoom,
+        input.height - top - foot - title_room(input) - GUTTER * zoom - BELOW_MIN * zoom,
     );
     if room.width <= 0.0 || room.height <= 0.0 {
         return None;
     }
-    let picture = room.fit(input.aspect);
-    if picture.area() < KEEP_SHARE * alone {
+    let picture = fit_picture(input, room);
+    if picture.area() < keep_share(input) * alone {
         return None;
     }
     let video = Rect::new(
@@ -488,13 +612,13 @@ fn below(input: &StageInput, alone: f64) -> Option<Arrangement> {
         picture.width,
         picture.height,
     );
-    let lyrics_top = video.bottom() + GUTTER * zoom / 2.0;
+    let lyrics_top = video.bottom() + title_room(input) + GUTTER * zoom / 2.0;
     let lyrics_width = (input.width - 2.0 * margin).min(BELOW_MAX_WIDTH * zoom);
     let lyrics = Rect::new(
         (input.width - lyrics_width) / 2.0,
         lyrics_top,
         lyrics_width,
-        input.height - lyrics_top,
+        input.height - foot - lyrics_top,
     );
     let queue = input.queue.then(|| {
         let width = (input.width * QUEUE_SHARE)
@@ -515,8 +639,7 @@ fn below(input: &StageInput, alone: f64) -> Option<Arrangement> {
 /// The picture as large as the stage allows, shifted away from the column
 /// as far as it can go, with the column over it under a shade.
 fn over(input: &StageInput, column: f64, queue: Option<f64>) -> Arrangement {
-    let stage = Rect::new(0.0, 0.0, input.width, input.height);
-    let mut video = alone_picture(stage, input.aspect);
+    let mut video = alone_picture(input);
     let free = match input.lyrics_side {
         Side::Left => Rect::new(column, 0.0, input.width - column, input.height),
         Side::Right => Rect::new(0.0, 0.0, input.width - column, input.height),
@@ -526,22 +649,22 @@ fn over(input: &StageInput, column: f64, queue: Option<f64>) -> Arrangement {
         video.x = centred.clamp(0.0, input.width - video.width);
     }
     let lyrics = match input.lyrics_side {
-        Side::Left => Rect::new(0.0, 0.0, column, input.height),
-        Side::Right => Rect::new(input.width - column, 0.0, column, input.height),
+        Side::Left => side_column(input, 0.0, column),
+        Side::Right => side_column(input, input.width - column, column),
     };
     let reach = (column * SCRIM_REACH).min(input.width);
-    let scrim = Scrim {
+    let scrim = (!input.framed).then(|| Scrim {
         rect: match input.lyrics_side {
             Side::Left => Rect::new(0.0, 0.0, reach, input.height),
             Side::Right => Rect::new(input.width - reach, 0.0, reach, input.height),
         },
         side: input.lyrics_side,
-    };
+    });
     finish(
         input,
         video,
         Some((Placement::Over, lyrics)),
-        Some(scrim),
+        scrim,
         queue.map(|width| sheet(input, width)),
         false,
     )
@@ -562,11 +685,13 @@ fn sheet(input: &StageInput, width: f64) -> (Rect, bool) {
 }
 
 /// A column cut down to the stretch between the header and the dock, so a
-/// list's first and last rows are never under either.
+/// list's first and last rows are never under either, and kept there while
+/// they rest.
 fn column_between_chrome(input: &StageInput, rect: Rect) -> Rect {
     let gap = SHEET_GAP * input.zoom;
-    let top = input.top_inset + gap;
-    let height = (input.height - top - input.bottom_inset - gap).max(120.0 * input.zoom);
+    let top = input.top_inset.max(input.chrome_top) + gap;
+    let bottom = input.bottom_inset.max(input.chrome_bottom);
+    let height = (input.height - top - bottom - gap).max(120.0 * input.zoom);
     Rect::new(rect.x, top, rect.width, height)
 }
 
@@ -591,14 +716,19 @@ fn finish(
         Some(band) => Some((Placement::Captions, band.band)),
         None => lyrics,
     };
-    let card = title_card(
-        input,
-        visible,
-        lyrics.map(|(placement, _)| placement),
-        queue,
-    );
+    let card = if input.framed {
+        Some(cover_title(input, video))
+    } else {
+        title_card(
+            input,
+            visible,
+            lyrics.map(|(placement, _)| placement),
+            queue,
+        )
+    };
     Arrangement {
         video,
+        framed: input.framed,
         floating,
         lyrics,
         captions,
@@ -641,7 +771,9 @@ fn title_card(
             x: visible.x + inset,
             y: visible.y.max(input.top_inset) + inset * 0.66,
             align_right: false,
+            centered: false,
             from_top: true,
+            max_width: visible.width * CARD_SHARE,
         }
     } else {
         let y = visible.bottom().min(input.height - input.bottom_inset) - CARD_LIFT * zoom;
@@ -654,13 +786,34 @@ fn title_card(
             },
             y,
             align_right: right,
+            centered: false,
             from_top: false,
+            max_width: visible.width * CARD_SHARE,
         }
     };
     let under_sheet = queue.is_some_and(|(rect, floating)| {
         floating && (anchor.x >= rect.x - inset && anchor.x <= rect.right() + inset)
     });
     (!under_sheet).then_some(anchor)
+}
+
+/// The title under a framed cover, centred on it and as wide as the cover and
+/// the gutters either side of it allow.
+fn cover_title(input: &StageInput, cover: Rect) -> Anchor {
+    let zoom = input.zoom;
+    let margin = MARGIN * zoom;
+    let max_width = (cover.width + GUTTER * zoom)
+        .max(COVER_TITLE_MIN * zoom)
+        .min(input.width - 2.0 * margin)
+        .max(1.0);
+    Anchor {
+        x: cover.x + cover.width / 2.0,
+        y: cover.bottom() + COVER_TITLE_GAP * zoom,
+        align_right: false,
+        centered: true,
+        from_top: true,
+        max_width,
+    }
 }
 
 #[cfg(test)]
@@ -870,6 +1023,31 @@ mod tests {
     }
 
     #[test]
+    fn a_sheet_keeps_its_place_while_the_chrome_rests() {
+        let shown = StageInput {
+            queue: true,
+            chrome_top: 46.0,
+            chrome_bottom: 130.0,
+            ..with_lyrics(1600.0, 1000.0, LyricsStyle::Auto)
+        };
+        let resting = StageInput {
+            top_inset: 0.0,
+            bottom_inset: 0.0,
+            ..shown
+        };
+        assert_eq!(arrange(shown).queue, arrange(resting).queue);
+        let shown_captions = arrange(StageInput {
+            lyrics: Some(LyricsStyle::Captions),
+            ..shown
+        });
+        let resting_captions = arrange(StageInput {
+            lyrics: Some(LyricsStyle::Captions),
+            ..resting
+        });
+        assert!(resting_captions.captions.unwrap().margin < shown_captions.captions.unwrap().margin);
+    }
+
+    #[test]
     fn the_card_stands_above_the_dock() {
         let stage = input(1920.0, 1080.0);
         let card = arrange(stage).card.unwrap();
@@ -898,6 +1076,96 @@ mod tests {
             ..input(1600.0, 1600.0)
         };
         assert_eq!(arrange(stage).video, Rect::new(0.0, 350.0, 1600.0, 900.0));
+    }
+
+    fn cover(width: f64, height: f64) -> StageInput {
+        StageInput {
+            aspect: 1.0,
+            framed: true,
+            title_height: 96.0,
+            ..input(width, height)
+        }
+    }
+
+    #[test]
+    fn a_cover_alone_sits_between_the_header_and_the_dock_with_its_title_under_it() {
+        let stage = cover(1280.0, 800.0);
+        let arrangement = arrange(stage);
+        let art = arrangement.video;
+        assert!(arrangement.framed && arrangement.floating);
+        assert!((art.width - art.height).abs() < 1e-9);
+        assert!(art.y >= stage.top_inset);
+        let card = arrangement.card.unwrap();
+        assert!(card.centered && card.from_top);
+        assert!((card.x - (art.x + art.width / 2.0)).abs() < 1e-9);
+        assert!(card.y > art.bottom());
+        assert!(card.y + stage.title_height <= 800.0 - stage.bottom_inset);
+        assert!(card.max_width >= art.width);
+        assert!((art.x + art.width / 2.0 - 640.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_cover_never_grows_past_its_largest_size() {
+        let arrangement = arrange(cover(3840.0, 2160.0));
+        assert!(arrangement.video.width <= COVER_MAX + 1e-9);
+        let zoomed = arrange(StageInput {
+            zoom: 1.5,
+            ..cover(3840.0, 2160.0)
+        });
+        assert!(zoomed.video.width > COVER_MAX);
+    }
+
+    #[test]
+    fn a_cover_stands_both_columns_beside_it_on_an_ordinary_window() {
+        let stage = StageInput {
+            lyrics: Some(LyricsStyle::Auto),
+            queue: true,
+            ..cover(1280.0, 800.0)
+        };
+        let arrangement = arrange(stage);
+        assert_eq!(arrangement.placement(), Some(Placement::Beside));
+        let (_, lyrics) = arrangement.lyrics.unwrap();
+        let (queue, floating) = arrangement.queue.unwrap();
+        assert!(!floating);
+        for column in [lyrics, queue] {
+            assert!(!overlaps(column, arrangement.video));
+            assert!(column.y >= stage.top_inset);
+            assert!(column.bottom() <= 800.0 - stage.bottom_inset);
+        }
+        assert!(lyrics.right() <= arrangement.video.x);
+        assert!(queue.x >= arrangement.video.right());
+    }
+
+    #[test]
+    fn a_cover_is_never_captioned_or_shaded() {
+        for style in LyricsStyle::ALL {
+            let arrangement = arrange(StageInput {
+                lyrics: Some(style),
+                ..cover(560.0, 520.0)
+            });
+            assert_ne!(arrangement.placement(), Some(Placement::Captions), "{style:?}");
+            assert!(arrangement.captions.is_none());
+            assert!(arrangement.scrim.is_none());
+        }
+    }
+
+    #[test]
+    fn a_tall_window_puts_the_lyrics_under_the_cover_and_its_title() {
+        let stage = StageInput {
+            lyrics: Some(LyricsStyle::Auto),
+            ..cover(720.0, 1400.0)
+        };
+        let arrangement = arrange(stage);
+        assert_eq!(arrangement.placement(), Some(Placement::Below));
+        let (_, lyrics) = arrangement.lyrics.unwrap();
+        let card = arrangement.card.unwrap();
+        assert!(lyrics.y >= card.y + stage.title_height);
+        assert!(lyrics.bottom() <= 1400.0 - stage.bottom_inset);
+    }
+
+    #[test]
+    fn the_video_arrangement_is_not_framed() {
+        assert!(!arrange(input(1600.0, 1000.0)).framed);
     }
 
     #[test]

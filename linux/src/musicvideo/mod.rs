@@ -1,4 +1,5 @@
 pub mod align;
+pub mod comments;
 pub mod llm;
 pub mod playback;
 pub mod score;
@@ -116,6 +117,9 @@ pub struct MusicVideoHandle {
     /// that simply cannot play reports that instead of reloading forever.
     recovering: Cell<bool>,
     sync_loop: RefCell<Option<glib::SourceId>>,
+    /// The comments of the videos shown lately, so a song played again or a
+    /// sort flipped back shows them at once.
+    pub comments: comments::Store,
 }
 
 impl MusicVideoHandle {
@@ -137,16 +141,12 @@ impl MusicVideoHandle {
             sink_ready: Cell::new(false),
             recovering: Cell::new(false),
             sync_loop: RefCell::new(None),
+            comments: comments::Store::default(),
         }
     }
 
     pub fn state(&self) -> VideoState {
         self.state.borrow().clone()
-    }
-
-    /// Whether the video lens is switched on.
-    pub fn is_enabled(&self) -> bool {
-        self.enabled.get()
     }
 
     pub fn drift(&self) -> Option<f64> {
@@ -238,6 +238,9 @@ pub fn start(core: &Rc<AppCore>) {
         .name("flaccy-buffer-sweep".into())
         .spawn(sweep_download_buffers)
         .ok();
+    if available() {
+        enable(core);
+    }
 }
 
 /// The download buffer that makes the video seekable is a temporary file
@@ -368,28 +371,13 @@ fn sync_tick(core: &Rc<AppCore>) {
     }
 }
 
-/// Turns music video mode on or off. Turning it on resolves a video for
-/// whatever is playing; turning it off tears the pipeline down so nothing is
-/// streamed in the background.
-pub fn set_enabled(core: &Rc<AppCore>, enabled: bool) {
-    if core.music_video.enabled.replace(enabled) == enabled {
-        return;
-    }
-    core.config.borrow_mut().music_video_mode = enabled;
-    crate::config::save(&core.config.borrow());
+/// Music video mode is on from start-up wherever this build can play video:
+/// every song looks for its video, and the stage shows it in place of the
+/// cover once it is found.
+fn enable(core: &Rc<AppCore>) {
+    core.music_video.enabled.set(true);
     crate::precache::refresh(core);
-    if enabled {
-        request_resolve(core, false);
-    } else {
-        next_seq(core);
-        if let Some(stage) = core.music_video.stage.borrow().as_ref() {
-            stage.unload();
-        }
-        *core.music_video.stream.borrow_mut() = None;
-        core.music_video.drift.set(None);
-        core.music_video.exhausted.set(false);
-        publish(core, VideoState::Off);
-    }
+    request_resolve(core, false);
     refresh_sync_loop(core);
 }
 

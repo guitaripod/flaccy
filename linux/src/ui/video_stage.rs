@@ -10,11 +10,14 @@ use gtk::subclass::prelude::*;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-/// How long the picture takes to move when a column comes or goes.
+/// How long the picture takes to move when a column comes or goes, or the
+/// cover opens out into the video.
 const TRANSITION_MS: u32 = 320;
-/// The share of the picture's height the cover takes while it stands in for
-/// the picture.
-const POSTER_SHARE: f64 = 0.78;
+/// How far the status pill sits below the top of the picture or the header.
+const STATUS_GAP: f64 = 14.0;
+/// The width a cover's title is measured at, so a long title reserves its
+/// second line however wide the cover ends up.
+const TITLE_MEASURE_WIDTH: f64 = 240.0;
 /// How far Up Next slides in from its edge as it appears.
 const SHEET_SLIDE: f64 = 40.0;
 /// The shade under a column over the picture, darkest at its outer edge.
@@ -145,11 +148,12 @@ mod imp {
 }
 
 glib::wrapper! {
-    /// Now Playing with a music video: the picture as large as the window
-    /// allows, the glow it casts around it, and the lyrics, Up Next and title
-    /// card laid beside, under or over it as `stage_layout` decides. Columns
-    /// coming and going move the picture with a short glide and fade the
-    /// column; a resize just lays everything out again.
+    /// Now Playing: the music video as large as the window allows and the
+    /// glow it casts around it, or the cover with its title under it while
+    /// there is no video, and the lyrics, Up Next or Comments and title card
+    /// laid beside, under or over it as `stage_layout` decides. Columns coming
+    /// and going and the cover opening out into the video move the picture
+    /// with a short glide and fade; a resize just lays everything out again.
     pub struct VideoStage(ObjectSubclass<imp::VideoStage>)
         @extends gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
@@ -201,9 +205,15 @@ impl VideoStage {
         self.change(|input| input.lyrics_side = side);
     }
 
-    /// The picture's shape changed: a new stream, or bars cropped away.
-    pub fn set_aspect(&self, aspect: f64) {
-        self.change(|input| input.aspect = aspect);
+    /// What the picture is: the video, at its shape once any bars are
+    /// cropped away, or the cover, framed square with its title under it.
+    /// The stage glides from one to the other, fading the cover out as the
+    /// video opens up out of it.
+    pub fn set_picture(&self, framed: bool, aspect: f64) {
+        self.change(|input| {
+            input.framed = framed;
+            input.aspect = aspect;
+        });
     }
 
     pub fn set_insets(&self, top: f64, bottom: f64) {
@@ -213,6 +223,20 @@ impl VideoStage {
         }
         input.top_inset = top;
         input.bottom_inset = bottom;
+        self.imp().input.set(input);
+        self.queue_allocate();
+    }
+
+    /// How far the header and the dock reach while they show: the side
+    /// panels keep clear of that much even while they rest, so nothing moves
+    /// under the pointer as they come and go.
+    pub fn set_chrome_insets(&self, top: f64, bottom: f64) {
+        let mut input = self.imp().input.get();
+        if input.chrome_top == top && input.chrome_bottom == bottom {
+            return;
+        }
+        input.chrome_top = top;
+        input.chrome_bottom = bottom;
         self.imp().input.set(input);
         self.queue_allocate();
     }
@@ -288,6 +312,7 @@ impl VideoStage {
         let mut input = imp.input.get();
         input.width = width;
         input.height = height;
+        input.title_height = self.title_height(input.zoom);
         let target = stage_layout::arrange(input);
         let t = imp.progress.get().clamp(0.0, 1.0);
         let from = if t < 1.0 { imp.from.get() } else { None };
@@ -295,13 +320,18 @@ impl VideoStage {
             Some(from) => from.video.lerp(target.video, t),
             None => target.video,
         };
+        let cover = |arrangement: &Arrangement| if arrangement.framed { 1.0 } else { 0.0 };
+        let cover_weight = match from {
+            Some(from) => cover(&from) + (cover(&target) - cover(&from)) * t,
+            None => cover(&target),
+        };
         let stage = Rect::new(0.0, 0.0, width, height);
         let visible = video.intersection(stage);
 
-        self.place(Layer::Ambient, stage, 1.0);
-        self.place(Layer::Poster, poster_rect(visible), 1.0);
-        self.place(Layer::Video, video, 1.0);
-        self.place_centred(Layer::Status, visible);
+        self.place(Layer::Ambient, stage, 1.0 - cover_weight);
+        self.place(Layer::Poster, video, cover_weight);
+        self.place(Layer::Video, video, 1.0 - cover_weight);
+        self.place_status(visible, &input);
 
         let lyrics_opacity = self.place_column(
             Layer::Lyrics,
@@ -329,7 +359,7 @@ impl VideoStage {
             |(rect, floating)| (floating, rect),
             SHEET_SLIDE * input.zoom * queue_side,
         );
-        self.place_card(target.card, visible);
+        self.place_card(target.card);
 
         let shown = Arrangement {
             video,
@@ -350,6 +380,10 @@ impl VideoStage {
         if !child.is_visible() {
             return;
         }
+        if opacity <= 0.0 || rect.width < 1.0 || rect.height < 1.0 {
+            child.set_child_visible(false);
+            return;
+        }
         child.set_child_visible(true);
         child.set_opacity(opacity);
         child.measure(gtk::Orientation::Horizontal, -1);
@@ -357,25 +391,44 @@ impl VideoStage {
         child.size_allocate(&allocation(rect), -1);
     }
 
-    /// The status message at its natural size, centred on the picture.
-    fn place_centred(&self, layer: Layer, area: Rect) {
-        let Some(child) = self.layer(layer) else {
+    /// The status pill at its natural size, centred across the top of the
+    /// picture and clear of the header.
+    fn place_status(&self, area: Rect, input: &StageInput) {
+        let Some(child) = self.layer(Layer::Status) else {
             return;
         };
         if !child.is_visible() {
             return;
         }
-        let limit = (area.width - 32.0).max(1.0) as i32;
-        let (_, natural, _, _) = child.measure(gtk::Orientation::Horizontal, -1);
-        let width = natural.min(limit).max(1);
+        let gap = STATUS_GAP * input.zoom;
+        let limit = (area.width - 2.0 * gap).max(1.0) as i32;
+        let (minimum, natural, _, _) = child.measure(gtk::Orientation::Horizontal, -1);
+        let width = natural.min(limit).max(minimum).max(1);
         let (_, height, _, _) = child.measure(gtk::Orientation::Vertical, width);
         let rect = Rect::new(
             area.x + (area.width - width as f64) / 2.0,
-            area.y + (area.height - height as f64) / 2.0,
+            area.y.max(input.top_inset) + gap,
             width as f64,
             height as f64,
         );
         child.size_allocate(&allocation(rect), -1);
+    }
+
+    /// How tall the title under a cover is, measured on the card itself
+    /// rather than on whatever reveals it, which measures nothing while it
+    /// is folded away.
+    fn title_height(&self, zoom: f64) -> f64 {
+        let Some(card) = self.layer(Layer::Card) else {
+            return 0.0;
+        };
+        let body = match card.downcast_ref::<gtk::Revealer>() {
+            Some(revealer) => revealer.child(),
+            None => Some(card),
+        };
+        let Some(body) = body else { return 0.0 };
+        let width = (TITLE_MEASURE_WIDTH * zoom).round() as i32;
+        let (_, natural, _, _) = body.measure(gtk::Orientation::Vertical, width);
+        natural as f64
     }
 
     /// Places a column that may be appearing, staying or going: it keeps its
@@ -411,7 +464,7 @@ impl VideoStage {
         opacity
     }
 
-    fn place_card(&self, anchor: Option<Anchor>, visible: Rect) {
+    fn place_card(&self, anchor: Option<Anchor>) {
         let Some(child) = self.layer(Layer::Card) else {
             return;
         };
@@ -420,11 +473,17 @@ impl VideoStage {
             return;
         };
         child.set_child_visible(true);
-        let limit = (visible.width * 0.6).max(1.0) as i32;
-        let (_, natural, _, _) = child.measure(gtk::Orientation::Horizontal, -1);
-        let width = natural.min(limit).max(1);
+        let limit = anchor.max_width.max(1.0) as i32;
+        let (minimum, natural, _, _) = child.measure(gtk::Orientation::Horizontal, -1);
+        let width = if anchor.centered {
+            limit.max(minimum)
+        } else {
+            natural.min(limit).max(minimum).max(1)
+        };
         let (_, height, _, _) = child.measure(gtk::Orientation::Vertical, width);
-        let x = if anchor.align_right {
+        let x = if anchor.centered {
+            anchor.x - width as f64 / 2.0
+        } else if anchor.align_right {
             anchor.x - width as f64
         } else {
             anchor.x
@@ -448,6 +507,7 @@ impl VideoStage {
         let changed = imp.reported.get().is_none_or(|reported| {
             reported.placement() != target.placement()
                 || reported.floating != target.floating
+                || reported.framed != target.framed
                 || captions_moved(&reported, &target)
         });
         if !changed || imp.report_queued.replace(true) {
@@ -480,18 +540,6 @@ fn captions_moved(before: &Arrangement, after: &Arrangement) -> bool {
         }
         (a, b) => a.is_some() != b.is_some(),
     }
-}
-
-/// A square for the cover, centred where the picture goes.
-fn poster_rect(visible: Rect) -> Rect {
-    let square = visible.fit(1.0);
-    let side = square.width * POSTER_SHARE;
-    Rect::new(
-        square.x + (square.width - side) / 2.0,
-        square.y + (square.height - side) / 2.0,
-        side,
-        side,
-    )
 }
 
 fn shifted(rect: Rect, by: f64) -> Rect {

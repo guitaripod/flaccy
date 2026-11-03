@@ -51,6 +51,11 @@ pub struct Config {
     pub eq_hover_preview: bool,
     pub np_show_lyrics: bool,
     pub np_show_queue: bool,
+    /// Now Playing's side panel shows the music video's comments; Up Next
+    /// shares the same place, so at most one of the two is on.
+    pub np_show_comments: bool,
+    /// Which comments come first (`musicvideo::comments::Sort::id`).
+    pub np_comments_sort: String,
     /// Which side panel the library shell had open: "lyrics", "queue", or empty
     /// for none.
     pub side_panel: String,
@@ -60,10 +65,8 @@ pub struct Config {
     /// Whole-interface zoom, 1.0 = the platform default. Lyrics scale on top of
     /// this with their own `lyrics_font_size`.
     pub ui_scale: f64,
-    pub np_show_video: bool,
     /// How lyrics sit on a music video (`stage_layout::LyricsStyle::id`).
     pub np_video_lyrics: String,
-    pub music_video_mode: bool,
     pub music_video_quality: i32,
     pub music_video_llm: bool,
     /// Empty means "whichever installed Ollama model looks most suitable".
@@ -220,14 +223,14 @@ impl Default for Config {
             eq_hover_preview: true,
             np_show_lyrics: false,
             np_show_queue: false,
+            np_show_comments: false,
+            np_comments_sort: "top".to_string(),
             side_panel: String::new(),
             shuffle: false,
             repeat_mode: "off".to_string(),
             lyrics_font_size: LYRICS_FONT_DEFAULT,
             ui_scale: UI_SCALE_DEFAULT,
-            np_show_video: false,
             np_video_lyrics: "auto".to_string(),
-            music_video_mode: false,
             music_video_quality: MUSIC_VIDEO_QUALITY_DEFAULT,
             music_video_llm: true,
             music_video_llm_model: String::new(),

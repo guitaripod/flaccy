@@ -34,6 +34,19 @@ impl VideoMatch {
         automatic + self.trim
     }
 
+    /// Where the local file plays the moment the video shows at `video` of
+    /// its own seconds, or `None` when the album has no such moment: a scene
+    /// the edit added, or a time before the song starts.
+    pub fn local_time(&self, video: f64) -> Option<f64> {
+        let automatic = video - self.trim;
+        let local = if self.map.is_empty() {
+            Some(automatic - self.offset)
+        } else {
+            self.map.local_time(automatic)
+        };
+        local.filter(|local| *local >= 0.0)
+    }
+
     /// How fast the video's timeline runs against the local file at `local`.
     pub fn rate_at(&self, local: f64) -> f64 {
         if self.map.is_empty() {
@@ -128,6 +141,23 @@ impl TimeMap {
         segment.start + segment.offset + segment.rate * (local - segment.start)
     }
 
+    /// The inverse of `video_time`: the first local position whose video time
+    /// is `video`, or `None` when no stretch of the local file plays it. The
+    /// first stretch also reaches back before its start and the last one on
+    /// past the end, the same way `segment_at` hands them out.
+    pub fn local_time(&self, video: f64) -> Option<f64> {
+        if self.segments.is_empty() {
+            return Some(video);
+        }
+        let last = self.segments.len() - 1;
+        self.segments.iter().enumerate().find_map(|(index, segment)| {
+            let local = segment.start + (video - segment.start - segment.offset) / segment.rate;
+            let after_start = index == 0 || local >= segment.start;
+            let before_end = index == last || local < self.segments[index + 1].start;
+            (after_start && before_end).then_some(local)
+        })
+    }
+
     /// The local position where the segment after the one governing `local`
     /// begins — the moment the video next jumps.
     pub fn next_cut_after(&self, local: f64) -> Option<f64> {
@@ -216,6 +246,54 @@ mod tests {
         assert_eq!(map.video_time(80.0), 85.25);
         assert_eq!(map.next_cut_after(10.0), Some(72.0));
         assert_eq!(map.next_cut_after(80.0), None);
+    }
+
+    #[test]
+    fn a_moment_in_the_video_finds_its_place_in_the_album() {
+        let inserted_scene = TimeMap::new(vec![
+            Segment {
+                start: 0.0,
+                offset: 10.5,
+                rate: 1.0,
+            },
+            Segment {
+                start: 72.0,
+                offset: 30.0,
+                rate: 1.0,
+            },
+        ]);
+        assert_eq!(inserted_scene.local_time(20.5), Some(10.0));
+        assert_eq!(inserted_scene.local_time(110.0), Some(80.0));
+        assert_eq!(inserted_scene.local_time(90.0), None);
+        for local in [3.0, 40.0, 71.0, 72.5, 150.0] {
+            let back = inserted_scene
+                .local_time(inserted_scene.video_time(local))
+                .expect("mapped");
+            assert!((back - local).abs() < 1e-9, "{local} came back as {back}");
+        }
+        let repeated = TimeMap::new(vec![
+            Segment {
+                start: 0.0,
+                offset: 10.5,
+                rate: 1.0,
+            },
+            Segment {
+                start: 72.0,
+                offset: 5.25,
+                rate: 1.0,
+            },
+        ]);
+        assert_eq!(repeated.local_time(80.0), Some(69.5));
+    }
+
+    #[test]
+    fn a_video_moment_carries_the_hand_trim_and_drops_the_intro() {
+        let plain = found(12.0, TimeMap::default(), 0.5);
+        assert_eq!(plain.local_time(42.5), Some(30.0));
+        assert_eq!(plain.local_time(5.0), None);
+        let mapped = found(0.0, TimeMap::single(8.0), -1.0);
+        assert_eq!(mapped.local_time(57.0), Some(50.0));
+        assert_eq!(mapped.video_time(50.0), 57.0);
     }
 
     #[test]

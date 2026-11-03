@@ -30,13 +30,12 @@ pub struct VideoView {
     pub surface: VideoSurface,
     pub status: gtk::Widget,
     pub ambient: AmbientGlow,
-    /// The header button whose popover holds the sync, the lyrics style and
-    /// the choice of video.
+    /// The header button whose popover holds the video and its sync, the
+    /// lyrics style, which side the lyrics keep to and the choice of video.
     pub tools: gtk::MenuButton,
     pub lyrics_style: adw::ToggleGroup,
-    /// Activating loads and syncs a video for whatever is playing;
-    /// deactivating parks the pipeline so nothing streams off screen.
-    pub set_active: Rc<dyn Fn(bool)>,
+    /// On while the lyrics keep to the right and Up Next to the left.
+    pub lyrics_right: gtk::Switch,
 }
 
 pub fn build(ui: &Rc<Ui>) -> VideoView {
@@ -72,7 +71,7 @@ pub fn build(ui: &Rc<Ui>) -> VideoView {
             let stage = ui.core.music_video.stage_state();
             let exhausted = ui.core.music_video.exhausted();
             status.render(&state, &stage, exhausted);
-            tools.render(&ui, &state);
+            tools.render(&ui, &state, exhausted);
             match state.matched() {
                 Some(found) => ambient.set_video(&found.video_id),
                 None => ambient.clear(),
@@ -102,28 +101,14 @@ pub fn build(ui: &Rc<Ui>) -> VideoView {
         });
     }
 
-    let set_active: Rc<dyn Fn(bool)> = {
-        let ui = Rc::clone(ui);
-        let render = Rc::clone(&render);
-        let lens = ambient.downgrade();
-        Rc::new(move |active| {
-            musicvideo::set_enabled(&ui.core, active);
-            let on_screen =
-                lens.upgrade().is_some_and(|lens| lens.is_mapped()) && !ui.window.is_suspended();
-            musicvideo::set_visible(&ui.core, active && on_screen);
-            render();
-            inhibitor.update();
-        })
-    };
-
     VideoView {
         picture,
         surface,
         status: status.widget.upcast(),
         ambient,
         lyrics_style: tools.lyrics_style.clone(),
+        lyrics_right: tools.lyrics_right.clone(),
         tools: tools.button,
-        set_active,
     }
 }
 
@@ -150,18 +135,23 @@ fn offloaded(surface: &VideoSurface) -> gtk::Widget {
     offload.upcast()
 }
 
-/// The video's options, in a popover off the header: what is playing and how
-/// it was chosen, how the picture is synced, the picture timing nudges, how
-/// lyrics sit on the video, and the way to a different video.
+/// Now Playing's options, in a popover off the header: the video playing and
+/// how it was chosen and synced, the picture timing nudges, or why there is
+/// none; how lyrics sit on the video and which side they keep to; and the way
+/// to a different video.
 #[derive(Clone)]
 struct Tools {
     button: gtk::MenuButton,
     lyrics_style: adw::ToggleGroup,
+    lyrics_right: gtk::Switch,
     matched: gtk::Box,
     title: gtk::Label,
     provenance: gtk::Label,
     sync: gtk::Label,
     reset: gtk::Button,
+    absent: gtk::Label,
+    search: gtk::Button,
+    choose: gtk::Button,
     open: gtk::Button,
 }
 
@@ -216,6 +206,13 @@ impl Tools {
         matched.append(&sync);
         matched.append(&timing);
 
+        let absent = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .max_width_chars(34)
+            .build();
+        absent.add_css_class("dim");
+
         let lyrics_style = adw::ToggleGroup::new();
         lyrics_style.add_css_class("round");
         for style in LyricsStyle::ALL {
@@ -235,7 +232,7 @@ impl Tools {
             .build();
         style_caption.add_css_class("caption-heading");
         let style_hint = gtk::Label::builder()
-            .label("Auto sets a column beside, under or over the picture, and captions when a column would hide too much of it.")
+            .label("Auto sets a column beside, under or over the picture, and captions when a column would hide too much of it. Beside a cover the lyrics are always a column.")
             .xalign(0.0)
             .wrap(true)
             .max_width_chars(34)
@@ -243,6 +240,14 @@ impl Tools {
         style_hint.add_css_class("dim");
         style_hint.add_css_class("caption");
 
+        let lyrics_right = gtk::Switch::builder()
+            .active(ui.core.config.borrow().np_swap_sides)
+            .valign(gtk::Align::Center)
+            .build();
+        let sides = option_row("Lyrics on the right", &lyrics_right);
+        sides.set_tooltip_text(Some("Swap the sides the lyrics and Up Next or Comments keep to"));
+
+        let search = menu_button("Search Again");
         let choose = menu_button("Choose a Different Video…");
         let open = menu_button("Open on YouTube at This Moment");
 
@@ -256,22 +261,35 @@ impl Tools {
             .width_request(300)
             .build();
         content.append(&matched);
+        content.append(&absent);
         content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         content.append(&style_caption);
         content.append(&lyrics_style);
         content.append(&style_hint);
+        content.append(&sides);
         content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        content.append(&search);
         content.append(&choose);
         content.append(&open);
 
         let popover = gtk::Popover::builder().child(&content).build();
         let button = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
-            .tooltip_text("Video Options")
+            .tooltip_text("Now Playing Options")
             .popover(&popover)
             .valign(gtk::Align::Center)
             .build();
         button.add_css_class("flat");
+        {
+            let ui = Rc::clone(ui);
+            let popover = popover.downgrade();
+            search.connect_clicked(move |_| {
+                if let Some(popover) = popover.upgrade() {
+                    popover.popdown();
+                }
+                musicvideo::refresh(&ui.core);
+            });
+        }
         {
             let ui = Rc::clone(ui);
             let popover = popover.downgrade();
@@ -296,22 +314,42 @@ impl Tools {
         Self {
             button,
             lyrics_style,
+            lyrics_right,
             matched,
             title,
             provenance,
             sync,
             reset,
+            absent,
+            search,
+            choose,
             open,
         }
     }
 
-    fn render(&self, ui: &Rc<Ui>, state: &VideoState) {
+    fn render(&self, ui: &Rc<Ui>, state: &VideoState, exhausted: bool) {
         let Some(found) = state.matched() else {
             self.matched.set_visible(false);
             self.open.set_sensitive(false);
+            let absent = absence_line(state);
+            self.absent.set_visible(absent.is_some());
+            self.absent.set_label(absent.as_deref().unwrap_or_default());
+            self.search.set_visible(matches!(
+                state,
+                VideoState::Missing(_) | VideoState::Failed(_)
+            ));
+            self.choose
+                .set_visible(!matches!(state, VideoState::Off | VideoState::Searching(_)));
+            set_menu_label(&self.choose, "Choose a Video…");
             return;
         };
         self.matched.set_visible(true);
+        self.absent.set_visible(exhausted);
+        self.absent
+            .set_label("The video ended before the song; your audio plays on with the cover.");
+        self.search.set_visible(false);
+        self.choose.set_visible(true);
+        set_menu_label(&self.choose, "Choose a Different Video…");
         self.open.set_sensitive(true);
         self.title.set_label(&found.title);
         self.provenance.set_label(&provenance_line(found));
@@ -323,6 +361,37 @@ impl Tools {
             video.stream_codec().map(|codec| codec.label()),
         ));
         self.reset.set_sensitive(found.trim.abs() >= 0.005);
+    }
+}
+
+/// What the options say while there is no video: still looking, nothing
+/// found and why, or what went wrong.
+fn absence_line(state: &VideoState) -> Option<String> {
+    match state {
+        VideoState::Off => None,
+        VideoState::Searching(_) => Some("Finding the music video…".to_string()),
+        VideoState::Missing(reason) => Some(format!(
+            "No music video for this song. {reason} Pick or paste one below if you know it."
+        )),
+        VideoState::Failed(message) => Some(message.clone()),
+        VideoState::Ready(_) => None,
+    }
+}
+
+/// The first clause of a failure, "Couldn't load the video's stream", for
+/// places too small for the cause yt-dlp spelled out after it; the whole
+/// message stays in the options and the log.
+pub(crate) fn brief(message: &str) -> String {
+    let message = message.trim();
+    match message.split_once(": ") {
+        Some((lead, _)) if lead.chars().count() >= 12 => lead.to_string(),
+        _ => message.to_string(),
+    }
+}
+
+fn set_menu_label(button: &gtk::Button, text: &str) {
+    if let Some(label) = button.child().and_downcast::<gtk::Label>() {
+        label.set_label(text);
     }
 }
 
@@ -389,77 +458,62 @@ impl IdleInhibitor {
     }
 }
 
-/// What the status layer's button does.
+/// What the status pill's button does.
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum Action {
-    /// Search YouTube from scratch: nothing was found last time.
-    SearchAgain,
-    /// Retry the match already decided with a fresh stream.
+    /// Retry the match already decided with a fresh stream, or the search
+    /// when nothing was decided.
     TryAgain,
 }
 
 impl Action {
     fn label(self) -> &'static str {
         match self {
-            Action::SearchAgain => "Search Again",
             Action::TryAgain => "Try Again",
         }
     }
 }
 
-/// The layer that covers the picture whenever there is nothing to show:
-/// searching, buffering, no match, or a failure worth explaining.
+/// A small pill on the picture that says what the video is doing while it is
+/// not simply playing: looking, opening, buffering, or what went wrong. A song
+/// with no music video says nothing here: the cover is the answer, and the
+/// options say why.
 #[derive(Clone)]
 struct StatusLayer {
     widget: gtk::Box,
     spinner: adw::Spinner,
     icon: gtk::Image,
     label: gtk::Label,
-    detail: gtk::Label,
     button: gtk::Button,
-    action: Rc<Cell<Action>>,
 }
 
 impl StatusLayer {
     fn new(ui: &Rc<Ui>) -> Self {
         let spinner = adw::Spinner::new();
-        spinner.set_size_request(36, 36);
-        let icon = gtk::Image::from_icon_name("video-display-symbolic");
-        icon.set_pixel_size(40);
-        icon.add_css_class("dim");
-        let label = gtk::Label::new(None);
-        label.add_css_class("title-4");
-        label.set_wrap(true);
-        label.set_justify(gtk::Justification::Center);
-        let detail = gtk::Label::new(None);
-        detail.add_css_class("dim");
-        detail.add_css_class("caption");
-        detail.set_wrap(true);
-        detail.set_justify(gtk::Justification::Center);
-        let button = gtk::Button::with_label(Action::SearchAgain.label());
-        button.add_css_class("pill");
-        button.set_halign(gtk::Align::Center);
-        let action = Rc::new(Cell::new(Action::SearchAgain));
+        spinner.set_size_request(16, 16);
+        let icon = gtk::Image::from_icon_name("network-offline-symbolic");
+        icon.set_pixel_size(16);
+        let label = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .max_width_chars(48)
+            .build();
+        let button = gtk::Button::with_label(Action::TryAgain.label());
+        button.add_css_class("flat");
+        button.add_css_class("mv-status-action");
         {
             let ui = Rc::clone(ui);
-            let action = Rc::clone(&action);
-            button.connect_clicked(move |_| match action.get() {
-                Action::SearchAgain => musicvideo::refresh(&ui.core),
-                Action::TryAgain => musicvideo::retry(&ui.core),
-            });
+            button.connect_clicked(move |_| musicvideo::retry(&ui.core));
         }
 
         let widget = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
+            .orientation(gtk::Orientation::Horizontal)
             .spacing(10)
-            .halign(gtk::Align::Center)
-            .valign(gtk::Align::Center)
             .build();
         widget.add_css_class("mv-status");
         widget.append(&spinner);
         widget.append(&icon);
         widget.append(&label);
-        widget.append(&detail);
         widget.append(&button);
 
         Self {
@@ -467,120 +521,56 @@ impl StatusLayer {
             spinner,
             icon,
             label,
-            detail,
             button,
-            action,
         }
     }
 
     fn render(&self, state: &VideoState, stage: &StageState, exhausted: bool) {
         let description = describe(state, stage, exhausted);
-        let showing = description.headline.is_some() || description.busy;
-        self.widget.set_visible(showing);
+        let Some(headline) = description.headline else {
+            self.widget.set_visible(false);
+            return;
+        };
+        self.widget.set_visible(true);
         self.spinner.set_visible(description.busy);
-        self.icon
-            .set_visible(!description.busy && description.icon.is_some());
-        if let Some(icon) = description.icon {
-            self.icon.set_icon_name(Some(icon));
-        }
-        show_text(&self.label, description.headline);
-        show_text(&self.detail, description.detail);
-        match description.action {
-            Some(action) => {
-                self.action.set(action);
-                self.button.set_label(action.label());
-                self.button.set_visible(true);
-            }
-            None => self.button.set_visible(false),
-        }
-    }
-}
-
-fn show_text(label: &gtk::Label, text: Option<String>) {
-    match text {
-        Some(text) => {
-            label.set_label(&text);
-            label.set_visible(true);
-        }
-        None => label.set_visible(false),
+        self.icon.set_visible(!description.busy);
+        self.label.set_label(&brief(&headline));
+        self.widget.set_tooltip_text(Some(&headline));
+        self.button.set_visible(description.action.is_some());
     }
 }
 
 #[derive(Default)]
 struct Description {
     busy: bool,
-    icon: Option<&'static str>,
     headline: Option<String>,
-    detail: Option<String>,
     action: Option<Action>,
 }
 
-/// One place that decides what the lens says, so the wording is the same
+/// One place that decides what the pill says, so the wording is the same
 /// wherever it is shown.
 fn describe(state: &VideoState, stage: &StageState, exhausted: bool) -> Description {
-    if exhausted && matches!(state, VideoState::Ready(_)) {
-        return Description {
-            icon: Some("media-playback-stop-symbolic"),
-            headline: Some("The video ended before the song".to_string()),
-            detail: Some("Your audio keeps playing to the end.".to_string()),
-            ..Description::default()
-        };
-    }
+    let busy = |headline: String| Description {
+        busy: true,
+        headline: Some(headline),
+        action: None,
+    };
+    let failed = |headline: String| Description {
+        busy: false,
+        headline: Some(headline),
+        action: Some(Action::TryAgain),
+    };
     match state {
-        VideoState::Off => Description {
-            icon: Some("video-display-symbolic"),
-            headline: Some("Music video mode is off".to_string()),
-            ..Description::default()
-        },
-        VideoState::Searching(phase) => {
-            let (headline, detail) = match phase {
-                Phase::Searching => ("Finding a music video…".to_string(), None),
-                Phase::Judging(model) => (
-                    format!("Asking {model} to choose…"),
-                    Some("The closest results were too close to call.".to_string()),
-                ),
-                Phase::Loading => ("Loading the video…".to_string(), None),
-            };
-            Description {
-                busy: true,
-                headline: Some(headline),
-                detail,
-                ..Description::default()
-            }
-        }
-        VideoState::Missing(reason) => Description {
-            icon: Some("video-display-symbolic"),
-            headline: Some("No music video for this song".to_string()),
-            detail: Some(format!(
-                "{reason} Your audio keeps playing — pick or paste a video from the list button if you know one."
-            )),
-            action: Some(Action::SearchAgain),
-            ..Description::default()
-        },
-        VideoState::Failed(message) => Description {
-            icon: Some("network-offline-symbolic"),
-            headline: Some(message.clone()),
-            action: Some(Action::TryAgain),
-            ..Description::default()
-        },
+        VideoState::Off | VideoState::Missing(_) => Description::default(),
+        VideoState::Searching(Phase::Searching) => busy("Finding the music video…".to_string()),
+        VideoState::Searching(Phase::Judging(model)) => busy(format!("Asking {model} to choose…")),
+        VideoState::Searching(Phase::Loading) => busy("Loading the video…".to_string()),
+        VideoState::Failed(message) => failed(message.clone()),
+        VideoState::Ready(_) if exhausted => Description::default(),
         VideoState::Ready(_) => match stage {
-            StageState::Failed(message) => Description {
-                icon: Some("network-offline-symbolic"),
-                headline: Some(message.clone()),
-                detail: Some("Your audio keeps playing.".to_string()),
-                action: Some(Action::TryAgain),
-                ..Description::default()
-            },
-            StageState::Buffering(percent) => Description {
-                busy: true,
-                headline: Some(format!("Buffering… {percent}%")),
-                ..Description::default()
-            },
-            StageState::Opening => Description {
-                busy: true,
-                headline: Some("Opening video…".to_string()),
-                ..Description::default()
-            },
+            StageState::Failed(message) => failed(message.clone()),
+            StageState::Buffering(percent) => busy(format!("Buffering… {percent}%")),
+            StageState::Opening => busy("Opening the video…".to_string()),
             StageState::Idle | StageState::Playing => Description::default(),
         },
     }
@@ -670,7 +660,7 @@ fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {
 /// marked, with thumbnails so a lyric video is told from the real one at a
 /// glance — plus a field for pasting the right video when the search missed
 /// it. The correction is remembered.
-fn present_chooser(ui: &Rc<Ui>) {
+pub fn present_chooser(ui: &Rc<Ui>) {
     let list = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .build();
@@ -923,7 +913,7 @@ fn candidate_subtitle(candidate: &Candidate, track_duration: f64) -> String {
 
 /// Watch counts run to ten digits; nobody reads those, so they are rounded to
 /// one significant decimal and given a suffix.
-fn compact_count(value: u64) -> String {
+pub(crate) fn compact_count(value: u64) -> String {
     for (limit, suffix) in [(1_000_000_000u64, "B"), (1_000_000, "M"), (1_000, "K")] {
         if value >= limit {
             let scaled = value as f64 / limit as f64;
@@ -1077,7 +1067,7 @@ mod tests {
     }
 
     #[test]
-    fn the_lens_explains_every_state_it_can_be_in() {
+    fn the_pill_speaks_only_while_the_video_is_on_its_way_or_broken() {
         let searching = describe(
             &VideoState::Searching(Phase::Searching),
             &StageState::Idle,
@@ -1098,8 +1088,7 @@ mod tests {
             &StageState::Idle,
             false,
         );
-        assert!(missing.headline.is_some() && missing.detail.is_some());
-        assert_eq!(missing.action, Some(Action::SearchAgain));
+        assert!(missing.headline.is_none() && missing.action.is_none());
         let failed = describe(
             &VideoState::Failed("Couldn't reach the video's server".into()),
             &StageState::Idle,
@@ -1121,23 +1110,26 @@ mod tests {
     }
 
     #[test]
-    fn a_song_that_outlasts_its_video_is_told_so() {
+    fn a_failure_is_cut_to_its_first_clause() {
+        assert_eq!(
+            brief("Couldn't load the video's stream: Unable to download API page: (refused)"),
+            "Couldn't load the video's stream"
+        );
+        assert_eq!(brief("HTTP: 403"), "HTTP: 403");
+        assert_eq!(
+            brief("yt-dlp isn't installed — install it with your package manager"),
+            "yt-dlp isn't installed — install it with your package manager"
+        );
+    }
+
+    #[test]
+    fn a_song_that_outlasts_its_video_goes_back_to_the_cover_quietly() {
         let ready = VideoState::Ready(found(0.0, true, "", "x"));
         let ended = describe(&ready, &StageState::Playing, true);
-        assert!(!ended.busy);
-        assert_eq!(
-            ended.headline.as_deref(),
-            Some("The video ended before the song")
-        );
-        assert!(ended.detail.is_some());
-        let missing = describe(
-            &VideoState::Missing("No results.".into()),
-            &StageState::Idle,
-            true,
-        );
-        assert_eq!(
-            missing.headline.as_deref(),
-            Some("No music video for this song")
-        );
+        assert!(!ended.busy && ended.headline.is_none());
+        let missing = VideoState::Missing("No results.".into());
+        assert!(absence_line(&missing)
+            .is_some_and(|line| line.starts_with("No music video for this song. No results.")));
+        assert!(absence_line(&VideoState::Off).is_none());
     }
 }

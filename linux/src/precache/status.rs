@@ -77,14 +77,10 @@ pub fn lyrics_line(status: &Status, now_unix: i64) -> String {
     }
 }
 
-/// What the video lane is doing, in a sentence. `lens_on` is whether the video
-/// lens is switched on, which the lane waits for.
-pub fn video_line(status: &Status, enabled: bool, lens_on: bool, now_unix: i64) -> String {
+/// What the video lane is doing, in a sentence.
+pub fn video_line(status: &Status, enabled: bool, now_unix: i64) -> String {
     if !enabled {
         return "Off".to_string();
-    }
-    if !lens_on {
-        return "Waiting for the video lens to be turned on".to_string();
     }
     match &status.video {
         LaneState::Off => "Starting up".to_string(),
@@ -139,17 +135,13 @@ mod tests {
     }
 
     #[test]
-    fn the_video_lane_waits_for_the_lens_and_names_the_song_it_is_on() {
+    fn the_video_lane_names_the_song_it_is_on() {
         let working = Status {
             video: LaneState::Working,
             video_current: "Heartless".into(),
             ..Status::default()
         };
-        assert_eq!(video_line(&working, false, true, 0), "Off");
-        assert_eq!(
-            video_line(&working, true, false, 0),
-            "Waiting for the video lens to be turned on"
-        );
-        assert_eq!(video_line(&working, true, true, 0), "Preparing \u{201c}Heartless\u{201d}");
+        assert_eq!(video_line(&working, false, 0), "Off");
+        assert_eq!(video_line(&working, true, 0), "Preparing \u{201c}Heartless\u{201d}");
     }
 }

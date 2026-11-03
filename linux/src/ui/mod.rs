@@ -7,6 +7,7 @@ pub mod artwork_crop;
 pub mod artwork_demo;
 pub mod artwork_editor;
 pub mod cleanup;
+pub mod comments_panel;
 pub mod context;
 pub mod controls;
 pub mod debut;

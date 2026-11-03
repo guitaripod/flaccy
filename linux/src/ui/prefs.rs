@@ -397,20 +397,21 @@ fn lyrics_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     group
 }
 
-/// Music video mode: what the video lens streams, who decides which video is
-/// the right one, and whether the picture is aligned to the audio by ear.
+/// Music videos: how tall a stream Now Playing asks for, who decides which
+/// video is the right one, and whether the picture is aligned to the audio by
+/// ear.
 fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title("Music Videos")
         .description(
-            "The video lens in Now Playing streams a song's music video and locks it to your \
-             lossless audio",
+            "Now Playing shows each song's music video, locked to your lossless audio, and the \
+             cover when a song has none",
         )
         .build();
 
     let quality = adw::ComboRow::builder()
         .title("Quality")
-        .subtitle("The tallest stream the lens will ask for")
+        .subtitle("The tallest stream Now Playing will ask for")
         .model(&gtk::StringList::new(
             &musicvideo::QUALITY_HEIGHTS
                 .iter()
@@ -551,7 +552,7 @@ fn prepare_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
 
     let videos = adw::SwitchRow::builder()
         .title("Prepare Music Videos")
-        .subtitle("Downloads the videos of the songs coming up while the video lens is on")
+        .subtitle("Downloads the videos of the songs coming up, so each one starts with its song")
         .active(ui.core.config.borrow().precache_video)
         .build();
     {
@@ -616,11 +617,8 @@ fn render_prepare_status(ui: &Rc<Ui>, lyrics: &adw::ActionRow, videos: &adw::Act
     let status = crate::precache::status::snapshot();
     let now = chrono::Utc::now().timestamp();
     lyrics.set_subtitle(&crate::precache::status::lyrics_line(&status, now));
-    let (enabled, lens_on) = (
-        ui.core.config.borrow().precache_video,
-        ui.core.music_video.is_enabled(),
-    );
-    let line = crate::precache::status::video_line(&status, enabled, lens_on, now);
+    let enabled = ui.core.config.borrow().precache_video;
+    let line = crate::precache::status::video_line(&status, enabled, now);
     let held = match status.video_files {
         0 => "nothing prepared yet".to_string(),
         1 => format!("1 video, {}", crate::ui::servers::format_bytes(status.video_bytes)),

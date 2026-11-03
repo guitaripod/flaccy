@@ -169,10 +169,6 @@
   min-width: 0;
 }
 
-.np-art-frame {
-  min-width: 0;
-}
-
 .suggested-scroll {
   min-width: 0;
 }
@@ -181,12 +177,8 @@
   min-width: 0;
 }
 
-.flaccy-narrow .np-title {
+.flaccy-narrow .np-card.under-cover .np-card-title {
   font-size: 22px;
-}
-
-.flaccy-narrow .np-artist {
-  font-size: 14px;
 }
 
 .flaccy-narrow .np-play {
@@ -194,8 +186,8 @@
   min-height: 56px;
 }
 
-.flaccy-narrow .np-side {
-  margin: 8px 4px;
+.flaccy-narrow .np-stage-queue,
+.flaccy-narrow .np-root:not(.np-stage) .np-stage-lyrics {
   border-radius: 12px;
 }
 
@@ -674,26 +666,6 @@ button.pill.suggested-action:active {
     linear-gradient(180deg, alpha(@window_bg_color, 0.55), alpha(@window_bg_color, 0.86) 70%);
 }
 
-.np-art {
-  border-radius: 20px;
-  box-shadow:
-    0 2px 10px alpha(#000, 0.35),
-    0 24px 70px alpha(#000, 0.5),
-    0 0 0 1px alpha(#fff, 0.06) inset;
-}
-
-.np-title {
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.np-artist {
-  font-size: 17px;
-  font-weight: 600;
-  color: @accent_color;
-}
-
 .np-meta {
   font-size: 12px;
   font-weight: 600;
@@ -734,12 +706,11 @@ button.pill.suggested-action:active {
   -gtk-icon-size: 20px;
 }
 
-/* ---- now playing: in-view lenses (Player / Lyrics / Up Next) ------------ */
-/* The blurred wash is the outermost layer; the ToolbarView (header + switched
-   ViewStack + persistent transport dock) floats over it fully transparent so
-   the cover bleeds behind every lens. */
+/* ---- now playing: panels ----------------------------------------------- */
+/* The blurred wash is the outermost layer; the ToolbarView (header, stage and
+   persistent transport dock) floats over it fully transparent so the cover
+   bleeds behind every panel. */
 .np-toolbar,
-.np-viewstack,
 .np-view {
   background: none;
   background-color: transparent;
@@ -752,15 +723,20 @@ button.pill.suggested-action:active {
   background-color: transparent;
 }
 
-/* Lyrics / Up Next columns beside the hero art — glass panels floating over
-   the wash, revealed by the header toggles. */
-.np-side {
+/* Beside the cover the lyrics, Up Next and Comments are glass panels floating
+   over the wash; over a video Up Next and Comments keep the glass, made dense
+   enough to read over a moving picture, and the lyrics float on the glow. */
+.np-stage-queue,
+.np-root:not(.np-stage) .np-stage-lyrics {
   background-color: alpha(@window_bg_color, 0.44);
   border-radius: 18px;
-  margin: 12px 8px 12px 8px;
   box-shadow:
     inset 0 0 0 1px alpha(#fff, 0.06),
     0 12px 40px alpha(#000, 0.28);
+}
+
+.np-stage .np-stage-queue {
+  background-color: alpha(@window_bg_color, 0.84);
 }
 
 /* Header pill toggles that reveal the side columns; light up in the accent
@@ -791,18 +767,6 @@ button.pill.suggested-action:active {
   padding: 10px 20px 14px 20px;
 }
 
-/* Hi-res / quality chip under the title in the Player lens. */
-.np-chip {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 2px 10px;
-  border-radius: 9999px;
-  background-color: alpha(@accent_bg_color, 0.18);
-  box-shadow: inset 0 0 0 1px alpha(@accent_bg_color, 0.30);
-  color: @accent_color;
-}
-
 /* A song whose audio was re-exported in the last two weeks: the accent pill
    of the quality chip, set small enough to sit beside a title in a list. */
 .new-mix-chip {
@@ -816,15 +780,19 @@ button.pill.suggested-action:active {
   color: @accent_color;
 }
 
-/* ---- now playing: the video stage --------------------------------------- */
-/* With a music video the page becomes a stage: the picture as large as the
-   window allows, the glow it casts behind it, lyrics beside, under or over it,
-   and the header and dock floating over it on soft shades. Every shade here is
-   a gradient or a flat fill: no blur and no filter, because the picture
-   repaints whatever lies over it on every one of its frames. */
-/* The stage is always a dark room, whatever the theme: the cover's wash shows
-   through dimmed until the picture's own glow fades in over it. */
+/* ---- now playing: the stage --------------------------------------------- */
+/* Every song plays on one stage. Once its music video plays the page becomes
+   a dark room: the picture as large as the window allows, the glow it casts
+   behind it, lyrics beside, under or over it, and the header and dock
+   floating over it on soft shades. Every shade there is a gradient or a flat
+   fill: no blur and no filter, because the picture repaints whatever lies
+   over it on every one of its frames. Before the video, and for a song with
+   none, the cover stands in the picture's place in the page's own light. */
 .np-video-stage {
+  transition: background-color 320ms ease;
+}
+
+.np-stage .np-video-stage {
   background-color: alpha(#000, 0.72);
 }
 
@@ -850,15 +818,25 @@ button.pill.suggested-action:active {
   box-shadow: 0 18px 48px alpha(#000, 0.45);
 }
 
-/* Covers the picture whenever there is nothing to show — searching, buffering,
-   nothing found. Dimmed rather than opaque so a first frame still shows
-   through while the stream is catching up. */
+/* A small pill across the top of the picture while the video is on its way
+   or has failed; a song with no video says nothing on the stage. */
 .mv-status {
-  background-color: alpha(#000, 0.62);
+  background-color: alpha(#000, 0.7);
+  box-shadow: 0 4px 16px alpha(#000, 0.3);
   color: #fff;
-  border-radius: 16px;
-  padding: 24px 32px;
-  margin: 0;
+  border-radius: 9999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mv-status-action {
+  min-height: 0;
+  padding: 2px 10px;
+  margin: -2px -8px -2px 0;
+  border-radius: 9999px;
+  color: mix(@accent_bg_color, #fff, 0.45);
+  font-weight: 700;
 }
 
 .np-stage headerbar {
@@ -874,9 +852,9 @@ button.pill.suggested-action:active {
   color: #fff;
 }
 
-/* Lyrics on the stage float on the glow or on the shade the stage lays under
+/* Lyrics over a video float on the glow or on the shade the stage lays under
    them, with no panel of their own, and stay light on any picture. */
-.np-stage-lyrics {
+.np-stage .np-stage-lyrics {
   background: none;
   box-shadow: none;
   border-radius: 0;
@@ -884,35 +862,35 @@ button.pill.suggested-action:active {
   padding: 0 16px;
 }
 
-.np-stage-lyrics,
-.np-stage-lyrics list,
-.np-stage-lyrics statuspage {
+.np-stage .np-stage-lyrics,
+.np-stage .np-stage-lyrics list,
+.np-stage .np-stage-lyrics statuspage {
   color: #fff;
 }
 
 /* The column scrolls itself line by line; a scroll indicator flashing over
    the picture at every line is noise. */
-.np-stage-lyrics scrollbar {
+.np-stage .np-stage-lyrics scrollbar {
   opacity: 0;
 }
 
-.np-stage-lyrics .lyric-line,
-.np-stage-lyrics .lyric-text {
+.np-stage .np-stage-lyrics .lyric-line,
+.np-stage .np-stage-lyrics .lyric-text {
   opacity: 0.68;
 }
 
-.np-stage-lyrics .lyric-line-near {
+.np-stage .np-stage-lyrics .lyric-line-near {
   opacity: 0.86;
 }
 
-.np-stage-lyrics .lyric-line-current {
+.np-stage .np-stage-lyrics .lyric-line-current {
   opacity: 1;
   color: mix(@accent_bg_color, #fff, 0.35);
 }
 
 /* The lyrics' own controls ride over the lines on the stage, so they wear a
    pill of their own and leave with the rest of the chrome. */
-.np-stage-lyrics .lyrics-corner {
+.np-stage .np-stage-lyrics .lyrics-corner {
   background-color: alpha(#000, 0.55);
   border-radius: 9999px;
   padding: 2px 6px;
@@ -923,17 +901,12 @@ button.pill.suggested-action:active {
   opacity: 0;
 }
 
-.np-stage-lyrics .lyric-beat-lit {
+.np-stage .np-stage-lyrics .lyric-beat-lit {
   color: mix(@accent_bg_color, #fff, 0.35);
 }
 
-.np-stage-lyrics .lyrics-list > row:hover {
+.np-stage .np-stage-lyrics .lyrics-list > row:hover {
   background-color: alpha(#fff, 0.08);
-}
-
-/* Up Next keeps its glass, made dense enough to read over a moving picture. */
-.np-stage-queue {
-  background-color: alpha(@window_bg_color, 0.84);
 }
 
 /* Captions: a shade across the foot of the picture, the sung line large and
@@ -1009,6 +982,67 @@ button.pill.suggested-action:active {
   font-size: 12px;
   font-weight: 600;
   opacity: 0.78;
+}
+
+/* Under the cover the card is the page's title, in the page's own colours. */
+.np-card.under-cover {
+  background-color: transparent;
+  padding: 0 8px;
+  color: @window_fg_color;
+}
+
+.np-card.under-cover .np-card-artist {
+  color: @accent_color;
+}
+
+.np-card.under-cover .np-card-title {
+  font-size: 30px;
+}
+
+.np-card.under-cover .np-card-meta {
+  opacity: 0.7;
+}
+
+/* ---- now playing: comments ---------------------------------------------- */
+.np-comments-list > row {
+  border-radius: 12px;
+  transition: background-color 240ms ease, box-shadow 240ms ease;
+}
+
+.np-comments-list > row:hover {
+  background-color: alpha(currentColor, 0.05);
+}
+
+.np-comment-author {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* The uploader's own comments wear their name in a pill, as on YouTube. */
+.np-comment-uploader {
+  background-color: alpha(currentColor, 0.12);
+  border-radius: 9999px;
+  padding: 0 8px;
+}
+
+.np-comment-text {
+  font-size: 14px;
+}
+
+.np-comment-foot {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.72;
+}
+
+.np-comment-hearted {
+  color: #ff476b;
+}
+
+/* A comment about the moment the video is passing lights up while it does. */
+.np-comments-list > row.np-comment-now {
+  background-color: alpha(@accent_bg_color, 0.16);
+  box-shadow: inset 3px 0 0 @accent_bg_color;
 }
 
 .mv-thumb {
