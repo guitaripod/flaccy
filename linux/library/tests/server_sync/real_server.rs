@@ -260,3 +260,31 @@ fn server_sync_real_server_takes_a_reseeded_cover_after_the_blob_is_uploaded_aga
         1
     );
 }
+
+#[test]
+#[ignore]
+fn server_sync_real_server_carries_a_song_volume_to_the_other_device() {
+    let mut server = RealServer::new("gain");
+    server.start();
+    let library = songs(2);
+    let mut first = Device::new("real-gain-a", &library);
+    let mut second = Device::new("real-gain-b", &library);
+    first.connect_link(&server.link("marcus"));
+    second.connect_link(&server.link("marcus"));
+    assert_eq!(first.db.set_song_gain("Song 1", "The Artist", 35).unwrap(), 35);
+    assert_eq!(first.sync().state, SyncState::UpToDate);
+    assert_eq!(
+        scalar(
+            &server.state(),
+            "SELECT COUNT(*) FROM scalars WHERE key LIKE 'gain/%'"
+        ),
+        1
+    );
+    assert_eq!(second.sync().state, SyncState::UpToDate);
+    assert_eq!(second.db.song_gain("Song 1", "The Artist").unwrap(), 35);
+
+    second.db.set_song_gain("Song 1", "The Artist", 0).unwrap();
+    assert_eq!(second.sync().state, SyncState::UpToDate);
+    assert_eq!(first.sync().state, SyncState::UpToDate);
+    assert_eq!(first.db.song_gain("Song 1", "The Artist").unwrap(), 0);
+}
