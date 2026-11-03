@@ -105,6 +105,25 @@ fn portrait_tile(
     button.upcast()
 }
 
+/// Holds `picture` at `side` square: a picture asks for its texture's own
+/// size, which for a photo is a thousand points.
+fn pinned(picture: &gtk::Picture, side: i32) -> adw::Clamp {
+    let tall = adw::Clamp::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .maximum_size(side)
+        .tightening_threshold(side)
+        .child(picture)
+        .build();
+    adw::Clamp::builder()
+        .maximum_size(side)
+        .tightening_threshold(side)
+        .child(&tall)
+        .hexpand(false)
+        .valign(gtk::Align::Start)
+        .visible(false)
+        .build()
+}
+
 /// The artist's reach: "4.1M listeners · 182.3M plays on Last.fm".
 pub fn reach_text(listeners: u64, plays: u64) -> String {
     format!("{} listeners  ·  {} plays on Last.fm", compact(listeners), compact(plays))
@@ -132,6 +151,7 @@ pub fn compact(value: u64) -> String {
 pub struct About {
     pub widget: gtk::Box,
     photo: gtk::Picture,
+    photo_host: adw::Clamp,
     reach: gtk::Label,
     tags: adw::WrapBox,
     bio_box: gtk::Box,
@@ -146,12 +166,11 @@ impl About {
             .width_request(ABOUT_PHOTO)
             .height_request(ABOUT_PHOTO)
             .content_fit(gtk::ContentFit::Cover)
-            .valign(gtk::Align::Start)
-            .visible(false)
             .build();
         photo.set_overflow(gtk::Overflow::Hidden);
         photo.add_css_class("artist-about-photo");
-        widget.append(&photo);
+        let photo_host = pinned(&photo, ABOUT_PHOTO);
+        widget.append(&photo_host);
 
         let column = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -171,16 +190,17 @@ impl About {
         column.append(&tags);
         widget.append(&column);
         {
-            let photo = photo.downgrade();
+            let (photo, host) = (photo.downgrade(), photo_host.downgrade());
             crate::ui::resize::watch_width(&widget, move |width, _| {
-                if let Some(photo) = photo.upgrade() {
-                    photo.set_visible(width >= 640 && photo.paintable().is_some());
+                if let (Some(photo), Some(host)) = (photo.upgrade(), host.upgrade()) {
+                    host.set_visible(width >= 640 && photo.paintable().is_some());
                 }
             });
         }
         let about = Rc::new(Self {
             widget,
             photo,
+            photo_host,
             reach,
             tags,
             bio_box,
@@ -264,7 +284,8 @@ impl About {
 
     pub fn set_photo(&self, texture: &gdk::Texture) {
         self.photo.set_paintable(Some(texture));
-        self.photo.set_visible(self.widget.width() == 0 || self.widget.width() >= 640);
+        self.photo_host
+            .set_visible(self.widget.width() == 0 || self.widget.width() >= 640);
     }
 
     fn refresh_visibility(&self) {
