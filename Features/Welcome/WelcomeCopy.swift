@@ -11,7 +11,7 @@ nonisolated enum WelcomeCopy {
     static var computerDetail: String {
         String(localized: "Send it over Wi-Fi from the computer's web browser, or stream all of it with Flaccy Server. Both free.")
     }
-    static var filesTitle: String { String(localized: "On this iPhone or in Files") }
+    static var filesTitle: String { (DeviceKind.isPad ? String(localized: "On this iPad or in Files") : String(localized: "On this iPhone or in Files")) }
     static var filesDetail: String { String(localized: "Add songs and folders from Files, iCloud Drive or a USB drive.") }
     static var serverTitle: String { String(localized: "On a music server") }
     static var serverDetail: String { String(localized: "Connect Navidrome, Jellyfin or another Subsonic server.") }
@@ -21,11 +21,11 @@ nonisolated enum WelcomeCopy {
 
     static var guideTitle: String { String(localized: "Connect Your Computer") }
     static var guideLead: String {
-        String(localized: "Flaccy Server shares the music on your Mac or PC with this iPhone and keeps playlists, loves and history in step. It's free, and your music never leaves your own network.")
+        (DeviceKind.isPad ? String(localized: "Flaccy Server shares the music on your Mac or PC with this iPad and keeps playlists, loves and history in step. It's free, and your music never leaves your own network.") : String(localized: "Flaccy Server shares the music on your Mac or PC with this iPhone and keeps playlists, loves and history in step. It's free, and your music never leaves your own network."))
     }
     static var stepTailscaleTitle: String { String(localized: "Get Tailscale on both") }
     static var stepTailscaleDetail: String {
-        String(localized: "Install Tailscale on this iPhone and on your computer, and sign in to the same account. It connects them safely, at home or away.")
+        (DeviceKind.isPad ? String(localized: "Install Tailscale on this iPad and on your computer, and sign in to the same account. It connects them safely, at home or away.") : String(localized: "Install Tailscale on this iPhone and on your computer, and sign in to the same account. It connects them safely, at home or away."))
     }
     static var getTailscale: String { String(localized: "Get Tailscale") }
     static var stepServerTitle: String { String(localized: "Start Flaccy Server") }

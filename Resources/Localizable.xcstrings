@@ -23111,6 +23111,70 @@
         }
       }
     },
+    "AirDrop the files to your iPad and save them to Files. Then tap Add Music and choose them.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sende die Dateien per AirDrop an dein iPad und sichere sie in „Dateien“. Tippe dann auf „Musik hinzufügen“ und wähle sie aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía los archivos a tu iPad con AirDrop y guárdalos en Archivos. Después toca Añadir música y selecciónalos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyez les fichiers à votre iPad par AirDrop et enregistrez-les dans Fichiers. Touchez ensuite Ajouter de la musique et choisissez-les."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia i file all'iPad con AirDrop e salvali in File. Poi tocca Aggiungi musica e selezionali."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルをAirDropでiPadに送り、ファイルAppに保存します。そのあと「音楽を追加」をタップして選択します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일을 AirDrop으로 iPad에 보내 파일 앱에 저장하세요. 그런 다음 음악 추가를 탭하고 선택하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij pliki przez AirDrop na iPada i zapisz je w aplikacji Pliki. Potem dotknij Dodaj muzykę i wybierz je."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envie os arquivos para o iPad por AirDrop e salve-os no app Arquivos. Depois toque em Adicionar música e escolha-os."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 AirDrop 将文件发送到 iPad，并存储到“文件”App。然后点按“添加音乐”并选取。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 AirDrop 將檔案傳送到 iPad，並儲存到「檔案」App。然後點一下「加入音樂」並選取。"
+          }
+        }
+      }
+    },
     "AirDrop the files to your iPhone and save them to Files. Then tap Add Music and choose them.": {
       "localizations": {
         "de": {
@@ -32767,6 +32831,70 @@
         }
       }
     },
+    "Connect this iPad to Wi-Fi to send music to it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde dieses iPad mit einem WLAN, um Musik darauf zu senden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta este iPad a una Wi-Fi para enviarle música."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez cet iPad au Wi-Fi pour lui envoyer de la musique."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega questo iPad a una rete Wi-Fi per inviargli musica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽を転送するには、このiPadをWi-Fiに接続してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악을 보내려면 이 iPad을 Wi-Fi에 연결하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Połącz ten iPad z Wi-Fi, aby wysłać na niego muzykę."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte este iPad a uma rede Wi-Fi para enviar música a ele."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请将这台 iPad 连接到 Wi-Fi 以接收音乐。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請將這部 iPad 連上 Wi-Fi 以接收音樂。"
+          }
+        }
+      }
+    },
     "Connect this iPhone to Wi-Fi to send music to it.": {
       "localizations": {
         "de": {
@@ -32891,6 +33019,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "連接到 Last.fm"
+          }
+        }
+      }
+    },
+    "Connect your iPad to a Mac, select it in the Finder sidebar, open the Files tab and drag songs or folders onto Flaccy.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde dein iPad mit einem Mac, wähle es in der Finder-Seitenleiste aus, öffne den Tab „Dateien“ und ziehe Titel oder Ordner auf Flaccy."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta tu iPad a un Mac, selecciónalo en la barra lateral del Finder, abre la pestaña Archivos y arrastra canciones o carpetas a Flaccy."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Branchez votre iPad à un Mac, sélectionnez-le dans la barre latérale du Finder, ouvrez l'onglet Fichiers et faites glisser des morceaux ou des dossiers sur Flaccy."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega l'iPad a un Mac, selezionalo nella barra laterale del Finder, apri la scheda File e trascina brani o cartelle su Flaccy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPadをMacに接続し、Finderのサイドバーで選択して「ファイル」タブを開き、曲やフォルダをFlaccyにドラッグします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPad을 Mac에 연결하고 Finder 사이드바에서 선택한 다음 파일 탭을 열어 곡이나 폴더를 Flaccy로 드래그하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podłącz iPada do Maca, wybierz go na pasku bocznym Findera, otwórz kartę Pliki i przeciągnij utwory lub foldery na Flaccy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte o iPad a um Mac, selecione-o na barra lateral do Finder, abra a aba Arquivos e arraste músicas ou pastas para o Flaccy."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用数据线将 iPad 连接到 Mac，在访达边栏中选择它，打开“文件”标签页，然后将歌曲或文件夹拖到 Flaccy 上。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用傳輸線將 iPad 連接到 Mac，在 Finder 側邊欄中選取它，打開「檔案」標籤頁，然後將歌曲或資料夾拖到 Flaccy 上。"
           }
         }
       }
@@ -49839,6 +50031,70 @@
         }
       }
     },
+    "Flaccy Server shares the music on your Mac or PC with this iPad and keeps playlists, loves and history in step. It's free, and your music never leaves your own network.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server teilt die Musik auf deinem Mac oder PC mit diesem iPad und hält Playlists, Favoriten und Verlauf synchron. Kostenlos, und deine Musik verlässt nie dein eigenes Netzwerk."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server comparte la música de tu Mac o PC con este iPad y mantiene sincronizados listas, favoritos e historial. Es gratis y tu música nunca sale de tu propia red."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server partage la musique de votre Mac ou PC avec cet iPad et garde playlists, coups de cœur et historique synchronisés. C'est gratuit, et votre musique ne quitte jamais votre propre réseau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server condivide la musica del tuo Mac o PC con questo iPad e tiene sincronizzati playlist, preferiti e cronologia. È gratis e la tua musica non lascia mai la tua rete."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy ServerはMacやPCの音楽をこのiPadと共有し、プレイリスト、お気に入り、履歴を同期します。無料で、音楽が自分のネットワークの外に出ることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server는 Mac이나 PC의 음악을 이 iPad과 공유하고 플레이리스트, 좋아요, 기록을 동기화합니다. 무료이며 음악이 내 네트워크 밖으로 나가지 않습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server udostępnia muzykę z twojego Maca lub PC temu iPadowi i synchronizuje playlisty, ulubione i historię. Za darmo, a twoja muzyka nigdy nie opuszcza twojej sieci."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy Server compartilha a música do seu Mac ou PC com este iPad e mantém playlists, favoritos e histórico sincronizados. É grátis, e sua música nunca sai da sua própria rede."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server 将你 Mac 或 PC 上的音乐共享到这台 iPad，并同步播放列表、喜欢和历史。免费，你的音乐永远不会离开你自己的网络。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server 會把你 Mac 或 PC 上的音樂分享到這部 iPad，並同步播放列表、喜愛與記錄。免費，你的音樂永遠不會離開你自己的網路。"
+          }
+        }
+      }
+    },
     "Flaccy Server shares the music on your Mac or PC with this iPhone and keeps playlists, loves and history in step. It's free, and your music never leaves your own network.": {
       "localizations": {
         "de": {
@@ -51703,6 +51959,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "字體"
+          }
+        }
+      }
+    },
+    "For true lossless on iPad, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für echtes verlustfreies Audio am iPad gehst du kabelgebunden: Der Apple-Kopfhöreradapter liefert bis zu 24 Bit/48 kHz, ein externer USB‑C-DAC schaltet Hi-Res bis 24 Bit/192 kHz frei. FLAC glänzt auch an der Anlage oder am Schreibtisch, wo der DAC per Kabel hängt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para lossless de verdad en el iPad, ve por cable: el adaptador de auriculares de Apple llega a 24 bits/48 kHz, y un DAC USB‑C externo desbloquea hi-res hasta 24 bits/192 kHz. El FLAC también brilla en un equipo de casa o de escritorio con el DAC conectado por cable."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour du vrai lossless sur iPad, passez au filaire : l'adaptateur casque Apple délivre jusqu'à 24 bits/48 kHz, et un DAC USB‑C externe débloque le hi-res jusqu'à 24 bits/192 kHz. Le FLAC brille aussi sur une chaîne ou un bureau où le DAC est câblé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per un lossless vero su iPad serve il cavo: l'adattatore per cuffie Apple arriva a 24 bit/48 kHz e un DAC USB‑C esterno sblocca l'hi-res fino a 24 bit/192 kHz. Il FLAC brilla anche su un impianto o su una scrivania, dove il DAC è collegato via cavo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPadで本当のロスレスを聴くなら有線です。Appleのヘッドフォンアダプタは24ビット/48 kHzまで、外付けUSB‑C DACなら24ビット/192 kHzのハイレゾロスレスまで再生できます。DACを有線でつなぐ据え置き環境やデスク環境でもFLACは真価を発揮します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPad에서 진짜 무손실을 들으려면 유선이 답입니다. Apple 헤드폰 어댑터는 24비트/48kHz까지, 외장 USB‑C DAC은 24비트/192kHz 하이레스 무손실까지 지원합니다. DAC을 유선으로 연결한 홈 오디오나 데스크 환경에서도 FLAC이 빛을 발합니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dla prawdziwego bezstratnego dźwięku na iPadzie wybierz kabel: adapter słuchawkowy Apple dostarcza do 24-bitowego/48 kHz, a zewnętrzny DAC USB-C odblokowuje bezstratny dźwięk hi-res do 24-bitowego/192 kHz. FLAC błyszczy też na domowym zestawie lub komputerze z podłączonym DAC-iem."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para lossless de verdade no iPad, vá de cabo: o adaptador de fones da Apple entrega até 24 bits/48 kHz, e um DAC USB‑C externo libera hi-res de até 24 bits/192 kHz. O FLAC também brilha num sistema de casa ou de mesa, com o DAC ligado por cabo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想在 iPad 上听到真正的无损，就走有线：Apple 耳机转接头最高支持 24 位/48 kHz，外接 USB‑C 解码器可解锁最高 24 位/192 kHz 的高解析度无损。在解码器有线连接的家用或桌面系统上，FLAC 同样出色。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想在 iPad 上聽到真正的無損，就走有線：Apple 耳機轉接器最高支援 24 位元/48 kHz，外接 USB‑C DAC 則能解鎖最高 24 位元/192 kHz 的高解析度無損。在 DAC 以有線連接的家用或桌上型系統上，FLAC 同樣出色。"
           }
         }
       }
@@ -58665,6 +58985,70 @@
         }
       }
     },
+    "Install Tailscale on this iPad and on your computer, and sign in to the same account. It connects them safely, at home or away.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installiere Tailscale auf diesem iPad und auf deinem Computer und melde dich mit demselben Konto an. Es verbindet beide sicher, zu Hause und unterwegs."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instala Tailscale en este iPad y en tu ordenador, e inicia sesión con la misma cuenta. Los conecta de forma segura, en casa o fuera."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installez Tailscale sur cet iPad et sur votre ordinateur, et connectez-vous au même compte. Il les relie en toute sécurité, chez vous ou ailleurs."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installa Tailscale su questo iPad e sul computer, e accedi con lo stesso account. Li collega in modo sicuro, a casa o fuori."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このiPadとコンピュータにTailscaleをインストールし、同じアカウントでサインインします。自宅でも外出先でも安全につながります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPad과 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인하세요. 집에서도 밖에서도 안전하게 연결됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zainstaluj Tailscale na tym iPadzie i na komputerze, i zaloguj się na to samo konto. Połączy je bezpiecznie, w domu i poza nim."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instale o Tailscale neste iPad e no seu computador, e entre na mesma conta. Ele os conecta com segurança, em casa ou fora."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台 iPad 和你的电脑上安装 Tailscale，并登录同一个账户。无论在家还是在外，它都能安全地连接两者。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這部 iPad 和你的電腦上安裝 Tailscale，並登入同一個帳號。無論在家或外出，它都能安全地連接兩者。"
+          }
+        }
+      }
+    },
     "Install Tailscale on this iPhone and on your computer, and sign in to the same account. It connects them safely, at home or away.": {
       "localizations": {
         "de": {
@@ -59837,6 +60221,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "繼續編輯"
+          }
+        }
+      }
+    },
+    "Keep Flaccy open on your iPad until everything has arrived.": {
+      "comment": "Wi-Fi Transfer web page",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lass Flaccy auf deinem iPad geöffnet, bis alles angekommen ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantén Flaccy abierta en tu iPad hasta que llegue todo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gardez Flaccy ouvert sur votre iPad jusqu'à ce que tout soit arrivé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni Flaccy aperto sul tuo iPad finché non è arrivato tutto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて届くまで、iPadでFlaccyを開いたままにしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 도착할 때까지 iPad에서 Flaccy를 열어 두세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie zamykaj Flaccy na iPadzie, dopóki wszystko nie dotrze."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantenha o Flaccy aberto no iPad até que tudo chegue."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在全部传完之前，请在 iPad 上保持 Flaccy 打开。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在全部傳完之前，請讓 iPad 上的 Flaccy 保持開啟。"
           }
         }
       }
@@ -75867,6 +76316,70 @@
         }
       }
     },
+    "On This iPad": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem iPad"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este iPad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur cet iPad"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo iPad"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この iPad"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPad"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na tym iPadzie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neste iPad"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPad"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPad"
+          }
+        }
+      }
+    },
     "On This iPhone": {
       "localizations": {
         "de": {
@@ -76183,6 +76696,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 年的今天"
+          }
+        }
+      }
+    },
+    "On this iPad or in Files": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem iPad oder in Dateien"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este iPad o en Archivos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur cet iPad ou dans Fichiers"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo iPad o in File"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このiPadまたは「ファイル」"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPad 또는 파일 앱"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na tym iPadzie lub w Plikach"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neste iPad ou no Arquivos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台 iPad 或“文件”中"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這部 iPad 或「檔案」中"
           }
         }
       }
@@ -99855,6 +100432,71 @@
         }
       }
     },
+    "Sent {count} of {total} to your iPad.": {
+      "comment": "Wi-Fi Transfer web page: finished; keep {count} and {total} as they are",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} von {total} an dein iPad gesendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviadas {count} de {total} a tu iPad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} sur {total} envoyés à votre iPad."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inviati {count} di {total} al tuo iPad."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{total}件中{count}件をiPadに送信しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{total}개 중 {count}개를 iPad으로 보냈습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wysłano {count} z {total} na iPada."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{count} de {total} enviadas para o seu iPad."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已发送 {count} 个到你的 iPad，共 {total} 个。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已傳送 {count} 個到你的 iPad，共 {total} 個。"
+          }
+        }
+      }
+    },
     "Sent {count} of {total} to your iPhone.": {
       "comment": "Wi-Fi Transfer web page: finished; keep {count} and {total} as they are",
       "localizations": {
@@ -106075,6 +106717,71 @@
         }
       }
     },
+    "Songs and whole folders go straight to your iPad.": {
+      "comment": "Wi-Fi Transfer web page: line under the title",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Songs und ganze Ordner landen direkt auf deinem iPad."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las canciones y carpetas enteras van directas a tu iPad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les morceaux et dossiers entiers arrivent directement sur votre iPad."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brani e intere cartelle arrivano direttamente sul tuo iPad."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲もフォルダごとも、そのままiPadへ届きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노래와 폴더 전체가 바로 iPad으로 전송됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory i całe foldery trafiają prosto na iPada."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Músicas e pastas inteiras vão direto para o seu iPad."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲和整个文件夹都会直接传到你的 iPad。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲和整個資料夾都會直接傳到你的 iPad。"
+          }
+        }
+      }
+    },
     "Songs and whole folders go straight to your iPhone.": {
       "comment": "Wi-Fi Transfer web page: line under the title",
       "localizations": {
@@ -106136,6 +106843,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "歌曲和整個資料夾都會直接傳到你的 iPhone。"
+          }
+        }
+      }
+    },
+    "Songs copied in with Finder or the Files app (On My iPad › Flaccy) appear the next time Flaccy launches.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel, die du per Finder oder in der App „Dateien“ (Auf meinem iPad › Flaccy) kopierst, erscheinen beim nächsten Start von Flaccy."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las canciones copiadas con el Finder o la app Archivos (En mi iPad › Flaccy) aparecen la próxima vez que se abra Flaccy."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les morceaux copiés avec le Finder ou l'app Fichiers (Sur mon iPad › Flaccy) apparaissent au prochain lancement de Flaccy."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I brani copiati con il Finder o l'app File (Su iPad › Flaccy) compaiono al prossimo avvio di Flaccy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finderまたはファイルアプリ（このiPad内 › Flaccy）でコピーした曲は、次にFlaccyを起動したときに表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder나 파일 앱(나의 iPad › Flaccy)으로 복사한 곡은 다음에 Flaccy를 실행할 때 나타납니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory skopiowane przez Findera lub aplikację Pliki (Na moim iPadzie › Flaccy) pojawią się przy następnym uruchomieniu Flaccy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As músicas copiadas pelo Finder ou pelo app Arquivos (No iPad › Flaccy) aparecem na próxima vez que o Flaccy for aberto."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过访达或“文件”App（我的 iPad › Flaccy）拷入的歌曲，会在下次启动 Flaccy 时出现。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 Finder 或「檔案」App（我的 iPad › Flaccy）拷入的歌曲，會在下次啟動 Flaccy 時出現。"
           }
         }
       }
@@ -116738,6 +117509,210 @@
           "stringUnit": {
             "state": "translated",
             "value": "此裝置已從 %@ 中移除。請重新新增伺服器以繼續同步。"
+          }
+        }
+      }
+    },
+    "This iPad": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses iPad"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This iPad"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este iPad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet iPad"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo iPad"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このiPad"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPad"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten iPad"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este iPad"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPad"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPad"
+          }
+        }
+      }
+    },
+    "This iPad is out of space. Free some up, then send the rest again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses iPad hat keinen Speicherplatz mehr. Gib etwas frei und sende den Rest erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este iPad no tiene espacio. Libera algo y vuelve a enviar el resto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet iPad n'a plus d'espace. Libérez-en un peu, puis renvoyez le reste."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo iPad ha esaurito lo spazio. Liberane un po' e invia di nuovo il resto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このiPadの空き容量が足りません。容量を空けてから、残りをもう一度送ってください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPad의 저장 공간이 부족합니다. 공간을 확보한 다음 나머지를 다시 보내세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na tym iPadzie zabrakło miejsca. Zwolnij trochę i wyślij resztę ponownie."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este iPad está sem espaço. Libere um pouco e envie o restante de novo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台 iPad 空间不足。请释放一些空间后重新发送剩余内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這部 iPad 空間不足。請釋放一些空間後重新傳送其餘內容。"
+          }
+        }
+      }
+    },
+    "This iPad stops syncing with %@. Your playlists and history stay here, and %@ keeps its copy.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses iPad synchronisiert nicht mehr mit %@. Playlists und Verlauf bleiben hier, und %@ behält seine Kopie."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This iPad stops syncing with %@. Your playlists and history stay here, and %@ keeps its copy."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este iPad deja de sincronizarse con %@. Tus playlists y tu historial se quedan aquí, y %@ conserva su copia."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet iPad arrête la synchronisation avec %@. Vos playlists et votre historique restent ici, et %@ garde sa copie."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo iPad smette di sincronizzarsi con %@. Le tue playlist e la cronologia restano qui, e %@ conserva la sua copia."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このiPadは %@ との同期を停止します。プレイリストと履歴はここに残り、%@ は自分のコピーを保持します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPad은 %@와의 동기화를 중단해요. 재생목록과 기록은 여기에 남고, %@은(는) 자신의 사본을 유지해요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten iPad przestaje synchronizować się z: %@. Twoje playlisty i historia zostają tutaj, a %@ zachowuje swoją kopię."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este iPad deixa de sincronizar com %@. Suas playlists e seu histórico ficam aqui, e %@ mantém a sua cópia."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPad 将停止与 %@ 同步。你的播放列表和记录保留在这里，%@ 保留其副本。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 iPad 將停止與 %@ 同步。你的播放列表和記錄保留在這裡，%@ 保留其副本。"
           }
         }
       }
@@ -129418,6 +130393,70 @@
         }
       }
     },
+    "Your computer and this iPad need to be on the same Wi-Fi.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Computer und dieses iPad müssen im selben WLAN sein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu ordenador y este iPad deben estar en la misma Wi-Fi."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre ordinateur et cet iPad doivent être sur le même Wi-Fi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il computer e questo iPad devono essere sulla stessa rete Wi-Fi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータとこのiPadを同じWi-Fiに接続してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터와 이 iPad이 같은 Wi-Fi에 연결되어 있어야 합니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komputer i ten iPad muszą być w tej samej sieci Wi-Fi."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O computador e este iPad precisam estar na mesma rede Wi-Fi."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电脑和这台 iPad 需要连接同一个 Wi-Fi。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電腦和這部 iPad 需要連接同一個 Wi-Fi。"
+          }
+        }
+      }
+    },
     "Your computer and this iPhone need to be on the same Wi-Fi.": {
       "localizations": {
         "de": {
@@ -132009,6 +133048,71 @@
         }
       }
     },
+    "lost the connection. Is Flaccy still open on your iPad?": {
+      "comment": "Wi-Fi Transfer web page: after a file's name",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindung verloren. Ist Flaccy auf deinem iPad noch geöffnet?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "se perdió la conexión. ¿Sigue Flaccy abierta en tu iPad?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "connexion perdue. Flaccy est-il toujours ouvert sur votre iPad ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "connessione persa. Flaccy è ancora aperto sul tuo iPad?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続が切れました。iPadでFlaccyが開いたままになっていますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결이 끊어졌습니다. iPad에서 Flaccy가 아직 열려 있나요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "utracono połączenie. Czy Flaccy jest nadal otwarty na iPadzie?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a conexão caiu. O Flaccy ainda está aberto no seu iPad?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接已断开。iPad 上的 Flaccy 还开着吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連線已中斷。iPad 上的 Flaccy 還開著嗎？"
+          }
+        }
+      }
+    },
     "lost the connection. Is Flaccy still open on your iPhone?": {
       "comment": "Wi-Fi Transfer web page: after a file's name",
       "localizations": {
@@ -132974,6 +134078,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "未知"
+          }
+        }
+      }
+    },
+    "your iPad is out of space": {
+      "comment": "Wi-Fi Transfer web page: after a file's name",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dein iPad hat keinen Speicherplatz mehr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tu iPad no tiene espacio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "votre iPad n'a plus d'espace"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "il tuo iPad ha esaurito lo spazio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPadの空き容量が足りません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPad의 저장 공간이 부족합니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "na iPadzie zabrakło miejsca"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "seu iPad está sem espaço"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 iPad 空间不足"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 iPad 空間不足"
           }
         }
       }

@@ -46,7 +46,7 @@ nonisolated enum LibrarySource: Hashable, Sendable {
         #if os(macOS)
         String(localized: "On This Mac")
         #else
-        String(localized: "On This iPhone")
+        DeviceKind.isPad ? String(localized: "On This iPad") : String(localized: "On This iPhone")
         #endif
     }
 

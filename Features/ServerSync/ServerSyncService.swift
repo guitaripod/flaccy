@@ -31,7 +31,7 @@ nonisolated enum ServerSyncService {
         #if os(macOS)
         Host.current().localizedName ?? "Mac"
         #else
-        "iPhone"
+        DeviceKind.isPad ? "iPad" : "iPhone"
         #endif
     }
 

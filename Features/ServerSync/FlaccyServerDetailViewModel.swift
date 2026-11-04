@@ -86,7 +86,7 @@ final class FlaccyServerDetailViewModel {
         #if os(macOS)
         String(localized: "This Mac stops syncing with \(name). Your playlists and history stay here, and \(name) keeps its copy.")
         #else
-        String(localized: "This iPhone stops syncing with \(name). Your playlists and history stay here, and \(name) keeps its copy.")
+        DeviceKind.isPad ? String(localized: "This iPad stops syncing with \(name). Your playlists and history stay here, and \(name) keeps its copy.") : String(localized: "This iPhone stops syncing with \(name). Your playlists and history stay here, and \(name) keeps its copy.")
         #endif
     }
 
@@ -94,7 +94,7 @@ final class FlaccyServerDetailViewModel {
         #if os(macOS)
         String(localized: "This Mac")
         #else
-        String(localized: "This iPhone")
+        DeviceKind.isPad ? String(localized: "This iPad") : String(localized: "This iPhone")
         #endif
     }
 

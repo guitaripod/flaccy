@@ -68,7 +68,7 @@ enum ListeningGuideContent {
         ListeningGuideCard(
             title: String(localized: "When FLAC is worth it"),
             symbolName: "cable.connector",
-            body: String(localized: "For true lossless on iPhone, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.")
+            body: (DeviceKind.isPad ? String(localized: "For true lossless on iPad, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.") : String(localized: "For true lossless on iPhone, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired."))
         ),
         ListeningGuideCard(
             title: String(localized: "Why some albums still click"),

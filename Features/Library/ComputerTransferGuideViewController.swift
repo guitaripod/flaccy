@@ -19,7 +19,7 @@ final class ComputerTransferGuideViewController: UIViewController {
             Route(
                 symbol: "cable.connector",
                 title: String(localized: "Finder, with a cable"),
-                detail: String(localized: "Connect your iPhone to a Mac, select it in the Finder sidebar, open the Files tab and drag songs or folders onto Flaccy.")
+                detail: (DeviceKind.isPad ? String(localized: "Connect your iPad to a Mac, select it in the Finder sidebar, open the Files tab and drag songs or folders onto Flaccy.") : String(localized: "Connect your iPhone to a Mac, select it in the Finder sidebar, open the Files tab and drag songs or folders onto Flaccy."))
             ),
             Route(
                 symbol: "icloud",
@@ -29,7 +29,7 @@ final class ComputerTransferGuideViewController: UIViewController {
             Route(
                 symbol: "dot.radiowaves.left.and.right",
                 title: String(localized: "AirDrop"),
-                detail: String(localized: "AirDrop the files to your iPhone and save them to Files. Then tap Add Music and choose them.")
+                detail: (DeviceKind.isPad ? String(localized: "AirDrop the files to your iPad and save them to Files. Then tap Add Music and choose them.") : String(localized: "AirDrop the files to your iPhone and save them to Files. Then tap Add Music and choose them."))
             ),
         ]
     }
@@ -199,7 +199,7 @@ final class ComputerTransferGuideViewController: UIViewController {
 
     private func makeFootnote() -> UIView {
         let label = UILabel()
-        label.text = String(localized: "Songs copied in with Finder or the Files app (On My iPhone › Flaccy) appear the next time Flaccy launches.")
+        label.text = (DeviceKind.isPad ? String(localized: "Songs copied in with Finder or the Files app (On My iPad › Flaccy) appear the next time Flaccy launches.") : String(localized: "Songs copied in with Finder or the Files app (On My iPhone › Flaccy) appear the next time Flaccy launches."))
         label.font = .preferredFont(forTextStyle: .footnote)
         label.textColor = .tertiaryLabel
         label.adjustsFontForContentSizeCategory = true

@@ -214,7 +214,9 @@ final class SettingsViewController: UITableViewController {
 
     func applySnapshot(animated: Bool) {
         var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
-        snapshot.appendSections(Section.allCases.filter { $0 != .trial || isTrialSectionVisible })
+        snapshot.appendSections(Section.allCases.filter {
+            ($0 != .trial || isTrialSectionVisible) && ($0 != .watch || WatchSyncService.shared.canPairWatch)
+        })
         snapshot.appendItems([.midgarEntry], toSection: .midgar)
         snapshot.appendItems([.appearance(AppAppearance.current)], toSection: .appearance)
         if isTrialSectionVisible {
@@ -240,7 +242,9 @@ final class SettingsViewController: UITableViewController {
         )
         snapshot.appendItems([.equalizer(summary: EqualizerCopy.settingsSummary), .gaplessPlayback, .autoplaySimilar, .libraryRadio, .crateDig], toSection: .playback)
         snapshot.appendItems([.listeningGuide], toSection: .guide)
-        snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedCount, profile: WatchSyncService.shared.profile)], toSection: .watch)
+        if WatchSyncService.shared.canPairWatch {
+            snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedCount, profile: WatchSyncService.shared.profile)], toSection: .watch)
+        }
         snapshot.appendItems(serverRows(), toSection: .servers)
         snapshot.appendItems(
             [.cacheLimit, .cacheUsage(serversModel.cacheCaption), .clearCache],

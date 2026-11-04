@@ -94,6 +94,10 @@ final class WatchSyncService: NSObject {
 
     var wcSession: WCSession? { WCSession.isSupported() ? WCSession.default : nil }
 
+    /// Whether an Apple Watch can pair with this device at all: an iPhone can,
+    /// an iPad never can, so it shows nothing about watches.
+    var canPairWatch: Bool { WCSession.isSupported() }
+
     var isSupported: Bool { WCSession.isSupported() }
     var isPaired: Bool { wcSession?.isPaired ?? false }
     var isWatchAppInstalled: Bool { wcSession?.isWatchAppInstalled ?? false }
