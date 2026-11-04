@@ -1,0 +1,42 @@
+{
+  "home": {
+    "kicker": "Made for the big screen",
+    "headline": "Your music, *the whole screen.*",
+    "maxLines": 1
+  },
+  "library": {
+    "kicker": "Library",
+    "headline": "Every album, *one sidebar away.*",
+    "maxLines": 1
+  },
+  "album": {
+    "kicker": "Lossless",
+    "headline": "Your collection, in *full quality.*",
+    "maxLines": 1
+  },
+  "lyrics": {
+    "kicker": "Lyrics",
+    "headline": "Art and lyrics, *side by side.*",
+    "maxLines": 1
+  },
+  "queue": {
+    "kicker": "Up Next",
+    "headline": "Your queue, *always at hand.*",
+    "maxLines": 1
+  },
+  "scrobble": {
+    "kicker": "Last.fm scrobbling",
+    "headline": "Every play counted, *even offline.*",
+    "maxLines": 1
+  },
+  "eq": {
+    "kicker": "Equalizer",
+    "headline": "Drag the curve. *Hear it change.*",
+    "maxLines": 1
+  },
+  "year": {
+    "kicker": "Year in Music",
+    "headline": "Your year in music, *ready to share.*",
+    "maxLines": 1
+  }
+}

@@ -324,5 +324,23 @@ def compose_mac(slide, copy, locale, window_path, out_path, index, slides, work_
     return out_path
 
 
+IPAD_SLIDE = (2752, 2064)
+
+
+def compose_ipad(slide, copy, locale, raw_path, out_path, index, slides, work_dir, device_width=2250, device_top=330):
+    """Caption on top, a landscape iPad Pro 13-inch bleeding off the bottom edge."""
+    accent, secondary = slide.get("accent", CORAL), slide.get("secondary", VIOLET)
+    blobs = [(420, 1700, 1500, accent, 0.30), (2350, 1950, 1500, secondary, 0.26), (1376, 0, 1100, accent, 0.05)]
+    canvas = backdrop(index, len(slides), IPAD_SLIDE, blobs, ring_rgb=accent, ring_center=(1376, 1300))
+    canvas = top_scrim(canvas, height=760)
+    prefix = os.path.join(work_dir, f"ipad{index:02d}")
+    os.makedirs(work_dir, exist_ok=True)
+    caption_bottom = draw_caption(canvas, copy, locale, prefix, accent, top=96, width=2300, scale=0.9)
+    framed = trimmed(frame_device(raw_path, slide.get("ipad_color", "Space Black")))
+    place_device(canvas, framed, device_width, max(device_top, caption_bottom + CAPTION_GAP))
+    canvas.convert("RGB").save(out_path, "PNG", optimize=True)
+    return out_path
+
+
 if __name__ == "__main__":
     print(__doc__)
