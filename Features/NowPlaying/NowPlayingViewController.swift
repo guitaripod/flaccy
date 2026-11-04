@@ -397,6 +397,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             })
         }
         sheet.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        sheet.anchorPopover(at: sleepTimerButton, fallback: view)
         present(sheet, animated: true)
     }
 

@@ -28,6 +28,7 @@ final class YearInMusicViewController: UIViewController {
     private var controlsStack = UIStackView()
     private var layoutConstraints: [NSLayoutConstraint] = []
     private var isWideLayout: Bool?
+    private weak var shareMenuButton: UIButton?
 
     private let selectionFeedback = UISelectionFeedbackGenerator()
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
@@ -270,6 +271,7 @@ final class YearInMusicViewController: UIViewController {
             }
         ])
         button.accessibilityLabel = String(localized: "Share")
+        shareMenuButton = button
         return button
     }
 
@@ -498,6 +500,7 @@ final class YearInMusicViewController: UIViewController {
         activity.completionWithItemsHandler = { [weak self] _, completed, _, _ in
             if completed { self?.notificationFeedback.notificationOccurred(.success) }
         }
+        activity.anchorPopover(at: shareMenuButton, fallback: view)
         present(activity, animated: true)
     }
 }

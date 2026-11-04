@@ -80,13 +80,13 @@ final class StreamingLinksViewController: UIViewController {
             subtitle: result.pageURL.absoluteString,
             accessibilityLabel: String(localized: "Share universal link")
         )
-        shareRow.onTap = { [weak self] in
+        shareRow.onTap = { [weak self, weak shareRow] in
             guard let self else { return }
-            shareURL(result.pageURL, label: String(localized: "Universal"))
+            shareURL(result.pageURL, label: String(localized: "Universal"), from: shareRow)
         }
-        shareRow.menuProvider = { [weak self] in
+        shareRow.menuProvider = { [weak self, weak shareRow] in
             guard let self else { return nil }
-            return linkMenu(for: result.pageURL, label: String(localized: "Universal"))
+            return linkMenu(for: result.pageURL, label: String(localized: "Universal"), source: shareRow)
         }
         addRow(shareRow)
 
@@ -100,9 +100,9 @@ final class StreamingLinksViewController: UIViewController {
             guard let self else { return }
             copyURL(result.pageURL, label: String(localized: "Universal"))
         }
-        copyRow.menuProvider = { [weak self] in
+        copyRow.menuProvider = { [weak self, weak copyRow] in
             guard let self else { return nil }
-            return linkMenu(for: result.pageURL, label: String(localized: "Universal"))
+            return linkMenu(for: result.pageURL, label: String(localized: "Universal"), source: copyRow)
         }
         addRow(copyRow)
 
@@ -121,7 +121,7 @@ final class StreamingLinksViewController: UIViewController {
                 accessibilityLabel: String(localized: "Open in \(link.displayName)")
             )
             row.onTap = { [weak self] in self?.openPlatform(link) }
-            row.menuProvider = { [weak self] in self?.linkMenu(for: link.url, label: link.displayName) }
+            row.menuProvider = { [weak self, weak row] in self?.linkMenu(for: link.url, label: link.displayName, source: row) }
             addRow(row)
         }
     }
@@ -193,7 +193,7 @@ final class StreamingLinksViewController: UIViewController {
         UIApplication.shared.open(link.url)
     }
 
-    private func shareURL(_ url: URL, label: String) {
+    private func shareURL(_ url: URL, label: String, from source: UIView?) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         MidgarLog.info("Sharing \(label) link", category: .ui)
         let text = String(localized: "\(result.title) by \(result.artist)")
@@ -203,6 +203,7 @@ final class StreamingLinksViewController: UIViewController {
                 self?.dismiss(animated: true)
             }
         }
+        activity.anchorPopover(at: source, fallback: view)
         present(activity, animated: true)
     }
 
@@ -213,9 +214,9 @@ final class StreamingLinksViewController: UIViewController {
         ToastView.show(String(localized: "\(label) link copied"), in: view, style: .success)
     }
 
-    private func linkMenu(for url: URL, label: String) -> UIMenu {
-        let share = UIAction(title: String(localized: "Share"), image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
-            self?.shareURL(url, label: label)
+    private func linkMenu(for url: URL, label: String, source: UIView?) -> UIMenu {
+        let share = UIAction(title: String(localized: "Share"), image: UIImage(systemName: "square.and.arrow.up")) { [weak self, weak source] _ in
+            self?.shareURL(url, label: label, from: source)
         }
         let copy = UIAction(title: String(localized: "Copy Link"), image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
             self?.copyURL(url, label: label)

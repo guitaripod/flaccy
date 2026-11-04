@@ -50,6 +50,11 @@ extension SettingsViewController {
             self?.confirmDisconnectLastFM()
         })
         sheet.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        let row = dataSource.snapshot().itemIdentifiers
+            .first { if case .lastFMAccount = $0 { true } else { false } }
+            .flatMap { dataSource.indexPath(for: $0) }
+            .flatMap { tableView.cellForRow(at: $0) }
+        sheet.anchorPopover(at: row, fallback: view)
         present(sheet, animated: true)
     }
 

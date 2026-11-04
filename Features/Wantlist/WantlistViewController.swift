@@ -531,6 +531,8 @@ extension WantlistViewController: UICollectionViewDelegate {
             UIPasteboard.general.string = title.isEmpty ? artist : "\(artist) — \(title)"
         })
         sheet.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        let cell = dataSource.indexPath(for: item).flatMap { collectionView.cellForItem(at: $0) }
+        sheet.anchorPopover(at: cell, fallback: view)
         present(sheet, animated: true)
     }
 

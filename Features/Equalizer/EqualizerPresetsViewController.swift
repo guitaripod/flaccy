@@ -603,6 +603,7 @@ extension EqualizerPresetsViewController: UITableViewDataSource, UITableViewDele
         let share = UIContextualAction(style: .normal, title: String(localized: "Share")) { [weak self] _, _, done in
             guard let self else { return done(false) }
             let activity = UIActivityViewController(activityItems: [self.engine.exportText(for: profile)], applicationActivities: nil)
+            activity.anchorPopover(at: tableView.cellForRow(at: indexPath), fallback: self.view)
             self.present(activity, animated: true)
             done(true)
         }
