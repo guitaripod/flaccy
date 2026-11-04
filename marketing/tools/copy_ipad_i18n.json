@@ -1,0 +1,422 @@
+{
+  "de": {
+    "album": {
+      "headline": "Alben, *in voller Qualität.*",
+      "kicker": "Verlustfrei",
+      "maxLines": 1
+    },
+    "eq": {
+      "headline": "Kurve ziehen. *Hör den Unterschied.*",
+      "kicker": "Equalizer",
+      "maxLines": 1
+    },
+    "home": {
+      "headline": "Deine Musik, *auf ganzer Fläche.*",
+      "kicker": "Fürs große Display",
+      "maxLines": 1
+    },
+    "library": {
+      "headline": "Jedes Album, *immer griffbereit.*",
+      "kicker": "Mediathek",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "headline": "Cover & Songtext, *nebeneinander.*",
+      "kicker": "Songtext",
+      "maxLines": 1
+    },
+    "queue": {
+      "headline": "Deine Warteschlange, *zur Hand.*",
+      "kicker": "Als Nächstes",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "headline": "Jeder Titel gezählt, *auch offline.*",
+      "kicker": "Last.fm-Scrobbling",
+      "maxLines": 1
+    },
+    "year": {
+      "headline": "Dein Musikjahr, *zum Teilen bereit.*",
+      "kicker": "Dein Jahr in Musik",
+      "maxLines": 1
+    }
+  },
+  "es": {
+    "album": {
+      "headline": "Tu colección, *en calidad total.*",
+      "kicker": "Sin pérdida",
+      "maxLines": 1
+    },
+    "eq": {
+      "headline": "Arrastra la curva. *Escúchalo.*",
+      "kicker": "Ecualizador",
+      "maxLines": 1
+    },
+    "home": {
+      "headline": "Tu música, *toda la pantalla.*",
+      "kicker": "Para la gran pantalla",
+      "maxLines": 1
+    },
+    "library": {
+      "headline": "Cada álbum, *en la barra lateral.*",
+      "kicker": "Biblioteca",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "headline": "Carátula y letra, *lado a lado.*",
+      "kicker": "Letra",
+      "maxLines": 1
+    },
+    "queue": {
+      "headline": "Tu cola, *siempre a mano.*",
+      "kicker": "A continuación",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "headline": "Cada escucha suma, *sin conexión.*",
+      "kicker": "Scrobbling en Last.fm",
+      "maxLines": 1
+    },
+    "year": {
+      "headline": "Tu año en música, *para compartir.*",
+      "kicker": "Tu año en música",
+      "maxLines": 1
+    }
+  },
+  "fr": {
+    "home": {
+      "kicker": "Fait pour le grand écran",
+      "headline": "Votre musique, *sur tout l'écran.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "Bibliothèque",
+      "headline": "Chaque album, *en un geste.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "Sans perte",
+      "headline": "Votre collection, *qualité totale.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "Paroles synchronisées",
+      "headline": "Pochette et paroles, *côte à côte.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "À suivre",
+      "headline": "Votre file, *toujours à portée.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Scrobbling Last.fm",
+      "headline": "Chaque écoute, *même hors ligne.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "Égaliseur",
+      "headline": "Glissez la courbe. *Entendez-la.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "Année en musique",
+      "headline": "Votre année, *prête à partager.*",
+      "maxLines": 1
+    }
+  },
+  "it": {
+    "home": {
+      "kicker": "Per il grande schermo",
+      "headline": "La tua musica, *tutto lo schermo.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "Libreria",
+      "headline": "Ogni album, *a un tocco.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "Senza perdite",
+      "headline": "La collezione, *in qualità piena.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "Testo sincronizzato",
+      "headline": "Arte e testi, *fianco a fianco.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "Successivi",
+      "headline": "La tua coda, *sempre a portata.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Scrobbling Last.fm",
+      "headline": "Ogni ascolto, *anche offline.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "Equalizzatore",
+      "headline": "Muovi la curva. *Senti il cambio.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "Anno in musica",
+      "headline": "Il tuo anno, *da condividere.*",
+      "maxLines": 1
+    }
+  },
+  "ja": {
+    "home": {
+      "kicker": "大画面のために",
+      "headline": "音楽を、*画面いっぱいに。*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "ライブラリ",
+      "headline": "全アルバムが、*サイドバーに。*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "ロスレス",
+      "headline": "コレクションを、*フル品質で。*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "歌詞",
+      "headline": "アートと歌詞、*並んで表示。*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "次に再生",
+      "headline": "キューは、*いつも手元に。*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Last.fm スクロブル",
+      "headline": "オフラインでも、*すべて記録。*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "イコライザ",
+      "headline": "カーブを動かす。*音がすぐ変わる。*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "年間ミュージック",
+      "headline": "今年の音楽を、*共有しよう。*",
+      "maxLines": 1
+    }
+  },
+  "ko": {
+    "home": {
+      "kicker": "대형 화면을 위해",
+      "headline": "음악을, *화면 가득.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "보관함",
+      "headline": "모든 앨범, *사이드바 하나로.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "무손실",
+      "headline": "내 컬렉션을, *최고 음질로.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "가사",
+      "headline": "앨범 아트와 가사, *나란히.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "다음 재생",
+      "headline": "대기열을, *늘 손안에.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Last.fm 스크로블링",
+      "headline": "오프라인도, *모든 재생 기록.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "이퀄라이저",
+      "headline": "커브를 끌면, *소리가 달라요.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "올해의 음악 리포트",
+      "headline": "올해의 음악을, *공유해요.*",
+      "maxLines": 1
+    }
+  },
+  "pl": {
+    "home": {
+      "kicker": "Stworzone na duży ekran",
+      "headline": "Twoja muzyka, *cały ekran.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "Biblioteka",
+      "headline": "Każdy album, *w pasku bocznym.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "Bezstratnie",
+      "headline": "Kolekcja w *pełnej jakości.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "Teksty",
+      "headline": "Okładka i tekst, *obok siebie.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "Następne",
+      "headline": "Kolejka, *zawsze pod ręką.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Scrobbling Last.fm",
+      "headline": "Każdy odsłuch, *nawet offline.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Przeciągnij, *usłysz zmianę.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "Rok w muzyce",
+      "headline": "Twój rok, *gotowy do dzielenia.*",
+      "maxLines": 1
+    }
+  },
+  "pt-BR": {
+    "home": {
+      "kicker": "Para a tela grande",
+      "headline": "Sua música, *a tela inteira.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "Biblioteca",
+      "headline": "Cada álbum, *na barra lateral.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "Sem perdas",
+      "headline": "Sua coleção, em *qualidade total.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "Letras",
+      "headline": "Capa e letra, *lado a lado.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "A seguir",
+      "headline": "Sua fila, *sempre à mão.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Scrobble do Last.fm",
+      "headline": "Cada play contado, *mesmo offline.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "Equalizador",
+      "headline": "Arraste a curva. *Ouça a mudança.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "Seu ano em música",
+      "headline": "Seu ano, *para compartilhar.*",
+      "maxLines": 1
+    }
+  },
+  "zh-Hans": {
+    "home": {
+      "kicker": "为大屏幕而做",
+      "headline": "你的音乐，*铺满整个屏幕。*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "资料库",
+      "headline": "每张专辑，*侧边栏一点即达。*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "无损",
+      "headline": "你的收藏，*无损全音质。*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "歌词",
+      "headline": "封面与歌词，*并肩呈现。*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "接下来播放",
+      "headline": "播放队列，*随手可及。*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Last.fm 记录",
+      "headline": "离线也记录，*每一次播放。*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "均衡器",
+      "headline": "拖动曲线，*听见变化。*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "年度音乐",
+      "headline": "你的年度音乐，*随时分享。*",
+      "maxLines": 1
+    }
+  },
+  "zh-Hant": {
+    "home": {
+      "kicker": "為大螢幕而做",
+      "headline": "你的音樂，*鋪滿整個螢幕。*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "資料庫",
+      "headline": "每張專輯，*側邊欄一點即達。*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "無損",
+      "headline": "你的收藏，*無損全音質。*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "歌詞",
+      "headline": "封面與歌詞，*並肩呈現。*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "接著播放",
+      "headline": "待播清單，*隨手可及。*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Last.fm 記錄",
+      "headline": "離線也記錄，*每一次播放。*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "等化器",
+      "headline": "拖曳曲線，*聽見變化。*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "年度音樂",
+      "headline": "你的年度音樂，*隨時分享。*",
+      "maxLines": 1
+    }
+  }
+}
