@@ -149,6 +149,12 @@ final class ArtistDetailViewController: UIViewController, SonglinkShareable {
     }
 
     func ownedTracks() -> [Track] {
+        Self.ownedTracks(of: artistName, albums: albums, appearsOn: appearsOn)
+    }
+
+    /// An artist's songs as their page plays them: every album credited to
+    /// them plus the songs they perform on other albums, duplicates folded.
+    static func ownedTracks(of artistName: String, albums: [Album], appearsOn: [Album]) -> [Track] {
         let key = LibraryHygiene.artistKey(artistName)
         let tracks = albums.flatMap(\.tracks)
             + appearsOn.flatMap { $0.tracks.filter { LibraryHygiene.artistKey($0.artist) == key } }

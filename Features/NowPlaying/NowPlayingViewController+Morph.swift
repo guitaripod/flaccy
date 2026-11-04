@@ -44,9 +44,12 @@ extension NowPlayingViewController {
         }
     }
 
-    func setPaneMode(_ enabled: Bool) {
+    func setPaneMode(_ enabled: Bool, style: AdaptiveLayout.SplitStyle = .halves) {
         isPaneMode = enabled
+        paneStyle = style
         grabberControl.isHidden = enabled
+        fitColumnPane()
+        view.setNeedsLayout()
         if enabled {
             onFocusRequest?(centerState != .artwork)
         } else {

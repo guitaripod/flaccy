@@ -56,13 +56,7 @@ extension LibraryViewController {
 
     func presentSettings() {
         impactLight.impactOccurred()
-        let settings = SettingsViewController()
-        settings.onImportFiles = { [weak self] in
-            self?.importTapped()
-        }
-        let nav = UINavigationController(rootViewController: settings)
-        nav.modalPresentationStyle = .pageSheet
-        present(nav, animated: true)
+        present(SettingsViewController.makePresented(library: self), animated: true)
     }
 
     func importTapped() {

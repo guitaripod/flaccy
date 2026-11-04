@@ -297,11 +297,7 @@ final class HomeViewController: UIViewController {
 
     func presentSettings() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        let settings = SettingsViewController()
-        settings.onImportFiles = { [library] in library.performWhenVisible { library.importTapped() } }
-        let navigation = UINavigationController(rootViewController: settings)
-        navigation.modalPresentationStyle = .pageSheet
-        present(navigation, animated: true)
+        present(SettingsViewController.makePresented(library: library), animated: true)
     }
 
     func presentEditHome() {

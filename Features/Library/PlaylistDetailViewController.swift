@@ -5,7 +5,7 @@ import UIKit
 final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
 
     private let playlistId: Int64
-    private let playlistName: String
+    private var playlistName: String
     private let audioPlayer: AudioPlaying
     private let db = DatabaseManager.shared
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
@@ -54,6 +54,9 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(artworkChanged), name: AlbumArtworkCache.didChangeNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(songsWereDropped(_:)), name: TrackDrag.playlistDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(tracksRevised), name: Library.tracksRevised, object: nil
@@ -108,6 +111,10 @@ final class PlaylistDetailViewController: UIViewController, SonglinkShareable {
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.delegate = self
         tableView.dataSource = self
+        if DeviceKind.isPad {
+            tableView.dragDelegate = self
+            tableView.dropDelegate = self
+        }
         tableView.separatorStyle = .none
         tableView.backgroundColor = .clear
         tableView.register(PlaylistTrackCell.self, forCellReuseIdentifier: PlaylistTrackCell.reuseID)
@@ -675,6 +682,53 @@ private final class PlaylistTrackCell: UITableViewCell {
         titleLabel.textColor = isPlaying ? .tintColor : .label
         barsView.isHidden = !isPlaying
         barsView.setAnimating(isPlaying && AudioPlayer.shared.isPlaying)
+    }
+}
+
+extension PlaylistDetailViewController: UITableViewDragDelegate, UITableViewDropDelegate {
+
+    func tableView(_ tableView: UITableView, itemsForBeginning session: UIDragSession, at indexPath: IndexPath) -> [UIDragItem] {
+        guard !isEditing, tracks.indices.contains(indexPath.row) else { return [] }
+        session.localContext = self
+        let track = tracks[indexPath.row]
+        return TrackDrag.items(for: [track], named: track.title)
+    }
+
+    /// Songs dragged in from elsewhere join the end of the playlist; a song
+    /// dragged within it is left to the Edit button's reordering.
+    func tableView(_ tableView: UITableView, canHandle session: UIDropSession) -> Bool {
+        TrackDrag.carriesTracks(session) && !isOwnDrag(session)
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        dropSessionDidUpdate session: UIDropSession,
+        withDestinationIndexPath destinationIndexPath: IndexPath?
+    ) -> UITableViewDropProposal {
+        guard TrackDrag.carriesTracks(session), !isOwnDrag(session) else { return UITableViewDropProposal(operation: .cancel) }
+        return UITableViewDropProposal(operation: .copy, intent: .unspecified)
+    }
+
+    func tableView(_ tableView: UITableView, performDropWith coordinator: UITableViewDropCoordinator) {
+        guard !isOwnDrag(coordinator.session) else { return }
+        TrackDrag.add(TrackDrag.tracks(in: coordinator.session), toPlaylist: playlistId, named: playlistName, in: view)
+    }
+
+    /// Takes a new name given elsewhere, a server sync or another device, while
+    /// this playlist stays open in the iPad's sidebar.
+    func showRenamed(_ name: String) {
+        guard name != playlistName else { return }
+        playlistName = name
+        title = name
+    }
+
+    private func isOwnDrag(_ session: UIDropSession) -> Bool {
+        session.localDragSession?.localContext as AnyObject? === self
+    }
+
+    @objc private func songsWereDropped(_ notification: Notification) {
+        guard notification.userInfo?[TrackDrag.playlistIDKey] as? Int64 == playlistId else { return }
+        loadTracks()
     }
 }
 

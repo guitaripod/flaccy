@@ -57,6 +57,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
 
     var isMorphEmbedded = false
     var isPaneMode = false
+    var paneStyle: AdaptiveLayout.SplitStyle = .halves
     var isFocused = false
     var onFocusRequest: ((Bool) -> Void)?
     weak var morphContainer: PlayerMorphContaining?
@@ -85,6 +86,10 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     var artworkGroupTop: NSLayoutConstraint!
     let focusLeftColumn = UILayoutGuide()
     let focusRightColumn = UILayoutGuide()
+    let portraitColumn = UILayoutGuide()
+    var portraitColumnFill: NSLayoutConstraint?
+    var artworkPreferredWidth: NSLayoutConstraint?
+    let landscapeControlsRegion = UILayoutGuide()
     let laptopLyricsHost = UIView()
     let laptopQueueHost = UIView()
     var laptopLyricsChild: LyricsViewController?
@@ -281,6 +286,8 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     func setupLaptopCompanions() {
         view.addLayoutGuide(focusLeftColumn)
         view.addLayoutGuide(focusRightColumn)
+        view.addLayoutGuide(landscapeControlsRegion)
+        setupPortraitColumn()
         for host in [laptopLyricsHost, laptopQueueHost] {
             host.translatesAutoresizingMaskIntoConstraints = false
             host.isHidden = true
@@ -288,6 +295,24 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
             view.addSubview(host)
         }
         view.bringSubviewToFront(scrubBubble)
+    }
+
+    /// The single column's width: the view's less the usual margins, never
+    /// wider than reads well, centred when the window is wider than that (a
+    /// big iPad with the player over the whole window).
+    func setupPortraitColumn() {
+        view.addLayoutGuide(portraitColumn)
+        let safe = view.safeAreaLayoutGuide
+        let fillsWidth = portraitColumn.widthAnchor.constraint(equalTo: safe.widthAnchor, constant: -56)
+        fillsWidth.priority = .init(999)
+        portraitColumnFill = fillsWidth
+        NSLayoutConstraint.activate([
+            portraitColumn.centerXAnchor.constraint(equalTo: safe.centerXAnchor),
+            portraitColumn.topAnchor.constraint(equalTo: safe.topAnchor),
+            portraitColumn.bottomAnchor.constraint(equalTo: safe.bottomAnchor),
+            portraitColumn.widthAnchor.constraint(lessThanOrEqualToConstant: AdaptiveLayout.playerContentMaximumWidth),
+            fillsWidth,
+        ])
     }
 
     /// A sheet-style grabber pill hinting the drag-to-collapse gesture, with a

@@ -10,6 +10,16 @@ final class SettingsViewController: UITableViewController {
 
     var onImportFiles: (() -> Void)?
 
+    /// Settings in its own navigation stack as a sheet, its Import Files row
+    /// opening the picker from the Library.
+    static func makePresented(library: LibraryViewController) -> UINavigationController {
+        let settings = SettingsViewController()
+        settings.onImportFiles = { [weak library] in library?.performWhenVisible { library?.importTapped() } }
+        let navigation = UINavigationController(rootViewController: settings)
+        navigation.modalPresentationStyle = .pageSheet
+        return navigation
+    }
+
     static let cellReuseIdentifier = "SettingsCell"
 
     let selectionFeedback = UISelectionFeedbackGenerator()

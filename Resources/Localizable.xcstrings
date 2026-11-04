@@ -35345,6 +35345,70 @@
         }
       }
     },
+    "Couldn't add %lld of the dropped files: the app they came from didn't hand them over, or there isn't enough free space. Free some up, or add them with Add Music.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld der abgelegten Dateien konnten nicht hinzugefügt werden: Die App, aus der sie kommen, hat sie nicht übergeben, oder es ist nicht genug Speicherplatz frei. Gib etwas frei oder füge sie mit „Musik hinzufügen“ hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudieron añadir %lld de los archivos soltados: la app de la que vienen no los entregó o no hay suficiente espacio libre. Libera algo de espacio o añádelos con «Añadir música»."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’ajouter %lld des fichiers déposés : l’app d’où ils viennent ne les a pas transmis, ou l’espace libre est insuffisant. Libérez de l’espace ou ajoutez-les avec « Ajouter de la musique »."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile aggiungere %lld dei file trascinati: l’app da cui provengono non li ha consegnati, oppure non c’è abbastanza spazio libero. Libera un po’ di spazio o aggiungili con «Aggiungi musica»."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドロップしたファイルのうち%lld件を追加できませんでした。元のアプリがファイルを渡さなかったか、空き容量が足りません。空き容量を増やすか、「音楽を追加」から追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드롭한 파일 중 %lld개를 추가할 수 없습니다. 파일을 보낸 앱이 넘겨주지 않았거나 여유 공간이 부족합니다. 공간을 확보하거나 '음악 추가'로 추가하세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się dodać %lld z upuszczonych plików: aplikacja, z której pochodzą, ich nie przekazała albo brakuje wolnego miejsca. Zwolnij trochę miejsca lub dodaj je przez „Dodaj muzykę”."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível adicionar %lld dos arquivos soltos: o app de onde vieram não os entregou ou não há espaço livre suficiente. Libere espaço ou adicione-os com “Adicionar música”."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法添加拖入的 %lld 个文件：来源 App 没有交出这些文件，或可用空间不足。请释放一些空间，或通过“添加音乐”添加。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法加入拖入的 %lld 個檔案：來源 App 沒有交出這些檔案，或可用空間不足。請釋放一些空間，或透過「加入音樂」加入。"
+          }
+        }
+      }
+    },
     "Couldn't add to playlist.": {
       "localizations": {
         "de": {
@@ -75168,6 +75232,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在播放"
+          }
+        }
+      }
+    },
+    "Now Playing Column": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spalte „Aktuelle Wiedergabe“"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Columna Reproduciendo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colonne En cours de lecture"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colonna In riproduzione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生中の列"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 재생 중 열"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kolumna Teraz odtwarzane"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coluna Tocando agora"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在播放栏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在播放欄"
           }
         }
       }

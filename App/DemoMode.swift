@@ -543,6 +543,10 @@ enum DemoRouter {
                 )
             }
             perform(route, window: window, tabs: tabs, player: player)
+            if DemoMode.environment["FLACCY_SIDEBAR"] == "1" {
+                try? await Task.sleep(for: .seconds(0.4))
+                tabs.sidebar.isHidden = false
+            }
             if let scroll = Double(DemoMode.environment["FLACCY_HOME_SCROLL"] ?? "") {
                 try? await Task.sleep(for: .seconds(1.2))
                 tabs.home.demoScroll(fraction: CGFloat(scroll))

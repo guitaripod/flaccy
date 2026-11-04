@@ -34,6 +34,9 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     let runwayBanner = TrialRunwayBannerView()
     var runwayBannerHeight: NSLayoutConstraint!
     var runwayBannerRequested = false
+    var onSegmentChange: ((LibraryViewModel.Segment) -> Void)?
+    var chipsBelowPicker: NSLayoutConstraint!
+    var chipsBelowBar: NSLayoutConstraint!
 
     /// Where the full-screen Debut lives. The root container supplies its own
     /// view so the showpiece covers the tab bar, the mini player and the other
@@ -329,6 +332,8 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self.updateRightBarButton(for: segment)
             self.updateChips(for: segment)
             self.updateSectionIndex()
+            self.updatePivotTitle()
+            self.onSegmentChange?(segment)
         }, for: .valueChanged)
         view.addSubview(segmentedControl)
         NSLayoutConstraint.activate([
@@ -391,7 +396,23 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         updateSectionIndex()
     }
 
-    func createPlaylistTapped() {
+    /// Hides the segmented picker while a sidebar lists the same pivots, and
+    /// names the pivot in the navigation bar instead.
+    func setSegmentPickerHidden(_ hidden: Bool) {
+        loadViewIfNeeded()
+        guard segmentedControl.isHidden != hidden else { return }
+        segmentedControl.isHidden = hidden
+        chipsBelowPicker.isActive = !hidden
+        chipsBelowBar.isActive = hidden
+        updatePivotTitle()
+        view.layoutIfNeeded()
+    }
+
+    func updatePivotTitle() {
+        navigationItem.title = segmentedControl.isHidden ? viewModel.currentSegment.title : nil
+    }
+
+    func createPlaylistTapped(presentingFrom presenter: UIViewController? = nil) {
         impactLight.impactOccurred()
         let alert = UIAlertController(title: String(localized: "New Playlist"), message: nil, preferredStyle: .alert)
         alert.addTextField { textField in
@@ -411,7 +432,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
                 if let self { ToastView.show(String(localized: "Couldn't create \u{201C}\(name)\u{201D} — the library database couldn't be written. Check free disk space and try again."), in: self.view, style: .error) }
             }
         })
-        present(alert, animated: true)
+        (presenter ?? self).present(alert, animated: true)
     }
 
     func setupFilterChips() {
@@ -422,8 +443,10 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         }
         view.addSubview(filterChipsView)
         chipsHeightConstraint = filterChipsView.heightAnchor.constraint(equalToConstant: 46)
+        chipsBelowPicker = filterChipsView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 8)
+        chipsBelowBar = filterChipsView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 4)
         NSLayoutConstraint.activate([
-            filterChipsView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 8),
+            chipsBelowPicker,
             filterChipsView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             filterChipsView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             chipsHeightConstraint,
@@ -489,6 +512,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: createLayout(for: .albums))
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.delegate = self
+        if DeviceKind.isPad { collectionView.dragDelegate = self }
         collectionView.prefetchDataSource = self
         collectionView.backgroundColor = .clear
         collectionView.keyboardDismissMode = .onDrag

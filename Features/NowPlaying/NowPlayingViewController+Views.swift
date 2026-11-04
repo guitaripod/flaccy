@@ -127,6 +127,7 @@ extension NowPlayingViewController {
 
         let preferredWidth = artworkContainer.widthAnchor.constraint(equalTo: row.widthAnchor)
         preferredWidth.priority = UILayoutPriority(999)
+        artworkPreferredWidth = preferredWidth
 
         NSLayoutConstraint.activate([
             artworkContainer.topAnchor.constraint(equalTo: row.topAnchor),

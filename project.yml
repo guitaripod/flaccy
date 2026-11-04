@@ -107,7 +107,7 @@ targets:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
         SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
       configs:
         Debug:
           CODE_SIGN_IDENTITY: "Apple Development: Marcus Ziadé (AUJJ76QHS7)"
@@ -137,6 +137,13 @@ targets:
           - Secrets.swift.example
           - AppDelegate.swift
           - AppTabBarController.swift
+          - Pad/AppCommandTarget.swift
+          - Pad/AppCommands.swift
+          - Pad/AudioFileDrop.swift
+          - Pad/DebugWindowFrame.swift
+          - Pad/TrackDrag.swift
+          - Pad/PadSidebar.swift
+          - Pad/PlayerColumnSetting.swift
           - SceneDelegate.swift
           - UI/AdaptiveLayout.swift
           - UI/AppAppearance.swift
@@ -165,6 +172,7 @@ targets:
         type: syncedFolder
         excludes:
           - AlbumDetail/AlbumDetailViewController+Delegates.swift
+          - AlbumDetail/AlbumDetailViewController+Drag.swift
           - AlbumDetail/AlbumDetailViewController+Enrichment.swift
           - AlbumDetail/AlbumDetailViewController+Header.swift
           - AlbumDetail/AlbumDetailViewController.swift
@@ -223,6 +231,7 @@ targets:
           - Library/LibraryViewController+ContextMenus.swift
           - Library/LibraryViewController+DataSource.swift
           - Library/LibraryViewController+Debut.swift
+          - Library/LibraryViewController+Drag.swift
           - Library/LibraryViewController+Delegates.swift
           - Library/LibraryViewController+Layout.swift
           - Library/LibraryViewController+Sample.swift

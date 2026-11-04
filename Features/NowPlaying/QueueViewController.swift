@@ -1,3 +1,4 @@
+import MidgarCore
 import UIKit
 
 final class QueueViewController: UIViewController, SonglinkShareable {
@@ -18,6 +19,10 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     private var lastTopSection: Section?
 
     var onPushRequest: ((UIViewController) -> Void)?
+
+    /// Lists only what plays next, for a place beside a player that already
+    /// shows the song playing now.
+    var listsUpNextOnly = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -50,6 +55,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
 
     private func setupTableView() {
         tableView.delegate = self
+        tableView.dropDelegate = self
         tableView.dataSource = self
         tableView.register(QueueTrackCell.self, forCellReuseIdentifier: QueueTrackCell.reuseID)
         tableView.rowHeight = UITableView.automaticDimension
@@ -118,7 +124,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     private func performInitialScrollIfNeeded() {
         guard !hasPerformedInitialScroll, view.bounds.height > 0 else { return }
         hasPerformedInitialScroll = true
-        guard AudioPlayer.shared.currentTrack != nil, !historyTracks.isEmpty else { return }
+        guard !listsUpNextOnly, AudioPlayer.shared.currentTrack != nil, !historyTracks.isEmpty else { return }
         tableView.scrollToRow(at: nowPlayingIndexPath, at: .top, animated: false)
     }
 
@@ -135,7 +141,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     @objc private func trackDidChange() {
         let followsCurrentTrack = !tableView.isDragging && !tableView.isDecelerating && isNowPlayingRowVisible()
         reload()
-        guard followsCurrentTrack, AudioPlayer.shared.currentTrack != nil else { return }
+        guard !listsUpNextOnly, followsCurrentTrack, AudioPlayer.shared.currentTrack != nil else { return }
         tableView.scrollToRow(at: nowPlayingIndexPath, at: .top, animated: true)
     }
 
@@ -170,7 +176,7 @@ final class QueueViewController: UIViewController, SonglinkShareable {
 
     private func updateEmptyState() {
         let isEmpty = AudioPlayer.shared.queue.isEmpty && AudioPlayer.shared.currentTrack == nil
-        tableView.backgroundView = isEmpty ? makeEmptyBackgroundView() : nil
+        tableView.backgroundView = isEmpty && !listsUpNextOnly ? makeEmptyBackgroundView() : nil
     }
 
     private func makeEmptyBackgroundView() -> UIView {
@@ -277,6 +283,39 @@ final class QueueViewController: UIViewController, SonglinkShareable {
     }
 }
 
+extension QueueViewController: UITableViewDropDelegate {
+
+    func tableView(_ tableView: UITableView, canHandle session: UIDropSession) -> Bool {
+        TrackDrag.carriesTracks(session)
+    }
+
+    func tableView(
+        _ tableView: UITableView,
+        dropSessionDidUpdate session: UIDropSession,
+        withDestinationIndexPath destinationIndexPath: IndexPath?
+    ) -> UITableViewDropProposal {
+        guard TrackDrag.carriesTracks(session) else { return UITableViewDropProposal(operation: .cancel) }
+        return UITableViewDropProposal(operation: .copy, intent: .insertAtDestinationIndexPath)
+    }
+
+    /// Songs dropped on the queue join Up Next where they land: above the
+    /// first waiting song when dropped on what is playing or already played,
+    /// at the end when dropped below the list.
+    func tableView(_ tableView: UITableView, performDropWith coordinator: UITableViewDropCoordinator) {
+        let tracks = TrackDrag.tracks(in: coordinator.session)
+        guard !tracks.isEmpty else { return }
+        let position: Int
+        switch coordinator.destinationIndexPath.flatMap({ Section(rawValue: $0.section) }) {
+        case .upNext: position = coordinator.destinationIndexPath?.row ?? upNextTracks.count
+        case .history, .nowPlaying: position = 0
+        case nil: position = upNextTracks.count
+        }
+        TrackDrag.insertInUpNext(tracks, at: position)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        MidgarLog.info("Dropped \(tracks.count) songs into Up Next at \(position)", category: .ui)
+    }
+}
+
 extension QueueViewController: UITableViewDataSource {
 
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -286,8 +325,8 @@ extension QueueViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         guard let section = Section(rawValue: section) else { return 0 }
         switch section {
-        case .history: return historyTracks.count
-        case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? 1 : 0
+        case .history: return listsUpNextOnly ? 0 : historyTracks.count
+        case .nowPlaying: return !listsUpNextOnly && AudioPlayer.shared.currentTrack != nil ? 1 : 0
         case .upNext: return upNextTracks.count
         }
     }
@@ -308,8 +347,8 @@ extension QueueViewController: UITableViewDataSource {
 
     private func headerTitle(for section: Section) -> String? {
         switch section {
-        case .history: return historyTracks.isEmpty ? nil : String(localized: "History")
-        case .nowPlaying: return AudioPlayer.shared.currentTrack != nil ? String(localized: "Now Playing") : nil
+        case .history: return listsUpNextOnly || historyTracks.isEmpty ? nil : String(localized: "History")
+        case .nowPlaying: return !listsUpNextOnly && AudioPlayer.shared.currentTrack != nil ? String(localized: "Now Playing") : nil
         case .upNext: return upNextTracks.isEmpty ? nil : String(localized: "Up Next")
         }
     }

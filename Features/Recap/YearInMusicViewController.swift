@@ -61,8 +61,8 @@ final class YearInMusicViewController: UIViewController {
         applyPageTransforms()
     }
 
-    /// The story card is 9:16. Tall, it sits above its controls and takes its
-    /// height from its width. Wide, there is no height to spare, so the card
+    /// The story card is 9:16. Tall, it sits above its controls, no wider
+    /// than reads well, and takes its height from its width. Wide, there is no height to spare, so the card
     /// takes its width from the height and the controls move beside it.
     private func updateLayoutMode() {
         let wide = view.bounds.width > view.bounds.height * 1.05
@@ -84,6 +84,8 @@ final class YearInMusicViewController: UIViewController {
         } else {
             let tallest = pagesScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 4000)
             tallest.priority = UILayoutPriority(250)
+            let controlsFill = controlsStack.widthAnchor.constraint(equalTo: safe.widthAnchor, constant: -48)
+            controlsFill.priority = UILayoutPriority(999)
             layoutConstraints = [
                 pagesScrollView.topAnchor.constraint(equalTo: safe.topAnchor, constant: 56),
                 pagesScrollView.centerXAnchor.constraint(equalTo: safe.centerXAnchor),
@@ -91,8 +93,9 @@ final class YearInMusicViewController: UIViewController {
                 pagesScrollView.widthAnchor.constraint(equalTo: pagesScrollView.heightAnchor, multiplier: 9.0 / 16.0),
                 pagesScrollView.bottomAnchor.constraint(lessThanOrEqualTo: controlsStack.topAnchor, constant: -8),
                 tallest,
-                controlsStack.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 24),
-                controlsStack.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -24),
+                controlsStack.centerXAnchor.constraint(equalTo: safe.centerXAnchor),
+                controlsStack.widthAnchor.constraint(lessThanOrEqualToConstant: AdaptiveLayout.playerContentMaximumWidth),
+                controlsFill,
                 controlsStack.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -12),
             ]
         }

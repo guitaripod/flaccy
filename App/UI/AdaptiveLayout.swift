@@ -11,6 +11,11 @@ enum AdaptiveLayout {
     static let splitMinimumWidth: CGFloat = 840
     static let splitMinimumHeight: CGFloat = 560
 
+    static let playerColumnMinimumWidth: CGFloat = 360
+    static let playerColumnMaximumWidth: CGFloat = 440
+    static let playerColumnWidthFraction: CGFloat = 0.3
+    static let columnLibraryMinimumWidth: CGFloat = 760
+
     static let gridTargetTileWidth: CGFloat = 160
     static let gridMinimumColumns = 3
     static let evenColumnsFromWidth: CGFloat = 500
@@ -21,10 +26,14 @@ enum AdaptiveLayout {
     static let detailStackedMinimumHeight: CGFloat = 760
 
     static let playerLandscapeMaximumHeight: CGFloat = 560
+    static let playerWideLandscapeMinimumWidth: CGFloat = 1000
+    static let playerContentMaximumWidth: CGFloat = 640
+    static let playerControlsMaximumWidth: CGFloat = 560
+    static let paneQueueMinimumHeight: CGFloat = 150
     static let badgesBesideTitleMinimumWidth: CGFloat = 300
     static let actionRowSingleLineMinimumWidth: CGFloat = 310
 
-    static let homeWideMinimumWidth: CGFloat = 600
+    static let homeWideMinimumWidth: CGFloat = 760
     static let homeWideJumpColumns = 3
 
     /// Whether Home has room for its iPad-class arrangement, judged from the
@@ -33,11 +42,29 @@ enum AdaptiveLayout {
         contentWidth >= homeWideMinimumWidth
     }
 
+    /// How a window that holds the library beside Now Playing divides. On a
+    /// phone the two are halves, ending at the fold when there is one; on an
+    /// iPad Now Playing is a column along the trailing edge and the library
+    /// keeps the rest. The idiom picks the arrangement, never the thresholds.
+    enum SplitStyle: Equatable {
+        case halves
+        case column
+
+        init(idiom: UIUserInterfaceIdiom) {
+            self = idiom == .pad ? .column : .halves
+        }
+    }
+
     /// Whether the window is big enough to hold the library beside Now Playing.
     /// Both sides are required so a Pro Max held sideways, which is wide but
-    /// short, keeps the single-pane player.
-    static func usesSplit(size: CGSize) -> Bool {
-        size.width >= splitMinimumWidth && size.height >= splitMinimumHeight
+    /// short, keeps the single-pane player. A column split also needs the
+    /// library to keep `columnLibraryMinimumWidth` beside the player column.
+    static func usesSplit(size: CGSize, style: SplitStyle = .halves) -> Bool {
+        guard size.height >= splitMinimumHeight else { return false }
+        switch style {
+        case .halves: return size.width >= splitMinimumWidth
+        case .column: return size.width - playerColumnWidth(forWidth: size.width) >= columnLibraryMinimumWidth
+        }
     }
 
     struct SplitGeometry: Equatable {
@@ -45,16 +72,36 @@ enum AdaptiveLayout {
         let secondaryLeading: CGFloat
     }
 
-    /// Where the two panes meet. With a fold reported for the window the panes
-    /// end at its edges, so each half stands on its own and nothing straddles
-    /// the hinge; without one they meet at a fixed gutter around the centre.
-    static func splitGeometry(width: CGFloat, division: CGRect?) -> SplitGeometry {
-        if let division, division.height > division.width, division.width > 0 {
-            return SplitGeometry(primaryWidth: division.minX, secondaryLeading: division.maxX)
+    /// Where the library ends and Now Playing begins. With a fold reported for
+    /// the window the panes end at its edges, so each half stands on its own
+    /// and nothing straddles the hinge; without one, halves meet at a fixed
+    /// gutter around the centre and a column takes `playerColumnWidth(forWidth:)`
+    /// along the trailing edge.
+    static func splitGeometry(width: CGFloat, division: CGRect?, style: SplitStyle = .halves) -> SplitGeometry {
+        if let fold = verticalFold(division) {
+            return SplitGeometry(primaryWidth: fold.minX, secondaryLeading: fold.maxX)
         }
-        let gutter: CGFloat = 40
-        let primary = (width / 2 - gutter / 2).rounded(.down)
-        return SplitGeometry(primaryWidth: primary, secondaryLeading: primary + gutter)
+        switch style {
+        case .halves:
+            let gutter: CGFloat = 40
+            let primary = (width / 2 - gutter / 2).rounded(.down)
+            return SplitGeometry(primaryWidth: primary, secondaryLeading: primary + gutter)
+        case .column:
+            let primary = width - playerColumnWidth(forWidth: width)
+            return SplitGeometry(primaryWidth: primary, secondaryLeading: primary)
+        }
+    }
+
+    /// The Now Playing column's width beside the library: a share of the
+    /// window, never narrower than the controls need nor so wide that it
+    /// starves the library.
+    static func playerColumnWidth(forWidth width: CGFloat) -> CGFloat {
+        min(max((width * playerColumnWidthFraction).rounded(.down), playerColumnMinimumWidth), playerColumnMaximumWidth)
+    }
+
+    private static func verticalFold(_ division: CGRect?) -> CGRect? {
+        guard let division, division.height > division.width, division.width > 0 else { return nil }
+        return division
     }
 
     /// Cover-wall column count for a container of this width. Phone widths keep
@@ -102,8 +149,10 @@ enum AdaptiveLayout {
     /// and lyrics or the queue the right half over the controls, each ending at
     /// the fold. A fold running
     /// across the view puts artwork and lyrics in the region above it and the
-    /// controls in the stable region below; a short, wide view puts the artwork
-    /// beside the controls; everything else is the single column.
+    /// controls in the stable region below; a short, wide view, or one wide
+    /// enough to hold a full-size cover beside the controls (an iPad's whole
+    /// window), puts the artwork beside the controls; everything else is the
+    /// single column.
     static func playerLayout(
         size: CGSize, horizontalFold: ClosedRange<CGFloat>?, focus: SplitGeometry? = nil
     ) -> PlayerLayout {
@@ -113,7 +162,8 @@ enum AdaptiveLayout {
         if let horizontalFold, size.height > size.width {
             return .laptop(foldTop: horizontalFold.lowerBound, foldBottom: horizontalFold.upperBound)
         }
-        if size.width > size.height * 1.15, size.height <= playerLandscapeMaximumHeight {
+        if size.width > size.height * 1.15,
+           size.height <= playerLandscapeMaximumHeight || size.width >= playerWideLandscapeMinimumWidth {
             return .landscape
         }
         return .portrait

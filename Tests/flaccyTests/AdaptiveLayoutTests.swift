@@ -3,8 +3,9 @@ import XCTest
 
 /// The thresholds every adaptive screen shares, checked against the real
 /// iPhone Duo sizes (outer 466 x 678, inner 669 x 951, bar 84 pt, fold 40 pt
-/// wide at the centre) and against a Pro Max held sideways, which is wide but
-/// must not be treated as a two-pane window.
+/// wide at the centre), against a Pro Max held sideways, which is wide but
+/// must not be treated as a two-pane window, and against the iPads (mini
+/// 744 x 1133, Air 11 820 x 1180, Pro 13 1032 x 1376) both ways up.
 nonisolated final class AdaptiveLayoutTests: XCTestCase {
 
     @MainActor func testInnerLandscapeSplits() {
@@ -35,6 +36,52 @@ nonisolated final class AdaptiveLayoutTests: XCTestCase {
         let horizontal = CGRect(x: 0, y: 455.5, width: 669, height: 40)
         let geometry = AdaptiveLayout.splitGeometry(width: 951, division: horizontal)
         XCTAssertEqual(geometry.secondaryLeading, 495)
+    }
+
+    @MainActor func testIPadColumnNeedsRoomForTheLibraryBesideIt() {
+        XCTAssertTrue(AdaptiveLayout.usesSplit(size: CGSize(width: 1376, height: 1032), style: .column))
+        XCTAssertTrue(AdaptiveLayout.usesSplit(size: CGSize(width: 1180, height: 820), style: .column))
+        XCTAssertTrue(AdaptiveLayout.usesSplit(size: CGSize(width: 1133, height: 744), style: .column))
+        XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 1032, height: 1376), style: .column))
+        XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 744, height: 1133), style: .column))
+        XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 951, height: 669), style: .column))
+        XCTAssertFalse(AdaptiveLayout.usesSplit(size: CGSize(width: 1376, height: 500), style: .column))
+    }
+
+    @MainActor func testIPadColumnIsAShareOfTheWindowWithinItsBounds() {
+        XCTAssertEqual(AdaptiveLayout.playerColumnWidth(forWidth: 1133), 360)
+        XCTAssertEqual(AdaptiveLayout.playerColumnWidth(forWidth: 1376), 412)
+        XCTAssertEqual(AdaptiveLayout.playerColumnWidth(forWidth: 2400), 440)
+        let geometry = AdaptiveLayout.splitGeometry(width: 1376, division: nil, style: .column)
+        XCTAssertEqual(geometry.primaryWidth, 964)
+        XCTAssertEqual(geometry.secondaryLeading, 964)
+    }
+
+    @MainActor func testAFoldDecidesWhereEitherStyleSplits() {
+        let fold = CGRect(x: 455.5, y: 0, width: 40, height: 669)
+        XCTAssertEqual(
+            AdaptiveLayout.splitGeometry(width: 951, division: fold, style: .column),
+            AdaptiveLayout.splitGeometry(width: 951, division: fold, style: .halves)
+        )
+    }
+
+    @MainActor func testSplitStyleFollowsTheIdiom() {
+        XCTAssertEqual(AdaptiveLayout.SplitStyle(idiom: .pad), .column)
+        XCTAssertEqual(AdaptiveLayout.SplitStyle(idiom: .phone), .halves)
+    }
+
+    @MainActor func testAWholeIPadWindowPutsTheCoverBesideTheControls() {
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1376, height: 1032), horizontalFold: nil), .landscape)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1180, height: 820), horizontalFold: nil), .landscape)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 1032, height: 1376), horizontalFold: nil), .portrait)
+        XCTAssertEqual(AdaptiveLayout.playerLayout(size: CGSize(width: 951, height: 669), horizontalFold: nil), .portrait)
+    }
+
+    @MainActor func testHomeGoesWideOnlyWithRoomForTheHeroBesideTwoColumnsOfTiles() {
+        XCTAssertFalse(AdaptiveLayout.homeIsWide(contentWidth: 393))
+        XCTAssertFalse(AdaptiveLayout.homeIsWide(contentWidth: 667))
+        XCTAssertTrue(AdaptiveLayout.homeIsWide(contentWidth: 760))
+        XCTAssertTrue(AdaptiveLayout.homeIsWide(contentWidth: 1032))
     }
 
     @MainActor func testPhoneWidthsKeepThreeColumns() {

@@ -46,26 +46,35 @@ extension NowPlayingViewController {
         case .portrait:
             constraints = [
                 centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 24),
-                centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
-                centerContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                centerContainer.leadingAnchor.constraint(equalTo: portraitColumn.leadingAnchor),
+                centerContainer.trailingAnchor.constraint(equalTo: portraitColumn.trailingAnchor),
                 centerContainer.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -14),
-                bottomControls.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
-                bottomControls.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                bottomControls.leadingAnchor.constraint(equalTo: portraitColumn.leadingAnchor),
+                bottomControls.trailingAnchor.constraint(equalTo: portraitColumn.trailingAnchor),
                 bottomControls.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -16),
-                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.42),
-                stateContentContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor),
-                stateContentContainer.trailingAnchor.constraint(equalTo: safe.trailingAnchor),
+                artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: isColumnPane ? 0.34 : 0.42),
+                stateContentContainer.leadingAnchor.constraint(equalTo: portraitColumn.leadingAnchor, constant: -columnMargin),
+                stateContentContainer.trailingAnchor.constraint(equalTo: portraitColumn.trailingAnchor, constant: columnMargin),
                 stateContentContainer.topAnchor.constraint(equalTo: compactHeader.bottomAnchor, constant: 10),
                 stateContentContainer.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor),
+                laptopQueueHost.leadingAnchor.constraint(equalTo: bottomControls.leadingAnchor),
+                laptopQueueHost.trailingAnchor.constraint(equalTo: bottomControls.trailingAnchor),
+                laptopQueueHost.topAnchor.constraint(equalTo: artworkGroup.bottomAnchor, constant: 18),
+                laptopQueueHost.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -12),
             ]
         case .landscape:
+            let controlsFillRegion = bottomControls.widthAnchor.constraint(equalTo: landscapeControlsRegion.widthAnchor)
+            controlsFillRegion.priority = .init(999)
             constraints = [
                 centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 12),
                 centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
                 centerContainer.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -12),
                 centerContainer.widthAnchor.constraint(equalTo: safe.widthAnchor, multiplier: centerState == .artwork ? 0.36 : 0.5),
-                bottomControls.leadingAnchor.constraint(equalTo: centerContainer.trailingAnchor, constant: 28),
-                bottomControls.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                landscapeControlsRegion.leadingAnchor.constraint(equalTo: centerContainer.trailingAnchor, constant: 28),
+                landscapeControlsRegion.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -28),
+                bottomControls.centerXAnchor.constraint(equalTo: landscapeControlsRegion.centerXAnchor),
+                bottomControls.widthAnchor.constraint(lessThanOrEqualToConstant: AdaptiveLayout.playerControlsMaximumWidth),
+                controlsFillRegion,
                 bottomControls.centerYAnchor.constraint(equalTo: safe.centerYAnchor),
                 bottomControls.topAnchor.constraint(greaterThanOrEqualTo: safe.topAnchor, constant: 12),
                 artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.72),
@@ -132,7 +141,7 @@ extension NowPlayingViewController {
                 stateContentContainer.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -12),
             ]
         }
-        applyControlSpacing(compact: isLaptop(mode) || isFocusMode(mode))
+        applyControlSpacing(compact: isLaptop(mode) || isFocusMode(mode) || isColumnPane)
         NSLayoutConstraint.activate(constraints)
         modeConstraints = constraints
         refreshCenterVisibility()
@@ -189,6 +198,31 @@ extension NowPlayingViewController {
         bottomControls.setCustomSpacing(compact ? 18 : 34, after: volumeRowView)
     }
 
+    /// Narrows the margins and the cover of an iPad's Now Playing column, and
+    /// lets the cover give way before the controls do, so the column still
+    /// fits a short window (an iPad mini on its side); restores all three
+    /// everywhere else.
+    func fitColumnPane() {
+        portraitColumnFill?.constant = -2 * columnMargin
+        artworkPreferredWidth?.priority = isColumnPane ? .init(740) : .init(999)
+        if layoutMode == .portrait {
+            activateLayoutMode(.portrait, foldTop: nil, foldBottom: nil)
+        } else {
+            applyControlSpacing(compact: isLaptop(layoutMode) || isFocusMode(layoutMode) || isColumnPane)
+        }
+    }
+
+    var columnMargin: CGFloat {
+        isColumnPane ? 20 : 28
+    }
+
+    /// True while this player is an iPad's Now Playing column: a narrow, tall
+    /// pane that tightens its controls and lists what plays next under the
+    /// title.
+    var isColumnPane: Bool {
+        isPaneMode && paneStyle == .column
+    }
+
     var isLaptopLayout: Bool {
         if case .laptop = layoutMode { return true }
         return false
@@ -196,11 +230,15 @@ extension NowPlayingViewController {
 
     /// Shows the companions the laptop pose adds to the artwork state (lyrics
     /// beside the cover, the queue above the controls) and tears them down in
-    /// every other pose so nothing observes the player for no reason.
+    /// every other pose so nothing observes the player for no reason. A pane
+    /// tall enough to leave room under the title (an iPad's Now Playing
+    /// column) shows what plays next there too.
     func syncLaptopCompanions() {
         let queueRoom = bottomControls.frame.minY - 10 - (laptopQueueHost.frame.minY)
         let showsLyrics = isLaptopLayout && centerState == .artwork && AudioPlayer.shared.currentTrack != nil
-        let showsQueue = isLaptopLayout && centerState != .queue && queueRoom >= 96
+        let showsPaneQueue = isColumnPane && layoutMode == .portrait && centerState == .artwork
+            && queueRoom >= AdaptiveLayout.paneQueueMinimumHeight
+        let showsQueue = (isLaptopLayout && centerState != .queue && queueRoom >= 96) || showsPaneQueue
         setCompanion(
             laptopLyricsHost, visible: showsLyrics, current: laptopLyricsChild,
             make: {
@@ -213,6 +251,7 @@ extension NowPlayingViewController {
             laptopQueueHost, visible: showsQueue, current: laptopQueueChild,
             make: { [weak self] in
                 let controller = QueueViewController()
+                controller.listsUpNextOnly = showsPaneQueue
                 controller.onPushRequest = { viewController in self?.dismissAndPush(viewController) }
                 return controller
             },

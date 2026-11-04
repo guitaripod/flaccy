@@ -10,6 +10,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private var rootController: RootContainerViewController?
     private var deferredPaywallObserver: NSObjectProtocol?
     private var mergePresenter: ServerMergePresenter?
+    private var commandTarget: AppCommandTarget?
+    private var audioFileDrop: AudioFileDrop?
     private let folderPoller = LibraryFolderPoller()
 
     func scene(
@@ -35,10 +37,20 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         tabs.library.debutHostProvider = { [weak rootVC] in rootVC?.view }
 
         window.overrideUserInterfaceStyle = AppAppearance.current.userInterfaceStyle
+        #if DEBUG && targetEnvironment(simulator)
+        window.rootViewController = DebugWindowFrame.wrapIfRequested(rootVC)
+        #else
         window.rootViewController = rootVC
+        #endif
         window.makeKeyAndVisible()
         self.window = window
         mergePresenter = ServerMergePresenter(window: window)
+        let commands = AppCommandTarget(window: window, tabs: tabs, player: playerContainer, root: rootVC)
+        commands.becomeCurrent()
+        commandTarget = commands
+        let fileDrop = AudioFileDrop(library: tabs.library, host: rootVC.view)
+        rootVC.view.addInteraction(UIDropInteraction(delegate: fileDrop))
+        audioFileDrop = fileDrop
         RemoteLaunch.start()
         #if DEBUG
         RemoteExercise.runIfRequested()
@@ -182,6 +194,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
+        commandTarget?.becomeCurrent()
         folderPoller.start()
         TrialRunwayPresenter.refresh(in: window)
         ServerSyncLifecycle.shared.becameActive()
@@ -215,8 +228,13 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 /// Root container. Under 840 pt it is the library with the player overlay
 /// morphing over it; at 840 x 560 pt and up it is two panes, the library stack
 /// beside a permanent Now Playing, each ending at the fold when there is one.
-/// It also lets the player overlay drive the status bar, so it flips to light
-/// content as the dark player expands over the library.
+/// On an iPad Now Playing is instead a column over the trailing edge, there
+/// once something is playing and the window leaves the library its room, and
+/// gone again when the person hides it; the tabs keep the whole window and
+/// their content steps clear of the column through the safe area, so the
+/// sidebar still docks. It also lets the player overlay drive
+/// the status bar, so it flips to light content as the dark player expands
+/// over the library.
 final class RootContainerViewController: UIViewController {
     weak var statusBarSource: UIViewController?
 
@@ -236,8 +254,15 @@ final class RootContainerViewController: UIViewController {
     }
     var onSplitChange: ((Bool) -> Void)?
     private var isPlayerFocused = false
+    private var isAnimatingColumn = false
 
     override var childForStatusBarStyle: UIViewController? { statusBarSource }
+
+    #if DEBUG && targetEnvironment(simulator)
+    override var prefersStatusBarHidden: Bool {
+        ProcessInfo.processInfo.environment["FLACCY_HIDE_STATUS_BAR"] == "1"
+    }
+    #endif
 
     #if canImport(UIKit, _version: 9127.0.85)
     @available(iOS 27.1, *)
@@ -261,6 +286,9 @@ final class RootContainerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(playerColumnSettingDidChange), name: PlayerColumnSetting.didChange, object: nil
+        )
 
         addChild(navigation)
         view.addSubview(navigation.view)
@@ -312,14 +340,84 @@ final class RootContainerViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        let size = view.bounds.size
-        if AdaptiveLayout.usesSplit(size: size) {
-            let geometry = AdaptiveLayout.splitGeometry(width: size.width, division: view.divisionRegionFrame)
+        guard !isAnimatingColumn else { return }
+        if let geometry = desiredSplitGeometry() {
             guard !isSplit || geometry != appliedGeometry else { return }
             applySplitLayout(geometry)
         } else if isSplit {
             applyCompactLayout()
         }
+    }
+
+    private var splitStyle: AdaptiveLayout.SplitStyle {
+        AdaptiveLayout.SplitStyle(idiom: traitCollection.userInterfaceIdiom)
+    }
+
+    /// Where the panes meet for this window, or nil when it stays one pane. A
+    /// column waits for something to play and steps aside when hidden.
+    private func desiredSplitGeometry() -> AdaptiveLayout.SplitGeometry? {
+        let size = view.bounds.size
+        let style = splitStyle
+        guard AdaptiveLayout.usesSplit(size: size, style: style) else { return nil }
+        if style == .column, !hasCurrentTrack || !PlayerColumnSetting.isShown { return nil }
+        return AdaptiveLayout.splitGeometry(width: size.width, division: view.divisionRegionFrame, style: style)
+    }
+
+    /// Whether the window could hold the Now Playing column right now, shown or
+    /// not, so the controls that show and hide it know when they mean something.
+    var canShowPlayerColumn: Bool {
+        splitStyle == .column && hasCurrentTrack && AdaptiveLayout.usesSplit(size: view.bounds.size, style: .column)
+    }
+
+    @objc private func playerColumnSettingDidChange() {
+        refreshColumn(animated: true)
+    }
+
+    /// Slides the Now Playing column in from the trailing edge or out past it
+    /// when it comes or goes for a reason other than the window's size: the
+    /// first song, the queue emptying, or the person showing or hiding it.
+    private func refreshColumn(animated: Bool) {
+        guard view.window != nil, splitStyle == .column, !isAnimatingColumn else {
+            view.setNeedsLayout()
+            return
+        }
+        let target = desiredSplitGeometry()
+        guard (target != nil) != isSplit else { return }
+        guard animated, !UIAccessibility.isReduceMotionEnabled else {
+            view.setNeedsLayout()
+            view.layoutIfNeeded()
+            return
+        }
+        let width = view.bounds.width
+        isAnimatingColumn = true
+        if let target {
+            applySplitLayout(target)
+            playerLeading.constant = width
+            view.layoutIfNeeded()
+            playerLeading.constant = target.secondaryLeading
+            animateColumn { [weak self] in
+                self?.isAnimatingColumn = false
+                self?.view.setNeedsLayout()
+            }
+        } else {
+            playerLeading.constant = width
+            navigation.additionalSafeAreaInsets.right = 0
+            animateColumn { [weak self] in
+                guard let self else { return }
+                self.isAnimatingColumn = false
+                self.applyCompactLayout()
+                self.view.setNeedsLayout()
+            }
+        }
+    }
+
+    private func animateColumn(completion: @escaping () -> Void) {
+        UIView.animate(
+            withDuration: 0.45, delay: 0, usingSpringWithDamping: 0.88, initialSpringVelocity: 0,
+            options: [.beginFromCurrentState, .allowUserInteraction]
+        ) {
+            self.view.layoutIfNeeded()
+        } completion: { _ in completion() }
     }
 
     /// Gives the player the whole window (artwork on one half, lyrics or the
@@ -346,8 +444,10 @@ final class RootContainerViewController: UIViewController {
     }
 
     func setHasCurrentTrack(_ hasTrack: Bool) {
+        guard hasTrack != hasCurrentTrack else { return }
         hasCurrentTrack = hasTrack
         updateDockInset()
+        refreshColumn(animated: true)
     }
 
     /// Keeps scroll content clear of the floating dock. On iOS 26 the system's
@@ -366,10 +466,17 @@ final class RootContainerViewController: UIViewController {
         isSplit = true
         appliedGeometry = geometry
         refreshVerticalBarConfiguration()
-        navigationTrailing.isActive = false
-        navigationWidth.constant = geometry.primaryWidth
-        navigationWidth.isActive = true
+        if splitStyle == .column {
+            navigationWidth.isActive = false
+            navigationTrailing.isActive = true
+            navigation.additionalSafeAreaInsets.right = view.bounds.width - geometry.secondaryLeading
+        } else {
+            navigationTrailing.isActive = false
+            navigationWidth.constant = geometry.primaryWidth
+            navigationWidth.isActive = true
+        }
         playerLeading.constant = isPlayerFocused ? 0 : geometry.secondaryLeading
+        player.paneStyle = splitStyle
         dimmingView.isHidden = true
         updateDockInset()
         player.setPaneMode(true)
@@ -387,6 +494,7 @@ final class RootContainerViewController: UIViewController {
         appliedGeometry = nil
         navigationWidth.isActive = false
         navigationTrailing.isActive = true
+        navigation.additionalSafeAreaInsets.right = 0
         playerLeading.constant = 0
         let keepsExpanded = isPlayerFocused
         isPlayerFocused = false

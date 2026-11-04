@@ -162,17 +162,29 @@ extension LibraryViewController: UISearchResultsUpdating {
 extension LibraryViewController: UIDocumentPickerDelegate {
 
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        guard !urls.isEmpty else { return }
-        let toast = ToastView.showLive(ImportOutcomeCopy.scanning, in: view)
+        importFiles(at: urls)
+    }
+
+    /// Imports files picked in Files or dropped on the window, reporting
+    /// progress and the outcome in `host` (the Library when nil) and running
+    /// `finished` once the import has let go of the files.
+    func importFiles(at urls: [URL], reportingIn host: UIView? = nil, finished: (@MainActor () -> Void)? = nil) {
+        guard !urls.isEmpty else {
+            finished?()
+            return
+        }
+        let toast = ToastView.showLive(ImportOutcomeCopy.scanning, in: host ?? view)
+        let presenter: UIViewController = view.window != nil ? self : (host?.window?.rootViewController ?? self)
         Task {
             let outcome = await viewModel.importFiles(
                 from: urls,
                 progress: { toast.update(ImportOutcomeCopy.progress($0)) },
-                decideReplacements: { prompt in await ImportReplacementAlert.ask(prompt, from: self) }
+                decideReplacements: { prompt in await ImportReplacementAlert.ask(prompt, from: presenter) }
             )
             let report = ImportOutcomeCopy.report(outcome)
             UINotificationFeedbackGenerator().notificationOccurred(report.isFailure ? .error : (report.isNoOp ? .warning : .success))
             toast.finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
+            finished?()
         }
     }
 }

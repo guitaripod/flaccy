@@ -115,6 +115,11 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     /// bar is: under the dock on a phone, down one side on an iPhone Duo.
     var dockObstruction: (() -> UIEdgeInsets)?
     var onMorphProgress: ((CGFloat) -> Void)?
+
+    /// What kind of pane the card becomes beside the library: a half that
+    /// ends at a fold, rounded on all four corners, or an iPad's column,
+    /// rounded only on the window's own.
+    var paneStyle: AdaptiveLayout.SplitStyle = .halves
     var onFocusChange: ((Bool) -> Void)?
 
     private var statusBarLight = false {
@@ -258,7 +263,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         onSettleToDock = nil
         isPaneMode = enabled
         applyTerminalState(enabled || keepsExpanded ? .full : .dock)
-        npc.setPaneMode(enabled)
+        npc.setPaneMode(enabled, style: paneStyle)
         proxyView.isHidden = true
         npc.setArtworkHiddenForMorph(false)
         miniPlayer.setMorphArtworkHidden(false)
@@ -310,6 +315,37 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
     func expandShowingLyrics() {
         npc.showLyricsCenterState()
         expand()
+    }
+
+    func collapseIfExpanded() {
+        guard state == .full, !isPaneMode else { return }
+        collapse()
+    }
+
+    /// Shows lyrics or the queue, opening the player first when it is docked,
+    /// or goes back to the artwork when that state is already showing.
+    func toggleCenterState(_ target: NowPlayingViewController.CenterState) {
+        guard isPaneMode || state == .full else {
+            target == .queue ? expandShowingQueue() : expandShowingLyrics()
+            return
+        }
+        npc.setCenterState(npc.centerState == target ? .artwork : target)
+    }
+
+    /// Opens or closes Now Playing over the library; as a pane it spreads
+    /// across the window with the lyrics, or returns to its column.
+    func toggleFullPlayer() {
+        if isPaneMode {
+            npc.setCenterState(npc.centerState == .artwork ? .lyrics : .artwork)
+        } else if state == .dock {
+            expand()
+        } else if state == .full {
+            collapse()
+        }
+    }
+
+    func toggleLoveForPlayingSong() {
+        npc.toggleLove()
     }
 
     func beginActionRowEditing() {
@@ -399,6 +435,7 @@ final class PlayerContainerViewController: UIViewController, PlayerMorphContaini
         CATransaction.setDisableActions(true)
         let cornerRadius = lerp(dockCorner, MorphTuning.fullCorner, t)
         cardView.layer.cornerRadius = cornerRadius
+        cardView.layer.maskedCorners = isPaneMode && paneStyle == .column ? .rightCorners : .allCorners
         cardShadowView.frame = cardView.frame
         cardShadowView.layer.shadowPath = UIBezierPath(
             roundedRect: cardShadowView.bounds, cornerRadius: cornerRadius
@@ -702,4 +739,9 @@ extension PlayerContainerViewController: UIGestureRecognizerDelegate {
     ) -> Bool {
         other.view is UIScrollView
     }
+}
+
+extension CACornerMask {
+    static let allCorners: CACornerMask = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+    static let rightCorners: CACornerMask = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
 }

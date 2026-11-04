@@ -2,9 +2,10 @@ import FlaccyCore
 import MidgarCore
 import UIKit
 
-/// The iPhone's root navigation: Home, Library, Recap and Search, with the
-/// mini player riding above the tab bar. Every screen that used to push onto
-/// the Library's stack now pushes onto the stack of whichever tab is selected.
+/// The root navigation: Home, Library, Recap and Search, with the mini player
+/// riding above the tab bar. On an iPad the same tabs grow into a sidebar
+/// (`PadSidebar`). Every screen that used to push onto the Library's stack now
+/// pushes onto the stack of whichever tab is selected.
 final class AppTabBarController: UITabBarController {
 
     enum Destination: String, CaseIterable {
@@ -39,6 +40,7 @@ final class AppTabBarController: UITabBarController {
     private var lastMiniPlayerIsPlaying = false
 
     private var tabsByDestination: [Destination: UITab] = [:]
+    private(set) var padSidebar: PadSidebar?
 
     private lazy var accessoryMiniPlayer: MiniPlayerView = {
         let mini = MiniPlayerView()
@@ -61,7 +63,11 @@ final class AppTabBarController: UITabBarController {
         recapNavigation.navigationBar.prefersLargeTitles = false
         searchNavigation.navigationBar.prefersLargeTitles = true
         home.tabController = self
-        configureTabs()
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            configurePadTabs()
+        } else {
+            configureTabs()
+        }
         if #available(iOS 26.0, *) {
             tabBarMinimizeBehavior = .onScrollDown
         }
@@ -73,6 +79,11 @@ final class AppTabBarController: UITabBarController {
     override func viewDidLoad() {
         super.viewDidLoad()
         library.loadViewIfNeeded()
+    }
+
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        padSidebar?.notifyPivotPlacement()
     }
 
     private func configureTabs() {
@@ -94,13 +105,58 @@ final class AppTabBarController: UITabBarController {
         selectedTab = homeTab
     }
 
+    /// The iPad's tabs: the iPhone's four with the Library as a group of its
+    /// pivots, plus the sidebar-only Playlists and Discover sections.
+    private func configurePadTabs() {
+        let sidebarModel = PadSidebar(tabs: self)
+        padSidebar = sidebarModel
+        library.onSegmentChange = { [weak sidebarModel] segment in sidebarModel?.libraryDidSwitch(to: segment) }
+        sidebarModel.onShowsPivotsChange = { [weak library] shows in library?.setSegmentPickerHidden(shows) }
+        registerForTraitChanges([UITraitHorizontalSizeClass.self]) { (controller: AppTabBarController, _) in
+            controller.padSidebar?.notifyPivotPlacement()
+        }
+        mode = .tabSidebar
+        delegate = sidebarModel
+        sidebar.delegate = sidebarModel
+        let homeTab = UITab(
+            title: HomeCopy.home, image: UIImage(systemName: "house.fill"), identifier: Destination.home.rawValue
+        ) { [homeNavigation] _ in homeNavigation }
+        let recapTab = UITab(
+            title: String(localized: "Recap"), image: UIImage(systemName: "chart.bar.xaxis"),
+            identifier: Destination.recap.rawValue
+        ) { [recapNavigation] _ in recapNavigation }
+        let searchTab = UISearchTab { [searchNavigation] _ in searchNavigation }
+        tabsByDestination = [.home: homeTab, .library: sidebarModel.libraryGroup, .recap: recapTab, .search: searchTab]
+        let primary = [homeTab, sidebarModel.libraryGroup, recapTab, searchTab]
+        sidebarModel.setPrimaryTabs(primary)
+        tabs = primary + [sidebarModel.playlistsGroup, sidebarModel.discoverGroup]
+        selectedTab = homeTab
+    }
+
     var selectedNavigation: UINavigationController {
         selectedViewController as? UINavigationController ?? libraryNavigation
     }
 
     func show(_ destination: Destination) {
+        if destination == .library, let pivot = padSidebar?.pivotTab(for: library.viewModel.currentSegment) {
+            selectedTab = pivot
+            return
+        }
         guard let tab = tabsByDestination[destination] else { return }
         selectedTab = tab
+    }
+
+    /// Opens one of the Library's pivots at the top of its stack: the
+    /// sidebar's own destination on an iPad, the segment in the Library tab
+    /// everywhere else.
+    func showLibrary(_ segment: LibraryViewModel.Segment) {
+        if let pivot = padSidebar?.pivotTab(for: segment) {
+            selectedTab = pivot
+        } else {
+            show(.library)
+        }
+        libraryNavigation.popToRootViewController(animated: false)
+        library.select(segment: segment)
     }
 
     /// Pushes onto the selected tab's stack, the one place any screen that

@@ -194,6 +194,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
         tableView = UITableView(frame: .zero, style: .plain)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.delegate = self
+        if DeviceKind.isPad { tableView.dragDelegate = self }
         tableView.separatorStyle = .none
         tableView.backgroundColor = .clear
         tableView.indicatorStyle = .white

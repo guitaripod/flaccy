@@ -28,6 +28,17 @@ final class SearchViewController: UIViewController {
 
     private let libraryViewModel: LibraryViewModel
     private let searchController = UISearchController(searchResultsController: nil)
+
+    /// Puts the cursor in the search field, for ⌘F. Waits a turn so the tab
+    /// is on screen before the field takes the keyboard.
+    func focusSearchField() {
+        loadViewIfNeeded()
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.searchController.isActive = true
+            self.searchController.searchBar.becomeFirstResponder()
+        }
+    }
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Section, SearchItem>!
     private var results = LibraryViewModel.SearchResults()

@@ -74,6 +74,32 @@ extension DatabaseManager {
         }
     }
 
+    /// Hands `onChange` every playlist, newest first, on the main queue: once
+    /// now and again after each write that touches the playlists table, from
+    /// this device or a server sync, until the returned token is cancelled or
+    /// released. Covers are never read.
+    public func observePlaylists(
+        onChange: @escaping @MainActor @Sendable ([PlaylistRecord]) -> Void
+    ) -> AnyDatabaseCancellable {
+        ValueObservation
+            .tracking { db in
+                try PlaylistRecord
+                    .select(Column("id"), Column("name"), Column("createdAt"))
+                    .order(Column("createdAt").desc)
+                    .fetchAll(db)
+            }
+            .start(
+                in: dbQueue,
+                scheduling: .async(onQueue: .main),
+                onError: { error in
+                    MidgarLog.error("Playlist observation failed: \(error.localizedDescription)", category: .database)
+                },
+                onChange: { playlists in
+                    MainActor.assumeIsolated { onChange(playlists) }
+                }
+            )
+    }
+
     public func addTrackToPlaylist(playlistId: Int64, trackFileURL: String) throws {
         try dbQueue.write { db in
             let maxPosition = try Int.fetchOne(
