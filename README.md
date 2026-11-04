@@ -1,10 +1,11 @@
 <p align="center">
   <h1 align="center">flaccy</h1>
-  <p align="center">The player for the music you own: iPhone, Apple Watch, Mac and Linux, with a free home server that keeps them in sync.</p>
+  <p align="center">The player for the music you own: iPhone, iPad, Apple Watch, Mac and Linux, with a free home server that keeps them in sync.</p>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/iOS%2018.6+-blue?logo=apple" alt="iOS">
+  <img src="https://img.shields.io/badge/iPadOS%2018.6+-blue?logo=apple" alt="iPadOS">
   <img src="https://img.shields.io/badge/watchOS%2011+-blue?logo=apple" alt="watchOS">
   <img src="https://img.shields.io/badge/macOS%2026+-blue?logo=apple" alt="macOS">
   <img src="https://img.shields.io/badge/Linux%20(GTK4)-yellow?logo=linux&logoColor=white" alt="Linux">
@@ -22,7 +23,8 @@ Point flaccy at your music. It plays FLAC, ALAC, WAV, AIFF, MP3 and AAC gaplessl
 | Platform | What it is | Get it |
 |---|---|---|
 | **iPhone + Apple Watch** | The full app, with a standalone Watch player that plays offline through AirPods | [App Store](https://apps.apple.com/app/id6787493695) |
-| **Mac** | Native AppKit app with Liquid Glass, folder watching and a menu bar player; one purchase covers iPhone, Watch and Mac | [Mac App Store](https://apps.apple.com/app/id6787493695) |
+| **iPad** | The same app with a sidebar, Now Playing and Up Next in a column beside it, keyboard shortcuts, the menu bar, pointer support and drag and drop; one purchase with iPhone | [App Store](https://apps.apple.com/app/id6787493695) |
+| **Mac** | Native AppKit app with Liquid Glass, folder watching and a menu bar player; one purchase covers iPhone, iPad, Watch and Mac | [Mac App Store](https://apps.apple.com/app/id6787493695) |
 | **Linux** | Native GTK4/libadwaita app with GStreamer, MPRIS and the same library, lyrics and equalizer; free | `yay -S flaccy-bin` or `curl -fsSL https://raw.githubusercontent.com/guitaripod/flaccy/master/linux/get-flaccy.sh \| sh` |
 | **Flaccy Server** | Free, GPL home server for the computer that holds your music, reached over Tailscale | [Setup guide](https://midgarcorp.cc/flaccy/server): `yay -S flaccy-server-bin`, `brew install guitaripod/tap/flaccy-server`, `.deb`/`.rpm`, Docker, or Share this Mac's library in Flaccy for Mac |
 
