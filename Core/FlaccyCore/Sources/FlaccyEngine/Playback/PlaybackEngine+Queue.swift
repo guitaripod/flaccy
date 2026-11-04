@@ -138,15 +138,25 @@ extension PlaybackEngine {
               sourceIndex != destinationIndex
         else { return }
 
-        let playing = currentTrack
+        let hadCurrent = currentTrack != nil
         let track = queue.remove(at: sourceIndex)
         queue.insert(track, at: destinationIndex)
-        if let playing, let idx = queue.firstIndex(of: playing) {
-            currentIndex = idx
+        if hadCurrent {
+            currentIndex = Self.index(of: currentIndex, afterMovingFrom: sourceIndex, to: destinationIndex)
         }
 
         resyncPreloadedItems()
         postOnMain(PlaybackEngine.queueDidChange)
+    }
+
+    /// Where the song at `index` sits once one song has moved from `source` to
+    /// `destination`. Found by position, never by value, because a queue can
+    /// hold the same song twice and the playing copy must not jump to another.
+    nonisolated static func index(of index: Int, afterMovingFrom source: Int, to destination: Int) -> Int {
+        if index == source { return destination }
+        if source < index, destination >= index { return index - 1 }
+        if source > index, destination <= index { return index + 1 }
+        return index
     }
 
     public func insertNext(_ track: Track) {
