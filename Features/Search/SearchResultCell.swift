@@ -15,6 +15,7 @@ final class SearchResultCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        contentView.highlightsUnderPointer(cornerRadius: 12)
         coverView.translatesAutoresizingMaskIntoConstraints = false
         coverView.layer.cornerCurve = .continuous
 

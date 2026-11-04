@@ -150,6 +150,7 @@ targets:
           - UI/MarqueeLabel.swift
           - UI/NewMixChipView.swift
           - UI/NowPlayingBarsView.swift
+          - UI/PointerHover.swift
           - UI/PopoverAnchor.swift
           - UI/QualityBadgeView.swift
           - UI/SectionIndexView.swift

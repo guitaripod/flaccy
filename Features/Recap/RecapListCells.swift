@@ -14,6 +14,7 @@ final class ArtistCardCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        cover.liftsUnderPointer(cornerRadius: 40)
 
         disc.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         disc.layer.cornerRadius = 40
@@ -119,6 +120,7 @@ final class AlbumCoverCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        cover.liftsUnderPointer(cornerRadius: 10)
 
         cover.layer.cornerRadius = 10
         cover.layer.cornerCurve = .continuous
@@ -198,6 +200,7 @@ final class TrackRowCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        contentView.highlightsUnderPointer(cornerRadius: 12)
 
         rankLabel.font = .monospacedDigitSystemFont(ofSize: 17, weight: .bold)
         rankLabel.textAlignment = .center

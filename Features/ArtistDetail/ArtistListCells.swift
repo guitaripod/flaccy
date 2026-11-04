@@ -11,6 +11,7 @@ final class PopularTrackCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        contentView.highlightsUnderPointer(cornerRadius: 12)
 
         rankLabel.font = UIFontMetrics(forTextStyle: .subheadline)
             .scaledFont(for: .monospacedDigitSystemFont(ofSize: 15, weight: .regular), maximumPointSize: 24)

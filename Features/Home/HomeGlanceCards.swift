@@ -10,6 +10,7 @@ class HomeGlanceCardCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        contentView.highlightsUnderPointer(cornerRadius: 22)
         contentView.backgroundColor = UIColor.label.withAlphaComponent(0.08)
         contentView.layer.cornerRadius = 22
         contentView.layer.cornerCurve = .continuous

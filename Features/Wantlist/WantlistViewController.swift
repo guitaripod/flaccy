@@ -13,6 +13,7 @@ final class WantlistRowCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        contentView.highlightsUnderPointer(cornerRadius: 12)
 
         artwork.layer.cornerRadius = 6
         artwork.layer.cornerCurve = .continuous

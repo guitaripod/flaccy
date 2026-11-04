@@ -16,6 +16,7 @@ final class HomeAlbumCardCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        art.liftsUnderPointer(cornerRadius: 10)
         art.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.font = .scaled(.subheadline, size: 14, weight: .semibold)
         titleLabel.numberOfLines = 1

@@ -16,6 +16,7 @@ final class TrackGridCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        artworkContainer.liftsUnderPointer(cornerRadius: 10)
 
         artworkContainer.layer.shadowColor = UIColor.black.cgColor
         artworkContainer.layer.shadowOpacity = 0.18

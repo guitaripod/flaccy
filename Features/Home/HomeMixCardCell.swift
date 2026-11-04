@@ -21,6 +21,7 @@ final class HomeMixCardCell: UICollectionViewCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        art.liftsUnderPointer(cornerRadius: 14)
         art.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(art)
 
