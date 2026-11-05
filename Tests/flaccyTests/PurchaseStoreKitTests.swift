@@ -27,8 +27,8 @@ struct PurchaseStoreKitTests {
         .deletingLastPathComponent()
         .appendingPathComponent("flaccyUITests/Flaccy.storekit")
 
-    private func makeHarness() throws -> Harness {
-        let session = try SKTestSession(contentsOf: Self.configurationURL)
+    private func makeHarness(configuration: URL = Self.configurationURL) throws -> Harness {
+        let session = try SKTestSession(contentsOf: configuration)
         session.resetToDefaultState()
         session.clearTransactions()
         session.disableDialogs = true
@@ -64,6 +64,19 @@ struct PurchaseStoreKitTests {
         #expect(welcome.storeProduct.id == FlaccyProducts.welcomeLifetime)
         #expect(welcome.isWelcomeBack)
         #expect(welcome.regularPrice == harness.manager.lifetimeOffer?.displayPrice)
+        await harness.store.stop()
+    }
+
+    @Test func aWelcomeBackProductPricedLikeLifetimeIsNoOfferAndForgetsTheReminder() async throws {
+        let configuration = try Self.configurationWithWelcomeBackAtLifetimePrice()
+        defer { try? FileManager.default.removeItem(at: configuration) }
+        let harness = try makeHarness(configuration: configuration)
+
+        let offers = await harness.manager.loadOffersIfNeeded()
+
+        #expect(offers.map(\.plan) == [.yearly, .lifetime])
+        #expect(harness.manager.lapsedLifetimeOffer == nil)
+        #expect(!harness.manager.lapsedOfferExists)
         await harness.store.stop()
     }
 
@@ -140,6 +153,23 @@ struct PurchaseStoreKitTests {
         #expect([PurchaseFailure.unreachable, .notAvailableInStorefront, .unverified, .other].allSatisfy {
             !($0.errorDescription ?? "").isEmpty
         })
+    }
+
+    /// `Flaccy.storekit` with the welcome-back lifetime at Lifetime's price, as App Store Connect holds it for the
+    /// 30 days after Lifetime's price goes up, written to a temporary file.
+    private static func configurationWithWelcomeBackAtLifetimePrice() throws -> URL {
+        let data = try Data(contentsOf: configurationURL)
+        var root = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        var products = try #require(root["products"] as? [[String: Any]])
+        let lifetimePrice = try #require(products.first { $0["productID"] as? String == FlaccyProducts.lifetime }?["displayPrice"])
+        let welcome = try #require(products.firstIndex { $0["productID"] as? String == FlaccyProducts.welcomeLifetime })
+        products[welcome]["displayPrice"] = lifetimePrice
+        root["products"] = products
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("flaccy-welcome-at-lifetime-" + UUID().uuidString)
+            .appendingPathExtension("storekit")
+        try JSONSerialization.data(withJSONObject: root).write(to: url)
+        return url
     }
 
     /// Buys `plan` with the confirmation anchored to the host app's window scene, as the paywall does. A scene-less

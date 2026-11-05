@@ -5,7 +5,7 @@
   ],
   "products" : [
     {
-      "displayPrice" : "24.99",
+      "displayPrice" : "34.99",
       "familyShareable" : false,
       "internalID" : "F1ACC7MA-0000-4000-8000-000000000002",
       "localizations" : [
@@ -20,7 +20,7 @@
       "type" : "NonConsumable"
     },
     {
-      "displayPrice" : "14.99",
+      "displayPrice" : "19.99",
       "familyShareable" : false,
       "internalID" : "1D8EC52A-C9B5-42B2-81C2-E64AA8862A8C",
       "localizations" : [
@@ -61,7 +61,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "7.99",
+          "displayPrice" : "14.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "4007F9A5-A9C3-4816-9F88-94293424FF86",

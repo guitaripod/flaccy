@@ -101,23 +101,28 @@ final class PurchaseManager {
         #endif
     }
 
-    /// The welcome-back product, once the App Store has returned it, is
-    /// remembered across launches so an offline consent or foreground still
-    /// schedules the welcome-back reminder.
+    /// Whether the App Store last returned the welcome-back product cheaper than
+    /// Lifetime, remembered across launches so an offline consent or foreground
+    /// still schedules the welcome-back reminder, and forgotten once a fetch
+    /// finds it no cheaper.
     var lapsedOfferExists: Bool {
         welcomeProductSeenThisSession || UserDefaults.standard.bool(forKey: Self.welcomeProductSeenKey)
     }
 
     /// The welcome-back lifetime plan, built at read time so "Usually <regular>"
     /// reflects the regular price whenever it has loaded, not whenever the
-    /// welcome-back product happened to arrive.
+    /// welcome-back product happened to arrive. It is only an offer while it
+    /// costs less than Lifetime, so a welcome-back product held at the regular
+    /// price is never presented as a welcome-back price.
     var lapsedLifetimeOffer: PurchaseOffer? {
-        guard let welcomeProduct else { return nil }
+        guard let welcomeProduct,
+              let regularPrice = Self.regularPrice(against: lifetimeOffer?.storeProduct, welcome: welcomeProduct)
+        else { return nil }
         return PurchaseOffer(
             plan: .lifetime,
             storeProduct: welcomeProduct,
             isWelcomeBack: true,
-            regularPrice: Self.regularPrice(against: lifetimeOffer?.storeProduct, welcome: welcomeProduct)
+            regularPrice: regularPrice
         )
     }
 
@@ -320,14 +325,16 @@ final class PurchaseManager {
         return offers
     }
 
-    /// Every products fetch records whether the welcome-back product exists and
-    /// keeps it, so the welcome-back price needs no second round trip when the
-    /// window opens.
+    /// Every products fetch records whether the welcome-back product exists
+    /// cheaper than Lifetime and keeps it, so the welcome-back price needs no
+    /// second round trip when the window opens. A fetch without Lifetime cannot
+    /// compare the two and leaves the record as it was.
     private func noteWelcomeProduct(in products: [StoreProduct]) {
         let product = products.first { $0.id == FlaccyProducts.welcomeLifetime }
-        if product != nil {
-            welcomeProductSeenThisSession = true
-            UserDefaults.standard.set(true, forKey: Self.welcomeProductSeenKey)
+        if let product, let lifetime = products.first(where: { $0.id == FlaccyProducts.lifetime }) {
+            let discounted = Self.regularPrice(against: lifetime, welcome: product) != nil
+            welcomeProductSeenThisSession = discounted
+            UserDefaults.standard.set(discounted, forKey: Self.welcomeProductSeenKey)
         }
         let changed = (welcomeProduct == nil) != (product == nil)
         welcomeProduct = product
@@ -346,7 +353,7 @@ final class PurchaseManager {
         do {
             noteWelcomeProduct(in: try await store.products())
             guard let offer = lapsedLifetimeOffer else {
-                MidgarLog.info("Welcome-back window open but the App Store has no welcome-back product", category: .purchases)
+                MidgarLog.info("Welcome-back window open but the App Store has no welcome-back product cheaper than Lifetime", category: .purchases)
                 return
             }
             MidgarLog.info(
