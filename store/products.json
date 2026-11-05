@@ -20,7 +20,7 @@
           "familySharable": false,
           "price": {
             "territory": "USA",
-            "amount": "7.99"
+            "amount": "14.99"
           },
           "introductoryOffers": [],
           "localizations": {
@@ -46,7 +46,7 @@
       "referenceName": "Flaccy Lifetime (iOS)",
       "price": {
         "territory": "USA",
-        "amount": "12.99"
+        "amount": "34.99"
       },
       "localizations": {
         "en-US": {
@@ -66,7 +66,7 @@
       "referenceName": "Flaccy Lifetime (iOS) · Welcome Back",
       "price": {
         "territory": "USA",
-        "amount": "8.99"
+        "amount": "34.99"
       },
       "localizations": {
         "en-US": {
