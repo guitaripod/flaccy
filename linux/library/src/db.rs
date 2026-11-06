@@ -384,13 +384,21 @@ impl Db {
         )
     }
 
-    /// Opens the library database, renaming a corrupt file aside and recreating
-    /// it when the initial open or migration fails (ports the iOS recovery path).
+    /// Opens the library database, renaming the file aside and starting a fresh
+    /// one only when SQLite says the file itself is damaged (mirrors
+    /// `DatabaseManager.openOrRecover(at:)`). Any other failure, such as a
+    /// permission, a full disk or a failed migration, is returned with the file
+    /// untouched, since recreating there would empty the library for a reason
+    /// that goes away on its own.
     pub fn open_with_recovery(path: &Path) -> Result<Self, rusqlite::Error> {
         match Self::open(path) {
             Ok(db) => Ok(db),
+            Err(err) if !is_damaged(&err) => {
+                crate::logger::error("database", &format!("open failed, file left as it was: {err}"));
+                Err(err)
+            }
             Err(err) => {
-                crate::logger::error("database", &format!("open failed, recreating: {err}"));
+                crate::logger::error("database", &format!("database is damaged, moving it aside: {err}"));
                 let stamp = Utc::now().timestamp();
                 let corrupt = path.with_file_name(format!("library.sqlite.corrupt-{stamp}"));
                 let _ = std::fs::rename(path, &corrupt);
@@ -3092,6 +3100,16 @@ impl Db {
     }
 }
 
+/// Whether `err` says the file is not a usable database, as opposed to one that
+/// could not be reached or written just now.
+fn is_damaged(err: &rusqlite::Error) -> bool {
+    matches!(
+        err,
+        rusqlite::Error::SqliteFailure(failure, _)
+            if matches!(failure.code, rusqlite::ErrorCode::DatabaseCorrupt | rusqlite::ErrorCode::NotADatabase)
+    )
+}
+
 #[cfg(test)]
 mod cleanup_tests {
     use super::*;
@@ -4714,6 +4732,72 @@ mod cleanup_tests {
         assert_eq!(reopened.fetch_album_artwork("Old", "Band"), Some(vec![4]));
         drop(reopened);
         remove_all(&path);
+    }
+
+    fn recovery_dir(name: &str) -> PathBuf {
+        static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let unique = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!("flaccy-recovery-{name}-{}-{unique}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        dir
+    }
+
+    fn aside_files(dir: &Path) -> Vec<PathBuf> {
+        std::fs::read_dir(dir)
+            .expect("list")
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.to_string_lossy().contains(".corrupt-"))
+            .collect()
+    }
+
+    #[test]
+    fn a_damaged_file_is_moved_aside_for_a_fresh_library() {
+        let dir = recovery_dir("damaged");
+        let path = dir.join("library.sqlite");
+        let garbage = "not a database ".repeat(512).into_bytes();
+        std::fs::write(&path, &garbage).expect("write garbage");
+        Db::open_with_recovery(&path).expect("a fresh library opens");
+        let aside = aside_files(&dir);
+        assert_eq!(aside.len(), 1);
+        assert_eq!(std::fs::read(&aside[0]).expect("read aside"), garbage);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_library_that_cannot_be_opened_is_left_where_it_is() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = recovery_dir("unreadable");
+        let path = dir.join("library.sqlite");
+        drop(Db::open(&path).expect("first open migrates"));
+        let before = std::fs::read(&path).expect("read");
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).expect("chmod");
+        let refused = Db::open_with_recovery(&path).is_err();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).expect("chmod back");
+        assert!(refused, "an unreadable library is an error, not a fresh start");
+        assert!(aside_files(&dir).is_empty());
+        assert_eq!(std::fs::read(&path).expect("read"), before);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn only_corruption_and_not_a_database_count_as_damage() {
+        let failure = |code: i32| rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(code), None);
+        assert!(is_damaged(&failure(rusqlite::ffi::SQLITE_CORRUPT)));
+        assert!(is_damaged(&failure(rusqlite::ffi::SQLITE_NOTADB)));
+        for code in [
+            rusqlite::ffi::SQLITE_CANTOPEN,
+            rusqlite::ffi::SQLITE_PERM,
+            rusqlite::ffi::SQLITE_AUTH,
+            rusqlite::ffi::SQLITE_IOERR,
+            rusqlite::ffi::SQLITE_FULL,
+            rusqlite::ffi::SQLITE_BUSY,
+            rusqlite::ffi::SQLITE_READONLY,
+            rusqlite::ffi::SQLITE_ERROR,
+        ] {
+            assert!(!is_damaged(&failure(code)), "code {code}");
+        }
+        assert!(!is_damaged(&rusqlite::Error::InvalidQuery));
     }
 
     #[test]

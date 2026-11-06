@@ -25,19 +25,39 @@ public final class DatabaseManager: Sendable {
             let dbDirectory = appSupport.appendingPathComponent("flaccy", isDirectory: true)
             try FileManager.default.createDirectory(at: dbDirectory, withIntermediateDirectories: true)
             let dbPath = dbDirectory.appendingPathComponent("library.sqlite").path
-            do {
-                dbQueue = try Self.openDatabase(at: dbPath)
-            } catch {
-                MidgarLog.error("Database open/migrate failed, recreating: \(error.localizedDescription)", category: .database)
-                Self.moveCorruptDatabaseAside(at: dbPath)
-                dbQueue = try Self.openDatabase(at: dbPath)
-            }
+            dbQueue = try Self.openOrRecover(at: dbPath)
             let state = Self.serverSyncState(dbQueue)
             serverSyncGate = ServerSyncGate(configured: state.configured, recording: state.recording)
             MidgarLog.info("Database initialized at \(dbPath)", category: .database)
         } catch {
-            fatalError("Failed to initialize database after recovery attempt: \(error)")
+            fatalError("Failed to open the library database, left as it was: \(error)")
         }
+    }
+
+    /// Opens the library at `path`, moving the file aside and starting a fresh
+    /// one only when SQLite says the file itself is damaged.
+    ///
+    /// Any other failure is thrown with the file untouched: a launch before the
+    /// first unlock that data protection refuses, a full disk, a permission, a
+    /// migration that failed. Each of those goes away on its own or with an
+    /// update, and recreating there handed the person an empty library with
+    /// their history moved out of reach.
+    static func openOrRecover(at path: String) throws -> DatabaseQueue {
+        do {
+            return try openDatabase(at: path)
+        } catch {
+            guard isDamaged(error) else { throw error }
+            MidgarLog.error("Database is damaged, moving it aside: \(error.localizedDescription)", category: .database)
+            moveCorruptDatabaseAside(at: path)
+            return try openDatabase(at: path)
+        }
+    }
+
+    /// Whether `error` says the file is not a usable database, as opposed to
+    /// one that could not be reached or written just now.
+    static func isDamaged(_ error: Error) -> Bool {
+        guard let error = error as? DatabaseError else { return false }
+        return error.resultCode == .SQLITE_CORRUPT || error.resultCode == .SQLITE_NOTADB
     }
 
     /// Opens a database at an arbitrary path, for tests that need to watch the
@@ -62,7 +82,7 @@ public final class DatabaseManager: Sendable {
     }
 
     /// Opens the SQLite database and runs all migrations, throwing instead of crashing
-    /// so a corrupt file can be moved aside and the library rebuilt from Documents.
+    /// so `openOrRecover(at:)` can tell a damaged file from one it cannot reach.
     static func openDatabase(at path: String) throws -> DatabaseQueue {
         var configuration = Configuration()
         configuration.prepareDatabase { db in db.add(function: enrichmentKeyNormalizer) }
