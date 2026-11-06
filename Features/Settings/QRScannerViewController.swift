@@ -63,10 +63,9 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         case .authorized:
             configureSession()
         case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
-                DispatchQueue.main.async {
-                    if granted { self?.configureSession() } else { self?.showDenied() }
-                }
+            Task { [weak self] in
+                let granted = await AVCaptureDevice.requestAccess(for: .video)
+                if granted { self?.configureSession() } else { self?.showDenied() }
             }
         default:
             showDenied()
