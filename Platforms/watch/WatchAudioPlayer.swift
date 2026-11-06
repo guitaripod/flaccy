@@ -474,12 +474,14 @@ final class WatchAudioPlayer: AudioPlaybackEngine {
     /// `activate(options:completionHandler:)` — it is what presents the
     /// Bluetooth route picker, and the synchronous `setActive(true)` throws for
     /// long-form sessions — so every play is gated behind it. Once the session
-    /// is active, subsequent activations complete immediately.
+    /// is active, subsequent activations complete immediately. The completion
+    /// arrives on a queue of the session's choosing, so it is `@Sendable` and
+    /// hops to the main actor itself.
     private func activateSessionAndPlay() {
         playIntentGeneration += 1
         let generation = playIntentGeneration
         isActivationPending = true
-        AVAudioSession.sharedInstance().activate(options: []) { [weak self] success, error in
+        AVAudioSession.sharedInstance().activate(options: []) { @Sendable [weak self] success, error in
             Task { @MainActor in
                 guard let self, generation == self.playIntentGeneration else { return }
                 self.isActivationPending = false
