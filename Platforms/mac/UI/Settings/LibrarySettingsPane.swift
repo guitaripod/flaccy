@@ -157,7 +157,7 @@ final class LibrarySettingsPane: SettingsPane {
             self, selector: #selector(libraryChanged), name: LibraryRoot.didChange, object: nil
         )
         NotificationCenter.default.addObserver(
-            self, selector: #selector(activityChanged), name: Library.progressDidChange, object: nil
+            self, selector: #selector(scanProgressed), name: Library.progressDidChange, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(activityChanged), name: EnrichmentCoordinator.progressDidChange, object: nil
@@ -184,6 +184,12 @@ final class LibrarySettingsPane: SettingsPane {
     @objc func libraryChanged() {
         refresh()
         refreshMetadata()
+    }
+
+    /// The library posts scan progress from its background scan, so this entry carries no actor isolation (Swift 6
+    /// traps a main-actor `@objc` entry the moment it runs elsewhere) and hops to the main queue.
+    @objc nonisolated func scanProgressed() {
+        DispatchQueue.main.async { [weak self] in self?.activityChanged() }
     }
 
     /// Both streams are re-read from their live sources rather than from the
