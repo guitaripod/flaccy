@@ -16,9 +16,11 @@ enum MacColors {
     /// A neutral film that reads correctly in both appearances: a light veil in
     /// dark mode, a dark veil in light mode. Pass a distinct `light` alpha when
     /// the dark-mode weight would be too heavy against a bright background.
+    /// AppKit resolves the color on whichever thread draws it, so the provider
+    /// is `@Sendable` and carries no actor isolation.
     static func fill(_ darkAlpha: CGFloat, light lightAlpha: CGFloat? = nil) -> NSColor {
         let resolvedLight = lightAlpha ?? darkAlpha
-        return NSColor(name: nil) { appearance in
+        return NSColor(name: nil) { @Sendable appearance in
             appearance.isDark
                 ? NSColor.white.withAlphaComponent(darkAlpha)
                 : NSColor.black.withAlphaComponent(resolvedLight)
@@ -33,7 +35,7 @@ enum MacColors {
 }
 
 extension NSAppearance {
-    var isDark: Bool {
+    nonisolated var isDark: Bool {
         bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
     }
 }

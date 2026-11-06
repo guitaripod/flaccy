@@ -286,7 +286,7 @@ final class MacHomeFilledButton: MacHomeInteractiveView {
             let base = NSColor.labelColor
             let alpha: CGFloat = isPressed ? 0.7 : (isHovered ? 0.88 : 1)
             fill.layer?.backgroundColor = base.withAlphaComponent(alpha).cgColor
-            let ink = NSColor(name: nil) { $0.isDark ? .black : .white }
+            let ink = NSColor(name: nil) { @Sendable in $0.isDark ? .black : .white }
             label.textColor = ink
             icon.contentTintColor = ink
         }

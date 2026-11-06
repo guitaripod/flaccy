@@ -29,7 +29,7 @@ enum PlaceholderGradient {
 
     static func image(seed: String, size: CGSize) -> NSImage {
         let (base, second) = colors(seed: seed)
-        return NSImage(size: size, flipped: false) { rect in
+        return NSImage(size: size, flipped: false) { @Sendable rect in
             guard let gradient = NSGradient(colors: [base, second]) else { return false }
             gradient.draw(in: rect, angle: -45)
             return true

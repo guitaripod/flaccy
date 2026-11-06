@@ -231,13 +231,14 @@ extension MacLyricShareViewController {
     }
 
     /// A round chip of a theme's background with a dot of its ink, ringed in
-    /// the accent colour while chosen.
+    /// the accent colour while chosen. AppKit runs the drawing handler on
+    /// whichever thread draws the image, so it is `@Sendable`.
     private static func swatch(_ palette: LyricSharePalette, selected: Bool) -> NSImage {
         let side: CGFloat = 40
         let top = nsColor(palette.background)
         let bottom = nsColor(palette.backgroundDeep)
         let ink = nsColor(palette.ink)
-        return NSImage(size: NSSize(width: side, height: side), flipped: false) { _ in
+        return NSImage(size: NSSize(width: side, height: side), flipped: false) { @Sendable _ in
             let rect = NSRect(x: 2, y: 2, width: side - 4, height: side - 4)
             NSGraphicsContext.saveGraphicsState()
             NSBezierPath(ovalIn: rect).addClip()

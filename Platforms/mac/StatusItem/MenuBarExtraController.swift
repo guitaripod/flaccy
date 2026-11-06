@@ -84,7 +84,7 @@ final class MenuBarExtraController: NSObject, NSMenuDelegate {
             if let artwork = track.artwork
                 ?? AlbumArtworkCache.shared.thumbnail(forAlbum: track.albumTitle, artist: track.artist) {
                 let artworkItem = NSMenuItem()
-                let resized = NSImage(size: NSSize(width: 96, height: 96), flipped: false) { rect in
+                let resized = NSImage(size: NSSize(width: 96, height: 96), flipped: false) { @Sendable rect in
                     artwork.draw(in: rect)
                     return true
                 }
