@@ -42,7 +42,10 @@ final class AboutSettingsPane: SettingsPane {
         privacy.bezelStyle = .rounded
         let terms = NSButton(title: String(localized: "Terms of Use"), target: self, action: #selector(openTerms))
         terms.bezelStyle = .rounded
-        addRow([privacy, terms], spacing: 10)
+        let support = NSButton(title: String(localized: "Contact Support"), target: self, action: #selector(openSupport))
+        support.bezelStyle = .rounded
+        support.toolTip = MidgarSupport.address
+        addRow([privacy, terms, support], spacing: 10)
 
         let copyright = explanation("© 2026 Midgar Oy")
         formStack.addArrangedSubview(copyright)
@@ -54,5 +57,10 @@ final class AboutSettingsPane: SettingsPane {
 
     @objc func openTerms() {
         NSWorkspace.shared.open(LegalLinks.termsURL)
+    }
+
+    @objc func openSupport() {
+        guard let url = URL(string: "mailto:\(MidgarSupport.address)?subject=Flaccy") else { return }
+        NSWorkspace.shared.open(url)
     }
 }

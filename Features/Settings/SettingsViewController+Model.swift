@@ -113,6 +113,7 @@ extension SettingsViewController {
         case midgarEntry
         case privacyPolicy
         case termsOfUse
+        case support
     }
 
     /// Renders an Apple-Settings-style icon: a white SF Symbol glyph centered

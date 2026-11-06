@@ -8,6 +8,17 @@ import UIKit
 
 extension SettingsViewController {
 
+    /// Starts an email to support, or copies the address where no mail app can take it.
+    func handleSupportTap() {
+        selectionFeedback.selectionChanged()
+        guard let url = URL(string: "mailto:\(MidgarSupport.address)?subject=Flaccy") else { return }
+        UIApplication.shared.open(url) { [weak self] opened in
+            guard !opened, let self else { return }
+            UIPasteboard.general.string = MidgarSupport.address
+            ToastView.show(String(localized: "Copied"), in: self.view, style: .info)
+        }
+    }
+
     func handleMetadataTap() {
         selectionFeedback.selectionChanged()
         navigationController?.pushViewController(EnrichmentReportViewController(), animated: true)

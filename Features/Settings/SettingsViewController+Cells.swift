@@ -44,6 +44,15 @@ extension SettingsViewController {
             cell.accessoryType = .disclosureIndicator
             cell.accessibilityLabel = String(localized: "Terms of Use")
 
+        case .support:
+            content.image = RowIcon.image(systemName: "envelope.fill", tint: .systemGreen)
+            content.text = String(localized: "Contact Support")
+            content.secondaryText = MidgarSupport.address
+            content.textProperties.color = .tintColor
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = String(localized: "Contact Support")
+            cell.accessibilityValue = MidgarSupport.address
+
         case .trialReminders(let enabled):
             content.image = RowIcon.image(systemName: "bell.badge.fill", tint: .systemOrange)
             content.text = String(localized: "Trial reminders")
@@ -276,7 +285,7 @@ extension SettingsViewController {
     static func baseContent(for row: Row) -> UIListContentConfiguration {
         var content: UIListContentConfiguration
         switch row {
-        case .metadataReport, .libraryDebutSummary, .server:
+        case .metadataReport, .libraryDebutSummary, .server, .support:
             content = .subtitleCell()
             content.secondaryTextProperties.font = .preferredFont(forTextStyle: .footnote)
             content.secondaryTextProperties.numberOfLines = 0

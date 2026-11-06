@@ -264,7 +264,7 @@ final class SettingsViewController: UITableViewController {
         if libraryDebut != nil {
             snapshot.appendItems([.libraryDebutSummary], toSection: .setup)
         }
-        snapshot.appendItems([.privacyPolicy, .termsOfUse], toSection: .about)
+        snapshot.appendItems([.privacyPolicy, .termsOfUse, .support], toSection: .about)
         snapshot.reloadSections([.lastFM])
         dataSource.apply(snapshot, animatingDifferences: animated)
     }
@@ -327,6 +327,7 @@ final class SettingsViewController: UITableViewController {
         case .watchSync: handleWatchTap()
         case .privacyPolicy: UIApplication.shared.open(LegalLinks.privacyURL)
         case .termsOfUse: UIApplication.shared.open(LegalLinks.termsURL)
+        case .support: handleSupportTap()
         case .importFiles: handleImportTap()
         case .rescanLibrary: handleRescanTap()
         case .metadataReport: handleMetadataTap()
