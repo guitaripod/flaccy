@@ -1,4 +1,4 @@
-# Maintainer: Marcus Ziade <guitaripod@gmail.com>
+# Maintainer: Marcus Ziade <marcus@midgarcorp.cc>
 pkgname=flaccy-server-bin
 pkgver=@VERSION@
 pkgrel=1
