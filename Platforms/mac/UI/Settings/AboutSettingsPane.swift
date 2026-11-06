@@ -59,8 +59,12 @@ final class AboutSettingsPane: SettingsPane {
         NSWorkspace.shared.open(LegalLinks.termsURL)
     }
 
+    /// Starts an email to support, or copies the address where no mail app can take it.
     @objc func openSupport() {
         guard let url = URL(string: "mailto:\(MidgarSupport.address)?subject=Flaccy") else { return }
-        NSWorkspace.shared.open(url)
+        guard !NSWorkspace.shared.open(url) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(MidgarSupport.address, forType: .string)
+        MacToast.show(String(localized: "Copied to the clipboard"), style: .info, in: view.window)
     }
 }
