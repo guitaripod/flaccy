@@ -67,9 +67,8 @@ final class WatchSyncBackgroundTask {
             subtitle: String(localized: "Preparing songs")
         )
         request.strategy = .fail
-        let registered = BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: nil) { task in
-            guard let task = task as? BGContinuedProcessingTask else { return }
-            Task { @MainActor in WatchSyncBackgroundTask.shared.adopt(task) }
+        let registered = BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: .main) { task in
+            WatchSyncBackgroundTask.shared.adopt(task)
         }
         guard registered else {
             MidgarLog.notice("Continued processing task was not registered; using a plain background task", category: .connectivity)
@@ -89,16 +88,19 @@ final class WatchSyncBackgroundTask {
         }
     }
 
+    /// Takes over the continued processing task the system launched for this sync.
+    ///
+    /// The scheduler runs the launch handler on the queue it was registered with, the main queue here: the handler is
+    /// formed on the main actor, and Swift 6 traps the moment such a closure runs on any other queue.
     @available(iOS 26.0, *)
-    private func adopt(_ task: BGContinuedProcessingTask) {
+    private func adopt(_ task: BGTask) {
+        guard let task = task as? BGContinuedProcessingTask else { return }
         guard isRunning else {
             task.setTaskCompleted(success: true)
             return
         }
         holder = task
-        task.expirationHandler = { [weak self] in
-            Task { @MainActor in self?.handleExpiration(of: task) }
-        }
+        task.expirationHandler = Self.expirationRelay(for: task.identifier)
         apply(to: task)
         MidgarLog.info("Continued processing task started", category: .connectivity)
     }
@@ -113,8 +115,18 @@ final class WatchSyncBackgroundTask {
         )
     }
 
+    /// The handler the system calls when it or the person ends the task. It runs on a queue of the system's choosing,
+    /// so it carries no actor isolation and hops to the main actor before touching any state.
     @available(iOS 26.0, *)
-    private func handleExpiration(of task: BGContinuedProcessingTask) {
+    private nonisolated static func expirationRelay(for identifier: String) -> @Sendable () -> Void {
+        {
+            Task { @MainActor in WatchSyncBackgroundTask.shared.handleExpiration(of: identifier) }
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private func handleExpiration(of identifier: String) {
+        guard let task = holder as? BGContinuedProcessingTask, task.identifier == identifier else { return }
         MidgarLog.info("Continued processing task ended by the system or the person", category: .connectivity)
         isRunning = false
         holder = nil
