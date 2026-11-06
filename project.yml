@@ -146,6 +146,7 @@ targets:
           - Pad/PlayerColumnSetting.swift
           - SceneDelegate.swift
           - UI/AdaptiveLayout.swift
+          - UI/AppAccent.swift
           - UI/AppAppearance.swift
           - UI/AsyncImageView.swift
           - UI/DownloadedMarkView.swift

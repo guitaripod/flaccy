@@ -29,6 +29,7 @@ final class MiniPlayerView: UIView {
     private let nextButton = UIButton(type: .system)
     private let queueButton = UIButton(type: .system)
     private let progressFill = UIView()
+    private var progressFollowsArtwork = false
     private var progressWidthConstraint: NSLayoutConstraint?
     private let timerLabel = UILabel()
     private var currentArtworkKey: String?
@@ -52,7 +53,7 @@ final class MiniPlayerView: UIView {
         blur.translatesAutoresizingMaskIntoConstraints = false
         addSubview(blur)
 
-        progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.85)
+        progressFill.backgroundColor = tintColor.withAlphaComponent(0.85)
         progressFill.translatesAutoresizingMaskIntoConstraints = false
         blur.contentView.addSubview(progressFill)
 
@@ -281,7 +282,8 @@ final class MiniPlayerView: UIView {
         } else {
             artworkView.contentMode = .center
             artworkView.image = UIImage(systemName: "music.note")
-            progressFill.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.85)
+            progressFollowsArtwork = false
+            progressFill.backgroundColor = tintColor.withAlphaComponent(0.85)
 
             AlbumArtworkCache.shared.loadThumbnail(forAlbum: track.albumTitle, artist: track.artist) { [weak self] image in
                 guard let self, let image, self.currentArtworkKey == requestedKey else { return }
@@ -339,7 +341,15 @@ final class MiniPlayerView: UIView {
             blue: totalB / CGFloat(count) / 255,
             alpha: 0.9
         )
+        progressFollowsArtwork = true
         progressFill.backgroundColor = color
+    }
+
+    /// Without a cover to take a color from, the progress line wears the accent.
+    override func tintColorDidChange() {
+        super.tintColorDidChange()
+        guard !progressFollowsArtwork else { return }
+        progressFill.backgroundColor = tintColor.withAlphaComponent(0.85)
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

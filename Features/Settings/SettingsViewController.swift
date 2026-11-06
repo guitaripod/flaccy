@@ -47,6 +47,7 @@ final class SettingsViewController: UITableViewController {
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellReuseIdentifier)
         tableView.register(AppearanceCell.self, forCellReuseIdentifier: AppearanceCell.reuseID)
+        tableView.register(AccentCell.self, forCellReuseIdentifier: AccentCell.reuseID)
         tableView.register(MidgarEntryCell.self, forCellReuseIdentifier: MidgarEntryCell.reuseID)
         view.backgroundColor = .systemGroupedBackground
 
@@ -228,7 +229,7 @@ final class SettingsViewController: UITableViewController {
             ($0 != .trial || isTrialSectionVisible) && ($0 != .watch || WatchSyncService.shared.canPairWatch)
         })
         snapshot.appendItems([.midgarEntry], toSection: .midgar)
-        snapshot.appendItems([.appearance(AppAppearance.current)], toSection: .appearance)
+        snapshot.appendItems([.appearance(AppAppearance.current), .accent(AppAccent.current)], toSection: .appearance)
         if isTrialSectionVisible {
             snapshot.appendItems([.trialReminders(enabled: TrialReminderScheduler.shared.isEnabled)], toSection: .trial)
         }
@@ -300,7 +301,7 @@ final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         guard let row = dataSource.itemIdentifier(for: indexPath) else { return false }
         switch row {
-        case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
+        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .serversExplainer, .cacheLimit, .cacheUsage:
             return false
@@ -336,7 +337,7 @@ final class SettingsViewController: UITableViewController {
         case .addServer: handleAddServerTap()
         case .server(let server): handleServerTap(server)
         case .clearCache: handleClearCacheTap()
-        case .appearance, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
+        case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
              .serversExplainer, .cacheLimit, .cacheUsage:
             break

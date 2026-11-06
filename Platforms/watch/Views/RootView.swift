@@ -25,6 +25,10 @@ struct RootView: View {
     @State private var pendingRemovals = PendingRemovals()
 
     var body: some View {
+        content.tint(WatchTheme.accent)
+    }
+
+    private var content: some View {
         NavigationStack(path: $path) {
             TabView(selection: $page) {
                 ContinuePage(onShowNowPlaying: { path.append(Route.nowPlaying) })

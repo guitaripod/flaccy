@@ -30,6 +30,10 @@ public enum SyncKeys {
     /// The run the phone is sending (phone -> watch, via updateApplicationContext).
     public static let syncBatch = "syncBatch"
 
+    /// The accent picked in the phone's Settings, as its `AccentChoice` id in
+    /// UTF-8 (phone -> watch, via updateApplicationContext).
+    public static let accent = "accent"
+
     /// User-info command (phone -> watch).
     public static let command = "command"
     public static let removePaths = "removePaths"

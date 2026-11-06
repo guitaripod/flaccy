@@ -80,6 +80,7 @@ extension SettingsViewController {
 
     nonisolated enum Row: Hashable {
         case appearance(AppAppearance)
+        case accent(AccentChoice)
         case trialReminders(enabled: Bool)
         case lastFMAccount(username: String?)
         case pendingScrobbles(count: Int)

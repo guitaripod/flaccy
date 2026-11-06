@@ -296,6 +296,9 @@ nonisolated final class WatchSyncReceiver: NSObject, @unchecked Sendable {
     /// an idle job or an empty run — the last state stands until the phone
     /// replaces it.
     private func ingestPhoneContext(_ context: [String: Any]) {
+        if let data = context[SyncKeys.accent] as? Data, let id = String(data: data, encoding: .utf8) {
+            DispatchQueue.main.async { WatchAccent.shared.adopt(id: id) }
+        }
         let progress = EnrichmentJobTransfer.decode(context[SyncKeys.enrichmentJob])
         let batch = SyncBatchTransfer.decode(context[SyncKeys.syncBatch])
         guard progress != nil || batch != nil else { return }

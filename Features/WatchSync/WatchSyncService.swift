@@ -64,6 +64,7 @@ final class WatchSyncService: NSObject {
     var jobObserver: NSObjectProtocol?
     var libraryObserver: NSObjectProtocol?
     var revisionObserver: NSObjectProtocol?
+    var accentObserver: NSObjectProtocol?
 
     private var trackIndex: [String: Track]?
     private var stemCache: [URL: String] = [:]
@@ -84,6 +85,7 @@ final class WatchSyncService: NSObject {
         observeEnrichmentJob()
         observeLibrary()
         observeRevisions()
+        observeAccent()
         WatchSyncBackgroundTask.shared.onExpiration = { [weak self] in self?.suspendPreparation() }
     }
 
@@ -631,6 +633,18 @@ final class WatchSyncService: NSObject {
         guard jobProgress != latestJob else { return }
         latestJob = jobProgress
         scheduleContextPublish()
+    }
+
+    /// The watch wears the accent picked here, so a new pick goes out with the
+    /// next context.
+    private func observeAccent() {
+        accentObserver = NotificationCenter.default.addObserver(
+            forName: AppAccent.didChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleContextPublish() }
+        }
     }
 
     private func observeEnrichmentJob() {

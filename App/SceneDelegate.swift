@@ -36,6 +36,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         rootVC.onSplitChange = { [weak tabs] isSplit in tabs?.suppressesMiniPlayer = isSplit }
 
         window.overrideUserInterfaceStyle = AppAppearance.current.userInterfaceStyle
+        window.tintColor = AppAccent.current.windowTint
         #if DEBUG && targetEnvironment(simulator)
         window.rootViewController = DebugWindowFrame.wrapIfRequested(rootVC)
         #else

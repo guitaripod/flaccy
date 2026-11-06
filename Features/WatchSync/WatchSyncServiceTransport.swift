@@ -168,9 +168,10 @@ extension WatchSyncService {
     }
 
     /// Mirrors the phone's side of the story onto the wrist in one application
-    /// context: the enrichment job and the run being sent. The context replaces
-    /// the previous one wholesale, so it always carries both, and a payload that
-    /// says nothing new is never sent because every update costs the radio.
+    /// context: the enrichment job, the run being sent and the accent. The
+    /// context replaces the previous one wholesale, so it always carries all
+    /// three, and a payload that says nothing new is never sent because every
+    /// update costs the radio.
     private func flushContext() {
         guard let wcSession, wcSession.activationState == .activated, wcSession.isWatchAppInstalled else { return }
         var context: [String: Data] = [:]
@@ -180,6 +181,7 @@ extension WatchSyncService {
         if let payload = SyncBatchTransfer.encode(latestBatch) {
             context[SyncKeys.syncBatch] = payload
         }
+        context[SyncKeys.accent] = Data(AppAccent.current.rawValue.utf8)
         guard context != lastSentContext else { return }
         do {
             try wcSession.updateApplicationContext(context)

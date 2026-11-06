@@ -31,7 +31,6 @@ struct FlaccyWatchApp: App {
                 .environment(store)
                 .environment(player)
                 .environment(WatchSyncReceiver.shared.status)
-                .tint(WatchTheme.accent)
                 .task {
                     WatchSyncReceiver.shared.onLibraryChanged = { [store] in
                         Task { @MainActor in store.reload() }
