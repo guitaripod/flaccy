@@ -39,7 +39,7 @@ Music player for FLAC and other local libraries, one product on four clients: iO
 - Images are tracked with Git LFS: pushes need `git-lfs` on PATH, and a fresh clone or worktree needs `git lfs pull` before the art shows.
 
 ## Conventions
-- Swift 6 language mode, strict concurrency, MainActor default isolation on Apple targets, warnings as errors in Release. A closure Apple calls on its own queue must not inherit MainActor: use a `nonisolated` function, `@Sendable` or `onMainActorSync`.
+- Swift 6 language mode, strict concurrency, MainActor default isolation on Apple targets, warnings as errors in Release. A closure Apple calls on its own queue must not inherit MainActor: use a `nonisolated` function, `@Sendable` or `onMainActorSync`. The same goes for an `@objc` method a selector observer or delegate reaches off the main thread: mark it `nonisolated` and hop. Swift 6 traps either at entry (`_dispatch_assert_queue_fail`); async delegate witnesses are safe.
 - Fully programmatic UIKit, MVVM, diffable data sources, UIStackView heavy, protocol-oriented, no storyboards or XIBs, iOS 18, thin view controllers. Persistence is GRDB (SQLite).
 - Logging: `MidgarLog` only, never `print()`. `FlaccyLogging.configure()` names the file `Library/Logs/flaccy.log`. Categories are `MidgarLog.Category` constants in FlaccyCore.
 - No comments or MARK statements; name things so they read clearly.
