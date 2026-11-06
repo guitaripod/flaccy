@@ -5,6 +5,9 @@ import FlaccyCore
 extension PlaybackEngine {
 
     #if os(iOS)
+    /// Registers the audio session handlers. The session posts on whichever thread it likes, so every handler is
+    /// `nonisolated`: Swift 6 traps a main-actor `@objc` entry the moment it runs elsewhere. Each reads what it needs
+    /// from the notification and then hops to the main queue.
     func registerAudioSessionObservers() {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleInterruption), name: AVAudioSession.interruptionNotification, object: nil
@@ -17,7 +20,7 @@ extension PlaybackEngine {
         )
     }
 
-    @objc func handleInterruption(_ notification: Notification) {
+    @objc nonisolated func handleInterruption(_ notification: Notification) {
         guard let info = notification.userInfo,
               let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: typeValue)
@@ -49,7 +52,7 @@ extension PlaybackEngine {
         }
     }
 
-    @objc func handleRouteChange(_ notification: Notification) {
+    @objc nonisolated func handleRouteChange(_ notification: Notification) {
         guard let info = notification.userInfo,
               let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
@@ -64,7 +67,7 @@ extension PlaybackEngine {
     }
 
     /// Rebuilds the player after mediaserverd crashes, which invalidates every AVFoundation object the app holds.
-    @objc func handleMediaServicesReset() {
+    @objc nonisolated func handleMediaServicesReset() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             MidgarLog.notice("Media services were reset, rebuilding player", category: .content)
@@ -85,11 +88,11 @@ extension PlaybackEngine {
     #endif
 
     /// Skips past an item that cannot finish decoding so one corrupt file never stalls the whole queue.
-    @objc func handleItemFailedToPlayToEnd(_ notification: Notification) {
+    @objc nonisolated func handleItemFailedToPlayToEnd(_ notification: Notification) {
         let failedItem = notification.object as? AVPlayerItem
+        let errorDescription = (notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)?.localizedDescription ?? "unknown"
         DispatchQueue.main.async { [weak self] in
             guard let self, let failedItem, failedItem === self.playingItem else { return }
-            let errorDescription = (notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)?.localizedDescription ?? "unknown"
             MidgarLog.error("Item failed to play to end at index \(self.currentIndex): \(errorDescription)", category: .playback)
             self.nextTrack()
         }

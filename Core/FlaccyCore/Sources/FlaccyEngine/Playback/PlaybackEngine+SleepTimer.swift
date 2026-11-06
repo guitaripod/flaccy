@@ -53,10 +53,11 @@ extension PlaybackEngine {
     /// Completes a sleep-at-end-of-track stop. The next item stays queued and
     /// `actionAtItemEnd` returns to `.advance`, so pressing play resumes on the
     /// following track rather than replaying the one that just finished.
-    @objc func handleItemDidPlayToEnd(_ notification: Notification) {
+    @objc nonisolated func handleItemDidPlayToEnd(_ notification: Notification) {
+        let finishedItem = notification.object as? AVPlayerItem
         DispatchQueue.main.async { [weak self] in
             guard let self, self.sleepAtEndOfTrack else { return }
-            guard (notification.object as? AVPlayerItem) === self.playingItem else { return }
+            guard finishedItem === self.playingItem else { return }
             MidgarLog.info("Sleep at end of track reached, stopping on \(self.currentTrack?.title ?? "unknown")", category: .playback)
             self.cancelSleepTimer()
             self.userPausedPlayback = true

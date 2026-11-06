@@ -100,6 +100,8 @@ public final class PlaybackEngine {
         #endif
     }
 
+    /// Registers the item handlers. AVPlayerItem may post these on another thread, so both handlers are `nonisolated`
+    /// and hop to the main queue before touching the engine.
     private func registerPlayerItemObservers() {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleItemFailedToPlayToEnd(_:)), name: .AVPlayerItemFailedToPlayToEndTime, object: nil
