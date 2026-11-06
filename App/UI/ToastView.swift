@@ -76,6 +76,13 @@ final class ToastView {
             guard let host else { return }
             ToastView.show(message, in: host, style: style)
         }
+
+        /// Takes the running toast away without a result of its own, for work that reports somewhere else.
+        func dismiss() {
+            guard !isFinished else { return }
+            isFinished = true
+            ToastView.animateOut(toast)
+        }
     }
 
     private static func makeToast(
@@ -102,7 +109,7 @@ final class ToastView {
         label.font = .scaled(.footnote, size: 14, weight: .medium)
         label.adjustsFontForContentSizeCategory = true
         label.textColor = .label
-        label.numberOfLines = 2
+        label.numberOfLines = 3
 
         let stack = UIStackView(arrangedSubviews: [icon, label])
         if let action {

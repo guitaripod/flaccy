@@ -322,7 +322,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.directoryURL = HandoffFolderPrompt.suggestedFolder
         FunnelSignals.shared.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
-            guard response == .OK, let url = panel.url else { return }
+            guard response == .OK, let url = panel.url else {
+                FunnelSignals.shared.notePickerCancelled()
+                return
+            }
             do {
                 try LibraryRoot.shared.chooseFolder(url)
                 FunnelSignals.shared.noteFolderChosen()
@@ -345,7 +348,10 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.message = String(localized: "Copies files into Flaccy's library folder, preserving folder structure.")
         FunnelSignals.shared.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
-            guard response == .OK, !panel.urls.isEmpty else { return }
+            guard response == .OK, !panel.urls.isEmpty else {
+                FunnelSignals.shared.notePickerCancelled()
+                return
+            }
             let urls = panel.urls
             let toast = MacToast.showImport(in: window)
             Task {

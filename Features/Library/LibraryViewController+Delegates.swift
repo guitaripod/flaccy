@@ -165,6 +165,15 @@ extension LibraryViewController: UIDocumentPickerDelegate {
         importFiles(at: urls)
     }
 
+    /// Closing the picker with nothing chosen and no music of their own means the person did not find their music in
+    /// Files, so the ways it does get in are offered once a launch.
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        FunnelSignals.shared.notePickerCancelled()
+        guard !libraryHoldsOwnMusic, !ImportHelpViewController.offeredAfterCancel else { return }
+        ImportHelpViewController.noteOfferedAfterCancel()
+        presentImportHelp(reason: nil)
+    }
+
     /// Imports files picked in Files or dropped on the window, reporting
     /// progress and the outcome in `host` (the Library when nil) and running
     /// `finished` once the import has let go of the files.
@@ -181,10 +190,86 @@ extension LibraryViewController: UIDocumentPickerDelegate {
                 progress: { toast.update(ImportOutcomeCopy.progress($0)) },
                 decideReplacements: { prompt in await ImportReplacementAlert.ask(prompt, from: presenter) }
             )
-            let report = ImportOutcomeCopy.report(outcome)
-            UINotificationFeedbackGenerator().notificationOccurred(report.isFailure ? .error : (report.isNoOp ? .warning : .success))
-            toast.finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
             finished?()
+            await Self.untilActive()
+            presentImportReport(ImportOutcomeCopy.report(outcome), closing: toast, in: host ?? view)
+        }
+    }
+
+    /// Says how the import ended. A pick that added nothing gets the reason and the ways music does get in: the whole
+    /// help when the library has no music of its own yet, otherwise a toast that opens it.
+    private func presentImportReport(_ report: ImportOutcomeCopy.Report, closing toast: ToastView.Live, in host: UIView) {
+        UINotificationFeedbackGenerator().notificationOccurred(report.isFailure ? .error : (report.isNoOp ? .warning : .success))
+        guard report.isDeadEnd else {
+            toast.finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
+            return
+        }
+        guard libraryHoldsOwnMusic else {
+            toast.dismiss()
+            presentImportHelp(reason: report.message)
+            return
+        }
+        toast.dismiss()
+        ToastView.showAction(report.message, actionTitle: String(localized: "Help"), in: host, style: .info) { [weak self] in
+            self?.presentImportHelp(reason: report.message)
+        }
+    }
+
+    /// An import can finish while the app is in the background, carried by its continued processing task; its result
+    /// waits until the person is back to read it.
+    private static func untilActive() async {
+        guard UIApplication.shared.applicationState != .active else { return }
+        for await _ in NotificationCenter.default.notifications(named: UIApplication.didBecomeActiveNotification) {
+            return
+        }
+    }
+
+    var libraryHoldsOwnMusic: Bool {
+        let sampleNames = SampleMusicService.sampleFileNames
+        return Library.shared.allTracks.contains { !SampleMusicService.isSample($0.fileURL, among: sampleNames) }
+    }
+
+    /// Opens the help over the Library, bringing the Library forward first when an iPad drop finished elsewhere, so
+    /// every way in it offers starts from where music lands.
+    func presentImportHelp(reason: String?) {
+        performWhenVisible { [weak self] in self?.showImportHelpSheet(reason: reason) }
+    }
+
+    /// Presents over whatever already sits on the Library, once a sheet on its way out (the Files picker) has gone.
+    private func showImportHelpSheet(reason: String?) {
+        var host: UIViewController = self
+        while let presented = host.presentedViewController {
+            guard !presented.isBeingDismissed else {
+                if let transition = presented.transitionCoordinator {
+                    transition.animate(alongsideTransition: nil) { [weak self] _ in self?.showImportHelpSheet(reason: reason) }
+                } else {
+                    DispatchQueue.main.async { [weak self] in self?.showImportHelpSheet(reason: reason) }
+                }
+                return
+            }
+            host = presented
+        }
+        let offersSample = !SampleMusicService.shared.isDownloading && !Library.shared.allTracks.contains {
+            SampleMusicService.isSample($0.fileURL)
+        }
+        let help = ImportHelpViewController.sheet(reason: reason, offersSample: offersSample) { [weak self] action in
+            self?.carryOut(action)
+        }
+        host.present(help, animated: true)
+    }
+
+    /// The help may have opened over another sheet the Library had up; that sheet goes first, so the way in the person
+    /// chose is presented from the Library itself.
+    private func carryOut(_ action: ImportHelpViewController.Action) {
+        guard presentedViewController == nil else {
+            dismiss(animated: true) { [weak self] in self?.carryOut(action) }
+            return
+        }
+        switch action {
+        case .chooseFiles: importTapped()
+        case .wifiTransfer: presentWiFiTransfer()
+        case .musicServer: AddServerViewController.present(from: self, servers: RemoteServersViewModel())
+        case .sample: sampleMusicTapped()
         }
     }
 }

@@ -69,6 +69,68 @@ final class ImportPlanTests: XCTestCase {
         XCTAssertEqual(plan.items.map(\.kind), [.lyrics, .lyrics, .audio])
     }
 
+    func testFormatsThisClientCannotPlayAreCountedByExtension() throws {
+        for name in ["01.flac", "02.ogg", "03.OGG", "04.opus", "cover.jpg", "notes.txt"] {
+            try write("Album/\(name)", in: outside)
+        }
+
+        let plan = plan([outside.appendingPathComponent("Album")])
+
+        XCTAssertEqual(destinations(plan), ["Album/01.flac"])
+        XCTAssertEqual(plan.unplayable, ["ogg": 2, "opus": 1])
+        XCTAssertEqual(plan.archives, 0)
+    }
+
+    func testAZipArchiveIsCountedNotWalked() throws {
+        try write("Downloads/Album.zip", in: outside)
+        try write("Downloads/Other.ZIP", in: outside)
+        try write("Downloads/readme.rar", in: outside)
+
+        let plan = plan([outside.appendingPathComponent("Downloads")])
+
+        XCTAssertEqual(plan.items, [])
+        XCTAssertEqual(plan.archives, 2)
+        XCTAssertEqual(plan.unplayable, [:])
+    }
+
+    func testAPickedFileInAnUnplayableFormatIsCounted() throws {
+        let file = try write("song.wv", in: outside)
+
+        let plan = plan([file])
+
+        XCTAssertEqual(plan.items, [])
+        XCTAssertEqual(plan.unplayable, ["wv": 1])
+    }
+
+    func testAPlaceholderInAnUnplayableFormatIsCountedUnderItsRealExtension() throws {
+        try write("Album/.01 Song.dsf.icloud", in: outside)
+
+        let plan = plan([outside.appendingPathComponent("Album")])
+
+        XCTAssertEqual(plan.items, [])
+        XCTAssertEqual(plan.unplayable, ["dsf": 1])
+    }
+
+    func testPassedOverFilesAlreadyInsideTheLibraryAreNotCounted() throws {
+        try write("Old/a.wma", in: library)
+        try write("Old/b.zip", in: library)
+
+        let plan = plan([library.appendingPathComponent("Old")])
+
+        XCTAssertEqual(plan.unplayable, [:])
+        XCTAssertEqual(plan.archives, 0)
+    }
+
+    func testAPlayableFormatIsNeverCountedAsPassedOver() throws {
+        try write("Album/01.flac", in: outside)
+        try write("Album/02.mp3", in: outside)
+
+        let plan = plan([outside.appendingPathComponent("Album")])
+
+        XCTAssertEqual(plan.unplayable, [:])
+        XCTAssertEqual(plan.archives, 0)
+    }
+
     func testHiddenFoldersAreNotWalked() throws {
         try write("Album/.git/objects/a.flac", in: outside)
         try write("Album/b.flac", in: outside)

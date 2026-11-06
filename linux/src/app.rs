@@ -1973,6 +1973,8 @@ const IMPORT_DIR: &str = "Imported";
 struct PlannedImport {
     placed: Vec<import_plan::Placed>,
     already_in_library: usize,
+    unplayable: std::collections::BTreeMap<String, usize>,
+    archives: usize,
 }
 
 impl PlannedImport {
@@ -2019,6 +2021,8 @@ fn plan_drop_import(paths: &[PathBuf], root: &std::path::Path) -> PlannedImport 
     PlannedImport {
         placed,
         already_in_library: plan.already_in_library,
+        unplayable: plan.unplayable,
+        archives: plan.archives,
     }
 }
 
@@ -2056,6 +2060,8 @@ fn run_drop_import(
                 .filter(is_audio)
                 .filter(|p| p.placement == import_plan::Placement::AlreadyPresent)
                 .count(),
+        unplayable: planned.unplayable,
+        archives: planned.archives,
         ..Default::default()
     };
     let database = Db::open(&environment.db_path);
@@ -2086,6 +2092,9 @@ fn run_drop_import(
             }
         }
         if entry.item.kind != import_plan::Kind::Audio {
+            if result.is_ok() {
+                outcome.lyrics += 1;
+            }
             continue;
         }
         match result {
@@ -2134,17 +2143,23 @@ fn replace_existing(
 }
 
 /// The toast that closes an import: the shared sentence, the songs replaced by
-/// newer versions, and the first replacement that could not be made.
+/// newer versions, what the pick passed over, and the first replacement that
+/// could not be made. In the order the Apple clients say them.
 fn import_message(outcome: &import_plan::Outcome, replaced: usize, failures: &[String]) -> String {
-    let nothing_else = outcome.imported == 0 && outcome.skipped == 0 && outcome.failed == 0;
+    let counted = outcome.imported > 0 || outcome.skipped > 0 || outcome.failed > 0;
     let mut parts: Vec<String> = Vec::new();
-    if !(replaced > 0 && nothing_else) {
+    if replaced == 0 {
         parts.push(import_plan::report(outcome).0);
+    } else if counted {
+        parts.push(import_plan::counted_report_beside_replacements(outcome).0);
     }
     if replaced == 1 {
         parts.push(copy::REPLACED_ONE.to_string());
     } else if replaced > 1 {
         parts.push(copy::fill(copy::REPLACED_COUNT, &[&replaced.to_string()]));
+    }
+    if replaced > 0 {
+        parts.extend(import_plan::passed_over_notes(outcome));
     }
     if let Some(first) = failures.first() {
         parts.push(first.clone());
@@ -2314,7 +2329,27 @@ mod tests {
             "Imported 3 items · 2 songs replaced with newer versions"
         );
         assert_eq!(import_message(&some, 0, &[]), "Imported 3 items");
-        assert_eq!(import_message(&none, 0, &[]), "Nothing to import.");
+        assert_eq!(
+            import_message(&none, 0, &[]),
+            "No music found there. Flaccy adds FLAC, MP3, M4A, Ogg, Opus, WAV and AIFF files."
+        );
+        let passed_over = Outcome {
+            imported: 3,
+            unplayable: [("wma".to_string(), 2)].into_iter().collect(),
+            ..Default::default()
+        };
+        assert_eq!(
+            import_message(&passed_over, 1, &[]),
+            "Imported 3 items · 1 song replaced with a newer version · 2 WMA files weren't added: Flaccy can't play them."
+        );
+        let only_zip = Outcome {
+            archives: 1,
+            ..Default::default()
+        };
+        assert_eq!(
+            import_message(&only_zip, 2, &[]),
+            "2 songs replaced with newer versions · 1 zip archive wasn't opened: unzip it first."
+        );
         let failed = Outcome {
             failed: 1,
             ..Default::default()

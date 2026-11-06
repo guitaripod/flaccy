@@ -652,6 +652,8 @@ enum DemoRouter {
             presentSheet(UINavigationController(rootViewController: StreamingLinksViewController(result: DemoMode.fakeSonglink)), from: tabs)
         case "computer-guide":
             presentSheet(UINavigationController(rootViewController: ComputerTransferGuideViewController()), from: tabs)
+        case "import-help", "import-help-formats", "import-help-zip":
+            tabs.present(ImportHelpViewController.sheet(reason: demoImportReason(route), offersSample: true) { _ in }, animated: false)
         default: break
         }
     }
@@ -690,6 +692,18 @@ enum DemoRouter {
 
     private static func present(_ controller: UIViewController, from presenter: UIViewController) {
         presenter.present(controller, animated: false)
+    }
+
+    /// The sentence a real pick would have produced, so the help is captured with the copy people see.
+    private static func demoImportReason(_ route: String) -> String? {
+        switch route {
+        case "import-help-formats":
+            ImportOutcomeCopy.report(LibraryImportOutcome(imported: 0, skipped: 0, failed: 0, unplayable: ["ogg": 12, "opus": 2])).message
+        case "import-help-zip":
+            ImportOutcomeCopy.report(LibraryImportOutcome(imported: 0, skipped: 0, failed: 0, archives: 1)).message
+        default:
+            nil
+        }
     }
 
     private static func presentSheet(_ controller: UINavigationController, from presenter: UIViewController) {

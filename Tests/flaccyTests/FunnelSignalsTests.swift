@@ -119,11 +119,36 @@ struct FunnelSignalsTests {
         #expect(h.spy.events == [step("import_failed"), step("import_failed")])
     }
 
-    @Test func anImportThatFoundNothingNewRecordsNothing() {
+    @Test func aPickThatBroughtNothingInSaysWhy() {
         let h = harness()
         h.signals.noteImport(.empty)
         h.signals.noteImport(LibraryImportOutcome(imported: 0, skipped: 5, failed: 0))
-        #expect(h.spy.events.isEmpty)
+        h.signals.noteImport(LibraryImportOutcome(imported: 0, skipped: 0, failed: 0, unplayable: ["ogg": 3]))
+        h.signals.noteImport(LibraryImportOutcome(imported: 0, skipped: 0, failed: 0, archives: 1))
+        #expect(h.spy.events == [
+            step("import_nothing_found"), step("import_already_present"), step("import_unsupported"), step("import_archive"),
+        ])
+    }
+
+    @Test func whatAPickPassedOverIsRecordedBesideItsSuccess() {
+        let h = harness()
+        h.signals.noteImport(LibraryImportOutcome(imported: 4, skipped: 2, failed: 0, unplayable: ["wma": 1], archives: 2))
+        #expect(h.spy.events == [step("import_succeeded"), step("import_unsupported"), step("import_archive")])
+    }
+
+    @Test func aReplacementSucceedsAndStoppingOrLyricsAloneRecordNothing() {
+        let h = harness()
+        h.signals.noteImport(LibraryImportOutcome(imported: 0, skipped: 3, failed: 0, replaced: 2))
+        h.signals.noteImport(LibraryImportOutcome(imported: 0, skipped: 0, failed: 0, stopped: 9))
+        h.signals.noteImport(LibraryImportOutcome(imported: 0, skipped: 0, failed: 0, lyrics: 4))
+        #expect(h.spy.events == [step("import_succeeded")])
+    }
+
+    @Test func aCancelledPickerAndWiFiTransferAreRecorded() {
+        let h = harness()
+        h.signals.notePickerCancelled()
+        h.signals.noteWiFiTransferOpened()
+        #expect(h.spy.events == [step("picker_cancelled"), step("add_music_opened"), step("wifi_transfer_opened")])
     }
 
     @Test func aCheckoutRecordsItsStartAndEachOutcomeWithTheProduct() {

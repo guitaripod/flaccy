@@ -30,7 +30,7 @@ enum WatchSyncExercise {
     /// show whether the system accepts the identifiers and runs the handler.
     private static func runBackgroundTask() async {
         try? await Task.sleep(for: .seconds(3))
-        let task = WatchSyncBackgroundTask.shared
+        let task = ContinuedWork.watchSync
         task.begin(total: 20)
         for completed in 1...20 {
             try? await Task.sleep(for: .seconds(1))

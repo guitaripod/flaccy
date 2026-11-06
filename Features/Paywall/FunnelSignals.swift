@@ -83,6 +83,17 @@ final class FunnelSignals {
         record(.addMusicOpened)
     }
 
+    /// The Files picker or the Mac's open panel was closed without choosing anything.
+    func notePickerCancelled() {
+        record(.pickerCancelled)
+    }
+
+    /// Wi-Fi Transfer counts as opening Add Music too; this says which way in it was.
+    func noteWiFiTransferOpened() {
+        record(.addMusicOpened)
+        record(.wifiTransferOpened)
+    }
+
     func noteTrialStarted() {
         record(.trialStarted)
     }
@@ -92,18 +103,32 @@ final class FunnelSignals {
         record(.importSucceeded)
     }
 
-    /// An import that brought in at least one song succeeded, whatever else it skipped or failed on. One that refused
-    /// for space, or lost every song it tried, failed. Finding nothing or only songs already there is neither.
+    /// An import that brought in at least one song, new or a newer version, succeeded, whatever else it skipped or failed on. One that refused
+    /// for space, or lost every song it tried, failed. Beside either, the pick may have held formats the app cannot
+    /// play or music still zipped. A pick that brought nothing in says why: every song was already there, or it held
+    /// nothing that looks like music at all.
     func noteImport(_ outcome: LibraryImportOutcome) {
-        guard let step = Self.step(for: outcome) else { return }
-        record(step)
+        Self.steps(for: outcome).forEach(record)
     }
 
-    static func step(for outcome: LibraryImportOutcome) -> Step? {
-        if outcome.shortfall != nil { return .importFailed }
-        if outcome.imported > 0 { return .importSucceeded }
-        if outcome.failed > 0 { return .importFailed }
-        return nil
+    static func steps(for outcome: LibraryImportOutcome) -> [Step] {
+        if outcome.shortfall != nil { return [.importFailed] }
+        var steps: [Step] = []
+        if outcome.imported > 0 || outcome.replaced > 0 {
+            steps.append(.importSucceeded)
+        } else if outcome.failed > 0 {
+            steps.append(.importFailed)
+        }
+        if !outcome.unplayable.isEmpty { steps.append(.importUnsupported) }
+        if outcome.archives > 0 { steps.append(.importArchive) }
+        let broughtNothing = outcome.imported == 0 && outcome.failed == 0 && outcome.replaced == 0
+            && outcome.stopped == 0 && outcome.lyrics == 0
+        if broughtNothing, outcome.skipped > 0 {
+            steps.append(.importAlreadyPresent)
+        } else if broughtNothing, steps.isEmpty {
+            steps.append(.importNothingFound)
+        }
+        return steps
     }
 
     func noteCheckoutStarted(product: String) {

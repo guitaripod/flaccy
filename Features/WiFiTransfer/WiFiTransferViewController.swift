@@ -58,7 +58,7 @@ final class WiFiTransferViewController: UIViewController {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.session.resume() }
         }
-        FunnelSignals.shared.noteAddMusicOpened()
+        FunnelSignals.shared.noteWiFiTransferOpened()
     }
 
     override func viewWillAppear(_ animated: Bool) {

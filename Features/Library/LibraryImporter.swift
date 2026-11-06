@@ -1,6 +1,7 @@
 import FlaccyCore
 import MidgarCore
 import Foundation
+import os
 
 /// One audio or lyrics file to write into the library, and whether it takes
 /// the place of a file already there.
@@ -8,6 +9,22 @@ private nonisolated struct ImportJob: Sendable {
     let item: ImportPlan.Item
     let destination: String
     let replacesExisting: Bool
+}
+
+/// Asked between songs whether an import should stop, because the background
+/// work carrying it was ended while the app was away. Songs already copied
+/// stay, and the same pick run again copies only the rest.
+nonisolated final class ImportStop: Sendable {
+
+    private let requested = OSAllocatedUnfairLock(initialState: false)
+
+    var isRequested: Bool {
+        requested.withLock { $0 }
+    }
+
+    func request() {
+        requested.withLock { $0 = true }
+    }
 }
 
 /// Copies picked files and folders into the library root. `ImportPlan` decides
@@ -25,7 +42,8 @@ nonisolated enum LibraryImporter {
         _ urls: [URL],
         into directory: URL,
         progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void,
-        decideReplacements: @escaping ImportReplacementDecider
+        decideReplacements: @escaping ImportReplacementDecider,
+        stop: ImportStop = ImportStop()
     ) async -> LibraryImportOutcome {
         await Task.detached(priority: .userInitiated) {
             let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
@@ -43,18 +61,32 @@ nonisolated enum LibraryImporter {
                     "Import refused: needs \(shortfall.needed) bytes, \(shortfall.available) available",
                     category: .content
                 )
-                return LibraryImportOutcome(imported: 0, skipped: skipped, failed: 0, shortfall: shortfall)
+                return LibraryImportOutcome(
+                    imported: 0, skipped: skipped, failed: 0, shortfall: shortfall,
+                    unplayable: plan.unplayable, archives: plan.archives
+                )
             }
 
             let total = jobs.filter { $0.item.kind == .audio }.count
             var imported = 0
             var replaced = 0
             var failed = 0
-            for job in jobs {
+            var stopped = 0
+            var lyrics = 0
+            if total > 0 { reporter.report(.copying(done: 0, total: total), force: true) }
+            for (index, job) in jobs.enumerated() {
+                if stop.isRequested {
+                    stopped = jobs[index...].filter { $0.item.kind == .audio }.count
+                    MidgarLog.notice("Import stopped with \(stopped) songs left to copy", category: .content)
+                    break
+                }
                 let target = directory.appendingPathComponent(job.destination)
                 do {
                     try write(job, to: target)
-                    guard job.item.kind == .audio else { continue }
+                    guard job.item.kind == .audio else {
+                        lyrics += 1
+                        continue
+                    }
                     if job.replacesExisting {
                         replaced += 1
                         MidgarLog.info("Replaced with a newer version: \(job.destination)", category: .content)
@@ -74,10 +106,14 @@ nonisolated enum LibraryImporter {
                 reporter.report(.copying(done: done, total: total), force: done == total)
             }
             MidgarLog.info(
-                "Import finished: \(imported) imported, \(replaced) replaced, \(skipped) skipped, \(failed) failed",
+                "Import finished: \(imported) imported, \(replaced) replaced, \(skipped) skipped, \(failed) failed, "
+                    + "\(stopped) stopped, \(plan.unplayable.values.reduce(0, +)) unplayable, \(plan.archives) archives",
                 category: .content
             )
-            return LibraryImportOutcome(imported: imported, skipped: skipped, failed: failed, replaced: replaced)
+            return LibraryImportOutcome(
+                imported: imported, skipped: skipped, failed: failed, replaced: replaced,
+                unplayable: plan.unplayable, archives: plan.archives, stopped: stopped, lyrics: lyrics
+            )
         }.value
     }
 

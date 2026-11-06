@@ -12,11 +12,23 @@
 //! The Apple half also recognises iCloud placeholders; no Linux file system
 //! leaves them, so this half skips them like any other hidden file.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub const LYRICS_EXTENSIONS: [&str; 2] = ["lrc", "elrc"];
+
+/// Audio formats people keep music in, whether or not the importing client
+/// plays them, so an import can name what it passed over instead of reporting
+/// that it found nothing.
+pub const RECOGNIZED_AUDIO_EXTENSIONS: [&str; 21] = [
+    "flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "aifc", "caf", "ogg", "oga", "opus",
+    "ape", "wv", "dsf", "dff", "wma", "mka", "mpc", "tta",
+];
+
+/// Archives an album download often arrives in; the music inside is not
+/// reached until the person unpacks it.
+pub const ARCHIVE_EXTENSIONS: [&str; 1] = ["zip"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -38,6 +50,10 @@ pub struct Plan {
     pub items: Vec<Item>,
     /// Audio files among the picked sources that already live inside the library.
     pub already_in_library: usize,
+    /// Audio files passed over because this client does not play their format, counted by lowercased extension.
+    pub unplayable: BTreeMap<String, usize>,
+    /// Archives passed over, whose music is not reached until they are unpacked.
+    pub archives: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -64,12 +80,17 @@ pub struct Placed {
 }
 
 /// What one import did, counted in audio files only: a lyrics sidecar rides
-/// along with its song and is never reported on its own.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+/// along with its song and is never reported on its own. What the plan passed
+/// over rides along so the report can name it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Outcome {
     pub imported: usize,
     pub skipped: usize,
     pub failed: usize,
+    pub unplayable: BTreeMap<String, usize>,
+    pub archives: usize,
+    /// Lyrics sidecars written, which a pick of nothing but lyrics brings in on their own.
+    pub lyrics: usize,
 }
 
 /// Walks every picked source. Hidden files and folders are skipped, a folder
@@ -81,6 +102,8 @@ pub fn plan(picked: &[PathBuf], library_root: &Path, audio_extensions: &[&str]) 
         audio_extensions: audio_extensions.iter().map(|e| e.to_lowercase()).collect(),
         items: Vec::new(),
         already_in_library: 0,
+        unplayable: BTreeMap::new(),
+        archives: 0,
         visited: HashSet::new(),
     };
     for source in picked {
@@ -103,6 +126,8 @@ pub fn plan(picked: &[PathBuf], library_root: &Path, audio_extensions: &[&str]) 
     Plan {
         items: walk.items,
         already_in_library: walk.already_in_library,
+        unplayable: walk.unplayable,
+        archives: walk.archives,
     }
 }
 
@@ -144,10 +169,29 @@ pub fn placements(
 }
 
 /// The sentence the Apple clients' `ImportOutcomeCopy.report` shows, word for
-/// word in its English form, and whether it reports a failure.
+/// word in its English form apart from the formats Linux plays and how it says
+/// to unpack a zip, and whether it reports a failure. When the pick brought in
+/// nothing and found nothing already there, it leads with why.
 pub fn report(outcome: &Outcome) -> (String, bool) {
+    if outcome.imported == 0 && outcome.skipped == 0 && outcome.failed == 0 {
+        if outcome.lyrics > 0 {
+            let mut parts = vec![lyrics_added(outcome.lyrics)];
+            parts.extend(passed_over_notes(outcome));
+            return (parts.join(" · "), false);
+        }
+        return (passed_over_lead(outcome), false);
+    }
+    let (counted, failure) = counted_report(outcome);
+    let mut parts = vec![counted];
+    parts.extend(passed_over_notes(outcome));
+    (parts.join(" · "), failure)
+}
+
+/// The sentence for what was imported, already there or failed, without the
+/// notes on what the pick passed over.
+pub fn counted_report(outcome: &Outcome) -> (String, bool) {
     match (outcome.imported, outcome.skipped, outcome.failed) {
-        (0, 0, 0) => ("Nothing to import.".to_string(), false),
+        (0, 0, 0) => (NO_MUSIC_FOUND.to_string(), false),
         (0, 1, 0) => ("Already in your library.".to_string(), false),
         (0, skipped, 0) => (
             format!("All {skipped} items are already in your library."),
@@ -167,6 +211,100 @@ pub fn report(outcome: &Outcome) -> (String, bool) {
             format!("Imported {imported}, {failed} failed to copy"),
             true,
         ),
+    }
+}
+
+/// The counted sentence when songs were also replaced by newer versions: a
+/// failure beside them is counted on its own rather than called a failed import.
+pub fn counted_report_beside_replacements(outcome: &Outcome) -> (String, bool) {
+    if outcome.imported == 0 && outcome.failed > 0 {
+        return (format!("{} failed to copy", outcome.failed), true);
+    }
+    counted_report(outcome)
+}
+
+fn lyrics_added(count: usize) -> String {
+    if count == 1 {
+        "Added 1 lyrics file".to_string()
+    } else {
+        format!("Added {count} lyrics files")
+    }
+}
+
+/// What the pick passed over, said after another sentence: the files in formats
+/// this client does not play, and the zips it did not open.
+pub fn passed_over_notes(outcome: &Outcome) -> Vec<String> {
+    let mut notes = Vec::new();
+    let unplayable: usize = outcome.unplayable.values().sum();
+    if unplayable == 1 {
+        let formats = listed(&format_names(&outcome.unplayable), "and");
+        notes.push(format!("1 {formats} file wasn't added: Flaccy can't play it."));
+    } else if unplayable > 1 {
+        let formats = listed(&format_names(&outcome.unplayable), "and");
+        notes.push(format!(
+            "{unplayable} {formats} files weren't added: Flaccy can't play them."
+        ));
+    }
+    if outcome.archives > 0 {
+        notes.push(archive_note(outcome.archives));
+    }
+    notes
+}
+
+const NO_MUSIC_FOUND: &str =
+    "No music found there. Flaccy adds FLAC, MP3, M4A, Ogg, Opus, WAV and AIFF files.";
+
+fn passed_over_lead(outcome: &Outcome) -> String {
+    let unplayable: usize = outcome.unplayable.values().sum();
+    let mut parts = Vec::new();
+    if unplayable > 0 {
+        let formats = listed(&format_names(&outcome.unplayable), "or");
+        parts.push(if unplayable == 1 {
+            format!("Flaccy can't play {formats} files, so this one wasn't added.")
+        } else {
+            format!("Flaccy can't play {formats} files, so these {unplayable} weren't added.")
+        });
+    }
+    if outcome.archives > 0 {
+        parts.push(if unplayable > 0 {
+            archive_note(outcome.archives)
+        } else if outcome.archives == 1 {
+            "The music there is in a zip archive. Extract it, then add the folder it makes."
+                .to_string()
+        } else {
+            format!(
+                "The music there is in {} zip archives. Extract each, then add the folders they make.",
+                outcome.archives
+            )
+        });
+    }
+    if parts.is_empty() {
+        parts.push(NO_MUSIC_FOUND.to_string());
+    }
+    parts.join(" · ")
+}
+
+fn archive_note(count: usize) -> String {
+    if count == 1 {
+        "1 zip archive wasn't opened: unzip it first.".to_string()
+    } else {
+        format!("{count} zip archives weren't opened: unzip them first.")
+    }
+}
+
+/// The extensions as people see them on their files, in a stable order.
+fn format_names(unplayable: &BTreeMap<String, usize>) -> Vec<String> {
+    unplayable.keys().map(|extension| extension.to_uppercase()).collect()
+}
+
+/// Joins names the way Foundation's English list format does: `A`, `A or B`,
+/// `A, B, or C`.
+fn listed(names: &[String], conjunction: &str) -> String {
+    match names {
+        [] => String::new(),
+        [only] => only.clone(),
+        [first, second] => format!("{first} {conjunction} {second}"),
+        [rest @ .., last] => format!("{}, {conjunction} {last}", rest.join(", ")),
     }
 }
 
@@ -312,6 +450,8 @@ struct Walk {
     audio_extensions: HashSet<String>,
     items: Vec<Item>,
     already_in_library: usize,
+    unplayable: BTreeMap<String, usize>,
+    archives: usize,
     visited: HashSet<PathBuf>,
 }
 
@@ -331,6 +471,9 @@ impl Walk {
         } else if allows_lyrics && LYRICS_EXTENSIONS.contains(&extension.as_str()) {
             Kind::Lyrics
         } else {
+            if !inside_library {
+                self.note_passed_over(extension);
+            }
             return;
         };
         if inside_library {
@@ -345,6 +488,16 @@ impl Walk {
             kind,
             size,
         });
+    }
+
+    /// Counts a file the import leaves behind when the person would expect
+    /// music from it; anything else (covers, logs, cue sheets) is not worth naming.
+    fn note_passed_over(&mut self, extension: String) {
+        if RECOGNIZED_AUDIO_EXTENSIONS.contains(&extension.as_str()) {
+            *self.unplayable.entry(extension).or_insert(0) += 1;
+        } else if ARCHIVE_EXTENSIONS.contains(&extension.as_str()) {
+            self.archives += 1;
+        }
     }
 
     /// Whether a folder sits inside the library is decided once per folder
@@ -638,7 +791,7 @@ mod tests {
     #[test]
     fn the_report_matches_the_apple_sentences() {
         let cases = [
-            ((0, 0, 0), "Nothing to import.", false),
+            ((0, 0, 0), NO_MUSIC_FOUND, false),
             ((0, 1, 0), "Already in your library.", false),
             ((0, 5, 0), "All 5 items are already in your library.", false),
             (
@@ -656,9 +809,156 @@ mod tests {
                 imported,
                 skipped,
                 failed,
+                ..Default::default()
             };
             assert_eq!(report(&outcome), (sentence.to_string(), failure));
         }
+    }
+
+    fn passed_over(unplayable: &[(&str, usize)], archives: usize) -> Outcome {
+        Outcome {
+            unplayable: unplayable
+                .iter()
+                .map(|(extension, count)| (extension.to_string(), *count))
+                .collect(),
+            archives,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn a_pick_with_nothing_playable_says_which_formats() {
+        assert_eq!(
+            report(&passed_over(&[("ogg", 1)], 0)),
+            (
+                "Flaccy can't play OGG files, so this one wasn't added.".to_string(),
+                false
+            )
+        );
+        assert_eq!(
+            report(&passed_over(&[("wv", 2), ("ape", 3), ("dsf", 9)], 0)).0,
+            "Flaccy can't play APE, DSF, or WV files, so these 14 weren't added."
+        );
+    }
+
+    #[test]
+    fn music_inside_a_zip_says_to_extract_it() {
+        assert_eq!(
+            report(&passed_over(&[], 1)).0,
+            "The music there is in a zip archive. Extract it, then add the folder it makes."
+        );
+        assert_eq!(
+            report(&passed_over(&[], 3)).0,
+            "The music there is in 3 zip archives. Extract each, then add the folders they make."
+        );
+        assert_eq!(
+            report(&passed_over(&[("wma", 2)], 1)).0,
+            "Flaccy can't play WMA files, so these 2 weren't added. · 1 zip archive wasn't opened: unzip it first."
+        );
+    }
+
+    #[test]
+    fn what_was_passed_over_follows_what_came_in() {
+        let mut outcome = passed_over(&[("ape", 1), ("wv", 3)], 2);
+        outcome.imported = 12;
+        assert_eq!(
+            report(&outcome).0,
+            "Imported 12 items · 4 APE and WV files weren't added: Flaccy can't play them. · 2 zip archives weren't opened: unzip them first."
+        );
+        let mut single = passed_over(&[("wma", 1)], 0);
+        single.skipped = 1;
+        assert_eq!(
+            report(&single).0,
+            "Already in your library. · 1 WMA file wasn't added: Flaccy can't play it."
+        );
+    }
+
+    #[test]
+    fn a_pick_of_only_lyrics_says_they_were_added() {
+        let lyrics = Outcome {
+            lyrics: 3,
+            ..Default::default()
+        };
+        assert_eq!(report(&lyrics), ("Added 3 lyrics files".to_string(), false));
+        let mut with_notes = passed_over(&[("wma", 2)], 0);
+        with_notes.lyrics = 1;
+        assert_eq!(
+            report(&with_notes).0,
+            "Added 1 lyrics file · 2 WMA files weren't added: Flaccy can't play them."
+        );
+    }
+
+    #[test]
+    fn a_failure_beside_replacements_is_counted_alone() {
+        let outcome = Outcome {
+            skipped: 1,
+            failed: 1,
+            ..Default::default()
+        };
+        assert_eq!(
+            counted_report_beside_replacements(&outcome),
+            ("1 failed to copy".to_string(), true)
+        );
+    }
+
+    #[test]
+    fn passed_over_files_already_inside_the_library_are_not_counted() {
+        let s = Sandbox::new();
+        s.write(&s.library, "Old/a.wma", 4);
+        s.write(&s.library, "Old/b.zip", 4);
+
+        let plan = s.plan(&[s.library.join("Old")]);
+
+        assert!(plan.unplayable.is_empty());
+        assert_eq!(plan.archives, 0);
+    }
+
+    #[test]
+    fn names_are_listed_like_foundation_lists_them() {
+        let names = |list: &[&str]| list.iter().map(|n| n.to_string()).collect::<Vec<_>>();
+        assert_eq!(listed(&names(&["OGG"]), "or"), "OGG");
+        assert_eq!(listed(&names(&["APE", "WV"]), "or"), "APE or WV");
+        assert_eq!(listed(&names(&["APE", "DSF", "WV"]), "and"), "APE, DSF, and WV");
+    }
+
+    #[test]
+    fn formats_this_client_cannot_play_are_counted_by_extension() {
+        let s = Sandbox::new();
+        for name in ["01.flac", "02.wma", "03.WMA", "04.ape", "cover.jpg", "notes.txt"] {
+            s.write(&s.outside, &format!("Album/{name}"), 4);
+        }
+
+        let plan = s.plan(&[s.outside.join("Album")]);
+
+        assert_eq!(destinations(&plan), vec!["Album/01.flac"]);
+        let counted: Vec<(String, usize)> = plan.unplayable.into_iter().collect();
+        assert_eq!(counted, vec![("ape".to_string(), 1), ("wma".to_string(), 2)]);
+        assert_eq!(plan.archives, 0);
+    }
+
+    #[test]
+    fn a_zip_archive_is_counted_not_walked() {
+        let s = Sandbox::new();
+        s.write(&s.outside, "Downloads/Album.zip", 4);
+        s.write(&s.outside, "Downloads/Other.ZIP", 4);
+        s.write(&s.outside, "Downloads/readme.rar", 4);
+
+        let plan = s.plan(&[s.outside.join("Downloads")]);
+
+        assert!(plan.items.is_empty());
+        assert_eq!(plan.archives, 2);
+        assert!(plan.unplayable.is_empty());
+    }
+
+    #[test]
+    fn a_picked_file_in_an_unplayable_format_is_counted() {
+        let s = Sandbox::new();
+        let file = s.write(&s.outside, "song.wv", 4);
+
+        let plan = s.plan(&[file]);
+
+        assert!(plan.items.is_empty());
+        assert_eq!(plan.unplayable.get("wv"), Some(&1));
     }
 
     #[derive(Default)]

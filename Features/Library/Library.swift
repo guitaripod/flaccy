@@ -14,6 +14,14 @@ nonisolated struct LibraryImportOutcome: Sendable, Equatable {
     let failed: Int
     var shortfall: StorageShortfall? = nil
     var replaced: Int = 0
+    /// Audio files passed over because the app does not play their format, by lowercased extension.
+    var unplayable: [String: Int] = [:]
+    /// Zip archives passed over, whose music is not reached until the person unpacks them.
+    var archives: Int = 0
+    /// Songs never started because the import was stopped while the app was in the background.
+    var stopped: Int = 0
+    /// Lyrics sidecars written, which a pick of nothing but lyrics brings in on their own.
+    var lyrics: Int = 0
 
     static let empty = LibraryImportOutcome(imported: 0, skipped: 0, failed: 0)
 }
@@ -460,9 +468,26 @@ final class Library: LibraryProviding {
         progress: @escaping @MainActor @Sendable (LibraryImportProgress) -> Void,
         decideReplacements: @escaping ImportReplacementDecider
     ) async -> LibraryImportOutcome {
+        let stop = ImportStop()
+        #if os(iOS)
+        let continuation = ImportContinuation.shared
+        continuation.started(stop)
         let outcome = await LibraryImporter.run(
-            urls, into: documentsDirectory, progress: progress, decideReplacements: decideReplacements
+            urls,
+            into: documentsDirectory,
+            progress: { update in
+                progress(update)
+                continuation.progressed(stop, update)
+            },
+            decideReplacements: decideReplacements,
+            stop: stop
         )
+        continuation.ended(stop)
+        #else
+        let outcome = await LibraryImporter.run(
+            urls, into: documentsDirectory, progress: progress, decideReplacements: decideReplacements, stop: stop
+        )
+        #endif
         FunnelSignals.shared.noteImport(outcome)
         await reload()
         return outcome

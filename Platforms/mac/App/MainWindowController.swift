@@ -384,6 +384,14 @@ final class AudioDropView: NSView {
         return true
     }
 
+    /// Music the library plays is taken; a format it does not play, or a zip, is taken too so the import can say why
+    /// nothing came of it.
+    private static func importsOrExplains(_ pathExtension: String) -> Bool {
+        Library.audioExtensions.contains(pathExtension)
+            || ImportPlan.recognizedAudioExtensions.contains(pathExtension)
+            || ImportPlan.archiveExtensions.contains(pathExtension)
+    }
+
     private func droppableURLs(from info: NSDraggingInfo) -> [URL] {
         let urls = info.draggingPasteboard.readObjects(
             forClasses: [NSURL.self],
@@ -394,8 +402,7 @@ final class AudioDropView: NSView {
             guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
                 return false
             }
-            return isDirectory.boolValue
-                || Library.audioExtensions.contains(url.pathExtension.lowercased())
+            return isDirectory.boolValue || Self.importsOrExplains(url.pathExtension.lowercased())
         }
     }
 }

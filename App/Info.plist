@@ -83,6 +83,7 @@
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).watchsync</string>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).watchsync.*</string>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).import.*</string>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).serversync</string>
 	</array>
 	<key>UIBackgroundModes</key>

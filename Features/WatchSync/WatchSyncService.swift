@@ -86,7 +86,7 @@ final class WatchSyncService: NSObject {
         observeLibrary()
         observeRevisions()
         observeAccent()
-        WatchSyncBackgroundTask.shared.onExpiration = { [weak self] in self?.suspendPreparation() }
+        ContinuedWork.watchSync.onExpiration = { [weak self] _ in self?.suspendPreparation() }
     }
 
     private static var transcodeDirectory: URL {
@@ -541,7 +541,7 @@ final class WatchSyncService: NSObject {
                 MainActor.assumeIsolated { self?.sampleMetrics() }
             }
         }
-        WatchSyncBackgroundTask.shared.begin(total: runStems.count)
+        ContinuedWork.watchSync.begin(total: runStems.count)
     }
 
     private func sampleMetrics() {
@@ -563,7 +563,7 @@ final class WatchSyncService: NSObject {
         guard !runStems.isEmpty, !ledger.isBusy else { return }
         runStems.removeAll()
         stopMetrics()
-        WatchSyncBackgroundTask.shared.finish()
+        ContinuedWork.watchSync.finish()
     }
 
     private func reportBackgroundProgress() {
@@ -573,7 +573,7 @@ final class WatchSyncService: NSObject {
             default: false
             }
         }.count
-        WatchSyncBackgroundTask.shared.update(completed: handedOff, total: runStems.count)
+        ContinuedWork.watchSync.update(completed: handedOff, total: runStems.count)
     }
 
     private func armWakeTimer() {

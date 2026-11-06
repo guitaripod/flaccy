@@ -137,6 +137,7 @@ targets:
           - Secrets.swift.example
           - AppDelegate.swift
           - AppTabBarController.swift
+          - ContinuedWork.swift
           - Pad/AppCommandTarget.swift
           - Pad/AppCommands.swift
           - Pad/AudioFileDrop.swift
@@ -223,6 +224,8 @@ targets:
           - Home/HomeViewController.swift
           - Library/AlbumCell.swift
           - Library/ComputerTransferGuideViewController.swift
+          - Library/ImportContinuation.swift
+          - Library/ImportHelpViewController.swift
           - Library/DuplicateCopiesViewController.swift
           - Library/LibraryFolderPoller.swift
           - Library/LibraryMosaicView.swift
@@ -309,7 +312,6 @@ targets:
           - Sharing/StreamingLinksViewController.swift
           - Wantlist/WantlistViewController.swift
           - WatchSync/WatchPlayIngestor.swift
-          - WatchSync/WatchSyncBackgroundTask.swift
           - WatchSync/WatchSyncCells.swift
           - WatchSync/WatchSyncCopy.swift
           - WatchSync/WatchRemoteExercise.swift

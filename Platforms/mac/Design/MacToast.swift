@@ -115,7 +115,32 @@ enum MacToast {
 
         func finish(reporting outcome: LibraryImportOutcome) {
             let report = ImportOutcomeCopy.report(outcome)
-            finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
+            guard report.isDeadEnd else {
+                finish(report.message, style: report.isFailure ? .error : (report.isNoOp ? .info : .success))
+                return
+            }
+            explainDeadEnd(report.message)
+        }
+
+        /// A pick that added nothing says why at a length a one-line toast would cut off, in a sheet the person reads
+        /// and closes.
+        private func explainDeadEnd(_ reason: String) {
+            guard !isFinished else { return }
+            isFinished = true
+            if let toast, toast === MacToast.currentToast {
+                toast.removeFromSuperview()
+                MacToast.currentToast = nil
+            }
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Nothing Was Added")
+            alert.informativeText = reason
+            alert.addButton(withTitle: String(localized: "OK"))
+            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+            if let window {
+                alert.beginSheetModal(for: window)
+            } else {
+                alert.runModal()
+            }
         }
 
         func finish(_ message: String, style: Style) {

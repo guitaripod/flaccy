@@ -1467,11 +1467,11 @@ fn new_mix_toast(core: &Rc<AppCore>, rel_path: &str, title: &str) -> adw::Toast 
 fn show_toast(overlay: &adw::ToastOverlay, live: &Rc<RefCell<Option<adw::Toast>>>, message: &str) {
     if let Some(toast) = live.borrow().as_ref() {
         toast.set_title(message);
-        toast.set_timeout(3);
+        toast.set_timeout(toast_seconds(message));
         return;
     }
     let toast = adw::Toast::new(message);
-    toast.set_timeout(3);
+    toast.set_timeout(toast_seconds(message));
     {
         let live = Rc::clone(live);
         toast.connect_dismissed(move |_| {
@@ -1480,6 +1480,12 @@ fn show_toast(overlay: &adw::ToastOverlay, live: &Rc<RefCell<Option<adw::Toast>>
     }
     *live.borrow_mut() = Some(toast.clone());
     overlay.add_toast(toast);
+}
+
+/// Three seconds for a short message, longer for one that explains why an
+/// import added nothing, so it can be read before it goes.
+fn toast_seconds(message: &str) -> u32 {
+    (message.chars().count() as u32 / 18).clamp(3, 10)
 }
 
 /// Ctrl+= / Ctrl++ / Ctrl+- / Ctrl+0 zoom the whole interface, persisted in

@@ -18,6 +18,18 @@ public enum ImportPlan {
 
     public static let lyricsExtensions: Set<String> = ["lrc", "elrc"]
 
+    /// Audio formats people keep music in, whether or not the importing client
+    /// plays them, so an import can name what it passed over instead of
+    /// reporting that it found nothing.
+    public static let recognizedAudioExtensions: Set<String> = [
+        "flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "aifc", "caf",
+        "ogg", "oga", "opus", "ape", "wv", "dsf", "dff", "wma", "mka", "mpc", "tta",
+    ]
+
+    /// Archives an album download often arrives in; the music inside is not
+    /// reached until the person unpacks it.
+    public static let archiveExtensions: Set<String> = ["zip"]
+
     public enum Kind: Equatable, Sendable {
         case audio
         case lyrics
@@ -43,10 +55,16 @@ public enum ImportPlan {
         public let items: [Item]
         /// Audio files among the picked sources that already live inside the library.
         public let alreadyInLibrary: Int
+        /// Audio files passed over because this client does not play their format, counted by lowercased extension.
+        public let unplayable: [String: Int]
+        /// Archives passed over, whose music is not reached until they are unpacked.
+        public let archives: Int
 
-        public init(items: [Item], alreadyInLibrary: Int) {
+        public init(items: [Item], alreadyInLibrary: Int, unplayable: [String: Int] = [:], archives: Int = 0) {
             self.items = items
             self.alreadyInLibrary = alreadyInLibrary
+            self.unplayable = unplayable
+            self.archives = archives
         }
     }
 
@@ -97,7 +115,12 @@ public enum ImportPlan {
                 )
             }
         }
-        return Plan(items: walk.items, alreadyInLibrary: walk.alreadyInLibrary)
+        return Plan(
+            items: walk.items,
+            alreadyInLibrary: walk.alreadyInLibrary,
+            unplayable: walk.unplayable,
+            archives: walk.archives
+        )
     }
 
     /// Where each planned file goes under `importRoot`, in plan order.
@@ -269,6 +292,8 @@ public enum ImportPlan {
         let fileManager: FileManager
         var items: [Item] = []
         var alreadyInLibrary = 0
+        var unplayable: [String: Int] = [:]
+        var archives = 0
         var visited: Set<String> = []
 
         init(libraryRoot: String, audioExtensions: Set<String>, fileManager: FileManager) {
@@ -292,6 +317,7 @@ public enum ImportPlan {
             } else if allowsLyrics, ImportPlan.lyricsExtensions.contains(pathExtension) {
                 kind = .lyrics
             } else {
+                if !insideLibrary { notePassedOver(pathExtension) }
                 return
             }
             guard !insideLibrary else {
@@ -299,6 +325,16 @@ public enum ImportPlan {
                 return
             }
             items.append(Item(source: file, destination: components.joined(separator: "/"), kind: kind, size: size))
+        }
+
+        /// Counts a file the import leaves behind when the person would expect
+        /// music from it; anything else (covers, logs, cue sheets) is not worth naming.
+        mutating func notePassedOver(_ pathExtension: String) {
+            if ImportPlan.recognizedAudioExtensions.contains(pathExtension) {
+                unplayable[pathExtension, default: 0] += 1
+            } else if ImportPlan.archiveExtensions.contains(pathExtension) {
+                archives += 1
+            }
         }
 
         /// Whether a folder sits inside the library is decided once per folder
