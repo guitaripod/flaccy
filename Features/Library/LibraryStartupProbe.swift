@@ -1,28 +1,34 @@
+import FlaccyCore
 import Foundation
 
-/// Whether some earlier launch already built a library, recorded in
-/// `UserDefaults` rather than derived from the database.
+/// Whether some earlier launch already built a library, answered without
+/// opening the database.
 ///
 /// The Debut has to decide whether it is taking the screen over *before* any
 /// disk work starts, and by the time a `SELECT` could answer the question the
 /// first frame has already been drawn — which is exactly how the frozen 1% ring
-/// got on screen. Reading a plist key costs nothing and is honest at launch.
+/// got on screen. `IndexedLibraryRecord` answers from a file's existence, which
+/// costs nothing and survives a launch that finds the preferences unreadable.
 nonisolated enum LibraryStartupProbe {
 
-    private static let key = "flaccy.library.hadIndexedLibrary"
-
-    static var hadIndexedLibrary: Bool {
-        UserDefaults.standard.bool(forKey: key)
+    private static var record: IndexedLibraryRecord {
+        let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("flaccy", isDirectory: true)
+        return IndexedLibraryRecord(folder: folder, defaults: .standard)
     }
 
-    /// Called once the first `loadFromDatabase()` that yielded albums returns.
+    static var hadIndexedLibrary: Bool {
+        record.hadIndexedLibrary
+    }
+
+    /// Called whenever a load yields albums; writes only when the record is missing.
     static func markIndexed() {
-        UserDefaults.standard.set(true, forKey: key)
+        record.markIndexed()
     }
 
     /// Only "Reset Library" clears this — the Debut is a per-library showpiece,
     /// so a delete-and-reinstall correctly earns it again.
     static func clear() {
-        UserDefaults.standard.removeObject(forKey: key)
+        record.clear()
     }
 }

@@ -34,7 +34,6 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let rootVC = RootContainerViewController(content: tabs, player: playerContainer)
         self.rootController = rootVC
         rootVC.onSplitChange = { [weak tabs] isSplit in tabs?.suppressesMiniPlayer = isSplit }
-        tabs.library.debutHostProvider = { [weak rootVC] in rootVC?.view }
 
         window.overrideUserInterfaceStyle = AppAppearance.current.userInterfaceStyle
         #if DEBUG && targetEnvironment(simulator)
@@ -43,6 +42,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = rootVC
         #endif
         window.makeKeyAndVisible()
+        tabs.library.adoptDebutHost(rootVC.view)
         self.window = window
         mergePresenter = ServerMergePresenter(window: window)
         let commands = AppCommandTarget(window: window, tabs: tabs, player: playerContainer, root: rootVC)

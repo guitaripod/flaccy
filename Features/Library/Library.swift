@@ -771,12 +771,13 @@ final class Library: LibraryProviding {
         revisedVersions[track.fileURL]
     }
 
-    /// Records that this library has been built at least once, the moment the
-    /// first read actually yields albums. The Debut has to decide whether to
-    /// take the screen over before any `SELECT` could answer that, so the answer
-    /// is written where the next launch can read it without opening anything.
+    /// Records that this library has been built at least once, whenever a read
+    /// yields albums. The Debut has to decide whether to take the screen over
+    /// before any `SELECT` could answer that, so the answer is written where the
+    /// next launch can read it without opening anything. Asking every time also
+    /// writes the record for a library indexed before it existed.
     private func recordIndexedLibrary() {
-        guard !albums.isEmpty, !LibraryStartupProbe.hadIndexedLibrary else { return }
+        guard !albums.isEmpty else { return }
         LibraryStartupProbe.markIndexed()
     }
 

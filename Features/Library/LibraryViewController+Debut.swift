@@ -15,6 +15,7 @@ extension LibraryViewController {
     /// at all, so there is nothing to flash.
     func installDebutViewIfNeeded() {
         guard !LibraryStartupProbe.hadIndexedLibrary else { return }
+        MidgarLog.info("Debut installed: no earlier launch recorded an indexed library", category: .content)
         let debut = LibraryDebutView()
         debut.translatesAutoresizingMaskIntoConstraints = false
         debut.accessibilityIdentifier = "library.debut"
@@ -24,11 +25,29 @@ extension LibraryViewController {
             guard let self else { return }
             PaywallViewController.presentSheet(from: self)
         }
-        let host = debutHost
-        host.addSubview(debut)
+        pin(debut, to: debutHost)
         debutView = debut
         navigationController?.setNavigationBarHidden(true, animated: false)
+    }
 
+    /// Takes the root container's view as the Debut's host.
+    ///
+    /// The root builds the tab bar, and the tab bar loads the Library, before
+    /// the root has a view to offer, so a Debut installed at launch first goes
+    /// up in the Library's own view. It is moved here, before the first frame:
+    /// left behind, every later `superview === debutHost` test missed it, and
+    /// the Debut stood over a loaded library with nothing left to take it down.
+    func adoptDebutHost(_ host: UIView) {
+        let previous = debutHost
+        adoptedDebutHost = host
+        guard previous !== host, let debut = debutView, debut.superview === previous else { return }
+        debut.removeFromSuperview()
+        pin(debut, to: host)
+        MidgarLog.info("Debut moved over the whole app", category: .content)
+    }
+
+    private func pin(_ debut: LibraryDebutView, to host: UIView) {
+        host.addSubview(debut)
         NSLayoutConstraint.activate([
             debut.topAnchor.constraint(equalTo: host.topAnchor),
             debut.leadingAnchor.constraint(equalTo: host.leadingAnchor),
@@ -55,6 +74,7 @@ extension LibraryViewController {
     /// summary, never left standing in the reader's way.
     func demoteDebutToSheet() {
         guard let debut = debutView, debut.superview === debutHost else { return }
+        MidgarLog.info("Debut stepped aside for the loaded library", category: .content)
         debut.removeFromSuperview()
         navigationController?.setNavigationBarHidden(false, animated: true)
         noteDebutLeftScreen()

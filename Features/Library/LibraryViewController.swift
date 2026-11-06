@@ -38,13 +38,15 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
     var chipsBelowPicker: NSLayoutConstraint!
     var chipsBelowBar: NSLayoutConstraint!
 
-    /// Where the full-screen Debut lives. The root container supplies its own
-    /// view so the showpiece covers the tab bar, the mini player and the other
-    /// tabs too; on its own the Library hosts it.
-    var debutHostProvider: (() -> UIView?)?
+    /// The root container's view, handed over by `adoptDebutHost(_:)` once the
+    /// window is up.
+    weak var adoptedDebutHost: UIView?
 
+    /// Where the full-screen Debut lives. The root container's view, so the
+    /// showpiece covers the tab bar, the mini player and the other tabs too;
+    /// on its own, and until the root hands its view over, the Library hosts it.
     var debutHost: UIView {
-        debutHostProvider?() ?? view
+        adoptedDebutHost ?? view
     }
 
     /// Posted once the Debut is over for good — its summary read and the view
