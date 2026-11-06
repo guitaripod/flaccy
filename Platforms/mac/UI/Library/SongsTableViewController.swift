@@ -120,6 +120,7 @@ final class SongsTableViewController: NSViewController {
     /// Chips fill the leading edge and scroll when the window is narrow; the
     /// three actions keep their width at the trailing edge.
     private func buildControlsBar() -> NSView {
+        chipsBar.clearChipID = SongsTableViewModel.Filter.all.rawValue
         chipsBar.configure(chips: viewModel.chips, selected: viewModel.filter.rawValue)
         chipsBar.onSelectChip = { [weak self] id in
             guard let filter = SongsTableViewModel.Filter(rawValue: id) else { return }

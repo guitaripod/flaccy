@@ -29,6 +29,11 @@ final class FilterChipsBar: NSView {
     var onSelectChip: ((String) -> Void)?
     var menuProvider: ((String) -> NSMenu?)?
 
+    /// The chip a lit chip falls back to when it is clicked again, marked with
+    /// a cross while it can, so the way back to everything is always the chip
+    /// in view. Nil leaves a lit chip lit.
+    var clearChipID: String?
+
     private let scrollView = NSScrollView()
     private let stack = NSStackView()
     private var buttons: [ChipButton] = []
@@ -77,12 +82,13 @@ final class FilterChipsBar: NSView {
         buttons.forEach { $0.removeFromSuperview() }
         buttons = chips.map { chip in
             let button = ChipButton(chip: chip)
-            button.isChosen = chip.id == selected
             button.onClick = { [weak self] in self?.choose(chip.id) }
             button.menuProvider = { [weak self] in self?.menuProvider?(chip.id) }
             return button
         }
         buttons.forEach { stack.addArrangedSubview($0) }
+        light(selected)
+        DispatchQueue.main.async { [weak self] in self?.reveal(selected) }
     }
 
     /// Rewords chips in place, so a chip whose title carries a setting
@@ -97,16 +103,36 @@ final class FilterChipsBar: NSView {
         setSelected(id: filter.rawValue)
     }
 
+    /// Lights the chip, and scrolls it into view when the selection moved; the
+    /// same selection repeated by a refresh leaves the row where it was.
     func setSelected(id: String) {
+        let moved = chosenID != id
+        light(id)
+        if moved { reveal(id) }
+    }
+
+    private var chosenID: String? {
+        buttons.first(where: \.isChosen)?.chip.id
+    }
+
+    private func light(_ id: String) {
+        let canClear = clearChipID.map { clear in buttons.contains { $0.chip.id == clear } } ?? false
         for button in buttons {
             button.isChosen = button.chip.id == id
+            button.clears = canClear && button.isChosen && button.chip.id != clearChipID
         }
     }
 
+    private func reveal(_ id: String) {
+        guard let button = buttons.first(where: { $0.chip.id == id }) else { return }
+        button.scrollToVisible(button.bounds.insetBy(dx: -8, dy: 0))
+    }
+
     private func choose(_ id: String) {
-        setSelected(id: id)
-        onSelectChip?(id)
-        if let filter = LibraryFilter(rawValue: id) {
+        let target = buttons.first(where: { $0.chip.id == id })?.clears == true ? (clearChipID ?? id) : id
+        setSelected(id: target)
+        onSelectChip?(target)
+        if let filter = LibraryFilter(rawValue: target) {
             onSelect?(filter)
         }
     }
@@ -120,6 +146,12 @@ private final class ChipButton: NSControl {
 
     var isChosen = false {
         didSet { applyColors() }
+    }
+
+    /// True while clicking the chip goes back to All; a chip without a menu of
+    /// its own shows a cross where the menu's chevron would be.
+    var clears = false {
+        didSet { applyTrailingMark() }
     }
 
     private let iconView = NSImageView()
@@ -138,7 +170,6 @@ private final class ChipButton: NSControl {
 
         iconView.symbolConfiguration = .init(pointSize: 10, weight: .semibold)
         label.font = .systemFont(ofSize: 11.5, weight: .semibold)
-        chevron.image = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil)
         chevron.symbolConfiguration = .init(pointSize: 8, weight: .bold)
 
         let stack = NSStackView(views: [iconView, label, chevron])
@@ -164,9 +195,16 @@ private final class ChipButton: NSControl {
         self.chip = chip
         iconView.image = NSImage(systemSymbolName: chip.icon, accessibilityDescription: nil)
         label.stringValue = chip.title
-        chevron.isHidden = !chip.hasMenu
         setAccessibilityLabel(String(localized: "Filter: \(chip.title)"))
+        applyTrailingMark()
         applyColors()
+    }
+
+    private func applyTrailingMark() {
+        let symbol = chip.hasMenu ? "chevron.down" : "xmark"
+        chevron.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        chevron.isHidden = !chip.hasMenu && !clears
+        setAccessibilityHelp(clears ? String(localized: "Shows everything again") : nil)
     }
 
     override func updateTrackingAreas() {

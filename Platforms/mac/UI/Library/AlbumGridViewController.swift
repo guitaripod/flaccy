@@ -141,6 +141,7 @@ final class AlbumGridViewController: NSViewController {
     }
 
     private func buildControlsBar() -> NSView {
+        chipsBar.clearChipID = LibraryFilter.all.rawValue
         chipsBar.onSelect = { [weak self] filter in
             self?.viewModel.setFilter(filter)
         }

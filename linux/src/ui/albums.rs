@@ -190,13 +190,16 @@ impl AdmissionStamp {
 /// the library being built.
 pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     let store = gio::ListStore::new::<BoxedAnyObject>();
-    let sort_mode = Rc::new(Cell::new(AlbumSort::from_id(
-        &ui.core.config.borrow().album_sort,
-    )));
-
     let chip_filter = Rc::new(Cell::new(LibraryFilter::from_id(
         &ui.core.config.borrow().albums_filter,
     )));
+    let saved_sort = AlbumSort::from_id(&ui.core.config.borrow().album_sort);
+    let pivot = pivot_sort(chip_filter.get());
+    let sort_mode = Rc::new(Cell::new(pivot.unwrap_or(saved_sort)));
+    let own_sort = Rc::new(Cell::new(
+        pivot.filter(|sort| *sort != saved_sort).map(|_| saved_sort),
+    ));
+    let pivoting = Rc::new(Cell::new(false));
     let allowed: Rc<RefCell<Option<HashSet<String>>>> = Rc::new(RefCell::new(None));
 
     let filter = {
@@ -462,20 +465,30 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             let rebuild = Rc::clone(&rebuild);
             let scroll = scroll.clone();
             let sort_dropdown = sort_dropdown.clone();
+            let sort_mode = Rc::clone(&sort_mode);
+            let own_sort = Rc::clone(&own_sort);
+            let pivoting = Rc::clone(&pivoting);
             move |picked: LibraryFilter| {
                 chip_filter.set(picked);
                 ui.core.config.borrow_mut().albums_filter = picked.id().to_string();
                 ui.core.save_config();
                 scroll.vadjustment().set_value(0.0);
-                let natural = match picked {
-                    LibraryFilter::RecentlyAdded => Some(AlbumSort::RecentlyAdded),
-                    LibraryFilter::RecentlyPlayed => Some(AlbumSort::RecentlyPlayed),
-                    _ => None,
+                let target = match pivot_sort(picked) {
+                    Some(sort) => {
+                        let current = sort_mode.get();
+                        if own_sort.get().is_none() && current != sort {
+                            own_sort.set(Some(current));
+                        }
+                        Some(sort)
+                    }
+                    None => own_sort.take(),
                 };
                 let before = sort_dropdown.selected();
-                if let Some(sort) = natural {
+                if let Some(sort) = target {
                     let index = AlbumSort::ALL.iter().position(|s| *s == sort).unwrap_or(0);
+                    pivoting.set(true);
                     sort_dropdown.set_selected(index as u32);
+                    pivoting.set(false);
                 }
                 if sort_dropdown.selected() == before {
                     rebuild();
@@ -502,6 +515,8 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     {
         let ui = Rc::clone(ui);
         let sort_mode = Rc::clone(&sort_mode);
+        let own_sort = Rc::clone(&own_sort);
+        let pivoting = Rc::clone(&pivoting);
         let rebuild = Rc::clone(&rebuild);
         let scroll = scroll.clone();
         sort_dropdown.connect_selected_notify(move |dropdown| {
@@ -509,8 +524,11 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
             if sort_mode.replace(sort) == sort {
                 return;
             }
-            ui.core.config.borrow_mut().album_sort = sort.id().to_string();
-            ui.core.save_config();
+            if !pivoting.get() {
+                own_sort.set(None);
+                ui.core.config.borrow_mut().album_sort = sort.id().to_string();
+                ui.core.save_config();
+            }
             scroll.vadjustment().set_value(0.0);
             rebuild();
         });
@@ -1232,5 +1250,17 @@ mod sort_tests {
             assert!(AlbumSort::from_id(sort.id()) == sort);
         }
         assert!(AlbumSort::from_id("garbage") == AlbumSort::Artist);
+    }
+}
+
+/// The order a pivot shows its albums in. Choosing the pivot switches the sort
+/// to it, and choosing a chip without one gives back the sort the person had
+/// picked, which is the only sort ever saved, so All is the whole library in
+/// its usual order again.
+fn pivot_sort(filter: LibraryFilter) -> Option<AlbumSort> {
+    match filter {
+        LibraryFilter::RecentlyAdded => Some(AlbumSort::RecentlyAdded),
+        LibraryFilter::RecentlyPlayed => Some(AlbumSort::RecentlyPlayed),
+        _ => None,
     }
 }

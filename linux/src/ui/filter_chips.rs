@@ -1,18 +1,30 @@
 use crate::filters::{LibraryFilter, LOCAL_SOURCE};
 use crate::recap::{Period, ALL_PERIODS};
 use adw::prelude::*;
+use gtk::glib;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 /// The row of quick-pivot chips over the Songs and Albums pages: one is always
-/// selected. When the set includes Most Played its chip names the time range it
-/// counts over and carries a small menu to change it.
+/// selected. A lit chip other than All shows a cross, and clicking it again
+/// goes back to All, so the way out is always the chip in view; the row scrolls
+/// to whichever chip lights. When the set includes Most Played its chip names
+/// the time range it counts over and carries a small menu to change it.
 pub struct ChipBar {
     pub widget: gtk::Widget,
-    chips: Vec<(LibraryFilter, gtk::ToggleButton)>,
+    chips: Vec<Chip>,
     range: Cell<Period>,
     range_checks: Vec<(Period, gtk::Image)>,
     silent: Cell<bool>,
+    selected: Cell<LibraryFilter>,
+    just_lit: Cell<bool>,
+}
+
+struct Chip {
+    filter: LibraryFilter,
+    button: gtk::ToggleButton,
+    label: gtk::Label,
+    cross: gtk::Image,
 }
 
 impl ChipBar {
@@ -34,19 +46,17 @@ impl ChipBar {
 
         let on_filter: Rc<dyn Fn(LibraryFilter)> = Rc::new(on_filter);
         let on_range: Rc<dyn Fn(Period)> = Rc::new(on_range);
-        let mut chips: Vec<(LibraryFilter, gtk::ToggleButton)> = Vec::new();
+        let mut chips: Vec<Chip> = Vec::new();
         let mut range_checks: Vec<(Period, gtk::Image)> = Vec::new();
         let mut range_menu: Option<gtk::MenuButton> = None;
 
         for filter in filters {
-            let chip = gtk::ToggleButton::builder().label(filter.label()).build();
-            chip.add_css_class("pill");
-            chip.add_css_class("chip");
-            if let Some((_, leader)) = chips.first() {
-                chip.set_group(Some(leader));
+            let chip = make_chip(*filter);
+            if let Some(leader) = chips.first() {
+                chip.button.set_group(Some(&leader.button));
             }
-            chip.set_active(*filter == selected);
-            chips.push((*filter, chip));
+            chip.button.set_active(*filter == selected);
+            chips.push(chip);
         }
 
         if filters.contains(&LibraryFilter::MostPlayed) {
@@ -55,18 +65,18 @@ impl ChipBar {
             range_checks = checks;
         }
 
-        for (filter, chip) in &chips {
-            match (filter, &range_menu) {
+        for chip in &chips {
+            match (chip.filter, &range_menu) {
                 (LibraryFilter::MostPlayed, Some(menu)) => {
                     let pair = gtk::Box::builder()
                         .orientation(gtk::Orientation::Horizontal)
                         .spacing(2)
                         .build();
-                    pair.append(chip);
+                    pair.append(&chip.button);
                     pair.append(menu);
                     row.append(&pair);
                 }
-                _ => row.append(chip),
+                _ => row.append(&chip.button),
             }
         }
 
@@ -76,18 +86,31 @@ impl ChipBar {
             range: Cell::new(range),
             range_checks,
             silent: Cell::new(false),
+            selected: Cell::new(selected),
+            just_lit: Cell::new(false),
         });
         bar.refresh_range_label();
+        bar.refresh_crosses();
+        bar.reveal_selected();
 
-        for (filter, chip) in &bar.chips {
-            let filter = *filter;
+        for chip in &bar.chips {
+            let filter = chip.filter;
             let bar_ref = Rc::clone(&bar);
             let on_filter = Rc::clone(&on_filter);
-            chip.connect_toggled(move |chip| {
-                if bar_ref.silent.get() || !chip.is_active() {
+            chip.button.connect_toggled(move |button| {
+                if bar_ref.silent.get() || !button.is_active() {
                     return;
                 }
+                bar_ref.just_lit.set(true);
+                bar_ref.light(filter);
                 on_filter(filter);
+            });
+            let bar_ref = Rc::clone(&bar);
+            chip.button.connect_clicked(move |_| {
+                if bar_ref.just_lit.replace(false) || filter == LibraryFilter::All {
+                    return;
+                }
+                bar_ref.clear_to_all();
             });
         }
 
@@ -99,12 +122,54 @@ impl ChipBar {
 
     pub fn set_selected(&self, filter: LibraryFilter) {
         self.silent.set(true);
-        for (candidate, chip) in &self.chips {
-            if *candidate == filter {
-                chip.set_active(true);
+        for chip in &self.chips {
+            if chip.filter == filter {
+                chip.button.set_active(true);
             }
         }
         self.silent.set(false);
+        if self.selected.get() != filter {
+            self.light(filter);
+        }
+    }
+
+    /// A click on the chip that was already lit: the group would keep it lit,
+    /// so All is lit instead, which reports the change like any other click.
+    fn clear_to_all(&self) {
+        if let Some(all) = self.chips.iter().find(|chip| chip.filter == LibraryFilter::All) {
+            all.button.set_active(true);
+        }
+        self.just_lit.set(false);
+    }
+
+    fn light(&self, filter: LibraryFilter) {
+        self.selected.set(filter);
+        self.refresh_crosses();
+        self.reveal_selected();
+    }
+
+    fn refresh_crosses(&self) {
+        let selected = self.selected.get();
+        for chip in &self.chips {
+            let clears = chip.filter == selected && chip.filter != LibraryFilter::All;
+            chip.cross.set_visible(clears);
+            chip.button
+                .set_tooltip_text(clears.then_some("Click again to show everything"));
+        }
+    }
+
+    /// Scrolls the row just far enough to show the lit chip, once it has a size.
+    fn reveal_selected(&self) {
+        let selected = self.selected.get();
+        let Some(chip) = self.chips.iter().find(|chip| chip.filter == selected) else {
+            return;
+        };
+        let button = chip.button.clone();
+        glib::idle_add_local_once(move || {
+            if let Some(viewport) = button.ancestor(gtk::Viewport::static_type()).and_downcast::<gtk::Viewport>() {
+                viewport.scroll_to(&button, None);
+            }
+        });
     }
 
     pub fn set_range(&self, range: Period) {
@@ -114,14 +179,37 @@ impl ChipBar {
 
     fn refresh_range_label(&self) {
         let range = self.range.get();
-        for (filter, chip) in &self.chips {
-            if *filter == LibraryFilter::MostPlayed {
-                chip.set_label(&format!("{} · {}", filter.label(), range.label()));
+        for chip in &self.chips {
+            if chip.filter == LibraryFilter::MostPlayed {
+                chip.label
+                    .set_label(&format!("{} · {}", chip.filter.label(), range.label()));
             }
         }
         for (period, check) in &self.range_checks {
             check.set_opacity(if *period == range { 1.0 } else { 0.0 });
         }
+    }
+}
+
+fn make_chip(filter: LibraryFilter) -> Chip {
+    let label = gtk::Label::new(Some(filter.label()));
+    let cross = gtk::Image::from_icon_name("window-close-symbolic");
+    cross.set_pixel_size(12);
+    cross.set_visible(false);
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(6)
+        .build();
+    content.append(&label);
+    content.append(&cross);
+    let button = gtk::ToggleButton::builder().child(&content).build();
+    button.add_css_class("pill");
+    button.add_css_class("chip");
+    Chip {
+        filter,
+        button,
+        label,
+        cross,
     }
 }
 
