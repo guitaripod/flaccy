@@ -36,6 +36,15 @@ final class AppTabBarController: UITabBarController {
         }
     }
 
+    /// The room the floating dock takes above the tab bar before iOS 26, so
+    /// scrolling content stops above it instead of under it.
+    var dockClearance: CGFloat = 0 {
+        didSet {
+            guard dockClearance != oldValue else { return }
+            applyDockClearance()
+        }
+    }
+
     private var lastMiniPlayerTrack: Track?
     private var lastMiniPlayerIsPlaying = false
 
@@ -84,6 +93,28 @@ final class AppTabBarController: UITabBarController {
     override func viewIsAppearing(_ animated: Bool) {
         super.viewIsAppearing(animated)
         padSidebar?.notifyPivotPlacement()
+    }
+
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        applyDockClearance()
+    }
+
+    /// Gives the dock's room to each tab's own stack while the tab bar runs
+    /// along the bottom (every iPhone, an iPad in a narrow window): a bottom
+    /// bar grows by whatever this controller's safe area adds, which lifted it
+    /// off the screen's edge and left the dock covering the last rows. With
+    /// the bar at the top or a sidebar, this controller takes it, so the
+    /// sidebar's last rows stay clear of the dock too.
+    private func applyDockClearance() {
+        guard #unavailable(iOS 26.0) else { return }
+        let barAlongBottom = traitCollection.userInterfaceIdiom == .phone || traitCollection.horizontalSizeClass == .compact
+        let own = barAlongBottom ? 0 : dockClearance
+        let perTab = dockClearance - own
+        if additionalSafeAreaInsets.bottom != own { additionalSafeAreaInsets.bottom = own }
+        for child in children where child.additionalSafeAreaInsets.bottom != perTab {
+            child.additionalSafeAreaInsets.bottom = perTab
+        }
     }
 
     private func configureTabs() {

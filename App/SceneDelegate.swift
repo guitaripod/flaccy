@@ -240,7 +240,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 final class RootContainerViewController: UIViewController {
     weak var statusBarSource: UIViewController?
 
-    private let navigation: UIViewController
+    private let navigation: AppTabBarController
     private let player: PlayerContainerViewController
     private let dimmingView = UIView()
     private var navigationTrailing: NSLayoutConstraint!
@@ -273,7 +273,7 @@ final class RootContainerViewController: UIViewController {
     }
     #endif
 
-    init(content navigation: UIViewController, player: PlayerContainerViewController) {
+    init(content navigation: AppTabBarController, player: PlayerContainerViewController) {
         self.navigation = navigation
         self.player = player
         navigation.view.translatesAutoresizingMaskIntoConstraints = false
@@ -456,7 +456,7 @@ final class RootContainerViewController: UIViewController {
     /// tab accessory reserves its own space, so nothing is added there.
     private func updateDockInset() {
         guard #unavailable(iOS 26.0) else { return }
-        navigation.additionalSafeAreaInsets.bottom = (!isSplit && hasCurrentTrack) ? 68 : 0
+        navigation.dockClearance = (!isSplit && hasCurrentTrack) ? 68 : 0
     }
 
     private func applySplitLayout(_ geometry: AdaptiveLayout.SplitGeometry) {
