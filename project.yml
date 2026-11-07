@@ -252,6 +252,7 @@ targets:
           - Lyrics/LyricsViewController+Timing.swift
           - Lyrics/LyricsViewController.swift
           - Lyrics/TimingNoteViews.swift
+          - LyricsMeaning/LyricsMeaningViewController.swift
           - NowPlaying/MiniPlayerView.swift
           - NowPlaying/NowPlayingBackdropView.swift
           - NowPlaying/NowPlayingVersionRow.swift

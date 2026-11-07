@@ -37,6 +37,8 @@ final class LyricsPanelViewController: NSViewController {
     private let retryButton = NSButton(title: "", target: nil, action: nil)
     private let timingButton = NSButton()
     private let shareButton = NSButton()
+    private let meaningButton = NSButton()
+    private var meaningPopover: NSPopover?
     private var shareableLyrics: Lyrics?
     private let timingNoteChip = NSButton()
     private var timingNoteKind: LyricsTimingNoteKind?
@@ -149,7 +151,16 @@ final class LyricsPanelViewController: NSViewController {
         shareButton.target = self
         shareButton.action = #selector(shareLyricsTapped)
 
-        let timingControls = NSStackView(views: [shareButton, timingNoteChip, timingButton])
+        meaningButton.image = NSImage(systemSymbolName: "text.book.closed", accessibilityDescription: LyricsMeaningCopy.buttonTitle)
+        meaningButton.imagePosition = .imageOnly
+        meaningButton.isBordered = false
+        meaningButton.contentTintColor = .tertiaryLabelColor
+        meaningButton.toolTip = LyricsMeaningCopy.buttonTitle
+        meaningButton.isHidden = true
+        meaningButton.target = self
+        meaningButton.action = #selector(meaningTapped(_:))
+
+        let timingControls = NSStackView(views: [meaningButton, shareButton, timingNoteChip, timingButton])
         timingControls.orientation = .horizontal
         timingControls.alignment = .centerY
         timingControls.spacing = 6
@@ -394,6 +405,7 @@ final class LyricsPanelViewController: NSViewController {
             lyrics = found
             shareableLyrics = found
             shareButton.isHidden = false
+            meaningButton.isHidden = MeaningPrompt.sungLines(found.document).isEmpty
             document = found.document
             timingButton.isHidden = false
             showTimingNote(for: found.document)
@@ -407,6 +419,7 @@ final class LyricsPanelViewController: NSViewController {
             plainTextView.isHidden = false
             shareableLyrics = found
             shareButton.isHidden = false
+            meaningButton.isHidden = MeaningPrompt.sungLines(found.document).isEmpty
             showTimingNote(for: found.document)
             scrollToTop()
             return
@@ -435,7 +448,7 @@ final class LyricsPanelViewController: NSViewController {
                 self.lastUserScroll = .distantPast
                 MidgarLog.info("Lyrics line seek to \(time)", category: .ui)
             }
-            lineView.contextMenuProvider = { [weak self] in self?.shareMenu(forLine: index) }
+            lineView.contextMenuProvider = { [weak self] in self?.lineMenu(forLine: index) }
             linesStack.addArrangedSubview(lineView)
             lineView.widthAnchor.constraint(equalTo: linesStack.widthAnchor, constant: -40).isActive = true
             lineViews.append(lineView)
@@ -465,15 +478,55 @@ final class LyricsPanelViewController: NSViewController {
         LyricShareWindowController.present(session, from: view.window)
     }
 
-    /// The right-click menu of a sung line. An instrumental stretch has none:
-    /// there is nothing to sing in it.
-    private func shareMenu(forLine index: Int) -> NSMenu? {
-        guard index < document.lines.count, LyricShareClip.isSelectable(index, in: document) else { return nil }
+    /// The right-click menu of a sung line: what it means, and a clip
+    /// starting from it. An instrumental stretch has none: there is nothing
+    /// to sing in it.
+    private func lineMenu(forLine index: Int) -> NSMenu? {
+        guard MeaningPrompt.focus(document, index: index) != nil else { return nil }
         let menu = NSMenu()
-        let item = menu.addItem(withTitle: LyricShareCopy.fromLine, action: #selector(shareFromLine(_:)), keyEquivalent: "")
-        item.target = self
-        item.representedObject = index
+        let explain = menu.addItem(withTitle: LyricsMeaningCopy.explainLine, action: #selector(explainLine(_:)), keyEquivalent: "")
+        explain.image = NSImage(systemSymbolName: "text.book.closed", accessibilityDescription: nil)
+        explain.target = self
+        explain.representedObject = index
+        if LyricShareClip.isSelectable(index, in: document) {
+            let share = menu.addItem(withTitle: LyricShareCopy.fromLine, action: #selector(shareFromLine(_:)), keyEquivalent: "")
+            share.image = NSImage(systemSymbolName: "quote.bubble", accessibilityDescription: nil)
+            share.target = self
+            share.representedObject = index
+        }
         return menu
+    }
+
+    @objc private func meaningTapped(_ sender: NSButton) {
+        showMeaning(line: nil)
+    }
+
+    @objc private func explainLine(_ sender: NSMenuItem) {
+        guard let index = sender.representedObject as? Int else { return }
+        showMeaning(line: index)
+    }
+
+    /// Opens the Meaning popover on line `line`, beside it, or on the whole
+    /// song under the corner button, for the lyrics showing. Returns the
+    /// popover so a capture can find its window.
+    @discardableResult
+    func showMeaning(line: Int?) -> NSPopover? {
+        meaningPopover?.close()
+        guard let current = lyrics ?? shareableLyrics, let track = player.currentTrack else { return nil }
+        let anchor: NSView
+        let edge: NSRectEdge
+        if let line {
+            guard line < lineViews.count else { return nil }
+            anchor = lineViews[line]
+            edge = .minX
+        } else {
+            anchor = meaningButton
+            edge = .maxY
+        }
+        meaningPopover = MacLyricsMeaningViewController.show(
+            song: MeaningSong(title: track.title, artist: track.artist, album: track.albumTitle),
+            document: current.document, line: line, relativeTo: anchor, edge: edge)
+        return meaningPopover
     }
 
     private func clearLines() {
@@ -652,6 +705,8 @@ final class LyricsPanelViewController: NSViewController {
         retryButton.isHidden = true
         timingButton.isHidden = true
         shareButton.isHidden = true
+        meaningButton.isHidden = true
+        meaningPopover?.close()
         shareableLyrics = nil
         hideTimingNote()
         clearLines()

@@ -90,6 +90,7 @@ enum DebugDrive {
         case playlistDetail(String)
         case nowPlayingLyrics
         case lyricShare
+        case lyricMeaning(line: Int?)
         case queuePanel(deep: Bool)
         case settings(paneIndex: Int)
         case paywall
@@ -109,6 +110,7 @@ enum DebugDrive {
         if CommandLine.arguments.contains("--shot-playlists") { return .section(.playlists) }
         if let name = value(after: "--shot-playlist") { return .playlistDetail(name) }
         if CommandLine.arguments.contains("--shot-lyric-share") { return .lyricShare }
+        if let line = value(after: "--shot-lyric-meaning") { return .lyricMeaning(line: Int(line)) }
         if CommandLine.arguments.contains("--shot-nowplaying-lyrics") { return .nowPlayingLyrics }
         if CommandLine.arguments.contains("--shot-nowplaying") { return .nowPlaying }
         if CommandLine.arguments.contains("--shot-queue-deep") { return .queuePanel(deep: true) }
@@ -256,6 +258,9 @@ enum DebugDrive {
             name = "flaccy-shot-nowplaying-lyrics"
         case .lyricShare:
             await driveLyricShare(window: window)
+            return
+        case .lyricMeaning(let line):
+            await driveLyricMeaning(window: window, line: line)
             return
         case .queuePanel(let deep):
             if deep { startDeepPlayback() } else { startHeroPlayback() }

@@ -369,6 +369,18 @@ extension DatabaseManager {
             }
         }
 
+        migrator.registerMigration("v22") { db in
+            try db.create(table: "lyricMeanings", options: [.withoutRowID]) { t in
+                t.column("trackTitle", .text).notNull()
+                t.column("artist", .text).notNull()
+                t.column("scope", .text).notNull()
+                t.column("language", .text).notNull()
+                t.column("body", .text).notNull()
+                t.column("fetchedAt", .datetime).notNull()
+                t.primaryKey(["trackTitle", "artist", "scope", "language"])
+            }
+        }
+
         return migrator
     }
 }

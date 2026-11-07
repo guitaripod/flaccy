@@ -40,14 +40,21 @@ extension LyricsViewController: UITableViewDelegate {
     func tableView(
         _ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint
     ) -> UIContextMenuConfiguration? {
-        guard isCurrentTrack, !document.lines[indexPath.row].isInterlude else { return nil }
+        guard MeaningPrompt.focus(document, index: indexPath.row) != nil else { return nil }
         let row = indexPath.row
+        let shareable = isCurrentTrack
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-            UIMenu(children: [
-                UIAction(title: LyricShareCopy.fromLine, image: UIImage(systemName: "quote.bubble")) { _ in
-                    self?.presentLyricShare(line: row)
+            var actions = [
+                UIAction(title: LyricsMeaningCopy.explainLine, image: UIImage(systemName: "text.book.closed")) { _ in
+                    self?.presentMeaning(line: row)
                 }
-            ])
+            ]
+            if shareable {
+                actions.append(UIAction(title: LyricShareCopy.fromLine, image: UIImage(systemName: "quote.bubble")) { _ in
+                    self?.presentLyricShare(line: row)
+                })
+            }
+            return UIMenu(children: actions)
         }
     }
 

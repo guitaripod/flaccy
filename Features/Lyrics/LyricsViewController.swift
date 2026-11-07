@@ -50,6 +50,7 @@ final class LyricsViewController: UIViewController {
     lazy var offsetItem = UIAction(title: "", attributes: .disabled) { _ in }
     lazy var timingButton: UIButton = makeTimingButton()
     lazy var shareButton: UIButton = makeShareButton()
+    lazy var meaningButton: UIButton = makeMeaningButton()
     lazy var timingNoteChip: UIButton = makeTimingNoteChip()
     lazy var timingControls: UIStackView = makeTimingControls()
     var timingNoteKind: LyricsTimingNoteKind?
@@ -127,6 +128,7 @@ final class LyricsViewController: UIViewController {
         retryButton.isHidden = true
         timingButton.isHidden = true
         shareButton.isHidden = true
+        meaningButton.isHidden = true
         hideTimingNote()
         document = LyricsDocument()
         lyrics = nil
@@ -257,6 +259,7 @@ final class LyricsViewController: UIViewController {
         if found.document.hasSynced || found.document.plain != nil {
             lyrics = found
             shareButton.isHidden = !isCurrentTrack
+            meaningButton.isHidden = MeaningPrompt.sungLines(found.document).isEmpty
         }
         if found.document.hasSynced {
             showSyncedLyrics(found)

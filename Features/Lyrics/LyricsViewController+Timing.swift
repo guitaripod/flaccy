@@ -45,7 +45,7 @@ extension LyricsViewController {
     /// the timing button. Hidden members collapse, so the button keeps its
     /// corner while the chip comes and goes.
     func makeTimingControls() -> UIStackView {
-        let stack = UIStackView(arrangedSubviews: [shareButton, timingNoteChip, timingButton])
+        let stack = UIStackView(arrangedSubviews: [meaningButton, shareButton, timingNoteChip, timingButton])
         stack.axis = .horizontal
         stack.alignment = .center
         stack.spacing = 6
@@ -56,6 +56,31 @@ extension LyricsViewController {
             stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
         ])
         return stack
+    }
+
+    /// Opens the Meaning sheet on the whole song.
+    func makeMeaningButton() -> UIButton {
+        var config = UIButton.Configuration.plain()
+        config.image = UIImage(systemName: "text.book.closed")
+        config.baseForegroundColor = .white.withAlphaComponent(0.7)
+        config.background.backgroundColor = .white.withAlphaComponent(0.12)
+        config.cornerStyle = .capsule
+        config.contentInsets = NSDirectionalEdgeInsets(top: 9, leading: 9, bottom: 9, trailing: 9)
+        let button = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.presentMeaning(line: nil)
+        })
+        button.accessibilityLabel = LyricsMeaningCopy.buttonTitle
+        button.isHidden = true
+        return button
+    }
+
+    /// Opens the Meaning sheet on line `line`, or on the whole song.
+    func presentMeaning(line: Int?) {
+        guard let lyrics, presentedViewController == nil else { return }
+        lineSelectionFeedback.impactOccurred()
+        LyricsMeaningViewController.present(
+            song: MeaningSong(title: trackTitle, artist: artistName, album: albumName),
+            document: lyrics.document, line: line, from: self)
     }
 
     /// Opens the lyric share sheet on the lines being sung.

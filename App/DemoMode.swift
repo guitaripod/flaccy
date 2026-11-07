@@ -644,6 +644,23 @@ enum DemoRouter {
                 guard let session = LyricShareSession.forCurrentTrack() else { return }
                 LyricShareViewController.present(session, from: player)
             }
+        case "lyric-meaning":
+            player.expandShowingLyrics()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                guard let track = AudioPlayer.shared.currentTrack,
+                      let lyrics = LyricsService.shared.cachedLyrics(track: track.title, artist: track.artist)
+                else { return }
+                var top: UIViewController = tabs
+                while let presented = top.presentedViewController { top = presented }
+                LyricsMeaningViewController.present(
+                    song: MeaningSong(title: track.title, artist: track.artist, album: track.albumTitle),
+                    document: lyrics.document, line: env["FLACCY_MEANING_LINE"].flatMap(Int.init), from: top)
+                guard env["FLACCY_MEANING_END"] != nil else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 12) {
+                    let navigation = top.presentedViewController as? UINavigationController
+                    (navigation?.viewControllers.first as? LyricsMeaningViewController)?.revealEndForScreenshot()
+                }
+            }
         case "paywall": PaywallViewController.presentSheet(from: tabs)
         case "equalizer", "equalizer-advanced", "equalizer-presets", "equalizer-outputs", "equalizer-import", "equalizer-preview", "equalizer-preview-cancel":
             player.expand()
