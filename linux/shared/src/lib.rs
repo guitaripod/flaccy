@@ -3,7 +3,7 @@
 //! Every module here mirrors a file in `Core/FlaccyCore/Sources/FlaccyCore/Library`
 //! and is covered by tests that assert the *same numbers* as the Swift cases —
 //! same phase weights, same backoff ladder, same routing decisions. The crate
-//! deliberately depends on nothing but `chrono` and `serde` so it builds and
+//! deliberately depends on nothing but `chrono`, `serde` and `serde_json` so it builds and
 //! tests on any machine, including the Mac that owns the Apple clients and has
 //! no GStreamer for the `flaccy` binary crate.
 //!
@@ -26,6 +26,7 @@ pub mod live_listing;
 pub mod load_progress;
 pub mod lyrics;
 pub mod lyric_share;
+pub mod meaning;
 pub mod playlist_cover;
 pub mod precache;
 pub mod remote;
