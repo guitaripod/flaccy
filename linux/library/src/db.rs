@@ -640,6 +640,15 @@ impl Db {
             CREATE TABLE IF NOT EXISTS songGains (
                 songKey TEXT PRIMARY KEY,
                 tenths INTEGER NOT NULL
+            ) WITHOUT ROWID;
+            CREATE TABLE IF NOT EXISTS lyricMeanings (
+                trackTitle TEXT NOT NULL,
+                artist TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                language TEXT NOT NULL,
+                body TEXT NOT NULL,
+                fetchedAt DATETIME NOT NULL,
+                PRIMARY KEY (trackTitle, artist, scope, language)
             ) WITHOUT ROWID;",
         )?;
         // Added after 1.8.0 so a remembered "no lyrics" answer can expire;
@@ -1870,6 +1879,48 @@ impl Db {
             )?;
             recorder.lyrics_offset(title, artist, offset_ms)
         })
+    }
+
+    /// A stored reading of a song's meaning (`flaccy_shared::meaning` names the
+    /// scopes) with how many days old it is. Mirrors
+    /// `DatabaseManager.lyricMeaning(trackTitle:artist:scope:language:)`.
+    pub fn fetch_lyric_meaning(
+        &self,
+        title: &str,
+        artist: &str,
+        scope: &str,
+        language: &str,
+    ) -> Option<(String, f64)> {
+        self.conn
+            .query_row(
+                "SELECT body, julianday('now') - julianday(fetchedAt) FROM lyricMeanings
+                 WHERE trackTitle = ?1 AND artist = ?2 AND scope = ?3 AND language = ?4",
+                params![title, artist, scope, language],
+                |row| Ok((row.get(0)?, row.get::<_, Option<f64>>(1)?.unwrap_or(f64::MAX))),
+            )
+            .optional()
+            .ok()
+            .flatten()
+    }
+
+    /// Remembers a reading, replacing an older one for the same question.
+    pub fn save_lyric_meaning(
+        &self,
+        title: &str,
+        artist: &str,
+        scope: &str,
+        language: &str,
+        body: &str,
+    ) -> Result<(), rusqlite::Error> {
+        self.conn.execute(
+            "INSERT INTO lyricMeanings (trackTitle, artist, scope, language, body, fetchedAt)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(trackTitle, artist, scope, language) DO UPDATE SET
+                body = excluded.body,
+                fetchedAt = excluded.fetchedAt",
+            params![title, artist, scope, language, body, now_string()],
+        )?;
+        Ok(())
     }
 
     /// The person's own volume for a song, in tenths of a decibel: 0 when they

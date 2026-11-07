@@ -435,6 +435,24 @@ menubutton.lyrics-note > button {
   opacity: 1.0;
 }
 
+/* The Meaning dialog: the asked line set off by an accent bar, readable
+   paragraphs, and a failure in the error colour. */
+.meaning-quote {
+  font-size: 1.25em;
+  font-weight: 600;
+  padding: 4px 0 4px 14px;
+  border-left: 3px solid @accent_color;
+}
+
+.meaning-text {
+  font-size: 1.05em;
+  line-height: 1.45;
+}
+
+.meaning-failure {
+  color: @error_color;
+}
+
 .lyrics-list > row {
   background: none;
   border-radius: 10px;

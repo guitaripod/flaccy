@@ -2019,6 +2019,12 @@ fn schedule_demo_detail(ui: &Rc<Ui>) {
             ui::lyric_share_dialog::present_for_current(&ui, line);
         });
     }
+    if let Ok(spec) = std::env::var("FLACCY_DEMO_MEANING") {
+        let ui = Rc::clone(ui);
+        glib::timeout_add_local_once(std::time::Duration::from_millis(2500), move || {
+            ui::meaning_dialog::present_for_current(&ui, spec.trim().parse().ok());
+        });
+    }
     if std::env::var_os("FLACCY_DEMO_SAMPLE").is_some() {
         let ui = Rc::clone(ui);
         glib::timeout_add_local_once(std::time::Duration::from_millis(1400), move || {

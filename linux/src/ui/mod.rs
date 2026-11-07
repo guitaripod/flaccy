@@ -32,6 +32,7 @@ pub mod lyric_share_dialog;
 pub mod lyrics_panel;
 pub mod lyric_line;
 pub mod lyrics_style;
+pub mod meaning_dialog;
 pub mod mosaic;
 pub mod now_playing;
 pub mod playlist_cover;

@@ -75,6 +75,12 @@ pub struct Config {
     /// Fetch lyrics for every song in the library in the background, not only
     /// the queue and what is played. On unless the person turned it off.
     pub lyrics_whole_library: bool,
+    /// The OpenAI-compatible model server that explains lyrics; empty means
+    /// `OLLAMA_HOST`, else Ollama on this computer.
+    pub meaning_server: String,
+    /// The model that explains lyrics; empty means one the server already has
+    /// loaded, else the first instruct model it recognises.
+    pub meaning_model: String,
     /// Prepare the music videos of the songs coming up ahead of time.
     pub precache_video: bool,
     /// How much disk prepared music videos may use, in gigabytes.
@@ -236,6 +242,8 @@ impl Default for Config {
             music_video_llm_model: String::new(),
             music_video_align: true,
             lyrics_whole_library: true,
+            meaning_server: String::new(),
+            meaning_model: String::new(),
             precache_video: true,
             precache_video_cap_gb: PRECACHE_VIDEO_CAP_DEFAULT_GB,
             remote_cache_cap_gb: REMOTE_CACHE_CAP_DEFAULT_GB,

@@ -2,6 +2,7 @@ use crate::config::{self, Session};
 use crate::events::AppEvent;
 use crate::history_sync::group_thousands;
 use crate::lastfm::{self, LastFmClient};
+use crate::meaning;
 use crate::musicvideo;
 use crate::ui::{ui_scale, Ui};
 use adw::prelude::*;
@@ -394,7 +395,136 @@ fn lyrics_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
         });
     }
     group.add(&row);
+    add_meaning_rows(ui, &group);
     group
+}
+
+/// Where Explain This Line is answered: the address of a model server on this
+/// computer or the network, and which of its models reads the lyrics.
+fn add_meaning_rows(ui: &Rc<Ui>, group: &adw::PreferencesGroup) {
+    let server = adw::EntryRow::builder()
+        .title(format!("Meaning Model Server (empty: {})", meaning::local_model::DEFAULT_SERVER))
+        .text(ui.core.config.borrow().meaning_server.as_str())
+        .show_apply_button(true)
+        .build();
+    let picker = Rc::new(MeaningPicker {
+        row: adw::ComboRow::builder().title("Meaning Model").build(),
+        names: RefCell::new(Vec::new()),
+        models: RefCell::new(Vec::new()),
+        server: RefCell::new(String::new()),
+        filling: Cell::new(false),
+    });
+    {
+        let ui = Rc::clone(ui);
+        let picker = Rc::clone(&picker);
+        server.connect_apply(move |row| {
+            let stored = meaning::local_model::normalize(&row.text()).unwrap_or_default();
+            row.set_text(&stored);
+            ui.core.config.borrow_mut().meaning_server = stored;
+            ui.core.save_config();
+            picker.probe(&ui);
+        });
+    }
+    {
+        let ui = Rc::clone(ui);
+        let weak = Rc::downgrade(&picker);
+        picker.row.connect_selected_notify(move |_| {
+            let Some(picker) = weak.upgrade() else { return };
+            if picker.filling.get() {
+                return;
+            }
+            let chosen = picker.chosen_name();
+            picker.describe(&chosen);
+            if ui.core.config.borrow().meaning_model == chosen {
+                return;
+            }
+            ui.core.config.borrow_mut().meaning_model = chosen;
+            ui.core.save_config();
+        });
+    }
+    group.add(&server);
+    group.add(&picker.row);
+    picker.probe(ui);
+}
+
+/// The row choosing which of the meaning server's models reads the lyrics,
+/// refilled whenever the server changes.
+struct MeaningPicker {
+    row: adw::ComboRow,
+    names: RefCell<Vec<String>>,
+    models: RefCell<Vec<meaning::local_model::Model>>,
+    server: RefCell<String>,
+    filling: Cell<bool>,
+}
+
+impl MeaningPicker {
+    /// Asks the server for its models off the main thread, then offers them
+    /// and says which one will answer.
+    fn probe(self: &Rc<Self>, ui: &Rc<Ui>) {
+        let server = meaning::local_model::server_url(&ui.core.config.borrow().meaning_server);
+        self.row.set_subtitle("Looking for models…");
+        let (tx, rx) = async_channel::bounded(1);
+        {
+            let server = server.clone();
+            std::thread::Builder::new()
+                .name("flaccy-meaning-probe".into())
+                .spawn(move || {
+                    let _ = tx.send_blocking(meaning::local_model::models(&server));
+                })
+                .ok();
+        }
+        let configured = ui.core.config.borrow().meaning_model.clone();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Ok(answer) = rx.recv().await else { return };
+            let Some(picker) = weak.upgrade() else { return };
+            picker.fill(&server, answer, &configured);
+        });
+    }
+
+    fn fill(
+        &self,
+        server: &str,
+        answer: Result<Vec<meaning::local_model::Model>, meaning::local_model::ModelFailure>,
+        configured: &str,
+    ) {
+        self.filling.set(true);
+        *self.server.borrow_mut() = server.to_string();
+        let models = answer.unwrap_or_default();
+        let mut names = vec!["Automatic".to_string()];
+        names.extend(models.iter().map(|model| model.id.clone()));
+        self.row.set_model(Some(&gtk::StringList::new(
+            &names.iter().map(String::as_str).collect::<Vec<_>>(),
+        )));
+        self.row
+            .set_selected(names.iter().position(|name| name == configured).unwrap_or(0) as u32);
+        self.row.set_sensitive(!models.is_empty());
+        *self.names.borrow_mut() = names;
+        *self.models.borrow_mut() = models;
+        self.filling.set(false);
+        self.describe(configured);
+    }
+
+    fn chosen_name(&self) -> String {
+        let selected = self.row.selected() as usize;
+        if selected == 0 {
+            return String::new();
+        }
+        self.names.borrow().get(selected).cloned().unwrap_or_default()
+    }
+
+    /// Which model will answer, or why none can.
+    fn describe(&self, configured: &str) {
+        let server = self.server.borrow();
+        let models = self.models.borrow();
+        let subtitle = match meaning::local_model::choose(configured, &models) {
+            Some(model) => format!("Explains lyrics with {model} at {server}"),
+            None => format!(
+                "No model answered at {server}, so Explain This Line can't answer; Wikipedia still does"
+            ),
+        };
+        self.row.set_subtitle(&subtitle);
+    }
 }
 
 /// Music videos: how tall a stream Now Playing asks for, who decides which

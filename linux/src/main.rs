@@ -27,6 +27,7 @@ pub(crate) use flaccy_shared::load_progress;
 pub(crate) use flaccy_library::logger;
 mod lyric_share;
 mod lyrics;
+mod meaning;
 mod mpris;
 mod musicvideo;
 mod palette;
