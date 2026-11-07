@@ -6,8 +6,10 @@ const PROBE_TIMEOUT: Duration = Duration::from_secs(4);
 /// A model server may have to load the model first, which on a big one takes
 /// most of a minute before the first word.
 pub const ANSWER_TIMEOUT: Duration = Duration::from_secs(180);
-/// Room for a reasoning model to think before it writes the answer asked for.
-const MAX_TOKENS: u32 = 1_500;
+/// Room for a reasoning model that thinks anyway before it writes the answer
+/// asked for: Gemma 4 26B spent 1,500 tokens thinking about one line and
+/// wrote nothing.
+const MAX_TOKENS: u32 = 4_000;
 const TEMPERATURE: f64 = 0.3;
 /// Instruct models that read lyrics well, best first, matched as substrings of
 /// a model's id when the person has not picked one.
@@ -114,7 +116,10 @@ pub fn choose(preferred: &str, models: &[Model]) -> Option<String> {
         .map(|model| model.id.clone())
 }
 
-/// Asks `model` the question and returns what it wrote.
+/// Asks `model` the question and returns what it wrote. Thinking is turned
+/// off where the server's chat template allows it (llama.cpp, vLLM and SGLang
+/// read `chat_template_kwargs`; Ollama ignores it): on llama-swap's Gemma 4
+/// 26B it took a line's answer from 71 s and no text to 5 s.
 pub fn chat(server: &str, model: &str, system: &str, user: &str) -> Result<String, ModelFailure> {
     let body = serde_json::json!({
         "model": model,
@@ -122,6 +127,7 @@ pub fn chat(server: &str, model: &str, system: &str, user: &str) -> Result<Strin
         "temperature": TEMPERATURE,
         "max_tokens": MAX_TOKENS,
         "response_format": { "type": "json_object" },
+        "chat_template_kwargs": { "enable_thinking": false },
         "messages": [
             { "role": "system", "content": system },
             { "role": "user", "content": user }
