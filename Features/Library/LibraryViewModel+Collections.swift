@@ -10,28 +10,109 @@ import AppKit
 
 extension LibraryViewModel {
 
-    func albumDateAddedMap() -> [String: Date] {
-        if let cached = cachedAlbumAdded { return cached }
-        var map = [String: Date]()
-        for album in library.albums {
-            var newest = Date.distantPast
-            for track in album.tracks {
-                if let added = meta(for: track)?.dateAdded, added > newest { newest = added }
-            }
-            map["\(album.title)|\(album.artist)"] = newest
+    /// The album signals every chip reads, built once and held until the
+    /// library, the play history or the day changes.
+    ///
+    /// Everything here is in memory: `trackMeta` is warmed off the main actor
+    /// before a snapshot is built, and the values are the database's own track
+    /// columns, which the history import and every scrobble reconcile. A chip
+    /// click therefore reads dictionaries instead of asking SQLite for an album
+    /// aggregate and asking the disk about every file in the library.
+    func filterSignals() -> FilterSignals {
+        let stamp = (day: Calendar.current.startOfDay(for: Date()), revision: LastFMStatsService.shared.scrobbleRevision)
+        if let cached = cachedFilterSignals, cachedFilterSignalsStamp?.day == stamp.day,
+           cachedFilterSignalsStamp?.revision == stamp.revision {
+            return cached
         }
-        cachedAlbumAdded = map
-        return map
+        let built = Self.buildFilterSignals(albums: library.albums, meta: trackMeta, now: stamp.day)
+        cachedFilterSignals = built
+        cachedFilterSignalsStamp = stamp
+        return built
     }
 
-    func albumLastPlayedMap() -> [String: Date] {
-        if let cached = cachedAlbumPlayed { return cached }
-        var map = [String: Date]()
-        if let rows = try? DatabaseManager.shared.lastPlayedByAlbum() {
-            for row in rows { map["\(row.albumTitle)|\(row.artist)"] = row.lastPlayed }
+    /// One pass over the library's albums and the warmed metadata, producing the
+    /// maps the chips need and the Rediscover order from the shared rules.
+    nonisolated static func buildFilterSignals(
+        albums: [Album],
+        meta: [String: TrackMeta],
+        now: Date
+    ) -> FilterSignals {
+        var added = [String: Date](minimumCapacity: albums.count)
+        var played = [String: Date](minimumCapacity: albums.count)
+        var entries: [(id: String, plays: Int, lastPlayed: Date?)] = []
+        entries.reserveCapacity(albums.count)
+
+        for album in albums {
+            let key = albumFilterKey(album)
+            var newest = Date.distantPast
+            var lastPlayed: Date?
+            var total = 0
+            for track in album.tracks {
+                guard let trackMeta = meta[LibraryPaths.relativePath(of: track.fileURL)] else { continue }
+                if trackMeta.dateAdded > newest { newest = trackMeta.dateAdded }
+                if let heardAt = trackMeta.lastPlayed, heardAt > (lastPlayed ?? .distantPast) { lastPlayed = heardAt }
+                total += trackMeta.track.playCount
+            }
+            added[key] = newest
+            if let lastPlayed { played[key] = lastPlayed }
+            entries.append((id: key, plays: total, lastPlayed: lastPlayed))
         }
-        cachedAlbumPlayed = map
-        return map
+
+        let order = LibraryFilterRules.rediscover(entries, now: now)
+        var byKey = [String: Album](minimumCapacity: albums.count)
+        for album in albums where byKey[albumFilterKey(album)] == nil {
+            byKey[albumFilterKey(album)] = album
+        }
+        return FilterSignals(
+            added: added,
+            played: played,
+            rediscover: (keys: Set(order), albums: order.compactMap { byKey[$0] })
+        )
+    }
+
+    /// The identity a chip ranks an album by, identical to the Linux client's
+    /// `Album::key`.
+    nonisolated static func albumFilterKey(_ album: Album) -> String {
+        "\(album.title)|\(album.artist)"
+    }
+
+    /// The albums among `albums` ordered by `ids`, dropping any the library no
+    /// longer holds.
+    func albums(_ albums: [Album], for ids: [String]) -> [Album] {
+        var byKey = [String: Album](minimumCapacity: albums.count)
+        for album in albums where byKey[Self.albumFilterKey(album)] == nil {
+            byKey[Self.albumFilterKey(album)] = album
+        }
+        return ids.compactMap { byKey[$0] }
+    }
+
+    /// The songs among `songs` ordered by `ids`, dropping any that are no longer
+    /// there.
+    func songs(_ songs: [Track], for ids: [String]) -> [Track] {
+        var byPath = [String: Track](minimumCapacity: songs.count)
+        for song in songs {
+            let path = LibraryPaths.relativePath(of: song.fileURL)
+            if byPath[path] == nil { byPath[path] = song }
+        }
+        return ids.compactMap { byPath[$0] }
+    }
+
+    /// The rows the Recently Added and Recently Played chips rank, keyed by the
+    /// identity the shared rules hand back.
+    func addedEntries(_ tracks: [Track]) -> [(id: String, dateAdded: Date)] {
+        let meta = trackMeta
+        return tracks.map { track in
+            let path = LibraryPaths.relativePath(of: track.fileURL)
+            return (id: path, dateAdded: meta[path]?.dateAdded ?? .distantPast)
+        }
+    }
+
+    func playedEntries(_ tracks: [Track]) -> [(id: String, lastPlayed: Date?)] {
+        let meta = trackMeta
+        return tracks.map { track in
+            let path = LibraryPaths.relativePath(of: track.fileURL)
+            return (id: path, lastPlayed: meta[path]?.lastPlayed)
+        }
     }
 
     func qualityRank(_ track: Track) -> Int {
@@ -45,23 +126,7 @@ extension LibraryViewModel {
     /// Albums highly played but not spun recently, ranked by a Longplay-style
     /// negligence score of playCount over days since last play.
     var rediscover: (keys: Set<String>, albums: [Album]) {
-        if let cached = cachedRediscover { return cached }
-        var scored: [(key: String, score: Double)] = []
-        if let rows = try? DatabaseManager.shared.lastPlayedByAlbum() {
-            let now = Date()
-            for row in rows {
-                let days = Int(now.timeIntervalSince(row.lastPlayed) / 86400)
-                guard days >= rediscoverMinDays, row.playCount >= rediscoverMinPlays else { continue }
-                let score = Double(row.playCount) / Double(days + 1)
-                scored.append((key: "\(row.albumTitle)|\(row.artist)", score: score))
-            }
-        }
-        scored.sort { $0.score > $1.score }
-        let byKey = Dictionary(library.albums.map { ("\($0.title)|\($0.artist)", $0) }, uniquingKeysWith: { a, _ in a })
-        let albums = scored.compactMap { byKey[$0.key] }
-        let result = (keys: Set(scored.map(\.key)), albums: albums)
-        cachedRediscover = result
-        return result
+        filterSignals().rediscover
     }
 
     var sortedAlbums: [Album] {
@@ -87,15 +152,15 @@ extension LibraryViewModel {
                 return y0 == y1 ? Self.titleOrder($0.title, $1.title) : y0 < y1
             }
         case .recentlyAdded:
-            let added = albumDateAddedMap()
+            let added = filterSignals().added
             result = library.albums.sorted {
-                (added["\($0.title)|\($0.artist)"] ?? .distantPast) > (added["\($1.title)|\($1.artist)"] ?? .distantPast)
+                (added[Self.albumFilterKey($0)] ?? .distantPast) > (added[Self.albumFilterKey($1)] ?? .distantPast)
             }
         case .recentlyPlayed:
-            let played = albumLastPlayedMap()
-            let hasPlay = library.albums.filter { played["\($0.title)|\($0.artist)"] != nil }
-                .sorted { (played["\($0.title)|\($0.artist)"] ?? .distantPast) > (played["\($1.title)|\($1.artist)"] ?? .distantPast) }
-            let noPlay = library.albums.filter { played["\($0.title)|\($0.artist)"] == nil }
+            let played = filterSignals().played
+            let hasPlay = library.albums.filter { played[Self.albumFilterKey($0)] != nil }
+                .sorted { (played[Self.albumFilterKey($0)] ?? .distantPast) > (played[Self.albumFilterKey($1)] ?? .distantPast) }
+            let noPlay = library.albums.filter { played[Self.albumFilterKey($0)] == nil }
                 .sorted { Self.titleOrder($0.title, $1.title) }
             result = hasPlay + noPlay
         }
@@ -128,15 +193,21 @@ extension LibraryViewModel {
                 warmScrobbleCountsIfNeeded()
                 return tracks.sorted { Self.titleOrder($0.title, $1.title) }
             }
-            let scored = tracks.filter { counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0 > 0 }
-                .sorted {
-                    let a = counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0
-                    let b = counts[LastFMStatsService.trackKey($1.title, $1.artist)] ?? 0
-                    return a == b ? Self.titleOrder($0.title, $1.title) : a > b
+            var scored: [(track: Track, plays: Int)] = []
+            var unscrobbled: [Track] = []
+            scored.reserveCapacity(tracks.count)
+            for track in tracks {
+                let plays = counts[LastFMStatsService.trackKey(track.title, track.artist)] ?? 0
+                if plays > 0 {
+                    scored.append((track, plays))
+                } else {
+                    unscrobbled.append(track)
                 }
-            let unscrobbled = tracks.filter { counts[LastFMStatsService.trackKey($0.title, $0.artist)] ?? 0 == 0 }
-                .sorted { Self.titleOrder($0.title, $1.title) }
-            result = scored + unscrobbled
+            }
+            let ranked = scored.sorted { lhs, rhs in
+                lhs.plays == rhs.plays ? Self.titleOrder(lhs.track.title, rhs.track.title) : lhs.plays > rhs.plays
+            }.map(\.track)
+            result = ranked + unscrobbled.sorted { Self.titleOrder($0.title, $1.title) }
         case .recentlyPlayed:
             let sortKeys: [(fileURL: String, lastPlayed: Date?)]
             do {
@@ -155,31 +226,26 @@ extension LibraryViewModel {
                     lastPlayedByPath[key.fileURL] = date
                 }
             }
-            var pathByTrack = [URL: String]()
-            pathByTrack.reserveCapacity(tracks.count)
+            var played: [(track: Track, date: Date)] = []
+            var unplayed: [Track] = []
+            played.reserveCapacity(tracks.count)
             for track in tracks {
-                pathByTrack[track.fileURL] = relativePath(for: track.fileURL)
-            }
-            let played = tracks.filter { lastPlayedByPath[pathByTrack[$0.fileURL] ?? ""] != nil }
-                .sorted {
-                    (lastPlayedByPath[pathByTrack[$0.fileURL] ?? ""] ?? .distantPast)
-                        > (lastPlayedByPath[pathByTrack[$1.fileURL] ?? ""] ?? .distantPast)
+                if let date = lastPlayedByPath[LibraryPaths.relativePath(of: track.fileURL)] {
+                    played.append((track, date))
+                } else {
+                    unplayed.append(track)
                 }
-            let unplayed = tracks.filter { lastPlayedByPath[pathByTrack[$0.fileURL] ?? ""] == nil }
-                .sorted { Self.titleOrder($0.title, $1.title) }
-            result = played + unplayed
+            }
+            result = played.sorted { $0.date > $1.date }.map(\.track)
+                + unplayed.sorted { Self.titleOrder($0.title, $1.title) }
         case .dateAdded:
             let metaMap = trackMeta
-            var pathByTrack = [URL: String]()
-            pathByTrack.reserveCapacity(tracks.count)
+            var dated: [(track: Track, date: Date)] = []
+            dated.reserveCapacity(tracks.count)
             for track in tracks {
-                pathByTrack[track.fileURL] = relativePath(for: track.fileURL)
+                dated.append((track, metaMap[LibraryPaths.relativePath(of: track.fileURL)]?.dateAdded ?? .distantPast))
             }
-            result = tracks.sorted {
-                let a = metaMap[pathByTrack[$0.fileURL] ?? ""]?.dateAdded ?? .distantPast
-                let b = metaMap[pathByTrack[$1.fileURL] ?? ""]?.dateAdded ?? .distantPast
-                return a > b
-            }
+            result = dated.sorted { $0.date > $1.date }.map(\.track)
         }
         cacheLock.lock()
         cachedSortedSongs = result

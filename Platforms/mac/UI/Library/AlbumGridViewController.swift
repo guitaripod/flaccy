@@ -242,7 +242,11 @@ final class AlbumGridViewController: NSViewController {
         guard viewModel.currentSegment == .albums else { return }
         hasMultipleSections = snapshot.sectionIdentifiers.count > 1
         layout.headerReferenceSize = hasMultipleSections ? NSSize(width: 0, height: 34) : .zero
-        dataSource?.apply(snapshot, animatingDifferences: animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        let swapsList = viewModel.snapshotIntent == .replaceList
+        dataSource?.apply(
+            snapshot,
+            animatingDifferences: animated && !swapsList && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        )
         refreshEmptyState()
         MidgarLog.debug("Album grid showing \(snapshot.numberOfItems) items", category: .ui)
     }

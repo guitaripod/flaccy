@@ -138,9 +138,7 @@ extension LibraryViewModel {
         cachedRecentAlbums = nil
         cachedPlaylists = nil
         cachedSuggestions = nil
-        cachedRediscover = nil
-        cachedAlbumAdded = nil
-        cachedAlbumPlayed = nil
+        cachedFilterSignals = nil
         cachedScrobbleCounts = nil
         cachedRepresentativeTracks = [:]
         cachedFirstAlbumByArtist = nil
@@ -151,8 +149,7 @@ extension LibraryViewModel {
 
     @objc func trackDidChange() {
         cachedRecentAlbums = nil
-        cachedRediscover = nil
-        cachedAlbumPlayed = nil
+        cachedFilterSignals = nil
         Self.invalidateSharedMeta()
         if albumSort == .recentlyPlayed { cachedSortedAlbums = nil }
         if songSort == .recentlyPlayed { cachedSortedSongs = nil }

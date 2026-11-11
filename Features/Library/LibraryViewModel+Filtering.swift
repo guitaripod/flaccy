@@ -10,6 +10,9 @@ import AppKit
 
 extension LibraryViewModel {
 
+    /// The Albums chip and its ordering. Membership and order come from the
+    /// shared `LibraryFilterRules` over the warmed album signals, so a click is
+    /// a pass over dictionaries — never a scrobble aggregate or a file lookup.
     func filteredAlbums(_ unsourced: [Album]) -> [Album] {
         let albums = source.map { source in unsourced.filter { $0.tracks.contains(where: source.admits) } } ?? unsourced
         switch filter {
@@ -20,23 +23,30 @@ extension LibraryViewModel {
         case .favorites:
             return albums.filter { isLovedAlbum($0) }
         case .recentlyAdded:
-            let added = albumDateAddedMap()
-            let cutoff = Date().addingTimeInterval(-recentlyWindow)
-            let sorted = albums.sorted { (added["\($0.title)|\($0.artist)"] ?? .distantPast) > (added["\($1.title)|\($1.artist)"] ?? .distantPast) }
-            let recent = sorted.filter { (added["\($0.title)|\($0.artist)"] ?? .distantPast) >= cutoff }
-            return recent.count >= 6 ? recent : Array(sorted.prefix(24))
+            let added = filterSignals().added
+            let ids = LibraryFilterRules.recentlyAdded(
+                albums.map { (id: Self.albumFilterKey($0), dateAdded: added[Self.albumFilterKey($0)] ?? .distantPast) },
+                now: Date(),
+                thresholds: .albums
+            )
+            return self.albums(albums, for: ids)
         case .recentlyPlayed:
-            let played = albumLastPlayedMap()
-            let cutoff = Date().addingTimeInterval(-recentlyWindow)
-            let sorted = albums.filter { played["\($0.title)|\($0.artist)"] != nil }
-                .sorted { (played["\($0.title)|\($0.artist)"] ?? .distantPast) > (played["\($1.title)|\($1.artist)"] ?? .distantPast) }
-            let recent = sorted.filter { (played["\($0.title)|\($0.artist)"] ?? .distantPast) >= cutoff }
-            return recent.count >= 6 ? recent : sorted
+            let played = filterSignals().played
+            let ids = LibraryFilterRules.recentlyPlayed(
+                albums.map { (id: Self.albumFilterKey($0), lastPlayed: played[Self.albumFilterKey($0)]) },
+                now: Date(),
+                thresholds: .albums
+            )
+            return self.albums(albums, for: ids)
         case .rediscover:
-            return rediscover.albums
+            let keys = filterSignals().rediscover.keys
+            return albums.filter { keys.contains(Self.albumFilterKey($0)) }
         }
     }
 
+    /// The Songs chip and its ordering, by the same shared rules: a 30-day
+    /// window that falls back to the newest songs, everything played when the
+    /// window is thin, and Rediscover's albums standing for their songs.
     func filteredSongs(_ unsourced: [Track]) -> [Track] {
         let songs = source.map { source in unsourced.filter(source.admits) } ?? unsourced
         switch filter {
@@ -47,18 +57,17 @@ extension LibraryViewModel {
         case .favorites:
             return songs.filter { LovedTracksService.shared.isLoved(track: $0) }
         case .recentlyAdded:
-            let cutoff = Date().addingTimeInterval(-recentlyWindow)
-            let sorted = songs.sorted { (meta(for: $0)?.dateAdded ?? .distantPast) > (meta(for: $1)?.dateAdded ?? .distantPast) }
-            let recent = sorted.filter { (meta(for: $0)?.dateAdded ?? .distantPast) >= cutoff }
-            return recent.count >= 10 ? recent : Array(sorted.prefix(40))
+            let ids = LibraryFilterRules.recentlyAdded(
+                addedEntries(songs), now: Date(), thresholds: .songs
+            )
+            return self.songs(songs, for: ids)
         case .recentlyPlayed:
-            let cutoff = Date().addingTimeInterval(-recentlyWindow)
-            let sorted = songs.filter { meta(for: $0)?.lastPlayed != nil }
-                .sorted { (meta(for: $0)?.lastPlayed ?? .distantPast) > (meta(for: $1)?.lastPlayed ?? .distantPast) }
-            let recent = sorted.filter { (meta(for: $0)?.lastPlayed ?? .distantPast) >= cutoff }
-            return recent.count >= 10 ? recent : sorted
+            let ids = LibraryFilterRules.recentlyPlayed(
+                playedEntries(songs), now: Date(), thresholds: .songs
+            )
+            return self.songs(songs, for: ids)
         case .rediscover:
-            let keys = rediscover.keys
+            let keys = filterSignals().rediscover.keys
             return songs.filter { keys.contains("\($0.albumTitle)|\($0.artist)") }
         }
     }

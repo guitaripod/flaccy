@@ -318,12 +318,7 @@ final class SongsTableViewModel {
     }
 
     private func relativePath(for url: URL) -> String {
-        if let song = RemoteTrackPath(assetURL: url) { return song.path }
-        let root = LibraryPaths.root.path
-        let path = url.standardizedFileURL.path
-        guard path.hasPrefix(root) else { return url.lastPathComponent }
-        let relative = String(path.dropFirst(root.count))
-        return relative.hasPrefix("/") ? String(relative.dropFirst()) : relative
+        LibraryPaths.relativePath(of: url)
     }
 
     @objc private func lovedDidChange(_ notification: Notification) {
@@ -396,7 +391,7 @@ final class SongsTableViewModel {
             )
             return members(of: rows, ids: ids)
         case .rediscover:
-            let albums = Set(derived.rediscoverAlbumKeys(now: now))
+            let albums = Self.rediscoverAlbumKeys(rows, now: now)
             return rows.filter { albums.contains("\($0.track.albumTitle)|\($0.track.artist)") }
         case .mostPlayed:
             let counts = derived.scrobbleCounts(for: range)
@@ -415,6 +410,24 @@ final class SongsTableViewModel {
     nonisolated private static func members(of rows: [Row], ids: [String]) -> [Row] {
         let wanted = Set(ids)
         return rows.filter { wanted.contains($0.id) }
+    }
+
+    /// The albums worth rediscovering, aggregated from the rows themselves —
+    /// plays summed and last play taken across an album's songs, exactly as the
+    /// Albums chip and the Linux client read them, so the pivot never asks the
+    /// scrobble table for a per-album aggregate on the way to the table.
+    nonisolated static func rediscoverAlbumKeys(_ rows: [Row], now: Date) -> Set<String> {
+        var plays = [String: Int]()
+        var lastPlayed = [String: Date]()
+        for row in rows {
+            let key = "\(row.track.albumTitle)|\(row.track.artist)"
+            plays[key, default: 0] += row.track.playCount
+            if let heard = row.lastPlayed, heard > (lastPlayed[key] ?? .distantPast) {
+                lastPlayed[key] = heard
+            }
+        }
+        let entries = plays.map { (id: $0.key, plays: $0.value, lastPlayed: lastPlayed[$0.key]) }
+        return Set(LibraryFilterRules.rediscover(entries, now: now))
     }
 
     nonisolated private static func filtered(_ rows: [Row], query rawQuery: String) -> [Row] {

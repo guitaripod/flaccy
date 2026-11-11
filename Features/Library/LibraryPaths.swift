@@ -23,19 +23,38 @@ nonisolated enum LibraryPaths {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].standardizedFileURL
     #endif
 
+    /// The root as a plain path. `URL.path` is string work; `standardizedFileURL`
+    /// is not — it asks the file system about every component, and a library on
+    /// an exFAT card made that a stat per lookup.
+    static var rootPath: String { root.path }
+
     /// The slash-separated path of `url` under the root, the key a track is
     /// stored and synced under, in the Unicode form the watch sync uses on the Mac.
     static func relativePath(of url: URL) -> String {
         if let song = RemoteTrackPath(assetURL: url) { return song.path }
+        if let relative = relativePath(of: url, under: rootPath) { return finish(relative) }
+        return finish(standardizedRelativePath(of: url))
+    }
+
+    /// The relative path when `url` is already the form the library builds
+    /// (`root.appendingPathComponent(storedPath)`), without asking the file
+    /// system anything; nil when it is not, so the caller can standardize once.
+    static func relativePath(of url: URL, under rootPath: String) -> String? {
+        let path = url.path
+        guard path.hasPrefix(rootPath) else { return nil }
+        let relative = String(path.dropFirst(rootPath.count))
+        return relative.hasPrefix("/") ? String(relative.dropFirst()) : relative
+    }
+
+    private static func standardizedRelativePath(of url: URL) -> String {
         let rootPath = root.standardizedFileURL.path
         let filePath = url.standardizedFileURL.path
-        var relative = url.lastPathComponent
-        if filePath.hasPrefix(rootPath) {
-            relative = String(filePath.dropFirst(rootPath.count))
-            if relative.hasPrefix("/") {
-                relative = String(relative.dropFirst())
-            }
-        }
+        guard filePath.hasPrefix(rootPath) else { return url.lastPathComponent }
+        let relative = String(filePath.dropFirst(rootPath.count))
+        return relative.hasPrefix("/") ? String(relative.dropFirst()) : relative
+    }
+
+    private static func finish(_ relative: String) -> String {
         #if os(macOS)
         return canonicalSyncPath(relative)
         #else

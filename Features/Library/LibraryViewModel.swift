@@ -116,6 +116,23 @@ final class LibraryViewModel {
         let lastPlayed: Date?
     }
 
+    /// Everything the quick-pivot chips read about albums, derived once per
+    /// library generation from the warmed track metadata: the newest date added
+    /// and last play across an album's songs, and the albums Rediscover hands
+    /// back in order.
+    ///
+    /// It is the same derivation the Linux client makes from its loaded tracks
+    /// (`Album::added_unix`, `last_played_unix`, the sum of `play_count`), so
+    /// both answer "what is neglected" identically. It also replaced a scrobble
+    /// table aggregate and a play-history read that ran on the main thread every
+    /// time a chip was clicked, and a per-track `standardizedFileURL` that asked
+    /// a library on an exFAT card about every file in it.
+    nonisolated struct FilterSignals: Sendable {
+        let added: [String: Date]
+        let played: [String: Date]
+        let rediscover: (keys: Set<String>, albums: [Album])
+    }
+
     static let sharedMetaLock = NSLock()
     static var sharedMeta: [ObjectIdentifier: [String: TrackMeta]] = [:]
     static var sharedMetaGeneration = 0
@@ -136,10 +153,8 @@ final class LibraryViewModel {
 
     var cachedScrobbleCounts: (period: ChartPeriod, counts: [String: Int])?
     var scrobbleCountsWarming = false
-    var cachedRediscover: (keys: Set<String>, albums: [Album])?
-    let recentlyWindow: TimeInterval = 60 * 60 * 24 * 30
-    let rediscoverMinDays = 14
-    let rediscoverMinPlays = 2
+    var cachedFilterSignals: FilterSignals?
+    var cachedFilterSignalsStamp: (day: Date, revision: Int)?
 
     var trackMeta: [String: TrackMeta] {
         let key = ObjectIdentifier(library)
@@ -223,18 +238,13 @@ final class LibraryViewModel {
     }
 
     #if os(macOS)
-    static var documentsPath: String { LibraryPaths.root.path }
+    static var documentsPath: String { LibraryPaths.rootPath }
     #else
-    static let documentsPath = LibraryPaths.root.path
+    static let documentsPath = LibraryPaths.rootPath
     #endif
 
     func relativePath(for url: URL) -> String {
-        if let song = RemoteTrackPath(assetURL: url) { return song.path }
-        let docs = Self.documentsPath
-        let path = url.standardizedFileURL.path
-        guard path.hasPrefix(docs) else { return url.lastPathComponent }
-        let relative = String(path.dropFirst(docs.count))
-        return relative.hasPrefix("/") ? String(relative.dropFirst()) : relative
+        LibraryPaths.relativePath(of: url)
     }
 
     /// Returns the codec-populated variant of a lightweight library track so its
@@ -243,7 +253,7 @@ final class LibraryViewModel {
     /// full-table meta lookup in that common case (it was hitching every Songs sort).
     func hydrate(_ track: Track) -> Track {
         if track.codec != nil { return track }
-        return trackMeta[relativePath(for: track.fileURL)]?.track ?? track
+        return trackMeta[LibraryPaths.relativePath(of: track.fileURL)]?.track ?? track
     }
 
     /// Faster than `localizedCaseInsensitiveCompare` across thousands of rows;
@@ -253,7 +263,7 @@ final class LibraryViewModel {
     }
 
     func meta(for track: Track) -> TrackMeta? {
-        trackMeta[relativePath(for: track.fileURL)]
+        trackMeta[LibraryPaths.relativePath(of: track.fileURL)]
     }
 
     /// The number of local plays for a track over the selected range, or nil
@@ -331,9 +341,6 @@ final class LibraryViewModel {
         }
         return cachedFirstAlbumByArtist?[artistMatchKey(name)]
     }
-
-    var cachedAlbumAdded: [String: Date]?
-    var cachedAlbumPlayed: [String: Date]?
 
     var cachedSortedAlbums: [Album]?
     var cachedSortedSongs: [Track]?

@@ -167,9 +167,7 @@ nonisolated final class LovedTracksService: @unchecked Sendable {
     private func relativePath(for url: URL) -> String {
         if let song = RemoteTrackPath(assetURL: url) { return song.path }
         let docs = Self.documentsPath
-        let path = url.standardizedFileURL.path
-        guard path.hasPrefix(docs) else { return url.lastPathComponent }
-        let relative = String(path.dropFirst(docs.count))
-        return relative.hasPrefix("/") ? String(relative.dropFirst()) : relative
+        if let relative = LibraryPaths.relativePath(of: url, under: docs) { return relative }
+        return url.lastPathComponent
     }
 }
