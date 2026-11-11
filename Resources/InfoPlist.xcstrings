@@ -3,6 +3,12 @@
   "strings": {
     "NSCameraUsageDescription": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy scanner den QR-kode, din Flaccy Server viser, så du ikke skal skrive dens adresse og nøgle."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -21,10 +27,22 @@
             "value": "Flaccy escanea el código QR que imprime tu Flaccy Server, para que no tengas que escribir su dirección ni su clave."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy skannaa Flaccy-palvelimen tulostaman QR-koodin, joten osoitetta ja avainta ei tarvitse kirjoittaa."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy scanne le code QR affiché par ton Flaccy Server, pour que tu n’aies pas à saisir son adresse ni sa clé."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy skannar QR-kóðann sem Flaccy-netþjónninn birtir, svo þú þurfir ekki að slá inn vistfang og lykil."
           }
         },
         "it": {
@@ -45,6 +63,12 @@
             "value": "Flaccy가 Flaccy Server가 출력한 QR 코드를 스캔하므로 서버 주소와 키를 직접 입력할 필요가 없습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy skanner QR-koden som Flaccy Server viser, så du slipper å skrive inn adressen og nøkkelen."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -55,6 +79,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O Flaccy escaneia o código QR que o seu Flaccy Server imprime, para você não precisar digitar o endereço e a chave dele."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy skannar QR-koden som din Flaccy Server skriver ut, så att du inte behöver skriva in adressen och nyckeln."
           }
         },
         "zh-Hans": {
@@ -73,6 +103,12 @@
     },
     "NSLocalNetworkUsageDescription": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy forbinder sig til musikserveren på dit hjemmenetværk."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -91,10 +127,22 @@
             "value": "Flaccy se conecta al servidor de música de tu red doméstica."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy yhdistää kotiverkkosi musiikkipalvelimeen."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy se connecte au serveur de musique de ton réseau domestique."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy tengist tónlistarnetþjóninum á heimanetinu þínu."
           }
         },
         "it": {
@@ -115,6 +163,12 @@
             "value": "Flaccy가 홈 네트워크의 음악 서버에 연결합니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy kobler seg til musikkserveren i hjemmenettverket ditt."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -125,6 +179,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O Flaccy se conecta ao servidor de música da sua rede doméstica."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy ansluter till musikservern i ditt hemnätverk."
           }
         },
         "zh-Hans": {
@@ -143,6 +203,12 @@
     },
     "NSPhotoLibraryAddUsageDescription": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy gemmer de sangtekst-videoer og -kort, du laver, i dit fotobibliotek, når du vælger Gem."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -161,10 +227,22 @@
             "value": "Flaccy guarda en tu fototeca los videos y tarjetas con letra que creas cuando eliges Guardar."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy tallentaa tekemäsi sanoitusvideot ja -kortit kuvakirjastoosi, kun valitset Tallenna."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy enregistre dans votre photothèque les vidéos et cartes de paroles que vous créez lorsque vous choisissez Enregistrer."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy vistar textamyndböndin og textakortin sem þú býrð til í myndasafnið þitt þegar þú velur „Vista“."
           }
         },
         "it": {
@@ -185,6 +263,12 @@
             "value": "“저장”을 선택하면 만든 가사 동영상과 카드를 사진 보관함에 저장합니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy lagrer sangtekstvideoene og -kortene du lager i bildebiblioteket ditt når du velger «Lagre»."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -195,6 +279,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O Flaccy salva na sua biblioteca de fotos os vídeos e cartões de letra que você criar quando escolher Salvar."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy sparar de låttextvideor och kort du skapar i ditt fotobibliotek när du väljer Spara."
           }
         },
         "zh-Hans": {

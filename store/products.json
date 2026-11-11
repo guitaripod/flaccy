@@ -4,10 +4,22 @@
     {
       "referenceName": "Flaccy Pro",
       "localizations": {
+        "da": {
+          "name": "Flaccy Pro"
+        },
         "en-US": {
           "name": "Flaccy Pro"
         },
+        "fi": {
+          "name": "Flaccy Pro"
+        },
+        "no": {
+          "name": "Flaccy Pro"
+        },
         "pl": {
+          "name": "Flaccy Pro"
+        },
+        "sv": {
           "name": "Flaccy Pro"
         }
       },
@@ -24,13 +36,29 @@
           },
           "introductoryOffers": [],
           "localizations": {
+            "da": {
+              "name": "Flaccy Pro årligt",
+              "description": "Alt i Flaccy i et helt år."
+            },
             "en-US": {
               "name": "Flaccy Pro Yearly",
               "description": "Everything in Flaccy for a year."
             },
+            "fi": {
+              "name": "Flaccy Pro vuosittainen",
+              "description": "Kaikki Flaccyssa koko vuodeksi."
+            },
+            "no": {
+              "name": "Flaccy Pro årlig",
+              "description": "Alt i Flaccy i et helt år."
+            },
             "pl": {
               "name": "Flaccy Pro rocznie",
               "description": "Wszystko z Flaccy na cały rok."
+            },
+            "sv": {
+              "name": "Flaccy Pro årsvis",
+              "description": "Allt i Flaccy för ett helt år."
             }
           },
           "reviewScreenshotMd5": "c1b49d3e2af9d66953b6944b33ae6e68",
@@ -49,13 +77,29 @@
         "amount": "34.99"
       },
       "localizations": {
+        "da": {
+          "name": "Flaccy Livstid",
+          "description": "Alle funktioner for evigt: bibliotek, scrobbling."
+        },
         "en-US": {
           "name": "Flaccy Lifetime",
           "description": "Unlock every feature — library, scrobbling, forever."
         },
+        "fi": {
+          "name": "Flaccy elinikäinen",
+          "description": "Kaikki ominaisuudet ikuisesti: kirjasto, scrobblaus."
+        },
+        "no": {
+          "name": "Flaccy Livstid",
+          "description": "Alle funksjoner for alltid: bibliotek, scrobbling."
+        },
         "pl": {
           "name": "Flaccy: dostęp dożywotni",
           "description": "Odblokuj wszystkie funkcje na zawsze."
+        },
+        "sv": {
+          "name": "Flaccy Livstid",
+          "description": "Alla funktioner för alltid: bibliotek, scrobbling."
         }
       },
       "reviewScreenshotMd5": "0231505d9f2e248e077f7ed26b8c1ff0"
@@ -69,13 +113,29 @@
         "amount": "34.99"
       },
       "localizations": {
+        "da": {
+          "name": "Flaccy Livstid · Velkommen tilbage",
+          "description": "Alle funktioner for evigt: bibliotek, scrobbling."
+        },
         "en-US": {
           "name": "Flaccy Lifetime · Welcome Back",
           "description": "Unlock every feature — library, scrobbling, forever."
         },
+        "fi": {
+          "name": "Flaccy elinikäinen · Tervetuloa",
+          "description": "Kaikki ominaisuudet ikuisesti: kirjasto, scrobblaus."
+        },
+        "no": {
+          "name": "Flaccy Livstid · Velkommen tilbake",
+          "description": "Alle funksjoner for alltid: bibliotek, scrobbling."
+        },
         "pl": {
           "name": "Flaccy: dostęp dożywotni, wróć",
           "description": "Odblokuj wszystkie funkcje na zawsze."
+        },
+        "sv": {
+          "name": "Flaccy Livstid · Välkommen tillbaka",
+          "description": "Alla funktioner för alltid: bibliotek, scrobbling."
         }
       },
       "reviewScreenshotMd5": "a5d19ccdb58d83855e3b1f806a74c565"
