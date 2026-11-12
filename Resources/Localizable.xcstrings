@@ -40133,6 +40133,12 @@
     },
     "Artwork and Details": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coverbilleder og detaljer"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -40145,10 +40151,22 @@
             "value": "Portadas y detalles"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kansikuvat ja tiedot"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Pochettes et détails"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umslög og upplýsingar"
           }
         },
         "it": {
@@ -40169,6 +40187,12 @@
             "value": "아트워크 및 세부 정보"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omslag og detaljer"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -40179,6 +40203,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capas e detalhes"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omslag och detaljer"
           }
         },
         "zh-Hans": {
@@ -102227,6 +102257,12 @@
     },
     "More from Midgar": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mere fra Midgar"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -102239,10 +102275,22 @@
             "value": "Más de Midgar"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lisää Midgarilta"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Plus de Midgar"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meira frá Midgar"
           }
         },
         "it": {
@@ -102263,6 +102311,12 @@
             "value": "Midgar의 다른 앱"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mer fra Midgar"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -102273,6 +102327,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mais da Midgar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mer från Midgar"
           }
         },
         "zh-Hans": {
@@ -103231,6 +103291,12 @@
     },
     "Music": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -103243,10 +103309,22 @@
             "value": "Música"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiikki"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Musique"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tónlist"
           }
         },
         "it": {
@@ -103267,6 +103345,12 @@
             "value": "음악"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikk"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -103277,6 +103361,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Música"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik"
           }
         },
         "zh-Hans": {
@@ -113660,6 +113750,12 @@
     },
     "Notifications": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifikationer"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -113672,10 +113768,22 @@
             "value": "Notificaciones"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ilmoitukset"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Notifications"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilkynningar"
           }
         },
         "it": {
@@ -113696,6 +113804,12 @@
             "value": "알림"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varslinger"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -113706,6 +113820,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notificações"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notiser"
           }
         },
         "zh-Hans": {
@@ -119608,6 +119728,12 @@
     },
     "Organize": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organisér"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -119620,10 +119746,22 @@
             "value": "Organizar"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Järjestä"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Organiser"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipulag"
           }
         },
         "it": {
@@ -119644,6 +119782,12 @@
             "value": "정리"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organiser"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -119654,6 +119798,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Organizar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organisera"
           }
         },
         "zh-Hans": {
@@ -163387,6 +163537,12 @@
     },
     "Stations": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stationer"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -163399,10 +163555,22 @@
             "value": "Emisoras"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asemat"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Stations"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stöðvar"
           }
         },
         "it": {
@@ -163423,6 +163591,12 @@
             "value": "스테이션"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stasjoner"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -163433,6 +163607,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Estações"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stationer"
           }
         },
         "zh-Hans": {
@@ -187649,6 +187829,12 @@
     },
     "Version": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -187661,10 +187847,22 @@
             "value": "Versión"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versio"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Version"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Útgáfa"
           }
         },
         "it": {
@@ -187685,6 +187883,12 @@
             "value": "버전"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versjon"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -187695,6 +187899,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Versão"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
           }
         },
         "zh-Hans": {
