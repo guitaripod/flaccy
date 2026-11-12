@@ -19603,66 +19603,72 @@
         }
       }
     },
-    "AI · included in your 7-day trial": {
+    "AI · included in the free trial": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "KI · in deiner 7-tägigen Testphase enthalten"
+            "value": "KI · in der kostenlosen Testphase enthalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI · included in the free trial"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA · incluida en tu prueba de 7 días"
+            "value": "IA · incluida en la prueba gratuita"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA · incluse dans votre essai de 7 jours"
+            "value": "IA · incluse dans l’essai gratuit"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA · inclusa nella prova di 7 giorni"
+            "value": "IA · inclusa nella prova gratuita"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · 7日間のトライアルに含まれます"
+            "value": "AI · 無料トライアルに含まれます"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · 7일 체험에 포함"
+            "value": "AI · 무료 체험에 포함"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · w cenie 7-dniowego okresu próbnego"
+            "value": "AI · w bezpłatnym okresie próbnym"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA · incluída no seu teste de 7 dias"
+            "value": "IA · incluída no teste gratuito"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · 已包含在 7 天试用中"
+            "value": "AI · 包含在免费试用中"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · 已包含在 7 天試用中"
+            "value": "AI · 包含在免費試用中"
           }
         }
       }

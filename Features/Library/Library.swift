@@ -63,6 +63,15 @@ nonisolated struct HoistedAlbumCover: Sendable, Hashable {
     let tileKey: String
 }
 
+extension LibraryProviding {
+    /// True once the library holds a song of the person's own, not only the free sample album: the sample never counts as
+    /// the library that earns the Debut, so music added after it still gets one.
+    var holdsOwnMusic: Bool {
+        let sampleNames = SampleMusicService.sampleFileNames
+        return allTracks.contains { !SampleMusicService.isSample($0.fileURL, among: sampleNames) }
+    }
+}
+
 protocol LibraryProviding: AnyObject {
     var albums: [Album] { get }
     var allTracks: [Track] { get }
@@ -802,9 +811,10 @@ final class Library: LibraryProviding {
     /// next launch can read it without opening anything. Asking every time also
     /// writes the record for a library indexed before it existed.
     private func recordIndexedLibrary() {
-        guard !albums.isEmpty else { return }
+        guard holdsOwnMusic else { return }
         LibraryStartupProbe.markIndexed()
     }
+
 
     /// The figures the Debut's summary card reports, read from the database and
     /// the model the person just watched being built rather than from counters

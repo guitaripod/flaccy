@@ -27,7 +27,7 @@ nonisolated enum LibraryDebutCopy {
     }
 
     static var trialChip: String {
-        String(localized: "AI · included in your 7-day trial")
+        String(localized: "AI · included in the free trial")
     }
 
     static var aiSkippedHeadline: String {

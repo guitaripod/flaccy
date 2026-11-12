@@ -416,6 +416,11 @@ final class MacLibrarySurfaceModel {
     func completeDebut(_ summary: LibraryDebutSummary) {
         debutCompleted = true
         router.releaseDebut()
+        guard Library.shared.holdsOwnMusic else {
+            MidgarLog.info("Debut over the sample album only; the person's own music keeps its Debut", category: .ui)
+            apply { _ in }
+            return
+        }
         LibraryStartupProbe.markIndexed()
         do {
             try DatabaseManager.shared.saveLibraryDebut(summary)

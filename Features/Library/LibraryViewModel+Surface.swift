@@ -147,6 +147,11 @@ extension LibraryViewModel {
     /// summary is what makes the launch a debut rather than a scan, so it is
     /// persisted before the surface is released, not after.
     func completeDebut(with summary: LibraryDebutSummary) {
+        guard library.holdsOwnMusic else {
+            MidgarLog.info("Debut over the sample album only; the person's own music keeps its Debut", category: .ui)
+            dismissDebut()
+            return
+        }
         do {
             try DatabaseManager.shared.saveLibraryDebut(summary)
         } catch {
