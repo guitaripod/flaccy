@@ -46,7 +46,7 @@ final class WiFiTransferViewController: UIViewController {
         view.backgroundColor = .systemGroupedBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = UIBarButtonItem(
-            systemItem: .done, primaryAction: UIAction { [weak self] _ in self?.finish() }
+            systemItem: .done, primaryAction: UIAction { [weak self] _ in self?.doneTapped() }
         )
         navigationItem.rightBarButtonItem?.accessibilityIdentifier = "wifiTransfer.done"
         buildContent()
@@ -74,6 +74,23 @@ final class WiFiTransferViewController: UIViewController {
         session.close()
         if let foregroundObserver { NotificationCenter.default.removeObserver(foregroundObserver) }
         foregroundObserver = nil
+    }
+
+    /// Done while a file is still arriving asks first: closing ends the transfer, and only the files that finished are kept.
+    private func doneTapped() {
+        guard case .receiving = session.state.activity else {
+            finish()
+            return
+        }
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        let alert = UIAlertController(
+            title: String(localized: "Music is still arriving"),
+            message: String(localized: "If you close now, the songs that have finished stay and the rest stop. Keep this screen open until the computer is done."),
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: String(localized: "Keep Open"), style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Close Anyway"), style: .destructive) { [weak self] _ in self?.finish() })
+        present(alert, animated: true)
     }
 
     private func finish() {

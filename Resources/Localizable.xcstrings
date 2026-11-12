@@ -32553,6 +32553,76 @@
         }
       }
     },
+    "Close Anyway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trotzdem schließen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close Anyway"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerrar de todos modos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermer quand même"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudi comunque"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "それでも閉じる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그래도 닫기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mimo to zamknij"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fechar mesmo assim"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍要关闭"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍要關閉"
+          }
+        }
+      }
+    },
     "Close Now Playing": {
       "localizations": {
         "de": {
@@ -51371,6 +51441,76 @@
         }
       }
     },
+    "Flaccy Server on My Computer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server auf meinem Computer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server on My Computer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server en mi ordenador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server sur mon ordinateur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server sul mio computer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイコンピュータの Flaccy Server"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 컴퓨터의 Flaccy Server"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server na moim komputerze"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server no meu computador"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我电脑上的 Flaccy Server"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我電腦上的 Flaccy Server"
+          }
+        }
+      }
+    },
     "Flaccy Server plays the music on your Mac or PC on this iPad over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network.": {
       "localizations": {
         "de": {
@@ -58349,6 +58489,76 @@
         }
       }
     },
+    "If you close now, the songs that have finished stay and the rest stop. Keep this screen open until the computer is done.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn du jetzt schließt, bleiben die fertigen Songs erhalten und der Rest wird angehalten. Lass diesen Bildschirm offen, bis der Computer fertig ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you close now, the songs that have finished stay and the rest stop. Keep this screen open until the computer is done."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si cierras ahora, las canciones terminadas se quedan y el resto se detiene. Mantén esta pantalla abierta hasta que el ordenador termine."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si vous fermez maintenant, les morceaux terminés restent et les autres s’arrêtent. Gardez cet écran ouvert jusqu’à ce que l’ordinateur ait terminé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se chiudi ora, i brani già completati restano e il resto si interrompe. Tieni aperta questa schermata finché il computer non ha finito."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今閉じると、完了した曲は残り、残りは止まります。コンピュータの処理が終わるまで、この画面を開いたままにしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 닫으면 완료된 곡은 남고 나머지는 중단됩니다. 컴퓨터 작업이 끝날 때까지 이 화면을 열어 두세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeśli zamkniesz teraz, zakończone utwory zostaną, a reszta się zatrzyma. Zostaw ten ekran otwarty, dopóki komputer nie skończy."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se você fechar agora, as músicas já concluídas ficam e as demais param. Mantenha esta tela aberta até o computador terminar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果现在关闭，已完成的歌曲会保留，其余的将停止。请保持此屏幕打开，直到电脑完成。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果現在關閉，已完成的歌曲會保留，其餘的將停止。請保持此畫面開啟，直到電腦完成。"
+          }
+        }
+      }
+    },
     "Import": {
       "localizations": {
         "de": {
@@ -61383,6 +61593,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "在全部傳完之前，請讓 iPhone 上的 Flaccy 保持開啟。"
+          }
+        }
+      }
+    },
+    "Keep Open": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offen lassen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Open"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantener abierto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder ouvert"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni aperto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開いたままにする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열어 두기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zostaw otwarte"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manter aberto"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持開啟"
           }
         }
       }
@@ -69797,6 +70077,76 @@
         }
       }
     },
+    "Music is still arriving": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik kommt noch an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Music is still arriving"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La música aún está llegando"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La musique arrive encore"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La musica sta ancora arrivando"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽をまだ受信中です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악을 아직 받는 중입니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muzyka wciąż jest odbierana"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A música ainda está chegando"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐仍在传输中"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音樂仍在傳輸中"
+          }
+        }
+      }
+    },
     "Music on another computer? Connect to Flaccy Server…": {
       "localizations": {
         "de": {
@@ -70665,6 +71015,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "自然的弦樂與空間感"
+          }
+        }
+      }
+    },
+    "Navidrome or Another Subsonic Server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome oder ein anderer Subsonic-Server"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome or Another Subsonic Server"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome u otro servidor Subsonic"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome ou un autre serveur Subsonic"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome o un altro server Subsonic"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome または別の Subsonic サーバ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome 또는 다른 Subsonic 서버"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome albo inny serwer Subsonic"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome ou outro servidor Subsonic"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome 或其他 Subsonic 服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome 或其他 Subsonic 伺服器"
           }
         }
       }
@@ -111377,6 +111797,76 @@
         }
       }
     },
+    "Stream from a computer or server": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von einem Computer oder Server streamen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stream from a computer or server"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproducir en streaming desde un ordenador o servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écouter en streaming depuis un ordinateur ou un serveur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci in streaming da un computer o server"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンピュータやサーバーからストリーミング"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터 또는 서버에서 스트리밍"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strumieniuj z komputera lub serwera"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transmitir de um computador ou servidor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从电脑或服务器串流播放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從電腦或伺服器串流播放"
+          }
+        }
+      }
+    },
     "Streamed songs stay here for replay. Downloads don’t count toward the limit.": {
       "localizations": {
         "de": {
@@ -129061,6 +129551,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "去哪裡取得？"
+          }
+        }
+      }
+    },
+    "Where does it play from?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woher wird abgespielt?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where does it play from?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Desde dónde se reproduce?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D’où vient la lecture ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da dove viene riprodotta?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生元はどこですか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생 위치는 어디인가요?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skąd pochodzi odtwarzanie?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De onde ela toca?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从哪里播放？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從哪裡播放？"
           }
         }
       }

@@ -121,6 +121,22 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             self?.presentComputerTransferGuide()
         })
     }()
+    lazy var streamButton: UIButton = {
+        var config = UIButton.Configuration.plain()
+        config.title = String(localized: "Stream from a computer or server")
+        config.image = UIImage(systemName: "server.rack")
+        config.imagePadding = 6
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+            var attributes = attributes
+            attributes.font = .preferredFont(forTextStyle: .subheadline)
+            return attributes
+        }
+        let button = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in
+            self?.presentStreamChoice()
+        })
+        button.accessibilityIdentifier = "library.stream"
+        return button
+    }()
     lazy var emptyStateView: UIView = {
         let container = UIView()
 
@@ -151,13 +167,14 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
         footnote.numberOfLines = 0
         footnote.textAlignment = .center
 
-        let stack = UIStackView(arrangedSubviews: [imageView, label, buttons, computerGuideButton, footnote])
+        let stack = UIStackView(arrangedSubviews: [imageView, label, buttons, computerGuideButton, streamButton, footnote])
         stack.axis = .vertical
         stack.spacing = 12
         stack.alignment = .center
         stack.setCustomSpacing(24, after: label)
         stack.setCustomSpacing(6, after: buttons)
-        stack.setCustomSpacing(14, after: computerGuideButton)
+        stack.setCustomSpacing(0, after: computerGuideButton)
+        stack.setCustomSpacing(14, after: streamButton)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         let scrollView = UIScrollView()
@@ -562,6 +579,7 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             wifiTransferButton.isHidden = false
             sampleMusicButton.isHidden = false
             computerGuideButton.isHidden = false
+            streamButton.isHidden = false
             applySampleButtonState()
             trialStartsLabel.isHidden = PurchaseManager.shared.state != .trialNotStarted
             collectionView.backgroundView = emptyStateView
@@ -572,9 +590,36 @@ final class LibraryViewController: UIViewController, SonglinkShareable {
             wifiTransferButton.isHidden = true
             sampleMusicButton.isHidden = true
             computerGuideButton.isHidden = true
+            streamButton.isHidden = true
             trialStartsLabel.isHidden = true
             collectionView.backgroundView = emptyStateView
         }
+    }
+
+    /// Music that lives elsewhere: the computer that shares it with Flaccy Server, or a Subsonic server such as Navidrome.
+    func presentStreamChoice() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let sheet = UIAlertController(title: String(localized: "Where does it play from?"), message: nil, preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: String(localized: "Flaccy Server on My Computer"), style: .default) { [weak self] _ in
+            self?.presentServerGuide()
+        })
+        sheet.addAction(UIAlertAction(title: String(localized: "Navidrome or Another Subsonic Server"), style: .default) { [weak self] _ in
+            guard let self else { return }
+            AddServerViewController.present(from: self, servers: RemoteServersViewModel())
+        })
+        sheet.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
+        sheet.popoverPresentationController?.sourceView = streamButton
+        present(sheet, animated: true)
+    }
+
+    private func presentServerGuide() {
+        let guide = ServerSetupGuideViewController()
+        let navigation = UINavigationController(rootViewController: guide)
+        guide.navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .close, primaryAction: UIAction { [weak navigation] _ in
+            navigation?.dismiss(animated: true)
+        })
+        guide.onConnected = { [weak navigation] in navigation?.dismiss(animated: true) }
+        present(navigation, animated: true)
     }
 
     func updateSectionIndex() {

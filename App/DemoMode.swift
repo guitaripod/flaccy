@@ -19,7 +19,7 @@ enum DemoMode {
     private static let historyModeKey = "flaccy.demo.historyMode"
 
     static var isDayOne: Bool { environment["FLACCY_ROUTE"] == "home-dayone" }
-    static var isEmptyLibrary: Bool { environment["FLACCY_ROUTE"] == "home-empty" }
+    static var isEmptyLibrary: Bool { ["home-empty", "library-empty"].contains(environment["FLACCY_ROUTE"]) }
     static var isHomeRoute: Bool { environment["FLACCY_ROUTE"]?.hasPrefix("home") == true }
 
     /// The empty-history Home needs a library nobody has played, the first-run
@@ -585,7 +585,7 @@ enum DemoRouter {
         switch route {
         case "home", "home-playing", "home-dayone", "home-empty", "charts": break
         case "home-edit": tabs.home.presentEditHome()
-        case "library":
+        case "library", "library-empty":
             tabs.library.select(segment: .albums)
             tabs.library.viewModel.setFilter(.all)
         case "search":
