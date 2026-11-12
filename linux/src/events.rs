@@ -14,6 +14,8 @@ pub enum AppEvent {
     ScanFinished {
         added: usize,
         removed: usize,
+        /// Why the scan could not read the music folder, when it could not.
+        failure: Option<String>,
     },
     TrackChanged(Option<Track>),
     NaturalEnd(Track),

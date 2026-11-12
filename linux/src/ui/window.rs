@@ -469,19 +469,10 @@ pub fn build(app: &adw::Application, core: &Rc<AppCore>) -> adw::ApplicationWind
             if let AppEvent::NewMixPlaying { rel_path, title } = event {
                 overlay.add_toast(new_mix_toast(&toast_core, rel_path, title));
             }
-            if let AppEvent::ScanFinished { added, removed } = event {
-                let toast = if *added > 0 || *removed > 0 {
-                    let toast = adw::Toast::new(&format!(
-                        "Library updated · {added} added · {removed} removed"
-                    ));
-                    toast.set_timeout(4);
-                    toast
-                } else {
-                    let toast = adw::Toast::new("Library up to date");
-                    toast.set_timeout(2);
-                    toast
-                };
-                overlay.add_toast(toast);
+            if let AppEvent::ScanFinished { added, removed, failure } = event {
+                if let Some(toast) = scan_toast(*added, *removed, failure.as_deref(), toast_core.library.borrow().tracks.is_empty()) {
+                    overlay.add_toast(toast);
+                }
             }
         });
 
@@ -2152,4 +2143,21 @@ fn demo_window_size() -> Option<(i32, i32)> {
         Some(_) => Some((1440, 900)),
         None => None,
     }
+}
+
+/// What the end of a scan says: a failure with its cause, the counts when something changed, nothing for an empty library
+/// (its page already says where the music goes), and a short "up to date" otherwise.
+fn scan_toast(added: usize, removed: usize, failure: Option<&str>, library_empty: bool) -> Option<adw::Toast> {
+    let (text, seconds) = if let Some(cause) = failure {
+        (format!("Couldn't read the music folder: {cause}. Choose another one in Preferences."), 8)
+    } else if added > 0 || removed > 0 {
+        (format!("Library updated · {added} added · {removed} removed"), 4)
+    } else if library_empty {
+        return None;
+    } else {
+        ("Library up to date".to_owned(), 2)
+    };
+    let toast = adw::Toast::new(&text);
+    toast.set_timeout(seconds);
+    Some(toast)
 }

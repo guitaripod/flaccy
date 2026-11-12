@@ -813,6 +813,23 @@ fn fill_model_row(ui: &Rc<Ui>, row: &adw::ComboRow, models: &[String]) {
     });
 }
 
+/// Asks for the folder the music lives in, then makes it the library's folder and rescans; `chosen` hears the new path.
+pub(crate) fn choose_music_folder(ui: &Rc<Ui>, chosen: impl Fn(&std::path::Path) + 'static) {
+    let dialog = gtk::FileDialog::builder().title("Choose Music Folder").build();
+    let ui = Rc::clone(ui);
+    let window = ui.window.clone();
+    dialog.select_folder(Some(&window), None::<&gio::Cancellable>, move |result| {
+        let Ok(folder) = result else { return };
+        let Some(path) = folder.path() else { return };
+        crate::logger::info("library", &format!("music folder changed to {}", path.display()));
+        ui.core.config.borrow_mut().music_dir = Some(path.display().to_string());
+        ui.core.save_config();
+        ui.core.player.set_root(path.clone());
+        chosen(&path);
+        ui.core.rescan();
+    });
+}
+
 fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder().title("Library").build();
 
@@ -826,25 +843,8 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
         let ui = Rc::clone(ui);
         let folder_row = folder_row.clone();
         choose.connect_clicked(move |_| {
-            let dialog = gtk::FileDialog::builder()
-                .title("Choose Music Folder")
-                .build();
-            let ui = Rc::clone(&ui);
-            let window = ui.window.clone();
             let folder_row = folder_row.clone();
-            dialog.select_folder(Some(&window), None::<&gio::Cancellable>, move |result| {
-                let Ok(folder) = result else { return };
-                let Some(path) = folder.path() else { return };
-                crate::logger::info(
-                    "library",
-                    &format!("music folder changed to {}", path.display()),
-                );
-                ui.core.config.borrow_mut().music_dir = Some(path.display().to_string());
-                ui.core.save_config();
-                ui.core.player.set_root(path.clone());
-                folder_row.set_subtitle(&path.display().to_string());
-                ui.core.rescan();
-            });
+            choose_music_folder(&ui, move |path| folder_row.set_subtitle(&path.display().to_string()));
         });
     }
     folder_row.add_suffix(&choose);

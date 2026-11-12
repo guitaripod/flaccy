@@ -778,9 +778,10 @@ impl AppCore {
                             core.reload_library();
                         } else {
                             core.emit_build_completed();
+                            core.hub.emit(&AppEvent::ScanProgress(LoadProgress::new(LoadPhase::Idle)));
                         }
                         crate::enrichment::request_background_pass(&core);
-                        core.hub.emit(&AppEvent::ScanFinished { added, removed });
+                        core.hub.emit(&AppEvent::ScanFinished { added, removed, failure: None });
                     }
                     ScanEvent::Revised(rel_paths) => core.note_new_versions(&rel_paths),
                     ScanEvent::Retagged => core.reload_library(),
@@ -788,10 +789,12 @@ impl AppCore {
                         crate::logger::error("library", &format!("scan failed: {message}"));
                         core.end_listing_scan();
                         core.scanning.set(false);
+                        core.hub.emit(&AppEvent::ScanProgress(LoadProgress::new(LoadPhase::Idle)));
                         crate::enrichment::request_background_pass(&core);
                         core.hub.emit(&AppEvent::ScanFinished {
                             added: 0,
                             removed: 0,
+                            failure: Some(message),
                         });
                         break;
                     }

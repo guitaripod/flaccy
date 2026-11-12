@@ -610,15 +610,16 @@ pub fn build(ui: &Rc<Ui>) -> gtk::Widget {
     stack.upcast()
 }
 
-/// Turns the "No Music Found" page into a live scan report while a *rescan* is
-/// running: the stage, what it means, and the running counts — instead of
-/// telling someone their library is empty while it is still being read. A first
-/// scan is the Debut's, not this one's.
+/// Turns the welcome into a live scan report while a *rescan* is running: the
+/// stage, what it means, and the running counts — instead of telling someone
+/// their library is empty while it is still being read. A first scan is the
+/// Debut's, not this one's. When the scan ends the welcome comes back, naming
+/// the folder as it is now, or why it could not be read.
 fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) {
     let idle_title = empty.title().to_string();
-    let idle_description = empty.description().map(|text| text.to_string());
     let idle_icon = empty.icon_name().map(|name| name.to_string());
     let actions = actions.clone();
+    let core = Rc::clone(&ui.core);
     ui.core
         .hub
         .subscribe_widget(empty, move |empty, event| match event {
@@ -634,42 +635,98 @@ fn attach_scan_status(ui: &Rc<Ui>, empty: &adw::StatusPage, actions: &gtk::Box) 
                 empty.set_description(Some(&description));
                 actions.set_visible(false);
             }
-            AppEvent::ScanFinished { .. } => {
+            AppEvent::ScanFinished { failure, .. } => {
                 empty.set_icon_name(idle_icon.as_deref());
                 empty.set_title(&idle_title);
-                empty.set_description(idle_description.as_deref());
+                let description = match failure {
+                    Some(cause) => format!("Flaccy couldn't read {}: {cause}. Choose another folder.", shown_path(&core.music_root())),
+                    None => welcome_description(&core.music_root()),
+                };
+                empty.set_description(Some(&description));
                 actions.set_visible(true);
             }
             _ => {}
         });
 }
 
-/// The "No Music Found" page with its way forward: pick the music folder,
-/// download the sample album, and watch a scan that is already under way.
-/// Home shows the same page while the library is empty.
+/// Where the library looks, named so a person knows which folder to fill or change.
+fn welcome_description(folder: &std::path::Path) -> String {
+    let shown = shown_path(folder);
+    if folder.is_dir() {
+        format!("Flaccy plays the music in {shown}, which has none yet. Choose your music folder, or bring music from another computer or server.")
+    } else {
+        format!("Flaccy looks for music in {shown}, which doesn't exist. Choose the folder your music is in, or bring it from another computer or server.")
+    }
+}
+
+/// A folder as a person reads it: under the home folder it starts with `~`.
+fn shown_path(folder: &std::path::Path) -> String {
+    match dirs::home_dir().and_then(|home| folder.strip_prefix(&home).ok().map(std::path::Path::to_path_buf)) {
+        Some(rest) if rest.as_os_str().is_empty() => "~".to_owned(),
+        Some(rest) => format!("~/{}", rest.display()),
+        None => folder.display().to_string(),
+    }
+}
+
+/// A pill button on the welcome.
+fn welcome_button(label: &str, suggested: bool) -> gtk::Button {
+    let button = gtk::Button::with_label(label);
+    button.add_css_class("pill");
+    if suggested {
+        button.add_css_class("suggested-action");
+    }
+    button
+}
+
+/// The welcome of an empty library, the Linux side of the iPhone's "Where is
+/// your music?": choose the folder the music is in (it names the one Flaccy
+/// reads now), connect a Flaccy Server or another music server, or play the
+/// sample album, and watch a scan that is already under way. Home shows the
+/// same page while the library is empty.
 pub(crate) fn build_empty_state(ui: &Rc<Ui>) -> adw::StatusPage {
     let empty = adw::StatusPage::builder()
         .icon_name("audio-x-generic-symbolic")
-        .title("No Music Found")
-        .description("Drop FLAC or MP3 files into your music folder, then rescan.\nChoose a different folder in Preferences.")
+        .title("Where is your music?")
+        .description(welcome_description(&ui.core.music_root()))
         .build();
+    empty.add_css_class("compact");
     let empty_actions = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(10)
         .halign(gtk::Align::Center)
         .build();
-    let empty_button = gtk::Button::with_label("Choose Music Folder");
-    empty_button.add_css_class("pill");
-    empty_button.add_css_class("suggested-action");
-    empty_button.set_action_name(Some("app.preferences"));
-    empty_actions.append(&empty_button);
-    let sample_button = gtk::Button::with_label("Download Sample Album");
-    sample_button.add_css_class("pill");
+    let folder_button = welcome_button("Choose Music Folder…", true);
+    folder_button.set_tooltip_text(Some("Pick the folder on this computer that holds your music"));
+    {
+        let ui = Rc::clone(ui);
+        folder_button.connect_clicked(move |_| super::prefs::choose_music_folder(&ui, |_| {}));
+    }
+    empty_actions.append(&folder_button);
+    let server_button = welcome_button("Connect to Flaccy Server…", false);
+    server_button.set_tooltip_text(Some("Play the music of a Mac or computer sharing it with Flaccy"));
+    {
+        let ui = Rc::clone(ui);
+        server_button.connect_clicked(move |_| super::flaccy_server_dialog::present(&ui, None));
+    }
+    empty_actions.append(&server_button);
+    let subsonic_button = welcome_button("Add a Music Server…", false);
+    subsonic_button.set_tooltip_text(Some("Navidrome, Jellyfin or another Subsonic server"));
+    {
+        let ui = Rc::clone(ui);
+        subsonic_button.connect_clicked(move |_| super::servers::present_add(&ui, &super::servers::Prefill::default()));
+    }
+    empty_actions.append(&subsonic_button);
+    let sample_button = welcome_button("Play the Free Sample Album", false);
+    sample_button.set_tooltip_text(Some("About 130 MB of 24-bit FLAC"));
     {
         let ui = Rc::clone(ui);
         sample_button.connect_clicked(move |_| crate::samples::download(&ui.core));
     }
     empty_actions.append(&sample_button);
+    let drop_hint = gtk::Label::new(Some("Or drop music files onto this window."));
+    drop_hint.add_css_class("dim");
+    drop_hint.add_css_class("caption");
+    empty_actions.append(&drop_hint);
     let sample_progress = gtk::Label::new(None);
     sample_progress.add_css_class("dim");
     sample_progress.add_css_class("caption");

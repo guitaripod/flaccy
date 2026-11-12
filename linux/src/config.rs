@@ -265,7 +265,7 @@ impl Config {
             .as_ref()
             .map(PathBuf::from)
             .filter(|p| p.is_dir())
-            .or_else(|| dirs::audio_dir())
+            .or_else(|| dirs::audio_dir().filter(|dir| Some(dir) != dirs::home_dir().as_ref()))
             .unwrap_or_else(|| dirs::home_dir().unwrap_or_default().join("Music"))
     }
 }
