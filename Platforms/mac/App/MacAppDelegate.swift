@@ -589,7 +589,7 @@ extension MacAppDelegate {
 
     private func stageBCapture() async {
         let sections: [(SidebarSection, String)] = [
-            (.charts, "charts"), (.yearInMusic, "yim"), (.wantlist, "wantlist"), (.listeningGuide, "guide"),
+            (.charts, "charts"), (.yearInMusic, "yim"), (.wantlist, "wantlist"),
         ]
         for (section, name) in sections {
             NotificationCenter.default.post(
@@ -660,7 +660,7 @@ extension MacAppDelegate {
     private func stageBStress() async {
         for round in 1...3 {
             MidgarLog.info("StageBDrive: stress round \(round)", category: .general)
-            for section in [SidebarSection.charts, .yearInMusic, .wantlist, .listeningGuide, .albums] {
+            for section in [SidebarSection.charts, .yearInMusic, .wantlist, .albums] {
                 NotificationCenter.default.post(
                     name: .flaccyShowSection, object: nil,
                     userInfo: [SectionNotificationKey.section: section.rawValue]

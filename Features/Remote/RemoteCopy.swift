@@ -52,7 +52,7 @@ nonisolated enum RemoteCopy {
     }
 
     static var cacheFooter: String {
-        String(localized: "Songs you stream are kept here so they replay without the server. The least recently played go first once the limit is reached. Songs you download stay outside the limit.")
+        String(localized: "Streamed songs stay here for replay. Downloads don\u{2019}t count toward the limit.")
     }
 
     static func syncHeadline(for progress: RemoteSyncProgress) -> String {

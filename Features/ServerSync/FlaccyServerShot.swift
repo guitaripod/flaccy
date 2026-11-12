@@ -133,8 +133,8 @@ enum FlaccyServerShot {
         if scenario == "detail", let record = FlaccyServerLibrary.record() {
             container.pushViewController(FlaccyServerDetailViewController(record: record), animated: false)
             try? await Task.sleep(for: .seconds(2))
-        } else if let indexPath = settings.dataSource.indexPath(for: .serversExplainer) {
-            settings.tableView.scrollToRow(at: indexPath, at: .top, animated: false)
+        } else if let section = settings.dataSource.snapshot().indexOfSection(.servers) {
+            settings.tableView.scrollToRow(at: IndexPath(row: 0, section: section), at: .top, animated: false)
         }
     }
 

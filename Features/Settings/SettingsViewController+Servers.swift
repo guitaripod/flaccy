@@ -12,21 +12,11 @@ extension SettingsViewController {
     }
 
     func serverRows() -> [Row] {
-        [.serversExplainer] + serversModel.rows.map { Row.server($0) } + [.addFlaccyServer, .addServer]
+        serversModel.rows.map { Row.server($0) } + [.addFlaccyServer, .addServer]
     }
 
     func configureServerRow(_ row: Row, cell: UITableViewCell, content: inout UIListContentConfiguration) {
         switch row {
-        case .serversExplainer:
-            content = .cell()
-            content.text = RemoteCopy.explainer
-            content.textProperties.font = .preferredFont(forTextStyle: .footnote)
-            content.textProperties.color = .secondaryLabel
-            content.textProperties.numberOfLines = 0
-            cell.selectionStyle = .none
-            cell.accessibilityTraits = .staticText
-            cell.accessibilityIdentifier = "settings.row.serversExplainer"
-
         case .server(let server):
             content.image = RowIcon.image(systemName: "server.rack", tint: .systemIndigo)
             content.text = server.name

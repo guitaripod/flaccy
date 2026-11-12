@@ -14,7 +14,6 @@ extension SettingsViewController {
         case lastFM
         case recap
         case playback
-        case guide
         case watch
         case servers
         case serverCache
@@ -30,7 +29,6 @@ extension SettingsViewController {
             case .lastFM: return "Last.fm"
             case .recap: return String(localized: "Year in Music")
             case .playback: return String(localized: "Playback")
-            case .guide: return nil
             case .watch: return String(localized: "Apple Watch")
             case .servers: return String(localized: "Servers")
             case .serverCache: return String(localized: "Server Cache")
@@ -42,39 +40,13 @@ extension SettingsViewController {
 
         var footer: String? {
             switch self {
-            case .midgar: return nil
-            case .appearance: return String(localized: "System follows your device's light and dark setting.")
-            case .trial: return String(localized: "Three reminders at most: two days before your trial ends, on the last day, and once if a welcome-back price becomes available.")
+            case .trial: return String(localized: "Two reminders before your trial ends, and one if an offer opens.")
             case .lastFM: return nil
-            case .recap: return String(localized: "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story.")
-            case .playback: return Self.playbackFooter
-            case .guide: return String(localized: "How Bluetooth, AAC, and lossless files really affect what you hear.")
-            case .watch: return nil
-            case .servers: return nil
+            case .playback: return String(localized: "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.")
+            case .servers: return String(localized: "Stream from Flaccy Server, Navidrome or another Subsonic server.")
             case .serverCache: return RemoteCopy.cacheFooter
-            case .library: return Self.libraryFooter
-            case .setup: return LibraryDebutCopy.settingsCaveat
-            case .about: return nil
+            case .midgar, .appearance, .recap, .watch, .library, .setup, .about: return nil
             }
-        }
-
-        /// Names the one format caveat listeners actually hear, so a lossy album
-        /// that clicks between tracks reads as the file's doing rather than the
-        /// app quietly failing at the thing it advertises.
-        private static var playbackFooter: String {
-            let gapless = String(localized: "Gapless is always on. Consecutive album tracks play with no silence between them — no setting to turn on, nothing to configure.")
-            let formats = String(localized: "It is exact for lossless files: FLAC, ALAC, WAV, AIFF. MP3 and AAC store a fraction of a second of encoder padding inside every file, which iOS does not strip, so those albums can still click between tracks. Re-rip the album to FLAC and the seam disappears.")
-            let autoplay = String(localized: "Autoplay keeps a similar-music station going when the queue ends.")
-            return "\(gapless)\n\n\(formats)\n\n\(autoplay)"
-        }
-
-        /// One sentence per switch in the section, in the order the switches
-        /// appear.
-        private static var libraryFooter: String {
-            let editions = String(localized: "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song.")
-            let duplicates = String(localized: "Hide duplicate songs lists a song once when it sits on several albums, such as a single and the album it came from. Press and hold a song to see every copy.")
-            let appleMusic = String(localized: "Flaccy asks Apple Music for covers it can't find anywhere else. Turning this on asks for permission once.")
-            return "\(editions)\n\n\(duplicates)\n\n\(appleMusic)"
         }
     }
 
@@ -92,9 +64,7 @@ extension SettingsViewController {
         case autoplaySimilar
         case libraryRadio
         case crateDig
-        case listeningGuide
         case watchSync(syncedCount: Int, profile: WatchAudioProfile)
-        case serversExplainer
         case server(RemoteServerRow)
         case addFlaccyServer
         case addServer

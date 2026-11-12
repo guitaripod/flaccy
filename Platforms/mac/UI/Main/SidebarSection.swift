@@ -9,7 +9,6 @@ enum SidebarSection: Int, CaseIterable {
     case wantlist
     case charts
     case yearInMusic
-    case listeningGuide
 
     var title: String {
         switch self {
@@ -21,7 +20,6 @@ enum SidebarSection: Int, CaseIterable {
         case .wantlist: String(localized: "Wantlist")
         case .charts: String(localized: "Charts")
         case .yearInMusic: String(localized: "Year in Music")
-        case .listeningGuide: String(localized: "Listening Guide")
         }
     }
 
@@ -35,7 +33,6 @@ enum SidebarSection: Int, CaseIterable {
         case .wantlist: "sparkles.rectangle.stack"
         case .charts: "chart.bar.xaxis"
         case .yearInMusic: "calendar.badge.clock"
-        case .listeningGuide: "book"
         }
     }
 
@@ -43,7 +40,7 @@ enum SidebarSection: Int, CaseIterable {
         switch self {
         case .home: HomeCopy.home
         case .albums, .songs, .artists, .playlists: String(localized: "Library")
-        case .wantlist, .charts, .yearInMusic, .listeningGuide: String(localized: "Discover")
+        case .wantlist, .charts, .yearInMusic: String(localized: "Discover")
         }
     }
 }
@@ -62,7 +59,6 @@ extension SidebarSection {
         case .wantlist: "wantlist"
         case .charts: "charts"
         case .yearInMusic: "yearInMusic"
-        case .listeningGuide: "listeningGuide"
         }
     }
 

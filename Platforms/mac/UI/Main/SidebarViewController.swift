@@ -10,7 +10,7 @@ final class SidebarViewController: NSViewController {
     private let scrollView = NSScrollView()
     private let groups: [(title: String, sections: [SidebarSection])] = [
         (String(localized: "Library"), [.albums, .songs, .artists, .playlists]),
-        (String(localized: "Discover"), [.wantlist, .charts, .yearInMusic, .listeningGuide]),
+        (String(localized: "Discover"), [.wantlist, .charts, .yearInMusic]),
     ]
 
     override func loadView() {

@@ -159,14 +159,6 @@ extension SettingsViewController {
             cell.accessibilityLabel = String(localized: "Crate Dig")
             cell.accessibilityHint = String(localized: "Plays deep cuts from albums you already love")
 
-        case .listeningGuide:
-            content.image = RowIcon.image(systemName: "waveform", tint: .systemCyan)
-            content.text = String(localized: "Listening Guide")
-            cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Listening Guide")
-            cell.accessibilityHint = String(localized: "Explains how Bluetooth, AAC, and lossless audio affect what you hear")
-            cell.accessibilityIdentifier = "settings.row.listeningGuide"
-
         case .watchSync(let syncedCount, let profile):
             content.image = RowIcon.image(systemName: "applewatch", tint: .systemBlue)
             content.text = String(localized: "Sync Music to Watch")
@@ -265,7 +257,7 @@ extension SettingsViewController {
             cell.accessibilityLabel = String(localized: "Library")
             cell.accessibilityValue = content.secondaryText
 
-        case .serversExplainer, .server, .addFlaccyServer, .addServer, .cacheLimit, .cacheUsage, .clearCache:
+        case .server, .addFlaccyServer, .addServer, .cacheLimit, .cacheUsage, .clearCache:
             configureServerRow(row, cell: cell, content: &content)
 
         case .storage(let used):

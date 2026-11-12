@@ -23879,134 +23879,6 @@
         }
       }
     },
-    "AirPods Max (USB-C) support 24-bit/48 kHz lossless over a USB-C cable, added by a firmware update in March 2025.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods Max (USB‑C) unterstützen verlustfreies Audio mit 24 Bit/48 kHz über ein USB‑C-Kabel – ergänzt durch ein Firmware-Update im März 2025."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los AirPods Max (USB‑C) admiten audio lossless de 24 bits/48 kHz por cable USB‑C, añadido con una actualización de firmware en marzo de 2025."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les AirPods Max (USB‑C) prennent en charge le lossless 24 bits/48 kHz via un câble USB‑C, ajouté par une mise à jour du firmware en mars 2025."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gli AirPods Max (USB‑C) supportano il lossless a 24 bit/48 kHz via cavo USB‑C, aggiunto con un aggiornamento firmware a marzo 2025."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods Max（USB‑C）は、2025年3月のファームウェアアップデートで追加されたUSB‑Cケーブル経由の24ビット/48 kHzロスレスに対応しています。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods Max(USB‑C)는 2025년 3월 펌웨어 업데이트로 추가된 USB‑C 케이블 연결에서 24비트/48kHz 무손실을 지원합니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods Max (USB-C) obsługują bezstratny dźwięk 24-bitowy/48 kHz przez kabel USB-C dzięki aktualizacji oprogramowania z marca 2025."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Os AirPods Max (USB‑C) suportam lossless de 24 bits/48 kHz por cabo USB‑C, recurso adicionado por uma atualização de firmware em março de 2025."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods Max（USB‑C）通过 USB‑C 线缆支持 24 位/48 kHz 无损音频，这项能力由 2025 年 3 月的固件更新带来。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods Max（USB‑C）可透過 USB‑C 連接線支援 24 位元/48 kHz 無損音訊，這項功能由 2025 年 3 月的韌體更新帶來。"
-          }
-        }
-      }
-    },
-    "AirPods receive audio over Bluetooth using Apple's AAC codec at up to roughly 256 kbps. The rate is adaptive — it can drop when the wireless link degrades.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods empfangen Audio über Bluetooth mit Apples AAC-Codec bei bis zu rund 256 kbit/s. Die Rate ist adaptiv und kann sinken, wenn die Funkverbindung schwächer wird."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los AirPods reciben el audio por Bluetooth con el códec AAC de Apple, hasta unos 256 kbps. La tasa es adaptativa: puede bajar cuando el enlace inalámbrico se degrada."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les AirPods reçoivent l'audio en Bluetooth via le codec AAC d'Apple, à environ 256 kbit/s au maximum. Le débit est adaptatif : il peut chuter quand la liaison sans fil se dégrade."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gli AirPods ricevono l'audio via Bluetooth con il codec AAC di Apple, fino a circa 256 kbps. Il bitrate è adattivo e può calare quando la connessione wireless peggiora."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPodsはBluetooth経由でAppleのAACコーデックを使い、最大およそ256 kbpsで音声を受信します。ビットレートは可変で、無線状況が悪くなると下がることがあります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods는 Apple의 AAC 코덱으로 최대 약 256kbps에서 블루투스로 오디오를 받습니다. 비트레이트는 가변이라 무선 연결이 나빠지면 낮아질 수 있습니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods odbierają dźwięk przez Bluetooth za pomocą kodeka AAC firmy Apple z przepływnością do około 256 kbps. Przepływność jest zmienna — może spaść, gdy łącze bezprzewodowe się pogorszy."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Os AirPods recebem áudio por Bluetooth com o codec AAC da Apple, a cerca de 256 kbps no máximo. A taxa é adaptativa: pode cair quando o enlace sem fio piora."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods 通过蓝牙以 Apple 的 AAC 编解码接收音频，最高约 256 kbps。码率是自适应的，无线连接变差时会下降。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods 透過藍牙以 Apple 的 AAC 編碼接收音訊，最高約 256 kbps。位元率會自動調整，無線連線變差時就會下降。"
-          }
-        }
-      }
-    },
     "Album": {
       "localizations": {
         "de": {
@@ -26301,70 +26173,6 @@
         }
       }
     },
-    "Apple confirms Bluetooth connections aren't lossless. Playing a FLAC or ALAC file to AirPods delivers, at best, ~256 kbps AAC at your ear. AirPods Pro 3's spec sheet lists “No Lossless Audio”.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple bestätigt: Bluetooth-Verbindungen sind nicht verlustfrei. Eine FLAC- oder ALAC-Datei kommt über AirPods bestenfalls als AAC mit ~256 kbit/s an. Im Datenblatt der AirPods Pro 3 steht „No Lossless Audio“."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple lo confirma: las conexiones Bluetooth no son lossless. Un archivo FLAC o ALAC llega a tus AirPods como AAC de ~256 kbps, en el mejor de los casos. La ficha técnica de los AirPods Pro 3 indica “No Lossless Audio”."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple le confirme : les connexions Bluetooth ne sont pas lossless. Un fichier FLAC ou ALAC arrive au mieux en AAC ~256 kbit/s dans vos AirPods. La fiche technique des AirPods Pro 3 indique « No Lossless Audio »."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple lo conferma: le connessioni Bluetooth non sono lossless. Un file FLAC o ALAC arriva agli AirPods al massimo come AAC a ~256 kbps. La scheda tecnica degli AirPods Pro 3 riporta “No Lossless Audio”."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AppleもBluetooth接続はロスレスではないと明言しています。FLACやALACのファイルでも、AirPodsに届くのはよくても約256 kbpsのAACです。AirPods Pro 3の仕様には「No Lossless Audio」と記載されています。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple도 블루투스 연결은 무손실이 아니라고 밝힙니다. FLAC이나 ALAC 파일도 AirPods까지는 잘해야 약 256kbps AAC로 전달됩니다. AirPods Pro 3 사양에는 “No Lossless Audio”라고 적혀 있습니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple potwierdza, że połączenia Bluetooth nie są bezstratne. Odtwarzanie pliku FLAC lub ALAC na AirPods daje w najlepszym razie ~256 kbps AAC w twoim uchu. Karta danych AirPods Pro 3 wprost podaje „Brak dźwięku bezstratnego”."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A Apple confirma: conexões Bluetooth não são lossless. Um arquivo FLAC ou ALAC chega aos AirPods, na melhor das hipóteses, como AAC de ~256 kbps. A ficha técnica dos AirPods Pro 3 traz “No Lossless Audio”."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple 已确认：蓝牙连接不是无损。FLAC 或 ALAC 文件传到 AirPods，最好也只是约 256 kbps 的 AAC。AirPods Pro 3 的规格表写着“No Lossless Audio”。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple 已確認：藍牙連線並非無損。將 FLAC 或 ALAC 檔案播放到 AirPods，傳到你耳裡的最多也只有約 256 kbps 的 AAC。AirPods Pro 3 的規格表上寫著「No Lossless Audio」。"
-          }
-        }
-      }
-    },
     "Artist": {
       "localizations": {
         "de": {
@@ -26901,70 +26709,6 @@
         }
       }
     },
-    "Audio Quality": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Audioqualität"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calidad de audio"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qualité audio"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qualità audio"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "オーディオ品質"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오디오 품질"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jakość dźwięku"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qualidade de áudio"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音频质量"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音訊品質"
-          }
-        }
-      }
-    },
     "Audio quality": {
       "localizations": {
         "de": {
@@ -27415,70 +27159,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動播放相似音樂"
-          }
-        }
-      }
-    },
-    "Autoplay keeps a similar-music station going when the queue ends.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Autoplay hält am Ende der Warteschlange einen Sender mit ähnlicher Musik am Laufen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La reproducción automática mantiene una emisora de música similar cuando la cola termina."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La lecture auto lance une radio de musique similaire quand la file se termine."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La riproduzione automatica avvia una stazione di musica simile quando la coda finisce."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動再生はキューが尽きたときに似た曲のステーションを続けます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동 재생은 대기열이 끝나면 비슷한 음악 스테이션을 이어 갑니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Autoodtwarzanie utrzymuje podobną stację muzyczną, gdy kolejka się skończy."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A reprodução automática mantém uma estação de música parecida quando a fila acaba."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自动播放会在队列结束时接上一个相似音乐电台。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動播放則會在待播清單結束時，接上一個相似音樂電台。"
           }
         }
       }
@@ -28385,70 +28065,6 @@
         }
       }
     },
-    "Bluetooth & AAC": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth & AAC"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth y AAC"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth et AAC"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth e AAC"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BluetoothとAAC"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "블루투스와 AAC"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth i AAC"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth e AAC"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "蓝牙与 AAC"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "藍牙與 AAC"
-          }
-        }
-      }
-    },
     "Bring All to Front": {
       "localizations": {
         "de": {
@@ -29021,70 +28637,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在計算…"
-          }
-        }
-      }
-    },
-    "Can you hear the difference?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hörst du den Unterschied?"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Notas la diferencia?"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entendez-vous la différence ?"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senti la differenza?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "違いが聴き分けられますか？"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "차이가 들리시나요?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Słyszysz różnicę?"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Você ouve a diferença?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你能听出差别吗？"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你聽得出差別嗎？"
           }
         }
       }
@@ -32821,70 +32373,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "收合播放器"
-          }
-        }
-      }
-    },
-    "Collapses “Album”, “Album (Deluxe)” and “Album (Remastered)” into one card and keeps a single best-quality copy of each shared song so Albums and Songs stay free of near-duplicates.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fasst „Album“, „Album (Deluxe)“ und „Album (Remastered)“ zu einer Karte zusammen und behält von jedem geteilten Titel nur die beste Kopie, damit Alben und Titel frei von Beinahe-Duplikaten bleiben."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupa “Álbum”, “Álbum (Deluxe)” y “Álbum (Remastered)” en una sola ficha y conserva una única copia con la mejor calidad de cada canción compartida, para que Álbumes y Canciones queden sin casi duplicados."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Regroupe « Album », « Album (Deluxe) » et « Album (Remastered) » en une seule fiche et ne garde que la meilleure copie de chaque morceau commun, pour que Albums et Morceaux restent sans quasi-doublons."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Riunisce “Album”, “Album (Deluxe)” e “Album (Remastered)” in un'unica card e tiene una sola copia con la qualità migliore di ogni brano in comune, così Album e Brani restano senza quasi-duplicati."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「Album」「Album (Deluxe)」「Album (Remastered)」を1枚のカードにまとめ、共通する曲は最高音質の1本だけを残します。アルバムと曲がほぼ重複でごちゃつきません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Album”, “Album (Deluxe)”, “Album (Remastered)”를 하나의 카드로 묶고 공통된 곡은 최고 음질 사본 하나만 남겨, 앨범과 곡 목록이 유사 중복 없이 깔끔하게 유지됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Łączy „Album”, „Album (Deluxe)” i „Album (Remastered)” w jedną kartę i zachowuje jedną kopię każdego wspólnego utworu w najwyższej jakości, dzięki czemu Albumy i Utwory nie zawierają niemal identycznych duplikatów."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Junta “Álbum”, “Álbum (Deluxe)” e “Álbum (Remastered)” em um só card e mantém uma única cópia com a melhor qualidade de cada música em comum, para que Álbuns e Músicas fiquem sem quase-duplicatas."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把“Album”“Album (Deluxe)”和“Album (Remastered)”合并成一张卡片，共同的歌曲只保留音质最好的一份，让专辑和歌曲不再有近似重复项。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把「Album」、「Album (Deluxe)」和「Album (Remastered)」合併成一張卡片，共同的歌曲只保留音質最好的一份，讓專輯和歌曲不再出現近似重複的項目。"
           }
         }
       }
@@ -47970,70 +47458,6 @@
         }
       }
     },
-    "Exceptions": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausnahmen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Excepciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exceptions"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eccezioni"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "例外"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예외"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyjątki"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exceções"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "例外情况"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "例外"
-          }
-        }
-      }
-    },
     "Expands the artist biography": {
       "localizations": {
         "de": {
@@ -48222,70 +47646,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "解釋歌詞要用到 Flaccy 的 AI，它包含在 Flaccy 永久版中。"
-          }
-        }
-      }
-    },
-    "Explains how Bluetooth, AAC, and lossless audio affect what you hear": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erklärt, wie Bluetooth, AAC und verlustfreies Audio dein Hörerlebnis beeinflussen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Explica cómo el Bluetooth, el AAC y el audio lossless afectan a lo que oyes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Explique comment le Bluetooth, l'AAC et le lossless influencent ce que vous entendez"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spiega come Bluetooth, AAC e audio lossless influiscono su ciò che senti"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth、AAC、ロスレスが聴こえ方にどう影響するかを解説します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "블루투스, AAC, 무손실 오디오가 소리에 어떤 영향을 주는지 설명합니다"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyjaśnia, jak Bluetooth, AAC i dźwięk bezstratny wpływają na to, co słyszysz"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Explica como Bluetooth, AAC e áudio lossless afetam o que você ouve"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "说明蓝牙、AAC 和无损音频如何影响你听到的声音"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "說明藍牙、AAC 與無損音訊如何影響你聽到的聲音"
           }
         }
       }
@@ -48798,70 +48158,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "FLAC 專輯一曲接一曲，中間沒有一秒空白。"
-          }
-        }
-      }
-    },
-    "FLAC, ALAC, WAV and AIFF albums are gapless with no caveat.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alben in FLAC, ALAC, WAV und AIFF laufen lückenlos – ohne Einschränkung."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los álbumes FLAC, ALAC, WAV y AIFF se reproducen sin pausas, sin ninguna salvedad."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les albums FLAC, ALAC, WAV et AIFF s'enchaînent sans blanc, sans aucune réserve."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gli album FLAC, ALAC, WAV e AIFF sono senza pause, senza alcuna riserva."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLAC、ALAC、WAV、AIFFのアルバムは、例外なくギャップレスで再生されます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLAC, ALAC, WAV, AIFF 앨범은 예외 없이 갭리스로 재생됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Albumy FLAC, ALAC, WAV i AIFF odtwarzane są bez przerw i bez żadnych zastrzeżeń."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Álbuns em FLAC, ALAC, WAV e AIFF tocam sem pausas, sem ressalvas."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLAC、ALAC、WAV 和 AIFF 专辑可无缝播放，没有任何例外。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLAC、ALAC、WAV 和 AIFF 專輯可無縫播放，沒有任何例外。"
           }
         }
       }
@@ -51631,70 +50927,6 @@
         }
       }
     },
-    "Flaccy and Last.fm share one listening history. Every scrobble on your account, from Flaccy or any other app or device, flows into Stats, play counts and Most Played, and keeps flowing on its own.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy und Last.fm teilen sich einen Hörverlauf. Jeder Scrobble deines Kontos, ob von Flaccy oder einer anderen App oder einem anderen Gerät, fließt in Statistiken, Wiedergabezähler und Meistgespielt ein – und das ganz von selbst."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy y Last.fm comparten un único historial de escucha. Cada scrobble de tu cuenta, de Flaccy o de cualquier otra app o dispositivo, llega a las estadísticas, los contadores de reproducciones y lo más escuchado, y sigue llegando solo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy et Last.fm partagent un seul historique d'écoute. Chaque scrobble de votre compte, venu de Flaccy ou de toute autre app ou appareil, alimente les statistiques, les compteurs de lectures et les plus écoutés, et continue de le faire tout seul."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy e Last.fm condividono un'unica cronologia di ascolto. Ogni scrobble del tuo account, da Flaccy o da qualsiasi altra app o dispositivo, confluisce in statistiche, conteggi delle riproduzioni e più ascoltati, e continua a farlo da solo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FlaccyとLast.fmは1つの再生履歴を共有します。Flaccyや他のアプリ・デバイスからのアカウント上のすべてのスクロブルが、統計、再生回数、よく聴く曲に反映され、自動的に更新され続けます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy와 Last.fm은 하나의 감상 기록을 공유합니다. Flaccy나 다른 앱·기기에서 계정에 기록된 모든 스크로블이 통계, 재생 횟수, 가장 많이 재생한 항목에 반영되며 자동으로 계속 업데이트됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy i Last.fm mają jedną wspólną historię odsłuchań. Każdy scrobble na Twoim koncie, z Flaccy lub z innej aplikacji czy urządzenia, trafia do statystyk, liczników odtworzeń i najczęściej odtwarzanych i napływa dalej samoczynnie."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Flaccy e o Last.fm compartilham um único histórico de reprodução. Cada scrobble da sua conta, do Flaccy ou de qualquer outro app ou dispositivo, chega às estatísticas, às contagens de reproduções e aos mais tocados, e continua chegando sozinho."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy 和 Last.fm 共用同一份收听记录。你账户上的每一条 Scrobble，无论来自 Flaccy 还是其他应用或设备，都会汇入统计、播放次数和最常播放，并持续自动更新。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy 和 Last.fm 共用同一份收聽記錄。你帳號上的每一筆 Scrobble，無論來自 Flaccy 或其他 App 或裝置，都會匯入統計、播放次數和最常播放，並持續自動更新。"
-          }
-        }
-      }
-    },
     "Flaccy asks Apple Music for covers it can't find anywhere else. Turning this on asks for permission once.": {
       "localizations": {
         "de": {
@@ -53499,6 +52731,70 @@
         }
       }
     },
+    "Folds Deluxe, Remaster and Explicit editions into one album.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fasst Deluxe-, Remaster- und Explicit-Editionen zu einem Album zusammen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funde las ediciones Deluxe, Remaster y Explicit en un solo álbum."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fond les éditions Deluxe, Remaster et Explicit en un seul album."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fonde le edizioni Deluxe, Remaster ed Explicit in un solo album."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deluxe版・Remaster版・Explicit版を1つのアルバムにまとめます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "디럭스, 리마스터, 익스플리싯 에디션을 하나의 앨범으로 합칩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Łączy edycje Deluxe, Remaster i Explicit w jeden album."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Junta as edições Deluxe, Remaster e Explicit em um só álbum."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把豪华版、重制版和显式版合成一张专辑。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把豪華版、重製版與 Explicit 版合成一張專輯。"
+          }
+        }
+      }
+    },
     "Folds deluxe, remaster, and explicit variants into one album": {
       "localizations": {
         "de": {
@@ -53623,134 +52919,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "字體"
-          }
-        }
-      }
-    },
-    "For true lossless on iPad, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für echtes verlustfreies Audio am iPad gehst du kabelgebunden: Der Apple-Kopfhöreradapter liefert bis zu 24 Bit/48 kHz, ein externer USB‑C-DAC schaltet Hi-Res bis 24 Bit/192 kHz frei. FLAC glänzt auch an der Anlage oder am Schreibtisch, wo der DAC per Kabel hängt."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para lossless de verdad en el iPad, ve por cable: el adaptador de auriculares de Apple llega a 24 bits/48 kHz, y un DAC USB‑C externo desbloquea hi-res hasta 24 bits/192 kHz. El FLAC también brilla en un equipo de casa o de escritorio con el DAC conectado por cable."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pour du vrai lossless sur iPad, passez au filaire : l'adaptateur casque Apple délivre jusqu'à 24 bits/48 kHz, et un DAC USB‑C externe débloque le hi-res jusqu'à 24 bits/192 kHz. Le FLAC brille aussi sur une chaîne ou un bureau où le DAC est câblé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Per un lossless vero su iPad serve il cavo: l'adattatore per cuffie Apple arriva a 24 bit/48 kHz e un DAC USB‑C esterno sblocca l'hi-res fino a 24 bit/192 kHz. Il FLAC brilla anche su un impianto o su una scrivania, dove il DAC è collegato via cavo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iPadで本当のロスレスを聴くなら有線です。Appleのヘッドフォンアダプタは24ビット/48 kHzまで、外付けUSB‑C DACなら24ビット/192 kHzのハイレゾロスレスまで再生できます。DACを有線でつなぐ据え置き環境やデスク環境でもFLACは真価を発揮します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iPad에서 진짜 무손실을 들으려면 유선이 답입니다. Apple 헤드폰 어댑터는 24비트/48kHz까지, 외장 USB‑C DAC은 24비트/192kHz 하이레스 무손실까지 지원합니다. DAC을 유선으로 연결한 홈 오디오나 데스크 환경에서도 FLAC이 빛을 발합니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dla prawdziwego bezstratnego dźwięku na iPadzie wybierz kabel: adapter słuchawkowy Apple dostarcza do 24-bitowego/48 kHz, a zewnętrzny DAC USB-C odblokowuje bezstratny dźwięk hi-res do 24-bitowego/192 kHz. FLAC błyszczy też na domowym zestawie lub komputerze z podłączonym DAC-iem."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para lossless de verdade no iPad, vá de cabo: o adaptador de fones da Apple entrega até 24 bits/48 kHz, e um DAC USB‑C externo libera hi-res de até 24 bits/192 kHz. O FLAC também brilha num sistema de casa ou de mesa, com o DAC ligado por cabo."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "想在 iPad 上听到真正的无损，就走有线：Apple 耳机转接头最高支持 24 位/48 kHz，外接 USB‑C 解码器可解锁最高 24 位/192 kHz 的高解析度无损。在解码器有线连接的家用或桌面系统上，FLAC 同样出色。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "想在 iPad 上聽到真正的無損，就走有線：Apple 耳機轉接器最高支援 24 位元/48 kHz，外接 USB‑C DAC 則能解鎖最高 24 位元/192 kHz 的高解析度無損。在 DAC 以有線連接的家用或桌上型系統上，FLAC 同樣出色。"
-          }
-        }
-      }
-    },
-    "For true lossless on iPhone, go wired: the Apple headphone adapter delivers up to 24-bit/48 kHz, and an external USB-C DAC unlocks hi-res lossless up to 24-bit/192 kHz. FLAC also shines on a home rig or desktop where the DAC is wired.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für echtes verlustfreies Audio am iPhone gehst du kabelgebunden: Der Apple-Kopfhöreradapter liefert bis zu 24 Bit/48 kHz, ein externer USB‑C-DAC schaltet Hi-Res bis 24 Bit/192 kHz frei. FLAC glänzt auch an der Anlage oder am Schreibtisch, wo der DAC per Kabel hängt."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para lossless de verdad en el iPhone, ve por cable: el adaptador de auriculares de Apple llega a 24 bits/48 kHz, y un DAC USB‑C externo desbloquea hi-res hasta 24 bits/192 kHz. El FLAC también brilla en un equipo de casa o de escritorio con el DAC conectado por cable."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pour du vrai lossless sur iPhone, passez au filaire : l'adaptateur casque Apple délivre jusqu'à 24 bits/48 kHz, et un DAC USB‑C externe débloque le hi-res jusqu'à 24 bits/192 kHz. Le FLAC brille aussi sur une chaîne ou un bureau où le DAC est câblé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Per un lossless vero su iPhone serve il cavo: l'adattatore per cuffie Apple arriva a 24 bit/48 kHz e un DAC USB‑C esterno sblocca l'hi-res fino a 24 bit/192 kHz. Il FLAC brilla anche su un impianto o su una scrivania, dove il DAC è collegato via cavo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iPhoneで本当のロスレスを聴くなら有線です。Appleのヘッドフォンアダプタは24ビット/48 kHzまで、外付けUSB‑C DACなら24ビット/192 kHzのハイレゾロスレスまで再生できます。DACを有線でつなぐ据え置き環境やデスク環境でもFLACは真価を発揮します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iPhone에서 진짜 무손실을 들으려면 유선이 답입니다. Apple 헤드폰 어댑터는 24비트/48kHz까지, 외장 USB‑C DAC은 24비트/192kHz 하이레스 무손실까지 지원합니다. DAC을 유선으로 연결한 홈 오디오나 데스크 환경에서도 FLAC이 빛을 발합니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dla prawdziwego bezstratnego dźwięku na iPhonie wybierz kabel: adapter słuchawkowy Apple dostarcza do 24-bitowego/48 kHz, a zewnętrzny DAC USB-C odblokowuje bezstratny dźwięk hi-res do 24-bitowego/192 kHz. FLAC błyszczy też na domowym zestawie lub komputerze z podłączonym DAC-iem."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para lossless de verdade no iPhone, vá de cabo: o adaptador de fones da Apple entrega até 24 bits/48 kHz, e um DAC USB‑C externo libera hi-res de até 24 bits/192 kHz. O FLAC também brilha num sistema de casa ou de mesa, com o DAC ligado por cabo."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "想在 iPhone 上听到真正的无损，就走有线：Apple 耳机转接头最高支持 24 位/48 kHz，外接 USB‑C 解码器可解锁最高 24 位/192 kHz 的高解析度无损。在解码器有线连接的家用或桌面系统上，FLAC 同样出色。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "想在 iPhone 上聽到真正的無損，就走有線：Apple 耳機轉接器最高支援 24 位元/48 kHz，外接 USB‑C DAC 則能解鎖最高 24 位元/192 kHz 的高解析度無損。在 DAC 以有線連接的家用或桌上型系統上，FLAC 同樣出色。"
           }
         }
       }
@@ -54913,130 +54081,66 @@
         }
       }
     },
-    "Gapless is always on in Flaccy — the next track is decoded and waiting before the current one ends, so a continuous album runs as one piece. What you hear at the seam depends on the file. Lossless formats store exactly the samples the master had, so there is nothing between tracks to remove. MP3 and AAC encode in fixed blocks and pad every file with a fraction of a second of silence at each end; that padding lives inside the file, and iOS does not strip it on playback.": {
+    "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lückenlose Wiedergabe ist in Flaccy immer aktiv – der nächste Titel ist bereits dekodiert und wartet, bevor der aktuelle endet, sodass ein durchgehendes Album wie aus einem Guss läuft. Was du an der Nahtstelle hörst, hängt von der Datei ab. Verlustfreie Formate speichern genau die Samples des Masters, also gibt es zwischen den Titeln nichts zu entfernen. MP3 und AAC kodieren in festen Blöcken und füllen jede Datei an beiden Enden mit einem Bruchteil einer Sekunde Stille auf; dieses Padding steckt in der Datei, und iOS entfernt es bei der Wiedergabe nicht."
+            "value": "Lückenlos ist bei verlustfreien Dateien exakt. MP3- und AAC-Dateien können winzige Encoder-Lücken behalten."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La reproducción sin pausas está siempre activa en Flaccy: la pista siguiente ya está decodificada y esperando antes de que termine la actual, así que un álbum continuo suena como una sola pieza. Lo que oyes en la unión depende del archivo. Los formatos lossless guardan exactamente las muestras del máster, así que entre pistas no hay nada que eliminar. MP3 y AAC codifican en bloques fijos y rellenan cada archivo con una fracción de segundo de silencio en cada extremo; ese relleno vive dentro del archivo y iOS no lo elimina al reproducir."
+            "value": "La reproducción sin pausas es exacta con archivos sin pérdida. Los MP3 y AAC pueden conservar pequeñas pausas del codificador."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La lecture sans blanc est toujours active dans Flaccy : le morceau suivant est déjà décodé et attend avant la fin du morceau en cours, si bien qu'un album continu se déroule d'une seule pièce. Ce que vous entendez à la jonction dépend du fichier. Les formats lossless conservent exactement les échantillons du master, il n'y a donc rien à retirer entre les morceaux. Le MP3 et l'AAC encodent par blocs de taille fixe et ajoutent à chaque extrémité de chaque fichier une fraction de seconde de silence ; ce remplissage est inclus dans le fichier, et iOS ne le supprime pas à la lecture."
+            "value": "La lecture sans blanc est exacte avec les fichiers sans perte. Les MP3 et AAC peuvent garder de minuscules blancs d'encodage."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La riproduzione senza pause è sempre attiva in Flaccy: il brano successivo è già decodificato e in attesa prima che finisca quello in corso, così un album continuo scorre come un unico pezzo. Ciò che senti nel punto di giunzione dipende dal file. I formati lossless conservano esattamente i campioni del master, quindi tra un brano e l'altro non c'è nulla da rimuovere. MP3 e AAC codificano a blocchi fissi e aggiungono a ogni file una frazione di secondo di silenzio a ciascuna estremità; quel padding sta dentro il file e iOS non lo elimina durante la riproduzione."
+            "value": "La riproduzione senza pause è esatta con i file lossless. I file MP3 e AAC possono conservare piccole pause dell'encoder."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccyではギャップレス再生は常にオンです。現在の曲が終わる前に次の曲がデコードされて待機しているため、続けて収録されたアルバムは一つの作品としてつながります。つなぎ目で聞こえる音はファイルによって変わります。ロスレス形式はマスターのサンプルをそのまま保存しているので、曲間に取り除くべきものはありません。MP3とAACは固定長のブロックでエンコードされ、すべてのファイルの両端に1秒未満の無音が加えられます。このパディングはファイル内部にあり、iOSは再生時に取り除きません。"
+            "value": "ギャップレスはロスレスファイルで正確に動作します。MP3やAACにはエンコーダー由来のわずかな無音が残ることがあります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flaccy에서 갭리스 재생은 항상 켜져 있습니다. 현재 곡이 끝나기 전에 다음 곡이 이미 디코딩되어 대기하므로, 이어지는 앨범이 하나의 작품처럼 흘러갑니다. 이음매에서 들리는 소리는 파일에 따라 달라집니다. 무손실 형식은 마스터의 샘플을 그대로 저장하므로 곡 사이에 제거할 것이 없습니다. MP3와 AAC는 고정 크기 블록으로 인코딩되며 모든 파일의 양쪽 끝에 1초 미만의 무음을 덧붙입니다. 이 패딩은 파일 안에 들어 있고, iOS는 재생할 때 이를 제거하지 않습니다."
+            "value": "갭리스는 무손실 파일에서 정확합니다. MP3와 AAC 파일에는 인코더가 남긴 아주 짧은 공백이 있을 수 있습니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "W Flaccy odtwarzanie bez przerw jest zawsze włączone — następny utwór jest już zdekodowany i czeka, zanim skończy się bieżący, więc ciągły album płynie jak jedna całość. To, co słychać na styku, zależy od pliku. Formaty bezstratne przechowują dokładnie te próbki, które miał master, więc między utworami nie ma niczego do usunięcia. MP3 i AAC kodują w blokach o stałym rozmiarze i dodają na obu końcach każdego pliku ułamek sekundy ciszy; to wypełnienie jest częścią pliku, a iOS nie usuwa go podczas odtwarzania."
+            "value": "Odtwarzanie bez przerw jest dokładne dla plików bezstratnych. Pliki MP3 i AAC mogą zachować drobne przerwy z kodera."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A reprodução sem pausas está sempre ativa no Flaccy — a próxima faixa já está decodificada e esperando antes de a atual terminar, então um álbum contínuo toca como uma peça só. O que você ouve na emenda depende do arquivo. Formatos lossless guardam exatamente as amostras do master, então não há nada a remover entre as faixas. MP3 e AAC codificam em blocos fixos e preenchem cada arquivo com uma fração de segundo de silêncio em cada ponta; esse preenchimento fica dentro do arquivo, e o iOS não o remove na reprodução."
+            "value": "A reprodução sem pausas é exata em arquivos sem perdas. Arquivos MP3 e AAC podem manter pequenas pausas do codificador."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在 Flaccy 中，无缝播放始终开启——当前曲目结束之前，下一首已经解码完毕、随时待命，所以连续的专辑会像一个整体一样播放。衔接处听到什么，取决于文件本身。无损格式完整保存了母带的采样，曲目之间没有任何需要去除的东西。MP3 和 AAC 按固定块编码，并在每个文件两端补上不到一秒的静音；这段填充就在文件内部，iOS 播放时不会将其去除。"
+            "value": "无损文件可实现精确无缝播放。MP3 和 AAC 文件可能保留编码器留下的细微间隙。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在 Flaccy 中，無縫播放一律開啟——目前曲目結束之前，下一首已經解碼完畢、隨時待命，所以連續的專輯會像一個整體一樣播放。銜接處聽到什麼，取決於檔案本身。無損格式完整保存了母帶的取樣，曲目之間沒有任何需要移除的東西。MP3 和 AAC 以固定區塊編碼，並在每個檔案兩端補上不到一秒的靜音；這段填充就在檔案內部，iOS 播放時不會將其移除。"
-          }
-        }
-      }
-    },
-    "Gapless is always on. Consecutive album tracks play with no silence between them — no setting to turn on, nothing to configure.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lückenlose Wiedergabe ist immer aktiv. Aufeinanderfolgende Albumtitel spielen ohne Stille dazwischen – keine Einstellung zum Einschalten, nichts zu konfigurieren."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La reproducción sin pausas está siempre activa. Las pistas consecutivas de un álbum suenan sin silencio entre ellas: no hay ningún ajuste que activar ni nada que configurar."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La lecture sans blanc est toujours active. Les morceaux consécutifs d'un album s'enchaînent sans silence entre eux : aucun réglage à activer, rien à configurer."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La riproduzione senza pause è sempre attiva. I brani consecutivi di un album suonano senza silenzio tra l'uno e l'altro: nessuna impostazione da attivare, niente da configurare."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ギャップレス再生は常にオンです。アルバムの連続する曲は曲間の無音なしで再生されます。オンにする設定も、調整する項目もありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "갭리스 재생은 항상 켜져 있습니다. 앨범의 연속된 트랙은 사이에 정적 없이 재생되며, 켜야 할 설정도 따로 구성할 것도 없습니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odtwarzanie bez przerw jest zawsze włączone. Kolejne utwory albumu grają bez ciszy między nimi — nie trzeba niczego włączać ani konfigurować."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A reprodução sem pausas está sempre ativa. As faixas consecutivas de um álbum tocam sem silêncio entre elas — não há nenhuma configuração para ligar nem nada para ajustar."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无缝播放始终开启。专辑中连续的曲目之间没有静音——无需开启任何设置，也无需任何配置。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無縫播放一律開啟。專輯中連續的曲目之間沒有空白——無需開啟任何設定，也無需任何調整。"
+            "value": "無損檔案可做到精確的無縫播放。MP3 與 AAC 檔案可能保留編碼器留下的細微間隙。"
           }
         }
       }
@@ -55165,70 +54269,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "無縫播放一律開啟——FLAC 專輯一曲接一曲，中間沒有一秒空白。"
-          }
-        }
-      }
-    },
-    "Gapless playback is always on — lossless albums flow track to track with zero silence.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lückenlose Wiedergabe ist immer aktiv – verlustfreie Alben laufen ohne Stille von Titel zu Titel."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La reproducción sin pausas está siempre activa: los álbumes lossless fluyen de pista a pista sin silencios."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La lecture sans blanc est toujours active — les albums lossless s'enchaînent sans une seconde de silence."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La riproduzione senza pause è sempre attiva: gli album lossless scorrono da un brano all'altro senza silenzi."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ギャップレス再生は常にオン — ロスレスのアルバムは無音を挟まず曲から曲へ流れます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "갭리스 재생은 항상 켜져 있습니다 — 무손실 앨범은 정적 없이 곡에서 곡으로 이어집니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odtwarzanie bez przerw jest zawsze włączone — albumy bezstratne płyną z utworu na utwór bez cienia ciszy."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A reprodução sem pausas está sempre ativa — álbuns lossless fluem de faixa em faixa sem um segundo de silêncio."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无缝播放始终开启——无损专辑一曲接一曲，中间没有一秒静音。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無縫播放一律開啟——無損專輯一曲接一曲，中間沒有一秒空白。"
           }
         }
       }
@@ -56647,70 +55687,6 @@
         }
       }
     },
-    "Group editions folds Deluxe, Remaster, and Explicit variants into one album and keeps a single best copy of each song.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„Editionen gruppieren“ fasst Deluxe-, Remaster- und Explicit-Varianten zu einem Album zusammen und behält von jedem Titel die beste Kopie."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupar ediciones funde las variantes Deluxe, Remaster y Explicit en un solo álbum y conserva la mejor copia de cada canción."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le regroupement des éditions fond les variantes Deluxe, Remaster et Explicit en un seul album et ne garde que la meilleure copie de chaque morceau."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il raggruppamento delle edizioni fonde le varianti Deluxe, Remaster ed Explicit in un solo album e tiene la copia migliore di ogni brano."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エディションをまとめると、Deluxe版・Remaster版・Explicit版が1つのアルバムになり、各曲は最良のコピーだけが残ります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "에디션 묶기는 디럭스, 리마스터, 익스플리싯 버전을 하나의 앨범으로 합치고 각 곡의 최상급 사본만 남깁니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grupowanie edycji łączy warianty Deluxe, Remaster i Explicit w jeden album i zachowuje jedną, najlepszą kopię każdego utworu."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupar edições funde as versões Deluxe, Remaster e Explicit em um só álbum e mantém a melhor cópia de cada música."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "合并版本会把豪华版、重制版和显式版合成一张专辑，每首歌只保留最佳的一份。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "合併版本會把豪華版、重製版與 Explicit 版合成一張專輯，每首歌只保留最好的一份。"
-          }
-        }
-      }
-    },
     "Grouping tracks into albums and artists": {
       "localizations": {
         "de": {
@@ -56835,70 +55811,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在把曲目歸入專輯和演出者。"
-          }
-        }
-      }
-    },
-    "H2-chip AirPods get lossless wirelessly only with Apple Vision Pro, over a proprietary 5 GHz link — not standard Bluetooth.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods mit H2-Chip bekommen verlustfreies Audio drahtlos nur mit Apple Vision Pro über eine proprietäre 5-GHz-Verbindung – nicht über normales Bluetooth."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los AirPods con chip H2 reciben lossless por vía inalámbrica solo con el Apple Vision Pro, mediante un enlace propietario de 5 GHz, no por Bluetooth estándar."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les AirPods à puce H2 reçoivent le lossless sans fil uniquement avec l'Apple Vision Pro, via une liaison propriétaire 5 GHz — pas en Bluetooth standard."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gli AirPods con chip H2 ricevono il lossless senza fili solo con Apple Vision Pro, tramite un collegamento proprietario a 5 GHz, non con il Bluetooth standard."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "H2チップ搭載のAirPodsがワイヤレスでロスレスを受け取れるのはApple Vision Proと組み合わせたときだけで、独自の5 GHzリンクを使います。標準のBluetoothではありません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "H2 칩이 들어간 AirPods가 무선으로 무손실을 받는 경우는 Apple Vision Pro와 함께 쓸 때뿐이며, 표준 블루투스가 아니라 독자 5GHz 연결을 사용합니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods z chipem H2 uzyskują dźwięk bezstratny bezprzewodowo tylko z Apple Vision Pro, przez zastrzeżone łącze 5 GHz — nie standardowy Bluetooth."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods com chip H2 só recebem lossless sem fio com o Apple Vision Pro, por um enlace proprietário de 5 GHz — não pelo Bluetooth padrão."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搭载 H2 芯片的 AirPods 只有配合 Apple Vision Pro 才能无线获得无损，走的是专有的 5 GHz 连接，而不是标准蓝牙。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搭載 H2 晶片的 AirPods 只有搭配 Apple Vision Pro 才能無線取得無損，走的是專屬的 5 GHz 連線，而不是標準藍牙。"
           }
         }
       }
@@ -57819,76 +56731,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "隱藏重複歌曲"
-          }
-        }
-      }
-    },
-    "Hide duplicate songs lists a song once when it sits on several albums, such as a single and the album it came from. Press and hold a song to see every copy.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Doppelte Songs ausblenden zeigt einen Song nur einmal, wenn er auf mehreren Alben steht, zum Beispiel auf einer Single und dem Album, von dem sie stammt. Halte einen Song gedrückt, um alle Kopien zu sehen."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hide duplicate songs lists a song once when it sits on several albums, such as a single and the album it came from. Press and hold a song to see every copy."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar canciones duplicadas muestra una canción una sola vez cuando aparece en varios álbumes, como un single y el álbum del que procede. Mantén pulsada una canción para ver todas sus copias."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Masquer les morceaux en double n'affiche un morceau qu'une fois lorsqu'il figure sur plusieurs albums, comme un single et l'album d'origine. Maintiens un morceau appuyé pour voir chaque copie."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nascondi brani duplicati mostra un brano una sola volta quando è presente in più album, ad esempio un singolo e l'album da cui proviene. Tieni premuto un brano per vedere tutte le copie."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重複した曲を非表示にすると、シングルと元のアルバムのように複数のアルバムに入っている曲は1回だけ表示されます。曲を長押しするとすべてのコピーを確認できます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "중복 곡 숨기기를 켜면 싱글과 원본 앨범처럼 여러 앨범에 들어 있는 곡을 한 번만 표시합니다. 곡을 길게 눌러 모든 복사본을 확인하세요."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ukryj zduplikowane utwory wyświetla utwór tylko raz, gdy znajduje się na kilku albumach, na przykład na singlu i albumie, z którego pochodzi. Przytrzymaj utwór, aby zobaczyć wszystkie kopie."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocultar músicas duplicadas lista uma música uma vez quando ela aparece em vários álbuns, como um single e o álbum de onde saiu. Mantenha uma música pressionada para ver todas as cópias."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“隐藏重复歌曲”会在一首歌同时出现在多张专辑中（例如单曲及其所属专辑）时只列出一次。长按歌曲可查看所有副本。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「隱藏重複歌曲」會在一首歌同時出現在多張專輯中（例如單曲及其所屬專輯）時只列出一次。長按歌曲可查看所有副本。"
           }
         }
       }
@@ -58923,70 +57765,6 @@
         }
       }
     },
-    "How Bluetooth, AAC, and lossless files really affect what you hear.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wie Bluetooth, AAC und verlustfreie Dateien dein Hörerlebnis wirklich beeinflussen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cómo afectan de verdad el Bluetooth, el AAC y los archivos lossless a lo que oyes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comment le Bluetooth, l'AAC et les fichiers lossless influencent vraiment ce que vous entendez."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Come Bluetooth, AAC e file lossless influiscono davvero su ciò che senti."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth、AAC、ロスレスのファイルが聴こえ方に本当はどう影響するのか。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "블루투스, AAC, 무손실 파일이 실제로 들리는 소리에 어떤 영향을 주는지 알아보세요."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jak Bluetooth, AAC i pliki bezstratne naprawdę wpływają na to, co słyszysz."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Como Bluetooth, AAC e arquivos lossless realmente afetam o que você ouve."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "蓝牙、AAC 和无损文件究竟如何影响你听到的声音。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "藍牙、AAC 與無損檔案究竟如何影響你聽到的聲音。"
-          }
-        }
-      }
-    },
     "Identifying albums": {
       "localizations": {
         "de": {
@@ -59117,70 +57895,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "如果 macOS 詢問是否允許 Flaccy 接受傳入連線，請選擇「允許」。"
-          }
-        }
-      }
-    },
-    "If one album gaps and the rest don't, check its format before blaming the player.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wenn ein Album Lücken hat und die anderen nicht, prüfe zuerst sein Format, bevor du dem Player die Schuld gibst."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Si un álbum tiene pausas y los demás no, comprueba su formato antes de culpar al reproductor."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Si un album présente des blancs et pas les autres, vérifiez son format avant d'accuser le lecteur."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se un album ha delle pause e gli altri no, controlla il suo formato prima di dare la colpa al player."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "あるアルバムだけ曲間が途切れるなら、プレーヤーを疑う前にそのフォーマットを確認してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 앨범에서만 끊김이 생기고 나머지는 괜찮다면, 플레이어를 탓하기 전에 해당 앨범의 형식부터 확인하세요."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jeśli jeden album ma przerwy, a pozostałe nie, sprawdź jego format, zanim obwinisz odtwarzacz."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se um álbum tem pausas e os outros não, confira o formato dele antes de culpar o player."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如果只有某张专辑出现间隙，其他专辑都正常，请先检查它的格式，再怪播放器。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如果只有某張專輯出現間隙，其他專輯都正常，請先檢查它的格式，再怪播放器。"
           }
         }
       }
@@ -60457,70 +59171,6 @@
         }
       }
     },
-    "In published blind tests — the largest public one put 580 participants on CD versus 256 kbps AAC — most listeners cannot reliably tell 256 kbps AAC from lossless. Only a small minority succeed, on specific tracks, under ideal conditions, on revealing gear. Apple itself calls the difference “virtually indistinguishable”.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In veröffentlichten Blindtests – der größte öffentliche stellte 580 Teilnehmer vor CD gegen 256 kbit/s AAC – können die meisten Hörer AAC mit 256 kbit/s nicht zuverlässig von verlustfrei unterscheiden. Nur eine kleine Minderheit schafft es, bei bestimmten Titeln, unter idealen Bedingungen, an sehr auflösender Hardware. Apple selbst nennt den Unterschied „praktisch nicht wahrnehmbar“."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En las pruebas ciegas publicadas —la mayor puso a 580 participantes ante CD frente a AAC de 256 kbps— la mayoría no distingue de forma fiable el AAC de 256 kbps del lossless. Solo lo consigue una pequeña minoría, en pistas concretas, en condiciones ideales y con equipos muy reveladores. La propia Apple llama a esa diferencia “prácticamente indistinguible”."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dans les tests en aveugle publiés — le plus vaste a opposé 580 participants au CD face à l'AAC 256 kbit/s — la plupart des auditeurs ne distinguent pas de façon fiable l'AAC 256 kbit/s du lossless. Seule une petite minorité y parvient, sur certains morceaux, dans des conditions idéales, sur du matériel très révélateur. Apple qualifie elle-même la différence de « pratiquement indiscernable »."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nei test in cieco pubblicati — il più ampio ha messo 580 partecipanti davanti a CD contro AAC a 256 kbps — la maggior parte degli ascoltatori non distingue in modo affidabile l'AAC a 256 kbps dal lossless. Ci riesce solo una piccola minoranza, su brani specifici, in condizioni ideali, con impianti molto rivelatori. Apple stessa definisce la differenza “praticamente indistinguibile”."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "公開されたブラインドテスト（最大規模のものはCDと256 kbps AACを580人で比較）では、ほとんどの人は256 kbps AACとロスレスを確実には区別できませんでした。聴き分けられるのはごく一部の人が、特定の曲を、理想的な条件で、解像度の高い機材で聴いたときだけです。Appleもその差を「事実上聴き分けられない」と表現しています。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "공개된 블라인드 테스트에서 — 가장 큰 테스트는 참가자 580명에게 CD와 256kbps AAC를 비교하게 했습니다 — 대부분의 청취자는 256kbps AAC와 무손실을 안정적으로 구별하지 못했습니다. 특정 곡을 이상적인 조건에서 해상력 높은 장비로 들을 때 소수만 구별해 냅니다. Apple 역시 그 차이를 “사실상 구별할 수 없다”고 표현합니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W opublikowanych testach ślepych — największy publiczny postawił 580 uczestników wobec CD kontra 256 kbps AAC — większość słuchaczy nie potrafi wiarygodnie odróżnić 256 kbps AAC od dźwięku bezstratnego. Udaje się to jedynie niewielkiej mniejszości, na konkretnych utworach, w idealnych warunkach, na sprzęcie ujawniającym różnice. Sam Apple nazywa tę różnicę „praktycznie niedostrzegalną”."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Em testes cegos publicados — o maior deles colocou 580 participantes diante de CD contra AAC de 256 kbps — a maioria dos ouvintes não distingue de forma confiável AAC de 256 kbps do lossless. Só uma pequena minoria consegue, em faixas específicas, em condições ideais, em equipamentos muito reveladores. A própria Apple chama essa diferença de “praticamente indistinguível”."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在已发表的盲测中——规模最大的一次让 580 名参与者对比 CD 与 256 kbps AAC——大多数听众无法稳定分辨 256 kbps AAC 和无损。只有极少数人能在特定曲目、理想条件和高解析度器材上做到。Apple 自己也称这种差别“几乎无法区分”。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在已發表的盲測中——規模最大的一次讓 580 位受試者比較 CD 與 256 kbps AAC——多數聽眾無法穩定分辨 256 kbps AAC 與無損。只有極少數人能在特定曲目、理想條件與夠好的器材上辦到。Apple 自己也說這個差別「幾乎無法分辨」。"
-          }
-        }
-      }
-    },
     "In sync": {
       "localizations": {
         "de": {
@@ -61681,70 +60331,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "它有回應，但不是 Flaccy Server。如果它是 Navidrome 或其他 Subsonic 伺服器，請將其新增為一般伺服器。"
-          }
-        }
-      }
-    },
-    "It is exact for lossless files: FLAC, ALAC, WAV, AIFF. MP3 and AAC store a fraction of a second of encoder padding inside every file, which iOS does not strip, so those albums can still click between tracks. Re-rip the album to FLAC and the seam disappears.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bei verlustfreien Dateien ist sie exakt: FLAC, ALAC, WAV, AIFF. MP3 und AAC speichern in jeder Datei einen Bruchteil einer Sekunde Encoder-Padding, das iOS nicht entfernt – deshalb können solche Alben zwischen den Titeln weiterhin knacken. Rippe das Album erneut als FLAC, und die Nahtstelle verschwindet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Es exacta con archivos lossless: FLAC, ALAC, WAV, AIFF. MP3 y AAC guardan en cada archivo una fracción de segundo de relleno del codificador, que iOS no elimina, así que esos álbumes aún pueden hacer clic entre pistas. Vuelve a extraer el álbum en FLAC y la unión desaparece."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elle est exacte avec les fichiers lossless : FLAC, ALAC, WAV, AIFF. Le MP3 et l'AAC stockent dans chaque fichier une fraction de seconde de remplissage de l'encodeur, qu'iOS ne supprime pas ; ces albums peuvent donc encore produire un clic entre les morceaux. Réextrayez l'album en FLAC et la jonction disparaît."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "È esatta con i file lossless: FLAC, ALAC, WAV, AIFF. MP3 e AAC conservano in ogni file una frazione di secondo di padding del codificatore, che iOS non elimina, quindi quegli album possono ancora fare clic tra un brano e l'altro. Rippa di nuovo l'album in FLAC e la giunzione scompare."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ロスレスファイル(FLAC、ALAC、WAV、AIFF)なら正確につながります。MP3とAACはすべてのファイルにエンコーダーによる1秒未満のパディングを含んでおり、iOSはこれを取り除かないため、そうしたアルバムでは曲間でクリック音が入ることがあります。アルバムをFLACで再リッピングすれば、つなぎ目は消えます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "무손실 파일(FLAC, ALAC, WAV, AIFF)에서는 정확하게 이어집니다. MP3와 AAC는 모든 파일 안에 1초 미만의 인코더 패딩을 담고 있고 iOS는 이를 제거하지 않으므로, 이런 앨범은 곡 사이에서 딱 소리가 날 수 있습니다. 앨범을 FLAC로 다시 리핑하면 이음매가 사라집니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W plikach bezstratnych jest dokładne: FLAC, ALAC, WAV, AIFF. MP3 i AAC przechowują w każdym pliku ułamek sekundy wypełnienia enkodera, którego iOS nie usuwa, więc takie albumy nadal mogą trzaskać między utworami. Zripuj album ponownie do FLAC, a szew zniknie."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "É exata com arquivos lossless: FLAC, ALAC, WAV, AIFF. MP3 e AAC guardam em cada arquivo uma fração de segundo de preenchimento do codificador, que o iOS não remove, então esses álbuns ainda podem estalar entre as faixas. Reripe o álbum em FLAC e a emenda desaparece."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对无损文件（FLAC、ALAC、WAV、AIFF）来说，衔接是精确的。MP3 和 AAC 在每个文件内部都带有不到一秒的编码器填充，而 iOS 不会去除它，所以这类专辑在曲目之间仍可能出现“咔”的一声。把专辑重新抓取为 FLAC，衔接处的杂音就会消失。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "對無損檔案（FLAC、ALAC、WAV、AIFF）來說，銜接是精確的。MP3 和 AAC 在每個檔案內部都帶有不到一秒的編碼器填充，而 iOS 不會移除它，所以這類專輯在曲目之間仍可能出現「喀」的一聲。把專輯重新擷取為 FLAC，銜接處的雜音就會消失。"
           }
         }
       }
@@ -64929,70 +63515,6 @@
         }
       }
     },
-    "Listening Guide": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hörguide"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guía de escucha"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guide d'écoute"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guida all'ascolto"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リスニングガイド"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "감상 가이드"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przewodnik po odsłuchach"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guia de audição"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收听指南"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "聆聽指南"
-          }
-        }
-      }
-    },
     "Listening clock, no plays yet": {
       "localizations": {
         "de": {
@@ -65363,72 +63885,66 @@
         }
       }
     },
-    "Lists a song once when it sits on several albums, such as a single and the album it came from. Your files stay untouched.": {
+    "Lists a song once when it is on several albums.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeigt einen Song nur einmal, wenn er auf mehreren Alben steht, zum Beispiel auf einer Single und dem Album, von dem sie stammt. Deine Dateien bleiben unverändert."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lists a song once when it sits on several albums, such as a single and the album it came from. Your files stay untouched."
+            "value": "Zeigt einen Song nur einmal, wenn er auf mehreren Alben steht."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muestra una canción una sola vez cuando aparece en varios álbumes, como un single y el álbum del que procede. Tus archivos no se modifican."
+            "value": "Muestra una canción una sola vez cuando aparece en varios álbumes."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Affiche un morceau une seule fois lorsqu'il figure sur plusieurs albums, comme un single et l'album d'origine. Tes fichiers restent intacts."
+            "value": "Affiche un morceau une seule fois lorsqu'il figure sur plusieurs albums."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra un brano una sola volta quando è presente in più album, ad esempio un singolo e l'album da cui proviene. I tuoi file restano intatti."
+            "value": "Mostra un brano una sola volta quando è presente in più album."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "シングルと元のアルバムのように複数のアルバムに入っている曲は1回だけ表示します。ファイルは変更されません。"
+            "value": "複数のアルバムに入っている曲は1回だけ表示します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "싱글과 원본 앨범처럼 여러 앨범에 들어 있는 곡을 한 번만 표시합니다. 파일은 그대로 유지됩니다."
+            "value": "여러 앨범에 들어 있는 곡을 한 번만 표시합니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wyświetla utwór raz, gdy znajduje się na kilku albumach, na przykład na singlu i albumie, z którego pochodzi. Twoje pliki pozostają nienaruszone."
+            "value": "Wyświetla utwór raz, gdy znajduje się na kilku albumach."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lista uma música uma vez quando ela aparece em vários álbuns, como um single e o álbum de onde saiu. Seus arquivos não são alterados."
+            "value": "Lista uma música uma vez quando ela aparece em vários álbuns."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当一首歌出现在多张专辑中（例如单曲及其所属专辑）时只列出一次。你的文件保持不变。"
+            "value": "一首歌出现在多张专辑中时只列出一次。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "當一首歌出現在多張專輯中（例如單曲及其所屬專輯）時只列出一次。你的檔案保持不變。"
+            "value": "一首歌出現在多張專輯中時只列出一次。"
           }
         }
       }
@@ -67727,134 +66243,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "最受歡迎"
-          }
-        }
-      }
-    },
-    "MP3 and AAC rips of live albums, DJ mixes and segued records can click between tracks — the padding is baked in, not something a player setting can undo.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3- und AAC-Rips von Live-Alben, DJ-Mixen und nahtlos ineinander übergehenden Platten können zwischen den Titeln knacken – das Padding ist fest eingebaut und lässt sich per Player-Einstellung nicht rückgängig machen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los rips en MP3 y AAC de álbumes en directo, mezclas de DJ y discos con temas enlazados pueden hacer clic entre pistas: el relleno viene incorporado y ningún ajuste del reproductor puede deshacerlo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les rips en MP3 et AAC d'albums live, de mixes de DJ et de disques aux morceaux enchaînés peuvent produire un clic entre les morceaux : le remplissage est intégré au fichier, et aucun réglage du lecteur ne peut l'annuler."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I rip in MP3 e AAC di album dal vivo, DJ mix e dischi con brani in segue possono fare clic tra un brano e l'altro: il padding è incorporato e nessuna impostazione del player può annullarlo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ライブアルバム、DJミックス、曲間が続けて収録されたレコードをMP3やAACでリッピングすると、曲間でクリック音が入ることがあります。パディングはファイルに組み込まれており、プレーヤーの設定では取り除けません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "라이브 앨범, DJ 믹스, 곡이 끊김 없이 이어지는 음반을 MP3나 AAC로 리핑하면 곡 사이에서 딱 소리가 날 수 있습니다. 패딩은 파일에 내장되어 있어 플레이어 설정으로 되돌릴 수 없습니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ripy albumów koncertowych, miksów didżejskich i płyt z płynnymi przejściami w MP3 i AAC mogą trzaskać między utworami — wypełnienie jest wpisane w plik i żadne ustawienie odtwarzacza tego nie cofnie."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rips em MP3 e AAC de álbuns ao vivo, mixes de DJ e discos com faixas emendadas podem estalar entre as faixas — o preenchimento já vem embutido e nenhuma configuração do player consegue desfazê-lo."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "现场专辑、DJ 混音以及曲目首尾相连的唱片，如果抓轨成 MP3 或 AAC，曲目之间可能会出现“咔”声——填充已经固化在文件里，播放器设置无法撤销。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "現場專輯、DJ 混音以及曲目首尾相連的唱片，如果擷取成 MP3 或 AAC，曲目之間可能會出現「喀」聲——填充已經固化在檔案裡，播放器設定無法復原。"
-          }
-        }
-      }
-    },
-    "MP3 and AAC store a fraction of a second of encoder padding inside every file, which macOS does not strip, so those albums can still click between tracks. Re-rip to FLAC and the seam disappears.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3 und AAC speichern in jeder Datei einen Bruchteil einer Sekunde Encoder-Padding, das macOS nicht entfernt – deshalb können solche Alben zwischen den Titeln weiterhin knacken. Rippe erneut als FLAC, und die Nahtstelle verschwindet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3 y AAC guardan en cada archivo una fracción de segundo de relleno del codificador, que macOS no elimina, así que esos álbumes aún pueden hacer clic entre pistas. Vuelve a extraer en FLAC y la unión desaparece."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le MP3 et l'AAC stockent dans chaque fichier une fraction de seconde de remplissage de l'encodeur, que macOS ne supprime pas ; ces albums peuvent donc encore produire un clic entre les morceaux. Réextrayez en FLAC et la jonction disparaît."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3 e AAC conservano in ogni file una frazione di secondo di padding del codificatore, che macOS non elimina, quindi quegli album possono ancora fare clic tra un brano e l'altro. Rippa di nuovo in FLAC e la giunzione scompare."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3とAACはすべてのファイルにエンコーダーによる1秒未満のパディングを含んでおり、macOSはこれを取り除かないため、そうしたアルバムでは曲間でクリック音が入ることがあります。FLACで再リッピングすれば、つなぎ目は消えます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3와 AAC는 모든 파일 안에 1초 미만의 인코더 패딩을 담고 있고 macOS는 이를 제거하지 않으므로, 이런 앨범은 곡 사이에서 딱 소리가 날 수 있습니다. FLAC로 다시 리핑하면 이음매가 사라집니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3 i AAC przechowują w każdym pliku ułamek sekundy wypełnienia enkodera, którego macOS nie usuwa, więc takie albumy nadal mogą trzaskać między utworami. Zripuj ponownie do FLAC, a szew zniknie."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3 e AAC guardam em cada arquivo uma fração de segundo de preenchimento do codificador, que o macOS não remove, então esses álbuns ainda podem estalar entre as faixas. Reripe em FLAC e a emenda desaparece."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3 和 AAC 在每个文件内部都带有不到一秒的编码器填充，而 macOS 不会去除它，所以这类专辑在曲目之间仍可能出现“咔”的一声。重新抓取为 FLAC，衔接处的杂音就会消失。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MP3 和 AAC 在每個檔案內部都帶有不到一秒的編碼器填充，而 macOS 不會移除它，所以這類專輯在曲目之間仍可能出現「喀」的一聲。重新擷取為 FLAC，銜接處的雜音就會消失。"
           }
         }
       }
@@ -80814,70 +79202,6 @@
         }
       }
     },
-    "Opens in your browser": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffnet sich im Browser"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se abre en tu navegador"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "S'ouvre dans votre navigateur"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Si apre nel browser"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ブラウザで開きます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "브라우저에서 열립니다"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwiera się w przeglądarce"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre no seu navegador"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将在浏览器中打开"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "將在瀏覽器中打開"
-          }
-        }
-      }
-    },
     "Opens system Settings to allow notifications": {
       "localizations": {
         "de": {
@@ -81076,66 +79400,66 @@
         }
       }
     },
-    "Optional. Connect a Last.fm account to scrobble your listens, sync loved tracks, and bring your whole listening history into Stats and play counts. Everything else works without it.": {
+    "Optional. Scrobble your plays and bring your Last.fm history into Stats.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Optional. Verbinde ein Last.fm-Konto, um deine Wiedergaben zu scrobbeln, Lieblingstitel zu synchronisieren und deinen gesamten Hörverlauf in Statistiken und Wiedergabezähler zu übernehmen. Alles andere funktioniert auch ohne."
+            "value": "Optional. Scrobble deine Wiedergaben und hol deinen Last.fm-Verlauf in die Statistiken."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opcional. Conecta una cuenta de Last.fm para hacer scrobble de lo que escuchas, sincronizar tus favoritas y traer todo tu historial de escucha a las estadísticas y los contadores de reproducciones. Todo lo demás funciona sin ella."
+            "value": "Opcional. Haz scrobble de lo que escuchas y trae tu historial de Last.fm a las estadísticas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Facultatif. Connectez un compte Last.fm pour scrobbler vos écoutes, synchroniser vos titres aimés et intégrer tout votre historique d'écoute aux statistiques et aux compteurs de lectures. Tout le reste fonctionne sans."
+            "value": "Facultatif. Scrobblez vos écoutes et intégrez votre historique Last.fm aux statistiques."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Facoltativo. Collega un account Last.fm per fare scrobble degli ascolti, sincronizzare i brani preferiti e portare tutta la cronologia di ascolto in statistiche e conteggi delle riproduzioni. Tutto il resto funziona anche senza."
+            "value": "Facoltativo. Fai scrobble degli ascolti e porta la cronologia di Last.fm nelle statistiche."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "任意です。Last.fmアカウントを接続すると、再生をスクロブルし、お気に入りの曲を同期し、再生履歴をすべて統計や再生回数に取り込めます。それ以外の機能は接続なしでも使えます。"
+            "value": "任意です。再生をスクロブルし、Last.fmの履歴を統計に取り込めます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "선택 사항입니다. Last.fm 계정을 연결하면 재생한 곡을 스크로블하고, 좋아요 표시한 곡을 동기화하고, 전체 감상 기록을 통계와 재생 횟수에 가져올 수 있습니다. 나머지 기능은 연결하지 않아도 작동합니다."
+            "value": "선택 사항입니다. 재생한 곡을 스크로블하고 Last.fm 기록을 통계로 가져옵니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opcjonalne. Połącz konto Last.fm, aby scrobblować odtworzenia, synchronizować polubione utwory i wczytać całą historię odsłuchań do statystyk i liczników odtworzeń. Wszystko inne działa bez niego."
+            "value": "Opcjonalne. Scrobbluj odtworzenia i wczytaj historię Last.fm do statystyk."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opcional. Conecte uma conta do Last.fm para fazer scrobble do que você ouve, sincronizar faixas favoritas e trazer todo o seu histórico de reprodução para as estatísticas e as contagens de reproduções. Todo o resto funciona sem ela."
+            "value": "Opcional. Faça scrobble do que você ouve e traga seu histórico do Last.fm para as estatísticas."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "可选。连接 Last.fm 账户后，可以对你的播放进行 Scrobble、同步喜爱的曲目，并把完整的收听记录带入统计和播放次数。没有它，其他功能照常使用。"
+            "value": "可选。对你的播放进行 Scrobble，并把 Last.fm 记录带入统计。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選用。連接 Last.fm 帳號後，可以對你的播放進行 Scrobble、同步喜愛的曲目，並把完整的收聽記錄帶入統計和播放次數。沒有它，其他功能照常使用。"
+            "value": "選用。對你的播放進行 Scrobble，並把 Last.fm 記錄帶入統計。"
           }
         }
       }
@@ -88272,70 +86596,6 @@
         }
       }
     },
-    "Practical takeaway": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fazit für die Praxis"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conclusión práctica"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "À retenir en pratique"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In pratica"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "実際のところ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "실전 요약"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Praktyczny wniosek"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conclusão prática"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "实用结论"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "實用結論"
-          }
-        }
-      }
-    },
     "Preamp": {
       "localizations": {
         "de": {
@@ -91400,66 +89660,66 @@
         }
       }
     },
-    "Re-analyze sends track filenames through Flaccy's AI to clean up titles, artists, and album grouping. It can take a few minutes for large libraries.": {
+    "Re-analyze cleans up titles, artists and albums from file names with AI.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Beim erneuten Analysieren schickt Flaccy die Dateinamen durch seine KI, um Titel, Interpreten und Albumzuordnung zu bereinigen. Bei großen Mediatheken kann das einige Minuten dauern."
+            "value": "Erneut analysieren bereinigt Titel, Interpreten und Alben anhand der Dateinamen mit KI."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reanalizar envía los nombres de archivo a la IA de Flaccy para depurar títulos, artistas y agrupación de álbumes. Puede tardar unos minutos en bibliotecas grandes."
+            "value": "Reanalizar depura títulos, artistas y álbumes a partir de los nombres de archivo con IA."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La réanalyse envoie les noms de fichiers à l'IA de Flaccy pour nettoyer les titres, les artistes et le regroupement des albums. Cela peut prendre quelques minutes sur de grandes bibliothèques."
+            "value": "La réanalyse nettoie titres, artistes et albums à partir des noms de fichiers grâce à l'IA."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La rianalisi manda i nomi dei file all'IA di Flaccy per ripulire titoli, artisti e raggruppamento degli album. Su librerie grandi può richiedere qualche minuto."
+            "value": "La rianalisi ripulisce titoli, artisti e album a partire dai nomi dei file con l'IA."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "再解析では、Flaccyがファイル名をAIに送り、タイトル・アーティスト・アルバムのまとまりを整えます。ライブラリが大きいと数分かかることがあります。"
+            "value": "再解析では、ファイル名をもとにAIでタイトル・アーティスト・アルバムを整えます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "다시 분석하면 Flaccy가 파일 이름을 AI로 보내 제목, 아티스트, 앨범 묶음을 정리합니다. 보관함이 크면 몇 분 걸릴 수 있습니다."
+            "value": "다시 분석하면 파일 이름을 바탕으로 AI가 제목, 아티스트, 앨범을 정리합니다."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ponowna analiza przepuszcza nazwy plików przez AI Flaccy, aby uporządkować tytuły, wykonawców i grupowanie albumów. Dla dużych bibliotek może to zająć kilka minut."
+            "value": "Ponowna analiza porządkuje tytuły, wykonawców i albumy na podstawie nazw plików za pomocą AI."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A reanálise envia os nomes dos arquivos para a IA do Flaccy limpar títulos, artistas e o agrupamento de álbuns. Pode levar alguns minutos em bibliotecas grandes."
+            "value": "A reanálise limpa títulos, artistas e álbuns a partir dos nomes dos arquivos com IA."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新分析会把曲目文件名交给 Flaccy 的 AI，整理标题、艺人和专辑归类。资料库较大时可能需要几分钟。"
+            "value": "重新分析会用 AI 根据文件名整理标题、艺人和专辑。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新分析會把曲目的檔案名稱交給 Flaccy 的 AI，整理標題、演出者與專輯歸類。資料庫較大時可能需要幾分鐘。"
+            "value": "重新分析會用 AI 依檔案名稱整理標題、演出者與專輯。"
           }
         }
       }
@@ -91716,70 +89976,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "為 Flaccy 放棄的專輯重新取得封面和發行日期。"
-          }
-        }
-      }
-    },
-    "Re-ripping the album to FLAC removes the seam for good.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wenn du das Album erneut als FLAC rippst, verschwindet die Nahtstelle für immer."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Volver a extraer el álbum en FLAC elimina la unión para siempre."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Réextraire l'album en FLAC supprime définitivement la jonction."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rippare di nuovo l'album in FLAC elimina la giunzione una volta per tutte."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アルバムをFLACで再リッピングすれば、つなぎ目は完全に解消されます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앨범을 FLAC로 다시 리핑하면 이음매가 완전히 사라집니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ponowne zripowanie albumu do FLAC usuwa szew raz na zawsze."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reripar o álbum em FLAC elimina a emenda de vez."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把专辑重新抓取为 FLAC，就能彻底消除衔接处的杂音。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把專輯重新擷取為 FLAC，就能徹底消除銜接處的雜音。"
           }
         }
       }
@@ -92740,70 +90936,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "已拷貝回顧卡片"
-          }
-        }
-      }
-    },
-    "Recap notifications are generated on this device from your local play history, with a shareable Year in Music story.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rückblick-Mitteilungen entstehen auf diesem Gerät aus deinem lokalen Wiedergabeverlauf – inklusive teilbarer Musikjahr-Story."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las notificaciones de resumen se generan en este dispositivo con tu historial local, e incluyen una historia del Año en música para compartir."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les notifications de récap sont générées sur cet appareil à partir de votre historique local, avec une story Année en musique à partager."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le notifiche del riepilogo vengono generate su questo dispositivo dalla tua cronologia locale, con una storia dell'Anno in musica da condividere."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リキャップ通知は端末内の再生履歴からこのデバイスで生成され、共有できる音楽の1年のストーリーも付きます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "리캡 알림은 이 기기의 재생 기록으로 생성되며, 공유할 수 있는 음악 결산 스토리도 함께 제공됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Powiadomienia o podsumowaniu są generowane na tym urządzeniu z twojej lokalnej historii odtwarzania, wraz z historią Roku w muzyce do udostępnienia."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As notificações da retrospectiva são geradas neste dispositivo a partir do seu histórico local, com um story do Ano em música para compartilhar."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回顾通知在本机根据你的播放记录生成，并附带可分享的年度音乐故事。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回顧通知會在這部裝置上、依你本機的播放記錄產生，並附上可分享的年度音樂故事。"
           }
         }
       }
@@ -100324,70 +98456,6 @@
         }
       }
     },
-    "Scrobbles every play, keeps an offline queue, and powers the Recap, Wantlist, and loved tracks.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scrobbelt jede Wiedergabe, hält eine Offline-Warteschlange bereit und liefert die Basis für Rückblick, Wunschliste und Favoriten."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scrobblea cada reproducción, mantiene una cola sin conexión y alimenta el resumen, la lista de deseos y las favoritas."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scrobble chaque écoute, garde une file hors ligne et alimente le récap, la liste d'envies et les morceaux aimés."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scrobbla ogni riproduzione, mantiene una coda offline e alimenta il riepilogo, la lista dei desideri e i preferiti."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すべての再生をスクロブルし、オフラインではキューに保持して、リキャップ・ウォントリスト・お気に入りの土台になります。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모든 재생을 스크로블하고 오프라인 대기열을 유지하며, 리캡과 위시리스트, 좋아요한 트랙의 바탕이 됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scrobbluje każde odtworzenie, utrzymuje kolejkę offline i zasila Podsumowanie, Listę życzeń i ulubione utwory."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scrobbla cada reprodução, mantém uma fila offline e alimenta a retrospectiva, a lista de desejos e as faixas curtidas."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "记录每一次播放，保留离线队列，并为回顾、心愿单和喜欢的曲目提供数据。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記錄每一次播放，保留離線佇列，並為回顧、願望清單與喜愛的曲目提供資料。"
-          }
-        }
-      }
-    },
     "Search": {
       "localizations": {
         "de": {
@@ -107592,70 +105660,6 @@
         }
       }
     },
-    "Six facts about Bluetooth, AAC, and what your files actually deliver to your ears.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sechs Fakten über Bluetooth, AAC und das, was deine Dateien wirklich an dein Ohr liefern."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seis datos sobre el Bluetooth, el AAC y lo que tus archivos entregan de verdad a tus oídos."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Six faits sur le Bluetooth, l'AAC et ce que vos fichiers délivrent vraiment à vos oreilles."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sei fatti su Bluetooth, AAC e ciò che i tuoi file consegnano davvero alle tue orecchie."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bluetooth、AAC、そしてファイルが実際に耳へ届けるものについての6つの事実。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "블루투스와 AAC, 그리고 당신의 파일이 실제로 귀에 전달하는 것에 관한 여섯 가지 사실."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sześć faktów o Bluetooth, AAC i o tym, co twoje pliki naprawdę dostarczają twoim uszom."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seis fatos sobre Bluetooth, AAC e o que seus arquivos realmente entregam aos seus ouvidos."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关于蓝牙、AAC，以及你的文件究竟把什么送到耳朵里的六个事实。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "關於藍牙、AAC，以及你的檔案究竟把什麼送進耳裡的六個事實。"
-          }
-        }
-      }
-    },
     "Six things you played recently": {
       "localizations": {
         "de": {
@@ -109723,70 +107727,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "值得入手的歌曲"
-          }
-        }
-      }
-    },
-    "Songs you stream are kept here so they replay without the server. The least recently played go first once the limit is reached. Songs you download stay outside the limit.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Songs, die du streamst, werden hier gespeichert, damit sie ohne den Server wieder abgespielt werden können. Wenn das Limit erreicht ist, werden zuerst die zuletzt gespielten entfernt. Heruntergeladene Songs zählen nicht zum Limit."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las canciones que reproduces en streaming se guardan aquí para volver a sonar sin el servidor. Al llegar al límite, primero se quitan las que se reprodujeron menos recientemente. Las canciones descargadas no cuentan para el límite."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les morceaux que tu écoutes en streaming sont conservés ici pour être rejoués sans le serveur. Une fois la limite atteinte, les moins récemment joués partent en premier. Les morceaux téléchargés ne comptent pas dans la limite."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I brani che ascolti in streaming vengono conservati qui, così possono essere riprodotti senza il server. Raggiunto il limite, si eliminano prima quelli ascoltati meno di recente. I brani scaricati non rientrano nel limite."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ストリーミングで再生した曲はここに保存され、サーバーなしでも再生できます。上限に達すると、最後に再生してからの時間が最も長い曲から削除されます。ダウンロードした曲は上限の対象外です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스트리밍으로 재생한 곡은 서버 없이도 다시 재생할 수 있도록 여기에 보관됩니다. 한도에 도달하면 가장 오래전에 재생한 곡부터 삭제됩니다. 다운로드한 곡은 한도에 포함되지 않습니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Utwory odtwarzane ze strumienia są tu przechowywane, aby dało się je odtworzyć bez serwera. Po osiągnięciu limitu najpierw usuwane są te, które grano najdawniej. Pobrane utwory nie są objęte limitem."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As músicas que você transmite ficam guardadas aqui para tocar sem o servidor. Ao atingir o limite, as menos tocadas recentemente saem primeiro. As músicas baixadas não entram no limite."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你流式播放的歌曲会保存在这里，即使没有服务器也能再次播放。达到上限后，最久未播放的歌曲会先被移除。你下载的歌曲不计入上限。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你串流播放的歌曲會保存在這裡，即使沒有伺服器也能再次播放。達到上限後，最久未播放的歌曲會先被移除。你下載的歌曲不計入上限。"
           }
         }
       }
@@ -112235,70 +110175,6 @@
         }
       }
     },
-    "Storing AAC 256 instead of FLAC loses nothing audible over AirPods and saves roughly 60% storage.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AAC 256 statt FLAC zu speichern kostet über AirPods nichts Hörbares und spart rund 60 % Speicher."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar AAC 256 en lugar de FLAC no pierde nada audible con AirPods y ahorra alrededor de un 60 % de espacio."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stocker de l'AAC 256 au lieu du FLAC ne coûte rien d'audible via AirPods et économise environ 60 % de stockage."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Salvare AAC 256 invece del FLAC non toglie nulla di udibile con gli AirPods e fa risparmiare circa il 60% di spazio."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLACの代わりにAAC 256で保存しても、AirPodsで聴こえる違いはなく、容量はおよそ60%節約できます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLAC 대신 AAC 256으로 저장해도 AirPods에서 들리는 차이는 없고 저장 공간은 약 60% 절약됩니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przechowywanie AAC 256 zamiast FLAC nie traci nic słyszalnego przez AirPods i oszczędza około 60% miejsca."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar AAC 256 em vez de FLAC não perde nada audível pelos AirPods e economiza cerca de 60% de armazenamento."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用 AAC 256 代替 FLAC 存储，通过 AirPods 听不出差别，却能省下约 60% 的空间。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "改存 AAC 256 而不是 FLAC，透過 AirPods 聽不出任何差別，卻能省下約 60% 的儲存空間。"
-          }
-        }
-      }
-    },
     "Story": {
       "localizations": {
         "de": {
@@ -112487,6 +110363,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "限時動態尺寸 · 9:16"
+          }
+        }
+      }
+    },
+    "Stream from Flaccy Server, Navidrome or another Subsonic server.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streame von Flaccy Server, Navidrome oder einem anderen Subsonic-Server."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproduce en streaming desde Flaccy Server, Navidrome u otro servidor Subsonic."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écoute en streaming depuis Flaccy Server, Navidrome ou un autre serveur Subsonic."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ascolta in streaming da Flaccy Server, Navidrome o un altro server Subsonic."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server、Navidrome、その他のSubsonicサーバーからストリーミングできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server, Navidrome 또는 다른 Subsonic 서버에서 스트리밍합니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Słuchaj strumieniowo z Flaccy Server, Navidrome lub innego serwera Subsonic."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transmita do Flaccy Server, do Navidrome ou de outro servidor Subsonic."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 Flaccy Server、Navidrome 或其他 Subsonic 服务器流式播放。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從 Flaccy Server、Navidrome 或其他 Subsonic 伺服器串流播放。"
+          }
+        }
+      }
+    },
+    "Streamed songs stay here for replay. Downloads don’t count toward the limit.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestreamte Songs bleiben hier zum erneuten Abspielen. Downloads zählen nicht zum Limit."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las canciones en streaming se guardan aquí para volver a sonar. Las descargas no cuentan para el límite."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les morceaux écoutés en streaming restent ici pour être rejoués. Les téléchargements ne comptent pas dans la limite."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I brani in streaming restano qui per riascoltarli. I download non contano nel limite."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーミングした曲は再生用にここに保存されます。ダウンロードした曲は上限に含まれません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스트리밍한 곡은 다시 재생할 수 있도록 여기에 보관됩니다. 다운로드한 곡은 한도에 포함되지 않습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory ze strumienia zostają tu do ponownego odtwarzania. Pobrane nie wliczają się do limitu."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As músicas transmitidas ficam aqui para tocar de novo. Os downloads não contam para o limite."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流式播放过的歌曲会保存在这里以便重播。下载的歌曲不计入上限。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "串流播放過的歌曲會保存在這裡以便重播。下載的歌曲不計入上限。"
           }
         }
       }
@@ -114655,70 +112659,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "跟隨系統"
-          }
-        }
-      }
-    },
-    "System follows your device's light and dark setting.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„System“ folgt der Hell-/Dunkel-Einstellung deines Geräts."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Sistema” sigue el ajuste claro u oscuro de tu dispositivo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "« Système » suit le réglage clair/sombre de votre appareil."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Sistema” segue l'impostazione chiaro/scuro del dispositivo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「システム」はデバイスのライト/ダーク設定に従います。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“시스템”은 기기의 라이트/다크 설정을 따릅니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Systemowy podąża za ustawieniem jasnego i ciemnego trybu twojego urządzenia."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Sistema” segue o ajuste claro ou escuro do seu dispositivo."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“跟随系统”会跟随设备的浅色/深色设置。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「跟隨系統」會依照裝置的淺色／深色設定。"
           }
         }
       }
@@ -124695,6 +122635,70 @@
         }
       }
     },
+    "Two reminders before your trial ends, and one if an offer opens.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwei Erinnerungen vor Ende deiner Testphase und eine, wenn ein Angebot startet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dos recordatorios antes de que termine tu prueba y uno si hay una oferta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deux rappels avant la fin de votre essai, et un si une offre se présente."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due promemoria prima della fine della prova e uno se arriva un'offerta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トライアル終了前に2回、オファーが始まったときに1回お知らせします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "체험 종료 전에 두 번, 할인이 시작되면 한 번 알려 드립니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dwa przypomnienia przed końcem okresu próbnego i jedno, gdy pojawi się oferta."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dois lembretes antes do fim do seu teste e um se surgir uma oferta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试用结束前提醒两次，有优惠时再提醒一次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試用結束前提醒兩次，有優惠時再提醒一次。"
+          }
+        }
+      }
+    },
     "Type": {
       "localizations": {
         "de": {
@@ -129853,134 +127857,6 @@
         }
       }
     },
-    "What happens to your files": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was mit deinen Dateien passiert"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qué pasa con tus archivos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce qui arrive à vos fichiers"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cosa succede ai tuoi file"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ファイルはどうなるか"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "파일은 어떻게 되나요"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co się dzieje z twoimi plikami"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O que acontece com seus arquivos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的文件会怎样"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的檔案會怎麼樣"
-          }
-        }
-      }
-    },
-    "What this means for your library": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was das für deine Mediathek bedeutet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qué significa esto para tu biblioteca"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce que cela signifie pour votre bibliothèque"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cosa significa per la tua libreria"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ライブラリにとっての意味"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내 라이브러리에 어떤 의미가 있을까"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co to oznacza dla twojej biblioteki"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O que isso significa para a sua biblioteca"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "这对你的音乐库意味着什么"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "這對你的音樂庫意味著什麼"
-          }
-        }
-      }
-    },
     "What you've set up so far": {
       "localizations": {
         "de": {
@@ -130045,70 +127921,6 @@
         }
       }
     },
-    "When FLAC is worth it": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wann sich FLAC lohnt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuándo merece la pena el FLAC"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quand le FLAC en vaut la peine"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quando il FLAC vale la pena"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLACが効くとき"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLAC이 진가를 발휘할 때"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kiedy FLAC się opłaca"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quando o FLAC vale a pena"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "什么时候值得用 FLAC"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "什麼時候值得用 FLAC"
-          }
-        }
-      }
-    },
     "When this output connects, Flaccy switches to its profile by itself and says so with a short banner.": {
       "localizations": {
         "de": {
@@ -130169,70 +127981,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "此輸出連接時，Flaccy 會自動切換到其設定檔，並以簡短橫幅提示。"
-          }
-        }
-      }
-    },
-    "When your queue runs out, Flaccy builds a station of similar music from your library instead of stopping.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wenn deine Warteschlange leer läuft, baut Flaccy einen Sender mit ähnlicher Musik aus deiner Mediathek, statt aufzuhören."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuando tu cola se acaba, Flaccy construye una emisora de música similar de tu biblioteca en vez de parar."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quand votre file se vide, Flaccy construit une radio de musique similaire depuis votre bibliothèque au lieu de s'arrêter."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quando la coda si esaurisce, Flaccy costruisce una stazione di musica simile dalla tua libreria invece di fermarsi."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "キューが尽きると、Flaccyは停止せずにライブラリから似た曲のステーションを組み立てます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대기열이 끝나면 Flaccy는 멈추지 않고 보관함에서 비슷한 음악 스테이션을 만듭니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gdy kolejka się skończy, Flaccy buduje stację podobnej muzyki z twojej biblioteki zamiast się zatrzymywać."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quando a fila acaba, o Flaccy monta uma estação de música parecida da sua biblioteca em vez de parar."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "队列播完后，Flaccy 不会停下，而是从你的资料库中生成一个相似音乐电台。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "待播清單播完後，Flaccy 不會停下，而是從你的資料庫組出一個相似音樂電台。"
           }
         }
       }
@@ -130425,134 +128173,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "上次離開的地方"
-          }
-        }
-      }
-    },
-    "Why lossless can't reach AirPods": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Warum verlustfrei die AirPods nicht erreicht"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Por qué el lossless no llega a los AirPods"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pourquoi le lossless n'atteint pas les AirPods"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perché il lossless non arriva agli AirPods"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ロスレスがAirPodsに届かない理由"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "무손실이 AirPods에 닿지 못하는 이유"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dlaczego dźwięk bezstratny nie dociera do AirPods"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Por que o lossless não chega aos AirPods"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "为什么无损到不了 AirPods"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "為什麼無損到不了 AirPods"
-          }
-        }
-      }
-    },
-    "Why some albums still click": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Warum manche Alben trotzdem knacken"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Por qué algunos álbumes aún hacen clic"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pourquoi certains albums font encore des clics"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perché alcuni album fanno ancora clic"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一部のアルバムでクリック音が残る理由"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일부 앨범에서 여전히 딱 소리가 나는 이유"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dlaczego niektóre albumy wciąż trzaskają"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Por que alguns álbuns ainda estalam"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "为什么有些专辑仍然会有“咔”声"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "為什麼有些專輯仍然會有「喀」聲"
           }
         }
       }
@@ -136436,70 +134056,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "iCloud Drive 或網路共享"
-          }
-        }
-      }
-    },
-    "iOS mixes all audio — your music plus system sounds — into one stream and re-encodes it to AAC for Bluetooth, so even a 256 kbps AAC file is decoded and encoded again on its way to your AirPods. This is how the audio pipeline works: engineering consensus, as Apple doesn't document passthrough. One extra generation of high-bitrate AAC is essentially inaudible — the loss is real on paper, tiny in practice.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS mischt alles Audio – deine Musik plus Systemtöne – zu einem Stream und kodiert ihn für Bluetooth neu in AAC. Selbst eine 256-kbit/s-AAC-Datei wird also auf dem Weg zu deinen AirPods dekodiert und erneut kodiert. So funktioniert die Audio-Pipeline: Konsens unter Fachleuten, da Apple keinen Passthrough dokumentiert. Eine zusätzliche Generation hochbitratiges AAC ist praktisch unhörbar – der Verlust ist auf dem Papier real, in der Praxis winzig."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS mezcla todo el audio —tu música más los sonidos del sistema— en un único flujo y lo recodifica a AAC para el Bluetooth, así que incluso un archivo AAC de 256 kbps se descodifica y se vuelve a codificar de camino a tus AirPods. Así funciona la cadena de audio: es el consenso técnico, ya que Apple no documenta ningún passthrough. Una generación extra de AAC de alta tasa es esencialmente inaudible: la pérdida es real sobre el papel y mínima en la práctica."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS mélange tout l'audio — votre musique et les sons système — en un seul flux et le réencode en AAC pour le Bluetooth : même un fichier AAC à 256 kbit/s est donc décodé puis réencodé en route vers vos AirPods. C'est ainsi que fonctionne la chaîne audio : c'est le consensus technique, Apple ne documentant pas de passthrough. Une génération supplémentaire d'AAC à haut débit est pour ainsi dire inaudible — la perte est réelle sur le papier, minuscule en pratique."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS unisce tutto l'audio — la tua musica più i suoni di sistema — in un unico flusso e lo ricodifica in AAC per il Bluetooth, quindi anche un file AAC a 256 kbps viene decodificato e ricodificato lungo la strada verso gli AirPods. È così che funziona la catena audio: è il consenso tecnico, dato che Apple non documenta alcun passthrough. Una generazione in più di AAC ad alto bitrate è praticamente inudibile: la perdita è reale sulla carta, minima nella pratica."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOSは音楽もシステム音もすべて1つのストリームにミックスし、Bluetooth用にAACへ再エンコードします。そのため256 kbpsのAACファイルでも、AirPodsに届くまでに一度デコードされ、もう一度エンコードされます。これがオーディオ経路の仕組みで、Appleがパススルーを明示していないため技術者の共通見解です。高ビットレートAACの世代が1つ増えても実質的に聴き分けられません — 理屈の上では損失があっても、実際にはごくわずかです。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS는 음악과 시스템 사운드를 포함한 모든 오디오를 하나의 스트림으로 합친 뒤 블루투스용 AAC로 다시 인코딩합니다. 그래서 256kbps AAC 파일도 AirPods로 가는 길에 디코딩되고 다시 인코딩됩니다. 오디오 경로가 원래 이렇게 동작하며, Apple이 패스스루를 문서화하지 않아 업계의 공통된 견해입니다. 고비트레이트 AAC를 한 세대 더 거쳐도 사실상 들리지 않습니다 — 이론상 손실은 있지만 실제로는 미미합니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS miksuje cały dźwięk — twoją muzykę oraz dźwięki systemowe — w jeden strumień i koduje go ponownie do AAC dla Bluetooth, więc nawet plik AAC 256 kbps jest dekodowany i kodowany ponownie w drodze do twoich AirPods. Tak działa potok audio: konsensus inżynierski, ponieważ Apple nie dokumentuje przekazywania bezpośredniego. Jedna dodatkowa generacja AAC o wysokiej przepływności jest praktycznie niesłyszalna — strata jest realna na papierze, znikoma w praktyce."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O iOS mistura todo o áudio — sua música mais os sons do sistema — em um único fluxo e o recodifica em AAC para o Bluetooth, então até um arquivo AAC de 256 kbps é decodificado e codificado de novo no caminho até os AirPods. É assim que o pipeline de áudio funciona: consenso de engenharia, já que a Apple não documenta passthrough. Uma geração extra de AAC de alta taxa é praticamente inaudível — a perda é real no papel e mínima na prática."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS 会把所有音频——你的音乐加上系统提示音——混合成一路数据流，再为蓝牙重新编码成 AAC，所以即便是 256 kbps 的 AAC 文件，在送到 AirPods 的路上也会被解码并重新编码一次。音频链路本就如此工作：这是工程界的共识，因为 Apple 并未说明存在直通。多一代高码率 AAC 基本听不出来——损失在纸面上真实存在，实际听感上微乎其微。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iOS 會把所有音訊——你的音樂加上系統音效——混合成單一串流，再為藍牙重新編碼成 AAC，所以即使是 256 kbps 的 AAC 檔案，在送往 AirPods 的路上也會被解碼並再編碼一次。音訊管線本來就是這樣運作：這是工程界的共識，因為 Apple 並未說明有直通。多一代高位元率 AAC 基本上聽不出來——損失在紙面上真實存在，實際聽感上微乎其微。"
           }
         }
       }

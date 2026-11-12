@@ -62,7 +62,7 @@ final class LibrarySettingsPane: SettingsPane {
         analyzeButton.target = self
         analyzeButton.action = #selector(analyzeTapped)
         buildActivityRow()
-        addFullWidth(explanation(String(localized: "Re-analyze sends track filenames through Flaccy's AI to clean up titles, artists, and album grouping. It can take a few minutes for large libraries.")))
+        addFullWidth(explanation(String(localized: "Re-analyze cleans up titles, artists and albums from file names with AI.")))
         formStack.addArrangedSubview(separator())
 
         buildMetadataGroup()
@@ -71,11 +71,11 @@ final class LibrarySettingsPane: SettingsPane {
         groupEditionsCheckbox.target = self
         groupEditionsCheckbox.action = #selector(groupEditionsToggled)
         formStack.addArrangedSubview(groupEditionsCheckbox)
-        addFullWidth(explanation(String(localized: "Collapses \u{201C}Album\u{201D}, \u{201C}Album (Deluxe)\u{201D} and \u{201C}Album (Remastered)\u{201D} into one card and keeps a single best-quality copy of each shared song so Albums and Songs stay free of near-duplicates.")))
+        addFullWidth(explanation(String(localized: "Folds Deluxe, Remaster and Explicit editions into one album.")))
         hideDuplicatesCheckbox.target = self
         hideDuplicatesCheckbox.action = #selector(hideDuplicatesToggled)
         formStack.addArrangedSubview(hideDuplicatesCheckbox)
-        addFullWidth(explanation(String(localized: "Lists a song once when it sits on several albums, such as a single and the album it came from. Your files stay untouched.")))
+        addFullWidth(explanation(String(localized: "Lists a song once when it is on several albums.")))
         cleanUpButton.bezelStyle = .rounded
         cleanUpButton.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         cleanUpButton.imagePosition = .imageLeading

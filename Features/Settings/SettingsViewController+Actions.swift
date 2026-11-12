@@ -187,11 +187,6 @@ extension SettingsViewController {
         navigationController?.pushViewController(RecapNotificationsViewController(), animated: true)
     }
 
-    func handleListeningGuideTap() {
-        selectionFeedback.selectionChanged()
-        navigationController?.pushViewController(ListeningGuideViewController(), animated: true)
-    }
-
     func handleWatchTap() {
         selectionFeedback.selectionChanged()
         navigationController?.pushViewController(WatchSyncViewController(), animated: true)

@@ -29,8 +29,8 @@ enum RemoteShot {
         let container = UINavigationController(rootViewController: settings)
         nav.present(container, animated: false)
         try? await Task.sleep(for: .seconds(2))
-        if let indexPath = settings.dataSource.indexPath(for: .serversExplainer) {
-            settings.tableView.scrollToRow(at: indexPath, at: .top, animated: false)
+        if let section = settings.dataSource.snapshot().indexOfSection(.servers) {
+            settings.tableView.scrollToRow(at: IndexPath(row: 0, section: section), at: .top, animated: false)
         }
     }
 

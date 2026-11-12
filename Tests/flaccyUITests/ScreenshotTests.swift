@@ -17,7 +17,6 @@ final class ScreenshotTests: XCTestCase {
         static let settings = "library.settings"
         static let recap = "library.playlists.recap"
         static let settingsTable = "settings.table"
-        static let listeningGuide = "settings.row.listeningGuide"
         static let yearInMusic = "settings.row.yearInMusic"
         static let yearInMusicClose = "yearInMusic.close"
         static let unlockLifetime = "unlockLifetime"
@@ -80,10 +79,6 @@ final class ScreenshotTests: XCTestCase {
         tapScrolling(app.cells[ID.yearInMusic], "Your Year in Music row", in: app)
         capture(app, wait: 6, name: "dark-08-year-in-music")
         tap(app.buttons[ID.yearInMusicClose], "Year in Music close button")
-        sleep(1)
-
-        tapScrolling(app.cells[ID.listeningGuide], "Listening Guide row", in: app)
-        capture(app, wait: 4, name: "dark-09-listening-guide")
     }
 
     @MainActor func testSongsListShot() throws {
@@ -153,10 +148,6 @@ final class ScreenshotTests: XCTestCase {
         capture(app, wait: 6, name: "light-02-library-songs")
 
         tap(app.buttons[ID.tabAlbums], "Albums tab")
-        sleep(1)
-        openSettings(app)
-        tapScrolling(app.cells[ID.listeningGuide], "Listening Guide row", in: app)
-        capture(app, wait: 4, name: "light-09-listening-guide")
     }
 
     @MainActor private func openSortMenuAndPick(

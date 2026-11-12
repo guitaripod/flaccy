@@ -227,6 +227,7 @@ final class SettingsViewController: UITableViewController {
         var snapshot = NSDiffableDataSourceSnapshot<Section, Row>()
         snapshot.appendSections(Section.allCases.filter {
             ($0 != .trial || isTrialSectionVisible) && ($0 != .watch || WatchSyncService.shared.canPairWatch)
+                && ($0 != .serverCache || !serversModel.rows.isEmpty)
         })
         snapshot.appendItems([.midgarEntry], toSection: .midgar)
         snapshot.appendItems([.appearance(AppAppearance.current), .accent(AppAccent.current)], toSection: .appearance)
@@ -252,15 +253,16 @@ final class SettingsViewController: UITableViewController {
             toSection: .recap
         )
         snapshot.appendItems([.equalizer(summary: EqualizerCopy.settingsSummary), .gaplessPlayback, .autoplaySimilar, .libraryRadio, .crateDig], toSection: .playback)
-        snapshot.appendItems([.listeningGuide], toSection: .guide)
         if WatchSyncService.shared.canPairWatch {
             snapshot.appendItems([.watchSync(syncedCount: WatchSyncService.shared.syncedCount, profile: WatchSyncService.shared.profile)], toSection: .watch)
         }
         snapshot.appendItems(serverRows(), toSection: .servers)
-        snapshot.appendItems(
-            [.cacheLimit, .cacheUsage(serversModel.cacheCaption), .clearCache],
-            toSection: .serverCache
-        )
+        if !serversModel.rows.isEmpty {
+            snapshot.appendItems(
+                [.cacheLimit, .cacheUsage(serversModel.cacheCaption), .clearCache],
+                toSection: .serverCache
+            )
+        }
         snapshot.appendItems(libraryRows(), toSection: .library)
         if libraryDebut != nil {
             snapshot.appendItems([.libraryDebutSummary], toSection: .setup)
@@ -303,7 +305,7 @@ final class SettingsViewController: UITableViewController {
         switch row {
         case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
-             .serversExplainer, .cacheLimit, .cacheUsage:
+             .cacheLimit, .cacheUsage:
             return false
         case .server(let server): return server.flaccy != nil
         case .historySync: return !ListenHistorySync.shared.status.isBusy
@@ -323,7 +325,6 @@ final class SettingsViewController: UITableViewController {
         case .recapNotifications: handleRecapNotificationsTap()
         case .libraryRadio: handleLibraryRadio()
         case .crateDig: handleCrateDig()
-        case .listeningGuide: handleListeningGuideTap()
         case .equalizer: present(EqualizerViewController.makePresented(), animated: true)
         case .watchSync: handleWatchTap()
         case .privacyPolicy: UIApplication.shared.open(LegalLinks.privacyURL)
@@ -339,7 +340,7 @@ final class SettingsViewController: UITableViewController {
         case .clearCache: handleClearCacheTap()
         case .appearance, .accent, .trialReminders, .gaplessPlayback, .autoplaySimilar, .groupAlbumEditions, .hideDuplicateSongs,
              .libraryStats, .storage, .appleMusicArtwork, .libraryDebutSummary, .midgarEntry,
-             .serversExplainer, .cacheLimit, .cacheUsage:
+             .cacheLimit, .cacheUsage:
             break
         }
     }

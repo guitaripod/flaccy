@@ -533,10 +533,7 @@ impl MeaningPicker {
 fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title("Music Videos")
-        .description(
-            "Now Playing shows each song's music video, locked to your lossless audio, and the \
-             cover when a song has none",
-        )
+        .description("Each song's music video, in sync with your audio")
         .build();
 
     let quality = adw::ComboRow::builder()
@@ -648,19 +645,12 @@ fn music_video_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
 fn prepare_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title("Prepare Ahead")
-        .description(
-            "Lyrics and music videos for the songs coming up are fetched before you reach them, \
-             at a pace the services accept, and paused whenever they ask for fewer requests",
-        )
+        .description("Fetches lyrics and videos for the songs coming up")
         .build();
 
     let whole_library = adw::SwitchRow::builder()
         .title("Lyrics for My Whole Library")
-        .subtitle(
-            "Looks up every song's lyrics in the background and retries until they are found, \
-             which tells lrclib your library's titles and artists. Off, only the queue and the \
-             songs you play are looked up",
-        )
+        .subtitle("Sends every song's title and artist to lrclib in the background")
         .active(ui.core.config.borrow().lyrics_whole_library)
         .build();
     {
@@ -880,7 +870,7 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
 
     let group_editions_row = adw::SwitchRow::builder()
         .title("Group Album Editions")
-        .subtitle("Fold deluxe, remaster and explicit variants into one album; keep one best copy of each song")
+        .subtitle("Fold deluxe, remaster and explicit editions into one album")
         .active(ui.core.config.borrow().group_album_editions)
         .build();
     {
@@ -899,7 +889,7 @@ fn library_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
 
     let hide_duplicates_row = adw::SwitchRow::builder()
         .title("Hide Duplicate Songs")
-        .subtitle("Show a song once in Songs and play it once in stations and mixes, however many releases it is on")
+        .subtitle("Show a song once, however many albums it is on")
         .active(ui.core.config.borrow().hide_duplicate_songs)
         .build();
     {
@@ -1130,9 +1120,7 @@ fn render_metadata_counts(ui: &Rc<Ui>, row: &adw::ActionRow, job: &JobProgress) 
     row.set_subtitle(&job_copy::settled(job.remaining, job.exhausted));
 }
 
-const LASTFM_CONNECTED_DESCRIPTION: &str = "Flaccy and Last.fm share one listening history. Every scrobble on your account, from Flaccy or any other app or device, flows into Stats, play counts and Most Played, and keeps flowing on its own.";
-
-const LASTFM_DISCONNECTED_DESCRIPTION: &str = "Connect a Last.fm account to scrobble your listens, sync loved tracks, and bring your whole listening history into Stats and play counts.";
+const LASTFM_DISCONNECTED_DESCRIPTION: &str = "Optional. Scrobble your plays and bring your Last.fm history into Stats.";
 
 fn lastfm_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder().title("Last.fm").build();
@@ -1156,11 +1144,7 @@ fn lastfm_group(ui: &Rc<Ui>) -> adw::PreferencesGroup {
         let pending_token = Rc::clone(&pending_token);
         Rc::new(move || {
             let session = ui.core.session.borrow().clone();
-            group.set_description(Some(if session.is_some() {
-                LASTFM_CONNECTED_DESCRIPTION
-            } else {
-                LASTFM_DISCONNECTED_DESCRIPTION
-            }));
+            group.set_description(session.is_none().then_some(LASTFM_DISCONNECTED_DESCRIPTION));
             sync_row.set_visible(session.is_some());
             match session {
                 Some(session) => {

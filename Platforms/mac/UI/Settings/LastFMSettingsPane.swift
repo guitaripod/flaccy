@@ -34,7 +34,7 @@ final class LastFMSettingsPane: SettingsPane {
         disconnectButton.target = self
         disconnectButton.action = #selector(disconnectTapped)
         addRow([statusLabel, connectButton, profileButton, disconnectButton], spacing: 10)
-        addFullWidth(explanation(String(localized: "Scrobbles every play, keeps an offline queue, and powers the Recap, Wantlist, and loved tracks.")))
+        addFullWidth(explanation(String(localized: "Optional. Scrobble your plays and bring your Last.fm history into Stats.")))
         formStack.addArrangedSubview(separator())
 
         formStack.addArrangedSubview(sectionLabel(String(localized: "Scrobbles")))
@@ -56,7 +56,6 @@ final class LastFMSettingsPane: SettingsPane {
         syncStatusLabel.font = .systemFont(ofSize: 12)
         syncStatusLabel.textColor = .secondaryLabelColor
         addRow([syncButton, syncSpinner, syncStatusLabel], spacing: 10)
-        addFullWidth(explanation(String(localized: "Flaccy and Last.fm share one listening history. Every scrobble on your account, from Flaccy or any other app or device, flows into Stats, play counts and Most Played, and keeps flowing on its own.")))
     }
 
     override func viewWillAppear() {
