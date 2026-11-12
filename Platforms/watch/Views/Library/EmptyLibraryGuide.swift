@@ -22,9 +22,9 @@ struct EmptyLibraryView: View {
                     .accessibilityAddTraits(.isHeader)
 
                 VStack(spacing: 6) {
-                    GuideStep(number: 1, symbol: "iphone", text: "Open Flaccy on your iPhone")
-                    GuideStep(number: 2, symbol: "applewatch", text: "Go to Settings › Apple Watch")
-                    GuideStep(number: 3, symbol: "checkmark.circle", text: "Pick albums to send")
+                    GuideStep(number: 1, symbol: "iphone", text: "Add music to Flaccy on your iPhone")
+                    GuideStep(number: 2, symbol: "applewatch", text: "In Settings, tap Sync Music to Watch")
+                    GuideStep(number: 3, symbol: "checkmark.circle", text: "Pick the albums to send")
                 }
                 .accessibilityElement(children: .contain)
 

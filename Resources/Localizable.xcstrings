@@ -4739,70 +4739,6 @@
         }
       }
     },
-    "%@ tracks · %@ albums on your wrist": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ Titel · %2$@ Alben an deinem Handgelenk"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ pistas · %2$@ álbumes en tu muñeca"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ morceaux · %2$@ albums à votre poignet"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ brani · %2$@ album al tuo polso"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手首に %1$@ 曲 · %2$@ アルバム"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "손목에 트랙 %1$@개 · 앨범 %2$@개"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ utworów · %2$@ albumów na twoim nadgarstku"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ faixas · %2$@ álbuns no seu pulso"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腕上 %1$@ 首曲目 · %2$@ 张专辑"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腕上 %1$@ 首曲目 · %2$@ 張專輯"
-          }
-        }
-      }
-    },
     "%@ was on both devices and is now one.": {
       "localizations": {
         "de": {
@@ -5073,6 +5009,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · 剩餘 %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ on your wrist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ an deinem Handgelenk"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ on your wrist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ en tu muñeca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ à votre poignet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ al polso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手首に %@ · %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손목에 %@ · %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ na nadgarstku"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ no seu pulso"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手腕上 %@ · %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手腕上 %@ · %@"
           }
         }
       }
@@ -21933,6 +21939,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "新增頻段"
+          }
+        }
+      }
+    },
+    "Add music to Flaccy first, then pick the albums your Apple Watch should carry.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge zuerst Musik zu Flaccy hinzu und wähle dann die Alben aus, die deine Apple Watch haben soll."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add music to Flaccy first, then pick the albums your Apple Watch should carry."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primero añade música a Flaccy y luego elige los álbumes que debe llevar tu Apple Watch."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez d’abord de la musique à Flaccy, puis choisissez les albums que votre Apple Watch doit contenir."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima aggiungi musica a Flaccy, poi scegli gli album che deve avere il tuo Apple Watch."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まず Flaccy に音楽を追加してから、Apple Watch に入れるアルバムを選んでください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 Flaccy에 음악을 추가한 다음, Apple Watch에 담을 앨범을 고르세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Najpierw dodaj muzykę do Flaccy, a potem wybierz albumy, które ma mieć Apple Watch."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primeiro adicione música ao Flaccy e depois escolha os álbuns que o seu Apple Watch deve ter."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先把音乐添加到 Flaccy，然后选择要放到 Apple Watch 上的专辑。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請先把音樂加入 Flaccy，然後選擇要放到 Apple Watch 上的專輯。"
           }
         }
       }
@@ -72277,6 +72353,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」沒有歌詞"
+          }
+        }
+      }
+    },
+    "No Music to Send Yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Musik zum Senden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Music to Send Yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todavía no hay música para enviar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore de musique à envoyer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna musica da inviare per ora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだ送る音楽がありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 보낼 음악이 없습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie ma jeszcze muzyki do wysłania"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há música para enviar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有可发送的音乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有可傳送的音樂"
           }
         }
       }

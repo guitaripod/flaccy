@@ -103,8 +103,8 @@ nonisolated enum LibraryDebutCopy {
     }
 
     static func watchCardDetail(trackCount: Int, albumCount: Int) -> String {
-        let tracks = LibraryLoadPhaseCopy.number(trackCount)
-        let albums = LibraryLoadPhaseCopy.number(albumCount)
-        return String(localized: "\(tracks) tracks · \(albums) albums on your wrist")
+        let tracks = String(localized: "\(trackCount) tracks")
+        let albums = String(localized: "\(albumCount) albums")
+        return String(localized: "\(tracks) · \(albums) on your wrist")
     }
 }

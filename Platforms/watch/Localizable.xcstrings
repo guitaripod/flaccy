@@ -900,70 +900,6 @@
         }
       }
     },
-    "%@ tracks · %@ albums on your wrist": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ Titel · %2$@ Alben an deinem Handgelenk"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ pistas · %2$@ álbumes en tu muñeca"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ morceaux · %2$@ albums à votre poignet"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ brani · %2$@ album al tuo polso"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手首に %1$@ 曲 · %2$@ アルバム"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "손목에 트랙 %1$@개 · 앨범 %2$@개"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ utworów · %2$@ albumów na twoim nadgarstku"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ faixas · %2$@ álbuns no seu pulso"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腕上 %1$@ 首曲目 · %2$@ 张专辑"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腕上 %1$@ 首曲目 · %2$@ 張專輯"
-          }
-        }
-      }
-    },
     "%@ · %@": {
       "localizations": {
         "de": {
@@ -1024,6 +960,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ on your wrist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ an deinem Handgelenk"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ en tu muñeca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ à ton poignet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ al polso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手首に %@ · %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손목에 %@ · %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ na nadgarstku"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ no seu pulso"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手腕上 %@ · %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手腕上 %@ · %@"
           }
         }
       }
@@ -3327,66 +3327,130 @@
         }
       }
     },
-    "AI · included in your 7-day trial": {
+    "AI · included in the free trial": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "KI · in deiner 7-tägigen Testphase enthalten"
+            "value": "KI · in der kostenlosen Testphase enthalten"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA · incluida en tu prueba de 7 días"
+            "value": "IA · incluida en la prueba gratuita"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA · incluse dans votre essai de 7 jours"
+            "value": "IA · incluse dans l’essai gratuit"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA · inclusa nella prova di 7 giorni"
+            "value": "IA · inclusa nella prova gratuita"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · 7日間のトライアルに含まれます"
+            "value": "AI · 無料トライアルに含まれます"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · 7일 체험에 포함"
+            "value": "AI · 무료 체험에 포함"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · w cenie 7-dniowego okresu próbnego"
+            "value": "AI · w bezpłatnym okresie próbnym"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "IA · incluída no seu teste de 7 dias"
+            "value": "IA · incluída no teste gratuito"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · 已包含在 7 天试用中"
+            "value": "AI · 包含在免费试用中"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "AI · 已包含在 7 天試用中"
+            "value": "AI · 包含在免費試用中"
+          }
+        }
+      }
+    },
+    "Add music to Flaccy on your iPhone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge Musik zu Flaccy auf deinem iPhone hinzu"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade música a Flaccy en tu iPhone"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoute de la musique à Flaccy sur ton iPhone"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi musica a Flaccy sul tuo iPhone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhoneのFlaccyに音楽を追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone의 Flaccy에 음악을 추가하세요"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj muzykę do Flaccy na iPhonie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicione música ao Flaccy no seu iPhone"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iPhone 上的 Flaccy 中添加音乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iPhone 上的 Flaccy 中加入音樂"
           }
         }
       }
@@ -4927,70 +4991,6 @@
         }
       }
     },
-    "Go to Settings › Apple Watch": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gehe zu Einstellungen › Apple Watch"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ve a Ajustes › Apple Watch"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre Réglages › Apple Watch"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vai in Impostazioni › Apple Watch"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設定 › Apple Watch を開く"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "설정 › Apple Watch로 이동"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przejdź do Ustawień › Apple Watch"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vá em Ajustes › Apple Watch"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "前往“设置”›“Apple Watch”"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "前往「設定」›「Apple Watch」"
-          }
-        }
-      }
-    },
     "Grouping tracks into albums and artists.": {
       "localizations": {
         "de": {
@@ -5115,6 +5115,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在辨識專輯"
+          }
+        }
+      }
+    },
+    "In Settings, tap Sync Music to Watch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe in den Einstellungen auf „Musik auf die Watch synchronisieren“"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En Ajustes, toca «Sincronizar música con el Watch»"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans Réglages, touche « Synchroniser la musique vers la Watch »"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Impostazioni, tocca «Sincronizza la musica sul Watch»"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定で「Watchに音楽を同期」をタップ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정에서 “Watch로 음악 동기화”를 탭하세요"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W Ustawieniach stuknij „Synchronizuj muzykę z Watchem”"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em Ajustes, toque em “Sincronizar Música com o Watch”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在“设置”中点按“把音乐同步到 Watch”"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在「設定」中點按「把音樂同步到 Watch」"
           }
         }
       }
@@ -6335,70 +6399,6 @@
         }
       }
     },
-    "Open Flaccy on your iPhone": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffne Flaccy auf deinem iPhone"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre Flaccy en tu iPhone"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre Flaccy sur ton iPhone"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apri Flaccy sul tuo iPhone"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iPhoneでFlaccyを開く"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iPhone에서 Flaccy 열기"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwórz Flaccy na iPhonie"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abra o Flaccy no seu iPhone"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 iPhone 上打开 Flaccy"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 iPhone 上打開 Flaccy"
-          }
-        }
-      }
-    },
     "Open Library Settings": {
       "localizations": {
         "de": {
@@ -6719,70 +6719,6 @@
         }
       }
     },
-    "Pick albums to send": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wähle Alben zum Senden aus"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elige álbumes para enviar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choisis les albums à envoyer"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scegli gli album da inviare"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送るアルバムを選ぶ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "보낼 앨범 고르기"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wybierz albumy do wysłania"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Escolha os álbuns para enviar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择要发送的专辑"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選擇要傳送的專輯"
-          }
-        }
-      }
-    },
     "Pick an album to start.": {
       "localizations": {
         "de": {
@@ -6843,6 +6779,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "挑一張專輯開始吧。"
+          }
+        }
+      }
+    },
+    "Pick the albums to send": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle die Alben zum Senden aus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige los álbumes que enviar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis les albums à envoyer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli gli album da inviare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送るアルバムを選ぶ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보낼 앨범 고르기"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz albumy do wysłania"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha os álbuns para enviar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择要发送的专辑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇要傳送的專輯"
           }
         }
       }

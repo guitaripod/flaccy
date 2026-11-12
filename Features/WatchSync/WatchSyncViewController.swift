@@ -50,6 +50,9 @@ final class WatchSyncViewController: UITableViewController {
     private var renderedFooterKey: [Bool]?
     private var songsInRun = 0
 
+    /// Opens the importer from the Library; set by Settings, which owns the way there.
+    var onAddMusic: (() -> Void)?
+
     init() { super.init(style: .insetGrouped) }
 
     @available(*, unavailable)
@@ -338,11 +341,29 @@ final class WatchSyncViewController: UITableViewController {
     }
 
     private func updateEmptyState() {
-        guard isSearching, albums.isEmpty else {
-            contentUnavailableConfiguration = nil
+        if isSearching {
+            contentUnavailableConfiguration = albums.isEmpty ? UIContentUnavailableConfiguration.search() : nil
             return
         }
-        contentUnavailableConfiguration = UIContentUnavailableConfiguration.search()
+        contentUnavailableConfiguration = Library.shared.allTracks.isEmpty ? noMusicConfiguration() : nil
+    }
+
+    /// A library with nothing to send says so and offers the way to fill it, instead of "choose an album below" over an empty list.
+    private func noMusicConfiguration() -> UIContentUnavailableConfiguration {
+        var empty = UIContentUnavailableConfiguration.empty()
+        empty.image = UIImage(systemName: "music.note.list")
+        empty.text = String(localized: "No Music to Send Yet")
+        empty.secondaryText = String(localized: "Add music to Flaccy first, then pick the albums your Apple Watch should carry.")
+        if onAddMusic != nil {
+            var button = UIButton.Configuration.borderedProminent()
+            button.title = String(localized: "Add Music")
+            empty.button = button
+            empty.buttonProperties.primaryAction = UIAction { [weak self] _ in
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                self?.onAddMusic?()
+            }
+        }
+        return empty
     }
 
     @objc private func libraryChanged() {

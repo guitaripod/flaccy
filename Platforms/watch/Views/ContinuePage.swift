@@ -2,7 +2,8 @@ import FlaccyCore
 import SwiftUI
 
 /// The first page of the wrist's vertical pager: the song to pick back up,
-/// or, with nothing to continue, a big Shuffle All.
+/// or, with nothing to continue, a big Shuffle All. A watch with no music yet
+/// says how to send some instead of showing a button that does nothing.
 struct ContinuePage: View {
 
     @Environment(WatchAudioPlayer.self) private var player
@@ -17,6 +18,8 @@ struct ContinuePage: View {
         Group {
             if let summary = player.resumeSummary {
                 continueContent(summary)
+            } else if isWaitingForMusic {
+                EmptyLibraryView(errorReason: syncStatus.lastErrorReason)
             } else {
                 shuffleContent
             }
@@ -115,6 +118,12 @@ struct ContinuePage: View {
             .accessibilityHint(Text("Plays everything on this watch in random order"))
         }
         .padding(.horizontal, 4)
+    }
+
+    /// Nothing on the wrist, nothing loading and nothing arriving: the guide is the only useful thing to show.
+    private var isWaitingForMusic: Bool {
+        store.isEmpty && !store.isLoading && !syncStatus.isReceiving
+            && !syncStatus.incoming.isActive && !syncStatus.incoming.preparing
     }
 
     private var resumeBackground: AnyShapeStyle {
