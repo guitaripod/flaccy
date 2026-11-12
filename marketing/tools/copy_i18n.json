@@ -758,5 +758,309 @@
       "headline": "為你的耳機\n*精心調校。*",
       "sub": "匯入 AutoEq 設定檔，依輸出分別儲存。"
     }
+  },
+  "sv": {
+    "home": {
+      "kicker": "Hem",
+      "headline": "Fortsätt precis\n*där du slutade.*",
+      "sub": "Fortsätt lyssna, mixar och minnen från ditt bibliotek."
+    },
+    "hero": {
+      "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
+      "headline": "Din samling,\ni *full kvalitet.*"
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Få det att låta\n*som du vill.*",
+      "sub": "Dra i kurvan. Hör skillnaden."
+    },
+    "nowplaying": {
+      "kicker": "Spelas nu",
+      "headline": "Hi-Res, visat\n*i varje detalj.*",
+      "sub": "Bitdjup och samplingsfrekvens för varje låt."
+    },
+    "lyrics": {
+      "kicker": "Synkade låttexter",
+      "headline": "Låttexter som följer\n*varje ord.*",
+      "sub": "Tryck på en rad för att hoppa dit."
+    },
+    "share": {
+      "kicker": "Dela låttext",
+      "headline": "Din favoritrad,\n*som video.*",
+      "sub": "Till själva låten, redo för Stories."
+    },
+    "playlists": {
+      "kicker": "Smarta spellistor",
+      "headline": "Spellistor som\n*bygger sig själva.*",
+      "sub": "Skapade ur ditt eget bibliotek."
+    },
+    "scrobble": {
+      "kicker": "Scrobbla till Last.fm",
+      "headline": "Varje lyssning räknas,\n*även offline.*",
+      "sub": "Försöker igen av sig själv när du är online."
+    },
+    "year": {
+      "kicker": "Ditt musikår",
+      "headline": "Ditt år i musik,\n*redo att dela.*",
+      "sub": "Story-kort och en affisch över ditt lyssnande."
+    },
+    "watch": {
+      "kicker": "Apple Watch",
+      "headline": "Klockan spelar\nmusik *offline.*",
+      "sub": "Ingen iPhone behövs."
+    },
+    "watchsync": {
+      "kicker": "Synka till klockan",
+      "headline": "Skicka album\n*till handleden.*",
+      "sub": "Mindre filer, så mer musik får plats."
+    },
+    "queue": {
+      "kicker": "Nästa",
+      "headline": "En kö som\n*kommer ihåg.*",
+      "sub": "Dra för att ändra ordning. Klarar omstarter."
+    },
+    "wantlist": {
+      "kicker": "Önskelista",
+      "headline": "Jaga din\n*nästa skiva.*",
+      "sub": "Nya släpp och luckorna i din samling."
+    },
+    "themes": {
+      "kicker": "Utseende",
+      "headline": "Ljust eller mörkt.\n*Du väljer.*",
+      "sub": "Följer systemet, eller välj själv."
+    },
+    "eqpro": {
+      "kicker": "Precisions-EQ",
+      "headline": "Anpassad efter\n*dina hörlurar.*",
+      "sub": "Importera AutoEq-profiler. Sparas per utgång."
+    }
+  },
+  "da": {
+    "home": {
+      "kicker": "Hjem",
+      "headline": "Fortsæt lige\n*hvor du slap.*",
+      "sub": "Fortsæt, mix og minder fra dit bibliotek."
+    },
+    "hero": {
+      "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
+      "headline": "Din samling,\ni *fuld kvalitet.*"
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Få det til at lyde\n*som dig.*",
+      "sub": "Træk i kurven. Hør forskellen."
+    },
+    "nowplaying": {
+      "kicker": "Afspilles nu",
+      "headline": "Hi-Res, vist\n*i hver detalje.*",
+      "sub": "Bitdybde og samplingsfrekvens på hvert nummer."
+    },
+    "lyrics": {
+      "kicker": "Synkroniserede sangtekster",
+      "headline": "Sangtekster, der følger\n*hvert ord.*",
+      "sub": "Tryk på en linje for at springe derhen."
+    },
+    "share": {
+      "kicker": "Del sangtekst",
+      "headline": "Din yndlingslinje,\n*som video.*",
+      "sub": "Sat til selve sangen, klar til Stories."
+    },
+    "playlists": {
+      "kicker": "Smarte playlister",
+      "headline": "Playlister, der\n*bygger sig selv.*",
+      "sub": "Lavet ud fra dit eget bibliotek."
+    },
+    "scrobble": {
+      "kicker": "Scrobbling til Last.fm",
+      "headline": "Hver afspilning tæller,\n*også offline.*",
+      "sub": "Prøver selv igen, når du er online."
+    },
+    "year": {
+      "kicker": "Dit musikår",
+      "headline": "Dit år i musik,\n*klar til at dele.*",
+      "sub": "Story-kort og en plakat over din lytning."
+    },
+    "watch": {
+      "kicker": "Apple Watch",
+      "headline": "Dit ur spiller\nmusik *offline.*",
+      "sub": "Ingen iPhone nødvendig."
+    },
+    "watchsync": {
+      "kicker": "Synk til uret",
+      "headline": "Send album\n*til dit håndled.*",
+      "sub": "Mindre filer, så der er plads til mere musik."
+    },
+    "queue": {
+      "kicker": "Næste",
+      "headline": "En kø, der\n*husker.*",
+      "sub": "Træk for at ændre rækkefølgen. Overlever genstart."
+    },
+    "wantlist": {
+      "kicker": "Ønskeliste",
+      "headline": "Find din\n*næste plade.*",
+      "sub": "Nye udgivelser og hullerne i din samling."
+    },
+    "themes": {
+      "kicker": "Udseende",
+      "headline": "Lyst eller mørkt.\n*Du bestemmer.*",
+      "sub": "Følger systemet, eller vælg selv."
+    },
+    "eqpro": {
+      "kicker": "Præcisions-EQ",
+      "headline": "Tilpasset\n*dine hovedtelefoner.*",
+      "sub": "Importér AutoEq-profiler. Gemt pr. udgang."
+    }
+  },
+  "no": {
+    "home": {
+      "kicker": "Hjem",
+      "headline": "Fortsett akkurat\n*der du slapp.*",
+      "sub": "Fortsett, mikser og minner fra biblioteket ditt."
+    },
+    "hero": {
+      "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
+      "headline": "Samlingen din,\ni *full kvalitet.*"
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Få det til å låte\n*som deg.*",
+      "sub": "Dra i kurven. Hør forskjellen."
+    },
+    "nowplaying": {
+      "kicker": "Spilles nå",
+      "headline": "Hi-Res, vist\n*i hver detalj.*",
+      "sub": "Bitdybde og samplingsfrekvens på hvert spor."
+    },
+    "lyrics": {
+      "kicker": "Synkroniserte sangtekster",
+      "headline": "Sangtekster som følger\n*hvert ord.*",
+      "sub": "Trykk på en linje for å hoppe dit."
+    },
+    "share": {
+      "kicker": "Del sangtekst",
+      "headline": "Favorittlinjen din,\n*som video.*",
+      "sub": "Satt til selve sangen, klar for Stories."
+    },
+    "playlists": {
+      "kicker": "Smarte spillelister",
+      "headline": "Spillelister som\n*bygger seg selv.*",
+      "sub": "Laget fra ditt eget bibliotek."
+    },
+    "scrobble": {
+      "kicker": "Scrobbling til Last.fm",
+      "headline": "Hver avspilling teller,\n*også offline.*",
+      "sub": "Prøver igjen av seg selv når du er på nett."
+    },
+    "year": {
+      "kicker": "Musikkåret ditt",
+      "headline": "Året ditt i musikk,\n*klart til å deles.*",
+      "sub": "Story-kort og en plakat over lyttingen din."
+    },
+    "watch": {
+      "kicker": "Apple Watch",
+      "headline": "Klokken spiller\nmusikk *offline.*",
+      "sub": "Ingen iPhone trengs."
+    },
+    "watchsync": {
+      "kicker": "Synk til klokken",
+      "headline": "Send album\n*til håndleddet.*",
+      "sub": "Mindre filer, så mer musikk får plass."
+    },
+    "queue": {
+      "kicker": "Neste",
+      "headline": "En kø som\n*husker.*",
+      "sub": "Dra for å endre rekkefølgen. Overlever omstart."
+    },
+    "wantlist": {
+      "kicker": "Ønskeliste",
+      "headline": "Finn din\n*neste plate.*",
+      "sub": "Nye utgivelser og hullene i samlingen din."
+    },
+    "themes": {
+      "kicker": "Utseende",
+      "headline": "Lyst eller mørkt.\n*Du bestemmer.*",
+      "sub": "Følger systemet, eller velg selv."
+    },
+    "eqpro": {
+      "kicker": "Presisjons-EQ",
+      "headline": "Tilpasset\n*hodetelefonene dine.*",
+      "sub": "Importer AutoEq-profiler. Lagret per utgang."
+    }
+  },
+  "fi": {
+    "home": {
+      "kicker": "Koti",
+      "headline": "Jatka siitä,\n*mihin jäit.*",
+      "sub": "Jatka kuuntelua, miksaukset ja muistot kirjastostasi."
+    },
+    "hero": {
+      "kicker": "FLAC · ALAC · WAV · AIFF · MP3 · AAC",
+      "headline": "Kokoelmasi\n*täydessä laadussa.*"
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Saa se kuulostamaan\n*omaltasi.*",
+      "sub": "Vedä käyrää. Kuule muutos."
+    },
+    "nowplaying": {
+      "kicker": "Toistetaan nyt",
+      "headline": "Hi-Res, näkyvissä\n*joka yksityiskohta.*",
+      "sub": "Bittisyvyys ja näytteenottotaajuus joka kappaleessa."
+    },
+    "lyrics": {
+      "kicker": "Synkronoidut sanoitukset",
+      "headline": "Sanoitukset, jotka\n*seuraavat joka sanaa.*",
+      "sub": "Napauta riviä ja hyppää siihen."
+    },
+    "share": {
+      "kicker": "Jaa sanoitukset",
+      "headline": "Lempirivisi\n*videona.*",
+      "sub": "Itse kappaleen tahdissa, valmiina Storiesiin."
+    },
+    "playlists": {
+      "kicker": "Älykkäät soittolistat",
+      "headline": "Soittolistat, jotka\n*rakentuvat itse.*",
+      "sub": "Tehty omasta kirjastostasi."
+    },
+    "scrobble": {
+      "kicker": "Last.fm-scrobblaus",
+      "headline": "Joka kuuntelu lasketaan,\n*myös offline.*",
+      "sub": "Yrittää itse uudelleen, kun olet taas verkossa."
+    },
+    "year": {
+      "kicker": "Musiikkivuotesi",
+      "headline": "Vuotesi musiikissa,\n*valmiina jaettavaksi.*",
+      "sub": "Story-kortit ja juliste kuuntelustasi."
+    },
+    "watch": {
+      "kicker": "Apple Watch",
+      "headline": "Kello soittaa\nmusiikkia *offline.*",
+      "sub": "iPhonea ei tarvita."
+    },
+    "watchsync": {
+      "kicker": "Synkronointi kelloon",
+      "headline": "Lähetä albumit\n*ranteeseesi.*",
+      "sub": "Pienemmät tiedostot, joten musiikkia mahtuu enemmän."
+    },
+    "queue": {
+      "kicker": "Seuraavana",
+      "headline": "Jono, joka\n*muistaa.*",
+      "sub": "Järjestä vetämällä. Säilyy uudelleenkäynnistyksen yli."
+    },
+    "wantlist": {
+      "kicker": "Toivelista",
+      "headline": "Etsi\n*seuraava levysi.*",
+      "sub": "Uutuudet ja kokoelmasi aukot."
+    },
+    "themes": {
+      "kicker": "Ulkoasu",
+      "headline": "Vaalea vai tumma.\n*Sinä päätät.*",
+      "sub": "Seuraa järjestelmää, tai valitse itse."
+    },
+    "eqpro": {
+      "kicker": "Tarkka EQ",
+      "headline": "Viritetty\n*kuulokkeillesi.*",
+      "sub": "Tuo AutoEq-profiilit. Tallennetaan ulostuloittain."
+    }
   }
 }

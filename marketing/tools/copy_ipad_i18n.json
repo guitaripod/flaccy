@@ -418,5 +418,173 @@
       "headline": "你的年度音樂，*隨時分享。*",
       "maxLines": 1
     }
+  },
+  "sv": {
+    "home": {
+      "kicker": "Gjord för den stora skärmen",
+      "headline": "Din musik, *hela skärmen.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "Bibliotek",
+      "headline": "Varje album, *ett sidofält bort.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "Förlustfritt",
+      "headline": "Din samling, i *full kvalitet.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "Låttexter",
+      "headline": "Omslag och låttext, *sida vid sida.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "Nästa",
+      "headline": "Din kö, *alltid nära till hands.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Scrobbla till Last.fm",
+      "headline": "Varje lyssning räknas, *även offline.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Dra i kurvan. *Hör skillnaden.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "Ditt musikår",
+      "headline": "Ditt år i musik, *redo att dela.*",
+      "maxLines": 1
+    }
+  },
+  "da": {
+    "home": {
+      "kicker": "Lavet til den store skærm",
+      "headline": "Din musik, *hele skærmen.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "Bibliotek",
+      "headline": "Hvert album, *én sidebjælke væk.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "Tabsfri",
+      "headline": "Din samling, i *fuld kvalitet.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "Sangtekster",
+      "headline": "Cover og sangtekst, *side om side.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "Næste",
+      "headline": "Din kø, *altid lige ved hånden.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Scrobbling til Last.fm",
+      "headline": "Hver afspilning tæller, *også offline.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Træk i kurven. *Hør forskellen.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "Dit musikår",
+      "headline": "Dit år i musik, *klar til at dele.*",
+      "maxLines": 1
+    }
+  },
+  "no": {
+    "home": {
+      "kicker": "Laget for den store skjermen",
+      "headline": "Musikken din, *hele skjermen.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "Bibliotek",
+      "headline": "Hvert album, *ett sidepanel unna.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "Tapsfritt",
+      "headline": "Samlingen din, i *full kvalitet.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "Sangtekster",
+      "headline": "Omslag og sangtekst, *side om side.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "Neste",
+      "headline": "Køen din, *alltid for hånden.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Scrobbling til Last.fm",
+      "headline": "Hver avspilling teller, *også offline.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Dra i kurven. *Hør forskjellen.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "Musikkåret ditt",
+      "headline": "Året ditt i musikk, *klart til å deles.*",
+      "maxLines": 1
+    }
+  },
+  "fi": {
+    "home": {
+      "kicker": "Tehty isolle näytölle",
+      "headline": "Musiikkisi, *koko näytöllä.*",
+      "maxLines": 1
+    },
+    "library": {
+      "kicker": "Kirjasto",
+      "headline": "Joka albumi *sivupalkin päässä.*",
+      "maxLines": 1
+    },
+    "album": {
+      "kicker": "Häviötön",
+      "headline": "Kokoelmasi *täydessä laadussa.*",
+      "maxLines": 1
+    },
+    "lyrics": {
+      "kicker": "Sanoitukset",
+      "headline": "Kansi ja sanoitukset *rinnakkain.*",
+      "maxLines": 1
+    },
+    "queue": {
+      "kicker": "Seuraavana",
+      "headline": "Jonosi, *aina käden ulottuvilla.*",
+      "maxLines": 1
+    },
+    "scrobble": {
+      "kicker": "Last.fm-scrobblaus",
+      "headline": "Joka kuuntelu lasketaan, *myös offline.*",
+      "maxLines": 1
+    },
+    "eq": {
+      "kicker": "Equalizer",
+      "headline": "Vedä käyrää. *Kuule muutos.*",
+      "maxLines": 1
+    },
+    "year": {
+      "kicker": "Musiikkivuotesi",
+      "headline": "Vuotesi musiikissa, *valmiina jaettavaksi.*",
+      "maxLines": 1
+    }
   }
 }
