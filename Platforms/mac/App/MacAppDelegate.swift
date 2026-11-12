@@ -220,11 +220,40 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func libraryRootChanged() {
         folderWatcher.start(watching: LibraryRoot.current)
+        let folder = LibraryRoot.current
         MacToast.show(
-            "Library folder: \(LibraryRoot.current.lastPathComponent)",
+            String(localized: "Music folder: \(folder.lastPathComponent)"),
             style: .success, in: mainWindowController?.window
         )
-        Task { await Self.reloadAndEnrich() }
+        Task {
+            await Self.reloadAndEnrich()
+            self.reportEmptyFolderIfNeeded(folder)
+        }
+    }
+
+    /// A folder the person chose that holds no music gets a word instead of silence: what Flaccy plays, and a way to pick again.
+    private func reportEmptyFolderIfNeeded(_ folder: URL) {
+        guard !LibraryRoot.shared.isUsingDefaultRoot, Library.shared.allTracks.isEmpty, LibraryRoot.current == folder,
+              let window = mainWindowController?.window
+        else { return }
+        MidgarLog.notice("The chosen music folder holds no music", category: .content)
+        let alert = NSAlert()
+        alert.messageText = String(localized: "No music in \u{201C}\(folder.lastPathComponent)\u{201D}")
+        alert.informativeText = String(localized: "Flaccy plays FLAC, ALAC, MP3, AAC, WAV and AIFF files, and found none in this folder or the folders inside it. Choose the folder your music is in. Music from the Music app is in Music \u{203A} Music \u{203A} Media.")
+        alert.addButton(withTitle: String(localized: "Choose Another Folder\u{2026}"))
+        alert.addButton(withTitle: String(localized: "OK"))
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn else { return }
+            self?.chooseMusicFolder(nil)
+        }
+    }
+
+    /// Where the folder picker opens: the folder of a moved library, else the person's Music folder, where the Music app keeps
+    /// its media. The sandbox hides the real home from the app's own paths, so it is read from the account.
+    private static var initialMusicFolder: URL? {
+        if let suggested = HandoffFolderPrompt.suggestedFolder { return suggested }
+        guard let home = getpwuid(getuid())?.pointee.pw_dir.map({ String(cString: $0) }) else { return nil }
+        return URL(fileURLWithPath: home, isDirectory: true).appending(path: "Music", directoryHint: .isDirectory)
     }
 
     private func notifyLibraryRootFallbackIfNeeded() {
@@ -319,8 +348,8 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.prompt = String(localized: "Use This Folder")
-        panel.message = String(localized: "Flaccy indexes the folder in place — nothing is copied or moved.")
-        panel.directoryURL = HandoffFolderPrompt.suggestedFolder
+        panel.message = String(localized: "Flaccy indexes the folder in place, nothing copied or moved. Music from the Music app is in Music \u{203A} Music \u{203A} Media.")
+        panel.directoryURL = Self.initialMusicFolder
         FunnelSignals.shared.noteAddMusicOpened()
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else {

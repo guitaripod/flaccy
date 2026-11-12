@@ -30535,6 +30535,76 @@
         }
       }
     },
+    "Choose Another Folder…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anderen Ordner wählen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Another Folder…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir otra carpeta…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir un autre dossier…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli un’altra cartella…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のフォルダを選択…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 폴더 선택…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz inny folder…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher outra pasta…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择其他文件夹…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇其他資料夾…"
+          }
+        }
+      }
+    },
     "Choose File": {
       "localizations": {
         "de": {
@@ -52617,70 +52687,6 @@
         }
       }
     },
-    "Flaccy indexes the folder in place — nothing is copied or moved.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy indexiert den Ordner an Ort und Stelle – nichts wird kopiert oder verschoben."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy indexa la carpeta donde está: no se copia ni se mueve nada."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy indexe le dossier sur place — rien n'est copié ni déplacé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy indicizza la cartella dov'è: nulla viene copiato o spostato."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccyはフォルダをその場でインデックスします — 何もコピーも移動もしません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy는 폴더를 제자리에서 색인합니다 — 아무것도 복사하거나 옮기지 않습니다."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy indeksuje folder w miejscu — nic nie jest kopiowane ani przenoszone."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Flaccy indexa a pasta onde ela está — nada é copiado ou movido."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy 会就地为文件夹建立索引——不会拷贝或移动任何东西。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flaccy 會就地為資料夾建立索引——不會拷貝或移動任何東西。"
-          }
-        }
-      }
-    },
     "Flaccy indexes the folder in place — nothing is copied or moved. Files added to the folder appear automatically.": {
       "localizations": {
         "de": {
@@ -52741,6 +52747,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy 會就地為資料夾建立索引——不會拷貝或移動任何東西。之後放進資料夾的檔案會自動出現。"
+          }
+        }
+      }
+    },
+    "Flaccy indexes the folder in place, nothing copied or moved. Music from the Music app is in Music › Music › Media.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indiziert den Ordner an seinem Platz; nichts wird kopiert oder verschoben. Musik aus der Music-App liegt unter Music › Music › Media."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indexes the folder in place, nothing copied or moved. Music from the Music app is in Music › Music › Media."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indexa la carpeta en su sitio, sin copiar ni mover nada. La música de la app Music está en Music › Music › Media."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indexe le dossier sur place, rien n’est copié ni déplacé. La musique de l’app Music se trouve dans Music › Music › Media."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indicizza la cartella sul posto, senza copiare né spostare nulla. La musica dell’app Music si trova in Music › Music › Media."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy はフォルダをそのまま索引化します。コピーや移動は行いません。Music アプリの音楽は Music › Music › Media にあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy는 폴더를 제자리에서 색인하며, 아무것도 복사하거나 옮기지 않습니다. Music 앱의 음악은 Music › Music › Media에 있습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indeksuje folder w miejscu, niczego nie kopiując ani nie przenosząc. Muzyka z aplikacji Music znajduje się w Music › Music › Media."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy indexa a pasta no lugar, sem copiar nem mover nada. A música do app Music está em Music › Music › Media."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 原地索引该文件夹，不复制也不移动任何内容。Music App 中的音乐位于 Music › Music › Media。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 就地索引該資料夾，不複製也不移動任何內容。Music App 中的音樂位於 Music › Music › Media。"
           }
         }
       }
@@ -53003,6 +53079,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy 需要存取 Apple Music 才能使用其封面。"
+          }
+        }
+      }
+    },
+    "Flaccy plays FLAC, ALAC, MP3, AAC, WAV and AIFF files, and found none in this folder or the folders inside it. Choose the folder your music is in. Music from the Music app is in Music › Music › Media.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy spielt FLAC-, ALAC-, MP3-, AAC-, WAV- und AIFF-Dateien ab, hat in diesem Ordner und seinen Unterordnern aber keine gefunden. Wähle den Ordner, in dem deine Musik liegt. Musik aus der Music-App liegt unter Music › Music › Media."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy plays FLAC, ALAC, MP3, AAC, WAV and AIFF files, and found none in this folder or the folders inside it. Choose the folder your music is in. Music from the Music app is in Music › Music › Media."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy reproduce archivos FLAC, ALAC, MP3, AAC, WAV y AIFF, pero no encontró ninguno en esta carpeta ni en las carpetas que contiene. Elige la carpeta donde está tu música. La música de la app Music está en Music › Music › Media."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy lit les fichiers FLAC, ALAC, MP3, AAC, WAV et AIFF, mais n’en a trouvé aucun dans ce dossier ni dans ses sous-dossiers. Choisissez le dossier où se trouve votre musique. La musique de l’app Music se trouve dans Music › Music › Media."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy riproduce file FLAC, ALAC, MP3, AAC, WAV e AIFF, ma in questa cartella e nelle cartelle al suo interno non ne ha trovato nessuno. Scegli la cartella in cui si trova la tua musica. La musica dell’app Music si trova in Music › Music › Media."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy は FLAC、ALAC、MP3、AAC、WAV、AIFF を再生しますが、このフォルダとその中のフォルダには対象ファイルが見つかりませんでした。音楽が入っているフォルダを選んでください。Music アプリの音楽は Music › Music › Media にあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy는 FLAC, ALAC, MP3, AAC, WAV, AIFF 파일을 재생하지만 이 폴더와 그 안의 폴더에서는 하나도 찾지 못했습니다. 음악이 들어 있는 폴더를 선택하세요. Music 앱의 음악은 Music › Music › Media에 있습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy odtwarza pliki FLAC, ALAC, MP3, AAC, WAV i AIFF, ale nie znalazł żadnego w tym folderze ani w folderach w nim. Wybierz folder, w którym jest twoja muzyka. Muzyka z aplikacji Music znajduje się w Music › Music › Media."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Flaccy toca arquivos FLAC, ALAC, MP3, AAC, WAV e AIFF, mas não encontrou nenhum nesta pasta nem nas pastas dentro dela. Escolha a pasta onde está sua música. A música do app Music está em Music › Music › Media."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 可以播放 FLAC、ALAC、MP3、AAC、WAV 和 AIFF 文件，但在此文件夹及其子文件夹中没有找到任何此类文件。请选择存放音乐的文件夹。Music App 中的音乐位于 Music › Music › Media。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy 可以播放 FLAC、ALAC、MP3、AAC、WAV 和 AIFF 檔案，但在此資料夾及其子資料夾中沒有找到任何此類檔案。請選擇存放音樂的資料夾。Music App 中的音樂位於 Music › Music › Media。"
           }
         }
       }
@@ -70077,6 +70223,76 @@
         }
       }
     },
+    "Music folder: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikordner: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Music folder: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carpeta de música: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dossier de musique : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartella musica: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽フォルダ: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음악 폴더: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder muzyki: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasta de música: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐文件夹：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音樂資料夾：%@"
+          }
+        }
+      }
+    },
     "Music is still arriving": {
       "localizations": {
         "de": {
@@ -74019,6 +74235,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "那裡沒有找到音樂。Flaccy 可加入 FLAC、ALAC、MP3、AAC、WAV 和 AIFF 檔案。"
+          }
+        }
+      }
+    },
+    "No music in “%@”": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Musik in „%@“"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No music in “%@”"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay música en “%@”"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune musique dans « %@ »"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna musica in “%@”"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」に音楽がありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”에 음악이 없습니다"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak muzyki w „%@”"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma música em “%@”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”中没有音乐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」中沒有音樂"
           }
         }
       }

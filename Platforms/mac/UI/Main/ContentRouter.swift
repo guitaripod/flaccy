@@ -65,6 +65,9 @@ final class ContentRouter: NSViewController {
         NotificationCenter.default.addObserver(
             self, selector: #selector(refreshOnboarding), name: LibraryRoot.didChange, object: nil
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(refreshOnboarding), name: OnboardingPanelView.didDismiss, object: nil
+        )
         surfaceCancellable = MacLibrarySurfaceModel.shared.state
             .removeDuplicates()
             .sink { [weak self] state in

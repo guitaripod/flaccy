@@ -36,6 +36,7 @@ final class OnboardingPanelView: NSView {
     private let sampleButton = GlassCapsuleButton(title: String(localized: "Download Sample Album"), symbolName: "arrow.down.circle")
     private let serverButton = NSButton(title: String(localized: "Music on another computer? Connect to Flaccy Server…"), target: nil, action: nil)
     private let trialStartsLabel = NSTextField(wrappingLabelWithString: PaywallCopy.trialStartsLine)
+    private let notNowButton = NSButton(title: String(localized: "Not Now"), target: nil, action: nil)
     private var isDownloading = false
     private let isMovingLibrary = HandoffFolderPrompt.isPending
 
@@ -43,7 +44,7 @@ final class OnboardingPanelView: NSView {
     private let host = NSView()
     private lazy var welcomeContent: NSStackView = Self.makeWelcomeContent(
         spinner: spinner, progressLabel: progressLabel, sampleButton: sampleButton, serverButton: serverButton,
-        trialStartsLabel: trialStartsLabel, movingLibrary: isMovingLibrary
+        notNowButton: notNowButton, trialStartsLabel: trialStartsLabel, movingLibrary: isMovingLibrary
     )
     private let debutView = MacLibraryDebutView()
     private var summaryCard: MacDebutSummaryCard?
@@ -57,6 +58,15 @@ final class OnboardingPanelView: NSView {
         case show
         case hide
         case keep
+    }
+
+    /// Posted when the person closes the welcome with Not Now.
+    static let didDismiss = Notification.Name("FlaccyOnboardingWelcomeDismissed")
+    private static let dismissedKey = "flaccy.mac.welcome.dismissed"
+
+    /// True once the person closed the welcome; Home's first-run card still offers the same ways in.
+    static var wasDismissed: Bool {
+        UserDefaults.standard.bool(forKey: dismissedKey)
     }
 
     #if DEBUG
@@ -74,6 +84,7 @@ final class OnboardingPanelView: NSView {
         #endif
         if MacLibrarySurfaceModel.shared.state.value.surface == .debut { return .show }
         if HandoffFolderPrompt.isPending { return .show }
+        if wasDismissed { return .hide }
         if !LibraryRoot.shared.isUsingDefaultRoot || LibraryRoot.shared.isFallbackActive
             || !Library.shared.allTracks.isEmpty {
             return .hide
@@ -95,6 +106,8 @@ final class OnboardingPanelView: NSView {
         sampleButton.onClick = { [weak self] in self?.downloadSample() }
         serverButton.target = self
         serverButton.action = #selector(connectToServer)
+        notNowButton.target = self
+        notNowButton.action = #selector(notNow)
 
         scrim.wantsLayer = true
         scrim.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.78).cgColor
@@ -275,6 +288,7 @@ final class OnboardingPanelView: NSView {
         progressLabel: NSTextField,
         sampleButton: GlassCapsuleButton,
         serverButton: NSButton,
+        notNowButton: NSButton,
         trialStartsLabel: NSTextField,
         movingLibrary: Bool
     ) -> NSStackView {
@@ -338,10 +352,16 @@ final class OnboardingPanelView: NSView {
         serverButton.contentTintColor = .controlAccentColor
         serverButton.setAccessibilityIdentifier("onboarding.connectServer")
 
+        notNowButton.bezelStyle = .accessoryBarAction
+        notNowButton.isBordered = false
+        notNowButton.font = .systemFont(ofSize: 12)
+        notNowButton.contentTintColor = MacColors.secondaryLabel
+        notNowButton.setAccessibilityIdentifier("onboarding.notNow")
+
         let content = NSStackView(
             views: movingLibrary
                 ? [icon, title, subtitle, buttons]
-                : [icon, title, subtitle, buttons, progressRow, hint, serverButton, trialStartsLabel]
+                : [icon, title, subtitle, buttons, progressRow, hint, serverButton, trialStartsLabel, notNowButton]
         )
         content.orientation = .vertical
         content.alignment = .centerX
@@ -353,6 +373,14 @@ final class OnboardingPanelView: NSView {
         return content
     }
 
+    /// Closes the welcome for good: the person looks around first, and Home's first-run card keeps the same ways in.
+    @objc private func notNow() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        MidgarLog.info("Onboarding: welcome closed with Not Now", category: .ui)
+        UserDefaults.standard.set(true, forKey: Self.dismissedKey)
+        NotificationCenter.default.post(name: Self.didDismiss, object: nil)
+    }
+
     /// Opens Add Flaccy Server for a person whose music lives on another computer running Flaccy Server.
     @objc private func connectToServer() {
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
@@ -361,11 +389,28 @@ final class OnboardingPanelView: NSView {
     }
 
     /// Turns on Share this Mac's library and shows the code Flaccy on the iPhone scans, so a library the Mac just read
-    /// reaches the phone in one step. The summary card that offers it is the introduction Settings would otherwise show.
+    /// reaches the phone in one step. The first time, it asks first with the same words Settings uses, because sharing opens
+    /// the library to devices on this network.
     private func shareWithIPhone() {
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
         MidgarLog.info("Onboarding: share this Mac's library with an iPhone", category: .ui)
         let sharing = MacLibrarySharing.shared
+        guard !sharing.hasBeenIntroduced, let window else {
+            startSharing(sharing)
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = SharingCopy.introTitle
+        alert.informativeText = SharingCopy.explanation
+        alert.addButton(withTitle: SharingCopy.share)
+        alert.addButton(withTitle: SharingCopy.notNow)
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn else { return }
+            self?.startSharing(sharing)
+        }
+    }
+
+    private func startSharing(_ sharing: LibrarySharing) {
         sharing.hasBeenIntroduced = true
         sharing.setEnabled(true)
         window?.contentViewController?.presentAsSheet(AddDevicePanelViewController(sharing: sharing))
