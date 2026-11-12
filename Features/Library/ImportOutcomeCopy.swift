@@ -1,3 +1,4 @@
+import FlaccyCore
 import Foundation
 
 /// The one sentence every client shows when an import finishes, built from the
@@ -105,6 +106,7 @@ enum ImportOutcomeCopy {
                 ? String(localized: "Flaccy can't play \(formats) files, so this one wasn't added.")
                 : String(localized: "Flaccy can't play \(formats) files, so these \(unplayable) weren't added."))
         }
+        if outcome.unplayable[ImportPlan.protectedExtension] != nil { parts.append(protectedNote) }
         if outcome.archives > 0 {
             parts.append(unplayable > 0 ? archiveNote(outcome.archives) : archiveLead(outcome.archives))
         }
@@ -121,8 +123,14 @@ enum ImportOutcomeCopy {
                 ? String(localized: "1 \(formats) file wasn't added: Flaccy can't play it.")
                 : String(localized: "\(unplayable) \(formats) files weren't added: Flaccy can't play them."))
         }
+        if outcome.unplayable[ImportPlan.protectedExtension] != nil { notes.append(protectedNote) }
         if outcome.archives > 0 { notes.append(archiveNote(outcome.archives)) }
         return notes
+    }
+
+    /// Why protected iTunes Store purchases stay out, after the sentence that counts them.
+    private static var protectedNote: String {
+        String(localized: "M4P songs are iTunes Store purchases that only Apple's Music app can play.")
     }
 
     private static var noMusicFound: String {

@@ -21,10 +21,17 @@ pub const LYRICS_EXTENSIONS: [&str; 2] = ["lrc", "elrc"];
 /// Audio formats people keep music in, whether or not the importing client
 /// plays them, so an import can name what it passed over instead of reporting
 /// that it found nothing.
-pub const RECOGNIZED_AUDIO_EXTENSIONS: [&str; 21] = [
+pub const RECOGNIZED_AUDIO_EXTENSIONS: [&str; 22] = [
     "flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "aifc", "caf", "ogg", "oga", "opus",
-    "ape", "wv", "dsf", "dff", "wma", "mka", "mpc", "tta",
+    "ape", "wv", "dsf", "dff", "wma", "mka", "mpc", "tta", "m4p",
 ];
+
+/// iTunes Store purchases from before 2009, locked to Apple's Music app; an import names them so the person knows why.
+pub const PROTECTED_EXTENSION: &str = "m4p";
+
+/// Why the protected files were not added, after the sentence that counts them.
+const PROTECTED_NOTE: &str =
+    "M4P songs are iTunes Store purchases that only Apple's Music app can play.";
 
 /// Archives an album download often arrives in; the music inside is not
 /// reached until the person unpacks it.
@@ -245,6 +252,9 @@ pub fn passed_over_notes(outcome: &Outcome) -> Vec<String> {
             "{unplayable} {formats} files weren't added: Flaccy can't play them."
         ));
     }
+    if outcome.unplayable.contains_key(PROTECTED_EXTENSION) {
+        notes.push(PROTECTED_NOTE.to_string());
+    }
     if outcome.archives > 0 {
         notes.push(archive_note(outcome.archives));
     }
@@ -264,6 +274,9 @@ fn passed_over_lead(outcome: &Outcome) -> String {
         } else {
             format!("Flaccy can't play {formats} files, so these {unplayable} weren't added.")
         });
+    }
+    if outcome.unplayable.contains_key(PROTECTED_EXTENSION) {
+        parts.push(PROTECTED_NOTE.to_string());
     }
     if outcome.archives > 0 {
         parts.push(if unplayable > 0 {
@@ -838,6 +851,20 @@ mod tests {
         assert_eq!(
             report(&passed_over(&[("wv", 2), ("ape", 3), ("dsf", 9)], 0)).0,
             "Flaccy can't play APE, DSF, or WV files, so these 14 weren't added."
+        );
+    }
+
+    #[test]
+    fn protected_itunes_purchases_say_why_they_stay_out() {
+        assert_eq!(
+            report(&passed_over(&[("m4p", 3)], 0)).0,
+            "Flaccy can't play M4P files, so these 3 weren't added. · M4P songs are iTunes Store purchases that only Apple's Music app can play."
+        );
+        let mut mixed = passed_over(&[("m4p", 1)], 0);
+        mixed.imported = 5;
+        assert_eq!(
+            report(&mixed).0,
+            "Imported 5 items · 1 M4P file wasn't added: Flaccy can't play it. · M4P songs are iTunes Store purchases that only Apple's Music app can play."
         );
     }
 

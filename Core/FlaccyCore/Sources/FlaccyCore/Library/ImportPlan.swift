@@ -23,8 +23,11 @@ public enum ImportPlan {
     /// reporting that it found nothing.
     public static let recognizedAudioExtensions: Set<String> = [
         "flac", "m4a", "aac", "alac", "mp3", "wav", "aiff", "aif", "aifc", "caf",
-        "ogg", "oga", "opus", "ape", "wv", "dsf", "dff", "wma", "mka", "mpc", "tta",
+        "ogg", "oga", "opus", "ape", "wv", "dsf", "dff", "wma", "mka", "mpc", "tta", "m4p",
     ]
+
+    /// iTunes Store purchases from before 2009, locked to Apple's Music app; an import names them so the person knows why.
+    public static let protectedExtension = "m4p"
 
     /// Archives an album download often arrives in; the music inside is not
     /// reached until the person unpacks it.

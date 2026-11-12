@@ -66575,6 +66575,76 @@
         }
       }
     },
+    "M4P songs are iTunes Store purchases that only Apple's Music app can play.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P-Songs sind iTunes-Store-Käufe, die nur die Music-App von Apple abspielen kann."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P songs are iTunes Store purchases that only Apple's Music app can play."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las canciones M4P son compras de la iTunes Store que solo puede reproducir la app Music de Apple."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les morceaux M4P sont des achats de l’iTunes Store que seule l’app Music d’Apple peut lire."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I brani M4P sono acquisti dall’iTunes Store che solo l’app Music di Apple può riprodurre."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P の曲は iTunes Store で購入したもので、Apple の Music アプリでしか再生できません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P 곡은 iTunes Store에서 구매한 곡으로, Apple의 Music 앱에서만 재생할 수 있습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utwory M4P to zakupy z iTunes Store, które odtworzy tylko aplikacja Music firmy Apple."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As músicas M4P são compras da iTunes Store que só o app Music da Apple consegue tocar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P 歌曲是在 iTunes Store 购买的，只有 Apple 的 Music App 能播放。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P 歌曲是在 iTunes Store 購買的，只有 Apple 的 Music App 能播放。"
+          }
+        }
+      }
+    },
     "MINUTES": {
       "localizations": {
         "de": {

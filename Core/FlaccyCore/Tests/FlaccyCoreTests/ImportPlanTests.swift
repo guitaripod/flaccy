@@ -81,6 +81,17 @@ final class ImportPlanTests: XCTestCase {
         XCTAssertEqual(plan.archives, 0)
     }
 
+    func testProtectedITunesPurchasesAreNamedNotSkippedSilently() throws {
+        for name in ["01.m4p", "02.M4P", "03.flac"] {
+            try write("iTunes/\(name)", in: outside)
+        }
+
+        let plan = plan([outside.appendingPathComponent("iTunes")])
+
+        XCTAssertEqual(destinations(plan), ["iTunes/03.flac"])
+        XCTAssertEqual(plan.unplayable, [ImportPlan.protectedExtension: 2])
+    }
+
     func testAZipArchiveIsCountedNotWalked() throws {
         try write("Downloads/Album.zip", in: outside)
         try write("Downloads/Other.ZIP", in: outside)
