@@ -51,6 +51,7 @@ nonisolated final class FlaccyMidgar: Sendable {
     /// Opens the log file. Call first thing at launch so nothing before the rest of the setup is lost.
     static func configureLogging() {
         FlaccyLogging.configure()
+        CrashReportRecorder.shared.start()
     }
 
     /// Hands the Last.fm service its API key, configures anonymous signals for the portal and starts the Midgar ID in

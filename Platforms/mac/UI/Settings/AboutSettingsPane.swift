@@ -59,8 +59,16 @@ final class AboutSettingsPane: SettingsPane {
         NSWorkspace.shared.open(LegalLinks.termsURL)
     }
 
-    /// Starts an email to support, or copies the address where no mail app can take it.
+    /// Starts an email to support with the log attached, through the mail app's link when the
+    /// share service has no mail account, or copies the address where no mail app can take it.
     @objc func openSupport() {
+        let items: [Any] = [SupportReport.body] + SupportReport.attachments()
+        if let mail = NSSharingService(named: .composeEmail), mail.canPerform(withItems: items) {
+            mail.recipients = [MidgarSupport.address]
+            mail.subject = SupportReport.subject
+            mail.perform(withItems: items)
+            return
+        }
         guard let url = URL(string: "mailto:\(MidgarSupport.address)?subject=Flaccy") else { return }
         guard !NSWorkspace.shared.open(url) else { return }
         NSPasteboard.general.clearContents()

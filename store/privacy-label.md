@@ -24,7 +24,7 @@ Everything else is "Data Not Collected".
 
 - Contacts, Browsing History, Search History, Sensitive Info, Health & Fitness, Location, Financial Info: none.
 - Contact Info: none. There is no account, no name and no email address.
-- Diagnostics: the log (`Library/Logs/flaccy.log`) stays on the device and is never uploaded. MetricKit is not collected.
+- Diagnostics: the log (`Library/Logs/flaccy.log`) and the crash and hang reports MetricKit hands the app (`Library/Logs/Diagnostics`) stay on the device and are never uploaded. Contact Support attaches them to an email the person writes and sends from their own mail app, where they can remove them first; that is a customer service request the person starts, which Apple's App Privacy answers leave out ("Optional disclosure", data collected only in a support request the user starts). MidgarSignals' MetricKit counts are still not collected.
 - Other Data: none.
 - Last.fm is optional: the person signs in with their own Last.fm account and the app sends scrobbles to Last.fm directly. Midgar receives only the signature request (the same track, artist and album text) and keeps nothing.
 

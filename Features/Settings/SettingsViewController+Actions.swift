@@ -2,21 +2,43 @@ import AuthenticationServices
 import Combine
 import MidgarCore
 import FlaccyCore
+import MessageUI
 import StoreKit
 import MidgarPortal
 import UIKit
 
 extension SettingsViewController {
 
-    /// Starts an email to support, or copies the address where no mail app can take it.
+    /// Starts an email to support with the log attached, through the mail app's link when Mail
+    /// has no account, or copies the address where no mail app can take it.
     func handleSupportTap() {
         selectionFeedback.selectionChanged()
+        if MFMailComposeViewController.canSendMail() {
+            presentSupportMail()
+            return
+        }
         guard let url = URL(string: "mailto:\(MidgarSupport.address)?subject=Flaccy") else { return }
         UIApplication.shared.open(url) { [weak self] opened in
             guard !opened, let self else { return }
             UIPasteboard.general.string = MidgarSupport.address
             ToastView.show(String(localized: "Copied"), in: self.view, style: .info)
         }
+    }
+
+    /// A draft to support carrying the log and the latest crash reports, which the person sees
+    /// attached and can remove before sending.
+    private func presentSupportMail() {
+        let mail = MFMailComposeViewController()
+        mail.mailComposeDelegate = self
+        mail.setToRecipients([MidgarSupport.address])
+        mail.setSubject(SupportReport.subject)
+        mail.setMessageBody(SupportReport.body, isHTML: false)
+        for url in SupportReport.attachments() {
+            guard let data = try? Data(contentsOf: url) else { continue }
+            let type = url.pathExtension == "json" ? "application/json" : "text/plain"
+            mail.addAttachmentData(data, mimeType: type, fileName: url.lastPathComponent)
+        }
+        present(mail, animated: true)
     }
 
     func handleMetadataTap() {
@@ -306,5 +328,16 @@ extension SettingsViewController {
         }
         let megabytes = Double(totalSize) / 1_048_576
         return String(format: String(localized: "%.0f MB"), megabytes)
+    }
+}
+
+extension SettingsViewController: @preconcurrency MFMailComposeViewControllerDelegate {
+
+    func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+        controller.dismiss(animated: true)
+        if result == .sent {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            ToastView.show(String(localized: "Sent. Thanks for writing."), in: view, style: .success)
+        }
     }
 }
