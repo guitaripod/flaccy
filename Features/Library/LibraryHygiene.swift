@@ -204,6 +204,41 @@ nonisolated extension LibraryHygiene {
         }
     }
 
+    /// Folds albums that show the same title and artist into one that keeps every track, so an
+    /// `Album.id` names one album.
+    ///
+    /// Groups are keyed by the release credit while an album shows its performers' majority
+    /// artist, so with editions grouping off two groups can look identical (one disc tagged
+    /// "The Beatles", the other "Beatles"). Home, Search and the artist page key their lists by
+    /// `Album.id`, and UIKit raises an exception for a list that holds one identifier twice.
+    static func mergeSameNamedAlbums(_ albums: [Album]) -> [Album] {
+        var order: [String] = []
+        var byID: [String: [Album]] = [:]
+        for album in albums {
+            if byID[album.id] == nil { order.append(album.id) }
+            byID[album.id, default: []].append(album)
+        }
+        guard order.count < albums.count else { return albums }
+        return order.compactMap { id in
+            guard let group = byID[id], let first = group.first else { return nil }
+            guard group.count > 1 else { return first }
+            let tracks = TrackOrdering.ordered(
+                group.flatMap(\.tracks),
+                number: { $0.trackNumber },
+                path: { $0.fileURL.path },
+                title: { $0.title }
+            )
+            return Album(
+                title: first.title,
+                artist: first.artist,
+                artwork: group.lazy.compactMap(\.artwork).first,
+                tracks: tracks,
+                year: group.lazy.compactMap(\.year).first { !$0.isEmpty },
+                genre: group.lazy.compactMap(\.genre).first { !$0.isEmpty }
+            )
+        }
+    }
+
     private static func mergeAlbumGroup(_ group: [Album]) -> Album {
         let canonical = group.max { lhs, rhs in
             (lhs.tracks.count, -lhs.title.count, aggregateQuality(lhs))

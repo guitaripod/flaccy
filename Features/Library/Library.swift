@@ -890,7 +890,7 @@ final class Library: LibraryProviding {
         if GroupAlbumEditionsSetting.isEnabled {
             loadedAlbums = LibraryHygiene.consolidateAlbums(loadedAlbums)
         }
-        return loadedAlbums
+        return LibraryHygiene.mergeSameNamedAlbums(loadedAlbums)
     }
 
     private func logLibraryState() {

@@ -52,7 +52,8 @@ nonisolated final class SimilarArtistService: @unchecked Sendable {
             )
             albums.append((album, weight))
         }
-        return albums.sorted { $0.match > $1.match }.map(\.album)
+        var seen = Set<String>()
+        return albums.sorted { $0.match > $1.match }.map(\.album).filter { seen.insert($0.id).inserted }
     }
 
     private func cachedSimilar(artist: String) async -> [(name: String, match: Double)] {
