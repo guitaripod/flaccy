@@ -87,7 +87,7 @@ fn a_device_on_this_network_enrolls_syncs_and_listens_over_pinned_tls() {
     std::fs::create_dir_all(&device).unwrap();
     let db = Db::open(&device.join("library.sqlite")).unwrap();
     let mut driver = Driver::new(TokenStore::new(device.join("sync-token")), None).with_backoff(Backoff::NONE);
-    let only_local = ServerLink::new(&local, link.enroll.as_deref(), link.name.as_deref()).reaching(Some(&pin), None);
+    let only_local = ServerLink::new(&local, link.enroll.as_deref(), link.name.as_deref()).reaching(Some(&pin), &[]);
     driver.enroll(&db, &only_local, "LAN phone").unwrap();
     assert_eq!(driver.run_once(&db).state, SyncState::UpToDate);
     let target = driver.live_target(&db).unwrap();

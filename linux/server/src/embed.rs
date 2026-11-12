@@ -107,8 +107,8 @@ pub struct Enrollment {
     pub code: String,
     /// The address the device connects to.
     pub url: String,
-    /// The address to try when `url` cannot be reached.
-    pub alternate: Option<String>,
+    /// The addresses to try, in order, when `url` cannot be reached.
+    pub alternates: Vec<String>,
     /// The pin of the key the `https` addresses answer with.
     pub pin: Option<String>,
     /// The user the device will belong to.
@@ -390,7 +390,7 @@ impl Handle {
             link: enrollment_link(&reach, &code, state.server_name()),
             code,
             url: reach.url,
-            alternate: reach.alternate,
+            alternates: reach.alternates,
             pin: reach.pin,
             user: user.name,
             expires_at,

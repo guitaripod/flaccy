@@ -1,9 +1,11 @@
 //! Which address a new device is told to use, and the one it falls back to.
 //!
 //! A device added while Tailscale is up gets the tailnet address, so it reaches
-//! the server anywhere, and this network's address as the fallback for a phone
-//! without Tailscale. Without Tailscale it gets this network's address, by its
-//! Bonjour name when the machine answers to one and by IP as the fallback. Every
+//! the server anywhere, and this network's addresses as fallbacks for a device
+//! without Tailscale. Without Tailscale it gets this network's addresses alone.
+//! On this network the Bonjour name comes first, because it survives a new IP
+//! from the router, and the IP last, because many devices cannot resolve
+//! `.local` names (a Linux box without nss-mdns, the iPhone simulator). Every
 //! `https` address in the link is checked against the pin it carries.
 
 use std::net::SocketAddr;
@@ -28,8 +30,8 @@ pub struct LocalReach {
 pub struct DeviceReach {
     /// The address to try first.
     pub url: String,
-    /// The address to try when the first cannot be reached.
-    pub alternate: Option<String>,
+    /// The addresses to try, in order, when the first cannot be reached.
+    pub alternates: Vec<String>,
     /// The pin for the `https` addresses, when the server shares on the local network.
     pub pin: Option<String>,
 }
@@ -57,13 +59,17 @@ pub fn local_reach(bound: &[SocketAddr], name: &str, answers_bonjour: bool, pin:
     Some(LocalReach { url: lan::url(&host, port), ip_url, pin: pin.to_owned() })
 }
 
-/// The tailnet first with this network as the fallback, this network alone, or `fallback` (loopback) when neither exists.
+/// The tailnet first with this network's addresses as fallbacks, this network alone, or `fallback` (loopback) when neither exists.
 pub fn device_reach(tailnet: Option<String>, local: Option<LocalReach>, fallback: Option<String>) -> Option<DeviceReach> {
     match (tailnet, local) {
-        (Some(url), Some(local)) => Some(DeviceReach { url, alternate: Some(local.url), pin: Some(local.pin) }),
-        (Some(url), None) => Some(DeviceReach { url, alternate: None, pin: None }),
-        (None, Some(local)) => Some(DeviceReach { url: local.url, alternate: local.ip_url, pin: Some(local.pin) }),
-        (None, None) => fallback.map(|url| DeviceReach { url, alternate: None, pin: None }),
+        (Some(url), Some(local)) => Some(DeviceReach {
+            url,
+            alternates: std::iter::once(local.url).chain(local.ip_url).collect(),
+            pin: Some(local.pin),
+        }),
+        (Some(url), None) => Some(DeviceReach { url, alternates: Vec::new(), pin: None }),
+        (None, Some(local)) => Some(DeviceReach { url: local.url, alternates: local.ip_url.into_iter().collect(), pin: Some(local.pin) }),
+        (None, None) => fallback.map(|url| DeviceReach { url, alternates: Vec::new(), pin: None }),
     }
 }
 
@@ -96,13 +102,13 @@ mod tests {
         let local = LocalReach { url: "https://arch.local:4545".into(), ip_url: Some("https://192.168.1.5:4545".into()), pin: "PIN".into() };
         let both = device_reach(Some("http://100.64.0.1:4545".into()), Some(local.clone()), None).unwrap();
         assert_eq!(both.url, "http://100.64.0.1:4545");
-        assert_eq!(both.alternate.as_deref(), Some("https://arch.local:4545"));
+        assert_eq!(both.alternates, vec!["https://arch.local:4545", "https://192.168.1.5:4545"]);
         assert_eq!(both.pin.as_deref(), Some("PIN"));
         let alone = device_reach(None, Some(local), Some("http://127.0.0.1:4545".into())).unwrap();
         assert_eq!(alone.url, "https://arch.local:4545");
-        assert_eq!(alone.alternate.as_deref(), Some("https://192.168.1.5:4545"));
+        assert_eq!(alone.alternates, vec!["https://192.168.1.5:4545"]);
         let tailnet_only = device_reach(Some("http://100.64.0.1:4545".into()), None, None).unwrap();
-        assert_eq!((tailnet_only.alternate, tailnet_only.pin), (None, None));
+        assert_eq!((tailnet_only.alternates, tailnet_only.pin), (Vec::<String>::new(), None));
         let neither = device_reach(None, None, Some("http://127.0.0.1:4545".into())).unwrap();
         assert_eq!(neither.url, "http://127.0.0.1:4545");
         assert_eq!(device_reach(None, None, None), None);

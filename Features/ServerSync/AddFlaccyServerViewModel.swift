@@ -32,7 +32,7 @@ final class AddFlaccyServerViewModel {
             guard address != oldValue else { return }
             linkName = nil
             linkPin = nil
-            linkAlternate = nil
+            linkAlternates = []
             returnToIdleAfterEdit()
         }
     }
@@ -55,7 +55,7 @@ final class AddFlaccyServerViewModel {
     private let deviceName: String
     private var linkName: String?
     private var linkPin: String?
-    private var linkAlternate: URL?
+    private var linkAlternates: [URL] = []
 
     init(
         gateway: any ServerSetupGateway = FlaccyServerSetupGateway(),
@@ -87,7 +87,7 @@ final class AddFlaccyServerViewModel {
         code = link.enrollmentCode
         linkName = link.name
         linkPin = link.pin
-        linkAlternate = link.alternateURL
+        linkAlternates = link.alternateURLs
         state = .idle
     }
 
@@ -100,7 +100,7 @@ final class AddFlaccyServerViewModel {
         guard canConnect, let input = ServerAddressInput(address) else { return }
         state = .checking(server: linkName ?? input.displayName)
         let result = await flow.connect(
-            address: input, typedCode: code, linkName: linkName, linkPin: linkPin, alternateURL: linkAlternate, deviceName: deviceName,
+            address: input, typedCode: code, linkName: linkName, linkPin: linkPin, alternateURLs: linkAlternates, deviceName: deviceName,
             serverNamed: { [weak self] name in Task { @MainActor in self?.noteServerName(name) } }
         )
         switch result {

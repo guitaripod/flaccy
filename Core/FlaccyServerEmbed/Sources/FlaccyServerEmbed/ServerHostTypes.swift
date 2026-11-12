@@ -60,8 +60,8 @@ public struct ServerEnrollment: Codable, Sendable, Equatable {
     public let url: String
     public let user: String
     public let expiresAt: String
-    /// The address a device tries when `url` cannot be reached.
-    public var alternate: String? = nil
+    /// The addresses a device tries, in order, when `url` cannot be reached.
+    public var alternates: [String] = []
     /// The pin of the key the `https` addresses answer with.
     public var pin: String? = nil
 }

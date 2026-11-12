@@ -35,8 +35,8 @@ pub struct ServerLink {
     pub name: Option<String>,
     /// The pin of the key every `https` address in the link answers with.
     pub pin: Option<String>,
-    /// The address to try when `url` cannot be reached, normalized.
-    pub alternate: Option<String>,
+    /// The addresses to try, in order, when `url` cannot be reached, normalized.
+    pub alternates: Vec<String>,
 }
 
 impl fmt::Debug for ServerLink {
@@ -47,7 +47,7 @@ impl fmt::Debug for ServerLink {
             .field("enroll", &self.enroll.as_ref().map(|_| "***"))
             .field("name", &self.name)
             .field("pin", &self.pin)
-            .field("alternate", &self.alternate)
+            .field("alternates", &self.alternates)
             .finish()
     }
 }
@@ -60,20 +60,20 @@ impl ServerLink {
             enroll: enroll.map(str::to_owned),
             name: name.map(str::to_owned),
             pin: None,
-            alternate: None,
+            alternates: Vec::new(),
         }
     }
 
-    /// The same link with the pin and the fallback address a local network server adds.
-    pub fn reaching(mut self, pin: Option<&str>, alternate: Option<&str>) -> Self {
+    /// The same link with the pin and the fallback addresses a local network server adds.
+    pub fn reaching(mut self, pin: Option<&str>, alternates: &[&str]) -> Self {
         self.pin = pin.map(str::to_owned);
-        self.alternate = alternate.map(str::to_owned);
+        self.alternates = alternates.iter().map(|url| (*url).to_owned()).collect();
         self
     }
 
-    /// The addresses to try, in order: `url`, then the fallback.
+    /// The addresses to try, in order: `url`, then the fallbacks.
     pub fn candidates(&self) -> Vec<String> {
-        std::iter::once(self.url.clone()).chain(self.alternate.clone()).collect()
+        std::iter::once(self.url.clone()).chain(self.alternates.iter().cloned()).collect()
     }
 
     /// Reads a pairing link; the old `key=` form parses too, with no enrollment code.
@@ -87,7 +87,7 @@ impl ServerLink {
         let mut enroll = None;
         let mut name = None;
         let mut pin = None;
-        let mut alternate = None;
+        let mut alternates = Vec::new();
         for pair in query.split('&') {
             let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
             let decoded = decode_segment(value).filter(|text| !text.is_empty());
@@ -96,14 +96,14 @@ impl ServerLink {
                 "enroll" => enroll = decoded,
                 "name" => name = decoded,
                 "pin" => pin = decoded,
-                "alt" => alternate = decoded.and_then(|raw| normalize(&raw)),
+                "alt" => alternates.extend(decoded.and_then(|raw| normalize(&raw))),
                 _ => {}
             }
         }
         let url = url
             .and_then(|raw| normalize(&raw))
             .ok_or(LinkError::MissingUrl)?;
-        Ok(ServerLink { url, enroll, name, pin, alternate })
+        Ok(ServerLink { url, enroll, name, pin, alternates })
     }
 }
 
@@ -123,7 +123,7 @@ impl fmt::Display for ServerLink {
         if let Some(pin) = &self.pin {
             write!(formatter, "&pin={}", encode_segment(pin))?;
         }
-        if let Some(alternate) = &self.alternate {
+        for alternate in &self.alternates {
             write!(formatter, "&alt={}", encode_segment(alternate))?;
         }
         Ok(())
@@ -148,13 +148,16 @@ mod tests {
     #[test]
     fn a_local_network_link_carries_its_pin_and_fallback() {
         let parsed = ServerLink::parse(
-            "flaccy://server?url=https%3A%2F%2Farch.local%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2F192.168.1.5%3A4545",
+            "flaccy://server?url=http%3A%2F%2F100.64.0.1%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2Farch.local%3A4545&alt=https%3A%2F%2F192.168.1.5%3A4545",
         )
         .unwrap();
-        assert_eq!(parsed.url, "https://arch.local:4545");
+        assert_eq!(parsed.url, "http://100.64.0.1:4545");
         assert_eq!(parsed.pin.as_deref(), Some("Ab-_9"));
-        assert_eq!(parsed.alternate.as_deref(), Some("https://192.168.1.5:4545"));
-        assert_eq!(parsed.candidates(), vec!["https://arch.local:4545", "https://192.168.1.5:4545"]);
+        assert_eq!(parsed.alternates, vec!["https://arch.local:4545", "https://192.168.1.5:4545"]);
+        assert_eq!(
+            parsed.candidates(),
+            vec!["http://100.64.0.1:4545", "https://arch.local:4545", "https://192.168.1.5:4545"]
+        );
         assert_eq!(ServerLink::parse(&parsed.to_string()).unwrap(), parsed);
     }
 

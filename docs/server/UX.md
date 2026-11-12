@@ -33,7 +33,7 @@ Scan this with the camera in Flaccy on your iPhone:
   <QR code>
 
 On a Mac or Linux, paste this link into Flaccy's Add Flaccy Server window:
-  flaccy://server?url=http%3A%2F%2Farch%3A4545&enroll=…&name=arch&pin=…&alt=https%3A%2F%2Farch-2.local%3A4545
+  flaccy://server?url=http%3A%2F%2Farch%3A4545&enroll=…&name=arch&pin=…&alt=https%3A%2F%2Farch-2.local%3A4545&alt=https%3A%2F%2F192.168.1.197%3A4545
 
 The code works once and expires in 10 minutes. Make another with `flaccy-server enroll`.
 ```

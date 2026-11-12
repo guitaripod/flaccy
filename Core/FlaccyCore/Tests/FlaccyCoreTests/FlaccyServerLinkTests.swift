@@ -116,12 +116,15 @@ final class ServerSyncPrimitivesTests: XCTestCase {
 
     func testALocalNetworkLinkCarriesItsPinAndFallbackLikeTheRustSide() throws {
         let link = try XCTUnwrap(FlaccyServerLink(
-            text: "flaccy://server?url=https%3A%2F%2Farch.local%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2F192.168.1.5%3A4545"
+            text: "flaccy://server?url=http%3A%2F%2F100.64.0.1%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2Farch.local%3A4545&alt=https%3A%2F%2F192.168.1.5%3A4545"
         ))
-        XCTAssertEqual(link.baseURL.absoluteString, "https://arch.local:4545")
+        XCTAssertEqual(link.baseURL.absoluteString, "http://100.64.0.1:4545")
         XCTAssertEqual(link.pin, "Ab-_9")
-        XCTAssertEqual(link.alternateURL?.absoluteString, "https://192.168.1.5:4545")
-        XCTAssertEqual(link.candidates.map(\.absoluteString), ["https://arch.local:4545", "https://192.168.1.5:4545"])
+        XCTAssertEqual(link.alternateURLs.map(\.absoluteString), ["https://arch.local:4545", "https://192.168.1.5:4545"])
+        XCTAssertEqual(
+            link.candidates.map(\.absoluteString),
+            ["http://100.64.0.1:4545", "https://arch.local:4545", "https://192.168.1.5:4545"]
+        )
         let plain = try XCTUnwrap(FlaccyServerLink(text: "flaccy://server?url=arch&enroll=ABC"))
         XCTAssertNil(plain.pin)
         XCTAssertEqual(plain.candidates.count, 1)

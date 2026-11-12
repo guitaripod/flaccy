@@ -43,14 +43,14 @@ public struct ServerSetupFlow: Sendable {
     }
 
     /// Runs the probe and the enrollment. `serverNamed` is called once the server has said its own name. A scanned link's
-    /// `linkPin` trusts the server's key and its `alternateURL` is tried when the address cannot be reached.
+    /// `linkPin` trusts the server's key and its `alternateURLs` are tried, in order, when the address cannot be reached.
     public func connect(
-        address: ServerAddressInput, typedCode: String, linkName: String?, linkPin: String? = nil, alternateURL: URL? = nil,
+        address: ServerAddressInput, typedCode: String, linkName: String?, linkPin: String? = nil, alternateURLs: [URL] = [],
         deviceName: String, serverNamed: @Sendable (String) -> Void
     ) async -> ServerSetupResult {
         let reached: (url: URL, hello: ServerHello)
         do {
-            reached = try await reach([address.baseURL] + (alternateURL.map { [$0] } ?? []), pin: linkPin)
+            reached = try await reach([address.baseURL] + alternateURLs, pin: linkPin)
         } catch {
             return .failed(ServerSetupFailure(error: error, server: linkName ?? address.displayName))
         }

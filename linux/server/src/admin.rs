@@ -133,7 +133,7 @@ pub(crate) fn enrollment_link(reach: &DeviceReach, code: &str, name: &str) -> St
     if let Some(pin) = &reach.pin {
         link.push_str(&format!("&pin={}", percent_encode(pin)));
     }
-    if let Some(alternate) = &reach.alternate {
+    for alternate in &reach.alternates {
         link.push_str(&format!("&alt={}", percent_encode(alternate)));
     }
     link
@@ -182,7 +182,7 @@ pub async fn enroll(config: &Config, args: EnrollArgs) -> Result<(), String> {
             "link": link,
             "code": code,
             "url": reach.url,
-            "alternate": reach.alternate,
+            "alternates": reach.alternates,
             "pin": reach.pin,
             "user": user.name,
             "expiresAt": expires
@@ -205,7 +205,7 @@ fn command_line_reach(config: &Config, url: Option<String>) -> Result<DeviceReac
         return Err("This server has not shared on this network yet. Start it once with `lan = true` (`flaccy-server serve`, or restart its service), then make the code again.".to_owned());
     }
     if let Some(url) = url {
-        return Ok(DeviceReach { url, alternate: None, pin });
+        return Ok(DeviceReach { url, alternates: Vec::new(), pin });
     }
     let tailnet_up = tailnet::addresses().map(|found| !found.is_empty()).unwrap_or(false);
     let tailnet = (tailnet_up || !config.lan).then(|| format!("http://{}:{}", machine_name(), config.port));
@@ -471,7 +471,7 @@ mod tests {
 
     #[test]
     fn the_link_escapes_every_value() {
-        let reach = DeviceReach { url: "http://my box:4545".into(), alternate: None, pin: None };
+        let reach = DeviceReach { url: "http://my box:4545".into(), alternates: Vec::new(), pin: None };
         let link = enrollment_link(&reach, "ABC", "My Mac");
         assert_eq!(link, "flaccy://server?url=http%3A%2F%2Fmy%20box%3A4545&enroll=ABC&name=My%20Mac");
     }
@@ -479,13 +479,13 @@ mod tests {
     #[test]
     fn a_local_network_link_carries_its_pin_and_fallback() {
         let reach = DeviceReach {
-            url: "https://arch.local:4545".into(),
-            alternate: Some("https://192.168.1.5:4545".into()),
+            url: "http://100.64.0.1:4545".into(),
+            alternates: vec!["https://arch.local:4545".into(), "https://192.168.1.5:4545".into()],
             pin: Some("Ab-_9".into()),
         };
         assert_eq!(
             enrollment_link(&reach, "ABC", "arch"),
-            "flaccy://server?url=https%3A%2F%2Farch.local%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2F192.168.1.5%3A4545"
+            "flaccy://server?url=http%3A%2F%2F100.64.0.1%3A4545&enroll=ABC&name=arch&pin=Ab-_9&alt=https%3A%2F%2Farch.local%3A4545&alt=https%3A%2F%2F192.168.1.5%3A4545"
         );
     }
 

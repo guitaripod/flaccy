@@ -39,7 +39,7 @@ public struct ServerLink: Sendable, Equatable {
 /// The `flaccy://server?url=<url>&enroll=<code>&name=<name>&pin=<pin>&alt=<url>` link `flaccy-server setup`,
 /// `flaccy-server enroll` and a Mac sharing its library print as a QR code and as text. A link with `enroll` is a Flaccy
 /// Server; a link with `key` stays a `ServerLink`. `pin` is the key every `https` address in the link answers with, and
-/// `alt` is the address to try when `url` cannot be reached (docs/server/PROTOCOL.md section 3.4).
+/// each `alt` is an address to try, in order, when `url` cannot be reached (docs/server/PROTOCOL.md section 3.4).
 public struct FlaccyServerLink: Sendable, Equatable, CustomStringConvertible {
 
     public static let defaultPort = 4545
@@ -48,19 +48,19 @@ public struct FlaccyServerLink: Sendable, Equatable, CustomStringConvertible {
     public let enrollmentCode: String
     public let name: String?
     public let pin: String?
-    public let alternateURL: URL?
+    public let alternateURLs: [URL]
 
-    public init(baseURL: URL, enrollmentCode: String, name: String?, pin: String? = nil, alternateURL: URL? = nil) {
+    public init(baseURL: URL, enrollmentCode: String, name: String?, pin: String? = nil, alternateURLs: [URL] = []) {
         self.baseURL = baseURL
         self.enrollmentCode = enrollmentCode
         self.name = name
         self.pin = pin
-        self.alternateURL = alternateURL
+        self.alternateURLs = alternateURLs
     }
 
-    /// The addresses to try, in order: `baseURL`, then the fallback.
+    /// The addresses to try, in order: `baseURL`, then the fallbacks.
     public var candidates: [URL] {
-        [baseURL] + (alternateURL.map { [$0] } ?? [])
+        [baseURL] + alternateURLs
     }
 
     /// The link a text holds, or nil when it is not a `flaccy://server` link with an address and an enrollment code.
@@ -81,7 +81,9 @@ public struct FlaccyServerLink: Sendable, Equatable, CustomStringConvertible {
         self.enrollmentCode = code
         self.name = value("name").flatMap { $0.isEmpty ? nil : $0 }
         self.pin = value("pin").flatMap { $0.isEmpty ? nil : $0 }
-        self.alternateURL = value("alt").flatMap(Self.baseURL(from:))
+        self.alternateURLs = items.filter { $0.name == "alt" }
+            .compactMap { $0.value?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .compactMap(Self.baseURL(from:))
     }
 
     public init?(url: URL) {
@@ -115,7 +117,7 @@ public struct FlaccyServerLink: Sendable, Equatable, CustomStringConvertible {
     }
 
     public var description: String {
-        "FlaccyServerLink(\(baseURL.absoluteString), code: ***, name: \(name ?? "nil"), pin: \(pin ?? "nil"), alt: \(alternateURL?.absoluteString ?? "nil"))"
+        "FlaccyServerLink(\(baseURL.absoluteString), code: ***, name: \(name ?? "nil"), pin: \(pin ?? "nil"), alt: \(alternateURLs.map(\.absoluteString)))"
     }
 }
 
