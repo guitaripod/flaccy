@@ -1416,6 +1416,12 @@
     },
     "%@ · %@ on your wrist": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ på dit håndled"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -1428,10 +1434,22 @@
             "value": "%@ · %@ en tu muñeca"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ ranteellasi"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %@ à ton poignet"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ á úlnliðnum þínum"
           }
         },
         "it": {
@@ -1452,6 +1470,12 @@
             "value": "손목에 %@ · %@"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ på håndleddet"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -1462,6 +1486,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %@ no seu pulso"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ på handleden"
           }
         },
         "zh-Hans": {
@@ -4829,6 +4859,12 @@
     },
     "AI · included in the free trial": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI · inkluderet i den gratis prøveperiode"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -4841,10 +4877,22 @@
             "value": "IA · incluida en la prueba gratuita"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekoäly · sisältyy ilmaiseen kokeiluun"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "IA · incluse dans l’essai gratuit"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gervigreind · innifalin í ókeypis prufutímanum"
           }
         },
         "it": {
@@ -4865,6 +4913,12 @@
             "value": "AI · 무료 체험에 포함"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI · inkludert i den gratis prøveperioden"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -4875,6 +4929,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "IA · incluída no teste gratuito"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI · ingår i den gratis provperioden"
           }
         },
         "zh-Hans": {
@@ -4893,6 +4953,12 @@
     },
     "Add music to Flaccy on your iPhone": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj musik til Flaccy på din iPhone"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -4905,10 +4971,22 @@
             "value": "Añade música a Flaccy en tu iPhone"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lisää musiikkia Flaccyyn iPhonessasi"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Ajoute de la musique à Flaccy sur ton iPhone"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bættu tónlist við Flaccy í iPhone-símanum þínum"
           }
         },
         "it": {
@@ -4929,6 +5007,12 @@
             "value": "iPhone의 Flaccy에 음악을 추가하세요"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legg til musikk i Flaccy på iPhonen din"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -4939,6 +5023,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adicione música ao Flaccy no seu iPhone"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lägg till musik i Flaccy på din iPhone"
           }
         },
         "zh-Hans": {
@@ -7401,6 +7491,12 @@
     },
     "In Settings, tap Sync Music to Watch": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryk på Synkroniser musik til uret i Indstillinger"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -7413,10 +7509,22 @@
             "value": "En Ajustes, toca «Sincronizar música con el Watch»"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Napauta Asetuksissa ”Synkronoi musiikki kelloon”."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Dans Réglages, touche « Synchroniser la musique vers la Watch »"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Í Stillingum, pikkaðu á „Samstilla tónlist við úrið“"
           }
         },
         "it": {
@@ -7437,6 +7545,12 @@
             "value": "설정에서 “Watch로 음악 동기화”를 탭하세요"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trykk på «Synkroniser musikk til klokken» i Innstillinger"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -7447,6 +7561,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Em Ajustes, toque em “Sincronizar Música com o Watch”"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I Inställningar trycker du på Synkronisera musik till klockan"
           }
         },
         "zh-Hans": {
@@ -9815,6 +9935,12 @@
     },
     "Pick the albums to send": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg de album, der skal sendes"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -9827,10 +9953,22 @@
             "value": "Elige los álbumes que enviar"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valitse lähetettävät albumit"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Choisis les albums à envoyer"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veldu plöturnar sem á að senda"
           }
         },
         "it": {
@@ -9851,6 +9989,12 @@
             "value": "보낼 앨범 고르기"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velg albumene som skal sendes"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -9861,6 +10005,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Escolha os álbuns para enviar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Välj album att skicka"
           }
         },
         "zh-Hans": {

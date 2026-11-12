@@ -1977,6 +1977,12 @@
     },
     "%@ answered with a different security key than when it was added, so Flaccy stopped. If it was reinstalled or moved to another computer, remove it and add it again with a new code.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ svarede med en anden sikkerhedsnøgle, end da den blev tilføjet, så Flaccy stoppede. Hvis den er blevet geninstalleret eller flyttet til en anden computer, skal du fjerne den og tilføje den igen med en ny kode."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -1995,10 +2001,22 @@
             "value": "%@ respondió con una clave de seguridad distinta a la de cuando se añadió, así que Flaccy se detuvo. Si se reinstaló o se movió a otro ordenador, elimínalo y añádelo de nuevo con un código nuevo."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ vastasi eri suojausavaimella kuin lisättäessä, joten Flaccy pysähtyi. Jos se asennettiin uudelleen tai siirrettiin toiselle tietokoneelle, poista se ja lisää uudelleen uudella koodilla."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ a répondu avec une autre clé de sécurité que lors de l’ajout, donc Flaccy s’est arrêté. S’il a été réinstallé ou déplacé sur un autre ordinateur, supprime-le et ajoute-le de nouveau avec un nouveau code."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ svaraði með öðrum öryggislykli en þegar netþjónninn var bættur við, svo Flaccy hætti. Ef netþjónninn var settur upp aftur eða fluttur í aðra tölvu, fjarlægðu hann og bættu honum við aftur með nýjum kóða."
           }
         },
         "it": {
@@ -2019,6 +2037,12 @@
             "value": "%@이(가) 추가했을 때와 다른 보안 키로 응답해서 Flaccy가 중지되었습니다. 다시 설치했거나 다른 컴퓨터로 옮겼다면 삭제한 뒤 새 코드로 다시 추가하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ svarte med en annen sikkerhetsnøkkel enn da den ble lagt til, så Flaccy stoppet. Hvis den ble installert på nytt eller flyttet til en annen datamaskin, fjern den og legg den til igjen med en ny kode."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -2029,6 +2053,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ respondeu com uma chave de segurança diferente da usada quando foi adicionado, então o Flaccy parou. Se ele foi reinstalado ou movido para outro computador, remova-o e adicione-o de novo com um código novo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ svarade med en annan säkerhetsnyckel än när den lades till, så Flaccy stoppade. Om den har installerats om eller flyttats till en annan dator, ta bort den och lägg till den igen med en ny kod."
           }
         },
         "zh-Hans": {
@@ -3275,6 +3305,12 @@
     },
     "%@ has a new security key": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ har en ny sikkerhedsnøgle"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -3293,10 +3329,22 @@
             "value": "%@ tiene una clave de seguridad nueva"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@:llä on uusi suojausavain"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ a une nouvelle clé de sécurité"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ er með nýjan öryggislykil"
           }
         },
         "it": {
@@ -3317,6 +3365,12 @@
             "value": "%@의 보안 키가 새로 바뀌었습니다"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ har en ny sikkerhetsnøkkel"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -3327,6 +3381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ tem uma nova chave de segurança"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ har en ny säkerhetsnyckel"
           }
         },
         "zh-Hans": {
@@ -3345,6 +3405,12 @@
     },
     "%@ has a new security key. Remove it and add it again to keep syncing.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ har en ny sikkerhedsnøgle. Fjern den, og tilføj den igen for at fortsætte synkroniseringen."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -3363,10 +3429,22 @@
             "value": "%@ tiene una clave de seguridad nueva. Elimínalo y añádelo de nuevo para seguir sincronizando."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@:llä on uusi suojausavain. Poista se ja lisää uudelleen, jotta synkronointi jatkuu."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ a une nouvelle clé de sécurité. Supprime-le et ajoute-le de nouveau pour continuer la synchronisation."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ er með nýjan öryggislykil. Fjarlægðu netþjóninn og bættu honum aftur við til að halda samstillingu áfram."
           }
         },
         "it": {
@@ -3387,6 +3465,12 @@
             "value": "%@의 보안 키가 바뀌었습니다. 동기화를 계속하려면 삭제한 뒤 다시 추가하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ har en ny sikkerhetsnøkkel. Fjern den og legg den til igjen for å fortsette å synkronisere."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -3397,6 +3481,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ tem uma nova chave de segurança. Remova-o e adicione-o de novo para continuar sincronizando."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ har en ny säkerhetsnyckel. Ta bort den och lägg till den igen för att synkroniseringen ska fortsätta."
           }
         },
         "zh-Hans": {
@@ -7235,6 +7325,12 @@
     },
     "%@ · %@ on your wrist": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ på dit håndled"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -7253,10 +7349,22 @@
             "value": "%@ · %@ en tu muñeca"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ ranteellasi"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %@ à votre poignet"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ á úlnliðnum þínum"
           }
         },
         "it": {
@@ -7277,6 +7385,12 @@
             "value": "손목에 %@ · %@"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ på håndleddet"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -7287,6 +7401,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %@ no seu pulso"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ på handleden"
           }
         },
         "zh-Hans": {
@@ -27453,6 +27573,12 @@
     },
     "A code works once and lasts 10 minutes. Make a new one on %@ and try again.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En kode virker én gang og gælder i 10 minutter. Opret en ny på %@, og prøv igen."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -27471,10 +27597,22 @@
             "value": "Un código funciona una sola vez y dura 10 minutos. Genera uno nuevo en %@ y vuelve a intentarlo."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koodi toimii kerran ja vanhenee 10 minuutin kuluttua. Luo uusi koodi %@:llä ja yritä uudelleen."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Un code ne fonctionne qu’une fois et reste valable 10 minutes. Crée-en un nouveau sur %@ et réessaie."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kóði virkar einu sinni og gildir í 10 mínútur. Búðu til nýjan á %@ og reyndu aftur."
           }
         },
         "it": {
@@ -27495,6 +27633,12 @@
             "value": "코드는 한 번만 사용할 수 있으며 10분 동안 유효합니다. %@에서 새 코드를 만든 뒤 다시 시도하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En kode fungerer én gang og varer i 10 minutter. Lag en ny på %@ og prøv igjen."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -27505,6 +27649,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Um código funciona uma única vez e vale por 10 minutos. Gere um novo em %@ e tente de novo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En kod fungerar bara en gång och gäller i 10 minuter. Skapa en ny på %@ och försök igen."
           }
         },
         "zh-Hans": {
@@ -29321,6 +29471,12 @@
     },
     "AI · included in the free trial": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI · inkluderet i den gratis prøveperiode"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -29339,10 +29495,22 @@
             "value": "IA · incluida en la prueba gratuita"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tekoäly · sisältyy ilmaiseen kokeiluun"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "IA · incluse dans l’essai gratuit"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gervigreind · innifalin í ókeypis prufutímanum"
           }
         },
         "it": {
@@ -29363,6 +29531,12 @@
             "value": "AI · 무료 체험에 포함"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI · inkludert i den gratis prøveperioden"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -29373,6 +29547,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "IA · incluída no teste gratuito"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI · ingår i den gratis provperioden"
           }
         },
         "zh-Hans": {
@@ -31993,6 +32173,12 @@
     },
     "Add Tailscale to listen away from home.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj Tailscale, så du kan lytte, når du er væk hjemmefra."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -32011,10 +32197,22 @@
             "value": "Añade Tailscale para escuchar fuera de casa."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lisää Tailscale, jotta voit kuunnella kotoa poissa ollessasi."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Ajoutez Tailscale pour écouter loin de chez vous."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bættu Tailscale við til að hlusta á ferðinni."
           }
         },
         "it": {
@@ -32035,6 +32233,12 @@
             "value": "외부에서 들으려면 Tailscale을 추가하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legg til Tailscale for å lytte utenfor hjemmet."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -32045,6 +32249,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adicione o Tailscale para ouvir fora de casa."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lägg till Tailscale för att lyssna när du inte är hemma."
           }
         },
         "zh-Hans": {
@@ -32645,6 +32855,12 @@
     },
     "Add music to Flaccy first, then pick the albums your Apple Watch should carry.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj først musik til Flaccy, og vælg derefter de album, din Apple Watch skal have med."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -32663,10 +32879,22 @@
             "value": "Primero añade música a Flaccy y luego elige los álbumes que debe llevar tu Apple Watch."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lisää ensin musiikkia Flaccyyn ja valitse sitten albumit, jotka haluat Apple Watchiin."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Ajoutez d’abord de la musique à Flaccy, puis choisissez les albums que votre Apple Watch doit contenir."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bættu fyrst tónlist við Flaccy og veldu síðan plöturnar sem Apple Watch-úrið þitt á að hafa."
           }
         },
         "it": {
@@ -32687,6 +32915,12 @@
             "value": "먼저 Flaccy에 음악을 추가한 다음, Apple Watch에 담을 앨범을 고르세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legg til musikk i Flaccy først, og velg deretter albumene Apple Watch-en din skal ha."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -32697,6 +32931,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Primeiro adicione música ao Flaccy e depois escolha os álbuns que o seu Apple Watch deve ter."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lägg först till musik i Flaccy och välj sedan de album som ska finnas på din Apple Watch."
           }
         },
         "zh-Hans": {
@@ -40851,6 +41091,12 @@
     },
     "Away from home?": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Væk hjemmefra?"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -40869,10 +41115,22 @@
             "value": "¿Fuera de casa?"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kotoa poissa?"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Loin de chez vous ?"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Á ferðinni?"
           }
         },
         "it": {
@@ -40893,6 +41151,12 @@
             "value": "외부에 계신가요?"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utenfor hjemmet?"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -40903,6 +41167,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fora de casa?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borta hemifrån?"
           }
         },
         "zh-Hans": {
@@ -43383,6 +43653,12 @@
     },
     "Can't reach %@ to list its devices. Same Wi-Fi, or Tailscale on?": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke nå %@ for at vise dens enheder. Samme Wi-Fi, eller Tailscale tændt?"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -43401,10 +43677,22 @@
             "value": "No se puede acceder a %@ para listar sus dispositivos. ¿Mismo Wi-Fi o Tailscale activado?"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ei ole tavoitettavissa, joten sen laitteita ei voi listata. Onko se samassa Wi-Fi-verkossa tai onko Tailscale päällä?"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de joindre %@ pour lister ses appareils. Même Wi-Fi, ou Tailscale activé ?"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki næst samband við %@ til að birta lista yfir tæki þess. Sama Wi-Fi, eða er Tailscale kveikt?"
           }
         },
         "it": {
@@ -43425,6 +43713,12 @@
             "value": "기기 목록을 가져오려고 %@에 연결할 수 없습니다. 같은 Wi-Fi인가요, 아니면 Tailscale이 켜져 있나요?"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Får ikke kontakt med %@ for å liste opp enhetene. Samme Wi-Fi, eller er Tailscale på?"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -43435,6 +43729,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Não foi possível acessar %@ para listar os dispositivos. Mesmo Wi-Fi ou Tailscale ativado?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan inte nå %@ för att lista dess enheter. Samma Wi-Fi, eller är Tailscale på?"
           }
         },
         "zh-Hans": {
@@ -43453,6 +43753,12 @@
     },
     "Can't reach %@. Same Wi-Fi, or Tailscale on?": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan ikke nå %@. Samme Wi-Fi, eller Tailscale tændt?"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -43471,10 +43777,22 @@
             "value": "No se puede acceder a %@. ¿Mismo Wi-Fi o Tailscale activado?"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ei ole tavoitettavissa. Onko se samassa Wi-Fi-verkossa tai onko Tailscale päällä?"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de joindre %@. Même Wi-Fi, ou Tailscale activé ?"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekki næst samband við %@. Sama Wi-Fi, eða er Tailscale kveikt?"
           }
         },
         "it": {
@@ -43495,6 +43813,12 @@
             "value": "%@에 연결할 수 없습니다. 같은 Wi-Fi인가요, 아니면 Tailscale이 켜져 있나요?"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Får ikke kontakt med %@. Samme Wi-Fi, eller er Tailscale på?"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -43505,6 +43829,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Não foi possível acessar %@. Mesmo Wi-Fi ou Tailscale ativado?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kan inte nå %@. Samma Wi-Fi, eller är Tailscale på?"
           }
         },
         "zh-Hans": {
@@ -44481,6 +44811,12 @@
     },
     "Check that %@ is on and on the same Wi-Fi as this device, or that Tailscale is on for both. Then try again.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontrollér, at %@ er tændt og på samme Wi-Fi som denne enhed, eller at Tailscale er tændt på begge. Prøv derefter igen."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -44499,10 +44835,22 @@
             "value": "Comprueba que %@ esté encendido y en el mismo Wi-Fi que este dispositivo, o que Tailscale esté activado en ambos. Luego vuelve a intentarlo."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarkista, että %@ on päällä ja samassa Wi-Fi-verkossa kuin tämä laite tai että Tailscale on päällä molemmissa. Yritä sitten uudelleen."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Vérifie que %@ est allumé et sur le même Wi-Fi que cet appareil, ou que Tailscale est activé sur les deux. Réessaie ensuite."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Athugaðu hvort %@ sé kveikt og á sama Wi-Fi og þetta tæki, eða hvort Tailscale sé kveikt á báðum. Reyndu síðan aftur."
           }
         },
         "it": {
@@ -44523,6 +44871,12 @@
             "value": "%@이(가) 켜져 있고 이 기기와 같은 Wi-Fi에 연결되어 있는지, 또는 두 기기 모두 Tailscale이 켜져 있는지 확인하세요. 그런 다음 다시 시도하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontroller at %@ er på og på samme Wi-Fi som denne enheten, eller at Tailscale er slått på for begge. Prøv deretter igjen."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -44533,6 +44887,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verifique se %@ está ligado e na mesma rede Wi-Fi deste dispositivo, ou se o Tailscale está ativado nos dois. Depois tente de novo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontrollera att %@ är på och ansluten till samma Wi-Fi som den här enheten, eller att Tailscale är aktiverat på båda. Försök sedan igen."
           }
         },
         "zh-Hans": {
@@ -44551,6 +44911,12 @@
     },
     "Check the address shown on %@, or scan its code again.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontrollér adressen, der vises på %@, eller scan koden igen."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -44569,10 +44935,22 @@
             "value": "Comprueba la dirección que muestra %@, o escanea de nuevo su código."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarkista laitteessa %@ näkyvä osoite tai skannaa sen koodi uudelleen."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Vérifie l’adresse affichée sur %@, ou scanne de nouveau son code."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Athugaðu vistfangið sem birtist á %@, eða skannaðu kóðann aftur."
           }
         },
         "it": {
@@ -44593,6 +44971,12 @@
             "value": "%@에 표시된 주소를 확인하거나 코드를 다시 스캔하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontroller adressen som vises på %@, eller skann koden på nytt."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -44603,6 +44987,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Confira o endereço mostrado em %@ ou escaneie o código dele de novo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontrollera adressen som visas på %@, eller skanna koden igen."
           }
         },
         "zh-Hans": {
@@ -44997,6 +45387,12 @@
     },
     "Choose Another Folder…": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg en anden mappe…"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -45015,10 +45411,22 @@
             "value": "Elegir otra carpeta…"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valitse toinen kansio…"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Choisir un autre dossier…"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velja aðra möppu…"
           }
         },
         "it": {
@@ -45039,6 +45447,12 @@
             "value": "다른 폴더 선택…"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velg en annen mappe…"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -45049,6 +45463,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Escolher outra pasta…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Välj en annan mapp…"
           }
         },
         "zh-Hans": {
@@ -47985,6 +48405,12 @@
     },
     "Close Anyway": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luk alligevel"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -48003,10 +48429,22 @@
             "value": "Cerrar de todos modos"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sulje silti"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Fermer quand même"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loka samt"
           }
         },
         "it": {
@@ -48027,6 +48465,12 @@
             "value": "그래도 닫기"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lukk likevel"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -48037,6 +48481,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fechar mesmo assim"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stäng ändå"
           }
         },
         "zh-Hans": {
@@ -64201,6 +64651,12 @@
     },
     "Devices on this Wi-Fi connect directly": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enheder på dette Wi-Fi forbinder sig direkte"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -64219,10 +64675,22 @@
             "value": "Los dispositivos en este Wi-Fi se conectan directamente"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tämän Wi-Fi-verkon laitteet yhdistyvät suoraan"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Les appareils sur ce Wi-Fi se connectent directement"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tæki á þessu Wi-Fi tengjast beint"
           }
         },
         "it": {
@@ -64243,6 +64711,12 @@
             "value": "이 Wi-Fi의 기기는 직접 연결됩니다"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enheter på dette Wi-Fi-et kobler seg direkte til"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -64253,6 +64727,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dispositivos nesta rede Wi-Fi se conectam diretamente"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enheter på det här Wi-Fi-nätverket ansluter direkt"
           }
         },
         "zh-Hans": {
@@ -75543,6 +76023,12 @@
     },
     "Flaccy Server on My Computer": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server på min computer"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -75561,10 +76047,22 @@
             "value": "Flaccy Server en mi ordenador"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server omalla tietokoneella"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy Server sur mon ordinateur"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server á tölvunni minni"
           }
         },
         "it": {
@@ -75585,6 +76083,12 @@
             "value": "내 컴퓨터의 Flaccy Server"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server på min datamaskin"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -75595,6 +76099,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy Server no meu computador"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server på min dator"
           }
         },
         "zh-Hans": {
@@ -75613,6 +76123,12 @@
     },
     "Flaccy Server plays the music on your Mac or PC on this iPad over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server afspiller musikken fra din Mac eller pc på denne iPad over dit Wi-Fi, med playlister, synes godt om-markeringer og historik synkroniseret. Den er gratis, og din musik forlader aldrig dit eget netværk."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -75631,10 +76147,22 @@
             "value": "Flaccy Server reproduce en este iPad la música de tu Mac o PC por Wi-Fi, con las listas, los me gusta y el historial al día. Es gratis, y tu música nunca sale de tu propia red."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server toistaa Mac- tai PC-tietokoneesi musiikkia tällä iPadilla Wi-Fi-verkon kautta, ja soittolistat, tykkäykset ja historia pysyvät ajan tasalla. Se on ilmainen, eikä musiikkisi koskaan poistu omasta verkostasi."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy Server joue sur cet iPad la musique de votre Mac ou PC via le Wi-Fi, avec playlists, favoris et historique synchronisés. C’est gratuit, et votre musique ne quitte jamais votre propre réseau."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server spilar tónlistina í Mac- eða PC-tölvunni þinni á þessum iPad yfir Wi-Fi, með spilunarlistum, líkuðum lögum og hlustunarferli í samstillingu. Hann er ókeypis og tónlistin þín yfirgefur aldrei þitt eigið net."
           }
         },
         "it": {
@@ -75655,6 +76183,12 @@
             "value": "Flaccy Server는 Mac이나 PC의 음악을 Wi-Fi를 통해 이 iPad에서 재생합니다. 재생목록, 좋아요, 재생 기록도 함께 맞춰집니다. 무료이며, 음악은 내 네트워크 밖으로 나가지 않습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server spiller av musikken på Mac-en eller PC-en din på denne iPaden over Wi-Fi, med spillelister, likte sanger og lyttehistorikk i takt. Den er gratis, og musikken din forlater aldri ditt eget nettverk."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -75665,6 +76199,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O Flaccy Server toca no seu iPad a música do Mac ou PC por Wi-Fi, com playlists, curtidas e histórico sincronizados. É grátis, e sua música nunca sai da sua própria rede."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server spelar upp musiken från din Mac eller dator på den här iPaden via ditt Wi-Fi, med spellistor, gillningar och historik i synk. Den är gratis, och din musik lämnar aldrig ditt eget nätverk."
           }
         },
         "zh-Hans": {
@@ -75683,6 +76223,12 @@
     },
     "Flaccy Server plays the music on your Mac or PC on this iPhone over your Wi-Fi, with playlists, loves and history in step. It's free, and your music never leaves your own network.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server afspiller musikken fra din Mac eller pc på denne iPhone over dit Wi-Fi, med playlister, synes godt om-markeringer og historik synkroniseret. Den er gratis, og din musik forlader aldrig dit eget netværk."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -75701,10 +76247,22 @@
             "value": "Flaccy Server reproduce en este iPhone la música de tu Mac o PC por Wi-Fi, con las listas, los me gusta y el historial al día. Es gratis, y tu música nunca sale de tu propia red."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server toistaa Mac- tai PC-tietokoneesi musiikkia tällä iPhonella Wi-Fi-verkon kautta, ja soittolistat, tykkäykset ja historia pysyvät ajan tasalla. Se on ilmainen, eikä musiikkisi koskaan poistu omasta verkostasi."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy Server joue sur cet iPhone la musique de votre Mac ou PC via le Wi-Fi, avec playlists, favoris et historique synchronisés. C’est gratuit, et votre musique ne quitte jamais votre propre réseau."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server spilar tónlistina í Mac- eða PC-tölvunni þinni á þessum iPhone yfir Wi-Fi, með spilunarlistum, líkuðum lögum og hlustunarferli í samstillingu. Hann er ókeypis og tónlistin þín yfirgefur aldrei þitt eigið net."
           }
         },
         "it": {
@@ -75725,6 +76283,12 @@
             "value": "Flaccy Server는 Mac이나 PC의 음악을 Wi-Fi를 통해 이 iPhone에서 재생합니다. 재생목록, 좋아요, 재생 기록도 함께 맞춰집니다. 무료이며, 음악은 내 네트워크 밖으로 나가지 않습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server spiller av musikken på Mac-en eller PC-en din på denne iPhonen over Wi-Fi, med spillelister, likte sanger og lyttehistorikk i takt. Den er gratis, og musikken din forlater aldri ditt eget nettverk."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -75735,6 +76299,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O Flaccy Server toca no seu iPhone a música do Mac ou PC por Wi-Fi, com playlists, curtidas e histórico sincronizados. É grátis, e sua música nunca sai da sua própria rede."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy Server spelar upp musiken från din Mac eller dator på den här iPhonen via ditt Wi-Fi, med spellistor, gillningar och historik i synk. Den är gratis, och din musik lämnar aldrig ditt eget nätverk."
           }
         },
         "zh-Hans": {
@@ -77263,6 +77833,12 @@
     },
     "Flaccy indexes the folder in place, nothing copied or moved. Music from the Music app is in Music › Music › Media.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indekserer mappen på stedet, intet kopieres eller flyttes. Musik fra Musik-appen ligger under Musik › Musik › Medier."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -77281,10 +77857,22 @@
             "value": "Flaccy indexa la carpeta en su sitio, sin copiar ni mover nada. La música de la app Music está en Music › Music › Media."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indeksoi kansion paikallaan, mitään ei kopioida eikä siirretä. Musiikki Music-sovelluksesta löytyy kohdasta Music › Music › Media."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy indexe le dossier sur place, rien n’est copié ni déplacé. La musique de l’app Music se trouve dans Music › Music › Media."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy skráir möppuna þar sem hún er, ekkert er afritað eða fært. Tónlist úr Tónlist-appinu er í Music › Music › Media."
           }
         },
         "it": {
@@ -77305,6 +77893,12 @@
             "value": "Flaccy는 폴더를 제자리에서 색인하며, 아무것도 복사하거나 옮기지 않습니다. Music 앱의 음악은 Music › Music › Media에 있습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indekserer mappen på stedet, ingenting kopieres eller flyttes. Musikk fra Musikk-appen ligger under Musikk › Musikk › Media."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -77315,6 +77909,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O Flaccy indexa a pasta no lugar, sem copiar nem mover nada. A música do app Music está em Music › Music › Media."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy indexerar mappen på plats – inget kopieras eller flyttas. Musik från appen Musik finns i Music › Music › Media."
           }
         },
         "zh-Hans": {
@@ -77715,6 +78315,12 @@
     },
     "Flaccy plays FLAC, ALAC, MP3, AAC, WAV and AIFF files, and found none in this folder or the folders inside it. Choose the folder your music is in. Music from the Music app is in Music › Music › Media.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy spiller FLAC-, ALAC-, MP3-, AAC-, WAV- og AIFF-filer, men har ikke fundet nogen i denne mappe eller i undermapperne. Vælg den mappe, din musik ligger i. Musik fra Musik-appen ligger under Musik › Musik › Medier."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -77733,10 +78339,22 @@
             "value": "Flaccy reproduce archivos FLAC, ALAC, MP3, AAC, WAV y AIFF, pero no encontró ninguno en esta carpeta ni en las carpetas que contiene. Elige la carpeta donde está tu música. La música de la app Music está en Music › Music › Media."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy toistaa FLAC-, ALAC-, MP3-, AAC-, WAV- ja AIFF-tiedostoja, mutta ei löytänyt yhtään tästä kansiosta eikä sen alikansioista. Valitse kansio, jossa musiikkisi on. Musiikki Music-sovelluksesta löytyy kohdasta Music › Music › Media."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Flaccy lit les fichiers FLAC, ALAC, MP3, AAC, WAV et AIFF, mais n’en a trouvé aucun dans ce dossier ni dans ses sous-dossiers. Choisissez le dossier où se trouve votre musique. La musique de l’app Music se trouve dans Music › Music › Media."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy spilar FLAC-, ALAC-, MP3-, AAC-, WAV- og AIFF-skrár, en fann engar í þessari möppu eða í möppunum inni í henni. Veldu möppuna sem tónlistin þín er í. Tónlist úr Tónlist-appinu er í Music › Music › Media."
           }
         },
         "it": {
@@ -77757,6 +78375,12 @@
             "value": "Flaccy는 FLAC, ALAC, MP3, AAC, WAV, AIFF 파일을 재생하지만 이 폴더와 그 안의 폴더에서는 하나도 찾지 못했습니다. 음악이 들어 있는 폴더를 선택하세요. Music 앱의 음악은 Music › Music › Media에 있습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy spiller av FLAC-, ALAC-, MP3-, AAC-, WAV- og AIFF-filer, men fant ingen i denne mappen eller i undermappene. Velg mappen musikken din ligger i. Musikk fra Musikk-appen ligger under Musikk › Musikk › Media."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -77767,6 +78391,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O Flaccy toca arquivos FLAC, ALAC, MP3, AAC, WAV e AIFF, mas não encontrou nenhum nesta pasta nem nas pastas dentro dela. Escolha a pasta onde está sua música. A música do app Music está em Music › Music › Media."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaccy spelar upp FLAC-, ALAC-, MP3-, AAC-, WAV- och AIFF-filer, men hittade inga i den här mappen eller i mapparna inuti den. Välj mappen där din musik finns. Musik från appen Musik finns i Music › Music › Media."
           }
         },
         "zh-Hans": {
@@ -78443,6 +79073,12 @@
     },
     "Folds Deluxe, Remaster and Explicit editions into one album.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samler Deluxe-, Remaster- og Explicit-udgaverne i ét album."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -78455,10 +79091,22 @@
             "value": "Funde las ediciones Deluxe, Remaster y Explicit en un solo álbum."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yhdistää Deluxe-, Remaster- ja Explicit-painokset yhdeksi albumiksi."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Fond les éditions Deluxe, Remaster et Explicit en un seul album."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sameinar Deluxe-, Remaster- og Explicit-útgáfur í eina plötu."
           }
         },
         "it": {
@@ -78479,6 +79127,12 @@
             "value": "디럭스, 리마스터, 익스플리싯 에디션을 하나의 앨범으로 합칩니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slår sammen Deluxe-, Remaster- og Explicit-utgavene til ett album."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -78489,6 +79143,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Junta as edições Deluxe, Remaster e Explicit em um só álbum."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slår ihop Deluxe-, Remaster- och Explicit-utgåvor till ett album."
           }
         },
         "zh-Hans": {
@@ -80393,6 +81053,12 @@
     },
     "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sømløs afspilning er præcis på tabsfrie filer. MP3- og AAC-filer kan beholde små huller fra encoderen."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -80405,10 +81071,22 @@
             "value": "La reproducción sin pausas es exacta con archivos sin pérdida. Los MP3 y AAC pueden conservar pequeñas pausas del codificador."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saumaton toisto on tarkka häviöttömissä tiedostoissa. MP3- ja AAC-tiedostoissa voi jäädä pieniä koodauksesta johtuvia aukkoja."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "La lecture sans blanc est exacte avec les fichiers sans perte. Les MP3 et AAC peuvent garder de minuscules blancs d'encodage."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Óslitin spilun er nákvæm á taplausum skrám. MP3- og AAC-skrár geta haldið örlitlum bilum frá kóðaranum."
           }
         },
         "it": {
@@ -80429,6 +81107,12 @@
             "value": "갭리스는 무손실 파일에서 정확합니다. MP3와 AAC 파일에는 인코더가 남긴 아주 짧은 공백이 있을 수 있습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sømløs avspilling er nøyaktig for tapsfrie filer. MP3- og AAC-filer kan beholde små pauser fra kodingen."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -80439,6 +81123,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "A reprodução sem pausas é exata em arquivos sem perdas. Arquivos MP3 e AAC podem manter pequenas pausas do codificador."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sömlös uppspelning är exakt på förlustfria filer. MP3- och AAC-filer kan behålla små luckor från kodaren."
           }
         },
         "zh-Hans": {
@@ -85757,6 +86447,12 @@
     },
     "If you close now, the songs that have finished stay and the rest stop. Keep this screen open until the computer is done.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvis du lukker nu, bliver de sange, der er færdige, og resten stopper. Lad denne skærm være åben, indtil computeren er færdig."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -85775,10 +86471,22 @@
             "value": "Si cierras ahora, las canciones terminadas se quedan y el resto se detiene. Mantén esta pantalla abierta hasta que el ordenador termine."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jos suljet nyt, valmiit kappaleet säilyvät ja loput pysähtyvät. Pidä tämä näkymä auki, kunnes tietokone on valmis."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Si vous fermez maintenant, les morceaux terminés restent et les autres s’arrêtent. Gardez cet écran ouvert jusqu’à ce que l’ordinateur ait terminé."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ef þú lokar núna haldast lögin sem eru þegar búin og restin stöðvast. Haltu þessum skjá opnum þar til tölvan er búin."
           }
         },
         "it": {
@@ -85799,6 +86507,12 @@
             "value": "지금 닫으면 완료된 곡은 남고 나머지는 중단됩니다. 컴퓨터 작업이 끝날 때까지 이 화면을 열어 두세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvis du lukker nå, blir de ferdige sangene, mens resten stopper. Hold denne skjermen åpen til datamaskinen er ferdig."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -85809,6 +86523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Se você fechar agora, as músicas já concluídas ficam e as demais param. Mantenha esta tela aberta até o computador terminar."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Om du stänger nu finns de låtar som är klara kvar, och resten avbryts. Håll den här skärmen öppen tills datorn är klar."
           }
         },
         "zh-Hans": {
@@ -88377,6 +89097,12 @@
     },
     "Install Tailscale on this iPad and on your computer, signed in to the same account, and your music plays anywhere.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installer Tailscale på denne iPad og på din computer, logget ind med samme konto, så spiller din musik overalt."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -88395,10 +89121,22 @@
             "value": "Instala Tailscale en este iPad y en tu ordenador, con la misma cuenta iniciada, y tu música sonará en cualquier lugar."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asenna Tailscale tähän iPadiin ja tietokoneeseesi, kirjautuneena samaan tiliin, niin musiikkisi toistetaan missä tahansa."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Installez Tailscale sur cet iPad et sur votre ordinateur, connectés au même compte, et votre musique se joue partout."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settu upp Tailscale á þessum iPad og tölvunni þinni, skráðu þig inn á sama aðgang, og tónlistin þín spilast hvar sem er."
           }
         },
         "it": {
@@ -88419,6 +89157,12 @@
             "value": "이 iPad와 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인하면 어디서든 음악을 들을 수 있습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installer Tailscale på denne iPaden og på datamaskinen din, logget på med samme konto, så spiller musikken din overalt."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -88429,6 +89173,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Instale o Tailscale neste iPad e no seu computador, conectados à mesma conta, e sua música toca em qualquer lugar."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installera Tailscale på den här iPaden och på datorn, och logga in med samma konto, så spelas din musik var som helst."
           }
         },
         "zh-Hans": {
@@ -88447,6 +89197,12 @@
     },
     "Install Tailscale on this iPhone and on your computer, signed in to the same account, and your music plays anywhere.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installer Tailscale på denne iPhone og på din computer, logget ind med samme konto, så spiller din musik overalt."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -88465,10 +89221,22 @@
             "value": "Instala Tailscale en este iPhone y en tu ordenador, con la misma cuenta iniciada, y tu música sonará en cualquier lugar."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asenna Tailscale tähän iPhoneen ja tietokoneeseesi, kirjautuneena samaan tiliin, niin musiikkisi toistetaan missä tahansa."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Installez Tailscale sur cet iPhone et sur votre ordinateur, connectés au même compte, et votre musique se joue partout."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settu upp Tailscale á þessum iPhone og tölvunni þinni, skráðu þig inn á sama aðgang, og tónlistin þín spilast hvar sem er."
           }
         },
         "it": {
@@ -88489,6 +89257,12 @@
             "value": "이 iPhone과 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인하면 어디서든 음악을 들을 수 있습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installer Tailscale på denne iPhonen og på datamaskinen din, logget på med samme konto, så spiller musikken din overalt."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -88499,6 +89273,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Instale o Tailscale neste iPhone e no seu computador, conectados à mesma conta, e sua música toca em qualquer lugar."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installera Tailscale på den här iPhonen och på datorn, och logga in med samma konto, så spelas din musik var som helst."
           }
         },
         "zh-Hans": {
@@ -89275,6 +90055,12 @@
     },
     "It doesn't match the key from when this device was added, so nothing was sent. If %@ was reinstalled or moved, remove it and add it again with a new code.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den stemmer ikke med den nøgle, der blev gemt, da denne enhed blev tilføjet, så intet blev sendt. Hvis %@ er blevet geninstalleret eller flyttet, skal du fjerne den og tilføje den igen med en ny kode."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -89293,10 +90079,22 @@
             "value": "No coincide con la clave de cuando se añadió este dispositivo, así que no se envió nada. Si %@ se reinstaló o se movió, elimínalo y añádelo de nuevo con un código nuevo."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avain ei täsmää siihen, joka tallennettiin laitetta lisättäessä, joten mitään ei lähetetty. Jos %@ asennettiin uudelleen tai siirrettiin, poista se ja lisää uudelleen uudella koodilla."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Elle ne correspond pas à la clé de l’ajout de cet appareil, donc rien n’a été envoyé. Si %@ a été réinstallé ou déplacé, supprime-le et ajoute-le de nouveau avec un nouveau code."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lykillinn stemmir ekki við þann sem var vistaður þegar tækið var bætt við, svo ekkert var sent. Ef %@ var sett upp aftur eða flutt, fjarlægðu netþjóninn og bættu honum aftur við með nýjum kóða."
           }
         },
         "it": {
@@ -89317,6 +90115,12 @@
             "value": "이 기기를 추가했을 때의 키와 일치하지 않아 아무것도 전송되지 않았습니다. %@을(를) 다시 설치하거나 옮겼다면 삭제한 뒤 새 코드로 다시 추가하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den samsvarer ikke med nøkkelen fra da denne enheten ble lagt til, så ingenting ble sendt. Hvis %@ ble installert på nytt eller flyttet, fjern den og legg den til igjen med en ny kode."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -89327,6 +90131,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Não corresponde à chave de quando este dispositivo foi adicionado, então nada foi enviado. Se %@ foi reinstalado ou movido, remova-o e adicione-o de novo com um código novo."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den stämmer inte med nyckeln som sparades när den här enheten lades till, så inget skickades. Om %@ har installerats om eller flyttats, ta bort den och lägg till den igen med en ny kod."
           }
         },
         "zh-Hans": {
@@ -90205,6 +91015,12 @@
     },
     "Keep Open": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold åben"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -90223,10 +91039,22 @@
             "value": "Mantener abierto"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pidä auki"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Garder ouvert"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hafa opið"
           }
         },
         "it": {
@@ -90247,6 +91075,12 @@
             "value": "열어 두기"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La stå åpen"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -90257,6 +91091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Manter aberto"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behåll öppet"
           }
         },
         "zh-Hans": {
@@ -90463,6 +91303,12 @@
     },
     "Keep this iPad on the same Wi-Fi. When your computer shows a code, scan it and Flaccy connects.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold denne iPad på samme Wi-Fi. Når din computer viser en kode, skal du scanne den, så forbinder Flaccy sig."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -90481,10 +91327,22 @@
             "value": "Mantén este iPad en el mismo Wi-Fi. Cuando tu ordenador muestre un código, escanéalo y Flaccy se conectará."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pidä tämä iPad samassa Wi-Fi-verkossa. Kun tietokone näyttää koodin, skannaa se, niin Flaccy muodostaa yhteyden."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Gardez cet iPad sur le même Wi-Fi. Quand votre ordinateur affiche un code, scannez-le et Flaccy se connecte."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haltu þessum iPad á sama Wi-Fi. Þegar tölvan þín sýnir kóða skaltu skanna hann og Flaccy tengist."
           }
         },
         "it": {
@@ -90505,6 +91363,12 @@
             "value": "이 iPad를 같은 Wi-Fi에 연결해 두세요. 컴퓨터에 코드가 표시되면 스캔하세요. Flaccy가 연결됩니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold denne iPaden på samme Wi-Fi. Når datamaskinen din viser en kode, skann den, så kobler Flaccy seg til."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -90515,6 +91379,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mantenha este iPad na mesma rede Wi-Fi. Quando seu computador mostrar um código, escaneie-o e o Flaccy se conecta."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Håll den här iPaden på samma Wi-Fi. När datorn visar en kod skannar du den, så ansluter Flaccy."
           }
         },
         "zh-Hans": {
@@ -90533,6 +91403,12 @@
     },
     "Keep this iPhone on the same Wi-Fi. When your computer shows a code, scan it and Flaccy connects.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold denne iPhone på samme Wi-Fi. Når din computer viser en kode, skal du scanne den, så forbinder Flaccy sig."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -90551,10 +91427,22 @@
             "value": "Mantén este iPhone en el mismo Wi-Fi. Cuando tu ordenador muestre un código, escanéalo y Flaccy se conectará."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pidä tämä iPhone samassa Wi-Fi-verkossa. Kun tietokone näyttää koodin, skannaa se, niin Flaccy muodostaa yhteyden."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Gardez cet iPhone sur le même Wi-Fi. Quand votre ordinateur affiche un code, scannez-le et Flaccy se connecte."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haltu þessum iPhone á sama Wi-Fi. Þegar tölvan þín sýnir kóða skaltu skanna hann og Flaccy tengist."
           }
         },
         "it": {
@@ -90575,6 +91463,12 @@
             "value": "이 iPhone을 같은 Wi-Fi에 연결해 두세요. 컴퓨터에 코드가 표시되면 스캔하세요. Flaccy가 연결됩니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold denne iPhonen på samme Wi-Fi. Når datamaskinen din viser en kode, skann den, så kobler Flaccy seg til."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -90585,6 +91479,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mantenha este iPhone na mesma rede Wi-Fi. Quando seu computador mostrar um código, escaneie-o e o Flaccy se conecta."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Håll den här iPhonen på samma Wi-Fi. När datorn visar en kod skannar du den, så ansluter Flaccy."
           }
         },
         "zh-Hans": {
@@ -94695,6 +95595,12 @@
     },
     "Lists a song once when it is on several albums.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viser en sang én gang, når den står på flere album."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -94707,10 +95613,22 @@
             "value": "Muestra una canción una sola vez cuando aparece en varios álbumes."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Näyttää kappaleen vain kerran, kun se on useilla albumeilla."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Affiche un morceau une seule fois lorsqu'il figure sur plusieurs albums."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sýnir lag aðeins einu sinni þegar það er á mörgum plötum."
           }
         },
         "it": {
@@ -94731,6 +95649,12 @@
             "value": "여러 앨범에 들어 있는 곡을 한 번만 표시합니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viser en sang bare én gang når den er på flere album."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -94741,6 +95665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lista uma música uma vez quando ela aparece em vários álbuns."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visar en låt en gång när den finns på flera album."
           }
         },
         "zh-Hans": {
@@ -97825,6 +98755,12 @@
     },
     "M4P songs are iTunes Store purchases that only Apple's Music app can play.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P-sange er køb fra iTunes Store, som kun Apples Musik-app kan afspille."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -97843,10 +98779,22 @@
             "value": "Las canciones M4P son compras de la iTunes Store que solo puede reproducir la app Music de Apple."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P-kappaleet ovat iTunes Storesta ostettuja, ja vain Applen Music-sovellus voi toistaa niitä."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Les morceaux M4P sont des achats de l’iTunes Store que seule l’app Music d’Apple peut lire."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P-lög eru kaup í iTunes Store sem aðeins Tónlist-appið frá Apple getur spilað."
           }
         },
         "it": {
@@ -97867,6 +98815,12 @@
             "value": "M4P 곡은 iTunes Store에서 구매한 곡으로, Apple의 Music 앱에서만 재생할 수 있습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P-sanger er kjøp fra iTunes Store som bare Apples Musikk-app kan spille av."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -97877,6 +98831,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "As músicas M4P são compras da iTunes Store que só o app Music da Apple consegue tocar."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "M4P-låtar är köp från iTunes Store som bara Apples app Musik kan spela upp."
           }
         },
         "zh-Hans": {
@@ -102425,6 +103385,12 @@
     },
     "Music folder: %@": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikmappe: %@"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -102443,10 +103409,22 @@
             "value": "Carpeta de música: %@"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiikkikansio: %@"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Dossier de musique : %@"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tónlistarmappa: %@"
           }
         },
         "it": {
@@ -102467,6 +103445,12 @@
             "value": "음악 폴더: %@"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikkmappe: %@"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -102477,6 +103461,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pasta de música: %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikmapp: %@"
           }
         },
         "zh-Hans": {
@@ -102495,6 +103485,12 @@
     },
     "Music is still arriving": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik er stadig på vej"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -102513,10 +103509,22 @@
             "value": "La música aún está llegando"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiikkia vielä saapuu"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "La musique arrive encore"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tónlist er enn að berast"
           }
         },
         "it": {
@@ -102537,6 +103545,12 @@
             "value": "음악을 아직 받는 중입니다"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikken kommer fortsatt inn"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -102547,6 +103561,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "A música ainda está chegando"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiken kommer fortfarande fram"
           }
         },
         "zh-Hans": {
@@ -102659,6 +103679,12 @@
     },
     "Music on another computer? Flaccy Server plays it here and keeps playlists, loves and history in sync. Free: midgarcorp.cc/flaccy/server": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik på en anden computer? Flaccy Server afspiller den her og holder playlister, synes godt om-markeringer og historik synkroniseret. Gratis: midgarcorp.cc/flaccy/server"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -102677,10 +103703,22 @@
             "value": "¿Música en otro ordenador? Flaccy Server la reproduce aquí y mantiene sincronizadas las listas, los me gusta y el historial. Gratis: midgarcorp.cc/flaccy/server"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiikki toisella tietokoneella? Flaccy Server toistaa sen täällä ja pitää soittolistat, tykkäykset ja historian synkronoituina. Ilmainen: midgarcorp.cc/flaccy/server"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "De la musique sur un autre ordinateur ? Flaccy Server la joue ici et garde les playlists, favoris et historique synchronisés. Gratuit : midgarcorp.cc/flaccy/server"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tónlist á annarri tölvu? Flaccy Server spilar hana hér og heldur spilunarlista, líkuð lög og hlustunarferil í samstillingu. Ókeypis: midgarcorp.cc/flaccy/server"
           }
         },
         "it": {
@@ -102701,6 +103739,12 @@
             "value": "다른 컴퓨터에 음악이 있나요? Flaccy Server가 여기서 재생하고 재생목록, 좋아요, 재생 기록을 동기화합니다. 무료: midgarcorp.cc/flaccy/server"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musikk på en annen datamaskin? Flaccy Server spiller den av her og holder spillelister, likte sanger og lyttehistorikk i takt. Gratis: midgarcorp.cc/flaccy/server"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -102711,6 +103755,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Música em outro computador? O Flaccy Server toca aqui e mantém playlists, curtidas e histórico sincronizados. Grátis: midgarcorp.cc/flaccy/server"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik på en annan dator? Flaccy Server spelar upp den här och håller spellistor, gillningar och historik synkroniserade. Gratis: midgarcorp.cc/flaccy/server"
           }
         },
         "zh-Hans": {
@@ -103797,6 +104847,12 @@
     },
     "Navidrome or Another Subsonic Server": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome eller en anden Subsonic-server"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -103815,10 +104871,22 @@
             "value": "Navidrome u otro servidor Subsonic"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome tai toinen Subsonic-palvelin"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Navidrome ou un autre serveur Subsonic"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome eða annar Subsonic-netþjónn"
           }
         },
         "it": {
@@ -103839,6 +104907,12 @@
             "value": "Navidrome 또는 다른 Subsonic 서버"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome eller en annen Subsonic-server"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -103849,6 +104923,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Navidrome ou outro servidor Subsonic"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navidrome eller en annan Subsonic-server"
           }
         },
         "zh-Hans": {
@@ -106335,6 +107415,12 @@
     },
     "No Music to Send Yet": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen musik at sende endnu"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -106353,10 +107439,22 @@
             "value": "Todavía no hay música para enviar"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ei vielä lähetettävää musiikkia"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Pas encore de musique à envoyer"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engin tónlist til að senda enn"
           }
         },
         "it": {
@@ -106377,6 +107475,12 @@
             "value": "아직 보낼 음악이 없습니다"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen musikk å sende ennå"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -106387,6 +107491,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ainda não há música para enviar"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen musik att skicka än"
           }
         },
         "zh-Hans": {
@@ -108121,6 +109231,12 @@
     },
     "No music in “%@”": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen musik i »%@«"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -108139,10 +109255,22 @@
             "value": "No hay música en “%@”"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ei musiikkia kohteessa ”%@”"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Aucune musique dans « %@ »"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engin tónlist í „%@“"
           }
         },
         "it": {
@@ -108163,6 +109291,12 @@
             "value": "“%@”에 음악이 없습니다"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen musikk i «%@»"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -108173,6 +109307,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nenhuma música em “%@”"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen musik i ”%@”"
           }
         },
         "zh-Hans": {
@@ -114892,6 +116032,12 @@
     },
     "On this Wi-Fi: %@": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "På dette Wi-Fi: %@"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -114910,10 +116056,22 @@
             "value": "En este Wi-Fi: %@"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tässä Wi-Fi-verkossa: %@"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Sur ce Wi-Fi : %@"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Á þessu Wi-Fi: %@"
           }
         },
         "it": {
@@ -114934,6 +116092,12 @@
             "value": "이 Wi-Fi: %@"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "På dette Wi-Fi-et: %@"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -114944,6 +116108,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nesta rede Wi-Fi: %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "På det här Wi-Fi-nätverket: %@"
           }
         },
         "zh-Hans": {
@@ -117900,6 +119070,12 @@
     },
     "Optional. Scrobble your plays and bring your Last.fm history into Stats.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valgfrit. Scrobble dine afspilninger, og hent din Last.fm-historik ind i Statistik."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -117912,10 +119088,22 @@
             "value": "Opcional. Haz scrobble de lo que escuchas y trae tu historial de Last.fm a las estadísticas."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valinnainen. Scrobblaa toistosi ja tuo Last.fm-historiasi Tilastoihin."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Facultatif. Scrobblez vos écoutes et intégrez votre historique Last.fm aux statistiques."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valfrjálst. Scrobblaðu spilanirnar þínar og færðu Last.fm-hlustunarferilinn þinn inn í Tölfræði."
           }
         },
         "it": {
@@ -117936,6 +119124,12 @@
             "value": "선택 사항입니다. 재생한 곡을 스크로블하고 Last.fm 기록을 통계로 가져옵니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valgfritt. Scrobble avspillingene dine og hent Last.fm-historikken din inn i Statistikk."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -117946,6 +119140,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Opcional. Faça scrobble do que você ouve e traga seu histórico do Last.fm para as estatísticas."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valfritt. Scrobbla dina uppspelningar och ta med din Last.fm-historik till Statistik."
           }
         },
         "zh-Hans": {
@@ -124056,6 +125256,12 @@
     },
     "Play this Mac's music on your iPhone and other devices, with playlists, loves and history in step. Devices on this Wi-Fi connect directly; Tailscale adds listening away from home.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afspil denne Macs musik på din iPhone og andre enheder, med playlister, synes godt om-markeringer og historik synkroniseret. Enheder på dette Wi-Fi forbinder sig direkte; Tailscale gør det muligt at lytte, når du er væk hjemmefra."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -124074,10 +125280,22 @@
             "value": "Reproduce la música de este Mac en tu iPhone y otros dispositivos, con listas, me gusta e historial al día. Los dispositivos en este Wi-Fi se conectan directamente; Tailscale añade la escucha fuera de casa."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toista tämän Macin musiikkia iPhonessasi ja muilla laitteilla, ja soittolistat, tykkäykset ja historia pysyvät ajan tasalla. Tämän Wi-Fi-verkon laitteet yhdistyvät suoraan; Tailscale mahdollistaa kuuntelun myös kotoa poissa ollessa."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Jouez la musique de ce Mac sur votre iPhone et vos autres appareils, avec playlists, favoris et historique synchronisés. Les appareils sur ce Wi-Fi se connectent directement ; Tailscale permet d’écouter loin de chez vous."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spilaðu tónlist þessarar Mac-tölvu í iPhone-símanum þínum og öðrum tækjum, með spilunarlistum, líkuðum lögum og hlustunarferli í samstillingu. Tæki á þessu Wi-Fi tengjast beint; Tailscale bætir við hlustun á ferðinni."
           }
         },
         "it": {
@@ -124098,6 +125316,12 @@
             "value": "이 Mac의 음악을 iPhone 등 다른 기기에서 재생하세요. 재생목록, 좋아요, 재생 기록도 함께 맞춰집니다. 같은 Wi-Fi의 기기는 직접 연결되고, Tailscale을 쓰면 외부에서도 들을 수 있습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spill av musikken fra denne Mac-en på iPhonen din og andre enheter, med spillelister, likte sanger og lyttehistorikk i takt. Enheter på dette Wi-Fi-et kobler seg direkte til; Tailscale gir lytting utenfor hjemmet."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -124108,6 +125332,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Toque a música deste Mac no seu iPhone e em outros dispositivos, com playlists, curtidas e histórico sincronizados. Dispositivos nesta rede Wi-Fi se conectam diretamente; o Tailscale adiciona a escuta fora de casa."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spela upp den här Mac:ens musik på din iPhone och andra enheter, med spellistor, gillningar och historik i synk. Enheter på det här Wi-Fi-nätverket ansluter direkt. Tailscale lägger till lyssning när du är borta hemifrån."
           }
         },
         "zh-Hans": {
@@ -133050,6 +134280,12 @@
     },
     "Re-analyze cleans up titles, artists and albums from file names with AI.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysér igen rydder op i titler, kunstnere og album ud fra filnavnene med AI."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -133062,10 +134298,22 @@
             "value": "Reanalizar depura títulos, artistas y álbumes a partir de los nombres de archivo con IA."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uudelleenanalyysi siivoaa nimet, artistit ja albumit tiedostonimistä Flaccy AI:n avulla."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "La réanalyse nettoie titres, artistes et albums à partir des noms de fichiers grâce à l'IA."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Greina aftur hreinsar til titla, listamenn og plötur út frá skráarnöfnum með gervigreind."
           }
         },
         "it": {
@@ -133086,6 +134334,12 @@
             "value": "다시 분석하면 파일 이름을 바탕으로 AI가 제목, 아티스트, 앨범을 정리합니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyser på nytt rydder opp i titler, artister og album fra filnavnene med KI."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -133096,6 +134350,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "A reanálise limpa títulos, artistas e álbuns a partir dos nomes dos arquivos com IA."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Att analysera om rensar upp titlar, artister och album från filnamnen med AI."
           }
         },
         "zh-Hans": {
@@ -145624,6 +146884,12 @@
     },
     "Scan this code with the camera in Flaccy on your iPhone or iPad. On another Mac or a Linux computer, paste the link into Add Flaccy Server.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan denne kode med kameraet i Flaccy på din iPhone eller iPad. På en anden Mac eller en Linux-computer indsætter du linket i »Tilføj Flaccy Server«."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -145642,10 +146908,22 @@
             "value": "Escanea este código con la cámara de Flaccy en tu iPhone o iPad. En otro Mac o en un ordenador Linux, pega el enlace en «Añadir Flaccy Server»."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skannaa tämä koodi iPhonessasi tai iPadissasi olevalla Flaccyn kameralla. Toisella Macilla tai Linux-tietokoneella liitä linkki kohtaan ”Lisää Flaccy-palvelin”."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Scannez ce code avec l’appareil photo de Flaccy sur votre iPhone ou iPad. Sur un autre Mac ou un ordinateur Linux, collez le lien dans « Ajouter Flaccy Server »."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skannaðu þennan kóða með myndavélinni í Flaccy á iPhone eða iPad. Á annarri Mac-tölvu eða Linux-tölvu skaltu líma hlekkinn í „Bæta við Flaccy-netþjóni“."
           }
         },
         "it": {
@@ -145666,6 +146944,12 @@
             "value": "iPhone이나 iPad의 Flaccy 카메라로 이 코드를 스캔하세요. 다른 Mac이나 Linux 컴퓨터에서는 링크를 “Flaccy Server 추가”에 붙여넣으세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skann denne koden med kameraet i Flaccy på iPhonen eller iPaden din. På en annen Mac eller en Linux-datamaskin limer du lenken inn i «Legg til Flaccy-server»."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -145676,6 +146960,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Escaneie este código com a câmera do Flaccy no seu iPhone ou iPad. Em outro Mac ou em um computador Linux, cole o link em “Adicionar Flaccy Server”."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skanna den här koden med kameran i Flaccy på din iPhone eller iPad. På en annan Mac eller en Linux-dator klistrar du in länken i ”Lägg till Flaccy-server”."
           }
         },
         "zh-Hans": {
@@ -149980,6 +151270,12 @@
     },
     "Sent. Thanks for writing.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sendt. Tak, fordi du skrev."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -149992,10 +151288,22 @@
             "value": "Enviado. Gracias por escribir."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lähetetty. Kiitos viestistä."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Envoyé. Merci de votre message."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skilaboðin eru send. Takk fyrir að skrifa."
           }
         },
         "it": {
@@ -150016,6 +151324,12 @@
             "value": "보냈습니다. 연락해 주셔서 감사합니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sendt. Takk for meldingen."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -150026,6 +151340,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enviado. Obrigado por escrever."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skickat. Tack för att du skrev."
           }
         },
         "zh-Hans": {
@@ -163351,6 +164671,12 @@
     },
     "Stream from Flaccy Server, Navidrome or another Subsonic server.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stream fra Flaccy Server, Navidrome eller en anden Subsonic-server."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -163363,10 +164689,22 @@
             "value": "Reproduce en streaming desde Flaccy Server, Navidrome u otro servidor Subsonic."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suoratoista Flaccy Serveristä, Navidromesta tai toisesta Subsonic-palvelimesta."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Écoute en streaming depuis Flaccy Server, Navidrome ou un autre serveur Subsonic."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streymdu frá Flaccy Server, Navidrome eða öðrum Subsonic-netþjóni."
           }
         },
         "it": {
@@ -163387,6 +164725,12 @@
             "value": "Flaccy Server, Navidrome 또는 다른 Subsonic 서버에서 스트리밍합니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strøm fra Flaccy Server, Navidrome eller en annen Subsonic-server."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -163397,6 +164741,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transmita do Flaccy Server, do Navidrome ou de outro servidor Subsonic."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strömma från Flaccy Server, Navidrome eller en annan Subsonic-server."
           }
         },
         "zh-Hans": {
@@ -163415,6 +164765,12 @@
     },
     "Stream from a computer or server": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stream fra en computer eller server"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -163433,10 +164789,22 @@
             "value": "Reproducir en streaming desde un ordenador o servidor"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suoratoista tietokoneelta tai palvelimelta"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Écouter en streaming depuis un ordinateur ou un serveur"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streyma úr tölvu eða netþjóni"
           }
         },
         "it": {
@@ -163457,6 +164825,12 @@
             "value": "컴퓨터 또는 서버에서 스트리밍"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strøm fra en datamaskin eller server"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -163467,6 +164841,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transmitir de um computador ou servidor"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strömma från en dator eller server"
           }
         },
         "zh-Hans": {
@@ -163485,6 +164865,12 @@
     },
     "Streamed songs stay here for replay. Downloads don’t count toward the limit.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streamede sange bliver her, så du kan afspille dem igen. Overførsler tæller ikke med i grænsen."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -163497,10 +164883,22 @@
             "value": "Las canciones en streaming se guardan aquí para volver a sonar. Las descargas no cuentan para el límite."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suoratoistetut kappaleet säilyvät täällä uudelleentoistoa varten. Lataukset eivät lasketa rajaan."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Les morceaux écoutés en streaming restent ici pour être rejoués. Les téléchargements ne comptent pas dans la limite."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streymd lög haldast hér til að spila aftur. Niðurhal telst ekki með í takmörkinu."
           }
         },
         "it": {
@@ -163521,6 +164919,12 @@
             "value": "스트리밍한 곡은 다시 재생할 수 있도록 여기에 보관됩니다. 다운로드한 곡은 한도에 포함되지 않습니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strømmede sanger blir her for ny avspilling. Nedlastinger teller ikke mot grensen."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -163531,6 +164935,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "As músicas transmitidas ficam aqui para tocar de novo. Os downloads não contam para o limite."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strömmade låtar finns kvar här för att kunna spelas upp igen. Hämtningar räknas inte mot gränsen."
           }
         },
         "zh-Hans": {
@@ -164889,6 +166299,12 @@
     },
     "Sync stays off until the date and time on %@ are right.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkroniseringen forbliver slået fra, indtil datoen og klokkeslættet på %@ er rigtige."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -164907,10 +166323,22 @@
             "value": "La sincronización sigue desactivada hasta que la fecha y la hora de %@ sean correctas."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkronointi pysyy pois päältä, kunnes %@:n päivämäärä ja kellonaika ovat oikein."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "La synchronisation reste désactivée tant que la date et l’heure de %@ ne sont pas justes."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samstilling helst slökkt þangað til dagsetning og tími á %@ eru rétt stillt."
           }
         },
         "it": {
@@ -164931,6 +166359,12 @@
             "value": "%@의 날짜와 시간이 맞을 때까지 동기화는 꺼진 상태로 유지됩니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkroniseringen er av til dato og klokkeslett på %@ stemmer."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -164941,6 +166375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "A sincronização fica desativada até que a data e a hora em %@ estejam corretas."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synkroniseringen är avstängd tills datum och tid på %@ stämmer."
           }
         },
         "zh-Hans": {
@@ -167637,6 +169077,12 @@
     },
     "Tailscale is off and this Wi-Fi isn't shared, so only this Mac can play it. Turn on either one.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale er slukket, og dette Wi-Fi deles ikke, så kun denne Mac kan afspille musikken. Tænd for en af dem."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -167655,10 +169101,22 @@
             "value": "Tailscale está desactivado y este Wi-Fi no está compartido, así que solo este Mac puede reproducirla. Activa una de las dos opciones."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale on pois päältä, eikä tätä Wi-Fi-verkkoa jaeta, joten vain tämä Mac voi toistaa musiikkia. Kytke jompikumpi päälle."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Tailscale est désactivé et ce Wi-Fi n’est pas partagé : seul ce Mac peut la lire. Activez l’une des deux options."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale er slökkt og þetta Wi-Fi er ekki deilt, svo aðeins þessi Mac-tölva getur spilað tónlistina. Kveiktu á öðru hvoru."
           }
         },
         "it": {
@@ -167679,6 +169137,12 @@
             "value": "Tailscale이 꺼져 있고 이 Wi-Fi는 공유되지 않아서 이 Mac에서만 재생할 수 있습니다. 둘 중 하나를 켜세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale er av, og dette Wi-Fi-et deles ikke, så bare denne Mac-en kan spille den av. Slå på en av dem."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -167689,6 +169153,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O Tailscale está desativado e este Wi-Fi não está compartilhado, então só este Mac pode tocá-la. Ative um dos dois."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale är av och det här Wi-Fi-nätverket delas inte, så bara den här Mac:en kan spela upp musiken. Slå på något av dem."
           }
         },
         "zh-Hans": {
@@ -169417,6 +170887,12 @@
     },
     "That isn’t a Flaccy Server code. Scan the code from Add a Device on your Mac, or the one your server printed.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det er ikke en Flaccy Server-kode. Scan koden fra »Tilføj en enhed« på din Mac, eller den, din server udskrev."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -169435,10 +170911,22 @@
             "value": "Ese no es un código de Flaccy Server. Escanea el código de «Añadir un dispositivo» en tu Mac o el que muestre tu servidor."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tämä ei ole Flaccy Serverin koodi. Skannaa koodi Macin kohdasta ”Lisää laite” tai skannaa palvelimesi tulostama koodi."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Ce n’est pas un code de Flaccy Server. Scanne le code de « Ajouter un appareil » sur ton Mac, ou celui affiché par ton serveur."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þetta er ekki kóði frá Flaccy Server. Skannaðu kóðann úr „Bæta við tæki“ á Mac-tölvunni þinni, eða kóðann sem netþjónninn þinn prentaði út."
           }
         },
         "it": {
@@ -169459,6 +170947,12 @@
             "value": "Flaccy Server 코드가 아닙니다. Mac의 “기기 추가”에 있는 코드나 서버에 표시된 코드를 스캔하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dette er ikke en kode for Flaccy Server. Skann koden fra «Legg til en enhet» på Mac-en din, eller den serveren din skrev ut."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -169469,6 +170963,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Este não é um código do Flaccy Server. Escaneie o código de “Adicionar um dispositivo” no seu Mac ou o que o seu servidor exibiu."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det är ingen Flaccy Server-kod. Skanna koden från ”Lägg till en enhet” på din Mac, eller den som servern skrev ut."
           }
         },
         "zh-Hans": {
@@ -174405,6 +175905,12 @@
     },
     "This Mac isn't on a network, so only it can play the library. Join Wi-Fi or turn on Tailscale.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne Mac er ikke på et netværk, så kun den kan afspille biblioteket. Forbind til Wi-Fi, eller tænd for Tailscale."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -174423,10 +175929,22 @@
             "value": "Este Mac no está en ninguna red, así que solo él puede reproducir la biblioteca. Conéctate a una red Wi-Fi o activa Tailscale."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tämä Mac ei ole verkossa, joten vain se voi toistaa kirjastoa. Liity Wi-Fi-verkkoon tai kytke Tailscale päälle."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Ce Mac n’est sur aucun réseau : lui seul peut lire la bibliothèque. Connectez-vous au Wi-Fi ou activez Tailscale."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þessi Mac-tölva er ekki á neti, svo aðeins hún getur spilað safnið. Tengstu við Wi-Fi eða kveiktu á Tailscale."
           }
         },
         "it": {
@@ -174447,6 +175965,12 @@
             "value": "이 Mac이 네트워크에 연결되어 있지 않아 이 Mac만 보관함을 재생할 수 있습니다. Wi-Fi에 연결하거나 Tailscale을 켜세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne Mac-en er ikke på et nettverk, så bare den kan spille biblioteket. Koble til Wi-Fi eller slå på Tailscale."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -174457,6 +175981,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Este Mac não está em rede, então só ele pode tocar a biblioteca. Conecte-se ao Wi-Fi ou ative o Tailscale."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den här Mac:en är inte ansluten till något nätverk, så bara den kan spela upp biblioteket. Anslut till Wi-Fi eller slå på Tailscale."
           }
         },
         "zh-Hans": {
@@ -176897,6 +178427,12 @@
     },
     "This version of Flaccy needs Flaccy Server 1.0 or newer. Update Flaccy on the Mac that shares, or the flaccy-server package on the computer that runs it.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne version af Flaccy kræver Flaccy Server 1.0 eller nyere. Opdater Flaccy på den Mac, der deler, eller pakken flaccy-server på computeren, der kører den."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -176915,10 +178451,22 @@
             "value": "Esta versión de Flaccy necesita Flaccy Server 1.0 o posterior. Actualiza Flaccy en el Mac que comparte, o el paquete flaccy-server en el ordenador que lo ejecuta."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tämä Flaccy-versio vaatii Flaccy Server 1.0:n tai uudemman. Päivitä Flaccy sillä Macilla, joka jakaa, tai päivitä flaccy-server-paketti tietokoneella, joka sitä ajaa."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Cette version de Flaccy nécessite Flaccy Server 1.0 ou plus récent. Mettez à jour Flaccy sur le Mac qui partage, ou le paquet flaccy-server sur l’ordinateur qui l’exécute."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þessi útgáfa af Flaccy þarf Flaccy Server 1.0 eða nýrri. Uppfærðu Flaccy á Mac-tölvunni sem deilir, eða flaccy-server pakkann á tölvunni sem keyrir hann."
           }
         },
         "it": {
@@ -176939,6 +178487,12 @@
             "value": "이 버전의 Flaccy는 Flaccy Server 1.0 이상이 필요합니다. 공유하는 Mac의 Flaccy, 또는 서버를 실행하는 컴퓨터의 flaccy-server 패키지를 업데이트하세요."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne versjonen av Flaccy krever Flaccy Server 1.0 eller nyere. Oppdater Flaccy på Mac-en som deler, eller pakken flaccy-server på datamaskinen som kjører den."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -176949,6 +178503,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Esta versão do Flaccy precisa do Flaccy Server 1.0 ou mais recente. Atualize o Flaccy no Mac que compartilha, ou o pacote flaccy-server no computador que o executa."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den här versionen av Flaccy kräver Flaccy Server 1.0 eller nyare. Uppdatera Flaccy på Mac:en som delar, eller paketet flaccy-server på datorn som kör det."
           }
         },
         "zh-Hans": {
@@ -179987,6 +181547,12 @@
     },
     "Trial starts with your own music · %@, one payment": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prøveperioden starter med din egen musik · %@, én betaling"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -179999,10 +181565,22 @@
             "value": "La prueba empieza con tu propia música · %@, pago único"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kokeilu alkaa omalla musiikillasi · %@, kertamaksu."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "L'essai commence avec votre propre musique · %@, paiement unique"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prufutíminn byrjar með þinni eigin tónlist · %@, ein greiðsla"
           }
         },
         "it": {
@@ -180023,6 +181601,12 @@
             "value": "체험은 내 음악을 재생하면 시작됩니다 · %@, 1회 결제"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prøveperioden starter med din egen musikk · %@, én betaling"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -180033,6 +181617,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "O teste começa com sua própria música · %@, pagamento único"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provperioden börjar med din egen musik · %@, en engångsbetalning"
           }
         },
         "zh-Hans": {
@@ -181279,6 +182869,12 @@
     },
     "Two reminders before your trial ends, and one if an offer opens.": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To påmindelser, før din prøveperiode slutter, og en, hvis der åbner sig et tilbud."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -181291,10 +182887,22 @@
             "value": "Dos recordatorios antes de que termine tu prueba y uno si hay una oferta."
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaksi muistutusta ennen kokeilun päättymistä ja yksi, jos tarjous tulee saataville."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Deux rappels avant la fin de votre essai, et un si une offre se présente."
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tvær áminningar áður en prufutíminn lýkur, og ein þegar tilboð verður í boði."
           }
         },
         "it": {
@@ -181315,6 +182923,12 @@
             "value": "체험 종료 전에 두 번, 할인이 시작되면 한 번 알려 드립니다."
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To påminnelser før prøveperioden din utløper, og én hvis et tilbud dukker opp."
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -181325,6 +182939,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dois lembretes antes do fim do seu teste e um se surgir uma oferta."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Två påminnelser innan din provperiod går ut, och en om ett erbjudande blir tillgängligt."
           }
         },
         "zh-Hans": {
@@ -189153,6 +190773,12 @@
     },
     "Where does it play from?": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvor afspilles det fra?"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -189171,10 +190797,22 @@
             "value": "¿Desde dónde se reproduce?"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mistä musiikki toistetaan?"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "D’où vient la lecture ?"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvaðan er spilað?"
           }
         },
         "it": {
@@ -189195,6 +190833,12 @@
             "value": "재생 위치는 어디인가요?"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvor spilles den fra?"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -189205,6 +190849,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "De onde ela toca?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varifrån spelas det?"
           }
         },
         "zh-Hans": {
@@ -189975,6 +191625,12 @@
     },
     "With Tailscale: %@": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Med Tailscale: %@"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -189993,10 +191649,22 @@
             "value": "Con Tailscale: %@"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscalen kautta: %@"
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Avec Tailscale : %@"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Með Tailscale: %@"
           }
         },
         "it": {
@@ -190017,6 +191685,12 @@
             "value": "Tailscale: %@"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Med Tailscale: %@"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -190027,6 +191701,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Com o Tailscale: %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Med Tailscale: %@"
           }
         },
         "zh-Hans": {
@@ -192227,6 +193907,12 @@
     },
     "Your %lld-day free trial starts with your own music": {
       "localizations": {
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din %lld-dages gratis prøveperiode starter med din egen musik"
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
@@ -192239,10 +193925,22 @@
             "value": "Tu prueba gratuita de %lld días empieza con tu propia música"
           }
         },
+        "fi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ilmainen %lld-päiväinen kokeilusi alkaa omalla musiikillasi."
+          }
+        },
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Votre essai gratuit de %lld jours commence avec votre propre musique"
+          }
+        },
+        "is": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Þinn %lld daga ókeypis prufutími byrjar með þinni eigin tónlist"
           }
         },
         "it": {
@@ -192263,6 +193961,12 @@
             "value": "%lld일 무료 체험은 내 음악을 재생하면 시작됩니다"
           }
         },
+        "nb": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din gratis prøveperiode på %lld dager starter med din egen musikk"
+          }
+        },
         "pl": {
           "stringUnit": {
             "state": "translated",
@@ -192273,6 +193977,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Seu teste gratuito de %lld dias começa com sua própria música"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din %lld-dagars gratis provperiod börjar med din egen musik"
           }
         },
         "zh-Hans": {
