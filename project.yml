@@ -242,6 +242,7 @@ targets:
           - Library/LibraryViewController+Sorting.swift
           - Library/LibraryViewController.swift
           - Library/NewMixShot.swift
+          - Library/LibraryWalkExercise.swift
           - Library/PlaylistDetailViewController.swift
           - Library/PlaylistListCells.swift
           - LyricShare/LyricShareViewController.swift
