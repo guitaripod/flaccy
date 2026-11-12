@@ -121773,66 +121773,66 @@
         }
       }
     },
-    "Trial starts with your first song · %@, one payment": {
+    "Trial starts with your own music · %@, one payment": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Testphase beginnt mit deinem ersten Titel · %@, einmalig"
+            "value": "Testphase beginnt mit deiner eigenen Musik · %@, einmalig"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La prueba empieza con tu primera canción · %@, pago único"
+            "value": "La prueba empieza con tu propia música · %@, pago único"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L'essai commence avec votre premier morceau · %@, paiement unique"
+            "value": "L'essai commence avec votre propre musique · %@, paiement unique"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La prova inizia con il tuo primo brano · %@, pagamento unico"
+            "value": "La prova inizia con la tua musica · %@, pagamento unico"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トライアルは最初の曲から始まります · %@、1回払い"
+            "value": "トライアルは自分の音楽を再生すると始まります · %@、1回払い"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "체험은 첫 곡부터 시작됩니다 · %@, 1회 결제"
+            "value": "체험은 내 음악을 재생하면 시작됩니다 · %@, 1회 결제"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Okres próbny zaczyna się od pierwszego utworu · %@, jedna płatność"
+            "value": "Okres próbny zaczyna się od Twojej własnej muzyki · %@, jedna płatność"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O teste começa com sua primeira música · %@, pagamento único"
+            "value": "O teste começa com sua própria música · %@, pagamento único"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "试用从第一首歌曲开始 · %@，一次付款"
+            "value": "试用从播放你自己的音乐开始 · %@，一次付款"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "試用從第一首歌曲開始 · %@，一次付款"
+            "value": "試用從播放你自己的音樂開始 · %@，一次付款"
           }
         }
       }
@@ -130043,66 +130043,66 @@
         }
       }
     },
-    "Your %lld-day free trial starts with your first song": {
+    "Your %lld-day free trial starts with your own music": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deine %lld-tägige kostenlose Testphase beginnt mit deinem ersten Titel"
+            "value": "Deine %lld-tägige kostenlose Testphase beginnt mit deiner eigenen Musik"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tu prueba gratuita de %lld días empieza con tu primera canción"
+            "value": "Tu prueba gratuita de %lld días empieza con tu propia música"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Votre essai gratuit de %lld jours commence avec votre premier morceau"
+            "value": "Votre essai gratuit de %lld jours commence avec votre propre musique"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La tua prova gratuita di %lld giorni inizia con il tuo primo brano"
+            "value": "La tua prova gratuita di %lld giorni inizia con la tua musica"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld日間の無料トライアルは最初の曲から始まります"
+            "value": "%lld日間の無料トライアルは自分の音楽を再生すると始まります"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld일 무료 체험은 첫 곡부터 시작됩니다"
+            "value": "%lld일 무료 체험은 내 음악을 재생하면 시작됩니다"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Twój %lld-dniowy bezpłatny okres próbny zaczyna się wraz z pierwszym utworem"
+            "value": "Twój %lld-dniowy bezpłatny okres próbny zaczyna się od Twojej własnej muzyki"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seu teste gratuito de %lld dias começa com sua primeira música"
+            "value": "Seu teste gratuito de %lld dias começa com sua própria música"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 天免费试用从第一首歌曲开始"
+            "value": "%lld 天免费试用从播放你自己的音乐开始"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 天免費試用從第一首歌曲開始"
+            "value": "%lld 天免費試用從播放你自己的音樂開始"
           }
         }
       }

@@ -174,9 +174,9 @@ enum PaywallCopy {
             return nil
         case .trialNotStarted:
             guard let price = lifetime?.displayPrice else {
-                return String(localized: "Your \(TrialRunway.lengthDays)-day free trial starts with your first song")
+                return String(localized: "Your \(TrialRunway.lengthDays)-day free trial starts with your own music")
             }
-            return String(localized: "Trial starts with your first song · \(price), one payment")
+            return String(localized: "Trial starts with your own music · \(price), one payment")
         case .trial(let daysRemaining):
             guard let price = lifetime?.displayPrice else {
                 return String(localized: "\(daysRemaining) days left in your free trial")
