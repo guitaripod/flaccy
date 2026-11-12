@@ -29,9 +29,7 @@ enum RemoteShot {
         let container = UINavigationController(rootViewController: settings)
         nav.present(container, animated: false)
         try? await Task.sleep(for: .seconds(2))
-        if let section = settings.dataSource.snapshot().indexOfSection(.servers) {
-            settings.tableView.scrollToRow(at: IndexPath(row: 0, section: section), at: .top, animated: false)
-        }
+        settings.open(.servers)
     }
 
     private static func openAddServer(from nav: UINavigationController) async {

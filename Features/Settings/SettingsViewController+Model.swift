@@ -7,50 +7,133 @@ import UIKit
 
 extension SettingsViewController {
 
+    /// A screen of Settings. The root lists every other page as a row with its icon, the way
+    /// the system Settings app does; each page holds the switches and actions of one subject.
+    nonisolated enum Page: Hashable, CaseIterable {
+        case root
+        case plan
+        case appearance
+        case notifications
+        case playback
+        case library
+        case servers
+        case lastFM
+        case about
+
+        var title: String {
+            switch self {
+            case .root: String(localized: "Settings")
+            case .plan: String(localized: "Flaccy Pro")
+            case .appearance: String(localized: "Appearance")
+            case .notifications: String(localized: "Notifications")
+            case .playback: String(localized: "Playback")
+            case .library: String(localized: "Library")
+            case .servers: String(localized: "Servers")
+            case .lastFM: "Last.fm"
+            case .about: String(localized: "About")
+            }
+        }
+
+        var symbolName: String {
+            switch self {
+            case .root, .plan: "sparkles"
+            case .appearance: "circle.lefthalf.filled"
+            case .notifications: "bell.badge.fill"
+            case .playback: "play.fill"
+            case .library: "music.note.house.fill"
+            case .servers: "server.rack"
+            case .lastFM: "dot.radiowaves.left.and.right"
+            case .about: "info"
+            }
+        }
+
+        var tint: UIColor {
+            switch self {
+            case .root, .plan: .systemPurple
+            case .appearance: .systemBlue
+            case .notifications: .systemRed
+            case .playback: .systemPurple
+            case .library: .systemOrange
+            case .servers: .systemTeal
+            case .lastFM: .systemRed
+            case .about: .systemGray
+            }
+        }
+
+        var accessibilityIdentifier: String { "settings.page.\(self)" }
+    }
+
     nonisolated enum Section: Int, CaseIterable, Hashable {
+        case rootPlan
+        case rootGeneral
+        case rootListening
+        case rootLibrary
+        case rootServices
+        case rootSupport
         case midgar
         case appearance
         case trial
-        case lastFM
         case recap
         case playback
-        case watch
+        case stations
+        case lastFM
         case servers
         case serverCache
-        case library
-        case setup
-        case about
+        case libraryAdd
+        case libraryOrganize
+        case libraryDetails
+        case libraryOverview
+        case aboutVersion
+        case aboutLegal
+
+        var page: Page {
+            switch self {
+            case .rootPlan, .rootGeneral, .rootListening, .rootLibrary, .rootServices, .rootSupport, .midgar: .root
+            case .appearance: .appearance
+            case .trial, .recap: .notifications
+            case .playback, .stations: .playback
+            case .lastFM: .lastFM
+            case .servers, .serverCache: .servers
+            case .libraryAdd, .libraryOrganize, .libraryDetails, .libraryOverview: .library
+            case .aboutVersion, .aboutLegal: .about
+            }
+        }
 
         var header: String? {
             switch self {
-            case .midgar: return nil
-            case .appearance: return String(localized: "Appearance")
-            case .trial: return String(localized: "Trial")
-            case .lastFM: return "Last.fm"
-            case .recap: return String(localized: "Year in Music")
-            case .playback: return String(localized: "Playback")
-            case .watch: return String(localized: "Apple Watch")
-            case .servers: return String(localized: "Servers")
-            case .serverCache: return String(localized: "Server Cache")
-            case .library: return String(localized: "Library")
-            case .setup: return nil
-            case .about: return String(localized: "About")
+            case .trial: String(localized: "Trial")
+            case .recap: String(localized: "Year in Music")
+            case .stations: String(localized: "Stations")
+            case .serverCache: String(localized: "Server Cache")
+            case .libraryAdd: String(localized: "Music")
+            case .libraryOrganize: String(localized: "Organize")
+            case .libraryDetails: String(localized: "Artwork and Details")
+            case .libraryOverview: String(localized: "Overview")
+            case .midgar: String(localized: "More from Midgar")
+            default: nil
             }
         }
 
         var footer: String? {
             switch self {
-            case .trial: return String(localized: "Two reminders before your trial ends, and one if an offer opens.")
-            case .lastFM: return nil
-            case .playback: return String(localized: "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.")
-            case .servers: return String(localized: "Stream from Flaccy Server, Navidrome or another Subsonic server.")
-            case .serverCache: return RemoteCopy.cacheFooter
-            case .midgar, .appearance, .recap, .watch, .library, .setup, .about: return nil
+            case .trial: String(localized: "Two reminders before your trial ends, and one if an offer opens.")
+            case .playback: String(localized: "Gapless is exact on lossless files. MP3 and AAC files can keep tiny encoder gaps.")
+            case .servers: String(localized: "Stream from Flaccy Server, Navidrome or another Subsonic server.")
+            case .serverCache: RemoteCopy.cacheFooter
+            default: nil
             }
         }
     }
 
+    /// What the plan row at the top of Settings says: the plan, or the trial and its days.
+    nonisolated struct PlanSummary: Hashable {
+        let title: String
+        let subtitle: String
+    }
+
     nonisolated enum Row: Hashable {
+        case plan(PlanSummary)
+        case page(Page, value: String?)
         case appearance(AppAppearance)
         case accent(AccentChoice)
         case trialReminders(enabled: Bool)
@@ -82,6 +165,7 @@ extension SettingsViewController {
         case storage(used: String)
         case libraryDebutSummary
         case midgarEntry
+        case version(String)
         case privacyPolicy
         case termsOfUse
         case support

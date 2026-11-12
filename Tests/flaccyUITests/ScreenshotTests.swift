@@ -15,11 +15,14 @@ final class ScreenshotTests: XCTestCase {
         static let tabPlaylists = "library.tab.playlists"
         static let sort = "library.sort"
         static let settings = "library.settings"
+        static let homeSettings = "home.settings"
         static let recap = "library.playlists.recap"
         static let settingsTable = "settings.table"
         static let yearInMusic = "settings.row.yearInMusic"
         static let yearInMusicClose = "yearInMusic.close"
         static let unlockLifetime = "unlockLifetime"
+        static let planRow = "settings.row.plan"
+        static let appearancePage = "settings.page.appearance"
         static let playerExpand = "player.expand"
         static let playerCollapse = "player.collapse"
         static let playerLyrics = "player.lyrics"
@@ -97,6 +100,7 @@ final class ScreenshotTests: XCTestCase {
         let app = launchApp()
         sleep(6)
         openSettings(app)
+        tap(app.cells[ID.planRow], "plan row")
         tap(app.buttons[ID.unlockLifetime], "Unlock Lifetime header button")
         capture(app, wait: 4, name: "dark-11-paywall")
     }
@@ -105,8 +109,9 @@ final class ScreenshotTests: XCTestCase {
         let app = launchApp()
         sleep(6)
         openSettings(app)
-        capture(app, wait: 2, name: "settings-01-hero")
+        capture(app, wait: 2, name: "settings-01-root")
 
+        tap(app.cells[ID.appearancePage], "Appearance row")
         tap(app.buttons[ID.appearance("light")], "Light appearance segment")
         capture(app, wait: 2, name: "settings-02-light")
 
@@ -115,6 +120,23 @@ final class ScreenshotTests: XCTestCase {
 
         app.swipeUp()
         capture(app, wait: 2, name: "settings-04-scrolled")
+    }
+
+    /// The search field on the Settings root finds a switch by name and opens its page.
+    @MainActor func testSettingsSearchOpensThePage() throws {
+        let app = launchApp()
+        sleep(6)
+        openSettings(app)
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5), "Settings has no search field")
+        field.tap()
+        field.typeText("dup")
+        let result = app.tables["settings.search.results"].cells.firstMatch
+        XCTAssertTrue(result.waitForExistence(timeout: 5), "Searching dup found nothing")
+        capture(app, wait: 1, name: "settings-05-search")
+        result.tap()
+        XCTAssertTrue(app.tables["settings.page.library"].waitForExistence(timeout: 5), "The result did not open the Library page")
+        capture(app, wait: 2, name: "settings-06-library")
     }
 
     @MainActor func testSortSanity() throws {
@@ -138,6 +160,7 @@ final class ScreenshotTests: XCTestCase {
     @MainActor func testLightTour() throws {
         let app = launchApp()
         openSettings(app)
+        tap(app.cells[ID.appearancePage], "Appearance row")
         tap(app.buttons[ID.appearance("light")], "Light appearance segment")
         sleep(1)
         app.terminate()
@@ -267,7 +290,12 @@ final class ScreenshotTests: XCTestCase {
     }
 
     @MainActor private func openSettings(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
-        tap(app.buttons[ID.settings], "settings button", file: file, line: line)
+        let gears = [app.buttons[ID.homeSettings], app.buttons[ID.settings]]
+        let deadline = Date().addingTimeInterval(15)
+        while Date() < deadline, !gears.contains(where: \.isHittable) {
+            usleep(250_000)
+        }
+        tap(gears.first(where: \.isHittable) ?? gears[0], "settings button", file: file, line: line)
         XCTAssertTrue(
             app.tables[ID.settingsTable].waitForExistence(timeout: 5),
             "Settings did not open",

@@ -17,6 +17,11 @@ extension SettingsViewController {
         if case .midgarEntry = row {
             return tableView.dequeueReusableCell(withIdentifier: MidgarEntryCell.reuseID, for: indexPath)
         }
+        if case .plan(let summary) = row,
+           let cell = tableView.dequeueReusableCell(withIdentifier: SettingsPlanCell.reuseID, for: indexPath) as? SettingsPlanCell {
+            cell.configure(summary)
+            return cell
+        }
 
         let cell = tableView.dequeueReusableCell(withIdentifier: Self.cellReuseIdentifier, for: indexPath)
         cell.accessoryType = .none
@@ -30,28 +35,41 @@ extension SettingsViewController {
         var content = Self.baseContent(for: row)
 
         switch row {
-        case .appearance, .accent, .midgarEntry:
+        case .appearance, .accent, .midgarEntry, .plan:
             break
+
+        case .page(let page, let value):
+            content.image = RowIcon.image(systemName: page.symbolName, tint: page.tint)
+            content.text = page.title
+            content.secondaryText = value
+            cell.accessoryType = .disclosureIndicator
+            cell.accessibilityLabel = page.title
+            cell.accessibilityValue = value
+            cell.accessibilityIdentifier = page.accessibilityIdentifier
+
+        case .version(let version):
+            content.text = String(localized: "Version")
+            content.secondaryText = version
+            cell.selectionStyle = .none
+            cell.accessibilityTraits = .staticText
+            cell.accessibilityLabel = String(localized: "Version")
+            cell.accessibilityValue = version
 
         case .privacyPolicy:
             content.image = RowIcon.image(systemName: "hand.raised.fill", tint: .systemBlue)
             content.text = String(localized: "Privacy Policy")
-            content.textProperties.color = .tintColor
             cell.accessoryType = .disclosureIndicator
             cell.accessibilityLabel = String(localized: "Privacy Policy")
 
         case .termsOfUse:
             content.image = RowIcon.image(systemName: "doc.text.fill", tint: .systemGray)
             content.text = String(localized: "Terms of Use")
-            content.textProperties.color = .tintColor
             cell.accessoryType = .disclosureIndicator
             cell.accessibilityLabel = String(localized: "Terms of Use")
 
         case .support:
             content.image = RowIcon.image(systemName: "envelope.fill", tint: .systemGreen)
             content.text = String(localized: "Contact Support")
-            content.secondaryText = MidgarSupport.address
-            content.textProperties.color = .tintColor
             cell.accessoryType = .disclosureIndicator
             cell.accessibilityLabel = String(localized: "Contact Support")
             cell.accessibilityValue = MidgarSupport.address
@@ -104,9 +122,9 @@ extension SettingsViewController {
 
         case .yearInMusic:
             content.image = RowIcon.image(systemName: "sparkles", tint: .systemIndigo)
-            content.text = String(localized: "Your Year in Music")
+            content.text = String(localized: "Year in Music")
             cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Your Year in Music")
+            cell.accessibilityLabel = String(localized: "Year in Music")
             cell.accessibilityHint = String(localized: "Shows your yearly listening recap with shareable story cards")
             cell.accessibilityIdentifier = "settings.row.yearInMusic"
 
@@ -160,11 +178,12 @@ extension SettingsViewController {
             cell.accessibilityHint = String(localized: "Plays deep cuts from albums you already love")
 
         case .watchSync(let syncedCount, let profile):
-            content.image = RowIcon.image(systemName: "applewatch", tint: .systemBlue)
-            content.text = String(localized: "Sync Music to Watch")
+            content.image = RowIcon.image(systemName: "applewatch", tint: .systemGray)
+            content.text = String(localized: "Apple Watch")
             content.secondaryText = syncedCount > 0 ? "\(syncedCount) · \(profile.displayName)" : profile.displayName
             cell.accessoryType = .disclosureIndicator
-            cell.accessibilityLabel = String(localized: "Sync Music to Watch")
+            cell.accessibilityLabel = String(localized: "Apple Watch")
+            cell.accessibilityIdentifier = "settings.row.watch"
             let spoken = [syncedCount > 0 ? String(localized: "\(syncedCount) tracks synced") : nil, profile.displayName]
             cell.accessibilityValue = spoken.compactMap { $0 }.joined(separator: ", ")
 
@@ -280,7 +299,7 @@ extension SettingsViewController {
     static func baseContent(for row: Row) -> UIListContentConfiguration {
         var content: UIListContentConfiguration
         switch row {
-        case .metadataReport, .libraryDebutSummary, .server, .support:
+        case .metadataReport, .libraryDebutSummary, .server:
             content = .subtitleCell()
             content.secondaryTextProperties.font = .preferredFont(forTextStyle: .footnote)
             content.secondaryTextProperties.numberOfLines = 0

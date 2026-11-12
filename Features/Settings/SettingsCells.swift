@@ -215,3 +215,65 @@ final class MidgarEntryCell: UITableViewCell {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 }
+
+/// The row at the top of Settings, drawn like the account row of the system Settings app: the
+/// Flaccy mark, the plan in large type and what it means beneath, opening the plan page.
+final class SettingsPlanCell: UITableViewCell {
+
+    static let reuseID = "SettingsPlanCell"
+
+    private let mark = UIImageView(image: SettingsHeaderView.brandGlyph())
+    private let titleLabel = UILabel()
+    private let subtitleLabel = UILabel()
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        accessoryType = .disclosureIndicator
+        accessibilityIdentifier = "settings.row.plan"
+        accessibilityTraits = .button
+        isAccessibilityElement = true
+
+        mark.translatesAutoresizingMaskIntoConstraints = false
+        mark.layer.cornerRadius = 14
+        mark.layer.cornerCurve = .continuous
+        mark.clipsToBounds = true
+
+        titleLabel.font = .scaled(.title3, size: 20, weight: .semibold)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.numberOfLines = 0
+        subtitleLabel.font = .preferredFont(forTextStyle: .subheadline)
+        subtitleLabel.adjustsFontForContentSizeCategory = true
+        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.numberOfLines = 0
+
+        let labels = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel])
+        labels.axis = .vertical
+        labels.spacing = 2
+        let row = UIStackView(arrangedSubviews: [mark, labels])
+        row.axis = .horizontal
+        row.spacing = 14
+        row.alignment = .center
+        row.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(row)
+        let margins = contentView.layoutMarginsGuide
+        NSLayoutConstraint.activate([
+            mark.widthAnchor.constraint(equalToConstant: 58),
+            mark.heightAnchor.constraint(equalToConstant: 58),
+            row.leadingAnchor.constraint(equalTo: margins.leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: margins.trailingAnchor),
+            row.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            row.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func configure(_ summary: SettingsViewController.PlanSummary) {
+        titleLabel.text = summary.title
+        subtitleLabel.text = summary.subtitle
+        subtitleLabel.isHidden = summary.subtitle.isEmpty
+        accessibilityLabel = summary.title
+        accessibilityValue = summary.subtitle
+    }
+}

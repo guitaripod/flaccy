@@ -242,7 +242,7 @@ final class SettingsHeaderView: UIView {
 
     /// A rounded-square brand mark: a diagonal cyan→indigo field behind a white
     /// waveform, drawn once at the display scale.
-    private static func brandGlyph() -> UIImage {
+    static func brandGlyph() -> UIImage {
         let side: CGFloat = 52
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
         return renderer.image { context in

@@ -103,7 +103,7 @@ extension SettingsViewController {
             guard let self else { return }
             if !granted {
                 self.notificationFeedback.notificationOccurred(.warning)
-                ToastView.show(String(localized: "Turn on notifications for Flaccy in Settings"), in: self.view, style: .info)
+                ToastView.show(String(localized: "Turn on notifications for Flaccy in Settings"), in: self.presenter.view, style: .info)
             }
             self.refreshTrialSectionVisibility()
         }

@@ -727,10 +727,27 @@ enum DemoRouter {
         presenter.present(controller, animated: false)
     }
 
+    /// Settings as a sheet, on the page `FLACCY_SETTINGS_PAGE` names (`appearance`, `library`,
+    /// `servers`, …) when it names one, then on `next` when there is one; `FLACCY_SETTINGS_SCROLL=bottom`
+    /// scrolls the page on top to its end.
     private static func presentSettings(pushing next: UIViewController?, from presenter: UIViewController) {
-        let settings = UINavigationController(rootViewController: SettingsViewController())
-        if let next { settings.pushViewController(next, animated: false) }
+        let root = SettingsViewController()
+        let settings = UINavigationController(rootViewController: root)
         presentSheet(settings, from: presenter)
+        if let name = DemoMode.environment["FLACCY_SETTINGS_PAGE"], !name.isEmpty,
+           let page = SettingsViewController.Page.allCases.first(where: { "\($0)".lowercased() == name.lowercased() }),
+           page != .root {
+            root.loadViewIfNeeded()
+            root.open(page)
+        }
+        if let next { settings.pushViewController(next, animated: false) }
+        if DemoMode.environment["FLACCY_SETTINGS_SCROLL"] == "bottom" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                guard let table = (settings.topViewController as? UITableViewController)?.tableView else { return }
+                let bottom = CGPoint(x: 0, y: max(-table.adjustedContentInset.top, table.contentSize.height - table.bounds.height + table.adjustedContentInset.bottom))
+                table.setContentOffset(bottom, animated: false)
+            }
+        }
     }
 }
 #endif

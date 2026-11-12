@@ -159,10 +159,9 @@ extension SettingsViewController {
         return stack
     }
 
-    override func tableView(
-        _ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
-    ) -> UISwipeActionsConfiguration? {
-        guard case .server(let server) = dataSource.itemIdentifier(for: indexPath), server.flaccy == nil else { return nil }
+    /// Remove, Rename and Refresh for a server that is not a Flaccy Server, whose own page has them.
+    func swipeActions(for row: Row) -> UISwipeActionsConfiguration? {
+        guard case .server(let server) = row, server.flaccy == nil else { return nil }
         let remove = UIContextualAction(style: .destructive, title: String(localized: "Remove")) { [weak self] _, _, done in
             self?.confirmRemove(server)
             done(true)
@@ -182,12 +181,12 @@ extension SettingsViewController {
 
     func handleAddFlaccyServerTap() {
         impactLight.impactOccurred()
-        AddFlaccyServerViewController.present(from: self)
+        AddFlaccyServerViewController.present(from: presenter)
     }
 
     func handleAddServerTap() {
         impactLight.impactOccurred()
-        AddServerViewController.present(from: self, servers: serversModel)
+        AddServerViewController.present(from: presenter, servers: serversModel)
     }
 
     func handleServerTap(_ server: RemoteServerRow) {
@@ -196,16 +195,19 @@ extension SettingsViewController {
         navigationController?.pushViewController(FlaccyServerDetailViewController(record: record), animated: true)
     }
 
-    override func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
-        guard dataSource.sectionIdentifier(for: section) == .servers, FlaccyServerNudge.isVisible(serverCount: serversModel.rows.count)
-        else { return nil }
+    /// The Flaccy Server suggestion under the server list until it is closed or a server is added.
+    func footerView(for section: Section) -> UIView? {
+        guard section == .servers, FlaccyServerNudge.isVisible(serverCount: serversModel.rows.count) else { return nil }
         return FlaccyServerNudgeView { [weak self] in
             self?.impactLight.impactOccurred()
             FlaccyServerNudge.dismiss()
             guard let self else { return }
-            var snapshot = self.dataSource.snapshot()
-            snapshot.reloadSections([.servers])
-            self.dataSource.apply(snapshot, animatingDifferences: true)
+            for page in self.livePages.allObjects where page.page == .servers {
+                guard let source = page.dataSource else { continue }
+                var snapshot = source.snapshot()
+                snapshot.reloadSections([.servers])
+                source.apply(snapshot, animatingDifferences: true)
+            }
         }
     }
 
@@ -232,13 +234,13 @@ extension SettingsViewController {
             let name = alert?.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             self?.rename(server, to: name)
         })
-        present(alert, animated: true)
+        presenter.present(alert, animated: true)
     }
 
     private func rename(_ server: RemoteServerRow, to name: String) {
         guard !name.isEmpty else {
             notificationFeedback.notificationOccurred(.warning)
-            ToastView.show(String(localized: "A server needs a name. Type one and try again."), in: view, style: .error)
+            ToastView.show(String(localized: "A server needs a name. Type one and try again."), in: presenter.view, style: .error)
             return
         }
         Task { [weak self] in
@@ -249,7 +251,7 @@ extension SettingsViewController {
             } catch {
                 let host = server.address
                 self.notificationFeedback.notificationOccurred(.error)
-                ToastView.show(RemoteFailure.from(error, host: host).errorDescription ?? "", in: self.view, style: .error)
+                ToastView.show(RemoteFailure.from(error, host: host).errorDescription ?? "", in: self.presenter.view, style: .error)
             }
         }
     }
@@ -265,7 +267,7 @@ extension SettingsViewController {
         alert.addAction(UIAlertAction(title: String(localized: "Remove Server"), style: .destructive) { [weak self] _ in
             self?.remove(server)
         })
-        present(alert, animated: true)
+        presenter.present(alert, animated: true)
     }
 
     private func remove(_ server: RemoteServerRow) {
@@ -274,10 +276,10 @@ extension SettingsViewController {
             do {
                 let sentence = try await self.serversModel.remove(serverID: server.id)
                 self.notificationFeedback.notificationOccurred(.success)
-                ToastView.show(sentence, in: self.view, style: .info)
+                ToastView.show(sentence, in: self.presenter.view, style: .info)
             } catch {
                 self.notificationFeedback.notificationOccurred(.error)
-                ToastView.show(RemoteFailure.from(error, host: server.address).errorDescription ?? "", in: self.view, style: .error)
+                ToastView.show(RemoteFailure.from(error, host: server.address).errorDescription ?? "", in: self.presenter.view, style: .error)
             }
         }
     }
@@ -295,9 +297,9 @@ extension SettingsViewController {
                 guard let self else { return }
                 let freed = await self.serversModel.clearCache()
                 self.notificationFeedback.notificationOccurred(.success)
-                ToastView.show(RemoteCopy.cacheCleared(bytes: freed), in: self.view, style: .success)
+                ToastView.show(RemoteCopy.cacheCleared(bytes: freed), in: self.presenter.view, style: .success)
             }
         })
-        present(alert, animated: true)
+        presenter.present(alert, animated: true)
     }
 }

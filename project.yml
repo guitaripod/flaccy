@@ -309,6 +309,8 @@ targets:
           - Settings/SettingsViewController+Model.swift
           - Settings/SettingsViewController+Servers.swift
           - Settings/SettingsViewController.swift
+          - Settings/SettingsPageViewController.swift
+          - Settings/SettingsSearchResultsController.swift
           - Sharing/SonglinkShareable.swift
           - Sharing/StreamingLinksViewController.swift
           - Wantlist/WantlistViewController.swift

@@ -21,7 +21,7 @@ extension SettingsViewController {
         UIApplication.shared.open(url) { [weak self] opened in
             guard !opened, let self else { return }
             UIPasteboard.general.string = MidgarSupport.address
-            ToastView.show(String(localized: "Copied"), in: self.view, style: .info)
+            ToastView.show(String(localized: "Copied"), in: self.presenter.view, style: .info)
         }
     }
 
@@ -38,7 +38,7 @@ extension SettingsViewController {
             let type = url.pathExtension == "json" ? "application/json" : "text/plain"
             mail.addAttachmentData(data, mimeType: type, fileName: url.lastPathComponent)
         }
-        present(mail, animated: true)
+        presenter.present(mail, animated: true)
     }
 
     func handleMetadataTap() {
@@ -83,12 +83,9 @@ extension SettingsViewController {
             self?.confirmDisconnectLastFM()
         })
         sheet.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
-        let row = dataSource.snapshot().itemIdentifiers
-            .first { if case .lastFMAccount = $0 { true } else { false } }
-            .flatMap { dataSource.indexPath(for: $0) }
-            .flatMap { tableView.cellForRow(at: $0) }
-        sheet.anchorPopover(at: row, fallback: view)
-        present(sheet, animated: true)
+        let row = visibleCell(for: .lastFMAccount(username: LastFMService.shared.username))
+        sheet.anchorPopover(at: row, fallback: presenter.view)
+        presenter.present(sheet, animated: true)
     }
 
     func confirmDisconnectLastFM() {
@@ -104,15 +101,15 @@ extension SettingsViewController {
             self?.notificationFeedback.notificationOccurred(.success)
             self?.applySnapshot(animated: true)
         })
-        present(alert, animated: true)
+        presenter.present(alert, animated: true)
     }
 
     func connectLastFM() {
         selectionFeedback.selectionChanged()
-        let fallbackWindow = (view.window?.windowScene ?? UIApplication.shared.connectedScenes
+        let fallbackWindow = (presenter.view.window?.windowScene ?? UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive })?.keyWindow
-        guard let window = view.window ?? fallbackWindow else {
+        guard let window = presenter.view.window ?? fallbackWindow else {
             MidgarLog.error("Last.fm connect tapped with no window to anchor sign-in to", category: .auth)
             return
         }
@@ -133,7 +130,7 @@ extension SettingsViewController {
                     preferredStyle: .alert
                 )
                 alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
-                present(alert, animated: true)
+                presenter.present(alert, animated: true)
             }
         }
     }
@@ -189,10 +186,13 @@ extension SettingsViewController {
     }
 
     func reconfigureRow(_ row: Row) {
-        var snapshot = dataSource.snapshot()
-        guard snapshot.itemIdentifiers.contains(row) else { return }
-        snapshot.reconfigureItems([row])
-        dataSource.apply(snapshot, animatingDifferences: false)
+        let sources: [DataSource?] = [dataSource] + livePages.allObjects.map(\.dataSource)
+        for case let source? in sources {
+            var snapshot = source.snapshot()
+            guard snapshot.itemIdentifiers.contains(row) else { continue }
+            snapshot.reconfigureItems([row])
+            source.apply(snapshot, animatingDifferences: false)
+        }
     }
 
     nonisolated static func scrobbleCount() -> Int {
@@ -201,7 +201,7 @@ extension SettingsViewController {
 
     func handleYearInMusicTap() {
         impactMedium.impactOccurred()
-        present(YearInMusicViewController(), animated: true)
+        presenter.present(YearInMusicViewController(), animated: true)
     }
 
     func handleRecapNotificationsTap() {
@@ -211,7 +211,14 @@ extension SettingsViewController {
 
     func handleWatchTap() {
         selectionFeedback.selectionChanged()
-        navigationController?.pushViewController(WatchSyncViewController(), animated: true)
+        navigationController?.pushViewController(makeWatchSyncPage(), animated: true)
+    }
+
+    /// The Apple Watch page, built in one place so the hooks it takes are set wherever it opens.
+    func makeWatchSyncPage() -> WatchSyncViewController {
+        let page = WatchSyncViewController()
+        page.onAddMusic = { [weak self] in self?.handleImportTap() }
+        return page
     }
 
     func handleImportTap() {
@@ -233,7 +240,7 @@ extension SettingsViewController {
         alert.addAction(UIAlertAction(title: String(localized: "Rescan"), style: .default) { [weak self] _ in
             self?.performRescan()
         })
-        present(alert, animated: true)
+        presenter.present(alert, animated: true)
     }
 
     /// Runs the rescan with only the rescan row disabled and spinning, so the
@@ -299,6 +306,7 @@ extension SettingsViewController {
     }
 
     func loadPriceIfNeeded() {
+        guard !Self.isScreenshotLaunch else { return }
         Task { [weak self] in
             await PurchaseManager.shared.loadOffersIfNeeded()
             await PurchaseManager.shared.loadLapsedOfferIfNeeded()
@@ -337,7 +345,21 @@ extension SettingsViewController: @preconcurrency MFMailComposeViewControllerDel
         controller.dismiss(animated: true)
         if result == .sent {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            ToastView.show(String(localized: "Sent. Thanks for writing."), in: view, style: .success)
+            ToastView.show(String(localized: "Sent. Thanks for writing."), in: presenter.view, style: .success)
         }
+    }
+}
+
+extension SettingsViewController {
+
+    /// A DEBUG screenshot launch, which must not ask StoreKit for prices: on a simulator with no
+    /// account that raises the system sign-in prompt over the capture. Always false in a release
+    /// build, where the seeder does not exist.
+    static var isScreenshotLaunch: Bool {
+        #if DEBUG && (targetEnvironment(simulator) || os(macOS))
+        ScreenshotSeeder.isActive
+        #else
+        false
+        #endif
     }
 }
