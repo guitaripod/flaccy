@@ -36,7 +36,7 @@ enum MetadataService {
         let artist = result.artist ?? pathInfo.artist ?? unknownArtist
         let albumTitle = result.albumTitle ?? pathInfo.album ?? unknownAlbum
         let trackNumber = result.trackNumber > 0 ? result.trackNumber : fileInfo.trackNumber
-        let artwork = result.artworkData.flatMap(PlatformImage.init(data:))
+        let artwork = result.artworkData.flatMap { AlbumArtworkCache.decode($0, maxPixelSize: scannedArtworkPixels) }
 
         return Track(
             fileURL: url,
@@ -98,6 +98,11 @@ enum MetadataService {
 
     nonisolated private static let unknownArtist = "Unknown Artist"
     nonisolated private static let unknownAlbum = "Unknown Album"
+
+    /// The longest side a cover read from a file is kept at, the largest size any screen draws
+    /// (`AlbumArtworkCache`'s full tier). Decoding a 5000 px scan at full size costs about 100 MB,
+    /// and the scan reads eight files at once.
+    nonisolated private static let scannedArtworkPixels: CGFloat = 1600
 
     /// What a fresh read of the file says, shaped for refreshing its existing track row.
     nonisolated static func refresh(from url: URL) async -> TrackMetadataRefresh {
