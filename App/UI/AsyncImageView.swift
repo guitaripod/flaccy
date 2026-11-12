@@ -219,11 +219,15 @@ final class AsyncImageView: UIImageView {
         }
     }
 
+    /// Shows the placeholder glyph at its own size in the middle of the frame: aspect-filling an
+    /// SF Symbol scaled it up past the frame and cropped it.
     func setPlaceholder(_ placeholder: UIImage?) {
+        contentMode = placeholder?.isSymbolImage == true ? .center : .scaleAspectFill
         if image !== placeholder { image = placeholder }
     }
 
     func setImageIfChanged(_ newImage: UIImage) {
+        contentMode = .scaleAspectFill
         if image !== newImage { image = newImage }
     }
 
@@ -304,6 +308,7 @@ final class AsyncImageView: UIImageView {
     }
 
     func set(_ image: UIImage, animated: Bool) {
+        contentMode = .scaleAspectFill
         guard animated, !UIAccessibility.isReduceMotionEnabled else { self.image = image; return }
         UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) { self.image = image }
     }

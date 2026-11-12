@@ -89,10 +89,20 @@ final class HomeBackdropView: UIView {
         UIView.animate(withDuration: 0.4) { self.imageView.alpha = opacity }
     }
 
+    /// The rect that covers a `side` square with `size` without distorting it, centered so the
+    /// square crops the overflow the way every cover view does.
+    nonisolated private static func aspectFillRect(for size: CGSize, side: CGFloat) -> CGRect {
+        guard size.width > 0, size.height > 0 else { return CGRect(x: 0, y: 0, width: side, height: side) }
+        let scale = side / min(size.width, size.height)
+        let width = size.width * scale
+        let height = size.height * scale
+        return CGRect(x: (side - width) / 2, y: (side - height) / 2, width: width, height: height)
+    }
+
     nonisolated private static func blurred(_ image: UIImage) -> UIImage? {
         let side = blurSide
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
-        let small = renderer.image { _ in image.draw(in: CGRect(x: 0, y: 0, width: side, height: side)) }
+        let small = renderer.image { _ in image.draw(in: aspectFillRect(for: image.size, side: side)) }
         guard let input = CIImage(image: small), let filter = CIFilter(name: "CIGaussianBlur") else { return nil }
         filter.setValue(input.clampedToExtent(), forKey: kCIInputImageKey)
         filter.setValue(blurRadius, forKey: kCIInputRadiusKey)

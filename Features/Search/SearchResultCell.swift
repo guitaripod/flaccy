@@ -80,7 +80,6 @@ final class SearchResultCell: UICollectionViewCell {
             placeholder: UIImage(systemName: item.placeholderSymbol)
         )
         coverView.tintColor = .tertiaryLabel
-        coverView.contentMode = coverView.image == nil ? .center : .scaleAspectFill
         isAccessibilityElement = true
         accessibilityLabel = item.accessibilityLabel
         accessibilityTraits = .button

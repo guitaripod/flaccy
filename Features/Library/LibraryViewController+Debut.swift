@@ -212,13 +212,13 @@ extension LibraryViewController {
         }
     }
 
-    /// The frames the album grid's first screen is about to occupy, in the debut
-    /// view's own space, so the tiles land on their own counterparts.
+    /// The covers of the album grid's first screen, in the debut view's own
+    /// space, so each square tile lands on its counterpart's square cover rather
+    /// than being squeezed into the whole cell with its title and artist lines.
     func albumGridTargetFrames(in space: UIView) -> [CGRect] {
         collectionView.indexPathsForVisibleItems
             .sorted()
-            .compactMap { collectionView.layoutAttributesForItem(at: $0)?.frame }
-            .map { collectionView.convert($0, to: space) }
+            .compactMap { (collectionView.cellForItem(at: $0) as? AlbumCell)?.artworkFrame(in: space) }
     }
 
     /// Drops everything the Debut was holding — thirty-six decoded covers, the

@@ -5,6 +5,11 @@ final class AlbumCell: UICollectionViewCell {
     static let reuseID = "AlbumCell"
 
     private let artworkContainer = UIView()
+
+    /// Where the square cover sits, in `space`'s coordinates, for a tile that has to land on it.
+    func artworkFrame(in space: UIView) -> CGRect {
+        artworkContainer.convert(artworkContainer.bounds, to: space)
+    }
     private let artworkView = UIImageView()
     private let shimmerLayer = CAGradientLayer()
     private let titleLabel = UILabel()

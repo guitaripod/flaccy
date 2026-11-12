@@ -140,7 +140,9 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
             let startedAtEpoch = self.currentEpoch()
             var image: PlatformImage?
             if let data = try? DatabaseManager.shared.fetchAlbumArtwork(title: title, artist: artist) {
-                image = Self.decode(data, maxPixelSize: tier.maxPixelSize)
+                image = tier == .thumbnail
+                    ? Self.decodeSquare(data, maxPixelSize: tier.maxPixelSize)
+                    : Self.decode(data, maxPixelSize: tier.maxPixelSize)
                 if let image, startedAtEpoch == self.currentEpoch() {
                     self.memoryCache.setObject(image, forKey: key as NSString, cost: image.memoryCost)
                 }
@@ -176,6 +178,18 @@ nonisolated final class AlbumArtworkCache: @unchecked Sendable {
             return PlatformImage(data: data)
         }
         return PlatformImage(cgImage: cgImage)
+    }
+
+    /// The centered square of the decoded cover. List rows draw a thumbnail at its own aspect
+    /// ratio inside a 44 pt square, so a cover scanned at 1200×1000 showed as a rectangle there,
+    /// and as an oval under the Artists tab's round mask, while every grid cell crops it square.
+    static func decodeSquare(_ data: Data, maxPixelSize: CGFloat) -> PlatformImage? {
+        guard let image = decode(data, maxPixelSize: maxPixelSize) else { return nil }
+        guard let cgImage = image.cgImage, cgImage.width != cgImage.height else { return image }
+        let side = min(cgImage.width, cgImage.height)
+        let square = CGRect(x: (cgImage.width - side) / 2, y: (cgImage.height - side) / 2, width: side, height: side)
+        guard let cropped = cgImage.cropping(to: square) else { return image }
+        return PlatformImage(cgImage: cropped)
     }
 
     private func cacheKey(title: String, artist: String, tier: Tier) -> String {
