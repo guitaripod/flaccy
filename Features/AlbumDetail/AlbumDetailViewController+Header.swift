@@ -78,13 +78,18 @@ extension AlbumDetailViewController {
     /// Arranges the header for the room this page was given. Stacked is the
     /// phone column; the banner puts a modest cover beside the title so rows
     /// start high on a wider page; side by side pins the cover and details in
-    /// a column and gives the whole other half to the tracks.
+    /// a column and gives the whole other half to the tracks. The banner and
+    /// the column size their cover from the room, so they are rebuilt when it
+    /// changes: a page pushed while the phone turned kept a cover sized for the
+    /// taller screen and hid the title and Play under the tab bar.
     func applyHeaderStyle() {
         let usable = view.safeAreaLayoutGuide.layoutFrame.size
         guard usable.width > 1 else { return }
         let style = AdaptiveLayout.detailHeaderStyle(forSize: usable)
-        guard style != appliedHeaderStyle else { return }
+        let resized = abs(usable.width - appliedHeaderSize.width) > 1 || abs(usable.height - appliedHeaderSize.height) > 1
+        guard style != appliedHeaderStyle || (style != .stacked && resized) else { return }
         appliedHeaderStyle = style
+        appliedHeaderSize = usable
         NSLayoutConstraint.deactivate(headerLayoutConstraints)
         headerLayoutConstraints = []
         headerColumn.removeFromSuperview()
@@ -154,22 +159,45 @@ extension AlbumDetailViewController {
         tableView.tableHeaderView = container
     }
 
+    /// Wide enough for Play and Shuffle to keep their labels beside the queue and share buttons.
+    static let headerColumnMinimumWidth: CGFloat = 360
+
+    /// Below this height (any iPhone on its side) the column puts a small cover beside the title,
+    /// so Play and Shuffle sit above the tab bar instead of under it.
+    static let headerColumnShortHeight: CGFloat = 440
+
     func installColumnHeader() {
         let usable = view.safeAreaLayoutGuide.layoutFrame.size
-        let artworkSide = min(max(usable.width * 0.4, 240) - 40, usable.height * 0.42, 340)
-        let columnWidth = max(artworkSide + 40, 280)
+        let short = usable.height < Self.headerColumnShortHeight
+        let artworkSide = short
+            ? min(usable.height * 0.3, 110)
+            : min(max(usable.width * 0.4, 240) - 40, usable.height * 0.42, 340)
+        let columnWidth = max(short ? 0 : artworkSide + 40, Self.headerColumnMinimumWidth)
         headerColumn.translatesAutoresizingMaskIntoConstraints = false
         headerColumn.showsVerticalScrollIndicator = false
         headerColumn.alwaysBounceVertical = false
         headerColumn.contentInsetAdjustmentBehavior = .always
         view.addSubview(headerColumn)
-        let mainStack = UIStackView(arrangedSubviews: [artworkCard, infoStack, actionRow])
+        let lead: UIView
+        if short {
+            let row = UIStackView(arrangedSubviews: [artworkCard, infoStack])
+            row.axis = .horizontal
+            row.spacing = 14
+            row.alignment = .center
+            lead = row
+        } else {
+            lead = artworkCard
+        }
+        let mainStack = UIStackView(arrangedSubviews: short ? [lead, actionRow] : [artworkCard, infoStack, actionRow])
         mainStack.axis = .vertical
+        mainStack.alignment = .leading
         mainStack.spacing = 16
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         headerColumn.addSubview(mainStack)
         let guide = view.safeAreaLayoutGuide
         let constraints = [
+            (short ? lead : infoStack).widthAnchor.constraint(equalTo: mainStack.widthAnchor),
+            actionRow.widthAnchor.constraint(equalTo: mainStack.widthAnchor),
             headerColumn.topAnchor.constraint(equalTo: view.topAnchor),
             headerColumn.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             headerColumn.leadingAnchor.constraint(equalTo: guide.leadingAnchor),

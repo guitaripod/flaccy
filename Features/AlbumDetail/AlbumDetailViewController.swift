@@ -20,6 +20,7 @@ final class AlbumDetailViewController: UIViewController, SonglinkShareable {
     let headerColumn = UIScrollView()
     var headerLayoutConstraints: [NSLayoutConstraint] = []
     var appliedHeaderStyle: AdaptiveLayout.DetailHeaderStyle?
+    var appliedHeaderSize: CGSize = .zero
     var tableLeading: NSLayoutConstraint!
     var tableColumnLeading: NSLayoutConstraint!
     let playCountLabel = UILabel()
