@@ -302,13 +302,15 @@ extension NowPlayingViewController {
         return titleRow
     }
 
-    /// Keeps the title readable in a narrow column: below the width that fits
-    /// the title beside the quality and equalizer badges, the badges drop to a
-    /// line of their own under it instead of squeezing the title into a scroll.
+    /// Keeps the title readable in a narrow column or at an accessibility text
+    /// size: below the width that fits the title beside the quality and
+    /// equalizer badges, the badges drop to a line of their own under it
+    /// instead of squeezing the title into a scroll.
     func placeBadgeStrip() {
         let width = infoBlock.bounds.width
         guard width > 1 else { return }
         let wraps = width < AdaptiveLayout.badgesBesideTitleMinimumWidth
+            || traitCollection.preferredContentSizeCategory.isAccessibilityCategory
         guard wraps != (badgeStrip.superview === wrappedBadgeLine) else { return }
         badgeStrip.removeFromSuperview()
         if wraps {

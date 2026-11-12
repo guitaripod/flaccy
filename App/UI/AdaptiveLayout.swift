@@ -29,6 +29,8 @@ enum AdaptiveLayout {
     static let playerWideLandscapeMinimumWidth: CGFloat = 1000
     static let playerContentMaximumWidth: CGFloat = 640
     static let playerControlsMaximumWidth: CGFloat = 560
+    static let playerRoomyPortraitMinimumHeight: CGFloat = 700
+    static let playerRoomyLandscapeMinimumHeight: CGFloat = 500
     static let paneQueueMinimumHeight: CGFloat = 150
     static let badgesBesideTitleMinimumWidth: CGFloat = 300
     static let actionRowSingleLineMinimumWidth: CGFloat = 310

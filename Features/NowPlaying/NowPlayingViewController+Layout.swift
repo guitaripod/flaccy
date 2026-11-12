@@ -23,6 +23,8 @@ extension NowPlayingViewController {
             default: activateLayoutMode(desired, foldTop: nil, foldBottom: nil)
             }
             view.setNeedsLayout()
+        } else if usesCompactControls(in: layoutMode) != compactControlsApplied {
+            applyControlFit(for: layoutMode)
         }
         syncLaptopCompanions()
     }
@@ -65,6 +67,8 @@ extension NowPlayingViewController {
         case .landscape:
             let controlsFillRegion = bottomControls.widthAnchor.constraint(equalTo: landscapeControlsRegion.widthAnchor)
             controlsFillRegion.priority = .init(999)
+            let controlsCentered = bottomControls.centerYAnchor.constraint(equalTo: safe.centerYAnchor)
+            controlsCentered.priority = .defaultHigh
             constraints = [
                 centerContainer.topAnchor.constraint(equalTo: safe.topAnchor, constant: 12),
                 centerContainer.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 28),
@@ -75,8 +79,9 @@ extension NowPlayingViewController {
                 bottomControls.centerXAnchor.constraint(equalTo: landscapeControlsRegion.centerXAnchor),
                 bottomControls.widthAnchor.constraint(lessThanOrEqualToConstant: AdaptiveLayout.playerControlsMaximumWidth),
                 controlsFillRegion,
-                bottomControls.centerYAnchor.constraint(equalTo: safe.centerYAnchor),
+                controlsCentered,
                 bottomControls.topAnchor.constraint(greaterThanOrEqualTo: safe.topAnchor, constant: 12),
+                bottomControls.bottomAnchor.constraint(lessThanOrEqualTo: safe.bottomAnchor, constant: -8),
                 artworkContainer.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.72),
                 artworkGroup.centerYAnchor.constraint(equalTo: centerContainer.centerYAnchor),
                 artworkGroup.topAnchor.constraint(greaterThanOrEqualTo: centerContainer.topAnchor),
@@ -141,7 +146,7 @@ extension NowPlayingViewController {
                 stateContentContainer.bottomAnchor.constraint(equalTo: bottomControls.topAnchor, constant: -12),
             ]
         }
-        applyControlSpacing(compact: isLaptop(mode) || isFocusMode(mode) || isColumnPane)
+        applyControlFit(for: mode)
         NSLayoutConstraint.activate(constraints)
         modeConstraints = constraints
         refreshCenterVisibility()
@@ -204,12 +209,34 @@ extension NowPlayingViewController {
     /// everywhere else.
     func fitColumnPane() {
         portraitColumnFill?.constant = -2 * columnMargin
-        artworkPreferredWidth?.priority = isColumnPane ? .init(740) : .init(999)
         if layoutMode == .portrait {
             activateLayoutMode(.portrait, foldTop: nil, foldBottom: nil)
         } else {
-            applyControlSpacing(compact: isLaptop(layoutMode) || isFocusMode(layoutMode) || isColumnPane)
+            applyControlFit(for: layoutMode)
         }
+    }
+
+    /// Whether the controls take their tight spacing and the cover gives way before them: the
+    /// laptop and focus poses, an iPad's column, an accessibility text size, and any player too
+    /// short for the roomy column, such as an iPhone SE, Display Zoom, or any iPhone on its side.
+    func usesCompactControls(in mode: AdaptiveLayout.PlayerLayout) -> Bool {
+        if isLaptop(mode) || isFocusMode(mode) || isColumnPane { return true }
+        if traitCollection.preferredContentSizeCategory.isAccessibilityCategory { return true }
+        switch mode {
+        case .portrait: return view.bounds.height < AdaptiveLayout.playerRoomyPortraitMinimumHeight
+        case .landscape: return view.bounds.height < AdaptiveLayout.playerRoomyLandscapeMinimumHeight
+        default: return false
+        }
+    }
+
+    /// Spaces the controls for the room `mode` has and lets a compact player's cover shrink
+    /// before the title, the badges and the controls are squeezed: at its usual priority the
+    /// cover kept its full width on a short screen and pushed the action row off the bottom.
+    func applyControlFit(for mode: AdaptiveLayout.PlayerLayout) {
+        let compact = usesCompactControls(in: mode)
+        compactControlsApplied = compact
+        artworkPreferredWidth?.priority = compact ? .init(740) : .init(999)
+        applyControlSpacing(compact: compact)
     }
 
     var columnMargin: CGFloat {

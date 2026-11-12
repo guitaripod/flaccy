@@ -89,6 +89,7 @@ final class NowPlayingViewController: UIViewController, SonglinkShareable {
     let portraitColumn = UILayoutGuide()
     var portraitColumnFill: NSLayoutConstraint?
     var artworkPreferredWidth: NSLayoutConstraint?
+    var compactControlsApplied: Bool?
     let landscapeControlsRegion = UILayoutGuide()
     let laptopLyricsHost = UIView()
     let laptopQueueHost = UIView()
